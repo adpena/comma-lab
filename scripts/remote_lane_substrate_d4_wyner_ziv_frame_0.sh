@@ -166,6 +166,12 @@ if [ -n "${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-}" ]; then
     MAX_PAIRS_ARGS+=(--max-pairs "$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS")
 fi
 
+AUTH_EVAL_ARGS=()
+if [[ "${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-}" =~ ^[0-9]+$ ]] && [ "$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS" -lt 600 ]; then
+    AUTH_EVAL_ARGS+=(--skip-auth-eval)
+    log "stage_4_truncated_pair_smoke_skips_auth_eval max_pairs=$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS required_pairs=600"
+fi
+
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --video-path "$D4_WYNER_ZIV_FRAME_0_VIDEO_PATH" \
     --output-dir "$D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR" \
@@ -177,6 +183,7 @@ fi
     --residual-coarse-w "$D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_W" \
     --base-archive-path "$D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH" \
     ${MAX_PAIRS_ARGS[@]+"${MAX_PAIRS_ARGS[@]}"} \
+    ${AUTH_EVAL_ARGS[@]+"${AUTH_EVAL_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume). A training

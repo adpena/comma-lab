@@ -39,6 +39,9 @@ def test_d4_remote_driver_defaults_to_t03_smoke_cap() -> None:
     assert 'D4_WYNER_ZIV_FRAME_0_MAX_PAIRS="${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-200}"' in driver
     assert "max_pairs=$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS" in driver
     assert '--max-pairs "$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS"' in driver
+    assert "stage_4_truncated_pair_smoke_skips_auth_eval" in driver
+    assert "AUTH_EVAL_ARGS+=(--skip-auth-eval)" in driver
+    assert '${AUTH_EVAL_ARGS[@]+"${AUTH_EVAL_ARGS[@]}"}' in driver
 
 
 def test_d4_remote_driver_contest_cuda_marker_requires_valid_auth_eval_json() -> None:

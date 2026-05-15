@@ -153,3 +153,12 @@ def test_c6_remote_driver_routes_modal_outputs_to_modal_results() -> None:
     assert 'MODAL_RUNTIME:-0}" = "1"' in script
     assert 'LOG_DIR="/modal_results/${DISPATCH_INSTANCE_JOB_ID}"' in script
     assert 'C6_E4_MDL_IBPS_OUTPUT_DIR="$OUTPUT_DIR"' in script
+
+
+def test_c6_remote_driver_threads_autocast_env_to_trainer() -> None:
+    script = Path("scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh").read_text(
+        encoding="utf-8",
+    )
+    assert "C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16" in script
+    assert "C6_TRAINER_ARGS+=(--enable-autocast-fp16)" in script
+    assert '${C6_TRAINER_ARGS[@]+"${C6_TRAINER_ARGS[@]}"}' in script

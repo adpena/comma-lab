@@ -5,7 +5,9 @@ import tempfile
 from pathlib import Path
 
 from experiments.train_substrate_d4_wyner_ziv_frame_0 import (
+    _build_parser,
     _resolve_auth_eval_json_paths,
+    _validate_auth_eval_pair_scope,
 )
 
 
@@ -29,3 +31,52 @@ def test_d4_auth_eval_json_stays_in_output_dir_when_output_is_durable() -> None:
 
     assert gate_json == durable_output / "contest_auth_eval.json"
     assert local_copy_json == durable_output / "contest_auth_eval.json"
+
+
+def test_d4_capped_pair_smoke_must_skip_auth_eval() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--video-path",
+            "upstream/videos/0.mkv",
+            "--output-dir",
+            "experiments/results/d4_unit",
+            "--max-pairs",
+            "200",
+        ],
+    )
+
+    try:
+        _validate_auth_eval_pair_scope(args)
+    except SystemExit as exc:
+        assert "--skip-auth-eval" in str(exc)
+        assert "truncated raw outputs" in str(exc)
+    else:
+        raise AssertionError("capped D4 auth eval should fail closed")
+
+
+def test_d4_full_pair_or_skip_auth_eval_pair_scope_is_allowed() -> None:
+    parser = _build_parser()
+    full_args = parser.parse_args(
+        [
+            "--video-path",
+            "upstream/videos/0.mkv",
+            "--output-dir",
+            "experiments/results/d4_unit",
+            "--max-pairs",
+            "600",
+        ],
+    )
+    skip_args = parser.parse_args(
+        [
+            "--video-path",
+            "upstream/videos/0.mkv",
+            "--output-dir",
+            "experiments/results/d4_unit",
+            "--max-pairs",
+            "200",
+            "--skip-auth-eval",
+        ],
+    )
+
+    _validate_auth_eval_pair_scope(full_args)
+    _validate_auth_eval_pair_scope(skip_args)

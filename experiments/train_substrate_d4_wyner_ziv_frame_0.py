@@ -392,6 +392,24 @@ def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
         )
 
 
+def _validate_auth_eval_pair_scope(args: argparse.Namespace) -> None:
+    """Refuse exact auth eval for capped pair smokes.
+
+    The contest evaluator expects one raw stream containing all 1200 frames
+    (600 pairs). A capped ``--max-pairs`` smoke emits a shorter archive by
+    design, so it is a timing/training artifact unless auth eval is skipped.
+    """
+    if args.skip_auth_eval:
+        return
+    if args.max_pairs is not None and args.max_pairs < N_PAIRS_FULL:
+        raise SystemExit(
+            "ERROR: --max-pairs below N_PAIRS_FULL=600 emits truncated raw "
+            "outputs and cannot produce a contest auth-eval score. Use "
+            "--skip-auth-eval for capped timing smokes, or omit --max-pairs "
+            "for full 600-pair contest auth eval."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Smoke entry path
 # ---------------------------------------------------------------------------
@@ -1174,6 +1192,7 @@ def main(argv: list[str] | None = None) -> int:
     _validate_full_cpu_flags(args)
     if args.smoke:
         return _smoke_main(args)
+    _validate_auth_eval_pair_scope(args)
     return _full_main(args)
 
 

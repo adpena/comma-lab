@@ -40,6 +40,7 @@ C6_E4_MDL_IBPS_BATCH_SIZE="${C6_E4_MDL_IBPS_BATCH_SIZE:-4}"
 C6_E4_MDL_IBPS_LR="${C6_E4_MDL_IBPS_LR:-5e-4}"
 C6_E4_MDL_IBPS_LATENT_DIM="${C6_E4_MDL_IBPS_LATENT_DIM:-24}"
 C6_E4_MDL_IBPS_BETA_IB="${C6_E4_MDL_IBPS_BETA_IB:-0.01}"
+C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16="${C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16:-false}"
 C6_E4_MDL_IBPS_UPSTREAM_DIR="${C6_E4_MDL_IBPS_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 C6_E4_MDL_IBPS_DEVICE="${C6_E4_MDL_IBPS_DEVICE:-cuda}"
 
@@ -156,6 +157,7 @@ cat > "$PROVENANCE" <<EOF
   "lr": "$C6_E4_MDL_IBPS_LR",
   "latent_dim": "$C6_E4_MDL_IBPS_LATENT_DIM",
   "beta_ib": "$C6_E4_MDL_IBPS_BETA_IB",
+  "enable_autocast_fp16": "$C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16",
   "device": "$C6_E4_MDL_IBPS_DEVICE",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"
@@ -172,6 +174,13 @@ fi
 
 PYBIN_RESOLVED="$CLAIM_PYTHON"
 
+C6_TRAINER_ARGS=()
+case "$C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16" in
+    1|true|TRUE|True|yes|YES|Yes)
+        C6_TRAINER_ARGS+=(--enable-autocast-fp16)
+        ;;
+esac
+
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --video-path "$C6_E4_MDL_IBPS_VIDEO_PATH" \
     --output-dir "$C6_E4_MDL_IBPS_OUTPUT_DIR" \
@@ -182,6 +191,7 @@ PYBIN_RESOLVED="$CLAIM_PYTHON"
     --beta-ib "$C6_E4_MDL_IBPS_BETA_IB" \
     --upstream-dir "$C6_E4_MDL_IBPS_UPSTREAM_DIR" \
     --device "$C6_E4_MDL_IBPS_DEVICE" \
+    ${C6_TRAINER_ARGS[@]+"${C6_TRAINER_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # The trainer is allowed to write non-authoritative stats, but this remote

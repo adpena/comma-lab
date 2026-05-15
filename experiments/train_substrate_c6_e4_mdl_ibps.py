@@ -46,14 +46,13 @@ Usage (full; CUDA-required; ratified by smoke; cost band $5 Modal T4)::
         --output-dir experiments/results/c6_<utc> \\
         --epochs 2000 --batch-size 4 --lr 5e-4 --device cuda
 """
-# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
+# AUTOCAST_FP16_WIRED:canonical-autocast-helper-wraps-C6-score-aware-hot-loop
 # TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks
 # TF32_WAIVED:opt-in-via-CLI-flag-to-keep-eval-roundtrip-numerics-deterministic
 # NO_GRAD_WAIVED:eval-time-scorer-forward-wrapped-in-torch.inference_mode-inside-_run_val_loop
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import shutil
@@ -69,6 +68,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     build_optimized_training_context as _build_optimized_training_context,
 )
@@ -87,9 +89,6 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canon_pin_seeds,
 )
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
-)
 from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
 )
@@ -100,6 +99,9 @@ from tac.substrates.c6_e4_mdl_ibps import (
     MDLIBPSConfig,
     MDLIBPSSubstrate,
     pack_archive,
+)
+from tac.training_optimization import (
+    autocast_aware_forward as _autocast_aware_forward,
 )
 
 # ---------------------------------------------------------------------------
@@ -206,7 +208,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="train_substrate_c6_e4_mdl_ibps",
         description=(
             "Train C6 MDL-IBPS substrate (zen-Z1 LARGEST single bet). "
-            "Information Bottleneck × MDL × Procedural Synthesis."
+            "Information Bottleneck x MDL x Procedural Synthesis."
         ),
     )
     p.add_argument("--video-path", type=Path, default=DEFAULT_VIDEO_PATH)
@@ -518,7 +520,6 @@ def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes) -> None:
 def _full_main(args: argparse.Namespace) -> int:
     """Full training: real video, score-aware Lagrangian + IB, EMA, auth eval."""
     from tac.differentiable_eval_roundtrip import (
-        apply_eval_roundtrip_during_training,
         patch_upstream_yuv6_globally,
     )
     from tac.scorer import load_differentiable_scorers
@@ -632,31 +633,43 @@ def _full_main(args: argparse.Namespace) -> int:
         batch_losses = []
         for i in range(0, n_pairs, args.batch_size):
             idx = perm[i:i + args.batch_size]
-            gt_rgb_0 = pairs["frame_0"][idx] * 255.0  # to byte domain
-            gt_rgb_1 = pairs["frame_1"][idx] * 255.0
-            # Encoder sees frame_1 (SegNet's input)
-            rgb_0, rgb_1, mu, logvar = substrate(idx, frames_for_encoder=pairs["frame_1"][idx])
-            # Convert to byte domain for score-aware loss
-            rgb_0_byte = rgb_0 * 255.0
-            rgb_1_byte = rgb_1 * 255.0
-            gt_pose_batch = gt_seg_batch = None
-            gt_seg_already_probs = None
-            if gt_cache is not None:
-                gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
-                gt_seg_already_probs = gt_cache.seg_already_probs
-            loss, parts = loss_fn(
-                reconstructed_rgb_0=rgb_0_byte,
-                reconstructed_rgb_1=rgb_1_byte,
-                gt_rgb_0=gt_rgb_0,
-                gt_rgb_1=gt_rgb_1,
-                archive_bytes_proxy=archive_bytes_proxy,
-                encoder_mu=mu,
-                encoder_logvar=logvar,
-                noise_std=args.noise_std,
-                gt_pose_batch=gt_pose_batch,
-                gt_seg_batch=gt_seg_batch,
-                gt_seg_already_probs=gt_seg_already_probs,
-            )
+            # Tier-1 O2: wrap substrate forward + score-aware scorer path in
+            # canonical autocast. Disabled by default unless the operator
+            # recipe/CLI opts in; optimizer, gradient clip, and EMA stay
+            # outside this context.
+            with _autocast_aware_forward(
+                enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                dtype=torch.float16,
+                device=device,
+            ):
+                gt_rgb_0 = pairs["frame_0"][idx] * 255.0  # to byte domain
+                gt_rgb_1 = pairs["frame_1"][idx] * 255.0
+                # Encoder sees frame_1 (SegNet's input)
+                rgb_0, rgb_1, mu, logvar = substrate(
+                    idx,
+                    frames_for_encoder=pairs["frame_1"][idx],
+                )
+                # Convert to byte domain for score-aware loss
+                rgb_0_byte = rgb_0 * 255.0
+                rgb_1_byte = rgb_1 * 255.0
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(idx, device=device)
+                    gt_seg_already_probs = gt_cache.seg_already_probs
+                loss, parts = loss_fn(
+                    reconstructed_rgb_0=rgb_0_byte,
+                    reconstructed_rgb_1=rgb_1_byte,
+                    gt_rgb_0=gt_rgb_0,
+                    gt_rgb_1=gt_rgb_1,
+                    archive_bytes_proxy=archive_bytes_proxy,
+                    encoder_mu=mu,
+                    encoder_logvar=logvar,
+                    noise_std=args.noise_std,
+                    gt_pose_batch=gt_pose_batch,
+                    gt_seg_batch=gt_seg_batch,
+                    gt_seg_already_probs=gt_seg_already_probs,
+                )
             if not torch.isfinite(loss):
                 print(f"[c6-full] NON-FINITE LOSS at epoch {epoch} batch {i}; aborting")
                 return 1

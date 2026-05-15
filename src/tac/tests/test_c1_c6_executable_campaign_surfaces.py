@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -56,6 +55,16 @@ def test_c6_recipe_min_smoke_gpu_blocks_stale_t4_timeout_surface() -> None:
     assert 'min_smoke_gpu: "A10G"' in recipe
     assert "--recipe substrate_c6_e4_mdl_ibps_modal_t4_dispatch" in wrapper
     assert "helper upgrades to A10G per recipe min" in wrapper
+    assert 'C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16: "true"' in recipe
+
+
+def test_c6_trainer_wraps_score_aware_hot_loop_in_autocast_helper() -> None:
+    trainer = _read("experiments/train_substrate_c6_e4_mdl_ibps.py")
+
+    assert "AUTOCAST_FP16_WIRED" in trainer
+    assert "autocast_aware_forward as _autocast_aware_forward" in trainer
+    assert "with _autocast_aware_forward(" in trainer
+    assert 'enabled=bool(getattr(args, "enable_autocast_fp16", False))' in trainer
 
 
 def test_c6_campaign_ledger_uses_existing_dry_run_surface_only() -> None:
