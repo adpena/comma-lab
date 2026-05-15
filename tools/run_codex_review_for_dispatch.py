@@ -30,6 +30,11 @@ Verdict taxonomy (parsed from codex companion output):
                       bypass.
   - no-ship         : >=1 CRITICAL finding; refuses dispatch unless paired-env
                       bypass.
+  - invocation-error: codex companion timed out / crashed / exited nonzero
+                      WITHOUT producing severity-tagged findings; the review
+                      did not complete. Per Catalog #281 (codex bfa2p1uex F1
+                      fail-closed-on-companion-failure self-protection):
+                      refuses dispatch unless paired-env bypass.
 
 Paired-env bypass (per CLAUDE.md "Comment-only contracts are FORBIDDEN" +
 Catalog #199 paired-env discipline):
@@ -53,9 +58,10 @@ Usage::
         --json-out /tmp/codex_review.json
 
 Exit codes:
-  0 = approve OR advisory (safe to dispatch)
-  1 = needs-attention OR no-ship (refuse dispatch)
-  2 = invocation error / codex companion missing
+  0 = approve OR advisory (safe to dispatch) OR paired-env bypass active
+  1 = needs-attention OR no-ship (refuse dispatch; codex found bugs)
+  2 = invocation-error (refuse dispatch; codex companion timeout/crash/nonzero
+      rc with no findings; review did not actually run; Catalog #281)
  13 = paired-env bypass invariant violated
 """
 
@@ -72,10 +78,11 @@ import shutil
 import subprocess
 import sys
 import time
-import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -100,7 +107,14 @@ COST_GATE_THRESHOLD_USD = 1.00
 # Verdict canonical set
 VERDICTS_SAFE = frozenset({"approve", "advisory"})
 VERDICTS_BLOCKING = frozenset({"needs-attention", "no-ship"})
-VERDICTS_ALL = VERDICTS_SAFE | VERDICTS_BLOCKING
+# Catalog #281 — codex bfa2p1uex F1: invocation-error is a NEW verdict that
+# represents companion timeout / crash / nonzero rc with no severity tokens.
+# Treated as BLOCKING by default (CLI exit=2) because the codex review did
+# not actually run; paired-env bypass per Catalog #199 still applies.
+VERDICT_INVOCATION_ERROR = "invocation-error"
+VERDICTS_ALL = (
+    VERDICTS_SAFE | VERDICTS_BLOCKING | frozenset({VERDICT_INVOCATION_ERROR})
+)
 
 # Schema version for the cache JSONL rows
 CACHE_SCHEMA_VERSION = "codex_pre_dispatch_review_cache_v1"
@@ -170,9 +184,7 @@ def _cache_lock() -> Iterator[None]:
 
 def _utc_iso() -> str:
     """Return current UTC time as ISO 8601 string."""
-    from datetime import datetime, timezone
-
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _utc_epoch() -> int:
@@ -181,15 +193,127 @@ def _utc_epoch() -> int:
 
 
 def _compute_cache_key(
-    git_head_sha: str, recipe_sha: str, trainer_sha: str
+    git_head_sha: str,
+    recipe_sha: str,
+    trainer_sha: str,
+    dirty_tree_fingerprint: str = "",
+    untracked_relevant_fingerprint: str = "",
 ) -> str:
-    """Composite SHA-256 of the three inputs (truncated to 16 hex chars)."""
+    """Composite SHA-256 of the inputs (truncated to 16 hex chars).
+
+    Catalog #282 — codex bfa2p1uex F2 cache-key-includes-dirty-tree
+    self-protection. Pre-fix, the key was only ``(git_head_sha, recipe_sha,
+    trainer_sha)``. Codex companion is invoked with ``--scope working-tree``
+    so dirty changes in shared helpers (``src/tac/preflight.py``,
+    ``tools/*.py``, etc.) and untracked relevant files materially change
+    what the review evaluates — but were INVISIBLE to the cache key. A
+    cached approve from 1h ago could authorize a materially different
+    working tree without rerunning review.
+    """
     h = hashlib.sha256()
     h.update(git_head_sha.encode("utf-8"))
     h.update(b"|")
     h.update(recipe_sha.encode("utf-8"))
     h.update(b"|")
     h.update(trainer_sha.encode("utf-8"))
+    h.update(b"|")
+    h.update(dirty_tree_fingerprint.encode("utf-8"))
+    h.update(b"|")
+    h.update(untracked_relevant_fingerprint.encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+# Catalog #282 — relevant-file globs for untracked-fingerprint scan.
+# Files matching these globs (relative to repo root) participate in the
+# untracked-relevant fingerprint so untracked dispatch-critical changes
+# invalidate the cache.
+_UNTRACKED_RELEVANT_GLOBS: tuple[str, ...] = (
+    "tools/*.py",
+    "src/tac/*.py",
+    "src/tac/preflight.py",
+    "src/tac/substrates/**/*.py",
+    "CLAUDE.md",
+    "scripts/remote_lane_*.sh",
+    "experiments/train_substrate_*.py",
+)
+
+
+def _git_dirty_tree_fingerprint(repo_root: Path) -> str:
+    """Return SHA-256 (truncated 16 chars) of git diff against HEAD.
+
+    Catalog #282 — captures both staged + unstaged changes via
+    ``git diff --binary --cached HEAD`` then ``git diff --binary``. Empty
+    string if git unavailable.
+    """
+    try:
+        h = hashlib.sha256()
+        for args in (
+            ["git", "diff", "--binary", "--cached", "HEAD"],
+            ["git", "diff", "--binary"],
+        ):
+            r = subprocess.run(
+                args,
+                cwd=str(repo_root),
+                capture_output=True,
+                timeout=15,
+            )
+            if r.returncode == 0:
+                h.update(r.stdout or b"")
+            h.update(b"|")
+        return h.hexdigest()[:16]
+    except (subprocess.SubprocessError, OSError):
+        return "no-git-diff"
+
+
+def _git_untracked_relevant_fingerprint(repo_root: Path) -> str:
+    """Return SHA-256 (truncated 16 chars) of untracked relevant file paths+sizes.
+
+    Catalog #282 — captures the set of untracked files matching
+    ``_UNTRACKED_RELEVANT_GLOBS`` (path + size + content hash). An untracked
+    helper that materially changes dispatch behavior must invalidate the
+    cache. Empty string if git unavailable.
+    """
+    try:
+        r = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode != 0:
+            return "no-git-untracked"
+        untracked = sorted(line.strip() for line in r.stdout.splitlines() if line.strip())
+    except (subprocess.SubprocessError, OSError):
+        return "no-git-untracked"
+
+    # Filter by canonical relevant globs
+    import fnmatch as _fnmatch
+
+    relevant: list[str] = []
+    for rel in untracked:
+        for pat in _UNTRACKED_RELEVANT_GLOBS:
+            if _fnmatch.fnmatch(rel, pat):
+                relevant.append(rel)
+                break
+
+    h = hashlib.sha256()
+    for rel in relevant:
+        path = repo_root / rel
+        try:
+            size = path.stat().st_size if path.exists() else 0
+        except OSError:
+            size = 0
+        h.update(rel.encode("utf-8"))
+        h.update(b"|")
+        h.update(str(size).encode("utf-8"))
+        h.update(b"|")
+        try:
+            if path.is_file() and size < 5_000_000:  # skip huge artifacts
+                h.update(path.read_bytes())
+        except OSError:
+            pass
+        h.update(b"\n")
     return h.hexdigest()[:16]
 
 
@@ -287,11 +411,10 @@ def append_cached_review(
     # Add invoked_at_epoch for fast TTL filtering on read
     row["invoked_at_epoch"] = _utc_epoch()
     serialized = json.dumps(row, sort_keys=True) + "\n"
-    with _cache_lock():
+    with _cache_lock(), cp.open("a", encoding="utf-8") as fh:
         # Append-only - never mutate prior rows (HISTORICAL_PROVENANCE per
         # Catalog #110/#113).
-        with cp.open("a", encoding="utf-8") as fh:
-            fh.write(serialized)
+        fh.write(serialized)
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +583,7 @@ def run_codex_review_for_dispatch(
     timeout_seconds: int = 600,
     cache_path: Path | None = None,
     skip_cache: bool = False,
+    no_cache_for_paid_dispatch: bool = False,
     script_path: str | None = None,
 ) -> CodexReviewResult:
     """Run a pre-dispatch codex adversarial review with caching + cost gate.
@@ -495,14 +619,29 @@ def run_codex_review_for_dispatch(
             elapsed_sec=0.0,
         )
 
-    # Compute cache key
+    # Compute cache key. Catalog #282 — codex bfa2p1uex F2: include
+    # dirty-tree + untracked-relevant fingerprints so working-tree changes in
+    # shared helpers (preflight, runtime, untracked dispatch-critical files)
+    # invalidate the cache. Codex companion is invoked with
+    # ``--scope working-tree``; the cache key MUST mirror that scope.
     git_sha = _git_head_sha(root)
     recipe_sha = _file_sha256(recipe_path)
     trainer_sha = _file_sha256(trainer_path)
-    cache_key = _compute_cache_key(git_sha, recipe_sha, trainer_sha)
+    dirty_fingerprint = _git_dirty_tree_fingerprint(root)
+    untracked_fingerprint = _git_untracked_relevant_fingerprint(root)
+    cache_key = _compute_cache_key(
+        git_sha,
+        recipe_sha,
+        trainer_sha,
+        dirty_tree_fingerprint=dirty_fingerprint,
+        untracked_relevant_fingerprint=untracked_fingerprint,
+    )
 
-    # Cache lookup (unless skip)
-    if not skip_cache:
+    # Cache lookup. Catalog #282 — for paid-dispatch path, skip cache by
+    # default (operator-authorize calls with no_cache_for_paid_dispatch=True
+    # via CLI flag) so a cached approve from minutes ago cannot authorize
+    # a now-different working tree.
+    if not skip_cache and not no_cache_for_paid_dispatch:
         cached = lookup_cached_review(
             cache_key, ttl_seconds=cache_ttl_seconds, cache_path=cache_path,
         )
@@ -536,16 +675,31 @@ def run_codex_review_for_dispatch(
         timeout_seconds=timeout_seconds,
         script_path=script_path,
     )
-    verdict, findings = parse_verdict_from_codex_output(output)
 
-    # Surface non-zero rc as advisory finding (don't promote to blocking
-    # automatically; the verdict parser already classifies severity)
+    # Catalog #281 — codex bfa2p1uex F1: rc-first verdict promotion.
+    # When the companion times out (rc=124), crashes (rc=2), or otherwise
+    # exits nonzero WITHOUT producing a severity-tagged finding the parser
+    # can recognize, the previous logic returned `approve` (because the
+    # bracketed error string lacked CRITICAL/HIGH/LOW tokens), letting paid
+    # dispatch continue with NO actual adversarial review. The fix promotes
+    # nonzero rc to a blocking verdict BEFORE parsing text. Paired-env
+    # bypass per Catalog #199 still applies via check_paired_bypass_env_or_exit.
     if rc != 0:
-        findings.insert(
-            0,
-            f"[codex-companion-rc] non-zero rc={rc} (verdict still classified "
-            f"by content)",
-        )
+        verdict = VERDICT_INVOCATION_ERROR
+        findings = [
+            f"[codex-companion-rc] FAIL-CLOSED nonzero rc={rc} "
+            f"(verdict={VERDICT_INVOCATION_ERROR}; codex review did not "
+            "complete; per Catalog #281 fail-closed-on-companion-failure "
+            "paired-env bypass via OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_"
+            "VERDICT=1 + RATIONALE=<text> if intentional)",
+        ]
+        # If the companion DID surface findings (e.g. partial output before
+        # timeout), preserve them so the operator can still see signal.
+        _, parsed_findings = parse_verdict_from_codex_output(output)
+        if parsed_findings:
+            findings.extend(parsed_findings[:10])
+    else:
+        verdict, findings = parse_verdict_from_codex_output(output)
 
     result = CodexReviewResult(
         verdict=verdict,
@@ -669,6 +823,16 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Bypass cache lookup; always invoke codex",
     )
     parser.add_argument(
+        "--no-cache-for-paid-dispatch",
+        action="store_true",
+        help=(
+            "Disable cache reuse for paid-dispatch path (Catalog #282). "
+            "Set by tools/operator_authorize.py before paid Modal/Lightning "
+            "dispatch so a stale cached approve cannot authorize a "
+            "different working tree."
+        ),
+    )
+    parser.add_argument(
         "--json-out",
         type=Path,
         default=None,
@@ -711,6 +875,7 @@ def main(argv: list[str] | None = None) -> int:
         cache_ttl_seconds=args.cache_ttl_seconds,
         timeout_seconds=args.timeout_seconds,
         skip_cache=args.skip_cache,
+        no_cache_for_paid_dispatch=args.no_cache_for_paid_dispatch,
         cache_path=args.cache_path,
         script_path=args.script_path,
     )
@@ -734,7 +899,11 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
 
-    # Verdict -> exit code
+    # Verdict -> exit code per Catalog #281 fail-closed-on-companion-failure:
+    #   approve / advisory  -> 0 (safe to dispatch)
+    #   needs-attention / no-ship -> 1 (refuse dispatch; findings exist)
+    #   invocation-error -> 2 (refuse dispatch; review did not run)
+    #   bypass active -> 0 (paired-env operator override active)
     if result.verdict in VERDICTS_SAFE:
         return 0
     if bypass_active:
@@ -744,6 +913,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 0
+    if result.verdict == VERDICT_INVOCATION_ERROR:
+        # Distinct exit code so callers (operator_authorize.py) can
+        # distinguish review-did-not-run from review-found-bugs.
+        return 2
     return 1
 
 

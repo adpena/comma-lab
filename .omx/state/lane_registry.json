@@ -29937,6 +29937,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_recovery_1_no_signal_loss_20260515",
+      "name": "RECOVERY-1 no-signal-loss batched commit (operator NON-NEGOTIABLE recover all)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3 commits 8533b7411 (9 files Group A research ledgers), 4a2655795 (5 files Group B canonical helpers + tests), becf34225 (6 files Group C state + Group D dp1 codex artifact); 20 files recovered total; 2 files DEFERRED (CONTENDED operator_authorize.py + gitignored modal_harvest_summary.json) [empirical:.omx/state/commit-serializer.log lines for pid serializer 8533b7411/4a2655795/becf34225]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_recovery_1_no_signal_loss_batched_commit_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_omnibus_bug_class_audit_20260515",
+      "name": "Omnibus bug class audit comprehensive enumeration",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/omnibus_bug_class_audit_matrix_20260515.json \u2014 180 catalog rows enumerated; 174 gate_exists/callable; 140 strict@0; 6 phantom rows (#273-#278); 31 live-count drift; 6 proposed GAP gates"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_omnibus_bug_class_audit_landed_20260515.md (pending write in same commit)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_fix_wave_3_pre_dispatch_codex_review_fail_open_20260515",
+      "name": "Codex bfa2p1uex 3-finding fail-open fix wave (F1/F2/F3)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_codex_review_for_dispatch.py F1+F2 fix; tools/operator_authorize.py F1 rc=2 + F2 --no-cache-for-paid-dispatch wire; commit batch 2026-05-15"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #281/#282/#283 STRICT @ 0; src/tac/preflight.py wired strict=True in preflight_all"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_codex_fix_wave_3_pre_dispatch_codex_review_fail_open_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -29946,5 +30069,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T21:04:54Z"
+  "updated_at": "2026-05-15T21:40:16Z"
 }

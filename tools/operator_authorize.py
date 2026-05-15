@@ -533,6 +533,10 @@ def _run_codex_pre_dispatch_review(
         recipe_path,
         "--estimated-cost-usd",
         f"{estimated_cost_usd:.2f}",
+        # Catalog #282 — codex bfa2p1uex F2 fix: paid-dispatch path MUST NOT
+        # reuse a cached approve from a stale working tree. Codex companion
+        # is invoked with --scope working-tree; the cache key MUST match.
+        "--no-cache-for-paid-dispatch",
     ]
     result = subprocess.run(cmd, cwd=str(REPO_ROOT))
     if result.returncode == 0:
@@ -545,6 +549,21 @@ def _run_codex_pre_dispatch_review(
             "Set OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_VERDICT=1 with paired "
             "OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_RATIONALE=<text> OR fix "
             "the underlying findings."
+        )
+    if result.returncode == 2:
+        # Catalog #281 — codex bfa2p1uex F1 fix: invocation-error means the
+        # codex companion timed out / crashed / exited nonzero with no
+        # severity-tagged findings. The review did NOT complete; refuse paid
+        # dispatch unless paired-env bypass.
+        raise SystemExit(
+            "[operator-authorize] FATAL: codex pre-dispatch review helper "
+            "exited rc=2 (invocation-error per Catalog #281). The codex "
+            "companion timed out, crashed, or otherwise failed to produce "
+            "a review. Refusing paid dispatch BEFORE GPU spend. Either "
+            "diagnose the codex companion failure (timeout / token-refresh / "
+            "node missing) OR set OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_"
+            "VERDICT=1 with paired OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_"
+            "RATIONALE=<text> if intentional."
         )
     raise SystemExit(
         "[operator-authorize] FATAL: codex pre-dispatch adversarial review "
