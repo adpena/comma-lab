@@ -285,3 +285,40 @@ Recovery commands:
 ```
 
 No score claim yet; all four calls were pending on first recovery.
+
+## Shrunk 96x128 Payload Sweep - 2026-05-15
+
+The D1 materializer now supports area-downsampling the harvested real margin
+map before payload regeneration via `--margin-map-resolution HxW`. This is the
+intended D1 rate-axis correction: keep the overlay operational while reducing
+the D1 sidecar from full-grid `384x512` cost to shrunk-grid `96x128` cost.
+
+Command:
+
+```bash
+PYTHONPATH=src .venv/bin/python tools/build_d1_overlay_policy_candidates.py \
+  --d1-bin experiments/results/lane_substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T134005Z__smoke__100ep_modal/harvested_artifacts/d1_polytope.bin \
+  --a1-bin experiments/results/lane_substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T134005Z__smoke__100ep_modal/harvested_artifacts/a1.bin \
+  --output-dir experiments/results/d1_payload_budget_sweep_real_a1_shrunk96_20260515_codex \
+  --policies rgb,green,neg_green,rb_pos_g_neg \
+  --amplitude-scales 1.0 \
+  --sign-policies payload,negate_payload \
+  --payload-budget-bits 8000,20000,50000,100000 \
+  --jacobian-lipschitz 20,10,5,2 \
+  --margin-map-resolution 96x128
+```
+
+Output manifest:
+
+`experiments/results/d1_payload_budget_sweep_real_a1_shrunk96_20260515_codex/d1_overlay_policy_candidates_manifest.json`
+
+Best static-xray rows:
+
+| candidate | bytes | decoded nonzero | integer feasible | est changed bytes / pair | archive sha256 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `d1_overlay_budget_100000_L_2_res_96x128_channel_rgb_amp_1_sign_payload` | 185307 | 12288 | 12069 | 3052008 | `e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab` |
+| `d1_overlay_budget_100000_L_2_res_96x128_channel_green_amp_1_sign_payload` | 185309 | 12288 | 12069 | 1017336 | `9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0` |
+| `d1_overlay_budget_50000_L_2_res_96x128_channel_rgb_amp_1_sign_payload` | 185310 | 12288 | 12069 | 3052008 | `b7dadbd2514fef90ae1963f4f48e5e4ccd6ec4ec675f9092bfc89175670e2b32` |
+
+No score claim. The shrunk candidates dominate the full-grid D1 packets on
+rate (`~185.3 KB` vs `~222.1 KB`) while preserving nonzero overlay diagnostics.

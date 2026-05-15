@@ -187,6 +187,41 @@ def test_d1_policy_builder_can_rebuild_payload_budget_sweep(tmp_path: Path) -> N
     assert parsed.meta["payload_sweep_candidate"] is True
 
 
+def test_d1_policy_builder_can_rebuild_shrunk_margin_resolution(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    out_dir = tmp_path / "out_shrunk"
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "rgb",
+            "--payload-budget-bits",
+            "512",
+            "--jacobian-lipschitz",
+            "1.0",
+            "--margin-map-resolution",
+            "4x4",
+        ]
+    )
+
+    assert rc == 0
+    summary = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")
+    assert summary["margin_map_resolution"] == [4, 4]
+    row = summary["candidates"][0]
+    assert row["margin_map_resolution_override"] == [4, 4]
+    assert "res_4x4" in row["candidate_id"]
+    parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
+    assert (parsed.height, parsed.width) == (4, 4)
+    assert parsed.meta["source_margin_map_resolution"] == [8, 8]
+
+
 def test_d1_policy_builder_rejects_bad_amplitude_scale() -> None:
     module = _load_tool()
     try:

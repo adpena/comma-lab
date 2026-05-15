@@ -139,6 +139,20 @@ def _parse_lipschitz_values(raw: str) -> list[float]:
     return values
 
 
+def _parse_resolution(raw: str) -> tuple[int, int] | None:
+    text = raw.strip().lower()
+    if not text:
+        return None
+    if "x" not in text:
+        raise SystemExit("--margin-map-resolution must be formatted as HxW")
+    h_text, w_text = text.split("x", 1)
+    h = int(h_text)
+    w = int(w_text)
+    if h <= 0 or w <= 0:
+        raise SystemExit(f"margin-map resolution must be positive; got {h}x{w}")
+    return h, w
+
+
 def _scale_slug(scale: float) -> str:
     text = f"{normalize_overlay_amplitude_scale(scale):.6g}"
     return text.replace("-", "m").replace(".", "p")
@@ -155,6 +169,7 @@ def _candidate_id(
     sign_policy: str,
     payload_budget_bits: int | None,
     jacobian_lipschitz: float | None,
+    margin_map_resolution: tuple[int, int] | None,
 ) -> str:
     prefix = "d1_overlay"
     if payload_budget_bits is not None and jacobian_lipschitz is not None:
@@ -162,6 +177,8 @@ def _candidate_id(
             f"_budget_{int(payload_budget_bits)}"
             f"_L_{_value_slug(float(jacobian_lipschitz))}"
         )
+    if margin_map_resolution is not None:
+        prefix += f"_res_{margin_map_resolution[0]}x{margin_map_resolution[1]}"
     return (
         f"{prefix}_channel_{channel_policy}"
         f"_amp_{_scale_slug(amplitude_scale)}"
@@ -177,15 +194,30 @@ def _rebuilt_payload_source(
     base_bytes: int,
     payload_budget_bits: int,
     jacobian_lipschitz: float,
+    margin_map_resolution: tuple[int, int] | None,
 ) -> bytes:
     import torch
+    import torch.nn.functional as F
 
     margin_map = torch.from_numpy(source.margin_map_float())
+    target_resolution = margin_map_resolution or (source.height, source.width)
+    if tuple(margin_map.shape) != tuple(target_resolution):
+        margin_map = (
+            F.interpolate(
+                margin_map.unsqueeze(0).unsqueeze(0).float(),
+                size=target_resolution,
+                mode="area",
+            )
+            .squeeze(0)
+            .squeeze(0)
+            .clamp_min(0.0)
+            .contiguous()
+        )
     cfg = D1PolytopeConfig(
         base_substrate_id=source.base_substrate_id,
         margin_map_mode=str(source.meta.get("margin_map_mode", "segnet_top1_minus_top2")),
         polytope_payload_bits=int(payload_budget_bits),
-        margin_map_resolution=(source.height, source.width),
+        margin_map_resolution=target_resolution,
         margin_map_int8_scale=float(source.meta.get("margin_map_int8_scale", 127.0)),
         jacobian_lipschitz=float(jacobian_lipschitz),
         margin_threshold=float(source.meta.get("margin_threshold", 0.1)),
@@ -212,6 +244,7 @@ def _rebuilt_payload_source(
                 source.meta.get("polytope_payload_bits", 0)
             ),
             "source_jacobian_lipschitz": float(source.jacobian_lipschitz),
+            "source_margin_map_resolution": [source.height, source.width],
         },
     )
 
@@ -259,6 +292,14 @@ def _build_parser() -> argparse.ArgumentParser:
             "is set."
         ),
     )
+    parser.add_argument(
+        "--margin-map-resolution",
+        default="",
+        help=(
+            "Optional payload-rebuild resolution formatted as HxW, for example "
+            "96x128. Uses area downsample from the source margin map."
+        ),
+    )
     return parser
 
 
@@ -279,6 +320,12 @@ def main(argv: list[str] | None = None) -> int:
     sign_policies = _parse_sign_policies(args.sign_policies)
     payload_budgets = _parse_budget_bits(args.payload_budget_bits)
     lipschitz_values = _parse_lipschitz_values(args.jacobian_lipschitz)
+    margin_map_resolution = _parse_resolution(args.margin_map_resolution)
+    if margin_map_resolution and not payload_budgets:
+        raise SystemExit(
+            "--margin-map-resolution requires --payload-budget-bits so the "
+            "payload can be rebuilt"
+        )
     if payload_budgets and not lipschitz_values:
         lipschitz_values = [float(source.jacobian_lipschitz)]
     if lipschitz_values and not payload_budgets:
@@ -302,6 +349,7 @@ def main(argv: list[str] | None = None) -> int:
                             base_bytes=len(a1_bytes),
                             payload_budget_bits=int(budget_bits),
                             jacobian_lipschitz=float(lipschitz),
+                            margin_map_resolution=margin_map_resolution,
                         ),
                     )
                 )
@@ -316,6 +364,7 @@ def main(argv: list[str] | None = None) -> int:
                         sign_policy=sign_policy,
                         payload_budget_bits=payload_budget_bits,
                         jacobian_lipschitz=jacobian_lipschitz,
+                        margin_map_resolution=margin_map_resolution,
                     )
                     candidate_root = args.output_dir / candidate_id
                     submission_dir = candidate_root / "submission_dir"
@@ -362,6 +411,11 @@ def main(argv: list[str] | None = None) -> int:
                         "d1_bin_sha256": _sha256_bytes(d1_variant),
                         "payload_budget_bits": payload_budget_bits,
                         "jacobian_lipschitz_override": jacobian_lipschitz,
+                        "margin_map_resolution_override": (
+                            list(margin_map_resolution)
+                            if margin_map_resolution is not None
+                            else None
+                        ),
                         "d1_meta_policy_tuple": {
                             "overlay_channel_policy": parsed_variant.meta.get(
                                 "overlay_channel_policy"
@@ -401,6 +455,9 @@ def main(argv: list[str] | None = None) -> int:
         "sign_policies": sign_policies,
         "payload_budget_bits": payload_budgets,
         "jacobian_lipschitz_values": lipschitz_values,
+        "margin_map_resolution": (
+            list(margin_map_resolution) if margin_map_resolution is not None else None
+        ),
         "policy_count": len(rows),
         "candidates": rows,
         "score_claim": False,
