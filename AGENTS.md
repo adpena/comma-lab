@@ -574,6 +574,104 @@ Subagents and codex-spawned helpers must inherit these four constituencies
 in their commits — review their output for OSS hygiene, ledger entries,
 production fitness, and composability hooks before promoting.
 
+## How To Design A New Substrate (UNIQUE-AND-COMPLETE-PER-METHOD)
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable
+(2026-05-15). Default mode for every new substrate / codec / method /
+composition is UNIQUE-AND-COMPLETE-PER-METHOD: the question is not "how do I
+share with the canonical helper" but "what is the OPTIMAL ENGINEERING for THIS
+specific method to achieve the lowest score possible." Canonical helpers are
+TOOLS available for use when they serve. They are NOT OBLIGATIONS to extend
+or share with by default.
+
+### Why the default flipped
+
+The 18-assumption audit
+(`feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md`)
+empirically established that 90%+ of substrates share 18 structural
+assumptions (EMA 100% / archive.zip 100% / eval_roundtrip 97% / canonical
+scorer-preprocess 97% / canonical auth_eval routing 97% / Tier-1 engineering
+78-100% / etc.). The variance between substrates IS the variance of the 10%
+NOT shared. The 0.196-0.199 cluster was the local-minimum produced by the
+SHARED 90% — a flat plateau where every "new substrate" was structurally a
+variation of the SAME implementation under different names. The
+canonical-helper-share + META-layer-consolidation reflexes were structurally
+suppressing substrate-optimal engineering. PR 95 winners did not have a
+270-catalog META layer constraining them; they had focused unique-and-complete
+implementations bound into single coherent packets reviewable in 30 seconds
+(PR101 = 605 LOC total).
+
+### The decision flowchart (the falling-rule list)
+
+```
+substrate X considering canonical helper Y?
+├── EMPIRICAL: paired-comparison smoke run? ($5-15)
+│   ├── YES → adopt the lower-scoring path (canonical OR unique)
+│   └── NO ↓
+├── PRINCIPLED: does Y's design assumption fit X's mathematical structure?
+│   ├── YES (no obvious mismatch) → adopt canonical (default)
+│   ├── NO (clear mathematical mismatch) → fork to UNIQUE-AND-DISTINCT
+│   └── UNCLEAR → run paired-comparison smoke OR fork with explicit rationale
+└── COUNCIL: when unsure + cost > $20 design work, summon council per
+    CLAUDE.md "Design decisions — non-negotiable"
+```
+
+### Size budget guidance per HNeRV parity discipline lesson 7
+
+- **Bolt-ons** share patterns and obey the ≤350 LOC budget per landing.
+  Bolt-ons happen many times across substrates.
+- **Substrate engineering** unique-ifies and may exceed the bolt-on size
+  budget. Substrate engineering happens ONCE per architecture class.
+- Treating substrate engineering like a bolt-on is the structural mistake
+  the operator's 2026-05-15 retrospective named.
+
+### Mandatory design memo discipline
+
+Every substrate scaffold landing memo dated >= 2026-05-15 MUST include a
+literal section header `## Canonical-vs-unique decision per layer` enforced
+by Catalog #290. Inside the section, list every canonical helper / META
+layer field / engineering pattern adoption decision per the falling-rule
+above (one row per layer: scorer-preprocess, auth-eval routing, archive
+grammar, inflate runtime, training curriculum, Tier-1 engineering, scorer
+routing, score-aware loss). For each row, name the canonical, name the
+substrate's choice (ADOPT or FORK), and give a one-line rationale
+referencing either an empirical paired smoke OR a principled mathematical
+mismatch OR an explicit "UNCLEAR — defaulted to canonical / forked with
+council review" tag. Sister to the existing 6-hook wire-in declaration per
+Catalog #125.
+
+### Canonical worked example — STC-DASHER scaffold
+
+The STC-DASHER scaffold v1 (`feedback_stc_dasher_scaffold_v1_arithmetic_maximalism_landed_20260515.md`)
+is the canonical worked example of the share-vs-unique balance. STC-DASHER
+keeps canonical math primitives (arithmetic coding helper, scorer-preprocess,
+fcntl-locked state writes) shareable because they obey the falling-rule list's
+"obvious-fit" branch — there is no plausible substrate-class reason to fork
+fcntl-based ledger writes. STC-DASHER's codec envelope (the syndrome-trellis
+encoder + Dasher-style symbol model + Filler's MaxStego loss) is intentionally
+unique-and-distinct because the substrate's mathematical structure is steno-
+graphic embedding under a contest-CUDA decoder constraint, which the canonical
+codec helpers (Ballé hyperprior + STE entropy + cooperative-receiver loss) do
+NOT serve. The design memo's `## Canonical-vs-unique decision per layer`
+section should make this split explicit row-by-row.
+
+### Cross-references
+
+- CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode — NON-NEGOTIABLE,
+  HIGHEST EMPHASIS" (the binding contract).
+- CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" (substrate-
+  level PR 95 lesson; the META extension lives in the new section above).
+- CLAUDE.md FORBIDDEN PATTERNS "Forbidden force-canonical-without-evaluation-
+  of-suppression (the canonicalization-trap)".
+- Catalog #290 (`check_substrate_design_memo_has_canonical_vs_unique_decision_section`)
+  — the structural enforcement.
+- `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md`
+  — the principle.
+- `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md`
+  — the historical depth + retrospective acknowledgment.
+- `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md`
+  — the 18-assumption matrix + 10 NSCS substrate-class shifts.
+
 ## Beauty, Simplicity, And Developer Experience
 
 Beauty and elegance are engineering constraints here, not decoration. Prefer

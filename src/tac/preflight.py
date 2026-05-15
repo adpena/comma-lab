@@ -2293,6 +2293,15 @@ def preflight_all(
         check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
             strict=True, verbose=verbose,
         )
+        # KNOWLEDGE-PRESERVATION-WAVE (#290): substrate scaffold landing memos
+        # dated >= 2026-05-15 must contain the literal section header
+        # ``## Canonical-vs-unique decision per layer`` so reviewers can
+        # audit which canonical helpers were adopted vs forked. Initial wire-
+        # in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" because
+        # in-flight scaffolds may predate the new contract.
+        check_substrate_design_memo_has_canonical_vs_unique_decision_section(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -60970,6 +60979,212 @@ def check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
             "--expected-content-sha256 flag on rc=4 retry) is the WAVE-D "
             "2c957c31e root cause; this gate refuses repository state where "
             "the pattern recurs.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #290 - check_substrate_design_memo_has_canonical_vs_unique_decision_section
+#
+# KNOWLEDGE-PRESERVATION-WAVE 2026-05-15 self-protection per operator NON-
+# NEGOTIABLE *"Save related memory and knowledge and instructions to prevent
+# and make us smarter than ever and more capable and rigorous"* + retrospective
+# *"this has been a huge problem since the beginning of the competition and
+# prevented us from actually building original implementations because you
+# didn't understand me and didn't understand the domain and problem space well
+# enough at the time but we learned from PR 95 and just learned the same lesson
+# again but across the entire contest and submission"*.
+#
+# Anchor memos:
+#   - feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md
+#   - feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md
+#   - feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md
+#
+# Refuses substrate scaffold landing memos under
+# ``~/.claude/projects/-Users-adpena-Projects-pact/memory/`` whose filename
+# matches one of:
+#   - ``feedback_*substrate*scaffold*landed_<YYYYMMDD>.md``
+#   - ``feedback_nscs<N>_landed_<YYYYMMDD>.md``
+#   - ``feedback_*substrate*v[0-9]+*landed_<YYYYMMDD>.md``
+# AND whose date suffix is >= 2026-05-15 (this directive's date), AND whose
+# body does NOT contain the literal section header
+# ``## Canonical-vs-unique decision per layer`` (case-insensitive).
+#
+# Bug class: pre-rule, NEW substrate scaffolds inherited canonical helpers +
+# META layer + shared engineering scaffold by default. Variance between
+# substrates was the variance of the 10% NOT shared. The 0.196-0.199 cluster
+# was what the SHARED 90% produced — a flat plateau encoded by my reflex
+# toward canonical-helper-share. Per the new "UNIQUE-AND-COMPLETE-PER-METHOD"
+# CLAUDE.md non-negotiable, every substrate scaffold design memo MUST document
+# explicit per-layer canonical-vs-unique decisions so a reviewer can audit
+# whether the substrate's optimal score path was suppressed by reflex
+# canonicalization. The literal section header is the single structural
+# requirement; the section's body content is the operator-facing audit
+# surface.
+#
+# Acceptance: pre-cutoff memos exempt by date filter; post-cutoff memos with
+# the literal section header pass; post-cutoff substrate scaffold memos
+# without the header are flagged. Memos that are neither substrate-scaffold
+# nor NSCS naming are out-of-scope by filename filter.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — the live
+# count at landing is likely > 0 because 4 in-flight + just-completed
+# scaffolds (STC-DASHER + ATW-CODEC + WUNDERKIND-G1-ENTROPY + U-DIE-KL) plus
+# any sister-subagent NSCS scaffolds may be missing the section header.
+# Strict-flip planned after the next backfill wave.
+#
+# Sister of:
+#   - Catalog #220 (substrate L1 scaffold operational mechanism declaration —
+#     same META class at the runtime-effect surface; #290 catches the
+#     design-memo-discipline surface)
+#   - Catalog #229 (premise-verification-before-edit — same per-memo
+#     discipline pattern at the verification surface)
+#   - Catalog #241 (substrate META layer contract — encodes the canonical
+#     fields; #290 forces the design memo to document why each canonical
+#     was adopted vs forked)
+# ============================================================================
+
+import re as _re_check_290
+
+
+# Cutoff date suffix; memos dated before this are exempt.
+_CHECK_290_CUTOFF_DATE_SUFFIX_INT = 20260515
+
+# Literal section header (case-insensitive substring match).
+_CHECK_290_REQUIRED_SECTION_HEADER = "## canonical-vs-unique decision per layer"
+
+# Filename patterns scoping which memos are subject to this gate.
+# Matches: feedback_*substrate*scaffold*landed_<YYYYMMDD>.md
+#          feedback_nscs<digits>_landed_<YYYYMMDD>.md
+#          feedback_*substrate*v<digits>*landed_<YYYYMMDD>.md
+_CHECK_290_SUBSTRATE_SCAFFOLD_FILENAME_RE = _re_check_290.compile(
+    r"^feedback_.*substrate.*scaffold.*landed_(\d{8})\.md$",
+    _re_check_290.IGNORECASE,
+)
+_CHECK_290_NSCS_FILENAME_RE = _re_check_290.compile(
+    r"^feedback_nscs\d+.*landed_(\d{8})\.md$",
+    _re_check_290.IGNORECASE,
+)
+_CHECK_290_SUBSTRATE_V_N_FILENAME_RE = _re_check_290.compile(
+    r"^feedback_.*substrate.*_v\d+.*landed_(\d{8})\.md$",
+    _re_check_290.IGNORECASE,
+)
+
+
+def _check_290_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    for regex in (
+        _CHECK_290_SUBSTRATE_SCAFFOLD_FILENAME_RE,
+        _CHECK_290_NSCS_FILENAME_RE,
+        _CHECK_290_SUBSTRATE_V_N_FILENAME_RE,
+    ):
+        m = regex.match(filename)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _check_290_default_memory_dir() -> Path:
+    """Default memory directory location for the operator."""
+    return Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
+
+
+def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
+    *,
+    memory_dir: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #290 — refuse substrate scaffold landing memos missing the
+    canonical-vs-unique decision section.
+
+    Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-
+    negotiable. Every substrate scaffold landing memo dated >= 2026-05-15 MUST
+    contain the literal section header
+    ``## Canonical-vs-unique decision per layer`` (case-insensitive) so the
+    operator and future agents can audit which canonical helpers were adopted
+    vs forked AND why. The historical mistake (operator's retrospective): the
+    reflex toward canonicalization was the structural cause of the 0.1928
+    cluster.
+
+    Acceptance:
+    - Pre-cutoff memos (date < 2026-05-15) are exempt by date filter.
+    - In-scope memos with the literal header pass.
+    - In-scope memos without the header are flagged.
+    - Memos that are neither substrate-scaffold nor NSCS naming are out-of-
+      scope by filename filter.
+
+    Sister of Catalog #220 (substrate L1 operational mechanism) + Catalog
+    #229 (premise-verification-before-edit) + Catalog #241 (substrate META
+    layer contract).
+
+    Memory: ``feedback_knowledge_preservation_pr95_meta_level_lesson_landed_20260515.md``.
+    Lane: ``lane_knowledge_preservation_pr95_meta_level_lesson_20260515``.
+    """
+    if memory_dir is None:
+        target = _check_290_default_memory_dir()
+    elif isinstance(memory_dir, str):
+        target = Path(memory_dir)
+    else:
+        target = memory_dir
+
+    if not target.is_dir():
+        return []
+
+    violations: list[str] = []
+    try:
+        candidates = sorted(target.iterdir())
+    except OSError:
+        return []
+
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_290_in_scope(entry.name)
+        if date_int is None:
+            continue  # filename not in scope
+        if date_int < _CHECK_290_CUTOFF_DATE_SUFFIX_INT:
+            continue  # pre-cutoff memos exempt
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _CHECK_290_REQUIRED_SECTION_HEADER in body.lower():
+            continue
+        violations.append(
+            f"{entry.name}: substrate scaffold memo dated {date_int} is "
+            "missing the required '## Canonical-vs-unique decision per layer' "
+            "section header (case-insensitive). Per CLAUDE.md "
+            "'UNIQUE-AND-COMPLETE-PER-METHOD operating mode' non-negotiable: "
+            "every substrate scaffold landing memo dated >= 2026-05-15 MUST "
+            "document per-layer canonical-vs-unique decisions so a reviewer "
+            "can audit whether the substrate's optimal score path was "
+            "suppressed by reflex canonicalization."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_design_memo_has_canonical_vs_unique_decision_section] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_design_memo_has_canonical_vs_unique_decision_section] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_design_memo_has_canonical_vs_unique_decision_section "
+            f"found {len(violations)} substrate scaffold memo(s) missing the "
+            "required '## Canonical-vs-unique decision per layer' section. "
+            "Per CLAUDE.md 'UNIQUE-AND-COMPLETE-PER-METHOD operating mode' + "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "non-negotiables. Catalog #290 (KNOWLEDGE-PRESERVATION-WAVE; "
+            "sister of Catalog #220 + #229 + #241).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
