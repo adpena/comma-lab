@@ -207,6 +207,7 @@ def _write_terminal_claim(
     job_id: str = "job-a",
     archive_sha256: str = "0" * 64,
     runtime_tree_sha256: str | None = None,
+    terminal_status: str = "completed_contest_cuda_score=0.209",
 ) -> None:
     runtime_note = (
         f" runtime_tree_sha256={runtime_tree_sha256}"
@@ -219,7 +220,7 @@ def _write_terminal_claim(
     )
     terminal_row = (
         f"| 2026-05-08T00:00:00Z | codex | {lane_id} | lightning | {job_id} | "
-        "2026-05-08T00:00Z | completed_contest_cuda_score=0.209 | "
+        f"2026-05-08T00:00Z | {terminal_status} | "
         f"A++ archive_sha256={archive_sha256}{runtime_note} |\n"
     )
     path.write_text(
@@ -229,6 +230,17 @@ def _write_terminal_claim(
         + active_row,
         encoding="utf-8",
     )
+
+
+def _rewrite_auth_score(path: Path, target_score: float) -> None:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    archive_bytes = int(payload["archive_size_bytes"])
+    rate_term = 25 * archive_bytes / 37_545_489
+    payload["avg_posenet_dist"] = 0.0
+    payload["avg_segnet_dist"] = (target_score - rate_term) / 100
+    payload["canonical_score"] = target_score
+    payload["score_recomputed_from_components"] = target_score
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def test_pre_submission_check_passes_strict_happy_path(tmp_path: Path) -> None:
@@ -312,6 +324,100 @@ def test_pre_submission_check_contest_final_requires_cpu_auth_eval_json(
 
     assert not report["passed"]
     assert "contest_cpu_auth_eval_exists" in _failed_check_names(report)
+
+
+def test_contest_final_rejects_cuda_score_above_operator_threshold(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    _rewrite_auth_score(
+        tmp_path / "submission" / "contest_auth_eval.json",
+        0.1920513168811056,
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert "auth_eval_score_at_or_below_submission_threshold" in _failed_check_names(report)
+
+
+def test_contest_final_rejects_cpu_axis_score_above_operator_threshold(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    _rewrite_auth_score(
+        tmp_path / "submission" / "contest_cpu_auth_eval.json",
+        0.1920513168811056,
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+        terminal_status="completed_contest_cpu_score=0.1920513168811056",
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--submission-score-axis",
+                "contest_cpu",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    assert not report["passed"]
+    assert (
+        "contest_cpu_auth_eval_score_at_or_below_submission_threshold"
+        in _failed_check_names(report)
+    )
 
 
 def test_pre_submission_check_contest_final_rejects_bad_cpu_pair(

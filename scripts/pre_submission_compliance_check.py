@@ -55,6 +55,8 @@ from experiments.contest_auth_eval import (  # noqa: E402
 
 ORIGINAL_VIDEO_BYTES = 37_545_489
 SCHEMA = "pre_submission_compliance_check_v1"
+DEFAULT_MAX_SUBMISSION_SCORE = 0.192
+SUBMISSION_SCORE_AXIS_CHOICES = ("contest_cuda", "contest_cpu")
 PACKED_PAYLOAD_MEMBER_NAMES = ("p", "renderer_payload.bin", "renderer_payload.bin.br")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 TERMINAL_DISPATCH_STATUS_PREFIXES = tuple(CLAIM_TERMINAL_PREFIXES)
@@ -62,6 +64,10 @@ SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES = (
     "completed_contest_cuda",
     "completed_exact_cuda",
     "completed_cuda_auth_eval",
+)
+SUCCESSFUL_CPU_EVAL_TERMINAL_STATUS_PREFIXES = (
+    "completed_contest_cpu",
+    "completed_modal_cpu_auth_eval",
 )
 PRIVATE_SURFACE_RE = re.compile(
     r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
@@ -147,6 +153,18 @@ def _score(seg_dist: float, pose_dist: float, archive_bytes: int) -> float:
 
 def _rate_from_archive_bytes(archive_bytes: int) -> float:
     return archive_bytes / ORIGINAL_VIDEO_BYTES
+
+
+def _score_for_submission_gate(
+    *,
+    record_score: float | None,
+    strict_formula: dict[str, Any] | None,
+) -> tuple[float | None, str]:
+    if strict_formula and strict_formula.get("score") is not None:
+        return float(strict_formula["score"]), "strict_formula"
+    if record_score is not None:
+        return float(record_score), "auth_eval_record"
+    return None, "missing"
 
 
 def unsafe_zip_name(name: str) -> str | None:
@@ -994,6 +1012,29 @@ def inspect_auth_eval(
                 math.isfinite(recomputed),
                 f"strict={recomputed} record={record.score} delta={score_delta}",
             )
+        gate_score, gate_score_source = _score_for_submission_gate(
+            record_score=float(record.score),
+            strict_formula=strict_formula,
+        )
+        _add(
+            checks,
+            "auth_eval_selected_axis_matches_submission_gate",
+            (not args.contest_final)
+            or args.submission_score_axis != "contest_cuda"
+            or record.score_axis == "contest_cuda",
+            f"selected_axis={args.submission_score_axis} record_axis={record.score_axis}",
+        )
+        _add(
+            checks,
+            "auth_eval_score_at_or_below_submission_threshold",
+            (not args.contest_final)
+            or args.submission_score_axis != "contest_cuda"
+            or (gate_score is not None and gate_score <= args.max_submission_score),
+            (
+                f"selected_axis={args.submission_score_axis} score={gate_score} "
+                f"source={gate_score_source} threshold={args.max_submission_score}"
+            ),
+        )
         _add(
             checks,
             "auth_eval_t4_equivalent",
@@ -1083,6 +1124,9 @@ def inspect_contest_cpu_auth_eval(
     cuda_auth_eval: dict[str, Any],
     *,
     required: bool,
+    contest_final: bool = False,
+    selected_axis: str = "contest_cuda",
+    max_submission_score: float = DEFAULT_MAX_SUBMISSION_SCORE,
 ) -> tuple[dict[str, Any], list[Check]]:
     checks: list[Check] = []
     exists = path.is_file()
@@ -1150,6 +1194,23 @@ def inspect_contest_cpu_auth_eval(
 
     if record is not None:
         linux_x86_64 = _payload_is_linux_x86_64(payload)
+        strict_formula: dict[str, Any] | None = None
+        if (
+            record.avg_segnet_dist is not None
+            and record.avg_posenet_dist is not None
+            and archive_bytes is not None
+        ):
+            recomputed = _score(record.avg_segnet_dist, record.avg_posenet_dist, int(archive_bytes))
+            strict_formula = {
+                "basis": "contest_cpu_auth_eval_components_plus_exact_archive_bytes",
+                "score": recomputed,
+                "report_reconstructed_score": float(record.score),
+                "score_delta_vs_report_reconstruction": recomputed - float(record.score),
+                "archive_rate_unscaled": _rate_from_archive_bytes(int(archive_bytes)),
+                "avg_segnet_dist": record.avg_segnet_dist,
+                "avg_posenet_dist": record.avg_posenet_dist,
+                "archive_bytes": int(archive_bytes),
+            }
         _add(
             checks,
             "contest_cpu_auth_eval_full_600_samples",
@@ -1216,6 +1277,29 @@ def inspect_contest_cpu_auth_eval(
                 f"{payload.get('cpu_leaderboard_reproduction_eligible')}"
             ),
         )
+        gate_score, gate_score_source = _score_for_submission_gate(
+            record_score=float(record.score),
+            strict_formula=strict_formula,
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_selected_axis_matches_submission_gate",
+            (not contest_final)
+            or selected_axis != "contest_cpu"
+            or record.score_axis == "contest_cpu",
+            f"selected_axis={selected_axis} record_axis={record.score_axis}",
+        )
+        _add(
+            checks,
+            "contest_cpu_auth_eval_score_at_or_below_submission_threshold",
+            (not contest_final)
+            or selected_axis != "contest_cpu"
+            or (gate_score is not None and gate_score <= max_submission_score),
+            (
+                f"selected_axis={selected_axis} score={gate_score} "
+                f"source={gate_score_source} threshold={max_submission_score}"
+            ),
+        )
 
     cpu_runtime_candidates = _payload_runtime_candidate_values(payload)
     cuda_runtime_candidates = _auth_runtime_candidates(cuda_auth_eval)
@@ -1241,6 +1325,7 @@ def inspect_contest_cpu_auth_eval(
         "exists": True,
         "required": required,
         "record": asdict(record) if record else None,
+        "strict_formula": strict_formula if record else None,
         "runtime_tree_candidates": _runtime_tree_candidates(payload),
         "runtime_tree_pruned_candidates": _pruned_runtime_tree_candidates(payload),
     }, checks
@@ -1349,6 +1434,7 @@ def inspect_dispatch_claims(
     job_id: str | None,
     *,
     require_successful_exact_eval_terminal: bool = False,
+    selected_axis: str = "contest_cuda",
     expected_archive_sha256: str | None = None,
     expected_runtime_tree_sha256: str | None = None,
 ) -> tuple[dict[str, Any], list[Check]]:
@@ -1423,9 +1509,14 @@ def inspect_dispatch_claims(
         ),
     )
     if require_successful_exact_eval_terminal:
+        successful_prefixes = (
+            SUCCESSFUL_CPU_EVAL_TERMINAL_STATUS_PREFIXES
+            if selected_axis == "contest_cpu"
+            else SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES
+        )
         successful_terminal = bool(
             latest_matching_status
-            and latest_matching_status.startswith(SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES)
+            and latest_matching_status.startswith(successful_prefixes)
         )
         _add(
             checks,
@@ -1433,7 +1524,8 @@ def inspect_dispatch_claims(
             successful_terminal,
             (
                 f"lane_id={lane_id} job_id={job_id} matching_rows={matching_rows} "
-                f"latest_matching_status={latest_matching_status!r}"
+                f"latest_matching_status={latest_matching_status!r} "
+                f"selected_axis={selected_axis}"
             ),
         )
         expected_sha = (expected_archive_sha256 or "").lower()
@@ -1749,6 +1841,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--require-t4-equivalent", action="store_true")
     parser.add_argument("--require-submission-runtime-match", action="store_true")
     parser.add_argument("--contest-final", action="store_true")
+    parser.add_argument(
+        "--submission-score-axis",
+        choices=SUBMISSION_SCORE_AXIS_CHOICES,
+        default="contest_cuda",
+        help=(
+            "Axis that the packet is being considered for. CPU submissions are "
+            "contest-eligible only when the packet is explicitly gated as "
+            "contest_cpu and carries matching CPU auth-eval custody."
+        ),
+    )
+    parser.add_argument(
+        "--max-submission-score",
+        type=float,
+        default=DEFAULT_MAX_SUBMISSION_SCORE,
+        help="Hard final-packet score ceiling for the selected axis.",
+    )
     parser.add_argument("--expect-single-member")
     parser.add_argument("--expected-archive-sha256")
     parser.add_argument("--expected-archive-size-bytes", type=int)
@@ -1772,7 +1880,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def build_report(args: argparse.Namespace) -> dict[str, Any]:
     if args.contest_final:
         args.require_auth_eval = True
-        args.require_t4_equivalent = True
+        args.require_t4_equivalent = args.submission_score_axis == "contest_cuda"
         args.require_submission_runtime_match = True
 
     submission_dir = args.submission_dir
@@ -1826,7 +1934,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         cpu_auth_path,
         archive,
         auth_record,
-        required=args.contest_final or args.contest_cpu_auth_eval_json is not None,
+        required=(
+            args.contest_final
+            or args.contest_cpu_auth_eval_json is not None
+            or args.submission_score_axis == "contest_cpu"
+        ),
+        contest_final=args.contest_final,
+        selected_axis=args.submission_score_axis,
+        max_submission_score=args.max_submission_score,
     )
     sections["contest_cpu_auth_eval"] = cpu_auth_record
     checks.extend(cpu_auth_checks)
@@ -1879,6 +1994,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         args.expected_lane_id,
         args.expected_job_id,
         require_successful_exact_eval_terminal=args.contest_final,
+        selected_axis=args.submission_score_axis,
         expected_archive_sha256=archive.get("sha256") if args.contest_final else None,
         expected_runtime_tree_sha256=(
             (args.expected_runtime_tree_sha256 or runtime_record.get("runtime_tree_sha256"))
