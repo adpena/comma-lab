@@ -1,18 +1,15 @@
 schema_version: 1
 name: substrate_z4_cooperative_receiver_loss_modal_t4_dispatch
 lane_id: lane_z4_cooperative_receiver_loss_step2_20260514
-# CANONICALIZE-SUBSTRATE-CONTEST-CHAIN-SUBAGENT 2026-05-15: Z4 trainer's
-# `_full_main` raises NotImplementedError pending Phase 2 council approval
-# (experiments/train_substrate_z4_cooperative_receiver_loss.py:314). Per CLAUDE.md
-# "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog #220, the
-# recipe MUST be tagged research_only=true so the contest-CUDA chain audit
-# (tools/local_pre_deploy_check.py + Catalog candidate gate) recognizes it as
-# transparently non-dispatchable. Removing this flag without first lifting the
-# NotImplementedError WILL result in Modal dispatch crashing pre-auth-eval
-# (Z3 v2 fc-01KRNHWD6AEMWGDJXBEY8GM0P3 bug class).
-research_only: true
-dispatch_blockers:
-  - phase_2_council_approval_required_to_lift_full_main_NotImplementedError
+# OPERATOR AUTHORIZED 2026-05-15: Phase 2 Council 11/11 unanimous LIFT verdict
+# (feedback_z4_z5_phase_2_council_deliberation_landed_20260515.md). Z4
+# trainer's `_full_main` is now implemented per Hotz-glue canonical-helpers
+# pattern (~390 LOC; reuses trainer_skeleton + score_aware_common +
+# smoke_auth_eval_gate). Contrarian + Fridrich binding stipulation: paired
+# `--lambda-pixel` ablation [0.0, 1.0] disambiguates Atick-Redlich
+# cooperative-receiver vs marginal-gradient-alignment hypotheses.
+smoke_only: false
+smoke_validation_contract: contest_cuda_auth_eval_v1
 summary: |
   Z4 cooperative-receiver loss substrate (Time-Traveler L5 staircase Step 2)
   per `.omx/research/campaign_z4_cooperative_receiver_loss_20260514.md` and
@@ -64,6 +61,7 @@ cost_band:
   epochs: 200
   all_flags_on: true
   hand_calibrated_fallback_p50_usd: 0.50
+  estimated_usd_max: 10.00
   platform_key: modal
   gpu_key: T4
 
@@ -145,6 +143,7 @@ env_overrides:
   Z4_GAMMA_POSE: "3.1622776601683795"
   Z4_ENABLE_AUTOCAST_FP16: "false"
   LOCAL_CUDA_WORKER: "1"
+  SMOKE_ONLY: "0"
 
 dependencies:
   - scripts/remote_lane_substrate_z4_cooperative_receiver_loss.sh
@@ -153,14 +152,15 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  Z4 first-anchor dispatch recipe — REQUIRES PHASE 2 COUNCIL APPROVAL.
+  Z4 first-anchor dispatch recipe — Phase 2 Council 11/11 unanimous LIFT
+  2026-05-15 (feedback_z4_z5_phase_2_council_deliberation_landed_20260515.md).
 
-  The _full_main body is currently NotImplementedError("Phase 2 council
-  approval required") per CLAUDE.md "Design decisions — non-negotiable":
-  loss-only intervention on top of A1+Z3 substrate is a council-grade
-  tradeoff because the predicted [0.180, 0.188] band overlaps Z3's
-  [0.188, 0.193] within tolerance. The council deliberation IS the test
-  of whether to allocate $5 GPU to disambiguate.
+  The _full_main body is now implemented per Hotz-glue canonical-helpers
+  pattern (~390 LOC; reuses trainer_skeleton + score_aware_common +
+  smoke_auth_eval_gate; no reinvention). Contrarian + Fridrich binding
+  stipulation: paired `--lambda-pixel` ablation [0.0, 1.0] disambiguates
+  Atick-Redlich cooperative-receiver vs marginal-gradient-alignment
+  hypotheses.
 
   Stage 0B smoke ($0.50 Modal T4) is the gating empirical test:
   - Archive bytes in [50_000, 200_000] AND smoke roundtrip passes → smoke green
