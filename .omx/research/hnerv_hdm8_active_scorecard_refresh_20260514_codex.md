@@ -54,3 +54,33 @@ surface the Modal uploaded-runtime hash explicitly.
 
 Result: `PASS (17 rows, 3 payload groups, 51 follow-up targets, internal score-lowering=PR106-R2-HDM8-HLM2-XMEMBER (0.20636166502462222))`.
 
+## 2026-05-15 Supersession: Format-0x05 Fixed-Meta Sidecar
+
+The same HDM8/HLM2 decoded-frame surface was re-emitted through the
+runtime-supported PR106 sidecar format `0x05`, replacing the older no-op
+format `0x02` sidecar framing.
+
+- label: `PR106-R2-HDM8-HLM2-XMEMBER`
+- score: `0.2063556722940441`
+- archive bytes: `186386`
+- archive SHA-256:
+  `9a8e7c4e09572586bac0c1ae425400267ae65b70c918a1c9d13a4ddb08f05adc`
+- auth eval JSON:
+  `experiments/results/modal_auth_eval/pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515T002100Z/contest_auth_eval.json`
+- Modal call id: `fc-01KRMG33DAJCD3YZAZQTK1VA4K`
+- eval JSON sha256:
+  `f522e276260b1634eb95b380e66b3f4df46ab2ade9b6a28bca250ea3e3bf02f2`
+- result JSON sha256:
+  `a417a34a29b3102ce70377d3d8d2fc74fda624000c3cb14ee7d860f11d533fb7`
+- score delta versus previous HDM8 reference:
+  `-0.000005992730578`
+- byte delta versus previous HDM8 reference: `-9`
+
+This is a rate-only exact-CUDA improvement. Component distances remained
+unchanged (`avg_segnet_dist=0.0006426`, `avg_posenet_dist=0.00003236`) and the
+delta equals the 9-byte rate term. `src/tac/hnerv_frontier_defaults.py` now
+routes active non-promotional CUDA frontier comparisons to this recovered eval.
+
+The older scorecard JSON artifact still records the 2026-05-14 HDM8 row. It is
+superseded by this ledger and should be regenerated before any scorecard audit
+is used as the HNeRV source of truth for a release packet.

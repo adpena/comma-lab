@@ -143,3 +143,60 @@ Legitimate byte-grammar cleanup, not a dispatch priority. The main score-lowerin
 path remains divergence work: Z3 v2 latent replacement, C1/Z5 predictive receiver
 surfaces, C6 executable campaign repair, Tier-C real-scorer MDL, and exact
 CUDA/CPU axis-labelled candidate evaluation.
+
+## 2026-05-15 HDM8 Application
+
+The same format `0x05` fixed-meta rank-elided sidecar was applied to the active
+HDM8/HLM2 archive, not just the older PR106/R2 PR101-grammar source archive.
+
+Candidate:
+
+- source archive:
+  `experiments/results/pr106_r2_hdm7_hlm2_hdm8_candidate_20260514_codex/exact_eval_static_release_surface/archive.zip`
+- source archive bytes: `186395`
+- source archive SHA-256:
+  `8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2`
+- candidate archive:
+  `experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/archive.zip`
+- candidate archive bytes: `186386`
+- candidate archive SHA-256:
+  `9a8e7c4e09572586bac0c1ae425400267ae65b70c918a1c9d13a4ddb08f05adc`
+- runtime consumption proof:
+  `experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/runtime_consumption.json`
+- full-frame same-runtime parity proof:
+  `experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/full_frame_parity_cpu.json`
+
+Recovered exact CUDA:
+
+- output dir:
+  `experiments/results/modal_auth_eval/pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515T002100Z`
+- Modal call id: `fc-01KRMG33DAJCD3YZAZQTK1VA4K`
+- eval JSON:
+  `experiments/results/modal_auth_eval/pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515T002100Z/contest_auth_eval.json`
+- eval JSON sha256:
+  `f522e276260b1634eb95b380e66b3f4df46ab2ade9b6a28bca250ea3e3bf02f2`
+- result JSON sha256:
+  `a417a34a29b3102ce70377d3d8d2fc74fda624000c3cb14ee7d860f11d533fb7`
+- evidence grade: `[contest-CUDA]`
+- archive bytes: `186386`
+- runtime tree SHA-256:
+  `0ec752724dde95867928cdf30c50db5eccc2d120054ec22529d0754a38a8ce5d`
+- samples: `600`
+- avg SegNet distance: `0.0006426`
+- avg PoseNet distance: `0.00003236`
+- canonical score: `0.2063556722940441`
+- score claim: `true`
+- promotion eligible: `false`
+
+Comparison:
+
+- Previous active HDM8 exact-CUDA score:
+  `0.20636166502462222` at `186395` bytes.
+- New format-`0x05` HDM8 exact-CUDA score:
+  `0.2063556722940441` at `186386` bytes.
+- Delta: `-0.000005992730578`, exactly the 9-byte rate-term reduction.
+
+Classification: legitimate byte-level score lowering inside the HDM8 basin and
+the new active internal non-promotional `[contest-CUDA]` reference. It is still
+not a paradigm escape; component distances are unchanged and the win is purely
+rate-side PacketIR cleanup.

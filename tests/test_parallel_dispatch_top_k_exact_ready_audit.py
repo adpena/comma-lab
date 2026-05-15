@@ -40,8 +40,8 @@ def test_parallel_dispatch_floor_preserves_active_nonpromotional_reference() -> 
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 
-    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20636166502462222
-    assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.20636166502462222
+    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.2063556722940441
+    assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.2063556722940441
     assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 
 
