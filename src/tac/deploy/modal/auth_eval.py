@@ -7,16 +7,18 @@ Modal call metadata, artifact harvest, and result JSON materialization.
 """
 from __future__ import annotations
 
-import io
 import hashlib
+import io
 import json
 import re
 import traceback
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
+from tac.auth_eval_result import parse_auth_eval_score_claim
 from tac.deploy.claims import (
     DispatchClaimSpec,
     predicted_eta,
@@ -24,7 +26,6 @@ from tac.deploy.claims import (
     terminal_dispatch_claim,
     utc_now,
 )
-from tac.auth_eval_result import parse_auth_eval_score_claim
 from tac.repo_io import read_json, write_json
 
 SPAWN_SCHEMA = "modal_auth_eval_spawn_v1"
@@ -63,6 +64,10 @@ class ModalArtifactWriteError(RuntimeError):
         super().__init__(f"failed to materialize {len(errors)} Modal artifact(s)")
 
 
+class ModalAuthEvalPairingError(ValueError):
+    """Raised when a Modal auth-eval dispatch lacks paired-axis custody."""
+
+
 @dataclass(frozen=True)
 class PreparedModalAuthEvalRequest:
     """Canonical local upload payload for Modal auth-eval entry points."""
@@ -83,6 +88,46 @@ class ClaimSpec(DispatchClaimSpec):
     """Dispatch-claim metadata for a Modal auth-eval job."""
 
     platform: str = "modal"
+
+
+def validate_modal_auth_eval_pairing(
+    *,
+    axis: str,
+    pair_group_id: str,
+    single_axis_waiver_reason: str,
+) -> dict[str, Any]:
+    """Validate the paired-by-default Modal auth-eval contract.
+
+    Modal CPU and CUDA auth evals can disagree materially. New exact-eval
+    dispatches must therefore belong to a CPU/CUDA pair group unless the
+    operator gives an explicit single-axis waiver reason. This helper only
+    validates dispatch metadata; pair completion is adjudicated from harvested
+    artifacts.
+    """
+
+    normalized_axis = str(axis or "").strip().lower()
+    if normalized_axis not in {"contest_cuda", "contest_cpu", "diagnostic_cuda", "diagnostic_cpu"}:
+        raise ModalAuthEvalPairingError(f"unsupported auth-eval axis: {axis!r}")
+    pair = str(pair_group_id or "").strip()
+    waiver = str(single_axis_waiver_reason or "").strip()
+    if pair and waiver:
+        raise ModalAuthEvalPairingError(
+            "set either pair_group_id or single_axis_waiver_reason, not both"
+        )
+    if not pair and not waiver:
+        raise ModalAuthEvalPairingError(
+            "Modal auth eval is paired-by-default. Use the paired launcher or "
+            "pass --pair-group-id shared by the CPU/CUDA sibling jobs. "
+            "Single-axis runs require --single-axis-waiver-reason."
+        )
+    return {
+        "paired_axis_required": True,
+        "pair_group_id": pair or None,
+        "single_axis_waiver_reason": waiver or None,
+        "single_axis_waiver_used": bool(waiver),
+        "axis": normalized_axis,
+        "required_pair_axes": ["contest_cuda", "contest_cpu"],
+    }
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -742,6 +787,7 @@ def recover_modal_auth_eval(
 
 __all__ = [
     "ClaimSpec",
+    "ModalAuthEvalPairingError",
     "claim_modal_auth_eval_dispatch",
     "fail_closed_remote_exception_result",
     "function_call_id",
@@ -749,10 +795,11 @@ __all__ = [
     "predicted_eta",
     "read_spawn_metadata",
     "recover_modal_auth_eval",
-    "terminal_modal_auth_eval_claim",
     "runtime_upload_skip_reason",
     "submission_dir_zip_bytes",
+    "terminal_modal_auth_eval_claim",
     "utc_now",
+    "validate_modal_auth_eval_pairing",
     "validate_runtime_upload_file",
     "write_spawn_metadata",
 ]

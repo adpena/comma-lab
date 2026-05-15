@@ -188,8 +188,11 @@ def test_cpu_labeled_exact_flag_is_not_accepted_as_cuda_evidence(tmp_path: Path)
 
     assert decision["exact_cuda_selector_rows"] == 0
     assert decision["non_cuda_exact_flag_rows"] == 1
+    assert decision["selector_positive_or_neutral_rows"] == 0
+    assert decision["calibration_status"] == "blocked"
     assert decision["ready_for_broad_waterfill_dispatch"] is False
     assert "non_cuda_selector_rows_marked_exact_cuda" in decision["blockers"]
+    assert mod.selector_row(review)["outcome"] == "non_cuda_exact_flag_ignored"
 
 
 def test_missing_raw_aggregate_match_blocks_even_with_neutral_cuda_control(
@@ -219,5 +222,6 @@ def test_missing_raw_aggregate_match_blocks_even_with_neutral_cuda_control(
 
     decision = mod.build_calibration([review], paired)["decision"]
 
+    assert decision["calibration_status"] == "blocked"
     assert decision["ready_for_broad_waterfill_dispatch"] is False
     assert "pr101_cpu_cuda_inflated_output_aggregate_match_missing" in decision["blockers"]

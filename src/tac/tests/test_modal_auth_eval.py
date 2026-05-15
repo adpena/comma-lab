@@ -69,6 +69,33 @@ def test_modal_app_has_correct_name(mod):
     assert mod.app.name == "comma-auth-eval"
 
 
+def test_modal_source_mount_ignore_excludes_generated_bytecode(mod) -> None:
+    assert mod.ignore_generated_mount_path(Path("src/tac/tests/__pycache__/x.pyc"))
+    assert mod.ignore_generated_mount_path(Path("src/tac/tests/x.pyo"))
+    assert mod.ignore_generated_mount_path(Path("src/tac/tests/._x.py"))
+    assert not mod.ignore_generated_mount_path(Path("src/tac/tests/test_modal_auth_eval.py"))
+
+
+def test_modal_auth_eval_requires_pair_group_or_single_axis_waiver(
+    mod, tmp_path, monkeypatch
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"archive bytes")
+    monkeypatch.setattr(
+        mod,
+        "claim_modal_auth_eval_dispatch",
+        lambda **_kwargs: pytest.fail("claim should not be recorded before pair validation"),
+    )
+
+    with pytest.raises(SystemExit, match="paired-by-default"):
+        mod.main(
+            str(archive),
+            str(tmp_path / "out"),
+            lane_id="lane_unit_modal_auth_eval_pair_required",  # FAKE_LANE_OK:test-fixture lane_id
+            instance_job_id="job_unit_modal_auth_eval_pair_required",
+        )
+
+
 def test_blocking_auth_eval_closes_claim_on_invalid_artifacts() -> None:
     cuda_text = TOOL_PATH.read_text(encoding="utf-8")
     cpu_text = CPU_TOOL_PATH.read_text(encoding="utf-8")
@@ -203,6 +230,7 @@ def test_cpu_run_auth_eval_signature_and_source_commit_flow(tmp_path, monkeypatc
         expected_runtime_tree_sha256=expected_hash,
         lane_id="lane_unit_modal_cpu_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_cpu_auth_eval",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cpu_auth_eval_local_request.json").read_text())
@@ -458,6 +486,7 @@ def test_modal_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtime(
             expected_runtime_tree_sha256="a" * 64,
             lane_id="lane_unit_modal_auth_eval_runtime_hash_guard",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_auth_eval_runtime_hash_guard",
+        pair_group_id="pair_unit_modal_auth_eval",
         )
 
     message = str(exc.value)
@@ -501,6 +530,7 @@ def test_modal_cpu_auth_eval_rejects_local_root_runtime_hash_for_uploaded_runtim
             expected_runtime_tree_sha256="f" * 64,
             lane_id="lane_unit_modal_cpu_auth_eval_runtime_hash_guard",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_cpu_auth_eval_runtime_hash_guard",
+        pair_group_id="pair_unit_modal_auth_eval",
         )
 
     message = str(exc.value)
@@ -656,6 +686,7 @@ def test_local_request_metadata_is_non_promotable_shape(mod, tmp_path, monkeypat
         str(out_dir),
         lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
@@ -705,6 +736,7 @@ def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkey
         inflate_env="CUDA_VISIBLE_DEVICES=",
         lane_id="lane_unit_modal_auth_eval_diag",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
@@ -753,6 +785,7 @@ def test_modal_cuda_inflate_device_request_is_diagnostic_only(mod, tmp_path, mon
         inflate_device="cpu",
         lane_id="lane_unit_modal_auth_eval_diag_device",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag_device",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
@@ -782,6 +815,7 @@ def test_modal_gpu_host_cpu_scorer_requires_explicit_inflate_device(
             scorer_device="cpu",
             lane_id="lane_unit_modal_auth_eval_diag_cpu_scorer",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_auth_eval_diag_cpu_scorer",
+        pair_group_id="pair_unit_modal_auth_eval",
         )
 
 
@@ -823,6 +857,7 @@ def test_modal_gpu_host_cpu_scorer_cuda_inflate_is_diagnostic_only(
         inflate_device="cuda",
         lane_id="lane_unit_modal_auth_eval_cpu_scorer_cuda_inflate",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_cpu_scorer_cuda_inflate",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
@@ -877,6 +912,7 @@ def test_modal_cuda_expected_runtime_hash_flows_to_remote_call(mod, tmp_path, mo
         expected_runtime_tree_sha256=expected_hash,
         lane_id="lane_unit_modal_auth_eval_expected_runtime",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_expected_runtime",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     request = json.loads((out_dir / "modal_cuda_auth_eval_local_request.json").read_text())
@@ -911,6 +947,7 @@ def test_detached_modal_auth_eval_writes_canonical_spawn_metadata(mod, tmp_path,
         provider_detach_ack=True,
         lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_detached",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
@@ -948,6 +985,7 @@ def test_detached_modal_auth_eval_marks_inflate_env_as_diagnostic_axis(mod, tmp_
         provider_detach_ack=True,
         lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_diag_detached",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
@@ -978,6 +1016,7 @@ def test_detached_modal_auth_eval_marks_non_t4_gpu_as_diagnostic_axis(mod, tmp_p
         provider_detach_ack=True,
         lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_a100_detached",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
@@ -1010,6 +1049,7 @@ def test_detached_modal_auth_eval_marks_cpu_scorer_as_diagnostic_axis(
         provider_detach_ack=True,
         lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
         instance_job_id="job_unit_modal_auth_eval_cpu_scorer_detached",
+        pair_group_id="pair_unit_modal_auth_eval",
     )
 
     metadata = json.loads((out_dir / "modal_auth_eval_spawn.json").read_text())
@@ -1038,6 +1078,7 @@ def test_detached_modal_auth_eval_requires_provider_detach_ack(mod, tmp_path, mo
             detach=True,
             lane_id="lane_unit_modal_auth_eval",  # FAKE_LANE_OK:test-fixture lane_id
             instance_job_id="job_unit_modal_auth_eval_detached",
+        pair_group_id="pair_unit_modal_auth_eval",
         )
 
     assert claim_calls == []

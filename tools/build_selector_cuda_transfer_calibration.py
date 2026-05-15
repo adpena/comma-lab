@@ -64,6 +64,14 @@ def selector_row(path: Path) -> dict[str, Any]:
     recomputation = payload.get("score_recomputation") or {}
     score_axis = payload.get("score_axis")
     exact_cuda_flag = payload.get("exact_cuda_evidence") is True
+    if exact_cuda_flag and score_axis != "contest_cuda":
+        outcome = "non_cuda_exact_flag_ignored"
+    elif not exact_cuda_flag:
+        outcome = "not_exact_cuda_evidence"
+    elif delta <= 0.0:
+        outcome = "cuda_improved_or_neutral"
+    else:
+        outcome = "cuda_regression"
     return {
         "path": repo_rel(path),
         "technique": payload.get("technique") or path.stem,
@@ -82,7 +90,7 @@ def selector_row(path: Path) -> dict[str, Any]:
         "measured_config_status": payload.get("measured_config_status"),
         "promotion_eligible": payload.get("promotion_eligible") is True,
         "ready_for_exact_eval_dispatch": payload.get("ready_for_exact_eval_dispatch") is True,
-        "outcome": "cuda_improved_or_neutral" if delta <= 0.0 else "cuda_regression",
+        "outcome": outcome,
     }
 
 
@@ -131,14 +139,17 @@ def calibration_decision(rows: list[dict[str, Any]], paired: dict[str, Any]) -> 
         blockers.append("pr101_cpu_cuda_inflated_output_aggregate_match_missing")
     if paired.get("dominant_score_delta_component") in {"pose", "seg"}:
         blockers.append("cpu_cuda_gap_component_dominated_not_rate_limited")
-    ready = bool(neutral_or_positive) and not blockers and raw_match is True
+    calibration_status = "blocked" if blockers else "calibrated"
+    ready = False
+    if calibration_status == "calibrated":
+        ready = bool(neutral_or_positive) and raw_match is True
     return {
         "ready_for_broad_waterfill_dispatch": ready,
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "calibration_status": "blocked" if blockers else "calibrated",
+        "calibration_status": calibration_status,
         "blockers": blockers,
         "exact_cuda_selector_rows": len(exact_rows),
         "non_cuda_exact_flag_rows": len(non_cuda_exact_flag_rows),

@@ -37,6 +37,7 @@ import modal
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     ModalArtifactWriteError,
+    ModalAuthEvalPairingError,
     claim_modal_auth_eval_dispatch,
     fail_closed_remote_exception_result,
     function_call_id,
@@ -44,8 +45,10 @@ from tac.deploy.modal.auth_eval import (
     modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
+    validate_modal_auth_eval_pairing,
     write_spawn_metadata,
 )
+from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
 from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval"
@@ -117,19 +120,30 @@ eval_image = (
         }
     )
     # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; mounts public-PR intake clones + robust_current + contest_auth_eval; trainer-discovery N/A
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+        "src",
+        remote_path=str(REMOTE_REPO / "src"),
+        ignore=ignore_generated_mount_path,
+    )
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+        "upstream",
+        remote_path=str(REMOTE_REPO / "upstream"),
+        ignore=ignore_generated_mount_path,
+    )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; submissions subset
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR runtime adapters
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR95 intake clone
         "experiments/results/public_pr95_intake_20260504_codex",
         remote_path=str(REMOTE_REPO / "experiments/results/public_pr95_intake_20260504_codex"),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR106 intake clone
         "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source",
@@ -137,6 +151,7 @@ eval_image = (
             REMOTE_REPO
             / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"
         ),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; contest_auth_eval entry script
         "experiments/contest_auth_eval.py",
@@ -894,6 +909,8 @@ def main(
     claim_agent: str = "codex:modal_auth_eval",
     claim_notes: str = "",
     force_claim: bool = False,
+    pair_group_id: str = "",
+    single_axis_waiver_reason: str = "",
 ) -> None:
     """Upload an archive and harvest Modal CUDA auth-eval artifacts."""
 
@@ -923,6 +940,22 @@ def main(
     submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
     out_dir = prepared.output_dir
     source_repo_commit = _local_git_commit()
+    requested_axis = (
+        "contest_cuda"
+        if str(scorer_device or "cuda").lower() == "cuda"
+        and str(inflate_device or "auto").lower() == "auto"
+        and str(gpu or "T4").upper() == "T4"
+        and not inflate_env
+        else f"diagnostic_{str(scorer_device or 'cuda').lower()}"
+    )
+    try:
+        pairing = validate_modal_auth_eval_pairing(
+            axis=requested_axis,
+            pair_group_id=pair_group_id,
+            single_axis_waiver_reason=single_axis_waiver_reason,
+        )
+    except ModalAuthEvalPairingError as exc:
+        raise SystemExit(f"FATAL: {exc}") from exc
     _validate_uploaded_runtime_tree_expectation(
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         submission_dir_path=submission_dir_path,
@@ -973,6 +1006,7 @@ def main(
         "score_claim": False,
         "promotion_eligible": False,
         "adjudication_required": True,
+        **pairing,
     }
     write_json(out_dir / "modal_cuda_auth_eval_local_request.json", local_summary)
 
@@ -985,7 +1019,9 @@ def main(
             claim_notes
             or (
                 "Modal CUDA auth eval; exact archive path; "
-                f"axis={axis_label}; archive_sha256={archive_sha256}"
+                f"axis={axis_label}; archive_sha256={archive_sha256}; "
+                f"pair_group_id={pairing.get('pair_group_id')}; "
+                f"single_axis_waiver={pairing.get('single_axis_waiver_used')}"
             )
         ),
     )
@@ -1063,6 +1099,7 @@ def main(
                 "instance_job_id": instance_job_id,
                 "claim_agent": claim_agent,
                 "claim_platform": "modal",
+                **pairing,
             },
         )
         claim_modal_auth_eval_dispatch(
@@ -1136,6 +1173,7 @@ def main(
     result["inflate_device_policy"] = inflate_device_policy
     result["inflate_env_overrides"] = list(inflate_env_overrides)
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
+    result.update(pairing)
     if diagnostic_only:
         result["diagnostic_only"] = True
         result["non_t4_gpu_diagnostic"] = non_t4_gpu_diagnostic

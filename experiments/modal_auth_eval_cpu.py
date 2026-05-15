@@ -58,6 +58,7 @@ import modal
 from tac.deploy.modal.auth_eval import (
     ClaimSpec,
     ModalArtifactWriteError,
+    ModalAuthEvalPairingError,
     claim_modal_auth_eval_dispatch,
     fail_closed_remote_exception_result,
     function_call_id,
@@ -65,8 +66,10 @@ from tac.deploy.modal.auth_eval import (
     modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
     terminal_modal_auth_eval_claim,
+    validate_modal_auth_eval_pairing,
     write_spawn_metadata,
 )
+from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
 from tac.repo_io import json_text, read_json, sha256_file, write_json
 
 APP_NAME = "comma-auth-eval-cpu"
@@ -139,15 +142,25 @@ base_image = (
 eval_image = (
     base_image
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir("src", remote_path=str(REMOTE_REPO / "src"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-    .add_local_dir("upstream", remote_path=str(REMOTE_REPO / "upstream"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+        "src",
+        remote_path=str(REMOTE_REPO / "src"),
+        ignore=ignore_generated_mount_path,
+    )
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+        "upstream",
+        remote_path=str(REMOTE_REPO / "upstream"),
+        ignore=ignore_generated_mount_path,
+    )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "submissions/robust_current",
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/public_runtime_adapters",
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
+        ignore=ignore_generated_mount_path,
     )
     # NB: ``experiments/results/public_pr_intake_full`` is ~17 GB total. Only
     # the per-PR source trees we exercise (PR107 apogee, PR102 hnerv_lc_v2)
@@ -159,6 +172,7 @@ eval_image = (
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee"
         ),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
@@ -166,6 +180,7 @@ eval_image = (
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1"
         ),
+        ignore=ignore_generated_mount_path,
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
         "experiments/contest_auth_eval.py",
@@ -798,6 +813,8 @@ def main(
     claim_agent: str = "codex:modal_auth_eval_cpu",
     claim_notes: str = "",
     force_claim: bool = False,
+    pair_group_id: str = "",
+    single_axis_waiver_reason: str = "",
 ) -> None:
     """Upload an archive and harvest Modal CPU auth-eval artifacts."""
 
@@ -827,6 +844,14 @@ def main(
     submission_dir_zip_sha256 = prepared.submission_dir_zip_sha256
     out_dir = prepared.output_dir
     source_repo_commit = _local_git_commit()
+    try:
+        pairing = validate_modal_auth_eval_pairing(
+            axis="contest_cpu",
+            pair_group_id=pair_group_id,
+            single_axis_waiver_reason=single_axis_waiver_reason,
+        )
+    except ModalAuthEvalPairingError as exc:
+        raise SystemExit(f"FATAL: {exc}") from exc
     _validate_uploaded_runtime_tree_expectation(
         expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         submission_dir_path=submission_dir_path,
@@ -851,6 +876,7 @@ def main(
         "promotion_eligible": False,
         "adjudication_required": True,
         "score_axis": "contest_cpu",
+        **pairing,
     }
     write_json(out_dir / "modal_cpu_auth_eval_local_request.json", local_summary)
 
@@ -863,7 +889,9 @@ def main(
             claim_notes
             or (
                 "Modal CPU auth eval; exact archive path; "
-                f"axis=contest_cpu; archive_sha256={archive_sha256}"
+                f"axis=contest_cpu; archive_sha256={archive_sha256}; "
+                f"pair_group_id={pairing.get('pair_group_id')}; "
+                f"single_axis_waiver={pairing.get('single_axis_waiver_used')}"
             )
         ),
     )
@@ -923,6 +951,7 @@ def main(
                 "instance_job_id": instance_job_id,
                 "claim_agent": claim_agent,
                 "claim_platform": "modal",
+                **pairing,
             },
         )
         claim_modal_auth_eval_dispatch(
@@ -993,6 +1022,7 @@ def main(
     result["inflate_sh"] = inflate_sh_rel
     result["source_repo_commit"] = source_repo_commit
     result["expected_runtime_tree_sha256"] = expected_runtime_tree_sha256
+    result.update(pairing)
     write_json(out_dir / "modal_cpu_auth_eval_result.json", result)
 
     print("=" * 60)
