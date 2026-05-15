@@ -184,3 +184,46 @@ Hardening landed after recovery:
   template.
 - Regression coverage in `src/tac/tests/test_frame_exploit_selector_packet.py`
   asserts the CPU template does not reuse the CUDA Modal upload root hash.
+
+## 2026-05-15 Exact CUDA Recovery
+
+Recovered Modal T4 CUDA call `fc-01KRMP4ZM5J8P1H3R2JN96VSC5`:
+
+- result review:
+  `.omx/research/pr101_fec6_fixed_huffman_k16_cuda_result_review_20260515_codex.json`
+- eval JSON:
+  `experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json`
+- eval JSON sha256:
+  `e7b64d010ad1b68a07d18304bec32869f156ed1f7da105efd25876a969e4a9b8`
+- archive sha256:
+  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`
+- archive bytes: `178517`
+- Modal CUDA runtime tree sha256:
+  `12d4315dcbf0943f07fcd357eaf06b126a999c252f8edeb2681179831248df04`
+- runtime content tree sha256:
+  `6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df`
+- samples: `600`
+- axis: `[contest-CUDA]`
+- `avg_segnet_dist`: `0.00066299`
+- `avg_posenet_dist`: `0.00016846`
+- canonical formula score:
+  `0.22621002169349796`
+
+Formula check:
+
+```text
+100 * 0.00066299
++ sqrt(10 * 0.00016846)
++ 25 * 178517 / 37545489
+= 0.22621002169349796
+```
+
+Classification:
+
+- Legitimate small CUDA improvement, non-promotable.
+- FEC6 K16 improves FEC3 K8 exact CUDA (`0.22626723761043824`) by
+  `-0.0000572159169403`.
+- The paired CPU/CUDA gap is `0.03415870481239236`.
+- This confirms the selector/grain family is not a no-op, but CPU-positive
+  selector modes transfer weakly to CUDA. Future work must be CUDA-in-loop or
+  explicitly paired CPU/CUDA water-fill, not CPU/MPS proxy promotion.

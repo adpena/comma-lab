@@ -1,0 +1,65 @@
+{
+  "schema": "contest_result_review_packet_v1",
+  "reviewed_at_utc": "2026-05-15T02:08:00Z",
+  "lane_id": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+  "classification": "legitimate_small_cuda_improvement_non_promotable",
+  "score_axis": "contest_cuda",
+  "evidence_grade": "contest-CUDA",
+  "score_claim": true,
+  "promotion_eligible": false,
+  "archive": {
+    "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip",
+    "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "bytes": 178517
+  },
+  "runtime": {
+    "submission_dir": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+    "modal_cuda_runtime_tree_sha256": "12d4315dcbf0943f07fcd357eaf06b126a999c252f8edeb2681179831248df04",
+    "runtime_content_tree_sha256": "6811f28c2116757851b4a6e68a5bdefd7866b4da1867eb13b3c62405de8834df",
+    "inflate_script_sha256": "313219ff9f2734716e64cd3483e0b19fff596810d4bddbc2161e3f134824c82c"
+  },
+  "eval": {
+    "output_dir": "experiments/results/modal_auth_eval/archive_6bae0201fb08",
+    "call_id": "fc-01KRMP4ZM5J8P1H3R2JN96VSC5",
+    "contest_auth_eval_json": "experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json",
+    "contest_auth_eval_sha256": "e7b64d010ad1b68a07d18304bec32869f156ed1f7da105efd25876a969e4a9b8",
+    "result_json": "experiments/results/modal_auth_eval/archive_6bae0201fb08/modal_cuda_auth_eval_result.json",
+    "result_json_sha256": "ec3e856db665c3a4ae288bd8dba5bb5b5df31780609246333ec3e611fd79fac2",
+    "provenance_json": "experiments/results/modal_auth_eval/archive_6bae0201fb08/provenance.json",
+    "provenance_sha256": "e465734f353fc20adc706a7999c0685bbbe2902ad6e599953d2ba147d11dac1b",
+    "inflated_outputs_manifest": "experiments/results/modal_auth_eval/archive_6bae0201fb08/inflated_outputs_manifest.json",
+    "inflated_outputs_manifest_sha256": "cda84f6e20f80abc44ecebe5662c74a01212355f3a8bf21f53f1c495e43fb470",
+    "n_samples": 600,
+    "platform": "Linux x86_64 Tesla T4 via Modal",
+    "command_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda"
+  },
+  "components": {
+    "avg_segnet_dist": 0.00066299,
+    "avg_posenet_dist": 0.00016846,
+    "seg_contribution": 0.066299,
+    "pose_contribution": 0.0410438789589873,
+    "rate_contribution": 0.11886714273451066,
+    "score_recomputed_from_components": 0.22621002169349796,
+    "display_final_score": 0.23
+  },
+  "deltas": {
+    "baseline_name": "PR101 FEC3 compact_exact_k8 CPU overlay exact CUDA",
+    "baseline_score_contest_cuda": 0.22626723761043824,
+    "delta_score_vs_baseline": -0.00005721591694027306,
+    "paired_cpu_score_contest_cpu": 0.1920513168811056,
+    "cpu_cuda_gap": 0.03415870481239236
+  },
+  "adversarial_review": {
+    "formula_recomputed": true,
+    "archive_byte_term_checked": true,
+    "selector_bytes_charged_in_archive": true,
+    "cuda_axis_closed": true,
+    "promotion_blocker": "score remains above CUDA frontier and above operator sub_0_192 threshold",
+    "interpretation": "The selector/film-grain family is not a no-op, but CPU-positive modes transfer weakly to CUDA."
+  },
+  "reactivation_criteria": [
+    "Continue only through CUDA-in-loop selector/grain sweeps or paired CPU/CUDA component models.",
+    "Do not spend more on byte-only selector compression for the current K8/K16 packets unless a component-positive packet is already below the threshold gap.",
+    "Use this paired CPU/CUDA result as a calibration row for future water-fill selectors."
+  ]
+}
