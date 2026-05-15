@@ -156,3 +156,59 @@ Authority note: Z3 remains non-promotional until exact paired
 `[contest-CUDA]` + `[contest-CPU]` auth-eval results land on the same archive
 and runtime. The direct-residual v2 packet is an executable score-lowering
 candidate, not a score claim.
+
+## 2026-05-15 Modal Smoke Result
+
+Command:
+
+```bash
+.venv/bin/python tools/run_modal_smoke_before_full.py \
+  --recipe substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch \
+  --smoke-epochs 100 --smoke-gpu T4 --smoke-timeout-hours 1.0 \
+  --operator-handle codex-z3v2 --smoke-only
+```
+
+Result:
+
+- Modal call: `fc-01KRNPJM15X4NH28375SCE954M`
+- Instance/job id:
+  `substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep`
+- Recovery path:
+  `experiments/results/lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep_modal/`
+- Terminal recovery: `rc=0`, `timed_out=false`, elapsed `8.578769848999997s`
+- Cost-band anchor: T4, 100 epochs, estimated cost `$0.0014059650585861105`
+- Claim state: terminal
+  `completed_modal_training_recovered_no_score_claim`; no active same-lane
+  claims after recovery.
+
+Recovered artifact signal:
+
+- Layout: `z3v2_latent_replacement`
+- Base archive payload bytes: `178162`
+- Z3 v2 archive payload bytes: `163969`
+- Payload byte savings: `14193`
+- Archive ZIP bytes: `164077`
+- Archive ZIP SHA-256:
+  `5f41db95f333ce42c4a95cee6c02f6cb6f4286fbf57dbee7be17dc3c221a14ee`
+- Payload SHA-256:
+  `d3fc0affcefb246204e0b4bdc0867d544932ec5467c32b5d739f5fba7126f946`
+- Runtime tree SHA-256:
+  `671ac1f789619fa39ce9dcaa38250c2e11ac6a61abb66556f7c4940083176ba8`
+- Z3HV2 section bytes: `1194`
+
+Promotion status:
+
+- `score_claim=false`
+- `promotion_eligible=false`
+- `rank_or_kill_eligible=false`
+- `ready_for_exact_eval_dispatch=false`
+- Blockers:
+  `smoke_no_scorer_load`,
+  `requires_separate_auth_eval_result_review_before_score_claim`,
+  `z3v2_score_claim_requires_paired_cuda_cpu_auth_eval`
+
+Classification: real executable packet-build signal, not a score. The smoke
+proves the hardened v2 direct-residual path emits a byte-smaller archive and
+survives Modal T4 packaging. The next score-bearing action is paired
+`[contest-CUDA]` and `[contest-CPU]` auth eval against this exact archive and
+runtime, followed by the normal result-review packet.
