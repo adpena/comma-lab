@@ -320,6 +320,25 @@ def _enforce_envelope(
             ),
             f"cost_confidence: {plan.cost_confidence_tag}",
         ]
+        campaign_metadata = [
+            part for part in (
+                f"lane_id={getattr(substrate, 'lane_id', '')}"
+                if getattr(substrate, "lane_id", "") else "",
+                f"campaign_id={getattr(substrate, 'campaign_id', '')}"
+                if getattr(substrate, "campaign_id", "") else "",
+                f"campaign_stage={getattr(substrate, 'campaign_stage', '')}"
+                if getattr(substrate, "campaign_stage", "") else "",
+                f"campaign_priority={getattr(substrate, 'campaign_priority', '')}"
+                if getattr(substrate, "campaign_priority", "") else "",
+                f"lane_class={getattr(substrate, 'lane_class', '')}"
+                if getattr(substrate, "lane_class", "") else "",
+                f"literature_anchor={getattr(substrate, 'literature_anchor', '')}"
+                if getattr(substrate, "literature_anchor", "") else "",
+            )
+            if part
+        ]
+        if campaign_metadata:
+            composition_notes_lines.append(f"campaign_metadata: {campaign_metadata!r}")
         if cell.notes:
             composition_notes_lines.append(f"notes: {cell.notes}")
         if cell.semantic_compatibility_warning is not None:
@@ -338,6 +357,9 @@ def _enforce_envelope(
                 "estimated_dispatch_cost_usd": plan.estimated_dispatch_cost_usd,
                 "eig_per_dollar": plan.eig_per_dollar,
                 "composition_notes": "\n".join(composition_notes_lines),
+                "lane_class": getattr(substrate, "lane_class", ""),
+                "literature_anchor": getattr(substrate, "literature_anchor", ""),
+                "campaign_metadata": campaign_metadata,
                 "blockers": list(plan.blockers),
                 "semantic_compatibility_warning": cell.semantic_compatibility_warning,
                 "operator_review_required": bool(plan.blockers),

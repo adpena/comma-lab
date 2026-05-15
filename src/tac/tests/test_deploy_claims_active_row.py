@@ -38,6 +38,7 @@ def test_active_claim_row_rejects_newest_terminal_match(tmp_path: Path) -> None:
 
 def test_is_terminal_status_covers_dispatch_close_prefixes() -> None:
     assert is_terminal_status("failed_stage")
+    assert is_terminal_status("timed_out_3600s_t4_smoke")
     assert is_terminal_status("stopped_operator")
     assert is_terminal_status("refused_dispatch_duplicate")
     assert is_terminal_status("falsified_score_1.43_pareto_dominated")

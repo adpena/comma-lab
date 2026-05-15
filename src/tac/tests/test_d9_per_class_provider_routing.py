@@ -565,7 +565,7 @@ def test_per_class_cost_ceiling_invariant() -> None:
     assert PER_CLASS_SOFT_COST_CEILING_USD["smoke"] == 2.0
     assert PER_CLASS_SOFT_COST_CEILING_USD["eval"] == 2.0
     assert PER_CLASS_SOFT_COST_CEILING_USD["full"] == 15.0
-    assert PER_CLASS_SOFT_COST_CEILING_USD["long_burn"] == 100.0
+    assert PER_CLASS_SOFT_COST_CEILING_USD["long_burn"] == 50.0
     assert PER_CLASS_SOFT_COST_CEILING_USD["cpu"] == 0.0
 
 

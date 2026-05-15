@@ -21,6 +21,9 @@ from tac.packetir_exact_closure import (  # noqa: E402
     build_packetir_exact_closure,
     render_packetir_exact_closure_markdown,
 )
+from tac.hnerv_frontier_defaults import (  # noqa: E402
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_EVAL,
+)
 from tac.repo_io import read_json, write_json  # noqa: E402
 
 DEFAULT_RESULT_DIR = (
@@ -50,9 +53,7 @@ DEFAULT_SOURCE_CUDA_EVAL = (
     "pr106_latent_sidecar_r2_pr101_grammar_20260511T180000Z/contest_auth_eval.json"
 )
 DEFAULT_CURRENT_BEST_CUDA_EVAL = (
-    REPO_ROOT
-    / "experiments/results/modal_auth_eval/"
-    "hnerv_hlm1_fixed_latent_recode_modal_t4_enforced_20260513/contest_auth_eval.json"
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_EVAL
 )
 DEFAULT_RECODE_PROFILE = (
     REPO_ROOT

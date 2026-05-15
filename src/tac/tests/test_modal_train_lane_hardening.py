@@ -29,6 +29,16 @@ def test_modal_env_sh_also_fails_closed_for_sourced_lane_scripts() -> None:
     assert "export T1_RUN_CONTEST_CUDA_AUTH_EVAL=0" in text
     assert "export SCPP_RUN_CONTEST_CUDA_AUTH_EVAL=0" in text
     assert "export RUN_CONTEST_EVAL=0" in text
+    assert "export DALI_DISABLE_NVML=" in text
+    assert "export PYTORCH_CUDA_ALLOC_CONF=" in text
+
+
+def test_modal_train_lane_threads_shared_dali_nvml_env_to_image_and_subprocess() -> None:
+    text = SOURCE.read_text()
+    assert "DALI_DISABLE_NVML_VALUE" in text
+    assert "PYTORCH_CUDA_ALLOC_CONF_VALUE" in text
+    assert '"DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE' in text
+    assert '"PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE' in text
 
 
 def test_modal_env_sh_pins_cublas_workspace_for_gpu_determinism() -> None:

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #239 (BOYD-2 self-protection) tests.
 
 Anchor: R2 ledger BOYD-2 finding (Boyd LOW, 2026-05-14, voice: convex
@@ -95,7 +96,7 @@ def test_classify_dispatch_long_burn_cost_ceiling_exact_routes_to_full() -> None
     is "full" — operators must explicitly request the long_burn class.
     """
     long_burn_cost_ceiling = PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]
-    # Note: 100.0 USD exactly. With OPEN ``>`` boundary returns "full".
+    # Note: 50.0 USD exactly. With OPEN ``>`` boundary returns "full".
     assert (
         classify_dispatch(estimated_cost_usd=long_burn_cost_ceiling)
         == "full"
@@ -119,7 +120,7 @@ def test_classify_dispatch_legacy_long_burn_via_wallclock_15h() -> None:
 
 
 def test_classify_dispatch_legacy_long_burn_via_cost_120usd() -> None:
-    """Pre-existing test passes: 120 USD is above the 100 USD ceiling
+    """Pre-existing test passes: 120 USD is above the 50 USD ceiling
     and routes to "long_burn" with both ``>=`` and ``>``.
     """
     assert classify_dispatch(estimated_cost_usd=120.0) == "long_burn"
@@ -197,7 +198,7 @@ def test_check_239_detects_synthetic_ge_long_burn_cost_boundary(
     target = src_dir / "cost_band_calibration.py"
     target.write_text(
         '''
-PER_CLASS_SOFT_COST_CEILING_USD = {"smoke": 2.0, "long_burn": 100.0}
+PER_CLASS_SOFT_COST_CEILING_USD = {"smoke": 2.0, "long_burn": 50.0}
 
 
 def classify_dispatch(*, estimated_cost_usd=None):
@@ -398,7 +399,7 @@ def test_check_239_multiple_violations_aggregated(tmp_path: Path) -> None:
     target.write_text(
         '''
 PER_CLASS_SOFT_WALLCLOCK_CEILING_HR = {"smoke": 0.5, "full": 12.0}
-PER_CLASS_SOFT_COST_CEILING_USD = {"smoke": 2.0, "long_burn": 100.0}
+PER_CLASS_SOFT_COST_CEILING_USD = {"smoke": 2.0, "long_burn": 50.0}
 
 
 def classify_dispatch(*, estimated_wall_clock_sec=None, estimated_cost_usd=None):

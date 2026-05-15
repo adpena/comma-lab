@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Catalog #241 + #242 META layer STRICT preflight gate tests."""
 
 from __future__ import annotations

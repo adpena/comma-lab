@@ -689,6 +689,14 @@ def test_parse_ibps1_archive_bytes_rejects_truncated_archive():
         mod.parse_ibps1_archive_bytes(truncated)
 
 
+def test_parse_ibps1_archive_bytes_rejects_trailing_schema_drift():
+    """Declared IBPS1 sections must cover the payload exactly."""
+    mod = _load_module()
+    inner = _build_synthetic_ibps1_inner()
+    with pytest.raises(ValueError, match="archive size"):
+        mod.parse_ibps1_archive_bytes(inner + b"tail")
+
+
 def test_parse_ibps1_uses_canonical_header_constants():
     """parse_ibps1 must use the same IBPS1_HEADER_SIZE constant the module declares."""
     mod = _load_module()

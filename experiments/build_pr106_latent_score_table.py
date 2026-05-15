@@ -82,6 +82,7 @@ from tac.sidechannel_score_table import (
 CAMERA_H = 874
 CAMERA_W = 1164
 EVAL_SIZE = (384, 512)
+# [calibration:submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py DELTA_SCALE; PR106 sidecar runtime contract]
 DELTA_SCALE = 0.01
 NO_OP_DIM = PR106_NO_OP_DIM
 DEFAULT_RUNTIME_DIR = REPO_ROOT / "submissions" / "pr106_latent_sidecar_r2_pr101_grammar"

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """@register_substrate decorator + registry behavior."""
 
 from __future__ import annotations

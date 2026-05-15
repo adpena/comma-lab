@@ -14,13 +14,68 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from tac.auth_eval_result import parse_auth_eval_score_claim
 from tac.deploy.claims import DispatchClaimSpec, terminal_dispatch_claim
 from tac.repo_io import json_text
 
 SCHEMA = "modal_training_terminal_claim_v1"
 
 
-def modal_training_terminal_status(result: dict[str, Any] | None) -> str:
+def _read_json_object(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def recovered_inline_contest_cuda_auth_eval(out_dir: Path) -> dict[str, Any] | None:
+    """Return recovered inline contest-CUDA auth-eval signal, if present.
+
+    Modal training terminal claims are intentionally non-promotional, but some
+    trainers run a byte-closed auth eval inline. This helper preserves that
+    signal without turning provider lifecycle recovery into a submission-ready
+    ranking surface.
+    """
+
+    root = Path(out_dir)
+    candidates = (
+        root / "harvested_artifacts" / "contest_auth_eval_cuda.json",
+        root / "harvested_artifacts" / "contest_auth_eval.json",
+        root / "contest_auth_eval_cuda.json",
+        root / "contest_auth_eval.json",
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        payload = _read_json_object(path)
+        if payload is None:
+            continue
+        claim = parse_auth_eval_score_claim(
+            payload,
+            required_score_axis="contest_cuda",
+        )
+        if claim is None:
+            continue
+        return {
+            "auth_eval_result_path": str(path),
+            "auth_eval_score": claim.score,
+            "auth_eval_score_axis": claim.score_axis,
+            "auth_eval_score_claim_valid": True,
+            "auth_eval_exact_cuda_complete": claim.exact_cuda_eval_complete,
+            "auth_eval_evidence_grade": claim.evidence_grade,
+            "auth_eval_lane_tag": claim.lane_tag,
+            "auth_eval_score_source_key": claim.source_key,
+            "auth_eval_recomputed_score": claim.recomputed_score,
+        }
+    return None
+
+
+def modal_training_terminal_status(
+    result: dict[str, Any] | None,
+    *,
+    recovered_auth_eval: dict[str, Any] | None = None,
+) -> str:
     """Return the terminal lane-claim status for a recovered Modal training result."""
 
     if not isinstance(result, dict):
@@ -32,6 +87,8 @@ def modal_training_terminal_status(result: dict[str, Any] | None) -> str:
         return "failed_modal_training_invalid_returncode"
     if isinstance(rc, int):
         if rc == 0:
+            if recovered_auth_eval is not None:
+                return "completed_modal_training_recovered_with_contest_cuda_auth_eval"
             return "completed_modal_training_recovered_no_score_claim"
         return f"failed_modal_training_rc_{rc}"
     return "failed_modal_training_unknown_returncode"
@@ -86,16 +143,26 @@ def append_modal_training_terminal_claim(
             "promotion_eligible": False,
         })
 
-    terminal_status = status or modal_training_terminal_status(result)
     if result is None:
         result = {}
+    recovered_auth_eval = recovered_inline_contest_cuda_auth_eval(out_dir)
+    terminal_status = status or modal_training_terminal_status(
+        result,
+        recovered_auth_eval=recovered_auth_eval,
+    )
     rc = result.get("returncode", result.get("rc"))
     timed_out = bool(result.get("timed_out", False))
     elapsed = result.get("elapsed_seconds")
+    recovered_score_note = ""
+    if recovered_auth_eval is not None:
+        recovered_score_note = (
+            "; recovered_inline_contest_cuda_auth_eval_score="
+            f"{recovered_auth_eval['auth_eval_score']}"
+        )
     notes = (
         "Modal training terminal recovery; score_claim=false; "
         f"promotion_eligible=false; rc={rc}; timed_out={timed_out}; "
-        f"elapsed_seconds={elapsed}; out_dir={out_dir}"
+        f"elapsed_seconds={elapsed}; out_dir={out_dir}{recovered_score_note}"
     )
     manifest: dict[str, Any] = {
         "schema": SCHEMA,
@@ -109,6 +176,8 @@ def append_modal_training_terminal_claim(
         "promotion_eligible": False,
         "notes": notes,
     }
+    if recovered_auth_eval is not None:
+        manifest["recovered_auth_eval"] = recovered_auth_eval
     try:
         terminal_dispatch_claim(
             repo_root=repo_root,
@@ -138,4 +207,5 @@ def append_modal_training_terminal_claim(
 __all__ = [
     "append_modal_training_terminal_claim",
     "modal_training_terminal_status",
+    "recovered_inline_contest_cuda_auth_eval",
 ]

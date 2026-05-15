@@ -145,6 +145,10 @@ env_overrides:
   D4_WYNER_ZIV_FRAME_0_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
   D4_WYNER_ZIV_FRAME_0_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR: /workspace/pact/lane_substrate_d4_wyner_ziv_frame_0_results/output
+  # F1 (lane_d4_unblock_f1_f4_smoke_l2_promotion_20260514): the smoke
+  # wrapper overrides this full-run reference to 50 epochs via
+  # D4_WYNER_ZIV_FRAME_0_SMOKE_EPOCHS. Keeping the recipe fallback at 2000
+  # preserves the cost-band full-run reference for later non-smoke dispatches.
   D4_WYNER_ZIV_FRAME_0_EPOCHS: "${D4_WYNER_ZIV_FRAME_0_EPOCHS:-2000}"
   D4_WYNER_ZIV_FRAME_0_UPSTREAM_DIR: /workspace/pact/upstream
   D4_WYNER_ZIV_FRAME_0_DEVICE: cuda

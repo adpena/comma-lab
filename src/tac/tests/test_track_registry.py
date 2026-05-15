@@ -57,6 +57,7 @@ def test_registry_keys_match_audit_table():
         "t13_joint_source_rd", "t19_adaptive_rho",
         "t20_kl_pose_distill", "t22_temporal_consistency",
         "lane_12_v2_nerv_as_renderer", "a1_substrate",
+        "frame0_postdecode_selector",
     }
     assert set(TRACK_REGISTRY.keys()) == expected
 
@@ -95,6 +96,13 @@ def test_visibility_continual_learning_sees_lane_12_v2_and_a1():
     visible_ids = {t.track_id for t in visible}
     assert "lane_12_v2_nerv_as_renderer" in visible_ids
     assert "a1_substrate" in visible_ids
+    assert "frame0_postdecode_selector" in visible_ids
+
+
+def test_visibility_packet_compiler_sees_frame0_postdecode_selector():
+    visible = list_tracks_visible_to("packet_compiler")
+    visible_ids = {t.track_id for t in visible}
+    assert visible_ids == {"frame0_postdecode_selector"}
 
 
 def test_visibility_unknown_component_returns_empty_list():
@@ -123,6 +131,7 @@ def test_promotable_excludes_t19_and_lane_12_v2():
     assert "lane_12_v2_nerv_as_renderer" not in promotable_ids
     assert "t7_fisher_rao" not in promotable_ids
     assert "t11_lovasz_hinge" not in promotable_ids
+    assert "frame0_postdecode_selector" not in promotable_ids
 
 
 # ── Pareto axis grouping ──────────────────────────────────────────────────
@@ -157,6 +166,7 @@ def test_multi_axis_groups_lane_12_v2_and_a1():
     multi_ids = {t.track_id for t in multi_tracks}
     assert "lane_12_v2_nerv_as_renderer" in multi_ids
     assert "a1_substrate" in multi_ids
+    assert "frame0_postdecode_selector" in multi_ids
 
 
 def test_none_axis_groups_t19_only():
@@ -191,6 +201,12 @@ def test_architecture_phase_groups_lane_12_v2():
     arch_tracks = list_tracks_by_phase(TrackPhase.ARCHITECTURE)
     arch_ids = {t.track_id for t in arch_tracks}
     assert arch_ids == {"lane_12_v2_nerv_as_renderer"}
+
+
+def test_postdecode_atom_phase_groups_frame0_selector():
+    postdecode_tracks = list_tracks_by_phase(TrackPhase.POSTDECODE_ATOM)
+    postdecode_ids = {t.track_id for t in postdecode_tracks}
+    assert postdecode_ids == {"frame0_postdecode_selector"}
 
 
 def test_substrate_phase_groups_a1():

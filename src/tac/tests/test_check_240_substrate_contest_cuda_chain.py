@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Tests for Catalog #240 - check_substrate_contest_cuda_chain_complete_or_research_only_tagged.
 
 Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against": this

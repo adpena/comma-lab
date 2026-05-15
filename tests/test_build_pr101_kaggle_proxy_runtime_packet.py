@@ -224,6 +224,42 @@ def test_builds_runtime_packet_with_only_bias_params_consumed(tmp_path: Path) ->
     )
 
 
+def test_build_normalizes_bare_python_inflate_wrapper(tmp_path: Path) -> None:
+    tool = _load_tool()
+    runtime = _runtime_fixture(tmp_path)
+    _write_file(
+        runtime / "inflate.sh",
+        """#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python "$HERE/inflate.py" "$@"
+""",
+        0o755,
+    )
+    source_archive = tmp_path / "source" / "archive.zip"
+    handoff_path = tmp_path / "handoff.json"
+    _write_zip(source_archive, payload=b"original-pr101-bytes")
+    _write_json(handoff_path, _handoff())
+
+    manifest = tool.build_proxy_runtime_packet(
+        handoff_path=handoff_path,
+        source_runtime_dir=runtime,
+        source_archive=source_archive,
+        packet_dir=tmp_path / "packet",
+    )
+
+    wrapper = (tmp_path / "packet" / "inflate.sh").read_text(encoding="utf-8")
+    assert 'command -v python3' in wrapper
+    assert '"$PYTHON_BIN" "$HERE/inflate.py" "$@"' in wrapper
+    assert 'python "$HERE/inflate.py"' not in wrapper
+    assert manifest["runtime_wrapper_patch"] == {
+        "patched_file": "inflate.sh",
+        "bare_python_invocation_replacements": 1,
+        "inserted_python_bin_resolver": True,
+        "portable_python_invocation": True,
+    }
+
+
 def test_refuses_hidden_operator_sidecars_in_runtime_tree(tmp_path: Path) -> None:
     tool = _load_tool()
     runtime = _runtime_fixture(tmp_path)

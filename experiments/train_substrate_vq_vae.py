@@ -699,6 +699,21 @@ def _device_or_die(name: str, *, smoke: bool):
     return _canonical_device_or_die(name, smoke=smoke, substrate_tag=_SUBSTRATE_TAG)
 
 
+def _sync_codebook_ema_shadow(ema: Any, model: Any) -> None:
+    """Keep persistent VQ codebook EMA state out of slow weight-EMA decay."""
+    state = model.state_dict()
+    for key in ("codebook", "ema_cluster_size", "ema_w"):
+        if key in state:
+            ema.shadow[key] = state[key].detach().clone()
+
+
+def _update_vq_codebook_ema_after_step(model: Any, pair_indices: Any, ema: Any) -> None:
+    """Advance fast VQ codebook EMA, then preserve it in the weight EMA shadow."""
+    model.update_codebook_ema(pair_indices)
+    ema.update(model)
+    _sync_codebook_ema_shadow(ema, model)
+
+
 # ---------------------------------------------------------------------------
 # Smoke main (CPU; no scorer load)
 # ---------------------------------------------------------------------------
@@ -964,7 +979,7 @@ def _full_main(args: argparse.Namespace) -> int:
                         model.parameters(), max_norm=args.grad_clip
                     )
                 optimizer.step()
-                ema.update(model)
+                _update_vq_codebook_ema_after_step(model, idx, ema)
                 epoch_loss_sum += float(loss.detach().item())
                 epoch_batches += 1
 
@@ -1113,6 +1128,7 @@ def _full_main(args: argparse.Namespace) -> int:
             print(f"[full] wrote {archive_zip_path}")
             _stage(f"archive_built_bytes_{archive_bytes}")
 
+        # 12. CUDA auth eval (CLAUDE.md "Auth eval EVERYWHERE")
         # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)
         auth_eval_result_path: Path | None = None
         contest_cuda_score: float | None = None

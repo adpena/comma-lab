@@ -1082,7 +1082,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "D6": "BOTH AXES contest-CPU + contest-CUDA (10-0)",
         },
         "stage_log": stage_log,
-        "hardware_substrate_cuda": _canon_detect_hardware_substrate(axis="cuda"),
+        "hardware_substrate_cuda": _canon_detect_hardware_substrate(
+            axis="cuda",
+            substrate_tag="a1_plus_lapose",
+            env_var_candidates=("A1_PLUS_LAPOSE_GPU", "MODAL_GPU"),
+        ),
     }
     (args.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
@@ -1262,7 +1266,8 @@ def _write_runtime(
 
 # Catalog #226: _run_contest_auth_eval_cuda was removed in favor of the
 # canonical helper `_canon_gate_auth_eval_call` invoked inline at the call
-# site in `_full_main`.
+# site in `_full_main`. Future CLI refactors of `experiments/contest_auth_eval.py`
+# propagate via the canonical helper, not 18 hand-rolled subprocess invocations.
 
 
 # ---------------------------------------------------------------------------

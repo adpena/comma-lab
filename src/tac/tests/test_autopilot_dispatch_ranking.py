@@ -33,8 +33,9 @@ def test_rank_dispatches_smoke():
     result = rank_dispatches()
     assert isinstance(result, RankingResult)
     assert result.schema == SCHEMA_VERSION
-    # 39 = 24 legacy + 15 FIX-J substrate-scaffold rows (LOOPCLOSE 2026-05-12).
-    assert result.n_substrates_considered == 39
+    # 55 = canonical substrate inventory including 2026-05-14 Z3/Z4/Z5/C1/C6
+    # campaign rows.
+    assert result.n_substrates_considered == 55
     assert len(result.ranked_dispatches) > 0
     # Score-claim invariants.
     assert result.score_claim is False
@@ -229,6 +230,39 @@ def test_as_candidate_row_kwargs_compatible_with_autopilot_loop():
     row = CandidateRow(**kwargs)
     assert row.candidate_id == "test_id"
     assert row.predicted_score_delta == -0.005
+
+
+def test_as_candidate_row_kwargs_carries_z1_metadata_to_autopilot_loop():
+    cand = RankedDispatchCandidate(
+        candidate_id="singleton__z3_balle_hyperprior_bolton",
+        family="bolt_on",
+        substrate_ids=("z3_balle_hyperprior_bolton",),
+        predicted_score_delta=-0.005,
+        expected_information_gain=0.005,
+        estimated_dispatch_cost_usd=2.0,
+        eig_per_dollar=0.0025,
+        composition_notes="test",
+        lane_class="substrate_class_shift",
+        literature_anchor="balle_2018",
+        campaign_metadata=("lane_id=lane_z3_balle_hyperprior_bolton_recover_20260514",),
+    )
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+    row = CandidateRow(**cand.as_candidate_row_kwargs())
+    assert row.lane_class == "substrate_class_shift"
+    assert row.literature_anchor == "balle_2018"
+
+
+def test_z3_singleton_registered_with_balle_2018_anchor_and_campaign_metadata():
+    result = rank_dispatches(drop_redundant_dominated=False)
+    by_id = {c.candidate_id: c for c in result.ranked_dispatches}
+    z3 = by_id["singleton__z3_balle_hyperprior_bolton"]
+    assert z3.literature_anchor == "balle_2018"
+    assert "substrate_class_shift" in z3.lane_class
+    assert any(
+        item == "campaign_id=lane_z3_balle_hyperprior_bolton_campaign_20260514"
+        for item in z3.campaign_metadata
+    )
+    assert "literature_anchor=balle_2018" in z3.composition_notes
 
 
 # ── Serialization ────────────────────────────────────────────────────────

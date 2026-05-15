@@ -30,17 +30,8 @@ Architecture (council-sketch 2026-05-12; not yet empirical-anchored):
 Council notes:
 - Total param target: ~180K (~10K encoder + ~10K decoder + ~4K codebook K=512,D=8
   + ~156K per-pair indices stored as part of the archive, not as model params)
-- Codebook adaptation: STE-gradient only (Bengio 2013) at L0 SKETCH; van den Oord
-  persistent N_c/m_c EMA buffer form (decay=0.99) is DEFERRED-pending-substrate-
-  engineering. The ``codebook_ema_decay=0.99`` config field is reserved for the
-  future EMA-buffer implementation (R4 finding Z-8.1, 2026-05-13). Promotion
-  past L0 SKETCH requires either implementing the persistent N_c/m_c buffers
-  (register_buffer("ema_cluster_size", torch.zeros(K)) +
-  register_buffer("ema_w", torch.zeros(K, D)) updated BEFORE quantize per
-  training step) OR explicit operator decision to ship the STE-gradient-only
-  variant. Per CLAUDE.md "Comment-only contracts are FORBIDDEN" — see van den
-  Oord council seat verdict in
-  feedback_review_zeta_r4_LANDED_20260513.md Finding Z-8.1.
+- Codebook adaptation: van den Oord persistent N_c/m_c EMA buffers
+  (decay=0.99) update the codebook explicitly after each training step.
 - Encoder/decoder weight EMA 0.997 per CLAUDE.md "EMA — non-negotiable".
 
 CLAUDE.md compliance:
@@ -90,14 +81,7 @@ class VqVaeConfig:
     output_width: int = _CONTEST_W
 
     codebook_ema_decay: float = 0.99
-    """Reserved for van den Oord persistent N_c/m_c codebook EMA decay (NOT
-    weight EMA 0.997). DEFERRED-pending-substrate-engineering at L0 SKETCH —
-    the architecture currently updates the codebook via STE gradient only (no
-    register_buffer for ema_cluster_size / ema_w). Per R4 finding Z-8.1
-    (2026-05-13): this field is honest config-reservation for the future EMA
-    buffer implementation; current trainer does NOT consume it. See
-    feedback_review_zeta_r4_LANDED_20260513.md Finding Z-8.1 for the van den
-    Oord + Tao + Filler verdict."""
+    """van den Oord persistent N_c/m_c codebook EMA decay (NOT weight EMA 0.997)."""
 
     commitment_cost: float = 0.25
     """Commitment loss weight (encoder pulled towards chosen codebook entry)."""
@@ -173,15 +157,9 @@ class VqVaeSubstrate(nn.Module):
     Forward signature mirrors sane_hnerv for trainer interop:
         forward(pair_indices) -> (rgb_0, rgb_1), each (B, 3, H, W).
 
-    The codebook is a trainable ``nn.Parameter`` updated via the
-    straight-through estimator (Bengio 2013) at L0 SKETCH. The van den Oord
-    persistent N_c/m_c EMA buffer form (decay=0.99) is DEFERRED-pending-
-    substrate-engineering per R4 finding Z-8.1 (2026-05-13): the
-    ``cfg.codebook_ema_decay`` config field is reserved for the future buffer
-    implementation but the current architecture does NOT register the
-    ``ema_cluster_size`` / ``ema_w`` buffers nor consume the decay during
-    training. Per CLAUDE.md "Comment-only contracts are FORBIDDEN", this
-    docstring is the authoritative description.
+    The codebook is an inflate-time tensor updated by persistent van den Oord
+    ``ema_cluster_size`` / ``ema_w`` buffers. Gradients flow through the STE to
+    the encoder/per-pair features; codebook movement is explicit EMA state.
     """
 
     def __init__(self, cfg: VqVaeConfig) -> None:
@@ -197,10 +175,17 @@ class VqVaeSubstrate(nn.Module):
             torch.empty(cfg.num_pairs, 2, cfg.embedding_dim, h_grid, w_grid).normal_(std=0.02)
         )
 
-        # Codebook: K x D
+        # Codebook: K x D. It is state_dict-visible for archive export, but
+        # not optimizer-updated; van den Oord EMA buffers move it explicitly.
         self.codebook = nn.Parameter(
-            torch.empty(cfg.codebook_size, cfg.embedding_dim).uniform_(-1.0 / cfg.codebook_size, 1.0 / cfg.codebook_size)
+            torch.empty(cfg.codebook_size, cfg.embedding_dim).uniform_(
+                -1.0 / cfg.codebook_size,
+                1.0 / cfg.codebook_size,
+            ),
+            requires_grad=False,
         )
+        self.register_buffer("ema_cluster_size", torch.zeros(cfg.codebook_size))
+        self.register_buffer("ema_w", torch.zeros(cfg.codebook_size, cfg.embedding_dim))
 
         # Encoder: a tiny refinement net applied to the per-pair feature before quantization
         # In a true VQ-VAE the encoder maps a frame -> grid; here we apply it as a
@@ -302,6 +287,43 @@ class VqVaeSubstrate(nn.Module):
         _zq0, _idx0, c0 = self._quantize(z_e_0)
         _zq1, _idx1, c1 = self._quantize(z_e_1)
         return 0.5 * (c0 + c1)
+
+    @torch.no_grad()
+    def update_codebook_ema(self, pair_indices: torch.Tensor) -> None:
+        """Update persistent codebook EMA buffers for the selected pairs."""
+
+        if pair_indices.dtype != torch.long:
+            raise ValueError("pair_indices must be torch.long")
+        per_pair = self.per_pair_features[pair_indices]
+        z_e_0 = self.encoder_refine(per_pair[:, 0])
+        z_e_1 = self.encoder_refine(per_pair[:, 1])
+        _zq0, idx0, _c0 = self._quantize(z_e_0)
+        _zq1, idx1, _c1 = self._quantize(z_e_1)
+
+        flat_z = torch.cat(
+            [
+                z_e_0.permute(0, 2, 3, 1).reshape(-1, self.cfg.embedding_dim),
+                z_e_1.permute(0, 2, 3, 1).reshape(-1, self.cfg.embedding_dim),
+            ],
+            dim=0,
+        ).detach()
+        flat_idx = torch.cat([idx0.reshape(-1), idx1.reshape(-1)], dim=0)
+        one_hot = torch.nn.functional.one_hot(
+            flat_idx,
+            num_classes=self.cfg.codebook_size,
+        ).to(dtype=flat_z.dtype, device=flat_z.device)
+        batch_count = one_hot.sum(dim=0)
+        batch_sum = one_hot.t() @ flat_z
+
+        decay = float(self.cfg.codebook_ema_decay)
+        self.ema_cluster_size.mul_(decay).add_(batch_count, alpha=1.0 - decay)
+        self.ema_w.mul_(decay).add_(batch_sum, alpha=1.0 - decay)
+
+        used = self.ema_cluster_size > 0
+        if used.any():
+            updated = self.codebook.detach().clone()
+            updated[used] = self.ema_w[used] / self.ema_cluster_size[used].unsqueeze(1)
+            self.codebook.copy_(updated)
 
     def encode_indices_for_archive(self) -> torch.Tensor:
         """Compute all codebook indices for all pairs (offline; trainer calls

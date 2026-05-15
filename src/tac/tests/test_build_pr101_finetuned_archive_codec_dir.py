@@ -331,6 +331,48 @@ def test_harvest_modal_calls_appends_terminal_claim_evidence_once(tmp_path: Path
     ]
 
 
+def test_harvest_modal_calls_terminal_evidence_preserves_inline_auth_eval_signal(
+    tmp_path: Path,
+) -> None:
+    mod = _load_harvest_module()
+    repo = tmp_path
+    out_dir = repo / "experiments" / "results" / "lane_demo_modal"
+    out_dir.mkdir(parents=True)
+    claim = {
+        "appended": True,
+        "lane_id": "lane_demo",
+        "instance_job_id": "job_demo",
+        "status": "completed_modal_training_recovered_with_contest_cuda_auth_eval",
+        "recovered_auth_eval": {
+            "auth_eval_score": 90.78433465890384,
+            "auth_eval_score_axis": "contest_cuda",
+            "auth_eval_score_claim_valid": True,
+            "auth_eval_exact_cuda_complete": True,
+        },
+    }
+
+    result = mod._append_terminal_claim_evidence(
+        repo_root=repo,
+        out_dir=out_dir,
+        terminal_claim=claim,
+    )
+
+    evidence = repo / "reports" / "cathedral_autopilot_evidence.jsonl"
+    row = json.loads(evidence.read_text(encoding="utf-8").splitlines()[0])
+    assert result["appended"] is True
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["recovered_auth_eval"]["auth_eval_score_axis"] == "contest_cuda"
+    assert (
+        row["measured_config_status"]
+        == "terminal_dispatch_claim_preserved_with_inline_auth_eval"
+    )
+    assert (
+        "terminal_training_harvest_preserves_inline_auth_eval_but_is_not_rank_authority"
+        in row["dispatch_blockers"]
+    )
+
+
 def test_harvest_modal_calls_refuses_evidence_when_terminal_claim_failed(tmp_path: Path) -> None:
     mod = _load_harvest_module()
     repo = tmp_path

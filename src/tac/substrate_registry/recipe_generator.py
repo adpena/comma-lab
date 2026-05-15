@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Auto-generate ``substrate_<id>_modal_<gpu>_dispatch.yaml`` from a contract.
 
 Pure function: ``generate_recipe_yaml(contract) -> str`` returns YAML bytes

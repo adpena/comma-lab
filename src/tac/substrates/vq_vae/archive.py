@@ -14,7 +14,7 @@ lesson L2):
     NUM_PAIRS(2)         u16       cfg.num_pairs (e.g. 600)
     H_GRID(2)            u16       index grid height (= H/grid_downsample)
     W_GRID(2)            u16       index grid width (= W/grid_downsample)
-    DECODER_BLOB_LEN(4)  u32       brotli(state_dict bytes) of encoder + decoder + codebook
+    DECODER_BLOB_LEN(4)  u32       brotli(state_dict bytes) of decoder + codebook
     INDICES_BLOB_LEN(4)  u32       packed int16 codebook indices bytes len
     META_BLOB_LEN(4)     u32       utf-8 json meta bytes len
     DECODER_BLOB         ...       brotli(pickled runtime state_dict, fp16 cpu)
@@ -75,7 +75,7 @@ class VqVaeArchive:
     """Parsed archive structure — the inflate-time data contract."""
 
     decoder_state_dict: dict[str, torch.Tensor]
-    """Encoder + decoder + codebook state_dict (all model weights)."""
+    """Inflate-time state_dict: codebook plus decoder tensors."""
 
     indices: torch.Tensor
     """``(num_pairs, 2, H_GRID, W_GRID)`` int64 codebook indices."""

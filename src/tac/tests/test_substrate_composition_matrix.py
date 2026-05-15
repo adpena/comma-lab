@@ -38,7 +38,7 @@ from tac.optimization.substrate_composition_matrix import (
 
 
 def test_inventory_has_expected_count():
-    """50-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 + 2 cooperative rows.
+    """55-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 + 2 cooperative + 5 campaign rows.
 
     Legacy 24 = residual basis 5 + pose-axis 3 + self-compression 3 +
     NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 +
@@ -63,11 +63,13 @@ def test_inventory_has_expected_count():
     ``feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md``.
 
     Cooperative-receiver wire-in 2026-05-13 added 2 rows: SARC and WZ1.
+    Integration/autopilot Scope D 2026-05-14 added Z3/Z4/Z5/C1/C6 campaign
+    rows so long-burn campaigns remain visible to the canonical ranker.
     """
     rows = canonical_substrate_inventory()
-    assert len(rows) == 50, (
-        "expected 50 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2 + "
-        f"2 cooperative), got {len(rows)}"
+    assert len(rows) == 55, (
+        "expected 55 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2 + "
+        f"2 cooperative + 5 campaign), got {len(rows)}"
     )
 
 
@@ -114,6 +116,30 @@ def test_inventory_dispatch_cost_table_complete():
         assert r.substrate_id in DISPATCH_COST_USD_MIDPOINT, (
             f"missing dispatch cost for {r.substrate_id!r}"
         )
+
+
+def test_z3_z4_z5_c1_c6_campaign_rows_registered_with_metadata():
+    rows = {r.substrate_id: r for r in canonical_substrate_inventory()}
+    expected = {
+        "z3_balle_hyperprior_bolton",
+        "z4_cooperative_receiver_loss",
+        "z5_predictive_coding_world_model",
+        "c1_world_model_foveation",
+        "c6_e4_mdl_ibps",
+    }
+    assert expected <= rows.keys()
+    z3 = rows["z3_balle_hyperprior_bolton"]
+    assert z3.lane_id == "lane_z3_balle_hyperprior_bolton_recover_20260514"
+    assert z3.campaign_id == "lane_z3_balle_hyperprior_bolton_campaign_20260514"
+    assert z3.literature_anchor == "balle_2018"
+    assert "substrate_class_shift" in z3.lane_class
+    for sid in expected:
+        row = rows[sid]
+        assert row.campaign_id
+        assert row.campaign_stage
+        assert row.campaign_priority
+        assert row.lane_class
+        assert row.literature_anchor
 
 
 def test_substrate_row_predicted_delta_alone_midpoint():

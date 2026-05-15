@@ -151,11 +151,12 @@ EVAL_H, EVAL_W = 384, 512
 CAMERA_H, CAMERA_W = 874, 1164
 N_PAIRS = 600
 
-# IBPS1 (C6 MDL-IBPS variant 1) header constants, mirrored from
-# src/tac/substrates/c6_e4_mdl_ibps/archive.py so this tool stays
-# importable even when the substrate package can't be imported (no torch
-# at --help time). Per CLAUDE.md "Beauty, simplicity, and developer
-# experience" — narrow contract preserved.
+# IBPS1 (C6 MDL-IBPS variant 1) header constants. The canonical
+# definitions live in :mod:`tac.substrates.c6_e4_mdl_ibps.archive`. This
+# tool's docstring + module-level constants intentionally mirror them so
+# the CLI remains usable when only a partial venv (no torch) is present
+# at ``--help`` time. The actual parser delegates to the canonical
+# surface (see :func:`parse_ibps1_archive_bytes` below).
 IBPS1_MAGIC = b"IBPS"
 IBPS1_HEADER_FMT = "<4sBHHIIII"  # magic(4) + ver(1) + ld(2) + np(2) + 4*u32
 IBPS1_HEADER_SIZE = struct.calcsize(IBPS1_HEADER_FMT)  # = 25
@@ -427,6 +428,17 @@ def parse_pr106_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]
 
 def parse_ibps1_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]:
     """Return section name -> (start, length) for IBPS1 (C6 MDL-IBPS) grammar.
+
+    Thin delegating shim. The canonical surface lives at
+    :func:`tac.substrates.c6_e4_mdl_ibps.archive.parse_ibps1_archive_bytes`
+    (promoted 2026-05-14 in
+    ``lane_ibps1_canonical_surface_promotion_20260514``).
+
+    This shim preserves the historical CLI/tools import path
+    (``from tools.mdl_scorer_conditional_ablation import
+    parse_ibps1_archive_bytes``) and the existing test surface for
+    backward compatibility. New callers should import directly from the
+    canonical surface to avoid drift if the IBPS1 schema ever versions.
 
     IBPS1 wire format (inner blob, single ZIP member '0.bin'); see
     :mod:`tac.substrates.c6_e4_mdl_ibps.archive` for the canonical

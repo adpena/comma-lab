@@ -82,6 +82,7 @@ HEADER = (
 TERMINAL_PREFIXES = (
     "completed_",
     "failed_",
+    "timed_out",
     "preempted",
     "cancelled",
     "refused_dispatch",

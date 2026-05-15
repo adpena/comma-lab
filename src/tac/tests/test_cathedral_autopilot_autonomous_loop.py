@@ -363,6 +363,80 @@ def test_load_candidates_from_jsonl(tmp_path):
     assert rows[1].blockers == ["needs_phase2_anchor"]
 
 
+def _write_probe_payload(tmp_path: Path, payload: dict | None = None) -> Path:
+    payload = payload or {
+        "schema": "zen_floor_disambiguator_v1",
+        "tool": "tools/probe_zen_floor_disambiguator.py",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "autopilot_rows": [
+            {
+                "candidate_id": "lane_zen_floor_probe_disambiguator_20260514",
+                "family": "zen_floor_planning_probe",
+                "predicted_score_delta": 0.0,
+                "expected_information_gain": 2.0,
+                "estimated_dispatch_cost_usd": 0.0,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "mdl_tier_c_density": 0.25,
+                "composition_alpha": 0.8,
+                "blockers": ["byte_closed_codec_candidate_required_before_dispatch"],
+                "notes": "[proxy] selected_interpretation=proxy_static_floor",
+            }
+        ],
+    }
+    p = tmp_path / "probe.json"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    return p
+
+
+def test_load_probe_disambiguator_autopilot_rows_read_only(tmp_path):
+    p = _write_probe_payload(tmp_path)
+    rows = loop.load_candidates_from_probe_disambiguator_output(p)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.candidate_id == "lane_zen_floor_probe_disambiguator_20260514"
+    assert row.family == "zen_floor_planning_probe"
+    assert row.blockers == ["byte_closed_codec_candidate_required_before_dispatch"]
+    assert row.mdl_tier_c_density == pytest.approx(0.25)
+    assert row.composition_alpha == pytest.approx(0.8)
+    assert "[probe-disambiguator; read-only planning]" in row.notes
+
+
+def test_load_probe_disambiguator_refuses_score_claim(tmp_path):
+    payload = {
+        "schema": "zen_floor_disambiguator_v1",
+        "score_claim": True,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "autopilot_rows": [],
+    }
+    p = _write_probe_payload(tmp_path, payload)
+    with pytest.raises(ValueError, match="score_claim=True"):
+        loop.load_candidates_from_probe_disambiguator_output(p)
+
+
+def test_main_accepts_probe_disambiguator_source(tmp_path):
+    p = _write_probe_payload(tmp_path)
+    out_path = tmp_path / "probe_report.json"
+    rc = loop.main([
+        "--probe-disambiguator-json", str(p),
+        "--iterations", "1",
+        "--output", str(out_path),
+        "--claims-path", str(tmp_path / "no_claims.md"),
+    ])
+    assert rc == 0
+    payload = json.loads(out_path.read_text())
+    assert "probe_disambiguator_read_only_source" in payload[
+        "claude_md_compliance_tags"
+    ]
+    assert payload["probe_disambiguator_source"]["read_only_consumer"] is True
+
+
 def test_main_returns_0_on_valid_input(tmp_path, capsys):
     cands_path = tmp_path / "cands.jsonl"
     cands_path.write_text(

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """SubstrateContract — canonical schema for the META layer.
 
 Per `.omx/research/substrate_meta_layer_design_20260515.md`, this is the

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Round-trip parity test between encoder + vendored decoder.
 
 The encoder lives in ``tac.codec.factorized_hnerv_codec``; the decoder is

@@ -457,6 +457,60 @@ def _patch_inflate_biases(inflate_path: Path, params: Mapping[str, float]) -> di
     }
 
 
+def _patch_inflate_wrapper_python_bin(inflate_sh_path: Path) -> dict[str, Any]:
+    """Make copied PR101 wrappers portable across Python binary names.
+
+    Some public PR101-derived wrappers invoke bare ``python``. That works in
+    many Linux images but fails on stricter local/macOS automation where only
+    ``python3`` or an explicit ``PYTHON_BIN`` is available. Normalize the copied
+    wrapper so generated packets remain runnable without mutating the source
+    runtime snapshot.
+    """
+
+    text = inflate_sh_path.read_text(encoding="utf-8")
+    replacements = (
+        ('python "$HERE/inflate.py"', '"$PYTHON_BIN" "$HERE/inflate.py"'),
+        ("python '$HERE/inflate.py'", '"$PYTHON_BIN" "$HERE/inflate.py"'),
+        ("python ${HERE}/inflate.py", '"$PYTHON_BIN" "${HERE}/inflate.py"'),
+        ('python "${HERE}/inflate.py"', '"$PYTHON_BIN" "${HERE}/inflate.py"'),
+    )
+    patched = text
+    count = 0
+    for old, new in replacements:
+        old_count = patched.count(old)
+        if old_count:
+            patched = patched.replace(old, new)
+            count += old_count
+    resolver = """if [ -z "${PYTHON_BIN:-}" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="python3"
+  elif command -v python >/dev/null 2>&1; then
+    PYTHON_BIN="python"
+  else
+    echo "ERROR: neither python3 nor python is available; set PYTHON_BIN" >&2
+    exit 127
+  fi
+fi
+"""
+    inserted_resolver = False
+    if count and 'PYTHON_BIN="${PYTHON_BIN:-' not in patched and 'command -v python3' not in patched:
+        here_line = 'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
+        if here_line in patched:
+            patched = patched.replace(here_line, here_line + "\n\n" + resolver, 1)
+            inserted_resolver = True
+        else:
+            patched = resolver + "\n" + patched
+            inserted_resolver = True
+    if patched != text:
+        inflate_sh_path.write_text(patched, encoding="utf-8")
+    return {
+        "patched_file": "inflate.sh",
+        "bare_python_invocation_replacements": count,
+        "inserted_python_bin_resolver": inserted_resolver,
+        "portable_python_invocation": count > 0,
+    }
+
+
 def build_proxy_runtime_packet(
     *,
     handoff_path: Path = DEFAULT_HANDOFF,
@@ -489,7 +543,11 @@ def build_proxy_runtime_packet(
     inflate_path = packet_dir / "inflate.py"
     if not inflate_path.is_file():
         raise ProxyRuntimePacketError("copied runtime is missing inflate.py")
+    inflate_sh_path = packet_dir / "inflate.sh"
+    if not inflate_sh_path.is_file():
+        raise ProxyRuntimePacketError("copied runtime is missing inflate.sh")
     runtime_patch = _patch_inflate_biases(inflate_path, params)
+    wrapper_patch = _patch_inflate_wrapper_python_bin(inflate_sh_path)
 
     packet_archive = packet_dir / "archive.zip"
     shutil.copyfile(source_archive, packet_archive)
@@ -560,6 +618,7 @@ def build_proxy_runtime_packet(
             "excluded_suffixes": list(EXCLUDED_SUFFIXES),
         },
         "runtime_patch": runtime_patch,
+        "runtime_wrapper_patch": wrapper_patch,
         "runtime_consumed_params": {
             key: params[key]
             for key in CANDIDATE_PARAMS

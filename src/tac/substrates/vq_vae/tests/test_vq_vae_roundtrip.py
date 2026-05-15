@@ -93,6 +93,102 @@ def test_runtime_state_dict_excludes_training_only_tensors():
     assert any(k.startswith("decoder.") for k in runtime_sd)
     assert "per_pair_features" not in runtime_sd
     assert not any(k.startswith("encoder_refine.") for k in runtime_sd)
+    assert "ema_cluster_size" not in runtime_sd
+    assert "ema_w" not in runtime_sd
+
+
+def test_codebook_ema_buffers_are_persistent_and_move_codebook():
+    cfg = VqVaeConfig(
+        codebook_size=8,
+        embedding_dim=2,
+        encoder_hidden=4,
+        decoder_hidden=4,
+        grid_downsample=8,
+        num_pairs=2,
+        output_height=16,
+        output_width=24,
+        codebook_ema_decay=0.0,
+    )
+    torch.manual_seed(23)
+    model = VqVaeSubstrate(cfg)
+
+    assert "ema_cluster_size" in model.state_dict()
+    assert "ema_w" in model.state_dict()
+    assert model.codebook.requires_grad is False
+
+    before = model.codebook.detach().clone()
+    idx = torch.tensor([0, 1], dtype=torch.long)
+    with torch.no_grad():
+        model.update_codebook_ema(idx)
+    after = model.codebook.detach()
+
+    assert torch.any(model.ema_cluster_size > 0)
+    assert not torch.allclose(after, before)
+
+
+def test_trainer_weight_ema_shadow_preserves_fast_codebook_ema():
+    from experiments.train_substrate_vq_vae import _sync_codebook_ema_shadow
+    from tac.training import EMA
+
+    cfg = VqVaeConfig(
+        codebook_size=8,
+        embedding_dim=2,
+        encoder_hidden=4,
+        decoder_hidden=4,
+        grid_downsample=8,
+        num_pairs=2,
+        output_height=16,
+        output_width=24,
+        codebook_ema_decay=0.0,
+    )
+    torch.manual_seed(29)
+    model = VqVaeSubstrate(cfg)
+    ema = EMA(model, decay=0.997)
+    idx = torch.tensor([0, 1], dtype=torch.long)
+
+    model.update_codebook_ema(idx)
+    ema.update(model)
+    _sync_codebook_ema_shadow(ema, model)
+
+    state = model.state_dict()
+    for key in ("codebook", "ema_cluster_size", "ema_w"):
+        assert torch.allclose(ema.shadow[key], state[key])
+
+
+def test_trainer_step_updates_fast_codebook_ema_before_shadow_sync():
+    from experiments.train_substrate_vq_vae import _update_vq_codebook_ema_after_step
+    from tac.training import EMA
+
+    cfg = VqVaeConfig(
+        codebook_size=8,
+        embedding_dim=2,
+        encoder_hidden=4,
+        decoder_hidden=4,
+        grid_downsample=8,
+        num_pairs=2,
+        output_height=16,
+        output_width=24,
+        codebook_ema_decay=0.0,
+    )
+    torch.manual_seed(31)
+    model = VqVaeSubstrate(cfg)
+    ema = EMA(model, decay=0.997)
+    opt = torch.optim.SGD(model.parameters(), lr=0.01)
+    idx = torch.tensor([0, 1], dtype=torch.long)
+
+    before_codebook = model.codebook.detach().clone()
+    rgb0, rgb1 = model(idx)
+    loss = rgb0.square().mean() + rgb1.square().mean() + model.compute_commitment_loss(idx)
+    opt.zero_grad()
+    loss.backward()
+    opt.step()
+    _update_vq_codebook_ema_after_step(model, idx, ema)
+
+    assert torch.any(model.ema_cluster_size > 0)
+    assert not torch.allclose(model.codebook.detach(), before_codebook)
+    state = model.state_dict()
+    for key in ("codebook", "ema_cluster_size", "ema_w"):
+        assert torch.allclose(ema.shadow[key], state[key])
 
 
 def test_pack_archive_rejects_training_only_state_dict():

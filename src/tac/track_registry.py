@@ -55,6 +55,7 @@ class TrackPhase(str, Enum):
     NUMERICAL_SOLVER = "numerical_solver"  # ADMM step / dual update
     ARCHITECTURE = "architecture"  # architecture-class atom
     SUBSTRATE = "substrate"  # empirical substrate anchor
+    POSTDECODE_ATOM = "postdecode_atom"  # deterministic post-decoder correction atom
 
 
 @dataclass(frozen=True)
@@ -230,6 +231,48 @@ TRACK_REGISTRY: dict[str, TrackEntry] = {
         entry_conditions=(),
         promotion_eligible=True,
         notes="Empirical anchor; consumed by predictor + Pareto frontier",
+    ),
+    "frame0_postdecode_selector": TrackEntry(
+        track_id="frame0_postdecode_selector",
+        module_path=(
+            "submissions/hdm8_film_grain_sidecar/inflate.py + "
+            "submissions/frame_exploit_selector_sidecar/inflate.py + "
+            "src/tac/optimization/postdecode_selector_waterfill.py"
+        ),
+        kind_summary=(
+            "Archive-charged deterministic first-frame postdecode selector; "
+            "stacks after RGB decoders and exploits SegNet last-frame-only behavior"
+        ),
+        phase=TrackPhase.POSTDECODE_ATOM,
+        pareto_axis=ParetoAxis.MULTI,
+        landed_commit_or_memo="hdm8_frame0_postfilter_local_first_rss_sweep_20260514_codex.md",
+        evidence_grade="[macOS-MPS advisory + modal-T4-CUDA-proxy pending]",
+        planner_visibility=(
+            "packet_compiler",
+            "xray_substrate_classifier",
+            "meta_lagrangian_search",
+            "pareto_3axis",
+            "cathedral_autopilot",
+            "continual_learning_posterior",
+            "field_equation_planner",
+        ),
+        entry_conditions=(
+            "byte-closed selector archive manifest",
+            "positive Modal T4 CUDA proxy",
+            "claimed exact contest-CUDA auth eval before score claim",
+        ),
+        promotion_eligible=False,
+        notes=(
+            "Registered as FGS1/FES1 cooperative-receiver grammars. Use water-fill "
+            "atom ledger to price selector bytes before exact eval."
+        ),
+        metadata={
+            "compiler_magic": "FGS1",
+            "compiler_magics": ("FGS1", "FES1"),
+            "compiler_stage": "postdecode_scorer_aware_selector_pack",
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
     ),
 }
 

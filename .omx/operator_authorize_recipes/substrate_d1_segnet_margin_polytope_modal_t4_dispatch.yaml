@@ -1,7 +1,13 @@
 schema_version: 1
 name: substrate_d1_segnet_margin_polytope_modal_t4_dispatch
 lane_id: lane_d1_segnet_margin_polytope_encoder_20260514
-summary: D1 SegNet margin polytope encoder first-anchor dispatch on Modal T4 (sub-0.188 path #1 lowest cost; deep-math memo §3.6/§10 D1; frame-1 polytope geometric-nullspace sister to YUCR's frame-0 structural-nullspace).
+summary: D1 SegNet margin polytope encoder L1 custody scaffold on Modal T4. Exact dispatch is blocked until L2 consumes the sidecar overlay in the runtime.
+dispatch_enabled: false
+dispatch_blockers:
+  - d1_l1_runtime_overlay_not_consumed
+  - l2_overlay_adapter_missing
+  - current_l1_packet_base_renderer_plus_rate_only
+  - do_not_dispatch_until_ready_for_exact_eval_dispatch_true
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -20,8 +26,8 @@ cost_band:
   platform_key: modal
   gpu_key: T4
 
-predicted_score_target: 0.184
-predicted_delta: "deep-math memo §10 D1 central band: Δ -0.005 to -0.012 on A1 0.192848 baseline → [contest-CPU prediction] [0.181, 0.188]"
+predicted_score_target: null
+predicted_delta: "L2-only projection from deep-math memo section 10 D1: delta -0.005 to -0.012 on A1 0.192848 baseline => [contest-CPU projection] [0.181, 0.188]. L1 does not apply the overlay and carries no score claim."
 predicted_delta_basis: ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md#section-10-top-5-dispatch-queue-d1"
 literature_anchor: "Fridrich-Holub 2014 UNIWARD steganalysis + Filler 2011 STC + Boyd-Vandenberghe 2004 §6 polytope geometry"
 council_verdicts:
@@ -32,15 +38,22 @@ council_verdicts:
   D5: "frame-1 polytope-interior noise allocation (deep-math memo §3.6)"
   D6: "BOTH AXES contest-CPU + contest-CUDA (mandatory; CUDA inline, CPU dispatched separately)"
 
-predicted_band: [0.165, 0.200]
+predicted_band: null
+l2_projected_band: [0.181, 0.188]
+predicted_score_evidence_grade: blocked_l1_noop_overlay
 
 risk: |
-  D1 is the lowest-cost sub-0.188-CLEARING substrate per deep-math memo §10
-  Top-K ranking. Predicted Δ band -0.005 to -0.012 is BOUNDED-FROM-ABOVE
-  by the fraction of pixels with high margin × per-pixel safe-bit budget.
-  An A1 archive whose margin distribution skews boundary-dominant (>50%
-  pixels with m < margin_threshold) would compress the achievable Δ
-  toward the lower bound -0.005.
+  D1 L1 is NOT dispatchable for exact score movement. The current runtime
+  verifies the D1 sidecar and the frozen A1 base custody, then delegates to
+  A1 without applying the polytope overlay. An exact eval of L1 would measure
+  base renderer output plus D1 sidecar rate overhead, not the D1 hypothesis.
+
+  The sub-0.188 band remains an L2 projection only. Per deep-math memo section
+  10 D1, projected delta -0.005 to -0.012 is bounded from above by the
+  fraction of pixels with high margin times per-pixel safe-bit budget. An A1
+  archive whose margin distribution skews boundary-dominant (>50% pixels with
+  m < margin_threshold) would compress the achievable delta toward the lower
+  bound -0.005.
 
   A1 substrate is FROZEN (loaded verbatim from archive.zip SHA
   87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5
@@ -54,18 +67,17 @@ risk: |
   (Linux x86_64 separate dispatch) before promotion. First-anchor dispatch
   is CUDA-only; CPU axis follow-up is a separate operator step.
 
-  Smoke-before-full pattern (Catalog #167): the operator-authorize wrapper
-  routes through `tools/run_modal_smoke_before_full.py` which fires a
-  100-epoch ~$0.15 Modal T4 smoke FIRST, validates rc=0 + auth-eval JSON
-  present + score in plausible band [0.15, 0.25], then fires the full
-  1000-epoch T4 dispatch only on smoke-green.
+  Smoke-before-full pattern (Catalog #167): this recipe is blocked before
+  smoke until the trainer readiness manifest reports
+  ready_for_exact_eval_dispatch=true and runtime_overlay_consumed=true. Do
+  not route the L1 packet through auth eval.
 
   Pre-smoke macOS-CPU SANITY gate (operator pre-approved 2026-05-13):
   the wrapper runs `tools/score_macos_cpu_advisory_proxy.py` on the A1
   baseline BEFORE Modal smoke to verify the proxy chain end-to-end.
   Proxy score outside [0.187, 0.200] refuses the chain at $0.
 
-envelope_status: "FITS $5 envelope at p50 fallback (macOS-CPU $0 + smoke $0.15 + full $1.00)"
+envelope_status: "BLOCKED for exact dispatch until L2 overlay adapter consumes d1_polytope.bin in runtime"
 
 remote_driver: scripts/remote_lane_substrate_d1_segnet_margin_polytope.sh
 timeout_hours: 1.5
@@ -126,10 +138,14 @@ sentinel_files:
   - src/tac/substrates/d1_segnet_margin_polytope/inflate.py
 
 notes: |
-  D1 first-anchor dispatch for the SegNet margin polytope encoder.
-  Per deep-math memo §10 D1 this is the LOWEST-COST sufficient path to
-  sub-0.188-CLEARING ($1 Modal smoke + 3 days build; $0 GPU during the
-  L1 SCAFFOLD landing).
+  D1 L1 is a custody scaffold for the SegNet margin polytope encoder. The
+  sidecar grammar, archive composition, base SHA binding, and runtime guard
+  are valid, but the current packet is not a score-lowering candidate because
+  the runtime does not yet apply the sidecar overlay.
+
+  Per deep-math memo section 10 D1, L2 remains a plausible low-cost path to
+  sub-0.188 once the fused D1+A1 runtime consumes d1_polytope.bin and the
+  readiness manifest flips runtime_overlay_consumed=true.
 
   Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline":
   this is a substrate-engineering lane (substrate-engineering LOC budget

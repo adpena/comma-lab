@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """@register_substrate decorator + in-memory registry.
 
 Per `.omx/research/substrate_meta_layer_design_20260515.md`, the decorator:

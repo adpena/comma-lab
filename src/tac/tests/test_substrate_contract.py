@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Pydantic-style validators on SubstrateContract.
 
 Per `.omx/research/substrate_meta_layer_design_20260515.md` § 5.3, the

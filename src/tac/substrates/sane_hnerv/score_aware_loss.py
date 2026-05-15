@@ -170,8 +170,8 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         pose_scorer: torch.nn.Module,
         rgb_0_rt: torch.Tensor,
         rgb_1_rt: torch.Tensor,
-        gt_rgb_0: torch.Tensor,
-        gt_rgb_1: torch.Tensor,
+        gt_rgb_0: torch.Tensor | None = None,
+        gt_rgb_1: torch.Tensor | None = None,
         gt_pose_batch: torch.Tensor | None = None,
         gt_seg_batch: torch.Tensor | None = None,
         gt_seg_already_probs: bool | None = None,
@@ -179,7 +179,10 @@ class SaneHnervScoreAwareLoss(torch.nn.Module):
         """Call the canonical scorer-preprocess contract.
 
         Subclasses can override this method to make substrate-local ownership
-        explicit while preserving the single canonical helper.
+        explicit while preserving the single canonical helper. Cache kwargs
+        (``gt_pose_batch`` / ``gt_seg_batch`` / ``gt_seg_already_probs``)
+        route through the dispatch helper to the cached path when supplied
+        per CLAUDE.md TIER-1-OPT-BATCH F3 wire-in 2026-05-14.
         """
         return score_pair_components_dispatch(
             seg_scorer=seg_scorer,

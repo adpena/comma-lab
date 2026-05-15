@@ -182,6 +182,15 @@ def test_class_shift_time_traveler_token_rewards() -> None:
     )
 
 
+def test_class_shift_balle_2018_literature_anchor_rewards() -> None:
+    result = loop.adjust_predicted_delta_for_class_shift(
+        -0.005, literature_anchor="balle_2018"
+    )
+    assert result == pytest.approx(
+        -0.005 - loop.CLASS_SHIFT_LITERATURE_ANCHOR_REWARD
+    )
+
+
 # ── apply_z1_empirical_revision_to_candidate_delta (composition) ───────────
 
 

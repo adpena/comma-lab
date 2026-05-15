@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Recipe-generator output validates against the canonical YAML schema.
 
 Cross-validates the generated recipe against the C6 / sane_hnerv canonical

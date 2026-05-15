@@ -2202,6 +2202,28 @@ def preflight_all(
         check_register_substrate_contract_fields_canonical(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #248 — GRAND-COUNCIL-MULTI-SISTER-MERGE-RESOLUTION
+        # self-protection. Refuses any state of the repo that contains
+        # residual git conflict markers (``<<<<<<< Updated upstream`` /
+        # ``<<<<<<< HEAD`` / ``>>>>>>> Stashed changes`` / ``>>>>>>> <branch>``)
+        # in canonical source files. Bug class anchor: 2026-05-15 multi-sister
+        # stash-pop race produced 79 UU files including 14 with residual
+        # conflict markers across src/tac/, experiments/, submissions/,
+        # tools/, reports/. Sister of Catalog #117 / #157 / #174 / #230.
+        # STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed
+        # AND self-protected against" + "Strict-flip atomicity rule" — live
+        # count at landing: 0 (the GRAND-COUNCIL-MULTI-SISTER-MERGE-RESOLUTION
+        # resolution lands in the same commit batch).
+        check_no_stash_pop_conflict_markers_in_canonical_files(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-14 Catalog #226 sister gate - train_renderer auth-eval
+        # wiring must stay aligned with experiments/auth_eval_renderer.py.
+        # Initial wire-in is warn-only because this is a renderer-side sister
+        # to the substrate trainer Catalog #226 gate.
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-09 Catalog #146 - operator decision B: Phase 1 trainer
         # _write_runtime contest-compliant inflate emission. STRICT @ 0
         # because the trainer was rewritten in the same commit-batch and the
@@ -54399,6 +54421,225 @@ def check_substrate_contest_cuda_chain_complete_or_research_only_tagged(
 
 
 # ----------------------------------------------------------------------------
+# Catalog #226 sister — train_renderer auth_eval_renderer CLI drift guard
+#
+# The substrate-trainer gate below (#226) refuses hand-rolled
+# experiments/contest_auth_eval.py subprocess invocations. The canonical
+# renderer trainer has a different auth path:
+# src/tac/experiments/train_renderer.py builds a real submission archive and
+# then calls experiments/auth_eval_renderer.py. Council R3 already caught this
+# wiring drifting once: it passed invented flags, omitted --archive-size-bytes,
+# and could silently skip the eval. This sister gate turns the focused
+# regression tests into a preflight surface without refactoring any trainers.
+# ----------------------------------------------------------------------------
+
+_CHECK_TRAIN_RENDERER_AUTH_EVAL_REQUIRED_FLAGS = frozenset(
+    {
+        "--checkpoint",
+        "--upstream-dir",
+        "--device",
+        "--archive-size-bytes",
+        "--output-dir",
+        "--poses",
+    }
+)
+
+
+def _check_train_renderer_auth_eval_argparse_flags(
+    auth_eval_path: Path,
+) -> set[str]:
+    """Return literal ``--flags`` declared by auth_eval_renderer's argparse."""
+    try:
+        text = auth_eval_path.read_text(encoding="utf-8")
+        tree = ast.parse(text, filename=str(auth_eval_path))
+    except (OSError, UnicodeDecodeError, SyntaxError):
+        return set()
+    flags: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        try:
+            func_src = ast.unparse(node.func)
+        except Exception:  # pragma: no cover - defensive
+            continue
+        if not func_src.endswith(".add_argument"):
+            continue
+        for arg in node.args:
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                if arg.value.startswith("--"):
+                    flags.add(arg.value)
+    return flags
+
+
+def _check_train_renderer_auth_eval_block(train_renderer_text: str) -> str | None:
+    """Extract the train_renderer auth-eval-on-best block."""
+    start = train_renderer_text.find("# Auth eval on best")
+    if start < 0:
+        return None
+    end = train_renderer_text.find("return best_scorer", start)
+    if end < 0:
+        return None
+    return train_renderer_text[start:end]
+
+
+def _check_train_renderer_auth_eval_literal_flags(block: str) -> set[str]:
+    """Return exact string-literal flags in the auth-eval block.
+
+    This intentionally matches only standalone string literals like
+    ``"--checkpoint"``. Help/error text such as
+    ``f"--auth-eval-masks and --auth-eval-poses"`` is not a subprocess flag
+    and should not count.
+    """
+    flags: set[str] = set()
+    for match in re.finditer(
+        r"(?P<prefix>^|[^A-Za-z0-9_])(?P<quote>[\"'])"
+        r"(?P<flag>--[a-z0-9][a-z0-9_-]*)(?P=quote)",
+        block,
+    ):
+        flags.add(match.group("flag"))
+    return flags
+
+
+def _check_train_renderer_auth_eval_masks_gate_fails_loud(block: str) -> bool:
+    """Return True when missing masks/poses fail before auth eval."""
+    marker = "if not args.auth_eval_masks or not args.auth_eval_poses:"
+    idx = block.find(marker)
+    if idx < 0:
+        return False
+    return "raise RuntimeError" in block[idx: idx + 1200]
+
+
+def check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Refuse train_renderer auth-eval-on-best wiring that drifts from
+    ``experiments/auth_eval_renderer.py``.
+
+    This is a narrow sister gate to Catalog #226. It protects the canonical
+    renderer trainer from the Council R3 failure mode: invented
+    auth_eval_renderer flags, missing ``--archive-size-bytes`` rate custody,
+    renderer-only archive sizing, brittle auth_eval_renderer path resolution,
+    or silent skip/fallback when masks/poses are absent.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    train_path = root / "src" / "tac" / "experiments" / "train_renderer.py"
+    auth_eval_path = root / "experiments" / "auth_eval_renderer.py"
+    violations: list[str] = []
+
+    auth_flags = _check_train_renderer_auth_eval_argparse_flags(auth_eval_path)
+    if not auth_eval_path.is_file():
+        violations.append("experiments/auth_eval_renderer.py: missing")
+    elif not auth_flags:
+        violations.append(
+            "experiments/auth_eval_renderer.py: no argparse --flags found; "
+            "cannot verify train_renderer auth-eval CLI contract"
+        )
+
+    try:
+        train_text = train_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        violations.append("src/tac/experiments/train_renderer.py: missing/unreadable")
+        train_text = ""
+
+    block = _check_train_renderer_auth_eval_block(train_text)
+    if block is None:
+        violations.append(
+            "src/tac/experiments/train_renderer.py: missing auth-eval-on-best "
+            "block bounded by '# Auth eval on best' and 'return best_scorer'"
+        )
+    else:
+        flags = _check_train_renderer_auth_eval_literal_flags(block)
+        invented = sorted(flags - auth_flags)
+        if invented and auth_flags:
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "passes flag(s) not declared by experiments/auth_eval_renderer.py "
+                f"argparse: {invented}. This is the Council R3 dead-flag bug "
+                "class; grep auth_eval_renderer.py parser.add_argument before "
+                "adding flags."
+            )
+
+        missing_required = sorted(
+            _CHECK_TRAIN_RENDERER_AUTH_EVAL_REQUIRED_FLAGS - flags
+        )
+        if missing_required:
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "is missing required auth_eval_renderer flag literal(s): "
+                f"{missing_required}. Required flags preserve checkpoint, "
+                "device, pose-conditioning, output custody, and archive-byte "
+                "rate custody."
+            )
+
+        if "build_submission_archive" not in block:
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "does not call build_submission_archive before auth eval; "
+                "renderer-only byte sizing is systematically optimistic."
+            )
+
+        if '"--archive-size-bytes", str(archive_bytes)' not in block:
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "does not pass --archive-size-bytes from the built archive "
+                "via str(archive_bytes); rate custody would drift to "
+                "renderer-only bytes."
+            )
+
+        if not _check_train_renderer_auth_eval_masks_gate_fails_loud(block):
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "must fail loud when --auth-eval-masks or --auth-eval-poses "
+                "is missing. Silent skip/fallback recreates the Council R3 "
+                "no-auth-eval failure mode."
+            )
+
+        soft_skip_re = (
+            r"if not args\.auth_eval_masks[^\n]*:\s*\n"
+            r"\s*print[^\n]*(WARN|Skipping)[\s\S]{0,400}\n\s*else:"
+        )
+        if re.search(soft_skip_re, block):
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "contains a masks-missing WARN/else skip pattern; use "
+                "fail-loud masks+poses validation or --no-auth-eval-on-best."
+            )
+
+        if re.search(r"parents\[\d+\]\s*/\s*['\"]\.\.['\"]", block):
+            violations.append(
+                "src/tac/experiments/train_renderer.py: auth-eval-on-best "
+                "uses brittle parents[N] / '..' path traversal; use the "
+                "established _repo constant for auth_eval_renderer.py."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [train-renderer-auth-eval-cli] "
+                f"{len(violations)} violation(s)"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:240]}")
+        else:
+            print(
+                "  [train-renderer-auth-eval-cli] OK "
+                "(train_renderer auth-eval block matches auth_eval_renderer CLI)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli "
+            f"found {len(violations)} renderer auth-eval wiring violation(s) "
+            "(Catalog #226 sister gate):\n  "
+            + "\n  ".join(violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
 # Catalog #226 — check_trainer_auth_eval_uses_canonical_helper
 #
 # Trainer hand-rolled auth_eval subprocess self-protection (2026-05-14).
@@ -55657,6 +55898,208 @@ def check_register_substrate_contract_fields_canonical(
             + "\n  ".join(e[:300] for e in errors[:5])
         )
     return errors
+
+
+# ----------------------------------------------------------------------------
+# Catalog #248 — check_no_stash_pop_conflict_markers_in_canonical_files
+#
+# GRAND-COUNCIL-MULTI-SISTER-MERGE-RESOLUTION self-protection (2026-05-15).
+# Bug class: parallel sister subagents using ``git stash push`` + ``git stash
+# pop`` workflows to coordinate edits can leave residual ``<<<<<<< Updated
+# upstream`` / ``======= `` / ``>>>>>>> Stashed changes`` (or HEAD-form
+# ``<<<<<<< HEAD``) conflict markers in canonical source files when the pop
+# encounters a 3-way merge conflict and the operator/sister silently moves
+# on without resolving. The empirical anchor is the 79-UU-file pile-up at
+# 2026-05-15 caused by 3+ parallel sister subagents (PAIRED-DISPATCH-SKIP /
+# ORPHAN-SIGNAL-AUDIT / 8-AXIS-SWEEP) all stashing-and-popping concurrently.
+# Conflict markers are syntactically invalid in every supported file type
+# (Python / shell / JSON / YAML / Markdown all break) and slipping them into
+# main is a hard rebuild-required incident.
+#
+# Sister of:
+# - Catalog #117 (`check_subagent_commit_serializer_uses_lock`) — last-50-
+#   commit serializer-usage gate.
+# - Catalog #157 (`check_commit_serializer_pre_lock_hash_against_head`) —
+#   commit-swap pre-pre-lock race detector.
+# - Catalog #174 (`check_subagent_commit_serializer_always_uses_expected_content_sha256`)
+#   — mandates `--expected-content-sha256` so sibling-edit detection is
+#   symmetric.
+# - Catalog #230 (`check_bulk_rewrite_respects_sister_subagent_ownership_map`)
+#   — extincts the editor-vs-editor collision class at the bulk-rewrite
+#   surface; #248 extincts the residual artifact at the file content surface.
+# Together the four close the multi-sister stash-pop race bug-class meta-
+# surface: edit-time (#230) + commit-time-pre-pre-lock (#157) + commit-time-
+# lock-arbitration (#117 + #174) + post-resolution-residual-marker (#248).
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule". Live count at
+# landing: 0 (the multi-sister race resolution lands in the same commit
+# batch).
+# ----------------------------------------------------------------------------
+
+# Conflict marker prefixes per Git's documented convention. Match at column
+# 0 (line-anchored) only. ``=======`` is excluded by itself because it is a
+# common token in ASCII-art docstrings / divider lines; we require the start
+# OR end marker pair to be present.
+_CHECK_248_CONFLICT_MARKER_PREFIXES = (
+    "<<<<<<< Updated upstream",
+    "<<<<<<< HEAD",
+    "<<<<<<< ours",
+    ">>>>>>> Stashed changes",
+    ">>>>>>> theirs",
+)
+# Generic ``>>>>>>> `` (any branch suffix) catches non-canonical stash-pop
+# residuals. We use a regex anchored at line start with exactly 7 ``>`` and a
+# trailing space to avoid clobbering shell-prompt-like text.
+_CHECK_248_GENERIC_END_MARKER_RE = re.compile(r"^>>>>>>> \S")
+_CHECK_248_GENERIC_START_MARKER_RE = re.compile(r"^<<<<<<< \S")
+# Per-line ``# CONFLICT_MARKER_INTENTIONAL_OK:<rationale>`` waiver for the
+# rare case where a file legitimately documents conflict-marker text (e.g.
+# this file's own catalog block, a tutorial, a test fixture). Placeholder
+# ``<rationale>`` literal rejected so the gate's docstring example cannot
+# self-waive.
+_CHECK_248_WAIVER_TOKEN = "# CONFLICT_MARKER_INTENTIONAL_OK:"
+_CHECK_248_WAIVER_PLACEHOLDER_REJECT = (
+    "# CONFLICT_MARKER_INTENTIONAL_OK:<rationale>",
+    "# CONFLICT_MARKER_INTENTIONAL_OK:<reason>",
+)
+_CHECK_248_SCAN_DIRS = (
+    "src",
+    "tools",
+    "scripts",
+    "experiments",
+    "submissions",
+    "tests",
+    "configs",
+    "docs",
+    "reports",
+    ".omx",
+    ".ralph",
+    ".agents",
+    "runtime-rs",
+    "cuda",
+    "jax",
+    "mojo",
+)
+_CHECK_248_SCAN_EXTENSIONS = (
+    ".py",
+    ".sh",
+    ".json",
+    ".jsonl",
+    ".yaml",
+    ".yml",
+    ".md",
+    ".txt",
+    ".cfg",
+    ".toml",
+    ".rs",
+    ".cu",
+    ".cuh",
+)
+_CHECK_248_EXCLUDED_PATH_MARKERS = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored/",
+    "build/lib/",
+    "reports/raw/",
+    ".venv/",
+    "__pycache__/",
+    "node_modules/",
+    ".git/",
+    "upstream/",  # pinned upstream snapshot per CLAUDE.md mutation frontier
+)
+_CHECK_248_SELF_EXEMPT_FILES = frozenset(
+    {
+        "src/tac/preflight.py",  # carries the marker literals in its own gate
+        "src/tac/tests/test_check_248_no_stash_pop_conflict_markers.py",  # fixtures
+    }
+)
+
+
+def check_no_stash_pop_conflict_markers_in_canonical_files(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #248 — refuse any state of the repo that contains residual git
+    conflict markers (``<<<<<<< Updated upstream`` / ``<<<<<<< HEAD`` /
+    ``>>>>>>> Stashed changes`` / ``>>>>>>> <branch>``) in canonical source
+    files.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    non-negotiable + "Strict-flip atomicity rule" — live count at landing: 0
+    (the GRAND-COUNCIL-MULTI-SISTER-MERGE-RESOLUTION resolution lands in the
+    same commit batch).
+
+    Bug class anchor: 2026-05-15 multi-sister stash-pop race produced 79 UU
+    files including 14 with residual conflict markers across ``src/tac/``,
+    ``experiments/``, ``submissions/``, ``tools/``, ``reports/``. Slipping
+    even one residual marker into main breaks every importer / parser /
+    consumer of that file because the marker syntax is universally invalid.
+    """
+    repo_root = repo_root or Path.cwd()
+    if isinstance(repo_root, str):
+        repo_root = Path(repo_root)
+    violations: list[str] = []
+
+    for scan_dir in _CHECK_248_SCAN_DIRS:
+        scan_path = repo_root / scan_dir
+        if not scan_path.exists():
+            continue
+        for path in scan_path.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix not in _CHECK_248_SCAN_EXTENSIONS:
+                continue
+            rel = path.relative_to(repo_root).as_posix()
+            if any(m in rel for m in _CHECK_248_EXCLUDED_PATH_MARKERS):
+                continue
+            if rel in _CHECK_248_SELF_EXEMPT_FILES:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                marker_kind: str | None = None
+                if any(line.startswith(p) for p in _CHECK_248_CONFLICT_MARKER_PREFIXES):
+                    marker_kind = "literal"
+                elif _CHECK_248_GENERIC_END_MARKER_RE.match(
+                    line
+                ) or _CHECK_248_GENERIC_START_MARKER_RE.match(line):
+                    marker_kind = "generic"
+                if marker_kind is None:
+                    continue
+                # Same-line waiver check. Placeholder rejection.
+                stripped = line.rstrip()
+                if _CHECK_248_WAIVER_TOKEN in stripped and not any(
+                    p in stripped for p in _CHECK_248_WAIVER_PLACEHOLDER_REJECT
+                ):
+                    # waiver carries a real rationale; skip
+                    continue
+                violations.append(
+                    f"{rel}:{lineno}: residual git conflict marker "
+                    f"({marker_kind}) — '{line[:80]}' "
+                    f"(Catalog #248: GRAND-COUNCIL-MULTI-SISTER-MERGE-"
+                    f"RESOLUTION self-protect)"
+                )
+
+    if verbose:
+        print(
+            f"  [no-stash-pop-conflict-markers] scanned, "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_stash_pop_conflict_markers_in_canonical_files found "
+            f"{len(violations)} residual git conflict marker(s) (Catalog "
+            "#248 — multi-sister stash-pop race self-protect):\n  "
+            + "\n  ".join(v[:300] for v in violations[:10])
+        )
+    return violations
 
 
 if __name__ == "__main__":

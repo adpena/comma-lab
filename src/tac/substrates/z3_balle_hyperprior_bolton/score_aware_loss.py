@@ -146,6 +146,8 @@ def z3_lagrangian(
     )
     if a1_pair_pred_rt is not None and (gt_pair is not None or cache_args_present):
         rgb_0_rt, rgb_1_rt = a1_pair_pred_rt
+        gt_rgb_0: torch.Tensor | None
+        gt_rgb_1: torch.Tensor | None
         if gt_pair is None:
             gt_rgb_0 = None
             gt_rgb_1 = None

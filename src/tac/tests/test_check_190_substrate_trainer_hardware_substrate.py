@@ -11,7 +11,9 @@ labeled every dispatch as T4 — violating CLAUDE.md "Forbidden
 empirical-claim-without-evidence-tag (the docstring-overstatement trap)".
 
 The canonical fix: detect substrate dynamically via
-``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate``.
+``tac.substrates._shared.trainer_skeleton.detect_hardware_substrate`` with an
+explicit ``substrate_tag=...`` keyword so post-train artifact emission cannot
+crash after GPU spend.
 """
 
 from __future__ import annotations
@@ -133,7 +135,8 @@ def test_dynamic_detection_is_accepted(tmp_path):
     """Variable reference is the canonical pattern; not a violation."""
     root = _make_corpus(tmp_path, {
         "experiments/train_substrate_clean.py":
-            "_detected_substrate = _canon_detect_hardware_substrate(...)\n"
+            "_detected_substrate = _canon_detect_hardware_substrate(\n"
+            "    axis='cuda', substrate_tag='foo')\n"
             "result = ContestResult(\n"
             "    hardware_substrate=_detected_substrate,\n"
             ")\n",
@@ -149,13 +152,41 @@ def test_helper_call_is_accepted(tmp_path):
     root = _make_corpus(tmp_path, {
         "experiments/train_substrate_clean2.py":
             "result = ContestResult(\n"
-            "    hardware_substrate=detect_hardware_substrate(axis='cuda'),\n"
+            "    hardware_substrate=detect_hardware_substrate(\n"
+            "        axis='cuda', substrate_tag='foo'),\n"
             ")\n",
     })
     vs = check_substrate_trainer_does_not_hardcode_hardware_substrate(
         repo_root=root, strict=False, verbose=False,
     )
     assert vs == []
+
+
+def test_detector_call_missing_substrate_tag_is_violation(tmp_path):
+    """Canonical detector calls must be tagged; otherwise terminal stats can crash."""
+    root = _make_corpus(tmp_path, {
+        "experiments/train_substrate_missing_tag.py":
+            "result = {\n"
+            "    'hardware_substrate': _canon_detect_hardware_substrate(axis='cuda'),\n"
+            "}\n",
+    })
+    vs = check_substrate_trainer_does_not_hardcode_hardware_substrate(
+        repo_root=root, strict=False, verbose=False,
+    )
+    assert len(vs) == 1
+    assert "missing required `substrate_tag=`" in vs[0]
+
+
+def test_detector_call_missing_substrate_tag_strict_raises(tmp_path):
+    """STRICT mode blocks missing detector tags before GPU dispatch."""
+    root = _make_corpus(tmp_path, {
+        "experiments/train_substrate_missing_tag.py":
+            "hardware_substrate = detect_hardware_substrate(axis='cuda')\n",
+    })
+    with pytest.raises(PreflightError):
+        check_substrate_trainer_does_not_hardcode_hardware_substrate(
+            repo_root=root, strict=True, verbose=False,
+        )
 
 
 def test_empty_corpus_no_violations(tmp_path):

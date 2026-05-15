@@ -244,6 +244,194 @@ def test_train_renderer_uses_repo_root_constant():
     )
 
 
+def _write_auth_eval_renderer_fixture(root: Path) -> None:
+    auth_eval = root / "experiments" / "auth_eval_renderer.py"
+    auth_eval.parent.mkdir(parents=True, exist_ok=True)
+    auth_eval.write_text(
+        """
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint")
+    parser.add_argument("--upstream-dir")
+    parser.add_argument("--device")
+    parser.add_argument("--batch-size")
+    parser.add_argument("--archive-size-bytes")
+    parser.add_argument("--output-dir")
+    parser.add_argument("--poses")
+    return parser.parse_args()
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_train_renderer_fixture(root: Path, block: str) -> None:
+    train_renderer = root / "src" / "tac" / "experiments" / "train_renderer.py"
+    train_renderer.parent.mkdir(parents=True, exist_ok=True)
+    train_renderer.write_text(block, encoding="utf-8")
+
+
+_GOOD_AUTH_EVAL_BLOCK = """
+def train(args):
+    # Auth eval on best
+    if getattr(args, "auth_eval_on_best", False):
+        if not args.auth_eval_masks or not args.auth_eval_poses:
+            raise RuntimeError("missing masks/poses")
+        from tac.submission_archive import build_submission_archive
+        archive_path = out_dir / "auth_eval_on_best_archive.zip"
+        build_submission_archive(output_path=archive_path)
+        archive_bytes = archive_path.stat().st_size
+        auth_eval_script = _repo / "experiments" / "auth_eval_renderer.py"
+        cmd = [
+            sys.executable, "-u", str(auth_eval_script),
+            "--checkpoint", str(best_fp4),
+            "--upstream-dir", args.auth_eval_upstream_dir,
+            "--device", "cuda",
+            "--archive-size-bytes", str(archive_bytes),
+            "--output-dir", str(out_dir),
+            "--poses", str(args.auth_eval_poses),
+        ]
+        subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    return best_scorer
+"""
+
+
+def test_train_renderer_auth_eval_preflight_passes_live_repo() -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    assert check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=REPO, strict=True, verbose=False,
+    ) == []
+
+
+def test_train_renderer_auth_eval_preflight_accepts_clean_fixture(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    _write_train_renderer_fixture(tmp_path, _GOOD_AUTH_EVAL_BLOCK)
+
+    assert check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=tmp_path, strict=True, verbose=False,
+    ) == []
+
+
+def test_train_renderer_auth_eval_preflight_rejects_invented_flag(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    block = _GOOD_AUTH_EVAL_BLOCK.replace(
+        '"--poses", str(args.auth_eval_poses),',
+        '"--auth-eval-masks", str(args.auth_eval_masks),\n'
+        '            "--poses", str(args.auth_eval_poses),',
+    )
+    _write_train_renderer_fixture(tmp_path, block)
+
+    violations = check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert any(
+        "not declared by experiments/auth_eval_renderer.py" in v
+        for v in violations
+    )
+
+
+def test_train_renderer_auth_eval_preflight_rejects_missing_archive_size(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    block = _GOOD_AUTH_EVAL_BLOCK.replace(
+        '            "--archive-size-bytes", str(archive_bytes),\n',
+        "",
+    )
+    _write_train_renderer_fixture(tmp_path, block)
+
+    violations = check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert any("--archive-size-bytes" in v for v in violations)
+
+
+def test_train_renderer_auth_eval_preflight_rejects_renderer_only_archive(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    block = _GOOD_AUTH_EVAL_BLOCK.replace(
+        "build_submission_archive",
+        "write_renderer_only_archive",
+    )
+    _write_train_renderer_fixture(tmp_path, block)
+
+    violations = check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert any("build_submission_archive" in v for v in violations)
+
+
+def test_train_renderer_auth_eval_preflight_rejects_soft_skip_on_missing_masks(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    block = _GOOD_AUTH_EVAL_BLOCK.replace(
+        '        if not args.auth_eval_masks or not args.auth_eval_poses:\n'
+        '            raise RuntimeError("missing masks/poses")\n',
+        '        if not args.auth_eval_masks:\n'
+        '            print("WARN Skipping auth eval")\n'
+        '        else:\n'
+        '            pass\n',
+    )
+    _write_train_renderer_fixture(tmp_path, block)
+
+    violations = check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert any("fail loud" in v for v in violations)
+
+
+def test_train_renderer_auth_eval_preflight_strict_raises(
+    tmp_path: Path,
+) -> None:
+    from tac.preflight import (
+        PreflightError,
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli,
+    )
+
+    _write_auth_eval_renderer_fixture(tmp_path)
+    block = _GOOD_AUTH_EVAL_BLOCK.replace(
+        '"--poses", str(args.auth_eval_poses),',
+        '"--invented-renderer-eval-flag", "1",\n'
+        '            "--poses", str(args.auth_eval_poses),',
+    )
+    _write_train_renderer_fixture(tmp_path, block)
+
+    with pytest.raises(PreflightError, match="Catalog #226 sister gate"):
+        check_train_renderer_auth_eval_uses_current_auth_eval_renderer_cli(
+            repo_root=tmp_path, strict=True, verbose=False,
+        )
+
+
 def test_argparse_smoke_default_true():
     """The flag must default to True per CLAUDE.md non-negotiable, and
     --no-auth-eval-on-best must turn it off."""

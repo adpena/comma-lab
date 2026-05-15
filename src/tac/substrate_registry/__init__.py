@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """META layer for substrate contracts + auto-wire.
 
 Operator directive 2026-05-15: "build a META layer that defines a

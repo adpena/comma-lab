@@ -18,6 +18,7 @@ from tac.analysis.hnerv_packet_sections import (
     PARSER_A2K1,
     PARSER_AUTO,
     PARSER_CPLX1,
+    PARSER_IBPS1,
     PARSER_PR101,
     PARSER_PR101_FEC6,
     PARSER_PR103,
@@ -186,6 +187,57 @@ def test_cplx1_manifest_records_byte_map_json_and_op1_sections(tmp_path: Path) -
     }
     assert all(length > 0 for length in gate3["lengths"])
     assert validate_packet_section_manifest(manifest) == []
+
+
+def test_ibps1_manifest_records_canonical_c6_sections_and_auto_infers(
+    tmp_path: Path,
+) -> None:
+    payload = _ibps1_payload(
+        latent_dim=4,
+        num_pairs=3,
+        encoder=b"encoder-bytes",
+        decoder=b"decoder-bytes",
+        meta=b'{"beta_ib":0.1}',
+    )
+    archive = tmp_path / "c6_e4_mdl_ibps.zip"
+    _stored_zip(archive, "0.bin", payload)
+
+    manifest = build_packet_section_manifest(
+        archive,
+        label="c6_e4_mdl_ibps",
+        parser=PARSER_AUTO,
+    )
+
+    assert manifest["parser_section_gate"]["ready"] is True
+    assert manifest["parser"]["name"] == PARSER_IBPS1
+    assert manifest["parser_input"]["kind"] == "member_payload"
+    assert [section["name"] for section in manifest["sections"]] == [
+        "ibps1_header",
+        "encoder_blob",
+        "decoder_blob",
+        "latent_blob",
+        "meta_blob",
+    ]
+    assert [section["optimization_role"] for section in manifest["sections"]] == [
+        "control_or_metadata",
+        "training_provenance_only",
+        "decoder_weight_stream",
+        "latent_stream",
+        "control_or_metadata",
+    ]
+    assert manifest["sections"][0]["length"] == 25
+    assert manifest["sections"][3]["length"] == 12
+    assert manifest["coverage"]["covers_payload"] is True
+    assert validate_packet_section_manifest(manifest) == []
+
+
+def test_ibps1_manifest_rejects_trailing_schema_drift(tmp_path: Path) -> None:
+    payload = _ibps1_payload(latent_dim=4, num_pairs=3) + b"tail"
+    archive = tmp_path / "ibps1_drift.zip"
+    _stored_zip(archive, "0.bin", payload)
+
+    with pytest.raises(HnervPacketSectionManifestError, match="archive size"):
+        build_packet_section_manifest(archive, label="IBPS1", parser=PARSER_IBPS1)
 
 
 def test_a2k1_manifest_fails_closed_on_truncated_decoder_length(tmp_path: Path) -> None:
@@ -423,3 +475,25 @@ def _pr103_payload() -> bytes:
         parts.append(bytes([index + 1]) * length)
     parts.append(b"sidecar-corrections")
     return b"".join(parts)
+
+
+def _ibps1_payload(
+    *,
+    latent_dim: int = 4,
+    num_pairs: int = 3,
+    encoder: bytes = b"enc",
+    decoder: bytes = b"dec",
+    meta: bytes = b"{}",
+) -> bytes:
+    latent = b"z" * (latent_dim * num_pairs)
+    header = (
+        b"IBPS"
+        + bytes([1])
+        + latent_dim.to_bytes(2, "little")
+        + num_pairs.to_bytes(2, "little")
+        + len(encoder).to_bytes(4, "little")
+        + len(decoder).to_bytes(4, "little")
+        + len(latent).to_bytes(4, "little")
+        + len(meta).to_bytes(4, "little")
+    )
+    return header + encoder + decoder + latent + meta

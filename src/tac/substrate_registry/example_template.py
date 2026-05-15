@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Reference implementation: how a substrate declares its META contract.
 
 NOT a real substrate. NOT registered as a lane. NOT dispatched. This file

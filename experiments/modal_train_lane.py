@@ -39,6 +39,10 @@ from __future__ import annotations
 
 import modal
 
+from tac.deploy.modal.runtime import (
+    DALI_DISABLE_NVML_VALUE,
+    PYTORCH_CUDA_ALLOC_CONF_VALUE,
+)
 from tac.deploy.modal.mount_manifest import build_training_image
 
 app = modal.App("comma-train-lane")
@@ -138,7 +142,15 @@ image = (
 # working tree) is now correctly omitted by construction — operator-extra
 # mounts must be declared, not silently absorbed from disk.
 training_image = build_training_image(
-    image.env({"PYTHONPATH": REMOTE_PYTHONPATH}),
+    image.env({
+        "PYTHONPATH": REMOTE_PYTHONPATH,
+        # Modal containers can expose CUDA while denying NVML internals.
+        # DALI's video reader works without NVML when this is set; without it,
+        # upstream/evaluate.py can fail after successful inflate with
+        # `nvml error (999)`.
+        "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
+    }),
     trainer_module_path=None,
     optional_files=(
         ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json",
@@ -224,6 +236,8 @@ def _run_lane_inner(
         f"export SCPP_MOUNTED_CODE_GIT_HEAD={mounted_code_git_head}\n"
         f"export SCPP_MOUNTED_CODE_GIT_BRANCH={mounted_code_git_branch}\n"
         'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"\n'
+        f"export DALI_DISABLE_NVML={DALI_DISABLE_NVML_VALUE}\n"
+        f"export PYTORCH_CUDA_ALLOC_CONF={PYTORCH_CUDA_ALLOC_CONF_VALUE}\n"
         "export AUTH_EVAL_DEVICE=cpu\n"
         "export MODAL_AUTH_EVAL_ADVISORY_ONLY=1\n"
         "export SCORE_CLAIM=false\n"
@@ -382,6 +396,8 @@ def _run_lane_inner(
         "WORKSPACE": str(workspace),
         "PYBIN": sys.executable,
         "PYTHONPATH": f"{workspace}/src:{workspace}/upstream:{workspace}",
+        "DALI_DISABLE_NVML": DALI_DISABLE_NVML_VALUE,
+        "PYTORCH_CUDA_ALLOC_CONF": PYTORCH_CUDA_ALLOC_CONF_VALUE,
         "FFMPEG_BIN": "/usr/local/bin/ffmpeg-master",
         # _modal_bin first so `python3` and `python` resolve to sys.executable
         # (the venv with torch/tac), not /usr/bin/python3 (system, no deps).

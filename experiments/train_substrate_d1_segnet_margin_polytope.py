@@ -479,8 +479,10 @@ def _write_provenance(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "predicted_score_band": [0.181, 0.188],
-        "predicted_score_evidence_grade": "first-principles-bound",
+        "current_runtime_effect": "base_renderer_plus_rate_only",
+        "runtime_overlay_consumed": False,
+        "l2_projected_score_band": [0.181, 0.188],
+        "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
         "source_memo": (
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
         ),
@@ -696,23 +698,20 @@ def _write_runtime(submission_dir: Path) -> None:
     """Emit contest-compliant inflate.sh + inflate.py + vendored A1 runtime.
 
     L1 SCAFFOLD design verdict V3 (post-renderer no-op overlay): the D1
-    sidecar bytes are STRUCTURALLY consumed at runtime (sha-verified
-    against the base archive at parse time during build, and shipped in
-    archive.zip so they count against the rate term), but the inflate-
-    time per-frame noise overlay is no-op-by-default until L2 INTEGRATION
-    lands a per-base adapter. Per Catalog #105 / #139 the no-op detector
-    is satisfied by the build-time pack/parse roundtrip + the rate-term
-    Δ from the sidecar bytes.
+    sidecar bytes are parsed and sha-bound at inflate time, but the
+    per-frame noise overlay is no-op-by-default until L2 INTEGRATION lands
+    a per-base adapter. This is deliberately fail-closed for score claims:
+    exact eval of the L1 packet would measure the base renderer plus rate
+    overhead, not a D1 score-lowering effect.
 
     For the L1 dispatch we therefore vendor A1's existing canonical
     inflate runtime (which already conforms to Catalog #146 with a 3-arg
     inflate.sh + per-file 2-arg inflate.py loop) and emit a thin
     inflate.sh that delegates to the A1 inflate after locating the A1
     blob inside archive_dir. The D1 sidecar bytes ride along inside the
-    archive zip and are visible to the rate term but not consumed at
-    inflate time. L2 INTEGRATION wires the polytope-aware noise overlay
-    via a D1+A1 fused inflate path (deferred per the council-grade L2
-    design verdicts).
+    archive zip and are verified by a small stdlib-only runtime guard.
+    L2 INTEGRATION wires the polytope-aware noise overlay via a D1+A1 fused
+    inflate path (deferred per the council-grade L2 design verdicts).
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
 
@@ -742,45 +741,92 @@ def _write_runtime(submission_dir: Path) -> None:
     shutil.copy2(a1_inflate_py, submission_dir / "inflate.py")
     (submission_dir / "inflate.py").chmod(0o755)
 
+    d1_verify_py = (
+        "#!/usr/bin/env python3\n"
+        "\"\"\"Stdlib-only D1 sidecar runtime custody guard.\"\"\"\n"
+        "from __future__ import annotations\n"
+        "import hashlib\n"
+        "import struct\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "FMT = '<4sBHHffBBIII'\n"
+        "SIZE = struct.calcsize(FMT)\n"
+        "MAGIC = b'D1PY'\n"
+        "def main(argv: list[str]) -> int:\n"
+        "    if len(argv) != 3:\n"
+        "        print('usage: d1_verify.py <d1_polytope.bin> <base.bin>', file=sys.stderr)\n"
+        "        return 2\n"
+        "    d1_path = Path(argv[1])\n"
+        "    base_path = Path(argv[2])\n"
+        "    blob = d1_path.read_bytes()\n"
+        "    if len(blob) < SIZE:\n"
+        "        raise ValueError(f'D1 sidecar too short: {len(blob)}')\n"
+        "    magic, version, h, w, scale, lipschitz, base_len, sha_len, margin_len, poly_len, meta_len = struct.unpack(FMT, blob[:SIZE])\n"
+        "    if magic != MAGIC:\n"
+        "        raise ValueError(f'bad D1 magic: {magic!r}')\n"
+        "    if version != 1:\n"
+        "        raise ValueError(f'unsupported D1 schema version: {version}')\n"
+        "    pos = SIZE\n"
+        "    base_id = blob[pos:pos + base_len].decode('utf-8'); pos += base_len\n"
+        "    expected_sha = blob[pos:pos + sha_len].decode('utf-8'); pos += sha_len\n"
+        "    pos += margin_len + poly_len + meta_len\n"
+        "    if pos != len(blob):\n"
+        "        raise ValueError(f'D1 sidecar size mismatch: parsed={pos} actual={len(blob)}')\n"
+        "    if base_id != 'a1':\n"
+        "        raise ValueError(f'D1 L1 runtime only supports a1 base; got {base_id!r}')\n"
+        "    actual_sha = hashlib.sha256(base_path.read_bytes()).hexdigest()[:sha_len]\n"
+        "    if actual_sha != expected_sha:\n"
+        "        raise ValueError(f'base sha mismatch: {actual_sha} != {expected_sha}')\n"
+        "    print(f'[d1-verify] parsed D1 sidecar h={h} w={w} margin_len={margin_len} poly_len={poly_len} meta_len={meta_len} L={lipschitz:.3f}', file=sys.stderr)\n"
+        "    return 0\n"
+        "if __name__ == '__main__':\n"
+        "    raise SystemExit(main(sys.argv))\n"
+    )
+    (submission_dir / "d1_verify.py").write_text(d1_verify_py, encoding="utf-8")
+    (submission_dir / "d1_verify.py").chmod(0o755)
+
     # Emit a Catalog #146-compliant 3-arg inflate.sh that:
     # 1. Locates the A1 blob inside archive_dir (tries 'a1.bin' first,
     #    falls back to 'x' for backward compatibility with the legacy
     #    A1 archive layout).
     # 2. Loops over the file list and invokes the A1 inflate.py per file.
     # 3. The D1 sidecar bytes (d1_polytope.bin) are present inside the
-    #    archive but not consumed by this inflate path (L1 SCAFFOLD
-    #    no-op overlay; L2 INTEGRATION wires the polytope-aware overlay).
+    #    archive and verified by d1_verify.py, but the overlay is not yet
+    #    applied by this L1 SCAFFOLD runtime.
     inflate_sh = (
         "#!/usr/bin/env bash\n"
         "# D1 SegNet margin polytope sidecar contest-compliant inflate.\n"
         "# Contract: $1=archive_dir $2=output_dir $3=file_list per Catalog #146.\n"
-        "# At L1 SCAFFOLD the sidecar bytes are structurally consumed (rate\n"
-        "# term) but the per-pixel polytope-aware noise overlay is no-op;\n"
-        "# the inflate path below is A1's canonical loop.\n"
+        "# At L1 SCAFFOLD the sidecar bytes are parsed and base-sha verified,\n"
+        "# but the per-pixel polytope-aware noise overlay is not active;\n"
+        "# the render path below is A1's canonical loop.\n"
         "set -euo pipefail\n"
         'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
         'DATA_DIR="$1"\n'
         'OUTPUT_DIR="$2"\n'
         'FILE_LIST="$3"\n'
         'mkdir -p "$OUTPUT_DIR"\n'
+        'D1="${DATA_DIR}/d1_polytope.bin"\n'
+        'if [ ! -f "$D1" ]; then\n'
+        '  echo "ERROR: D1 sidecar not found in ${DATA_DIR}" >&2\n'
+        '  exit 1\n'
+        'fi\n'
+        '# Try a1.bin first (the new D1+A1 archive layout); fall back to x.\n'
+        'A1_SRC="${DATA_DIR}/a1.bin"\n'
+        'if [ ! -f "$A1_SRC" ]; then\n'
+        '  A1_SRC="${DATA_DIR}/x"\n'
+        'fi\n'
+        'if [ ! -f "$A1_SRC" ]; then\n'
+        '  echo "ERROR: A1 source blob not found in ${DATA_DIR}" >&2\n'
+        '  exit 1\n'
+        'fi\n'
+        '  "${PYTHON:-python3}" "$HERE/d1_verify.py" "$D1" "$A1_SRC"\n'
         "while IFS= read -r line; do\n"
         '  [ -z "$line" ] && continue\n'
         '  BASE="${line%.*}"\n'
-        '  # Try a1.bin first (the new D1+A1 archive layout); fall back to x.\n'
-        '  SRC="${DATA_DIR}/a1.bin"\n'
-        '  if [ ! -f "$SRC" ]; then\n'
-        '    SRC="${DATA_DIR}/x"\n'
-        '  fi\n'
-        '  if [ ! -f "$SRC" ]; then\n'
-        '    SRC="${DATA_DIR}/${BASE}.bin"\n'
-        '  fi\n'
-        '  if [ ! -f "$SRC" ]; then\n'
-        '    echo "ERROR: A1 source blob not found in ${DATA_DIR}" >&2\n'
-        '    exit 1\n'
-        '  fi\n'
         '  DST="${OUTPUT_DIR}/${BASE}.raw"\n'
         '  printf "Inflating %s ... " "$line"\n'
-        '  "${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"\n'
+        '  "${PYTHON:-python3}" "$HERE/inflate.py" "$A1_SRC" "$DST"\n'
         'done < "$FILE_LIST"\n'
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
@@ -843,8 +889,9 @@ def _full_main(args: argparse.Namespace) -> int:
        safe budget = margin / L (closed-form; no SGD).
     7. Pack D1POLY1 sidecar + compose with frozen A1 base.
     8. Build archive.zip with both members, write contest runtime tree.
-    9. Run CUDA auth eval on the canonical archive (gated by
-       smoke_auth_eval_gate so smoke/CPU/full-cpu paths skip cleanly).
+    9. Refuse CUDA auth eval until the D1 overlay is actually consumed by
+       the runtime. L1 emits a byte-closed custody packet, not a score-
+       lowering candidate.
     10. Update continual-learning posterior on success (Catalog #128).
     11. Write provenance.json with predicted/empirical bands.
 
@@ -856,14 +903,10 @@ def _full_main(args: argparse.Namespace) -> int:
       averaged over pairs; ~200 KB → ~50 KB post-brotli). Per-pair would
       cost N_pairs × that and overflow the 3 KB Pareto budget per Catalog
       #170/#171.
-    * V3 Polytope-interior noise timing: POST-renderer (the sidecar
-      payload is consumed by the inflate-time D1 overlay AFTER the base
-      renderer emits its frame). At L1 SCAFFOLD the overlay is no-op (the
-      margin map + polytope payload are STRUCTURALLY consumed at parse
-      time per Catalog #105/#139 no-op-detector) — the SCORE EFFECT
-      comes from the SegNet seeing the same base-rendered frame, but
-      the archive declares the safe-polytope geometry for L2 INTEGRATION
-      to apply true per-pixel noise overlays.
+    * V3 Polytope-interior noise timing: POST-renderer. At L1 SCAFFOLD
+      the sidecar is parsed and base-sha verified, but no pixel overlay is
+      applied. Therefore L1 is a custody/proof artifact only. The D1 score
+      effect is blocked until L2 wires the per-base overlay adapter.
     * V4 D1 + YUCR composition order: D1 ALONE on A1 first (cleanest
       single-variable ablation — build subagent recommendation).
     * V5 EMA shadow scope: EMA the MARGIN MAP only (cheap; matches the
@@ -871,12 +914,10 @@ def _full_main(args: argparse.Namespace) -> int:
       Default decay 0.997 per Catalog #88.
 
     The per-pixel rate savings is bounded above by the polytope-interior
-    fraction × per-pixel safe-bit budget; predicted ΔS for D1-alone on A1
-    is [-0.012, -0.005] (deep-math memo §10) → predicted [contest-CPU]
-    band [0.181, 0.188] (A1 0.192848 + Δ). This is NOT a score claim
-    per CLAUDE.md "Apples-to-apples evidence discipline"; the auth-eval
-    call below is the only path to a CUDA-axis score, and the operator
-    must run a paired Linux x86_64 CPU eval separately.
+    fraction × per-pixel safe-bit budget; projected ΔS for D1-L2 on A1 is
+    [-0.012, -0.005] (deep-math memo §10). L1 does not claim that band and
+    does not dispatch exact eval, because current inflate output is A1 plus
+    rate overhead.
     """
     import numpy as np
     import torch
@@ -1079,9 +1120,11 @@ def _full_main(args: argparse.Namespace) -> int:
                 "git_head": _git_head_sha(),
                 "n_pairs_used": int(n_pairs),
                 "ema_decay": float(ema_decay),
-                "predicted_score_band_low": 0.181,
-                "predicted_score_band_high": 0.188,
-                "predicted_score_evidence_grade": "first-principles-bound",
+                "runtime_overlay_consumed": False,
+                "current_runtime_effect": "base_renderer_plus_rate_only",
+                "l2_projected_score_band_low": 0.181,
+                "l2_projected_score_band_high": 0.188,
+                "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
             },
         )
         d1_overhead_bytes = len(d1_blob)
@@ -1141,6 +1184,7 @@ def _full_main(args: argparse.Namespace) -> int:
             base_archive_bytes=base_bytes_len,
             d1_overhead_bytes=d1_overhead_bytes,
             config=cfg,
+            runtime_overlay_consumed=False,
         )
         readiness["lane_id"] = SUBSTRATE_LANE_ID
         readiness["archive_zip_bytes"] = archive_zip_size
@@ -1157,24 +1201,35 @@ def _full_main(args: argparse.Namespace) -> int:
         )
 
         # ------------------------------------------------------------------
-        # CUDA auth eval (Catalog #167 smoke-before-full gate).
+        # CUDA auth eval gate.
         # ------------------------------------------------------------------
         auth_eval_json_path = args.output_dir / "contest_auth_eval_cuda.json"
-        auth_result = _canon_gate_auth_eval_call(
-            args=args,
-            archive_zip=archive_zip_path,
-            inflate_sh=submission_dir / "inflate.sh",
-            upstream_dir=args.upstream_dir,
-            output_json=auth_eval_json_path,
-            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
-            substrate_tag=SUBSTRATE_TAG,
-            device=device,
-            full_cpu_active=full_cpu_active,
-        )
-        if auth_result is None:
-            _stage("auth_eval_skipped_gate_refused")
+        if not bool(readiness.get("ready_for_exact_eval_dispatch")):
+            args.auth_eval_skipped_reason = "d1_l1_runtime_overlay_not_consumed"
+            print(
+                f"[{SUBSTRATE_TAG}-auth-eval] SKIPPED: "
+                "D1 L1 runtime parses the sidecar but does not apply the "
+                "overlay, so exact eval would only measure A1 plus rate "
+                "overhead. Build the L2 overlay adapter before dispatch.",
+                flush=True,
+            )
+            _stage("auth_eval_skipped_d1_l1_runtime_overlay_not_consumed")
         else:
-            _stage("auth_eval_cuda_done_valid_claim")
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=submission_dir / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_json_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag=SUBSTRATE_TAG,
+                device=device,
+                full_cpu_active=full_cpu_active,
+            )
+            if auth_result is None:
+                _stage("auth_eval_skipped_gate_refused")
+            else:
+                _stage("auth_eval_cuda_done_valid_claim")
 
     finally:
         unpatch_upstream_yuv6(yuv6_token)
@@ -1223,14 +1278,16 @@ def _full_main(args: argparse.Namespace) -> int:
         "design_verdicts": {
             "v1_jacobian_lipschitz": float(args.jacobian_lipschitz),
             "v2_margin_map_scope": "per_frame_ema",
-            "v3_polytope_noise_timing": "post_renderer_no_op_overlay_at_l1",
+            "v3_polytope_noise_timing": "post_renderer_overlay_blocked_at_l1",
             "v4_composition_order": "d1_alone_on_a1",
             "v5_ema_shadow_scope": "margin_map_only",
             "ema_decay": float(args.ema_decay),
         },
-        "predicted_score_band_low": 0.181,
-        "predicted_score_band_high": 0.188,
-        "predicted_score_evidence_grade": "first-principles-bound",
+        "runtime_overlay_consumed": False,
+        "current_runtime_effect": "base_renderer_plus_rate_only",
+        "l2_projected_score_band_low": 0.181,
+        "l2_projected_score_band_high": 0.188,
+        "predicted_score_evidence_grade": "blocked_l1_noop_overlay",
         "source_memo": (
             ".omx/research/deep_math_geometry_manifolds_synthesis_20260514.md"
         ),

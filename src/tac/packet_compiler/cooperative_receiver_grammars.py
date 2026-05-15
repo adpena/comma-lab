@@ -101,6 +101,32 @@ COOPERATIVE_RECEIVER_PACKET_GRAMMARS: tuple[CooperativeReceiverPacketGrammar, ..
         compiler_stage="seg_axis_db4_idwt_detail_band_pack",
         notes="A1 + DB4 IDWT single-level detail-band wavelet residual sidecar; seg-axis edge sharpening",
     ),
+    CooperativeReceiverPacketGrammar(
+        magic=b"FGS1",
+        xray_label="frame0_grain_selector_sidecar_v1",
+        substrate_class="frame0_postdecode_selector_packet",
+        archive_version="frame0_grain_selector_fgs1_v1",
+        campaign_id="hdm8_frame0_postdecode_selector",
+        source_module="submissions.hdm8_film_grain_sidecar.inflate",
+        compiler_stage="postdecode_scorer_aware_selector_pack",
+        notes=(
+            "Archive-charged deterministic first-frame postdecode selector; "
+            "stacks after any RGB decoder and must remain scorer-free at inflate time"
+        ),
+    ),
+    CooperativeReceiverPacketGrammar(
+        magic=b"FES1",
+        xray_label="frame_exploit_selector_sidecar_v1",
+        substrate_class="frame_exploit_selector_sidecar_packet",
+        archive_version="frame_exploit_selector_fes1_v1",
+        campaign_id="frame_exploit_segnet_posenet_selector",
+        source_module="submissions.frame_exploit_selector_sidecar.inflate",
+        compiler_stage="postdecode_pairwise_frame0_selector_pack",
+        notes=(
+            "Archive-charged PR106 sidecar selector derived from full-600 "
+            "SegNet/PoseNet proxy rows; exact-CUDA gated before any score claim"
+        ),
+    ),
 )
 
 

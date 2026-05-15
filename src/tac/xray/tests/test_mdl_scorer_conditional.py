@@ -155,6 +155,34 @@ def _build_pr101_minimum_archive(path: Path) -> bytes:
     return rng
 
 
+def _build_ibps1_minimum_archive(path: Path) -> bytes:
+    """Build a ZIP with one canonical C6 IBPS1 ``0.bin`` member."""
+
+    encoder = b"E" * 13
+    decoder = b"D" * 19
+    latent_dim = 4
+    num_pairs = 3
+    latent = b"Z" * (latent_dim * num_pairs)
+    meta = b'{"beta_ib":0.1}'
+    payload = (
+        b"IBPS"
+        + bytes([1])
+        + latent_dim.to_bytes(2, "little")
+        + num_pairs.to_bytes(2, "little")
+        + len(encoder).to_bytes(4, "little")
+        + len(decoder).to_bytes(4, "little")
+        + len(latent).to_bytes(4, "little")
+        + len(meta).to_bytes(4, "little")
+        + encoder
+        + decoder
+        + latent
+        + meta
+    )
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", payload)
+    return payload
+
+
 # Back-compat alias for tests below.
 _build_random_archive = _build_pr101_minimum_archive
 
@@ -186,6 +214,30 @@ def test_estimator_compute_metadata_records_delegated_module(tmp_path):
     result = est.compute(archive)
     assert result.metadata["delegated_module"] == "tac.analysis.scorer_conditional_mdl"
     assert result.metadata["tier"] == "structural"
+
+
+def test_estimator_compute_uses_ibps1_sections_instead_of_whole_blob(tmp_path):
+    archive = tmp_path / "c6_ibps1.zip"
+    inner_payload = _build_ibps1_minimum_archive(archive)
+
+    result = ScorerConditionalMDLEstimator().compute(archive, label="c6_ibps1")
+
+    value = result.primitive_value
+    assert isinstance(value, MDLDensityResult)
+    assert value.measurable_payload_bytes == len(inner_payload)
+    section_names = [section[0] for section in value.per_section_breakdown]
+    assert section_names == [
+        "ibps1_header",
+        "encoder_blob",
+        "decoder_blob",
+        "latent_blob",
+        "meta_blob",
+    ]
+    assert "whole_blob" not in section_names
+    assert ("latent_blob", "latent_stream") == (
+        value.per_section_breakdown[3][0],
+        value.per_section_breakdown[3][1],
+    )
 
 
 # ── compose_with returns ComposedXRayPrimitive ───────────────────────────

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Auto-generate ``scripts/remote_lane_substrate_<id>.sh`` from a contract.
 
 Pure function: ``generate_driver_shell(contract) -> str`` returns the full

@@ -33,6 +33,7 @@ from tac.substrates.c6_e4_mdl_ibps import (
     EVAL_HW,
     IBPS1_MAGIC,
     IBPS1_SCHEMA_VERSION,
+    IBPS1_SECTION_ROLES,
     IBDecoder,
     IBEncoder,
     IBMDLLoss,
@@ -43,6 +44,7 @@ from tac.substrates.c6_e4_mdl_ibps import (
     NUM_PAIRS,
     pack_archive,
     parse_archive,
+    parse_ibps1_archive_bytes,
 )
 from tac.substrates.c6_e4_mdl_ibps.archive import (
     IBPS1_HEADER_FMT,
@@ -273,6 +275,38 @@ def test_archive_magic_and_version() -> None:
 def test_archive_header_size_invariant() -> None:
     assert IBPS1_HEADER_SIZE == 25
     assert struct.calcsize(IBPS1_HEADER_FMT) == IBPS1_HEADER_SIZE
+
+
+def test_canonical_ibps1_section_parser_matches_archive_layout() -> None:
+    enc_sd, dec_sd, latents, meta, _sub, _cfg = _make_archive_inputs(
+        latent_dim=8, num_pairs=4
+    )
+    blob = pack_archive(enc_sd, dec_sd, latents, meta)
+
+    sections = parse_ibps1_archive_bytes(blob)
+
+    assert list(sections) == [
+        "ibps1_header",
+        "encoder_blob",
+        "decoder_blob",
+        "latent_blob",
+        "meta_blob",
+    ]
+    assert sections["ibps1_header"] == (0, IBPS1_HEADER_SIZE)
+    assert sections["latent_blob"][1] == 32
+    end_meta = sections["meta_blob"][0] + sections["meta_blob"][1]
+    assert end_meta == len(blob)
+    assert IBPS1_SECTION_ROLES["latent_blob"] == "latent_stream"
+
+
+def test_canonical_ibps1_parser_rejects_trailing_schema_drift() -> None:
+    enc_sd, dec_sd, latents, meta, _sub, _cfg = _make_archive_inputs(
+        latent_dim=8, num_pairs=4
+    )
+    blob = pack_archive(enc_sd, dec_sd, latents, meta)
+
+    with pytest.raises(ValueError, match="archive size .* expected"):
+        parse_ibps1_archive_bytes(blob + b"tail")
 
 
 def test_archive_roundtrip_preserves_latents() -> None:

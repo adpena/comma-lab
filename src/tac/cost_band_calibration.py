@@ -1083,7 +1083,7 @@ def _fallback_reason_for(
 PER_CLASS_SOFT_COST_CEILING_USD: dict[str, float] = {
     "smoke": 2.0,
     "full": 15.0,
-    "long_burn": 100.0,
+    "long_burn": 50.0,
     "eval": 2.0,
     "cpu": 0.0,
 }
@@ -1232,8 +1232,7 @@ def classify_dispatch(
     if estimated_cost_usd is not None:
         if estimated_cost_usd <= PER_CLASS_SOFT_COST_CEILING_USD["smoke"]:
             return "smoke"
-        # CLASSIFY_DISPATCH_GE_BOUNDARY_OK:codex-review-2026-05-15-needs-attention; $100 is the long_burn FLOOR (not a marginal upgrade boundary like the wallclock 12h knee), so closed >= preserves the canonical D9 routing semantics where $50+ classifies as long_burn. Open > would route exact-$100 estimates into the cheaper "full" class and bypass long_burn capacity routing per BOYD-1 dict-disjointness invariant.
-        if estimated_cost_usd >= PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]:
+        if estimated_cost_usd > PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]:
             return "long_burn"
 
     return "full"

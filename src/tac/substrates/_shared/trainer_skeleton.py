@@ -44,6 +44,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
 import random
 import shutil
 import subprocess
@@ -376,7 +377,21 @@ def detect_hardware_substrate(
         ``"unknown_cpu"``.
     """
     if axis == "cpu":
-        return "linux_x86_64_modal_cpu"
+        system = platform.system()
+        machine = platform.machine().lower()
+        if system == "Darwin":
+            return "macos_arm64" if machine in {"arm64", "aarch64"} else "macos_x86_64"
+        if system == "Linux" and machine in {"x86_64", "amd64"}:
+            if any(name.startswith("MODAL_") for name in os.environ):
+                return "linux_x86_64_modal_cpu"
+            if os.environ.get("GITHUB_ACTIONS"):
+                return "linux_x86_64_gha_cpu"
+            if os.environ.get("VAST_CONTAINERLABEL") or os.environ.get("VASTAI_INSTANCE_ID"):
+                return "linux_x86_64_vast_cpu"
+            if os.environ.get("LIGHTNING_CLOUD_PROJECT_ID") or os.environ.get("LIGHTNING_USER_ID"):
+                return "linux_x86_64_lightning_cpu"
+            return "linux_x86_64_cpu"
+        return "unknown_cpu"
     if axis != "cuda":
         return "unknown"
 

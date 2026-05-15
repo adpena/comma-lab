@@ -99,6 +99,9 @@ class RankedDispatchCandidate:
     estimated_dispatch_cost_usd: float
     eig_per_dollar: float
     composition_notes: str
+    lane_class: str = ""
+    literature_anchor: str = ""
+    campaign_metadata: tuple[str, ...] = ()
     blockers: tuple[str, ...] = ()
     fits_per_dispatch_cap: bool = True
     fits_cumulative_envelope: bool = True
@@ -116,6 +119,8 @@ class RankedDispatchCandidate:
             "estimated_dispatch_cost_usd": self.estimated_dispatch_cost_usd,
             "blockers": list(self.blockers),
             "notes": self.composition_notes,
+            "lane_class": self.lane_class or None,
+            "literature_anchor": self.literature_anchor,
         }
 
 
@@ -154,6 +159,21 @@ def _build_singleton_dispatch_candidates(
     """One RankedDispatchCandidate per substrate (the simplest dispatch unit)."""
     out: list[RankedDispatchCandidate] = []
     for r in pareto_rows:
+        campaign_metadata = tuple(
+            part for part in (
+                f"lane_id={r.lane_id}" if r.lane_id else "",
+                f"campaign_id={r.campaign_id}" if r.campaign_id else "",
+                f"campaign_stage={r.campaign_stage}" if r.campaign_stage else "",
+                f"campaign_priority={r.campaign_priority}" if r.campaign_priority else "",
+                f"lane_class={r.lane_class}" if r.lane_class else "",
+                f"literature_anchor={r.literature_anchor}" if r.literature_anchor else "",
+            )
+            if part
+        )
+        metadata_note = (
+            "; " + "; ".join(campaign_metadata)
+            if campaign_metadata else ""
+        )
         out.append(
             RankedDispatchCandidate(
                 candidate_id=f"singleton__{r.substrate_id}",
@@ -167,7 +187,11 @@ def _build_singleton_dispatch_candidates(
                     f"[predicted; substrate composition matrix v1] "
                     f"singleton dispatch of {r.substrate_id}; "
                     f"axis={r.target_axis.value}, class={r.substrate_class.value}"
+                    f"{metadata_note}"
                 ),
+                lane_class=r.lane_class,
+                literature_anchor=r.literature_anchor,
+                campaign_metadata=campaign_metadata,
             )
         )
     return out
@@ -213,6 +237,29 @@ def _build_orthogonal_pair_candidates(
             composite = predicted_composite_delta(
                 [ri.substrate_id, rj.substrate_id], matrix=matrix
             )
+            lane_class = "+".join(
+                part for part in (ri.lane_class, rj.lane_class) if part
+            )
+            literature_anchor = "; ".join(
+                part for part in (ri.literature_anchor, rj.literature_anchor) if part
+            )
+            campaign_metadata = tuple(
+                part
+                for row in (ri, rj)
+                for part in (
+                    f"{row.substrate_id}:lane_id={row.lane_id}" if row.lane_id else "",
+                    f"{row.substrate_id}:campaign_id={row.campaign_id}" if row.campaign_id else "",
+                    f"{row.substrate_id}:campaign_stage={row.campaign_stage}" if row.campaign_stage else "",
+                    f"{row.substrate_id}:campaign_priority={row.campaign_priority}" if row.campaign_priority else "",
+                    f"{row.substrate_id}:lane_class={row.lane_class}" if row.lane_class else "",
+                    f"{row.substrate_id}:literature_anchor={row.literature_anchor}" if row.literature_anchor else "",
+                )
+                if part
+            )
+            metadata_note = (
+                f"; metadata={list(campaign_metadata)!r}"
+                if campaign_metadata else ""
+            )
             out.append(
                 RankedDispatchCandidate(
                     candidate_id=f"orthogonal_pair__{ri.substrate_id}__{rj.substrate_id}",
@@ -227,7 +274,11 @@ def _build_orthogonal_pair_candidates(
                         f"orthogonal pair ({ri.substrate_id} + {rj.substrate_id}); "
                         f"alpha={cell.expected_alpha:.2f}; "
                         f"rationale={cell.rationale}"
+                        f"{metadata_note}"
                     ),
+                    lane_class=lane_class,
+                    literature_anchor=literature_anchor,
+                    campaign_metadata=campaign_metadata,
                 )
             )
     return out
@@ -396,6 +447,7 @@ def serialize_candidate(c: RankedDispatchCandidate) -> dict[str, Any]:
     d = dataclasses.asdict(c)
     d["substrate_ids"] = list(c.substrate_ids)
     d["blockers"] = list(c.blockers)
+    d["campaign_metadata"] = list(c.campaign_metadata)
     return d
 
 

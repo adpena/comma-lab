@@ -31,7 +31,7 @@
 ## Comparisons
 
 - delta_vs_packetir_source_cuda: `-0.00010065943776227382`
-- delta_vs_current_best_cuda: `0.0001371669443431811`
+- delta_vs_current_best_cuda: `0.00015581099503059193`
 - not_current_frontier: `true`
 
 ## Blockers

@@ -226,6 +226,7 @@ def build_packetir_exact_closure(
     cpu_summary: dict[str, Any] | None = None
     if cpu_eval is not None:
         cpu_summary = _eval_summary(cpu_eval, required_axis="contest_cpu")
+        _mark_non_cuda_axis_diagnostic(cpu_summary)
         _check(
             checks,
             "cpu_eval_is_axis_labeled_diagnostic_not_cuda_claim",
@@ -548,6 +549,19 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         ),
         "inflated_output_total_bytes": _first_int(inflated_manifest.get("total_bytes")),
     }
+
+
+def _mark_non_cuda_axis_diagnostic(summary: dict[str, Any]) -> None:
+    """Keep non-CUDA axis rows visibly non-authoritative for row consumers."""
+
+    blockers = [
+        "not_contest_cuda_axis",
+        "cpu_axis_not_rank_or_kill_authority",
+        "requires_cuda_cpu_policy_review",
+    ]
+    for key in ("promotion_blockers", "rank_or_kill_blockers"):
+        existing = [str(item) for item in summary.get(key) or []]
+        summary[key] = [*existing, *[item for item in blockers if item not in existing]]
 
 
 def _runtime_consumption_summary(

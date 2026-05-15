@@ -168,6 +168,12 @@ class SubstrateRow:
     requires_score_aware_training: bool
     landed_at: str  # e.g., "2026-05-11" or "2026-05-09".
     landing_memo: str  # e.g., "feedback_*_landed_*.md" filename token.
+    lane_id: str = ""
+    campaign_id: str = ""
+    campaign_stage: str = ""
+    campaign_priority: str = ""
+    lane_class: str = ""
+    literature_anchor: str = ""
 
     def predicted_delta_alone_midpoint(self) -> float:
         return 0.5 * (self.predicted_delta_alone_band[0] + self.predicted_delta_alone_band[1])
@@ -209,7 +215,7 @@ class CompositionResult:
 
 
 def canonical_substrate_inventory() -> list[SubstrateRow]:
-    """Return the 48-row substrate inventory.
+    """Return the 55-row substrate inventory.
 
     Composition:
     - 24 legacy rows (residual basis 5 + pose-axis 3 + self-compression 3 +
@@ -220,6 +226,9 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
     - 9 WAVE-A-2 TRADITION 2 rows for older single-file `<name>_renderer.py`
       substrates that pre-date the substrate-scaffold subpackage discipline
       (CANON-1.A explicit-taxonomy resolution, 2026-05-12)
+    - 2 cooperative-receiver rows (SARC + Wyner-Ziv)
+    - 5 2026-05-14 campaign rows (Z3/Z4/Z5/C1/C6) registered so the
+      Cathedral/autopilot ranker sees the long-burn campaign stack.
 
     Order is stable (alphabetical by substrate_class then substrate_id) to
     preserve deterministic matrix construction across runs.
@@ -982,6 +991,108 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             landed_at="2026-05-13",
             landing_memo="feedback_wyner_ziv_cooperative_receiver_substrate_l1_landed_20260513",
         ),
+        # ── 2026-05-14 campaign rows: keep long-burn campaigns visible to
+        # Cathedral/autopilot without adding a new ranker framework.
+        SubstrateRow(
+            substrate_id="z3_balle_hyperprior_bolton",
+            name="Z3 Ballé 2018 scale-hyperprior bolt-on for frozen A1",
+            substrate_class=SubstrateClass.BOLT_ON,
+            target_axis=ScoreAxis.RATE,
+            format_id=0xB2,
+            magic_bytes="Z3H1",
+            runtime_dep_closure=("torch", "brotli", "numpy"),
+            byte_budget_band=(1_000, 15_000),
+            predicted_delta_alone_band=(-0.0100, -0.0010),
+            requires_score_aware_training=True,
+            landed_at="2026-05-14",
+            landing_memo="feedback_z3_balle_hyperprior_smoke_classification_20260514_codex",
+            lane_id="lane_z3_balle_hyperprior_bolton_recover_20260514",
+            campaign_id="lane_z3_balle_hyperprior_bolton_campaign_20260514",
+            campaign_stage="Z3 staircase step 1",
+            campaign_priority="across_class_staircase_step_1",
+            lane_class="substrate_engineering substrate_class_shift",
+            literature_anchor="balle_2018",
+        ),
+        SubstrateRow(
+            substrate_id="z4_cooperative_receiver_loss",
+            name="Z4 cooperative-receiver loss on Z3/A1",
+            substrate_class=SubstrateClass.BOLT_ON,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xB3,
+            magic_bytes="Z4CR",
+            runtime_dep_closure=("torch", "brotli", "constriction"),
+            byte_budget_band=(50_000, 200_000),
+            predicted_delta_alone_band=(-0.0100, -0.0050),
+            requires_score_aware_training=True,
+            landed_at="2026-05-14",
+            landing_memo="feedback_grand_council_maximize_value_landed_20260514",
+            lane_id="lane_z4_cooperative_receiver_loss_step2_20260514",
+            campaign_id="campaign_z4_cooperative_receiver_loss_20260514",
+            campaign_stage="Z4 staircase step 2",
+            campaign_priority="across_class_staircase_step_2",
+            lane_class="substrate_engineering substrate_class_shift",
+            literature_anchor="Atick-Redlich1990; Tishby-Zaslavsky",
+        ),
+        SubstrateRow(
+            substrate_id="z5_predictive_coding_world_model",
+            name="Z5 predictive-coding world model",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xB4,
+            magic_bytes="Z5WM",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(80_000, 250_000),
+            predicted_delta_alone_band=(-0.0380, -0.0250),
+            requires_score_aware_training=True,
+            landed_at="2026-05-14",
+            landing_memo="feedback_grand_council_maximize_value_landed_20260514",
+            lane_id="lane_z5_predictive_coding_world_model_step3_20260514",
+            campaign_id="campaign_z5_predictive_coding_world_model_20260514",
+            campaign_stage="Z5 staircase step 3",
+            campaign_priority="across_class_staircase_step_3",
+            lane_class="substrate_engineering substrate_class_shift",
+            literature_anchor="Rao-Ballard1999; predictive-coding; Friston2010",
+        ),
+        SubstrateRow(
+            substrate_id="c1_world_model_foveation",
+            name="C1 world-model plus foveation substrate",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xB5,
+            magic_bytes="WMF\x01",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(100_000, 180_000),
+            predicted_delta_alone_band=(-0.0600, -0.0400),
+            requires_score_aware_training=True,
+            landed_at="2026-05-14",
+            landing_memo="feedback_c1_world_model_foveation_campaign_l1_scaffold_landed_20260514",
+            lane_id="lane_c1_world_model_foveation_campaign_l1_scaffold_20260514",
+            campaign_id="campaign_c1_world_model_foveation_20260514",
+            campaign_stage="C1 long-burn campaign",
+            campaign_priority="long_term_campaign_c1",
+            lane_class="substrate_engineering substrate_class_shift",
+            literature_anchor="Ha-Schmidhuber2018; DreamerV3; Atick-Redlich1990; Rao-Ballard1999",
+        ),
+        SubstrateRow(
+            substrate_id="c6_e4_mdl_ibps",
+            name="C6/E4 MDL-IBPS substrate",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xB6,
+            magic_bytes="IBPS",
+            runtime_dep_closure=("torch", "brotli"),
+            byte_budget_band=(40_000, 150_000),
+            predicted_delta_alone_band=(-0.0800, -0.0300),
+            requires_score_aware_training=True,
+            landed_at="2026-05-14",
+            landing_memo="feedback_recovery_2_c6_finish_and_modal_harvest_landed_20260514",
+            lane_id="lane_c6_e4_mdl_ibps_substrate_20260514",
+            campaign_id="campaign_lane_c6_e4_mdl_ibps_substrate_20260514",
+            campaign_stage="C6/E4 long-burn campaign",
+            campaign_priority="long_term_campaign_c6",
+            lane_class="substrate_engineering substrate_class_shift",
+            literature_anchor="Tishby-Zaslavsky; Rissanen1978; MacKay2003; MDL-IBPS",
+        ),
     ]
     # Stable sort: by class then id.
     rows.sort(key=lambda r: (r.substrate_class.value, r.substrate_id))
@@ -1366,6 +1477,12 @@ class ParetoRow:
     expected_information_gain: float
     eig_per_dollar: float
     notes: str = ""
+    lane_id: str = ""
+    campaign_id: str = ""
+    campaign_stage: str = ""
+    campaign_priority: str = ""
+    lane_class: str = ""
+    literature_anchor: str = ""
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
@@ -1445,6 +1562,12 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     # ── Cooperative-receiver substrates (2026-05-13) ──
     "sar_coherent_pose_pairs_substrate": 1.00,
     "wyner_ziv_cooperative_receiver_substrate": 1.50,
+    # ── 2026-05-14 long-burn campaign rows (smoke/campaign fallback p50s) ──
+    "z3_balle_hyperprior_bolton": 2.00,
+    "z4_cooperative_receiver_loss": 5.00,
+    "z5_predictive_coding_world_model": 10.00,
+    "c1_world_model_foveation": 1.00,
+    "c6_e4_mdl_ibps": 0.50,
 }
 
 
@@ -1481,6 +1604,18 @@ def per_substrate_pareto_rows(
             f"[predicted; substrate composition matrix v1] "
             f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
         )
+        if s.lane_id:
+            notes += f"; lane_id={s.lane_id}"
+        if s.campaign_id:
+            notes += f"; campaign_id={s.campaign_id}"
+        if s.campaign_stage:
+            notes += f"; campaign_stage={s.campaign_stage}"
+        if s.campaign_priority:
+            notes += f"; campaign_priority={s.campaign_priority}"
+        if s.lane_class:
+            notes += f"; lane_class={s.lane_class}"
+        if s.literature_anchor:
+            notes += f"; literature_anchor={s.literature_anchor}"
         if cost_estimation_pending:
             notes += "; cost_estimation_required (cost=0.0 treated as unknown, not free)"
         rows.append(
@@ -1494,6 +1629,12 @@ def per_substrate_pareto_rows(
                 expected_information_gain=eig,
                 eig_per_dollar=eig_per_dollar,
                 notes=notes,
+                lane_id=s.lane_id,
+                campaign_id=s.campaign_id,
+                campaign_stage=s.campaign_stage,
+                campaign_priority=s.campaign_priority,
+                lane_class=s.lane_class,
+                literature_anchor=s.literature_anchor,
             )
         )
     return rows

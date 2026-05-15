@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Driver-generator output is canonical, deterministic, and bash-syntax-valid."""
 
 from __future__ import annotations

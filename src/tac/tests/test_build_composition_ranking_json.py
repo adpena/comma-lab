@@ -232,6 +232,25 @@ def test_write_then_load_roundtrip(bridge, tmp_path):
         assert row.candidate_id in payload_ids
 
 
+def test_campaign_metadata_emitted_for_z3_bare_cell(bridge):
+    payload = bridge.build_payload(
+        max_primitives_per_cell=0,
+        only_with_primitives=False,
+        apply_posterior=False,
+        apply_cost_band=False,
+    )
+    z3 = next(
+        row for row in payload["ranked_dispatches"]
+        if row["substrate_ids"] == ["z3_balle_hyperprior_bolton"]
+    )
+    assert z3["lane_class"] == "substrate_engineering substrate_class_shift"
+    assert z3["literature_anchor"] == "balle_2018"
+    assert "campaign_id=lane_z3_balle_hyperprior_bolton_campaign_20260514" in z3[
+        "campaign_metadata"
+    ]
+    assert "literature_anchor=balle_2018" in z3["composition_notes"]
+
+
 def test_blockers_propagate_from_cell(bridge):
     """Any cell-level blockers (e.g., PR101 GOLD on non-HNeRV) propagate through."""
     payload = bridge.build_payload(max_primitives_per_cell=4)

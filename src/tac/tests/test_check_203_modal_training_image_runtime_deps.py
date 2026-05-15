@@ -37,6 +37,10 @@ image = (
     .pip_install(
         {dep_args},
     )
+    .env({{
+        "DALI_DISABLE_NVML": "1",
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+    }})
 )
 """
 
@@ -76,7 +80,13 @@ def test_comment_only_dependency_reference_does_not_satisfy_gate(tmp_path: Path)
 import modal
 
 # constriction>=0.4,<0.5 is mentioned here but not installed.
-image = modal.Image.debian_slim().pip_install("brotli", "pyppmd>=1.3,<2.0")
+image = modal.Image.debian_slim().pip_install(
+    "brotli",
+    "pyppmd>=1.3,<2.0",
+).env({
+    "DALI_DISABLE_NVML": "1",
+    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+})
 """,
     )
 
@@ -87,6 +97,29 @@ image = modal.Image.debian_slim().pip_install("brotli", "pyppmd>=1.3,<2.0")
 
     assert len(violations) == 1
     assert "constriction" in violations[0]
+
+
+def test_missing_modal_dali_nvml_env_is_violation(tmp_path: Path) -> None:
+    repo = _write_repo(
+        tmp_path,
+        """
+import modal
+
+image = modal.Image.debian_slim().pip_install(
+    "brotli",
+    "constriction>=0.4,<0.5",
+    "pyppmd>=1.3,<2.0",
+)
+""",
+    )
+
+    violations = check_modal_training_image_includes_hard_runtime_deps(
+        repo_root=repo,
+        verbose=False,
+    )
+
+    assert any("DALI_DISABLE_NVML" in violation for violation in violations)
+    assert any("PYTORCH_CUDA_ALLOC_CONF" in violation for violation in violations)
 
 
 def test_pyproject_without_entropy_dep_does_not_force_modal_literal(tmp_path: Path) -> None:

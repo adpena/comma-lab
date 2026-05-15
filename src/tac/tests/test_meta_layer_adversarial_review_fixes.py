@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Regression tests for META-layer adversarial-review-round-1+2 fixes (2026-05-15).
 
 Per `feedback_meta_layer_adversarial_review_round_1_2_landed_20260515.md`,

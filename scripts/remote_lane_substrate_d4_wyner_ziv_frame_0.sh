@@ -154,6 +154,7 @@ cat > "$PROVENANCE" <<EOF
   "cublas_workspace_config": "$CUBLAS_WORKSPACE_CONFIG",
   "dali_disable_nvml": "$DALI_DISABLE_NVML",
   "pytorch_cuda_alloc_conf": "$PYTORCH_CUDA_ALLOC_CONF",
+  "max_pairs": "$D4_WYNER_ZIV_FRAME_0_MAX_PAIRS",
   "base_archive_path": "$D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"

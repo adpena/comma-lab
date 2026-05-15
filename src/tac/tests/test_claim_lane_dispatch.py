@@ -206,7 +206,7 @@ def test_placeholder_lane_id_rejected(claims_path, lane_id):
 
 def test_terminal_prefixes_constants():
     # Spec from .pyc revealed these prefixes — verify they're all present
-    expected = {"completed_", "failed_", "preempted", "cancelled",
+    expected = {"completed_", "failed_", "timed_out", "preempted", "cancelled",
                 "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_",
                 "falsified_", "retired_", "config_retired_",
                 "measured_implementation_retired_",
@@ -217,6 +217,7 @@ def test_terminal_prefixes_constants():
 
 def test_falsified_and_retired_statuses_close_claims(claims_path):
     terminal_statuses = [
+        "timed_out_3600s_t4_smoke",
         "falsified_score_1.43_pareto_dominated",
         "retired_config_exact_negative",
         "config_retired_pr107_b050",

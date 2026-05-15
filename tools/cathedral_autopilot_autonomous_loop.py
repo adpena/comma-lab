@@ -458,6 +458,11 @@ _CLASS_SHIFT_LITERATURE_TOKENS = (
     "DreamerV3",
     "Dreamer V3",
     "Dreamer-V3",
+    "balle_2018",
+    "Ballé",
+    "Balle",
+    "scale-hyperprior",
+    "scale_hyperprior",
 )
 
 CLASS_SHIFT_LANE_CLASS_REWARD = 0.02
@@ -1466,6 +1471,23 @@ def _parse_approval_flags(items: list[str]) -> frozenset[EventClass]:
     return frozenset(out)
 
 
+def _coerce_optional_float(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _require_planning_only_flag(raw: dict[str, Any], key: str, *, context: str) -> None:
+    if raw.get(key, False):
+        raise ValueError(
+            f"{context} has {key}=True; refusing to consume it as planning-only "
+            "autopilot input"
+        )
+
+
 def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     """Load CandidateRow objects from a JSONL file (one row per line).
 
@@ -1479,14 +1501,6 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     ``composition_alpha`` (float). Backward-compat: rows without these
     fields use None defaults.
     """
-    def _opt_float(value: object) -> float | None:
-        if value is None:
-            return None
-        try:
-            return float(value)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
-            return None
-
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
         for line in f:
@@ -1494,9 +1508,9 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
             if not s:
                 continue
             raw = json.loads(s)
-            mdl_density = _opt_float(raw.get("mdl_density"))
-            mdl_tier_c_density = _opt_float(raw.get("mdl_tier_c_density"))
-            composition_alpha = _opt_float(raw.get("composition_alpha"))
+            mdl_density = _coerce_optional_float(raw.get("mdl_density"))
+            mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
+            composition_alpha = _coerce_optional_float(raw.get("composition_alpha"))
             lane_class_raw = raw.get("lane_class")
             lane_class: str | None = (
                 str(lane_class_raw) if lane_class_raw is not None else None
@@ -1598,6 +1612,13 @@ def load_candidates_from_substrate_composition_ranking(
             f"composition_notes: {raw.get('composition_notes', '')}",
             f"substrate_ids: {raw.get('substrate_ids', [])!r}",
         ]
+        if raw.get("lane_class"):
+            notes_lines.append(f"lane_class: {raw.get('lane_class')}")
+        if raw.get("literature_anchor"):
+            notes_lines.append(f"literature_anchor: {raw.get('literature_anchor')}")
+        if raw.get("campaign_metadata"):
+            notes_lines.append(f"campaign_metadata: {raw.get('campaign_metadata')!r}")
+        lane_class_raw = raw.get("lane_class")
         # Catalog #227 wire-in: read optional composition_alpha if present
         # (the canonical Z3×C6 probe-disambiguator emits this).
         composition_alpha_raw = raw.get("composition_alpha")
@@ -1615,6 +1636,9 @@ def load_candidates_from_substrate_composition_ranking(
             estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
             blockers=list(raw.get("blockers", [])),
             notes="\n".join(notes_lines),
+            mdl_density=_coerce_optional_float(raw.get("mdl_density")),
+            lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
+            literature_anchor=str(raw.get("literature_anchor", "")),
             composition_alpha=composition_alpha,
         ))
     return rows
@@ -1735,6 +1759,83 @@ def apply_substrate_composition_matrix_to_candidates(
         if alpha is not None:
             cand.composition_alpha = alpha
     return candidates
+
+
+# ── Probe-disambiguator read-only autopilot-row consumer ──────────────────
+
+
+def load_candidates_from_probe_disambiguator_output(path: Path) -> list[CandidateRow]:
+    """Load read-only ``autopilot_rows`` from a probe-disambiguator JSON artifact.
+
+    Probe-disambiguators arbitrate design interpretations; they are NOT
+    dispatch packets or score evidence. This consumer intentionally accepts
+    only rows whose top-level and per-row safety flags remain fail-closed.
+    """
+    if not path.is_file():
+        raise FileNotFoundError(f"probe-disambiguator JSON not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"probe-disambiguator JSON must be an object: {path}")
+    for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        _require_planning_only_flag(payload, key, context="probe-disambiguator JSON")
+    if payload.get("dispatch_attempted", False):
+        raise ValueError(
+            "probe-disambiguator JSON has dispatch_attempted=True; refusing "
+            "to consume it as an autopilot planning source"
+        )
+    raw_rows = payload.get("autopilot_rows")
+    if not isinstance(raw_rows, list):
+        raise ValueError(
+            "probe-disambiguator JSON missing list field 'autopilot_rows'"
+        )
+
+    rows: list[CandidateRow] = []
+    for raw in raw_rows:
+        if not isinstance(raw, dict):
+            raise ValueError("probe-disambiguator autopilot_rows entries must be objects")
+        cid = raw.get("candidate_id")
+        if not cid:
+            raise ValueError("probe-disambiguator row missing candidate_id")
+        for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+            _require_planning_only_flag(
+                raw, key, context=f"probe-disambiguator row {cid!r}"
+            )
+        if raw.get("dispatch_attempted", False):
+            raise ValueError(
+                f"probe-disambiguator row {cid!r} has dispatch_attempted=True; "
+                "refusing to consume it as an autopilot planning row"
+            )
+        lane_class_raw = raw.get("lane_class")
+        notes = "\n".join(
+            [
+                "[probe-disambiguator; read-only planning]",
+                f"source_path: {path}",
+                f"source_schema: {payload.get('schema')!r}",
+                f"source_tool: {payload.get('tool')!r}",
+                f"row_notes: {raw.get('notes', '')}",
+            ]
+        )
+        rows.append(
+            CandidateRow(
+                candidate_id=str(cid),
+                family=str(raw.get("family", "probe_disambiguator")),
+                predicted_score_delta=float(raw.get("predicted_score_delta", 0.0)),
+                expected_information_gain=float(raw.get("expected_information_gain", 0.0)),
+                estimated_dispatch_cost_usd=float(raw.get("estimated_dispatch_cost_usd", 0.0)),
+                blockers=list(raw.get("blockers", [])),
+                notes=notes,
+                mdl_density=_coerce_optional_float(raw.get("mdl_density")),
+                lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
+                literature_anchor=str(raw.get("literature_anchor", "")),
+                mdl_tier_c_density=_coerce_optional_float(
+                    raw.get("mdl_tier_c_density")
+                ),
+                composition_alpha=_coerce_optional_float(
+                    raw.get("composition_alpha")
+                ),
+            )
+        )
+    return rows
 
 
 def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...]]:
@@ -2000,7 +2101,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     parser.add_argument("--candidates-jsonl", type=Path, default=None,
                         help="Path to JSONL file of CandidateRow rows. Mutually "
-                             "exclusive with --use-substrate-composition-matrix-ranking.")
+                             "exclusive with the other candidate-source flags.")
     parser.add_argument(
         "--use-substrate-composition-matrix-ranking",
         type=Path,
@@ -2012,7 +2113,18 @@ def main(argv: Optional[list[str]] = None) -> int:
             "When set, candidates are loaded from the ranking and "
             "filter_composition_incompatible_dispatches enforces the matrix's "
             "REPLACEMENT/INCOMPATIBLE/ANTAGONISTIC constraints across the dispatch "
-            "queue. Mutually exclusive with --candidates-jsonl."
+            "queue. Mutually exclusive with the other candidate-source flags."
+        ),
+    )
+    parser.add_argument(
+        "--probe-disambiguator-json",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a probe-disambiguator JSON artifact carrying read-only "
+            "autopilot_rows. Mutually exclusive with the other candidate-source "
+            "flags; rows must be planning-only and fail closed on score/promotion/"
+            "exact-eval dispatch flags."
         ),
     )
     parser.add_argument(
@@ -2110,18 +2222,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     try:
         if args.iterations <= 0:
             raise ValueError("--iterations must be > 0")
-        # Exactly one of --candidates-jsonl OR --use-substrate-composition-matrix-ranking
-        # must be supplied. They are mutually exclusive.
+        # Exactly one candidate source must be supplied. They are mutually exclusive.
         sources_supplied = sum(
             1 for x in (
                 args.candidates_jsonl,
                 args.use_substrate_composition_matrix_ranking,
+                args.probe_disambiguator_json,
             ) if x is not None
         )
         if sources_supplied != 1:
             raise ValueError(
-                "exactly one of --candidates-jsonl or "
-                "--use-substrate-composition-matrix-ranking must be supplied "
+                "exactly one of --candidates-jsonl, "
+                "--use-substrate-composition-matrix-ranking, or "
+                "--probe-disambiguator-json must be supplied "
                 f"(got {sources_supplied})"
             )
         if args.candidates_jsonl is not None and not args.candidates_jsonl.is_file():
@@ -2131,6 +2244,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             and not args.use_substrate_composition_matrix_ranking.is_file()
         ):
             raise FileNotFoundError(args.use_substrate_composition_matrix_ranking)
+        if (
+            args.probe_disambiguator_json is not None
+            and not args.probe_disambiguator_json.is_file()
+        ):
+            raise FileNotFoundError(args.probe_disambiguator_json)
         approval_set = _parse_approval_flags(
             args.require_operator_approval_on or ["dispatch"]
         )
@@ -2186,6 +2304,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             composition_dropped.clear()
             composition_dropped.extend(dropped)
             return kept
+    elif args.probe_disambiguator_json is not None:
+        def _source() -> list[CandidateRow]:
+            return load_candidates_from_probe_disambiguator_output(
+                args.probe_disambiguator_json
+            )
     else:
         def _source() -> list[CandidateRow]:
             return load_candidates_from_jsonl(args.candidates_jsonl)
@@ -2203,6 +2326,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         auto_load_continual_posterior=args.load_continual_posterior,
     )
 
+    if args.use_substrate_composition_matrix_ranking is not None:
+        source_tag = "substrate_composition_matrix_constraints_enforced"
+    elif args.probe_disambiguator_json is not None:
+        source_tag = "probe_disambiguator_read_only_source"
+    else:
+        source_tag = "candidates_jsonl_source"
+
     output_payload = {
         "schema": AUTONOMOUS_LOOP_SCHEMA,
         "evidence_grade": "[predicted; cathedral autopilot ranking]",
@@ -2213,9 +2343,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             "no_kill_verdict_in_loop",
             "race_mode_explicit_opt_in_only",
             "operator_authorized_le_5_dollar_mode_dual_gated",
-            "substrate_composition_matrix_constraints_enforced"
-                if args.use_substrate_composition_matrix_ranking is not None
-                else "candidates_jsonl_source",
+            source_tag,
         ],
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
@@ -2240,6 +2368,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                 ],
             }
             if args.use_substrate_composition_matrix_ranking is not None
+            else None
+        ),
+        "probe_disambiguator_source": (
+            {
+                "path": str(args.probe_disambiguator_json),
+                "read_only_consumer": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            if args.probe_disambiguator_json is not None
             else None
         ),
         "reports": [serialize_report(r) for r in reports],

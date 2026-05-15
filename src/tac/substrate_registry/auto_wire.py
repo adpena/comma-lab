@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Auto-wire query helpers for the 6 Catalog #125 hooks.
 
 Per `.omx/research/substrate_meta_layer_design_20260515.md` § 4.1, the META

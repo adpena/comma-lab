@@ -65,7 +65,7 @@ def _canonical_ranking_payload() -> dict:
         "per_dispatch_cap_usd": 5.0,
         "cumulative_cap_usd": 20.0,
         "cumulative_estimated_spend_usd": 0.6,
-        "n_ranked_dispatches": 4,
+        "n_ranked_dispatches": 5,
         "n_filtered_dropped": 0,
         "score_claim": False,
         "promotion_eligible": False,
@@ -88,6 +88,27 @@ def _canonical_ranking_payload() -> dict:
                 "estimated_dispatch_cost_usd": 0.10,
                 "eig_per_dollar": 0.005,
                 "composition_notes": "[predicted; substrate composition matrix v1] singleton dispatch of magic_codec",
+                "blockers": [],
+                "fits_per_dispatch_cap": True,
+                "fits_cumulative_envelope": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            {
+                "candidate_id": "singleton__z3_balle_hyperprior_bolton",
+                "family": "bolt_on",
+                "substrate_ids": ["z3_balle_hyperprior_bolton"],
+                "predicted_score_delta": -0.0055,
+                "expected_information_gain": 0.0055,
+                "estimated_dispatch_cost_usd": 2.00,
+                "eig_per_dollar": 0.00275,
+                "composition_notes": "[predicted; substrate composition matrix v1] singleton dispatch of z3",
+                "lane_class": "substrate_engineering substrate_class_shift",
+                "literature_anchor": "balle_2018",
+                "campaign_metadata": [
+                    "campaign_id=lane_z3_balle_hyperprior_bolton_campaign_20260514"
+                ],
                 "blockers": [],
                 "fits_per_dispatch_cap": True,
                 "fits_cumulative_envelope": True,
@@ -243,6 +264,17 @@ def test_load_ranking_predicted_score_delta_round_trips(tmp_path):
     by_id = {r.candidate_id: r for r in rows}
     assert by_id["singleton__magic_codec"].predicted_score_delta == pytest.approx(-0.0005)
     assert by_id["singleton__nerv_as_renderer"].predicted_score_delta == pytest.approx(-0.005)
+
+
+def test_load_ranking_carries_lane_class_literature_and_campaign_metadata(tmp_path):
+    p = _write_ranking(tmp_path)
+    rows = loop.load_candidates_from_substrate_composition_ranking(p)
+    by_id = {r.candidate_id: r for r in rows}
+    z3 = by_id["singleton__z3_balle_hyperprior_bolton"]
+    assert z3.lane_class == "substrate_engineering substrate_class_shift"
+    assert z3.literature_anchor == "balle_2018"
+    assert "campaign_metadata:" in z3.notes
+    assert "lane_z3_balle_hyperprior_bolton_campaign_20260514" in z3.notes
 
 
 # ── candidate_substrate_ids_from_ranking ───────────────────────────────────

@@ -304,6 +304,7 @@ def _append_terminal_claim_evidence(
             "status": status,
         }
 
+    recovered_auth_eval = terminal_claim.get("recovered_auth_eval")
     row = {
         "schema": "cathedral_autopilot_terminal_claim_evidence_v1",
         "recorded_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
@@ -324,13 +325,22 @@ def _append_terminal_claim_evidence(
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "recovered_auth_eval": recovered_auth_eval if isinstance(recovered_auth_eval, dict) else None,
         "proxy_row": True,
         "family_falsified": False,
         "method_family_retired": False,
         "contest_dispatch_verdict": "no_signal_loss_terminal_claim_coverage",
-        "measured_config_status": "terminal_dispatch_claim_preserved_no_score",
+        "measured_config_status": (
+            "terminal_dispatch_claim_preserved_with_inline_auth_eval"
+            if isinstance(recovered_auth_eval, dict)
+            else "terminal_dispatch_claim_preserved_no_score"
+        ),
         "dispatch_blockers": [
-            "terminal_training_harvest_has_no_score_authority",
+            (
+                "terminal_training_harvest_preserves_inline_auth_eval_but_is_not_rank_authority"
+                if isinstance(recovered_auth_eval, dict)
+                else "terminal_training_harvest_has_no_score_authority"
+            ),
             "exact_result_review_required_before_promotion_or_rank_kill",
         ],
         "reactivation_criteria": [
@@ -401,7 +411,10 @@ def harvest_modal_calls(
         normalise_modal_training_result_summary,
         partial_modal_training_result_summary,
     )
-    from tac.deploy.modal.training_claims import append_modal_training_terminal_claim
+    from tac.deploy.modal.training_claims import (
+        append_modal_training_terminal_claim,
+        recovered_inline_contest_cuda_auth_eval,
+    )
     from tac.deploy.modal.training_cost import append_modal_training_cost_anchor
 
     metadata_files = _metadata_files(repo_root)
@@ -498,6 +511,19 @@ def harvest_modal_calls(
                             f"{type(exc).__name__}:{exc}"
                         ),
                     }
+            elif isinstance(terminal_claim, dict) and not isinstance(
+                terminal_claim.get("recovered_auth_eval"), dict
+            ):
+                recovered_auth_eval = recovered_inline_contest_cuda_auth_eval(out_dir)
+                if recovered_auth_eval is not None:
+                    terminal_claim = {
+                        **terminal_claim,
+                        "recovered_auth_eval": recovered_auth_eval,
+                    }
+                    terminal_marker.write_text(
+                        json.dumps(terminal_claim, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8",
+                    )
             terminal_evidence = _append_terminal_claim_evidence(
                 repo_root=repo_root,
                 out_dir=out_dir,

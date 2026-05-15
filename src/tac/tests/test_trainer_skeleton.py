@@ -366,10 +366,42 @@ def test_require_contest_cuda_auth_eval_claim_rejects_diagnostic_cuda(tmp_path: 
 
 
 def test_detect_hardware_substrate_cpu_axis_returns_modal_cpu(monkeypatch) -> None:
-    """axis='cpu' returns Modal CPU substrate by convention."""
+    """axis='cpu' returns Modal CPU only when Modal env is present."""
+    monkeypatch.setattr(ts.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(ts.platform, "machine", lambda: "x86_64")
+    monkeypatch.setenv("MODAL_TASK_ID", "task")
     assert ts.detect_hardware_substrate(
         axis="cpu", substrate_tag="test",
     ) == "linux_x86_64_modal_cpu"
+
+
+def test_detect_hardware_substrate_cpu_axis_returns_macos_arm64(monkeypatch) -> None:
+    """macOS CPU is advisory and must not be mislabeled as Linux Modal CPU."""
+    monkeypatch.setattr(ts.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(ts.platform, "machine", lambda: "arm64")
+    monkeypatch.delenv("MODAL_TASK_ID", raising=False)
+    assert ts.detect_hardware_substrate(
+        axis="cpu", substrate_tag="test",
+    ) == "macos_arm64"
+
+
+def test_detect_hardware_substrate_cpu_axis_returns_plain_linux(monkeypatch) -> None:
+    """Plain Linux x86_64 CPU stays distinct from provider-specific CPU axes."""
+    monkeypatch.setattr(ts.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(ts.platform, "machine", lambda: "x86_64")
+    for name in (
+        "MODAL_TASK_ID",
+        "MODAL_GPU",
+        "GITHUB_ACTIONS",
+        "VAST_CONTAINERLABEL",
+        "VASTAI_INSTANCE_ID",
+        "LIGHTNING_CLOUD_PROJECT_ID",
+        "LIGHTNING_USER_ID",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    assert ts.detect_hardware_substrate(
+        axis="cpu", substrate_tag="test",
+    ) == "linux_x86_64_cpu"
 
 
 def test_detect_hardware_substrate_unknown_axis_returns_unknown() -> None:
