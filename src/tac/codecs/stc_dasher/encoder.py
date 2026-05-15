@@ -184,6 +184,12 @@ def encode_stream(
         raise ValueError("context_length must be in [0, 255]")
     if payload_bit_ratio < 1:
         raise ValueError("payload_bit_ratio must be >= 1")
+    if payload_bit_ratio != DEFAULT_PAYLOAD_BIT_RATIO:
+        raise ValueError(
+            "payload_bit_ratio is fixed at 4 in STC-Dasher v1 because the "
+            "envelope does not serialize this field yet; bump the schema before "
+            "exposing non-default ratios"
+        )
     if not math.isfinite(sigma):
         raise ValueError("sigma must be finite")
 

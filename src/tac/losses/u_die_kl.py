@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""U-DIE-KL substrate-wide loss helper — Grand Reunion symposium #5 composite.
+"""U-DIE-KL substrate-wide loss helper - Grand Reunion symposium #5 composite.
 
 This module is the canonical training-side substrate-agnostic bolt-on
 combining three score-aware-loss families into a single torch-tensor loss:
@@ -54,20 +54,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tac.losses.core import (
-    _hwc_to_chw,
-    _validate_kl_temperature,
-    scorer_forward_pair,
-)
+from tac.losses.core import _validate_kl_temperature, scorer_forward_pair
 
 __all__ = (
+    "DEFAULT_DIE_CACHE_INTERVAL",
     "DEFAULT_KL_TEMPERATURE",
     "DEFAULT_UNIWARD_EPSILON",
-    "DEFAULT_DIE_CACHE_INTERVAL",
     "UDIEKLConfig",
     "UDIEKLLoss",
-    "compute_uniward_weight_map",
     "compute_die_weight_map",
+    "compute_uniward_weight_map",
     "kl_distill_segnet_term",
 )
 
@@ -80,7 +76,7 @@ __all__ = (
 DEFAULT_KL_TEMPERATURE: float = 2.0
 
 # UNIWARD wavelet-band-sum denominator floor (Holub-Fridrich-Denemark 2014).
-# Prevents division by zero in flat regions where Sigma_b |W_b(I)(p)| ~= 0.
+# Prevents division by zero in flat regions where sum_b |W_b(I)(p)| ~= 0.
 DEFAULT_UNIWARD_EPSILON: float = 1e-3
 
 # DIE-map cache interval. The per-pixel scorer-gradient map is expensive
@@ -133,7 +129,7 @@ def _validate_cache_interval(value: int) -> int:
 
 
 # ---------------------------------------------------------------------------
-# UNIWARD weight map (canonical Haar-like wavelet bands per Mallat 2009 §7.2)
+# UNIWARD weight map (canonical Haar-like wavelet bands per Mallat 2009 section 7.2)
 # ---------------------------------------------------------------------------
 
 
@@ -145,7 +141,7 @@ def compute_uniward_weight_map(
 ) -> torch.Tensor:
     """Compute the UNIWARD per-pixel embedding-cost weight map.
 
-    Per the canonical UNIWARD formulation (Holub-Fridrich-Denemark 2014 §III):
+    Per the canonical UNIWARD formulation (Holub-Fridrich-Denemark 2014 section III):
 
         rho(p) = 1 / (epsilon + |W_h(I)(p)| + |W_v(I)(p)| + |W_d(I)(p)|)
 
@@ -157,7 +153,7 @@ def compute_uniward_weight_map(
     (textured regions; perturbations are undetectable).
 
     The weight is normalized per-image to ``mean=1`` so the loss scale
-    matches the unweighted MSE — substrate trainers can drop alpha=1 in
+    matches the unweighted MSE - substrate trainers can drop alpha=1 in
     without recalibrating their LR / EMA decay.
 
     Args:
@@ -182,7 +178,7 @@ def compute_uniward_weight_map(
     B, T, C, H, W = target_btchw.shape
 
     # Compute on grayscale luminance to mirror the UNIWARD UERD-on-Y
-    # discipline (Holub 2014 §III.B); aggregation over C is the caller's
+    # discipline (Holub 2014 section III.B); aggregation over C is the caller's
     # responsibility per the canonical convention.
     x = target_btchw.to(dtype=torch.float32).mean(dim=2, keepdim=True)  # (B, T, 1, H, W)
 
@@ -216,7 +212,7 @@ def compute_uniward_weight_map(
 
 
 # ---------------------------------------------------------------------------
-# DIE weight map (scorer-gradient-weighted per Yousfi 2022 §IV)
+# DIE weight map (scorer-gradient-weighted per Yousfi 2022 section IV)
 # ---------------------------------------------------------------------------
 
 
@@ -230,7 +226,7 @@ def compute_die_weight_map(
 ) -> torch.Tensor:
     """Compute the DIE per-pixel scorer-attention weight map.
 
-    Per Yousfi 2022 §IV ("Detector-Informed Embedding for Steganography"):
+    Per Yousfi 2022 section IV ("Detector-Informed Embedding for Steganography"):
 
         DIE_attention(p) = ||grad_seg(p)||_2 + ||grad_pose(p)||_2
 
@@ -308,7 +304,11 @@ def compute_die_weight_map(
     # Per-image normalization (mean=1.0 per the loss-scale-preserving
     # convention sister of compute_uniward_weight_map).
     per_image_mean = per_pixel.mean(dim=(2, 3, 4), keepdim=True).clamp_min(1e-12)
-    weight = per_pixel / per_image_mean
+    weight = torch.where(
+        per_image_mean > 1e-12,
+        per_pixel / per_image_mean,
+        torch.ones_like(per_pixel),
+    )
 
     weight = torch.nan_to_num(weight, nan=1.0, posinf=1.0, neginf=1.0)
     if detach:
@@ -337,7 +337,7 @@ def kl_distill_segnet_term(
     where ``student`` is the predicted-frame SegNet output (gradients flow)
     and ``teacher`` is the target-frame SegNet output (frozen,
     ``torch.no_grad()``). PoseNet is intentionally NOT distilled here per
-    CLAUDE.md "KL distill caused PoseNet collapse as primary loss" — KL
+    CLAUDE.md "KL distill caused PoseNet collapse as primary loss" - KL
     distill for SegNet only.
 
     Honors Catalog #164 by routing through ``preprocess_input`` BEFORE
@@ -446,7 +446,7 @@ class UDIEKLLoss(nn.Module):
 
     * Canonical scorer-preprocess discipline (Catalog #164: routes through
       ``scorer_forward_pair`` and ``scorer.preprocess_input``).
-    * EMA compatibility per CLAUDE.md "EMA — NON-NEGOTIABLE": the helper
+    * EMA compatibility per CLAUDE.md "EMA - NON-NEGOTIABLE": the helper
       adds NO learnable params (scorers are frozen by contract; UNIWARD
       and DIE weights are non-learnable per-pixel multipliers).
     * Compress-side scorer use only per CLAUDE.md "Contest compliance"
@@ -469,7 +469,7 @@ class UDIEKLLoss(nn.Module):
     """
 
     # Canonical instance attribute types (helps static analysis + dataclasses
-    # interop without making this class a dataclass — nn.Module ownership of
+    # interop without making this class a dataclass - nn.Module ownership of
     # parameters/buffers is not dataclass-friendly).
     config: UDIEKLConfig
     scorer_seg: nn.Module
@@ -504,7 +504,22 @@ class UDIEKLLoss(nn.Module):
             uniward_epsilon=uniward_epsilon,
             die_cache_interval=die_cache_interval,
         )
-        # We do NOT register the scorers as submodules — they are CALLER-
+        for name, scorer in (("scorer_seg", scorer_seg), ("scorer_pose", scorer_pose)):
+            trainable = [
+                param_name
+                for param_name, param in scorer.named_parameters()
+                if param.requires_grad
+            ]
+            if trainable:
+                preview = ", ".join(trainable[:5])
+                suffix = "" if len(trainable) <= 5 else f", ... (+{len(trainable) - 5})"
+                raise ValueError(
+                    f"{name} must be frozen before constructing UDIEKLLoss; "
+                    f"trainable parameters: {preview}{suffix}"
+                )
+            scorer.eval()
+
+        # We do NOT register the scorers as submodules - they are CALLER-
         # owned and CALLER-frozen. Storing them as plain attributes means
         # they don't appear in self.parameters(), don't get state-dict-saved
         # by the substrate trainer, and don't pollute the EMA shadow.
@@ -579,7 +594,7 @@ class UDIEKLLoss(nn.Module):
         # Per-pixel residual (B, T, C, H, W).
         residual = (pred_btchw.float() - target_btchw.float()).pow(2)
 
-        total = pred_btchw.new_zeros(())
+        total = residual.new_zeros(())
 
         # alpha: UNIWARD-weighted loss
         if cfg.alpha > 0.0:

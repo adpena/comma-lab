@@ -19,8 +19,6 @@ Lane: ``lane_u_die_kl_substrate_wide_loss_v1_20260515``.
 """
 from __future__ import annotations
 
-import math
-
 import pytest
 import torch
 import torch.nn as nn
@@ -36,18 +34,17 @@ from tac.losses import (
     kl_distill_segnet_term,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fake scorers (sister of test_lane_12_v2_nerv_as_renderer.py::_FakeScorerSeg)
 # ---------------------------------------------------------------------------
 
 
 class _FakeScorerSeg(nn.Module):
-    """Fake SegNet — small CNN that returns 5-class logits.
+    """Fake SegNet - small CNN that returns 5-class logits.
 
     Mirrors the contest scorer contract: ``preprocess_input(x)`` takes a
     5-D ``(B, T, C, H, W)`` tensor and returns a 4-D ``(B, C, H, W)``
-    tensor (LAST frame only — matches modules.py SegNet semantics).
+    tensor (LAST frame only - matches modules.py SegNet semantics).
     """
 
     def __init__(self, *, num_classes: int = 5, in_channels: int = 3) -> None:
@@ -67,7 +64,7 @@ class _FakeScorerSeg(nn.Module):
 
 
 class _FakeScorerPose(nn.Module):
-    """Fake PoseNet — small MLP that returns dict with "pose" key shape (B, 12).
+    """Fake PoseNet - small MLP that returns dict with "pose" key shape (B, 12).
 
     Mirrors the contest scorer contract: ``preprocess_input(x)`` collapses
     the 5-D pair into 4-D channel-stacked YUV6-pair semantics; ``forward``
@@ -88,7 +85,7 @@ class _FakeScorerPose(nn.Module):
 
     def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
         assert x.ndim == 4
-        # Reduce spatial dims via avgpool + linear — keep gradient flow.
+        # Reduce spatial dims via avgpool + linear - keep gradient flow.
         feat = x.mean(dim=(2, 3))  # (B, T*C)
         # Project to fc input dim = 8 by repeating/truncating.
         if feat.shape[1] < 8:
@@ -217,6 +214,33 @@ def test_die_weight_map_normalized_per_image_to_mean_one() -> None:
     assert torch.allclose(means, torch.ones_like(means), atol=1e-4)
 
 
+def test_die_weight_map_zero_gradient_falls_back_to_neutral_weight() -> None:
+    class _ZeroGradSeg(nn.Module):
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            return x[:, -1].float() / 255.0
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            base = x[:, :1] * 0.0
+            return base.repeat(1, 5, 1, 1)
+
+    class _ZeroGradPose(nn.Module):
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            B, T, C, H, W = x.shape
+            return x.reshape(B, T * C, H, W).float() / 255.0
+
+        def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+            base = x.mean(dim=(1, 2, 3), keepdim=False) * 0.0
+            return {"pose": base[:, None].repeat(1, 12)}
+
+    pred = _make_pair(seed=120)
+    target = pred.clone()
+    seg = _ZeroGradSeg()
+    pose = _ZeroGradPose()
+    _freeze(seg, pose)
+    w = compute_die_weight_map(pred, target, seg, pose)
+    assert torch.allclose(w, torch.ones_like(w), atol=1e-6)
+
+
 def test_die_weight_map_detached_by_default() -> None:
     pred = _make_pair(seed=14).requires_grad_(True)
     target = _make_pair(seed=15)
@@ -343,7 +367,7 @@ def test_kl_distill_loss_gradient_does_not_flow_to_target() -> None:
 
 
 def test_kl_distill_loss_default_temperature_is_quantizr_canon() -> None:
-    """Per CLAUDE.md "Quantizr intelligence" — kl_on_logits(T=2.0)."""
+    """Per CLAUDE.md "Quantizr intelligence" - kl_on_logits(T=2.0)."""
     assert DEFAULT_KL_TEMPERATURE == 2.0
 
 
@@ -462,6 +486,13 @@ def test_loss_constructor_rejects_non_module_scorer() -> None:
     seg = _FakeScorerSeg()
     with pytest.raises(TypeError, match="scorer_pose"):
         UDIEKLLoss(scorer_seg=seg, scorer_pose="not a module")
+
+
+def test_loss_constructor_rejects_unfrozen_scorers() -> None:
+    seg = _FakeScorerSeg()
+    pose = _FakeScorerPose()
+    with pytest.raises(ValueError, match="scorer_seg must be frozen"):
+        UDIEKLLoss(scorer_seg=seg, scorer_pose=pose)
 
 
 def test_loss_returns_finite_scalar_on_default_config() -> None:
@@ -707,7 +738,7 @@ def test_substrate_integration_loss_decreases_after_training_step() -> None:
         opt.step()
         losses.append(loss.item())
 
-    # Loss should be roughly decreasing — allow tolerance for noise.
+    # Loss should be roughly decreasing - allow tolerance for noise.
     assert losses[-1] <= losses[0] + 1e-3, (
         f"Loss did not decrease over training: first={losses[0]}, last={losses[-1]}, all={losses}"
     )

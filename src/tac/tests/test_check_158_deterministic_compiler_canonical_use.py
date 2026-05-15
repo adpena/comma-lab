@@ -121,6 +121,30 @@ if __name__ == "__main__":
     main()
 '''
 
+_CANONICAL_CLI_ALIAS = '''\
+#!/usr/bin/env python3
+from tac.packet_compiler.deterministic_compiler_cli import main as _main
+
+def main(argv=None):
+    return _main(argv, label="packet-compiler")
+'''
+
+_DIRECT_ORACLE_CLI_ALIAS = '''\
+#!/usr/bin/env python3
+from tac.submission_packet_compiler import compile_packet
+
+def main(argv=None):
+    return compile_packet("archive.zip", mode="inspect")
+'''
+
+_COMMENT_ONLY_CLI_ALIAS = '''\
+#!/usr/bin/env python3
+# tac.packet_compiler.deterministic_compiler_cli is the intended helper.
+
+def main(argv=None):
+    return 0
+'''
+
 
 # ---------------------------------------------------------------------------
 # Canonical / waived / non-packet surfaces all pass
@@ -228,6 +252,55 @@ def test_submission_in_name_caught(tmp_path: Path) -> None:
         repo_root=repo, strict=False,
     )
     assert len(violations) == 1
+
+
+def test_operator_cli_alias_direct_oracle_import_is_caught(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "submission_packet_compiler.py").write_text(
+        _DIRECT_ORACLE_CLI_ALIAS,
+    )
+
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo,
+        strict=False,
+    )
+
+    assert len(violations) == 1
+    assert "tac.submission_packet_compiler" in violations[0]
+    assert "deterministic_compiler_cli" in violations[0]
+
+
+def test_operator_cli_alias_must_ast_import_canonical_cli(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "contest_packet_compiler.py").write_text(
+        _COMMENT_ONLY_CLI_ALIAS,
+    )
+
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo,
+        strict=False,
+    )
+
+    assert len(violations) == 1
+    assert "does not import" in violations[0]
+    assert "deterministic_compiler_cli" in violations[0]
+
+
+def test_operator_cli_alias_canonical_wrapper_passes(tmp_path: Path) -> None:
+    repo = _make_tools_repo(tmp_path)
+    (repo / "tools" / "submission_packet_compiler.py").write_text(
+        _CANONICAL_CLI_ALIAS,
+    )
+    (repo / "tools" / "contest_packet_compiler.py").write_text(
+        _CANONICAL_CLI_ALIAS,
+    )
+
+    violations = check_deterministic_compiler_canonical_use(
+        repo_root=repo,
+        strict=False,
+    )
+
+    assert violations == []
 
 
 def test_materialize_archive_surface_caught(tmp_path: Path) -> None:

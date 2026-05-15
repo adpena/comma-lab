@@ -38,6 +38,11 @@ def test_encode_decode_stream_roundtrip_verifies_syndrome() -> None:
     assert decoded.n_input_symbols == len(payload) * 8
 
 
+def test_encode_rejects_non_default_payload_bit_ratio_until_schema_bump() -> None:
+    with pytest.raises(ValueError, match="payload_bit_ratio is fixed at 4"):
+        encode_stream(b"payload", sigma=0, payload_bit_ratio=3)
+
+
 def test_stateful_encoder_decoder_roundtrip() -> None:
     payload = b"lane_stc_dasher_scaffold_v1" * 5
 
@@ -60,4 +65,3 @@ def test_decode_rejects_bad_magic() -> None:
 
     with pytest.raises(STCDasherDecodeError, match="magic mismatch"):
         decode_stream(bytes(encoded), sigma=0)
-

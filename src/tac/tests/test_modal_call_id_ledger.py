@@ -17,6 +17,7 @@ import datetime as _dt
 import json
 import multiprocessing as mp
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -71,6 +72,22 @@ def test_valid_statuses_match_event_types():
 def test_terminal_statuses_subset():
     assert TERMINAL_STATUSES.issubset(VALID_STATUSES)
     assert "dispatched" not in TERMINAL_STATUSES
+
+
+def test_ledger_lock_held_is_thread_local(tmp_lock):
+    """A sibling thread must not inherit another thread's lock-depth state."""
+    from tac.deploy.modal.call_id_ledger import _ledger_lock, _ledger_lock_held
+
+    seen: list[bool] = []
+
+    with _ledger_lock(tmp_lock):
+        assert _ledger_lock_held() is True
+
+        worker = threading.Thread(target=lambda: seen.append(_ledger_lock_held()))
+        worker.start()
+        worker.join(timeout=5)
+
+    assert seen == [False]
 
 
 # ─────────────────────────────────────────────────────────────────────────

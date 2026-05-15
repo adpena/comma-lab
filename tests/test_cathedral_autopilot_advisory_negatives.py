@@ -112,3 +112,45 @@ def test_autopilot_rank_or_kill_requires_explicit_true() -> None:
     assert row["score_claim_valid"] is True
     assert row["promotion_eligible"] is True
     assert row["rank_or_kill_eligible"] is False
+
+
+def test_contest_cpu_claim_counter_does_not_count_linux_cuda_rows() -> None:
+    autopilot = _load_autopilot()
+    archive_sha = "a" * 64
+    runtime_sha = "b" * 64
+    common = {
+        "empirical_archive_bytes": 185_578,
+        "empirical_score": 0.1966,
+        "empirical_d_seg": 0.00067,
+        "empirical_d_pose": 3.36e-05,
+        "archive_sha256": archive_sha,
+        "runtime_tree_sha256": runtime_sha,
+        "sample_count": 600,
+        "score_claim": True,
+        "rank_or_kill_eligible": True,
+        "exact_eval_command": "python experiments/contest_auth_eval.py --samples 600",
+        "log_path": "reports/exact_eval.log",
+    }
+    cuda_row = autopilot.TechniqueEvidence(
+        technique="linux_cuda_row",
+        evidence_grade="[contest-CUDA]",
+        device_axis="contest_cuda",
+        hardware="Linux x86_64 T4 [contest-CUDA]",
+        score_contest_cuda=0.1966,
+        **common,
+    )
+    cpu_row = autopilot.TechniqueEvidence(
+        technique="linux_cpu_row",
+        evidence_grade="[contest-CPU]",
+        device_axis="contest_cpu",
+        hardware="GitHub Actions Ubuntu-24.04 Linux x86_64 CPU [contest-CPU]",
+        score_contest_cpu=0.1966,
+        **common,
+    )
+
+    report = autopilot.summarize_evidence_semantics(
+        [cuda_row, cpu_row],
+        catalogs=[],
+    )
+
+    assert report["contest_cpu_score_claim_row_count"] == 1

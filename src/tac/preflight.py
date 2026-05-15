@@ -33510,6 +33510,12 @@ _DETERMINISTIC_COMPILER_LEGACY_SHA256: dict[str, str] = {
 #: Token that, when present in a packet-builder source file, waives the gate
 #: with an explicit rationale.
 _DETERMINISTIC_COMPILER_WAIVER_TOKEN = "DETERMINISTIC_COMPILER_OK"
+_DETERMINISTIC_COMPILER_OPERATOR_CLI_ALIASES: tuple[str, ...] = (
+    "tools/submission_packet_compiler.py",
+    "tools/contest_packet_compiler.py",
+)
+_DETERMINISTIC_COMPILER_CLI_MODULE = "tac.packet_compiler.deterministic_compiler_cli"
+_DETERMINISTIC_COMPILER_ORACLE_MODULE = "tac.submission_packet_compiler"
 
 
 def _source_sha256(text: str) -> str:
@@ -33553,6 +33559,23 @@ def _deterministic_compiler_ast_proof(text: str) -> bool:
             and func.value.id in deterministic_aliases
         ):
             return True
+    return False
+
+
+def _deterministic_compiler_cli_alias_imports_canonical(text: str) -> bool:
+    """Return true only when a tool imports the canonical shared CLI helper."""
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.module == _DETERMINISTIC_COMPILER_CLI_MODULE:
+                return any(alias.name in {"main", "run_packet_compiler_cli"} for alias in node.names)
+        elif isinstance(node, ast.Import):
+            if any(alias.name == _DETERMINISTIC_COMPILER_CLI_MODULE for alias in node.names):
+                return True
     return False
 
 
@@ -33615,6 +33638,30 @@ def check_deterministic_compiler_canonical_use(
         return []
 
     violations: list[str] = []
+    for rel in _DETERMINISTIC_COMPILER_OPERATOR_CLI_ALIASES:
+        alias_path = root / rel
+        if not alias_path.is_file():
+            continue
+        try:
+            alias_text = alias_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if _DETERMINISTIC_COMPILER_ORACLE_MODULE in alias_text:
+            violations.append(
+                f"{rel}: operator-facing packet compiler CLI imports "
+                f"`{_DETERMINISTIC_COMPILER_ORACLE_MODULE}` directly. Route "
+                f"through `{_DETERMINISTIC_COMPILER_CLI_MODULE}` so inspect, "
+                "identity, canonicalize, and optimize modes share one canonical "
+                "compiler surface."
+            )
+            continue
+        if not _deterministic_compiler_cli_alias_imports_canonical(alias_text):
+            violations.append(
+                f"{rel}: operator-facing packet compiler CLI does not import "
+                f"`{_DETERMINISTIC_COMPILER_CLI_MODULE}`. Thin aliases must "
+                "delegate to the canonical shared CLI helper instead of "
+                "recreating parser/dispatch logic."
+            )
     for path in _deterministic_compiler_candidate_paths(tools_dir):
         rel = path.relative_to(root).as_posix()
         name = path.name

@@ -312,7 +312,10 @@ def main(argv: list[str] | None = None) -> int:
         "--payload-bit-ratio",
         type=int,
         default=4,
-        help="STC payload-to-cover bit ratio (default 4 = 25% syndrome rate).",
+        help=(
+            "STC payload-to-cover bit ratio. v1 supports only 4 because the "
+            "envelope does not serialize the ratio yet."
+        ),
     )
     parser.add_argument(
         "--max-source-bytes",
@@ -340,6 +343,14 @@ def main(argv: list[str] | None = None) -> int:
             f"ERROR: --out-dir must be under {namespace_root.relative_to(REPO_ROOT)}/ "
             f"per CLAUDE.md /tmp-forbidden + Catalog #207 namespace discipline. "
             f"Got: {out_dir_resolved}",
+            file=sys.stderr,
+        )
+        return 2
+    if args.payload_bit_ratio != 4:
+        print(
+            "ERROR: --payload-bit-ratio is fixed at 4 in STC-Dasher v1 because "
+            "the envelope does not serialize this field yet; bump the schema "
+            "before exposing non-default ratios.",
             file=sys.stderr,
         )
         return 2

@@ -7,7 +7,7 @@ import json
 import zipfile
 from pathlib import Path
 
-from tools.build_stc_dasher_archive_v1 import build_stc_dasher_candidate
+from tools.build_stc_dasher_archive_v1 import REPO_ROOT, build_stc_dasher_candidate, main
 
 
 def _write_zip(path: Path, payload: bytes) -> None:
@@ -86,3 +86,21 @@ def test_builder_refuses_truncated_non_byte_closed_candidate(tmp_path: Path) -> 
     assert "Refusing slow scaffold build" in message
     assert "non-byte-closed candidate" in message
     assert not (out_dir / "build_manifest.json").exists()
+
+
+def test_builder_cli_rejects_non_default_payload_ratio_before_build(tmp_path: Path) -> None:
+    out_dir = REPO_ROOT / "experiments" / "results" / "pytest_stc_invalid_ratio"
+
+    rc = main(
+        [
+            "--source-archive",
+            str(tmp_path / "missing.zip"),
+            "--out-dir",
+            str(out_dir),
+            "--payload-bit-ratio",
+            "3",
+        ]
+    )
+
+    assert rc == 2
+    assert not out_dir.exists()

@@ -114,6 +114,7 @@ import fcntl
 import json
 import os
 import socket
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -190,15 +191,29 @@ class CallIdLedgerCorruptError(RuntimeError):
     """
 
 
-# In-process lock-held depth (Catalog #140 sister pattern). Pairs with
+# Thread-local lock-held depth (Catalog #140 sister pattern). Pairs with
 # ``_ledger_lock_held()`` so any direct-write helper can refuse calls that
-# bypass the canonical locked path.
-_ledger_lock_depth: int = 0
+# bypass the canonical locked path. This must be thread-local: a process-global
+# depth counter lets sibling threads skip the fcntl acquire while another
+# thread is inside the critical section.
+_ledger_lock_depth_tls = threading.local()
+
+
+def _get_ledger_lock_depth() -> int:
+    """Return this thread's local ledger-lock re-entry depth."""
+
+    return int(getattr(_ledger_lock_depth_tls, "depth", 0))
+
+
+def _set_ledger_lock_depth(value: int) -> None:
+    """Set this thread's local ledger-lock re-entry depth."""
+
+    _ledger_lock_depth_tls.depth = int(value)
 
 
 def _ledger_lock_held() -> bool:
-    """Return True if THIS process is currently inside ``_ledger_lock``."""
-    return _ledger_lock_depth > 0
+    """Return True if THIS thread is currently inside ``_ledger_lock``."""
+    return _get_ledger_lock_depth() > 0
 
 
 @contextlib.contextmanager
@@ -210,16 +225,15 @@ def _ledger_lock(lock_path: Path | None = None):
     process is counted (depth > 1); fcntl is only re-acquired on the 0->1
     transition to avoid same-process deadlock.
     """
-    global _ledger_lock_depth
-
     p = lock_path or MODAL_CALL_ID_LEDGER_LOCK
     p.parent.mkdir(parents=True, exist_ok=True)
-    if _ledger_lock_depth > 0:
-        _ledger_lock_depth += 1
+    depth = _get_ledger_lock_depth()
+    if depth > 0:
+        _set_ledger_lock_depth(depth + 1)
         try:
             yield None
         finally:
-            _ledger_lock_depth -= 1
+            _set_ledger_lock_depth(_get_ledger_lock_depth() - 1)
         return
     fd = os.open(str(p), os.O_RDWR | os.O_CREAT, 0o644)
     deadline = time.monotonic() + LOCK_TIMEOUT_SECONDS
@@ -232,11 +246,11 @@ def _ledger_lock(lock_path: Path | None = None):
                 if time.monotonic() >= deadline:
                     raise TimeoutError(f"could not acquire {p} within {LOCK_TIMEOUT_SECONDS}s") from None
                 time.sleep(0.05)
-        _ledger_lock_depth += 1
+        _set_ledger_lock_depth(_get_ledger_lock_depth() + 1)
         try:
             yield fd
         finally:
-            _ledger_lock_depth -= 1
+            _set_ledger_lock_depth(_get_ledger_lock_depth() - 1)
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)

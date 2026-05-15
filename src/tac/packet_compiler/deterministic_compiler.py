@@ -1051,6 +1051,7 @@ def inspect_packet_oracle(
     input_packet: Path | str,
     *,
     target_profile: TargetProfile = "contest_one_video_replay",
+    zipwire_bin: Path | str | None = None,
 ) -> dict[str, Any]:
     """Thin wrapper around :func:`tac.submission_packet_compiler.inspect_packet`.
 
@@ -1072,7 +1073,14 @@ def inspect_packet_oracle(
             "contest_one_video_replay", "contest_generalized",
         ) else "contest_one_video_replay"
     )
-    base = _oracle_inspect_packet(input_packet, target_profile=oracle_profile)
+    try:
+        base = _oracle_inspect_packet(
+            input_packet,
+            target_profile=oracle_profile,
+            zipwire_bin=zipwire_bin,
+        )
+    except _OraclePacketCompilerError as exc:
+        raise DeterministicPacketCompilerError(str(exc)) from exc
     base["deterministic_compiler_target_profile"] = target_profile
     base["deterministic_compiler_target_profile_policy"] = _profile_policy(
         target_profile,

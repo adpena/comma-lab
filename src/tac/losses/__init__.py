@@ -25,16 +25,6 @@ from .cat_entropy_v2 import (
     CatEntropyV2Config,
     cat_entropy_v2,
 )
-from .u_die_kl import (
-    DEFAULT_DIE_CACHE_INTERVAL,
-    DEFAULT_KL_TEMPERATURE,
-    DEFAULT_UNIWARD_EPSILON,
-    UDIEKLConfig,
-    UDIEKLLoss,
-    compute_die_weight_map,
-    compute_uniward_weight_map,
-    kl_distill_segnet_term,
-)
 from .core import (
     DEFAULT_SEGNET_NUM_CLASSES,
     DEFAULT_SINKHORN_BLUR,
@@ -86,6 +76,16 @@ from .core import (
     temperature_scorer_loss,
     train_scorer_proxy,
     uniward_quant_noise_loss,
+)
+from .u_die_kl import (
+    DEFAULT_DIE_CACHE_INTERVAL,
+    DEFAULT_KL_TEMPERATURE,
+    DEFAULT_UNIWARD_EPSILON,
+    UDIEKLConfig,
+    UDIEKLLoss,
+    compute_die_weight_map,
+    compute_uniward_weight_map,
+    kl_distill_segnet_term,
 )
 
 __all__ = [

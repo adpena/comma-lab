@@ -9,9 +9,16 @@ import sys
 import zipfile
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = REPO_ROOT / "tools" / "parallel_dispatch_top_k.py"
+SRC = REPO_ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from tac.hnerv_frontier_defaults import (  # noqa: E402
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE,
+    ACTIVE_SCORE_FRONTIER_SCORE,
+)
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -40,8 +47,11 @@ def test_parallel_dispatch_floor_preserves_active_nonpromotional_reference() -> 
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 
-    assert module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE == 0.20632570864115363
-    assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == 0.20632570864115363
+    assert (
+        module.DEFAULT_ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE
+        == ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE
+    )
+    assert module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE == ACTIVE_SCORE_FRONTIER_SCORE
     assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 
 

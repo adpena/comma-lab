@@ -61,11 +61,11 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from tac.authority_contract import normalize_score_authority_fields  # noqa: E402
 from tac.optimization.candidate_evidence_contract import (  # noqa: E402
     has_positive_exact_cuda_evidence_marker,
     promotable_exact_cuda_evidence_blockers,
 )
-from tac.authority_contract import normalize_score_authority_fields  # noqa: E402
 from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     contest_score,
@@ -378,7 +378,7 @@ def _now_utc_iso() -> str:
     lane_check_125_backfill_and_production_hardening_polish).
     """
     import datetime as _dt
-    return _dt.datetime.now(tz=_dt.timezone.utc).isoformat(timespec="seconds")
+    return _dt.datetime.now(tz=_dt.UTC).isoformat(timespec="seconds")
 
 
 def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
@@ -395,7 +395,7 @@ def _seed_loss_modifier_catalog_from_registry() -> list[dict[str, Any]]:
         Each row carries ``last_updated_utc`` so stale rows can be detected.
     """
     try:
-        from tac.track_registry import TRACK_REGISTRY  # noqa: WPS433
+        from tac.track_registry import TRACK_REGISTRY
     except ImportError as exc:
         # Soft-fail if registry import broken — autopilot still works with
         # the legacy ENCODER/ARCH catalogs, but log loudly so the operator
@@ -466,7 +466,7 @@ def _seed_representation_lane_catalog_from_registry() -> list[dict[str, Any]]:
         that names cathedral_autopilot in planner_visibility).
     """
     try:
-        from tac.track_registry import TRACK_REGISTRY  # noqa: WPS433
+        from tac.track_registry import TRACK_REGISTRY
     except ImportError:
         return []
 
@@ -954,6 +954,10 @@ def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
     replace exact CUDA custody for CUDA promotion, dispatch, or broad
     retirement decisions.
     """
+    axis = _device_axis_for_evidence(evidence)
+    if axis != "contest_cpu":
+        return False
+    axis_blockers = _device_axis_evidence_blockers(evidence, axis)
     text = " ".join(
         part.strip().lower()
         for part in (
@@ -965,13 +969,6 @@ def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
             evidence.hardware,
         )
         if part
-    )
-    exact_cpu = (
-        "contest-cpu" in text
-        or "contest_cpu" in text
-        or "linux x86_64" in text
-        or "ubuntu-24.04" in text
-        or "github-actions" in text
     )
     proxy_marker = any(
         marker in text
@@ -991,7 +988,7 @@ def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
         evidence.score_claim is True
         and evidence.rank_or_kill_eligible is True
         and not evidence.dispatch_blockers
-        and exact_cpu
+        and not axis_blockers
         and not proxy_marker
     )
 
