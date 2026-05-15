@@ -116,6 +116,23 @@ def _check_false_authority(payload: dict[str, Any], path: Path) -> None:
             raise ValueError(f"{path} has {key}=true; refusing score-authority input")
 
 
+def _check_no_score_authority_text(text: str, path: Path) -> None:
+    """Reject Markdown/TXT authority leaks that are not structured JSON."""
+
+    for key in (
+        "score_claim",
+        "score_claim_valid",
+        "contest_axis_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_attempted",
+    ):
+        pattern = rf"\b{re.escape(key)}\b\s*(?::|=)\s*`?true`?(?=\s|$)"
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            raise ValueError(f"{path} has {key}=true in text; refusing score-authority input")
+
+
 def _score_terms(row: dict[str, Any]) -> tuple[float, float, float]:
     pose = _as_float(row.get("pose_score_contribution"))
     seg = _as_float(row.get("seg_score_contribution"))
@@ -238,6 +255,7 @@ def load_pair_records(
         for idx, row in enumerate(rows):
             if not isinstance(row, dict):
                 raise ValueError(f"{path} hitlist[{idx}] must be an object")
+            _check_false_authority(row, path)
             records.append(
                 _pair_record_from_row(row=row, path=path, label=label, kind="hardpair_hitlist")
             )
@@ -258,6 +276,7 @@ def load_pair_records(
         for idx, row in enumerate(rows):
             if not isinstance(row, dict):
                 raise ValueError(f"{path} rows[{idx}] must be an object")
+            _check_false_authority(row, path)
             records.append(
                 _pair_record_from_row(row=row, path=path, label=label, kind="pair_component_xray")
             )
@@ -362,14 +381,19 @@ def _axis_context_from_markdown(path: Path, text: str) -> dict[str, Any]:
 
 
 def load_axis_context(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    _check_no_score_authority_text(text, path)
     if path.suffix.lower() == ".json":
-        payload = _load_json(path)
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"could not load JSON {path}: {exc}") from exc
         if not isinstance(payload, dict):
             raise ValueError(f"{path} must contain a JSON object")
         _check_false_authority(payload, path)
         return _axis_context_from_json(path, payload)
     if path.suffix.lower() in {".md", ".markdown", ".txt"}:
-        return _axis_context_from_markdown(path, path.read_text(encoding="utf-8"))
+        return _axis_context_from_markdown(path, text)
     raise ValueError(f"{path} must be JSON or Markdown/TXT")
 
 
@@ -488,6 +512,15 @@ def build_plan(
             f"source archive SHA mismatch: got {source_archive_record['sha256']}, "
             f"expected {expected_source_sha256}"
         )
+    if not axis_contexts:
+        raise ValueError("at least one paired CPU/CUDA axis artifact is required")
+    evidence_notes = [load_evidence_note(path) for path in pr106_format0c_ledgers]
+    if not evidence_notes:
+        raise ValueError("at least one PR106 format0C paired CPU/CUDA ledger is required")
+    if not any(note["contains_paired_eval_requirement"] for note in evidence_notes):
+        raise ValueError(
+            "PR106 format0C ledger must explicitly require paired CPU/CUDA eval discipline"
+        )
 
     selected = select_candidate_pairs(
         pair_records,
@@ -504,7 +537,7 @@ def build_plan(
         "pair_hitlists": [_path_record(path) for path in pair_hitlist_paths],
         "pair_xrays": [_path_record(path) for path in pair_xray_paths],
         "paired_axis_artifacts": [_path_record(path) for path in paired_axis_artifacts],
-        "pr106_format0c_ledgers": [load_evidence_note(path) for path in pr106_format0c_ledgers],
+        "pr106_format0c_ledgers": evidence_notes,
         "source_archive": source_archive_record,
     }
     state_for_hash = {

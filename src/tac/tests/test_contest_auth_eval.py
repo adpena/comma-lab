@@ -345,6 +345,28 @@ def test_evidence_contract_tags_cpu_as_leaderboard_reproduction(cae) -> None:
     assert contract["rank_or_kill_eligible"] is False
 
 
+def test_evidence_contract_demotes_modal_cpu_advisory_even_on_linux_x86(cae) -> None:
+    contract = cae._auth_eval_evidence_contract(
+        "cpu",
+        600,
+        {
+            "gpu_t4_match": False,
+            "modal_auth_eval_advisory_only": True,
+            "platform_machine": "x86_64",
+            "platform_system": "Linux",
+        },
+    )
+
+    assert contract["evidence_grade"] == "B"
+    assert contract["lane_tag"] == "[diagnostic-auth-eval]"
+    assert contract["score_axis"] == "diagnostic_cpu"
+    assert contract["cpu_leaderboard_reproduction_eligible"] is False
+    assert (
+        "modal_training_wrapper_auth_eval_advisory_only"
+        in contract["diagnostic_blockers"]
+    )
+
+
 def test_evidence_contract_downgrades_macos_cpu_to_advisory(cae) -> None:
     contract = cae._auth_eval_evidence_contract(
         "cpu",

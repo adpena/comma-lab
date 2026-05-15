@@ -558,12 +558,16 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "video_names_file": str(args.video_names_file),
         "sys_argv": sys.argv,
         "effective_inflate_python": os.environ.get("PYTHON") or sys.executable,
+        "modal_auth_eval_advisory_only": (
+            os.environ.get("MODAL_AUTH_EVAL_ADVISORY_ONLY", "").strip() == "1"
+        ),
         "env_vars": {k: os.environ.get(k) for k in (
             "PYTHONPATH", "CUDA_VISIBLE_DEVICES", "CUBLAS_WORKSPACE_CONFIG",
             "PYTHONHASHSEED", "PYTORCH_CUDA_ALLOC_CONF", "LD_LIBRARY_PATH",
             "CONFIG_ENV_PATH", "PYTHON_INFLATE", "LANE_MM_SIGMA",
             "INFLATE_BROTLI_SPEC", "INFLATE_AV_SPEC", "INFLATE_TORCH_SPEC",
-            "INFLATE_TORCHVISION_SPEC", "INFLATE_NUMPY_SPEC", "UV_BIN",
+            "INFLATE_TORCHVISION_SPEC", "INFLATE_NUMPY_SPEC",
+            "MODAL_AUTH_EVAL_ADVISORY_ONLY", "UV_BIN",
             "UV_PROJECT_ENVIRONMENT", "PYTHON",
         )},
     }
@@ -1358,6 +1362,12 @@ def _auth_eval_evidence_contract(
 ) -> dict:
     """Return explicit evidence semantics for the selected eval device."""
 
+    if provenance.get("modal_auth_eval_advisory_only") is True:
+        diagnostic_blockers = [
+            *(diagnostic_blockers or []),
+            "modal_training_wrapper_auth_eval_advisory_only",
+        ]
+
     if diagnostic_blockers:
         return {
             "evidence_grade": "B",
@@ -1398,9 +1408,6 @@ def _auth_eval_evidence_contract(
         and is_linux_x86_64
         and _gpu_contest_faithful_cuda
     )
-    # Kept as alias for backward-compat with any external consumers that
-    # imported this name (e.g. test fixtures).
-    is_cuda_t4_full = is_cuda_contest_full
     is_cpu_full = device == "cpu" and n_samples == 600 and is_linux_x86_64
     if is_cuda_contest_full:
         return {

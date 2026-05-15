@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = REPO_ROOT / "tools" / "build_pr106_cuda_latent_correction_probe.py"
 
@@ -136,6 +138,24 @@ def _format0c_ledger(path: Path) -> Path:
     return path
 
 
+def _format0c_ledger_without_paired_warning(path: Path) -> Path:
+    path.write_text(
+        "\n".join(
+            [
+                "# PR106 format0C auth eval",
+                "- Archive bytes: `186327`",
+                "| Axis | Score |",
+                "| --- | ---: |",
+                "| `[contest-CUDA]` | `0.2063163866158099` |",
+                "| `[contest-CPU]` | `0.22776488386973992` |",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_build_plan_false_authority_and_byte_budget_selection(tmp_path: Path) -> None:
     module = _load_module()
     hardpair = _write_json(tmp_path / "hardpair_hitlist.json", _hardpair_payload())
@@ -184,6 +204,7 @@ def test_cli_writes_json_markdown_and_rebuild_command(tmp_path: Path) -> None:
     module = _load_module()
     hardpair = _write_json(tmp_path / "hardpair_hitlist.json", _hardpair_payload())
     axis = _write_json(tmp_path / "paired_axis.json", _axis_payload())
+    ledger = _format0c_ledger(tmp_path / "pr106_format0c.md")
     source_archive = tmp_path / "archive.zip"
     source_archive.write_bytes(b"fixture archive bytes")
     output_dir = tmp_path / "out"
@@ -194,6 +215,8 @@ def test_cli_writes_json_markdown_and_rebuild_command(tmp_path: Path) -> None:
             str(hardpair),
             "--paired-axis-artifact",
             str(axis),
+            "--pr106-format0c-ledger",
+            str(ledger),
             "--source-archive",
             str(source_archive),
             "--byte-budget",
@@ -223,6 +246,93 @@ def test_cli_writes_json_markdown_and_rebuild_command(tmp_path: Path) -> None:
     assert "paired CPU/CUDA exact eval required before frontier language: `true`" in markdown
     assert "build_pr106_cuda_latent_correction_probe.py" in rebuild
     assert "--materialize" in module.build_parser().format_help()
+
+
+def test_cli_requires_paired_axis_artifact(tmp_path: Path) -> None:
+    module = _load_module()
+    hardpair = _write_json(tmp_path / "hardpair_hitlist.json", _hardpair_payload())
+    ledger = _format0c_ledger(tmp_path / "pr106_format0c.md")
+    source_archive = tmp_path / "archive.zip"
+    source_archive.write_bytes(b"fixture archive bytes")
+
+    assert module.main(
+        [
+            "--pair-hitlist",
+            str(hardpair),
+            "--pr106-format0c-ledger",
+            str(ledger),
+            "--source-archive",
+            str(source_archive),
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    ) == 2
+
+
+def test_cli_requires_format0c_ledger_with_paired_warning(tmp_path: Path) -> None:
+    module = _load_module()
+    hardpair = _write_json(tmp_path / "hardpair_hitlist.json", _hardpair_payload())
+    axis = _write_json(tmp_path / "paired_axis.json", _axis_payload())
+    source_archive = tmp_path / "archive.zip"
+    source_archive.write_bytes(b"fixture archive bytes")
+
+    assert module.main(
+        [
+            "--pair-hitlist",
+            str(hardpair),
+            "--paired-axis-artifact",
+            str(axis),
+            "--source-archive",
+            str(source_archive),
+            "--output-dir",
+            str(tmp_path / "out_missing_ledger"),
+        ]
+    ) == 2
+
+    weak_ledger = _format0c_ledger_without_paired_warning(tmp_path / "weak_pr106_format0c.md")
+    assert module.main(
+        [
+            "--pair-hitlist",
+            str(hardpair),
+            "--paired-axis-artifact",
+            str(axis),
+            "--pr106-format0c-ledger",
+            str(weak_ledger),
+            "--source-archive",
+            str(source_archive),
+            "--output-dir",
+            str(tmp_path / "out_weak_ledger"),
+        ]
+    ) == 2
+
+
+def test_load_pair_records_rejects_row_level_score_authority(tmp_path: Path) -> None:
+    module = _load_module()
+    payload = _hardpair_payload()
+    payload["hitlist"][0]["score_claim"] = True
+    hardpair = _write_json(tmp_path / "hardpair_hitlist.json", payload)
+
+    with pytest.raises(ValueError, match="score_claim=true"):
+        module.load_pair_records(pair_hitlist_paths=[hardpair], pair_xray_paths=[])
+
+
+def test_load_axis_context_rejects_markdown_score_authority(tmp_path: Path) -> None:
+    module = _load_module()
+    axis_md = tmp_path / "paired_axis.md"
+    axis_md.write_text(
+        "\n".join(
+            [
+                "# paired axis artifact",
+                "- classification: `cpu_positive_cuda_miss_due_to_component_drift`",
+                "- score_claim: `true`",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="score_claim=true in text"):
+        module.load_axis_context(axis_md)
 
 
 def test_materialize_placeholder_fails_closed_without_outputs(tmp_path: Path) -> None:

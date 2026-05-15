@@ -91,6 +91,19 @@ def _coherent_score_payload(*, score_axis: str = "contest_cpu") -> dict[str, obj
     }
 
 
+def _diagnostic_cpu_score_payload() -> dict[str, object]:
+    payload = _coherent_score_payload(score_axis="diagnostic_cpu")
+    payload.update(
+        {
+            "cpu_leaderboard_reproduction_eligible": False,
+            "diagnostic_blockers": ["modal_training_wrapper_auth_eval_advisory_only"],
+            "evidence_grade": "B",
+            "lane_tag": "[diagnostic-auth-eval]",
+        }
+    )
+    return payload
+
+
 # ---------------------------------------------------------------------------
 # Refusal banners
 # ---------------------------------------------------------------------------
@@ -233,7 +246,7 @@ def test_gate_explicit_env_cpu_runs_cpu_auth_eval_without_cuda_claim_return(
     monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
     args = _make_args(smoke=False, skip_auth_eval=False)
     out_json = tmp_path / "auth_eval_cpu.json"
-    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    out_json.write_text(json.dumps(_diagnostic_cpu_score_payload()), encoding="utf-8")
     fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
 
     with mock.patch.object(subprocess, "run", return_value=fake_proc) as run_mock:
@@ -402,7 +415,7 @@ def test_gate_modal_cpu_advisory_uses_explicit_temp_bypass(
     monkeypatch.setenv("MODAL_AUTH_EVAL_ADVISORY_ONLY", "1")
     args = _make_args(smoke=False, skip_auth_eval=False)
     out_json = tmp_path / "contest_auth_eval_cpu.json"
-    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    out_json.write_text(json.dumps(_diagnostic_cpu_score_payload()), encoding="utf-8")
     fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
     captured = {}
 
@@ -424,6 +437,59 @@ def test_gate_modal_cpu_advisory_uses_explicit_temp_bypass(
     assert "--work-dir" in cmd
     assert "--allow-temp-work-dir" in cmd
     assert args.auth_eval_skipped_reason == EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON
+
+
+def test_gate_modal_cpu_advisory_rejects_undemoted_contest_cpu_payload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modal advisory eval must not leak contest-CPU authority through the gate."""
+
+    monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
+    monkeypatch.setenv("MODAL_AUTH_EVAL_ADVISORY_ONLY", "1")
+    args = _make_args(smoke=False, skip_auth_eval=False)
+    out_json = tmp_path / "contest_auth_eval_cpu.json"
+    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+
+    with mock.patch.object(subprocess, "run", return_value=fake_proc), pytest.raises(
+        AuthEvalGateError,
+        match="contest-CPU-authority payload",
+    ):
+        gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            return_non_cuda_result=True,
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
+
+
+def test_gate_modal_cpu_advisory_can_return_demoted_diagnostic_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CPU-aware Modal train-lane callers must not see contest-CPU authority."""
+
+    monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
+    monkeypatch.setenv("MODAL_AUTH_EVAL_ADVISORY_ONLY", "1")
+    args = _make_args(smoke=False, skip_auth_eval=False)
+    out_json = tmp_path / "contest_auth_eval_cpu.json"
+    out_json.write_text(json.dumps(_diagnostic_cpu_score_payload()), encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+
+    with mock.patch.object(subprocess, "run", return_value=fake_proc):
+        out = gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            return_non_cuda_result=True,
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
+
+    assert out is not None
+    assert out["auth_eval_device"] == "cpu"
+    assert out["auth_eval_score_axis"] == "diagnostic_cpu"
+    assert out["auth_eval_evidence_grade"] == "B"
+    assert out["auth_eval_cpu_leaderboard_reproduction_eligible"] is False
 
 
 def test_gate_extra_argv_appended(tmp_path: Path) -> None:

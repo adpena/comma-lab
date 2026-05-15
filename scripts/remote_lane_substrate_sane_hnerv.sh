@@ -18,9 +18,9 @@
 #     uses Modal A100 per operator directive 2026-05-12 "reroute all to
 #     modal and lightning free tier")
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_SANE_HNERV_DONE marker) per the CLAUDE.md
-# score-tag rule and preflight completion-tag check.
+# Score-tagging: this Modal training wrapper is not the contest-CUDA eval
+# surface. It may produce advisory CPU auth-eval JSON when Modal lacks NVDEC,
+# but exact paired CPU/CUDA eval must be launched separately after harvest.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity — non-negotiable".
 set -euo pipefail
@@ -174,9 +174,9 @@ trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true
 # TIER_1_OPERATOR_REQUIRED_FLAGS manifest.
 #
 # Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU
-# AND CUDA": this is a FIRST-ANCHOR research dispatch on CUDA only; the
-# resulting tag is [contest-CUDA] single-axis (CPU axis required separately
-# before promotion-grade status).
+# AND CUDA": this Modal train-lane path validates trainer/archive wiring only.
+# The shared Modal wrapper forces AUTH_EVAL_DEVICE=cpu and
+# MODAL_AUTH_EVAL_ADVISORY_ONLY=1; paired exact eval is a separate dispatcher.
 log "stage_4_trainer_invoke_begin video=$SANE_HNERV_VIDEO_PATH epochs=$SANE_HNERV_EPOCHS device=$SANE_HNERV_DEVICE"
 TRAIN_START_UTC=$(date -u +%FT%TZ)
 set +e
@@ -192,16 +192,40 @@ set -e
 TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
-# Stage 5: completion record (the auth-eval JSON was already written by the
-# trainer at stage 12 if reached). We surface the path here for harvest.
-AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_cuda.json"
-if [ ! -f "$AUTH_EVAL_JSON" ] && [ -f "$OUTPUT_DIR/auth_eval.json" ]; then
-    AUTH_EVAL_JSON="$OUTPUT_DIR/auth_eval.json"
+# Stage 5: completion record. The trainer writes artifacts under
+# SANE_HNERV_OUTPUT_DIR, not necessarily OUTPUT_DIR when the recipe overrides
+# it. Only a JSON that explicitly validates as contest-CUDA gets a
+# contest-CUDA marker; advisory/fallback JSON remains training-artifact-only.
+AUTH_EVAL_JSON="$SANE_HNERV_OUTPUT_DIR/contest_auth_eval_cuda.json"
+AUTH_EVAL_TAG="[training-artifact]"
+if [ -f "$AUTH_EVAL_JSON" ]; then
+    if AUTH_EVAL_TAG="$("$PYBIN" - "$AUTH_EVAL_JSON" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1], encoding="utf-8").read())
+if (
+    payload.get("score_axis") == "contest_cuda"
+    and payload.get("score_claim_valid") is True
+    and payload.get("exact_cuda_eval_complete") is True
+):
+    print("[contest-CUDA]")
+else:
+    print("[training-artifact]")
+PY
+    )"; then
+        :
+    else
+        AUTH_EVAL_TAG="[training-artifact]"
+    fi
+elif [ -f "$SANE_HNERV_OUTPUT_DIR/auth_eval.json" ]; then
+    AUTH_EVAL_JSON="$SANE_HNERV_OUTPUT_DIR/auth_eval.json"
+    AUTH_EVAL_TAG="[training-artifact]"
 fi
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
+ARCHIVE_PATH="$SANE_HNERV_OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
     log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_SANE_HNERV_DONE [contest-CUDA] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    log "LANE_SANE_HNERV_DONE $AUTH_EVAL_TAG auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 12)"
 fi

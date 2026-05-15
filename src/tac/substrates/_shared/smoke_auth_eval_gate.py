@@ -374,6 +374,15 @@ def gate_auth_eval_call(
 
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     if auth_eval_device_type != "cuda":
+        if modal_cpu_advisory and (
+            payload.get("score_axis") == "contest_cpu"
+            or payload.get("cpu_leaderboard_reproduction_eligible") is True
+        ):
+            raise AuthEvalGateError(
+                f"[{substrate_tag}] Modal advisory CPU auth eval produced a "
+                "contest-CPU-authority payload; expected diagnostic demotion "
+                "from contest_auth_eval.py"
+            )
         parsed = parse_finite_auth_eval_score(
             payload,
             require_component_recompute=require_component_recompute,
