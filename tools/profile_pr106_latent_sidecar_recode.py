@@ -297,7 +297,7 @@ def _attach_exact_result_review(
     target["exact_cuda_auth_eval_claim"] = True
     blockers = _remove_blockers(
         target.get("candidate_exact_eval_blockers") or target.get("exact_eval_blockers"),
-        {"exact_cuda_auth_eval_missing"},
+        {"exact_cuda_auth_eval_missing", "contest_auth_eval_adjudication_missing"},
     )
     if "exact_cuda_result_review_already_exists" not in blockers:
         blockers.append("exact_cuda_result_review_already_exists")

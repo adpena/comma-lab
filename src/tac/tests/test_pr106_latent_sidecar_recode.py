@@ -507,6 +507,9 @@ def test_recode_profile_links_matching_exact_cuda_result_review(tmp_path: Path) 
     assert row["exact_cuda_result_reviews"][0]["archive_sha256"] == candidate_sha256
     assert row["exact_cuda_result_reviews"][0]["canonical_score"] == 0.2063310355127786
     assert "exact_cuda_auth_eval_missing" not in row["candidate_exact_eval_blockers"]
+    assert "contest_auth_eval_adjudication_missing" not in row[
+        "candidate_exact_eval_blockers"
+    ]
     assert "exact_cuda_result_review_already_exists" in row[
         "candidate_exact_eval_blockers"
     ]
@@ -515,3 +518,8 @@ def test_recode_profile_links_matching_exact_cuda_result_review(tmp_path: Path) 
     )
     assert manifest["exact_cuda_auth_eval_claim"] is True
     assert manifest["exact_cuda_result_reviews"][0]["path"] == str(review_path)
+    assert "exact_cuda_auth_eval_missing" not in manifest["exact_eval_blockers"]
+    assert "contest_auth_eval_adjudication_missing" not in manifest[
+        "exact_eval_blockers"
+    ]
+    assert "exact_cuda_result_review_already_exists" in manifest["exact_eval_blockers"]
