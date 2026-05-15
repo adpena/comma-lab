@@ -1983,6 +1983,27 @@ def preflight_all(
         check_l1_to_l2_promotion_canonical_4_gate(
             strict=False, verbose=verbose,
         )
+        # 2026-05-15 Catalog #236 - TAO-1 prose-negation guard self-protection.
+        # Anchor: R2 ledger TAO-1 finding (Tao + MacKay CRITICAL 2026-05-14).
+        # Refuses drift of the prose-negation guard helper / token set / split
+        # structured-vs-loose pattern surfaces that prevent Catalog #233 gate 3
+        # from regressing to bag-of-tokens semantics. STRICT @ 0 - the surfaces
+        # ARE the contract; no waiver. Sister of Catalog #136 / #185.
+        # Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+        check_catalog_233_gate_3_prose_negation_guard_present(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #237 - BOYD-1 fallback-semantic disambiguator
+        # self-protection. Anchor: R2 ledger BOYD-1 finding (Boyd + Tao CRITICAL
+        # 2026-05-14). Refuses drift of the cheaper-alternative-vs-capacity-
+        # overflow split + FallbackReason enum + capacity_overflow opt-in
+        # parameter on select_provider_for_class. Also enforces dict-disjointness
+        # invariant (no fallback in both dicts for the same dispatch class).
+        # STRICT @ 0 - surfaces ARE the contract. Sister of Catalog #131 / #136.
+        # Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+        check_d9_fallback_semantic_disambiguator_present(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-14 Catalog #220 - substrate scaffold byte addition without
         # operational score-improvement mechanism. Anchor: D1 R3 dispatch
         # produced score ~0.222 vs predicted [0.181, 0.188] because the L1
@@ -51994,21 +52015,23 @@ _CHECK_233_TIER_C_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?i)(?<![\w-])mdl_density\s*[:=]\s*[-+]?\d"),
 )
 
-_CHECK_233_AUTH_EVAL_100EP_PATTERNS: tuple[re.Pattern[str], ...] = (
+# TAO-1 (Catalog #236 self-protection, 2026-05-15): the legacy "100ep + auth-eval
+# within 80 chars" co-occurrence patterns produced FALSE POSITIVES on prose-only
+# evidence such as "previously 100ep auth-eval was attempted; superseded by
+# 200ep" (a retired-config description) or "discussion of 100ep auth-eval
+# tradeoffs". Per Tao + MacKay R2 verdict, the gate must require AFFIRMATIVE
+# structured evidence (key=value pair OR explicit lane tag) and explicitly
+# reject prose-discussion contexts. The structured patterns below are the
+# canonical anchors; the loose "100ep + auth-eval" co-occurrence forms are
+# RETAINED only as fallback evidence and SUBJECT TO the prose-context guard
+# `_check_233_text_has_prose_negation_for_auth_eval` below.
+_CHECK_233_AUTH_EVAL_100EP_STRUCTURED_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
         r"(?i)(?<![\w-])auth[_-]?eval[_-]?score[_-]?axis\s*[:=]\s*"
         r"[\"']?contest_(?:cuda|cpu)[\"']?(?![\w.-])"
     ),
     re.compile(
         r"(?i)(?<![\w-])auth[_-]?eval\s*rc\s*[:=]\s*0\s+contest_(?:cuda|cpu)(?![\w-])"
-    ),
-    re.compile(
-        r"(?i)(?<![\w-])(?:100ep|100_ep|100\s+epochs)\b"
-        r"(?=[^.\n;]{0,80}\b(?:auth[_\s-]?eval|auth-eval)\b)"
-    ),
-    re.compile(
-        r"(?i)(?<![\w-])(?:auth[_\s-]?eval|auth-eval)\b"
-        r"(?=[^.\n;]{0,80}\b(?:100ep|100_ep|100\s+epochs)\b)"
     ),
     re.compile(r"(?<![\w-])\[contest-CUDA\](?![\w-])"),
     re.compile(r"(?<![\w-])\[contest-CPU GHA Linux(?: x86_64)?\](?![\w-])"),
@@ -52017,6 +52040,74 @@ _CHECK_233_AUTH_EVAL_100EP_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?i)(?<![\w-])auth_eval_complete(?![\w-])"),
     re.compile(r"(?i)(?<![\w-])converged[_\s-]*(?:auth[_\s-]?eval|auth-eval)(?![\w-])"),
 )
+
+# Loose co-occurrence patterns: "100ep" near "auth-eval". Only accepted when
+# the prose-context guard does NOT detect a negation/discussion marker.
+_CHECK_233_AUTH_EVAL_100EP_LOOSE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?i)(?<![\w-])(?:100ep|100_ep|100\s+epochs)\b"
+        r"(?=[^.\n;]{0,80}\b(?:auth[_\s-]?eval|auth-eval)\b)"
+    ),
+    re.compile(
+        r"(?i)(?<![\w-])(?:auth[_\s-]?eval|auth-eval)\b"
+        r"(?=[^.\n;]{0,80}\b(?:100ep|100_ep|100\s+epochs)\b)"
+    ),
+)
+
+# Backwards-compat alias for tests / callers that import the old union name.
+_CHECK_233_AUTH_EVAL_100EP_PATTERNS: tuple[re.Pattern[str], ...] = (
+    *_CHECK_233_AUTH_EVAL_100EP_STRUCTURED_PATTERNS,
+    *_CHECK_233_AUTH_EVAL_100EP_LOOSE_PATTERNS,
+)
+
+# Prose-context negation tokens. If any of these appear within a small window
+# AROUND the loose 100ep+auth-eval co-occurrence, the gate REJECTS the match
+# as a prose-discussion context (not affirmative evidence of a converged
+# 100ep auth-eval anchor). Sister of Catalog #136
+# (`check_custody_gate_accept_tokens_concrete_only`) which extincted the
+# bag-of-tokens validator class — same structural discipline applied to the
+# 4-gate canonical's gate 3.
+_CHECK_233_PROSE_NEGATION_TOKENS: frozenset[str] = frozenset({
+    "previously",
+    "superseded",
+    "deprecated",
+    "deprecating",
+    "retired",
+    "retired_config",
+    "retired-config",
+    "discussion of",
+    "discussion_of",
+    "tradeoff",
+    "tradeoffs",
+    "vs ",
+    " vs",
+    "instead of",
+    "rather than",
+    "considered",
+    "would be",
+    "would have been",
+    "if we had",
+    "alternative to",
+    "originally",
+    "abandoned",
+    "rejected",
+    "rationale_for_not",
+    "todo",
+    "planned",
+    "planning",
+    "pending",
+    "would-have",
+    "would have",
+    "hypothetical",
+    "counterfactual",
+    "earlier attempt",
+    "first attempt",
+    "draft",
+    "proposed but",
+    "not yet",
+    "no auth-eval anchor",
+    "no auth_eval anchor",
+})
 
 _CHECK_233_CUSTODY_VALIDATOR_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?i)(?<![\w-])validate_custody(?:_verdict)?(?:\(|\b)"),
@@ -52153,9 +52244,66 @@ def _check_233_custody_validated(text: str) -> bool:
     )
 
 
+def _check_233_text_has_prose_negation_for_auth_eval(text: str) -> bool:
+    """Return True when prose-discussion context surrounds the 100ep mention.
+
+    TAO-1 self-protection (Catalog #236): retired-config descriptions like
+    "previously 100ep auth-eval was attempted; superseded by 200ep" or
+    "discussion of 100ep auth-eval tradeoffs" trip the loose co-occurrence
+    pattern but do NOT prove a converged 100ep auth-eval anchor exists. The
+    prose-context guard scans for negation/discussion tokens within a
+    160-char window around any "100ep" mention (preceding 80 chars + the
+    surrounding sentence). If any negation token appears in window, the
+    gate REJECTS the loose match.
+
+    The structured patterns (`auth_eval_score_axis=...`, `[contest-CUDA]`,
+    `auth_eval_complete`, etc.) are NOT subject to the prose guard because
+    those are key=value pairs / tagged lane labels and cannot appear in
+    prose discussion accidentally.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against": this is the same bug class as Catalog #136 (custody validator
+    bag-of-tokens) — a token set that did not require structural context.
+    """
+    if not text:
+        return False
+    lower = text.lower()
+    # Find every 100ep / 100_ep / "100 epochs" position.
+    needles = ("100ep", "100_ep", "100 epochs")
+    positions: list[int] = []
+    for needle in needles:
+        idx = 0
+        while True:
+            j = lower.find(needle, idx)
+            if j == -1:
+                break
+            positions.append(j)
+            idx = j + len(needle)
+    if not positions:
+        return False
+    # Around each position, check for any negation token in a 160-char
+    # window (80 before + 80 after).
+    for pos in positions:
+        start = max(0, pos - 80)
+        end = min(len(lower), pos + 80)
+        window = lower[start:end]
+        for neg_tok in _CHECK_233_PROSE_NEGATION_TOKENS:
+            if neg_tok in window:
+                return True
+    return False
+
+
 def _check_233_evaluate_4_gates(text: str) -> tuple[bool, bool, bool, bool]:
     """Return (smoke_green, tier_c_measured, auth_eval_100ep, custody_validated)
     booleans for a lane's concatenated registry text.
+
+    Per Catalog #236 (TAO-1 self-protection 2026-05-15): gate 3
+    (auth_eval_100ep) requires AFFIRMATIVE structured evidence and rejects
+    prose-discussion contexts. The structured patterns (key=value pairs,
+    lane tags) always satisfy the gate; the loose "100ep + auth-eval"
+    co-occurrence patterns are accepted ONLY when no negation/discussion
+    token appears in window. This eliminates the bug class anchored by the
+    R2 ledger TAO-1 finding.
     """
     smoke_green = _check_233_text_matches_any_pattern(
         text, _CHECK_233_SMOKE_GREEN_PATTERNS
@@ -52163,9 +52311,23 @@ def _check_233_evaluate_4_gates(text: str) -> tuple[bool, bool, bool, bool]:
     tier_c_measured = _check_233_text_matches_any_pattern(
         text, _CHECK_233_TIER_C_PATTERNS
     )
-    auth_eval_100ep = _check_233_text_matches_any_pattern(
-        text, _CHECK_233_AUTH_EVAL_100EP_PATTERNS
+
+    # Gate 3 — affirmative structured evidence path is unconditional.
+    auth_eval_100ep_structured = _check_233_text_matches_any_pattern(
+        text, _CHECK_233_AUTH_EVAL_100EP_STRUCTURED_PATTERNS
     )
+    if auth_eval_100ep_structured:
+        auth_eval_100ep = True
+    else:
+        # Loose co-occurrence path is gated by the prose-negation guard.
+        loose = _check_233_text_matches_any_pattern(
+            text, _CHECK_233_AUTH_EVAL_100EP_LOOSE_PATTERNS
+        )
+        if loose and _check_233_text_has_prose_negation_for_auth_eval(text):
+            auth_eval_100ep = False
+        else:
+            auth_eval_100ep = loose
+
     custody_validated = _check_233_custody_validated(text)
     return smoke_green, tier_c_measured, auth_eval_100ep, custody_validated
 
@@ -52575,6 +52737,268 @@ def _check_220_collect_lane_text(lane: dict) -> str:
                 if isinstance(ev, str):
                     parts.append(ev)
     return "\n".join(parts)
+
+
+# ----------------------------------------------------------------------------
+# Catalog #236 — TAO-1 prose-negation guard self-protection
+# ----------------------------------------------------------------------------
+#
+# Prevents regression of the TAO-1 R2 finding (Tao + MacKay CRITICAL,
+# 2026-05-14): Catalog #233 gate 3 (auth_eval_100ep) accepted prose
+# co-occurrences of "100ep" + "auth-eval" within an 80-char window even
+# when the surrounding context was clearly NOT affirmative evidence
+# (retired-config descriptions, design discussions, tradeoff comparisons).
+#
+# This META gate enforces the structural invariant that the prose-negation
+# guard helper `_check_233_text_has_prose_negation_for_auth_eval` continues
+# to exist AND that the negation token set retains its non-trivial size.
+# Refuses any state of `src/tac/preflight.py` that:
+#   1. Drops the helper function name `_check_233_text_has_prose_negation_for_auth_eval`
+#   2. Drops the canonical token-set name `_CHECK_233_PROSE_NEGATION_TOKENS`
+#   3. Reduces the negation token set below the canonical floor (10 tokens)
+#
+# Sister of:
+#   - Catalog #136 (`check_custody_gate_accept_tokens_concrete_only`) —
+#     same META class for the custody validator token set.
+#   - Catalog #185 (`check_strict_flipped_catalog_entries_have_live_count_zero`)
+#     — META-meta-meta gate that refuses CLAUDE.md drift.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against".
+# Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+
+_CHECK_236_REQUIRED_PREFLIGHT_TOKENS: tuple[str, ...] = (
+    "_check_233_text_has_prose_negation_for_auth_eval",
+    "_CHECK_233_PROSE_NEGATION_TOKENS",
+    "_CHECK_233_AUTH_EVAL_100EP_STRUCTURED_PATTERNS",
+    "_CHECK_233_AUTH_EVAL_100EP_LOOSE_PATTERNS",
+)
+_CHECK_236_NEGATION_TOKEN_FLOOR: int = 10
+
+
+def check_catalog_233_gate_3_prose_negation_guard_present(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #236 — refuse drift of the TAO-1 prose-negation guard.
+
+    Refuses any state of ``src/tac/preflight.py`` that drops:
+      - helper function ``_check_233_text_has_prose_negation_for_auth_eval``
+      - canonical token-set ``_CHECK_233_PROSE_NEGATION_TOKENS``
+      - structured patterns ``_CHECK_233_AUTH_EVAL_100EP_STRUCTURED_PATTERNS``
+      - loose patterns ``_CHECK_233_AUTH_EVAL_100EP_LOOSE_PATTERNS``
+    OR reduces the negation token set below the canonical floor
+    (currently 10).
+
+    There is no waiver — these surfaces ARE the contract. Sister of
+    Catalog #136 (custody validator concrete-tokens-only) and Catalog
+    #233 (the parent 4-gate canonical).
+
+    Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    target = root / "src" / "tac" / "preflight.py"
+    if not target.is_file():
+        # Not a hard violation — the caller may be running outside the
+        # canonical repo layout (e.g. from a vendored copy).
+        if verbose:
+            print(
+                "  [catalog-236] OK (preflight.py not present at canonical path)"
+            )
+        return violations
+
+    text = target.read_text(encoding="utf-8")
+
+    for token in _CHECK_236_REQUIRED_PREFLIGHT_TOKENS:
+        if token not in text:
+            violations.append(
+                f"src/tac/preflight.py is missing required surface "
+                f"{token!r} per Catalog #236 TAO-1 self-protection. "
+                f"The Catalog #233 4-gate canonical relies on the "
+                f"prose-negation guard to refuse retired-config / "
+                f"discussion-of-tradeoffs false positives at gate 3. "
+                f"Per CLAUDE.md \"Bugs must be permanently fixed AND "
+                f"self-protected against\": this surface is the "
+                f"runtime contract. Restore the helper / token set "
+                f"OR reach out to land a council-grade revision."
+            )
+
+    # Try to import the live token set and confirm size.
+    try:
+        from tac.preflight import _CHECK_233_PROSE_NEGATION_TOKENS as _live_tokens
+        if (
+            isinstance(_live_tokens, frozenset)
+            and len(_live_tokens) < _CHECK_236_NEGATION_TOKEN_FLOOR
+        ):
+            violations.append(
+                f"_CHECK_233_PROSE_NEGATION_TOKENS has only "
+                f"{len(_live_tokens)} entries — below the canonical "
+                f"floor of {_CHECK_236_NEGATION_TOKEN_FLOOR} per "
+                f"Catalog #236 TAO-1 self-protection. Adding tokens "
+                f"is fine; reducing the set below the floor opens "
+                f"the prose-negation guard's coverage gap that "
+                f"caused the original bug class. Restore the missing "
+                f"tokens OR raise the floor via a council-reviewed PR."
+            )
+    except ImportError:
+        # The check is defensive; if the import fails, the surface-token
+        # check above will already have flagged the missing definition.
+        pass
+
+    if verbose:
+        print(
+            f"  [catalog-236] scanned preflight.py "
+            f"required_tokens={len(_CHECK_236_REQUIRED_PREFLIGHT_TOKENS)} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_catalog_233_gate_3_prose_negation_guard_present "
+            f"found {len(violations)} drift violation(s) in src/tac/"
+            f"preflight.py per Catalog #236 TAO-1 self-protection:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #237 — BOYD-1 fallback semantic disambiguator self-protection
+# ----------------------------------------------------------------------------
+#
+# Prevents regression of the BOYD-1 R2 finding (Boyd + Tao CRITICAL,
+# 2026-05-14): D9 ``FALLBACK_PROVIDERS_PER_CLASS`` was semantically
+# overloaded — Time-Traveler amendment's cheaper-alternative trigger
+# conflicted with ``long_burn``'s capacity-overflow fallback. The fix
+# splits the dict into two semantically-distinct dicts gated by an
+# explicit ``FallbackReason`` enum and ``capacity_overflow`` opt-in.
+#
+# This META gate enforces:
+#   1. ``_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS`` exists in cost_band_calibration.py
+#   2. ``_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS`` exists
+#   3. ``FallbackReason`` enum exists with both members
+#   4. ``select_provider_for_class`` declares the ``capacity_overflow`` parameter
+#   5. The two dicts are disjoint per dispatch class (no double-classification)
+#
+# Sister of:
+#   - Catalog #131 (`check_no_bare_writes_to_shared_state`) — META gate
+#     for state-write discipline.
+#   - Catalog #136 (`check_custody_gate_accept_tokens_concrete_only`) —
+#     META gate for token-set discipline.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against".
+# Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+
+_CHECK_237_REQUIRED_TOKENS: tuple[str, ...] = (
+    "_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS",
+    "_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS",
+    "class FallbackReason",
+    "CHEAPER_ALTERNATIVE",
+    "CAPACITY_OVERFLOW",
+    "capacity_overflow: bool",
+    "_fallback_reason_for",
+)
+
+
+def check_d9_fallback_semantic_disambiguator_present(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #237 — refuse drift of the BOYD-1 fallback-semantic disambiguator.
+
+    Refuses any state of ``src/tac/cost_band_calibration.py`` that drops
+    the canonical surfaces required by BOYD-1's permanent fix:
+      - ``_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS`` dict
+      - ``_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS`` dict
+      - ``FallbackReason`` enum with both members
+      - ``capacity_overflow`` parameter on ``select_provider_for_class``
+      - ``_fallback_reason_for`` classifier helper
+
+    Also enforces the disjointness invariant: a (provider, gpu) tuple
+    must NOT appear in BOTH dicts for the same dispatch class. Same
+    semantic in two places defeats the purpose of the disambiguator.
+
+    There is no waiver — these surfaces ARE the contract. Sister of
+    Catalog #131 (state-write discipline) and Catalog #136 (custody
+    validator concrete-tokens-only).
+
+    Memory: feedback_r2_critical_fix_wave_tao1_boyd1_landed_20260515.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    target = root / "src" / "tac" / "cost_band_calibration.py"
+    if not target.is_file():
+        if verbose:
+            print(
+                "  [catalog-237] OK (cost_band_calibration.py not present)"
+            )
+        return violations
+
+    text = target.read_text(encoding="utf-8")
+
+    for token in _CHECK_237_REQUIRED_TOKENS:
+        if token not in text:
+            violations.append(
+                f"src/tac/cost_band_calibration.py is missing required "
+                f"surface {token!r} per Catalog #237 BOYD-1 self-"
+                f"protection. The fallback-semantic disambiguator "
+                f"prevents regression of the cheaper-alternative-vs-"
+                f"capacity-overflow conflation bug class anchored in "
+                f"the R2 ledger BOYD-1 finding. Per CLAUDE.md \"Bugs "
+                f"must be permanently fixed AND self-protected "
+                f"against\": this surface is the runtime contract."
+            )
+
+    # Try to import the live dicts and verify disjointness invariant.
+    try:
+        from tac.cost_band_calibration import (
+            _CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS as _live_overflow,
+            _CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS as _live_cheaper,
+            DISPATCH_CLASSES as _live_classes,
+        )
+        for cls in _live_classes:
+            cheaper = set(_live_cheaper.get(cls, []))
+            overflow = set(_live_overflow.get(cls, []))
+            shared = cheaper & overflow
+            if shared:
+                violations.append(
+                    f"D9 dispatch class {cls!r} has fallback "
+                    f"{shared!r} in BOTH "
+                    f"_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS AND "
+                    f"_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS — this "
+                    f"defeats the BOYD-1 disambiguator. Per CLAUDE.md "
+                    f"\"Beauty, simplicity\" non-negotiable: every "
+                    f"fallback has exactly one semantic. Move the "
+                    f"shared entry to ONE of the dicts."
+                )
+    except ImportError:
+        pass
+
+    if verbose:
+        print(
+            f"  [catalog-237] scanned cost_band_calibration.py "
+            f"required_tokens={len(_CHECK_237_REQUIRED_TOKENS)} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_d9_fallback_semantic_disambiguator_present found "
+            f"{len(violations)} drift violation(s) in cost_band_"
+            f"calibration.py per Catalog #237 BOYD-1 self-protection:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
 
 
 def check_substrate_l1_scaffold_no_byte_addition_without_operational_score_improvement_mechanism(

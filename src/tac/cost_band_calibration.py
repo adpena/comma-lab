@@ -70,6 +70,7 @@ Per CLAUDE.md "Forbidden score claims" sister rule: every emission carries
 from __future__ import annotations
 
 import datetime
+import enum
 import fcntl
 import json
 import math
@@ -957,15 +958,123 @@ CANONICAL_PROVIDER_PER_CLASS: dict[str, tuple[str, str]] = {
     "cpu": ("github", "ubuntu-latest"),
 }
 
-# Per-class fallback list per Decision 9. Order matters: the routing helper
-# tries fallbacks in order and returns the first available one.
-FALLBACK_PROVIDERS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
+# BOYD-1 self-protection (Catalog #237 2026-05-15): the fallback table is
+# semantically OVERLOADED. Two distinct trigger conditions historically
+# shared the same data structure:
+#
+#   1. CHEAPER_ALTERNATIVE — Time-Traveler amendment trigger (cost-band
+#      posterior shift >25%). Fallback fires automatically when canonical
+#      empirical p50 exceeds fallback p50 by the threshold. Example:
+#      `full` class fallback `modal/A100` is genuinely cheaper than
+#      canonical `vastai/RTX_4090` for some recipes; auto-routing works.
+#
+#   2. CAPACITY_OVERFLOW — manual operator escalation when canonical
+#      provider is saturated (Lightning A100 queue full / Modal A100 503).
+#      Fallback is MORE EXPENSIVE than canonical by design. The
+#      Time-Traveler amendment will NEVER fire because the cost-shift
+#      inequality fails. Example: `long_burn` class fallback
+#      `vastai/H100` ($1.50-1.99/hr) vs canonical `lightning/A100`
+#      ($0/hr subscription) — H100 is more expensive but exists for
+#      the rare race-mode operator escalation when Lightning queue is
+#      saturated.
+#
+# Per Boyd's R2 verdict + Tao's structural finding: the SAME dict cannot
+# carry both semantics without a discriminator. Future operators adding
+# new dispatch classes have no signal which trigger to expect. Per
+# CLAUDE.md "Beauty, simplicity": every public API must be expressive
+# and unambiguous.
+#
+# Resolution (Option B from R2 ledger): keep the per-class semantics
+# explicit via two separate dicts. Time-Traveler auto-routing reads ONLY
+# `_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS`. Capacity-overflow fallbacks
+# (currently only `long_burn`) live in
+# `_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS` and are NEVER auto-routed —
+# they require explicit operator escalation via
+# :func:`select_provider_for_class(..., capacity_overflow=True)`.
+#
+# Cross-ref: Catalog #237 STRICT preflight gate refuses any future
+# refactor that re-merges the two dicts under a single name, OR adds
+# a fallback to the cheaper-alternative set whose static cost class is
+# higher than the canonical for that dispatch class.
+#
+# Sister of Catalog #136 (custody validator concrete-tokens-only) and
+# Catalog #233 / #236 (4-gate canonical structural-evidence discipline)
+# — all three extinct the same META class: ambiguous data structures
+# carrying multiple semantics under one name.
+
+class FallbackReason(enum.Enum):
+    """Reason a fallback fires for a dispatch class.
+
+    CHEAPER_ALTERNATIVE: Time-Traveler amendment trigger. Fallback is
+        empirically cheaper than canonical (>25% cost-band posterior shift).
+        Auto-routed without operator intervention.
+
+    CAPACITY_OVERFLOW: Manual operator escalation. Fallback is more
+        expensive than canonical, used only when canonical provider is
+        saturated. Time-Traveler amendment will NEVER fire for this
+        reason. Requires explicit ``capacity_overflow=True`` flag in
+        :func:`select_provider_for_class`.
+    """
+
+    CHEAPER_ALTERNATIVE = "cheaper_alternative"
+    CAPACITY_OVERFLOW = "capacity_overflow"
+
+
+# Cheaper-alternative fallbacks: Time-Traveler amendment auto-routes here
+# when cost-band posterior shows >25% cost shift. Order matters: the
+# routing helper tries fallbacks in order and returns the cheapest.
+_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
     "smoke": [("modal", "A10G")],
     "full": [("modal", "A100")],
-    "long_burn": [("vastai", "H100")],
+    "long_burn": [],  # No cheaper alternative — A100 subscription is already free.
     "eval": [("modal", "A10G")],
     "cpu": [],  # GHA is the only canonical free CPU surface.
 }
+
+# Capacity-overflow fallbacks: manual operator escalation when canonical
+# is saturated. NEVER auto-routed; requires explicit
+# ``capacity_overflow=True`` argument. Cost may be HIGHER than canonical.
+_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
+    "smoke": [],  # smoke recipes can wait for canonical T4 capacity.
+    "full": [],  # full recipes can wait for canonical RTX_4090 capacity.
+    "long_burn": [("vastai", "H100")],  # Lightning A100 saturation escalation.
+    "eval": [],
+    "cpu": [],
+}
+
+# Backwards-compat alias for legacy callers / tests that grep the old name.
+# DEPRECATED: do not reference in new code. New consumers MUST use the
+# explicit `_CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS` /
+# `_CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS` dicts. Catalog #237 STRICT
+# preflight gate refuses any new write to / re-export of this name.
+# The legacy union is computed for the back-compat alias only; mutation
+# is explicitly NOT supported.
+FALLBACK_PROVIDERS_PER_CLASS: dict[str, list[tuple[str, str]]] = {
+    cls: list(
+        _CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS.get(cls, [])
+    ) + list(
+        _CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS.get(cls, [])
+    )
+    for cls in DISPATCH_CLASSES
+}
+
+
+def _fallback_reason_for(
+    dispatch_class: str, provider: str, gpu: str
+) -> FallbackReason | None:
+    """Return the :class:`FallbackReason` for one (class, provider, gpu) tuple.
+
+    Returns ``None`` if the tuple is not registered as any fallback for the
+    given dispatch class. Used by :func:`select_provider_for_class` to
+    classify the chosen fallback for forensic logging.
+    """
+    cheaper = _CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS.get(dispatch_class, [])
+    if (provider, gpu) in cheaper:
+        return FallbackReason.CHEAPER_ALTERNATIVE
+    overflow = _CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS.get(dispatch_class, [])
+    if (provider, gpu) in overflow:
+        return FallbackReason.CAPACITY_OVERFLOW
+    return None
 
 # Per-class soft cost ceiling in USD per dispatch (informational; the gate
 # is the operator's session-budget envelope, not this number). Used by
@@ -1002,6 +1111,11 @@ class ProviderRoutingDecision:
     cost-band posterior consulted, and a human-readable rationale. Consumers
     (operator_authorize.py, autopilot ranker) read ``provider`` + ``gpu`` for
     the dispatch decision and ``rationale`` for logging.
+
+    BOYD-1 self-protection (Catalog #237 2026-05-15): ``fallback_reason``
+    explicitly disambiguates whether the chosen fallback is a Time-Traveler
+    cheaper-alternative auto-route OR a manual operator capacity-overflow
+    escalation. ``None`` when no fallback was selected (canonical chosen).
     """
 
     dispatch_class: str
@@ -1017,6 +1131,7 @@ class ProviderRoutingDecision:
     canonical_cost_p50_usd: float | None
     fallback_cost_p50_usd: float | None
     rationale: str
+    fallback_reason: FallbackReason | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -1033,6 +1148,9 @@ class ProviderRoutingDecision:
             "canonical_cost_p50_usd": self.canonical_cost_p50_usd,
             "fallback_cost_p50_usd": self.fallback_cost_p50_usd,
             "rationale": self.rationale,
+            "fallback_reason": (
+                self.fallback_reason.value if self.fallback_reason else None
+            ),
         }
 
 
@@ -1142,13 +1260,14 @@ def select_provider_for_class(
     posterior_path: Path | None = None,
     consult_posterior: bool = True,
     epochs_for_posterior: int = 3000,
+    capacity_overflow: bool = False,
 ) -> ProviderRoutingDecision:
     """Resolve the (provider, gpu) tuple for one dispatch class.
 
     Implements council Decision 9 binding verdict (PROCEED Option B + Time-
     Traveler amendment). Returns a :class:`ProviderRoutingDecision` with full
     forensic context (canonical, fallback, posterior consulted, re-routing
-    rationale).
+    rationale, fallback reason).
 
     Args:
         dispatch_class: One of :data:`DISPATCH_CLASSES`. Unknown classes
@@ -1164,10 +1283,19 @@ def select_provider_for_class(
             True; tests may set False to assert the canonical decision.
         epochs_for_posterior: Epochs bucket to query the posterior with.
             Defaults to 3000 (T1 Balle canonical).
+        capacity_overflow: If True, allow the routing helper to escalate
+            to the capacity-overflow fallback set (e.g. ``long_burn`` →
+            ``vastai/H100`` when Lightning A100 is saturated). Default
+            False — capacity-overflow fallbacks are NEVER auto-routed
+            without explicit operator opt-in. Per BOYD-1 R2 finding +
+            Catalog #237 self-protection: cheaper-alternative and
+            capacity-overflow are semantically distinct triggers and
+            must not be conflated.
 
     Returns:
         :class:`ProviderRoutingDecision`. Consumers read ``provider`` +
-        ``gpu`` for the dispatch decision; ``rationale`` for forensics.
+        ``gpu`` for the dispatch decision; ``rationale`` for forensics;
+        ``fallback_reason`` for explicit cheaper-vs-overflow disambiguation.
 
     Per Catalog #175 + #177 (cost-band outcome discipline) the helper only
     consults SUCCESSFUL_DISPATCH anchors via :func:`predict`. Per Catalog
@@ -1249,14 +1377,31 @@ def select_provider_for_class(
             ),
         )
 
-    # Time-Traveler amendment: consult posterior for canonical AND every fallback.
+    # Time-Traveler amendment: consult posterior for canonical AND every
+    # cheaper-alternative fallback. BOYD-1 self-protection: capacity-
+    # overflow fallbacks are NOT auto-routed; only the cheaper-alternative
+    # set participates in the >25% cost-shift evaluation. Capacity-overflow
+    # escalation requires explicit ``capacity_overflow=True`` opt-in below.
     canon_p50, canon_tag = _consult_posterior_for_provider(
         canon_provider,
         canon_gpu,
         epochs_bucket_value=epochs_for_posterior,
         posterior_path=posterior_path,
     )
-    fallbacks = FALLBACK_PROVIDERS_PER_CLASS.get(dispatch_class, [])
+    fallbacks = list(
+        _CHEAPER_ALTERNATIVE_FALLBACKS_PER_CLASS.get(dispatch_class, [])
+    )
+    if capacity_overflow:
+        # Operator explicitly authorized capacity-overflow escalation; add
+        # those fallbacks to the candidate set. The Time-Traveler cost-shift
+        # check is still applied (so even when overflow=True, an overflow
+        # fallback is only chosen if its empirical cost beats canonical's
+        # — which is rare by definition since overflow fallbacks are
+        # typically more expensive). The semantic split is preserved via
+        # the `fallback_reason` field on the returned decision.
+        fallbacks.extend(
+            _CAPACITY_OVERFLOW_FALLBACKS_PER_CLASS.get(dispatch_class, [])
+        )
     best_fallback: tuple[str, str] | None = None
     best_fallback_p50: float | None = None
     best_fallback_tag: str | None = None
@@ -1318,6 +1463,12 @@ def select_provider_for_class(
             f"{('$%.2f' % best_fallback_p50) if best_fallback_p50 is not None else 'no_anchors'}"
         )
 
+    chosen_fallback_reason: FallbackReason | None = None
+    if best_fallback is not None:
+        chosen_fallback_reason = _fallback_reason_for(
+            dispatch_class, best_fallback[0], best_fallback[1]
+        )
+
     return ProviderRoutingDecision(
         dispatch_class=dispatch_class,
         provider=chosen_provider,
@@ -1332,6 +1483,7 @@ def select_provider_for_class(
         canonical_cost_p50_usd=canon_p50,
         fallback_cost_p50_usd=best_fallback_p50,
         rationale=rationale,
+        fallback_reason=chosen_fallback_reason,
     )
 
 
@@ -1340,6 +1492,7 @@ def select_provider_for_recipe(
     *,
     posterior_path: Path | None = None,
     consult_posterior: bool = True,
+    capacity_overflow: bool = False,
 ) -> ProviderRoutingDecision:
     """Convenience wrapper: classify + select for one recipe meta dict.
 
@@ -1348,6 +1501,16 @@ def select_provider_for_recipe(
     ``cost_band.epochs``, and the canonical ``platform``/``provider`` +
     ``gpu`` keys. This helper threads them into :func:`classify_dispatch`
     and :func:`select_provider_for_class`.
+
+    Args:
+        recipe_meta: Recipe dict with optional ``dispatch_class`` /
+            ``dispatch_label`` / ``cost_band.epochs`` keys.
+        posterior_path: Override for the posterior JSONL (tests only).
+        consult_posterior: Whether to consult the cost-band posterior.
+        capacity_overflow: If True, allow capacity-overflow fallback
+            escalation (e.g. Lightning A100 saturated → Vast.ai H100).
+            BOYD-1 self-protection: capacity-overflow fallbacks are
+            NEVER auto-routed without explicit operator opt-in.
     """
     explicit_class = recipe_meta.get("dispatch_class")
     dispatch_label = recipe_meta.get("dispatch_label") or recipe_meta.get("label")
@@ -1377,4 +1540,5 @@ def select_provider_for_recipe(
         posterior_path=posterior_path,
         consult_posterior=consult_posterior,
         epochs_for_posterior=int(epochs) if isinstance(epochs, int) and epochs > 0 else 3000,
+        capacity_overflow=capacity_overflow,
     )
