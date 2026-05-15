@@ -189,11 +189,11 @@ if __name__ == "__main__":
 _prepend_pythonpath(REPO / "src", REPO)
 ensure_repo_imports(REPO)
 
+from tac.deploy.claims import is_terminal_status as is_dispatch_claim_terminal_status  # noqa: E402
 from tac.geometry_feedback_readiness import (  # noqa: E402
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     geometry_feedback_contract_failures,
 )
-from tac.deploy.claims import is_terminal_status as is_dispatch_claim_terminal_status  # noqa: E402
 from tac.hnerv_frontier_defaults import HNERV_ACTIVE_SCORECARD  # noqa: E402
 from tac.repo_io import json_text, sha256_bytes  # noqa: E402
 from tac.source_index import SourceIndex  # noqa: E402
@@ -638,6 +638,7 @@ _EXPECTED_XRAY_TOOLS = frozenset(
         "tools/xray_per_tensor_saliency_heatmap.py",
         "tools/xray_inflate_op_cost_profiler.py",
         "tools/xray_cpu_cuda_drift_per_arch_class.py",
+        "tools/xray_paired_cpu_cuda_axis_delta.py",
         "tools/xray_substrate_classifier.py",
         "tools/xray_per_frame_difficulty_profile.py",
     }

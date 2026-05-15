@@ -102,6 +102,7 @@ def test_briefing_json_composite_has_all_three_keys():
     assert all(row["tool_exists"] is True for row in out["xray_tools"])
     assert {
         "tools/xray_archive_section_entropy_heatmap.py",
+        "tools/xray_paired_cpu_cuda_axis_delta.py",
         "tools/xray_substrate_classifier.py",
     }.issubset({row["tool"] for row in out["xray_tools"]})
     integration = out["cooperative_receiver_solver_integration"]

@@ -57,13 +57,13 @@ EXACT_READY_SUPPRESSION_MANIFEST = (
     REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
 )
 
+from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimizer.exact_readiness import (  # noqa: E402
     ACTIVE_FLOOR_SCORE,
     as_bool,
     is_sha256,
     terminal_claim_result_conflicts,
 )
-from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimizer.exact_ready_audit import (  # noqa: E402
     apply_suppression_manifest,
     audit_exact_ready_queues,
@@ -1131,6 +1131,21 @@ XRAY_TOOLKIT = [
             "  --archive experiments/results/track4_sg_a1_t178000_20260509/archive.zip \\\n"
             "  --cuda-auth-eval-json experiments/results/.../contest_auth_eval.json \\\n"
             "  --label pr107_apogee"
+        ),
+    },
+    {
+        "tool": "tools/xray_paired_cpu_cuda_axis_delta.py",
+        "purpose": (
+            "Compare exact CPU and CUDA auth-eval artifacts for the same "
+            "archive — quantifies component deltas, byte-equivalent axis gap, "
+            "and whether rate-only polishing can plausibly fix the miss. Use "
+            "AFTER both axes exist."
+        ),
+        "example": (
+            ".venv/bin/python tools/xray_paired_cpu_cuda_axis_delta.py \\\n"
+            "  --cpu-auth-eval-json experiments/results/.../cpu/contest_auth_eval.json \\\n"
+            "  --cuda-auth-eval-json experiments/results/.../cuda/contest_auth_eval.json \\\n"
+            "  --label candidate"
         ),
     },
     {
