@@ -107,6 +107,36 @@ def test_cuda_prefix_selector_gate_passes_when_pose_seg_and_score_do_not_regress
     ) == []
 
 
+def test_cuda_prefix_selector_gate_tolerates_float_noise_on_neutral_seg(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "0" * 64
+    reference = _write_auth_eval(tmp_path / "reference.json", archive_sha256="1" * 64)
+
+    gate = build_hdm8_selector_cuda_component_gate(
+        proxy={
+            "axis": "modal-t4-cuda-proxy-prefix",
+            "n_pairs": 600,
+            "avg_posenet_dist": 0.0009,
+            "avg_segnet_dist": 0.002000000001,
+            "baseline_avg_posenet_dist": 0.001,
+            "baseline_avg_segnet_dist": 0.002,
+            "delta_vs_none_charged": -0.0001,
+        },
+        candidate_archive_sha256=archive_sha,
+        candidate_archive_bytes=187_000,
+        repo_root=tmp_path,
+        reference_result_path=reference,
+        min_cuda_prefix_pairs=600,
+    )
+
+    assert gate["passed"] is True
+    assert not any(
+        blocker.startswith("segnet_delta_exceeds_threshold")
+        for blocker in gate["blockers"]
+    )
+
+
 def test_exact_cuda_candidate_gate_blocks_posenet_regression(tmp_path: Path) -> None:
     reference_sha = "e" * 64
     candidate_sha = "f" * 64

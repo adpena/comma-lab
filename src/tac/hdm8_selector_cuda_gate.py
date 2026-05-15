@@ -34,6 +34,7 @@ DEFAULT_MAX_POSE_DELTA = 0.0
 DEFAULT_MAX_SEG_DELTA = 0.0
 DEFAULT_MAX_SCORE_DELTA = 0.0
 DEFAULT_MIN_CUDA_PREFIX_PAIRS = 24
+DEFAULT_FLOAT_TOLERANCE = 1e-10
 
 
 def _repo_rel(path: Path, repo_root: Path) -> str:
@@ -159,17 +160,17 @@ def _threshold_blockers(
     max_score_delta: float,
 ) -> list[str]:
     blockers: list[str] = []
-    if float(deltas["pose_delta"]) > max_pose_delta:
+    if float(deltas["pose_delta"]) > max_pose_delta + DEFAULT_FLOAT_TOLERANCE:
         blockers.append(
             "posenet_delta_exceeds_threshold:"
             f"{float(deltas['pose_delta']):.12g}>{max_pose_delta:.12g}"
         )
-    if float(deltas["seg_delta"]) > max_seg_delta:
+    if float(deltas["seg_delta"]) > max_seg_delta + DEFAULT_FLOAT_TOLERANCE:
         blockers.append(
             "segnet_delta_exceeds_threshold:"
             f"{float(deltas['seg_delta']):.12g}>{max_seg_delta:.12g}"
         )
-    if float(deltas["score_delta"]) > max_score_delta:
+    if float(deltas["score_delta"]) > max_score_delta + DEFAULT_FLOAT_TOLERANCE:
         blockers.append(
             "score_delta_exceeds_threshold:"
             f"{float(deltas['score_delta']):.12g}>{max_score_delta:.12g}"
