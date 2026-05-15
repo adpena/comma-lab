@@ -532,6 +532,7 @@ def build_readiness_manifest(
     config,
     predicted_score_band: tuple[float, float] = (0.181, 0.188),
     runtime_overlay_consumed: bool = True,
+    base_archive_evidence_grade: str = "contest_archive",
 ) -> dict[str, object]:
     """Build a non-promotable readiness manifest for autopilot consumption.
 
@@ -549,14 +550,28 @@ def build_readiness_manifest(
     the polytope overlay (see
     :func:`tac.substrates.d1_segnet_margin_polytope.overlay.apply_l2_overlay_for_video_list`).
     """
-    overlay_ready = bool(runtime_overlay_consumed)
+    base_grade = str(base_archive_evidence_grade)
+    base_is_contest = base_grade == "contest_archive"
+    overlay_ready = bool(runtime_overlay_consumed) and base_is_contest
+    dispatch_blockers: list[str] = []
+    if not bool(runtime_overlay_consumed):
+        dispatch_blockers.extend(
+            [
+                "d1_runtime_overlay_not_consumed",
+                "current_l1_packet_is_base_renderer_plus_rate_only",
+                "exact_eval_would_measure_noop_sidecar_rate_penalty_not_d1_score_lowering",
+            ]
+        )
+    if not base_is_contest:
+        dispatch_blockers.append(f"base_archive_evidence_grade_not_contest:{base_grade}")
     return {
         "d1poly_schema_version": D1POLY1_SCHEMA_VERSION,
         "base_substrate_id": base_substrate_id,
         "base_archive_bytes": int(base_archive_bytes),
         "d1_overhead_bytes": int(d1_overhead_bytes),
         "total_archive_bytes": int(base_archive_bytes + d1_overhead_bytes),
-        "runtime_overlay_consumed": overlay_ready,
+        "runtime_overlay_consumed": bool(runtime_overlay_consumed),
+        "base_archive_evidence_grade": base_grade,
         "current_runtime_effect": (
             "d1_overlay_active" if overlay_ready else "base_renderer_plus_rate_only"
         ),
@@ -570,13 +585,7 @@ def build_readiness_manifest(
         "score_claim": False,
         "ready_for_exact_eval_dispatch": overlay_ready,
         "promotion_eligible": False,
-        "dispatch_blockers": []
-        if overlay_ready
-        else [
-            "d1_runtime_overlay_not_consumed",
-            "current_l1_packet_is_base_renderer_plus_rate_overhead",
-            "exact_eval_would_measure_noop_sidecar_rate_penalty_not_d1_score_lowering",
-        ],
+        "dispatch_blockers": [] if overlay_ready else dispatch_blockers,
         "polytope_payload_bits": int(config.polytope_payload_bits),
         "margin_map_resolution": list(config.margin_map_resolution),
         "margin_map_mode": str(config.margin_map_mode),

@@ -751,6 +751,26 @@ def test_readiness_manifest_l2_default_overlay_ready_exposes_dispatchable_projec
     assert 0.18 <= manifest["predicted_score_band_high"] <= 0.19
 
 
+def test_readiness_manifest_blocks_synthetic_smoke_base_even_with_overlay():
+    cfg = D1PolytopeConfig()
+    manifest = build_readiness_manifest(
+        base_substrate_id="a1",
+        base_archive_bytes=len(b"smoke_base_archive_bytes"),
+        d1_overhead_bytes=2_000,
+        config=cfg,
+        runtime_overlay_consumed=True,
+        base_archive_evidence_grade="synthetic_smoke",
+    )
+
+    assert manifest["runtime_overlay_consumed"] is True
+    assert manifest["base_archive_evidence_grade"] == "synthetic_smoke"
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["predicted_score_band_low"] is None
+    assert "base_archive_evidence_grade_not_contest:synthetic_smoke" in manifest[
+        "dispatch_blockers"
+    ]
+
+
 # ---------------------------------------------------------------------------
 # D1 substrate handle
 # ---------------------------------------------------------------------------

@@ -1163,6 +1163,10 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
     # "deterministic reproducibility" non-negotiable. CUBLAS_WORKSPACE_CONFIG
     # is required for torch.use_deterministic_algorithms.
     env.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    # Modal/T4 DALI can hit NVML before scorer code has a chance to recover.
+    # Keep this guard at the canonical evaluator boundary so lane scripts do
+    # not have to rediscover it one-by-one.
+    env.setdefault("DALI_DISABLE_NVML", "1")
 
     result = subprocess.run(cmd, timeout=timeout, env=env, capture_output=True, text=True)
     elapsed = time.monotonic() - t0

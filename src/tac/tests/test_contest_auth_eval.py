@@ -238,7 +238,10 @@ def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypa
     submission.mkdir()
     (submission / "archive.zip").write_bytes(b"archive")
 
+    captured: dict[str, object] = {}
+
     def fake_run(*_args, **_kwargs):
+        captured["env"] = dict(_kwargs.get("env") or {})
         report = submission / "report.txt"
         report.write_text("""=== Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.0107
@@ -268,6 +271,7 @@ def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypa
 
     assert "evaluate_elapsed_seconds" in result
     assert result["evaluate_elapsed_seconds"] >= 0.0
+    assert captured["env"]["DALI_DISABLE_NVML"] == "1"
 
 
 def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:

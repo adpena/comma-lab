@@ -687,6 +687,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         base_archive_bytes=len(fake_base_bytes),
         d1_overhead_bytes=len(d1_blob),
         config=cfg,
+        runtime_overlay_consumed=False,
+        base_archive_evidence_grade="synthetic_smoke",
     )
     readiness["smoke_run"] = True
     readiness["margin_synth_boundary_fraction"] = float(
