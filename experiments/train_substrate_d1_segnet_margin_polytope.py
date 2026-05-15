@@ -1043,10 +1043,66 @@ def _overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
         return -1
     if policy == 'alternating_pairs':
         return 1 if int(pair_idx) % 2 == 0 else -1
+    if policy == 'pair_mask':
+        raise ValueError('pair_mask sign policy requires decoded pair_sign_mask')
     raise ValueError(
         f'unsupported D1 overlay_sign_policy={{sign_policy!r}}; '
-        "expected one of ['alternating_pairs', 'negate_payload', 'payload']"
+        "expected one of ['alternating_pairs', 'negate_payload', 'pair_mask', 'payload']"
     )
+
+
+def _unpack_pair_sign_mask(mask_hex: str, *, n_pairs: int) -> tuple[int, ...]:
+    payload = bytes.fromhex(str(mask_hex))
+    expected_len = (int(n_pairs) * 2 + 7) // 8
+    if len(payload) != expected_len:
+        raise ValueError(
+            f'D1 pair mask byte length {{len(payload)}} != expected {{expected_len}}'
+        )
+    signs = []
+    sign_by_code = {{0: 0, 1: 1, 2: -1}}
+    for byte in payload:
+        for shift in (0, 2, 4, 6):
+            if len(signs) >= n_pairs:
+                break
+            code = (byte >> shift) & 0b11
+            if code not in sign_by_code:
+                raise ValueError('D1 pair mask contains reserved 2-bit code 3')
+            signs.append(sign_by_code[code])
+    return tuple(signs)
+
+
+def _pair_sign_mask_from_meta(meta: dict[str, object], n_pairs: int) -> tuple[int, ...] | None:
+    policy = str(meta.get('overlay_sign_policy', 'payload')).strip().lower()
+    if policy != 'pair_mask':
+        return None
+    mask_hex = meta.get('overlay_pair_sign_mask_bits_hex')
+    mask_pairs = int(meta.get('overlay_pair_sign_mask_n_pairs', n_pairs))
+    if not isinstance(mask_hex, str) or not mask_hex:
+        raise ValueError('D1 pair_mask policy missing overlay_pair_sign_mask_bits_hex')
+    if mask_pairs != n_pairs:
+        raise ValueError(
+            f'D1 pair mask n_pairs={{mask_pairs}} does not match inflated n_pairs={{n_pairs}}'
+        )
+    return _unpack_pair_sign_mask(mask_hex, n_pairs=n_pairs)
+
+
+def _overlay_sign_for_pair_masked(
+    sign_policy: str,
+    pair_idx: int,
+    pair_sign_mask: tuple[int, ...] | None,
+) -> int:
+    if sign_policy.strip().lower() != 'pair_mask':
+        return _overlay_sign_for_pair(sign_policy, pair_idx)
+    if pair_sign_mask is None:
+        raise ValueError('pair_mask sign policy requires pair_sign_mask')
+    if pair_idx < 0 or pair_idx >= len(pair_sign_mask):
+        raise ValueError(
+            f'pair_idx {{pair_idx}} outside pair_sign_mask length {{len(pair_sign_mask)}}'
+        )
+    sign = int(pair_sign_mask[pair_idx])
+    if sign not in (-1, 0, 1):
+        raise ValueError(f'D1 pair_sign_mask[{{pair_idx}}]={{sign}} is invalid')
+    return sign
 
 
 def _attenuate_overlay_levels(
@@ -1070,6 +1126,7 @@ def _apply_overlay(
     channel_policy: str,
     amplitude_scale: float,
     sign_policy: str,
+    pair_sign_mask: tuple[int, ...] | None,
 ) -> dict[str, int]:
     actual_size = raw_path.stat().st_size
     pair_bytes = 2 * FRAME_BYTES
@@ -1083,7 +1140,7 @@ def _apply_overlay(
     )
     nonzero_overlay_pixels = int(np.count_nonzero(overlay_hw))
     weights = _channel_policy_weights(channel_policy)
-    _overlay_sign_for_pair(sign_policy, 0)
+    _overlay_sign_for_pair_masked(sign_policy, 0, pair_sign_mask)
     if nonzero_overlay_pixels == 0:
         return {{
             'pairs_modified': 0,
@@ -1099,7 +1156,9 @@ def _apply_overlay(
     bytes_changed = 0
     with raw_path.open('r+b') as fp:
         for pair_idx in range(n_pairs):
-            sign = _overlay_sign_for_pair(sign_policy, pair_idx)
+            sign = _overlay_sign_for_pair_masked(sign_policy, pair_idx, pair_sign_mask)
+            if sign == 0:
+                continue
             pair_overlay = overlay_flat if sign > 0 else overlay_flat_negative
             frame_1_offset = (2 * pair_idx + 1) * FRAME_BYTES
             fp.seek(frame_1_offset)
@@ -1192,12 +1251,21 @@ def main(argv: list[str] | None = None) -> int:
             ],
             check=True,
         )
+        actual_size = dst_raw.stat().st_size
+        if actual_size % (2 * FRAME_BYTES) != 0:
+            raise ValueError(
+                f'raw size {{actual_size}} is not a multiple of pair_bytes={{2 * FRAME_BYTES}}'
+            )
+        pair_sign_mask = _pair_sign_mask_from_meta(
+            d1['meta'], actual_size // (2 * FRAME_BYTES)
+        )
         diag = _apply_overlay(
             dst_raw,
             overlay_hw,
             channel_policy=channel_policy,
             amplitude_scale=amplitude_scale,
             sign_policy=sign_policy,
+            pair_sign_mask=pair_sign_mask,
         )
         total_pairs += diag['pairs_modified']
         total_bytes += diag['bytes_changed']

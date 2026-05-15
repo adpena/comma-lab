@@ -1172,6 +1172,81 @@ def test_generated_d1_runtime_applies_overlay_and_fails_closed(tmp_path):
     assert "changed zero bytes" in zero_result.stderr
 
 
+def test_generated_d1_runtime_consumes_pair_mask(tmp_path):
+    import importlib
+
+    trainer = importlib.import_module(
+        "experiments.train_substrate_d1_segnet_margin_polytope"
+    )
+    submission_dir = tmp_path / "submission"
+    trainer._write_runtime(submission_dir)
+
+    fake_a1 = (
+        "from pathlib import Path\n"
+        "import sys\n"
+        "camera_h, camera_w = 874, 1164\n"
+        "frame_bytes = camera_h * camera_w * 3\n"
+        "Path(sys.argv[2]).write_bytes(bytes([128]) * (6 * frame_bytes))\n"
+    )
+    (submission_dir / "a1_inflate.py").write_text(fake_a1, encoding="utf-8")
+
+    from tac.substrates.d1_segnet_margin_polytope.overlay import pack_pair_sign_mask
+
+    base_bytes = b"some-a1-base"
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    (archive_dir / "a1.bin").write_bytes(base_bytes)
+    cfg, mm, payload, _ = _make_dummy_archive_inputs()
+    signs = [1, 0, -1]
+    blob = pack_archive(
+        margin_map=mm,
+        polytope_payload=payload,
+        jacobian_lipschitz=10.0,
+        base_substrate_id="a1",
+        base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
+        base_archive_bytes=len(base_bytes),
+        config=cfg,
+        extra_meta={
+            "overlay_channel_policy": "green",
+            "overlay_sign_policy": "pair_mask",
+            "overlay_pair_sign_mask_bits_hex": pack_pair_sign_mask(signs),
+            "overlay_pair_sign_mask_n_pairs": len(signs),
+        },
+    )
+    (archive_dir / "d1_polytope.bin").write_bytes(blob)
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+    output_dir = tmp_path / "out_pair_mask"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(submission_dir / "inflate.py"),
+            str(archive_dir),
+            str(output_dir),
+            str(file_list),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "sign_policy=pair_mask" in result.stderr
+    assert "pairs_modified=2" in result.stderr
+    payload = (output_dir / "0.raw").read_bytes()
+    frame_bytes = 874 * 1164 * 3
+    pair0_frame1 = np.frombuffer(payload[frame_bytes : 2 * frame_bytes], dtype=np.uint8)
+    pair1_frame1 = np.frombuffer(
+        payload[3 * frame_bytes : 4 * frame_bytes], dtype=np.uint8
+    )
+    pair2_frame1 = np.frombuffer(
+        payload[5 * frame_bytes : 6 * frame_bytes], dtype=np.uint8
+    )
+    assert (pair0_frame1 != 128).any()
+    assert (pair1_frame1 == 128).all()
+    assert (pair2_frame1 != 128).any()
+
+
 def test_d1_substrate_lane_class_marker_present():
     """Catalog #124 HNeRV parity L7 substrate_engineering waiver: ensure
     the lane_class declaration is present in module docstring so the

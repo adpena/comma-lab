@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -106,6 +107,7 @@ def analyze_d1_overlay_effect(
     channel_policy: str | None = None,
     amplitude_scale: float | None = None,
     sign_policy: str | None = None,
+    pair_sign_mask: Sequence[int] | None = None,
     min_integer_delta_lsb: float = 1.0,
 ) -> D1OverlayDiagnostics:
     """Analyze whether a D1 sidecar can change inflate output bytes.
@@ -130,7 +132,7 @@ def analyze_d1_overlay_effect(
         if sign_policy is not None
         else archive.meta.get("overlay_sign_policy", "payload")
     )
-    overlay_sign_for_pair(sign, 0)
+    overlay_sign_for_pair(sign, 0, pair_sign_mask)
 
     decoded = decode_polytope_payload(archive.polytope_payload)
     camera_overlay = _build_camera_resolution_overlay(

@@ -36,6 +36,7 @@ hardware per CLAUDE.md "Submission auth eval" non-negotiable.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -68,6 +69,7 @@ D1_OVERLAY_SIGN_POLICIES: tuple[str, ...] = (
     "payload",
     "negate_payload",
     "alternating_pairs",
+    "pair_mask",
 )
 
 D1_OVERLAY_AMPLITUDE_SCALES: tuple[float, ...] = (0.0, 0.5, 1.0)
@@ -112,7 +114,66 @@ def normalize_overlay_amplitude_scale(amplitude_scale: float) -> float:
     return scale
 
 
-def overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
+def pack_pair_sign_mask(signs: Sequence[int]) -> str:
+    """Pack per-pair D1 signs into a deterministic 2-bit hex string.
+
+    Values are ``0`` = disabled, ``1`` = payload sign, ``-1`` = negated sign.
+    Four signs fit in one byte. This keeps a 600-pair selector to 150 bytes
+    before JSON/ZIP compression and avoids a noisy list of integers in the
+    archive metadata.
+    """
+    if len(signs) == 0:
+        raise ValueError("pair sign mask must not be empty")
+    out = bytearray()
+    acc = 0
+    nbits = 0
+    code_by_sign = {0: 0, 1: 1, -1: 2}
+    for raw in signs:
+        sign = int(raw)
+        if sign not in code_by_sign:
+            raise ValueError(f"pair sign mask value must be -1, 0, or 1; got {raw!r}")
+        acc |= code_by_sign[sign] << nbits
+        nbits += 2
+        if nbits == 8:
+            out.append(acc)
+            acc = 0
+            nbits = 0
+    if nbits:
+        out.append(acc)
+    return out.hex()
+
+
+def unpack_pair_sign_mask(mask_hex: str, *, n_pairs: int) -> tuple[int, ...]:
+    """Unpack a D1 2-bit pair-sign mask from metadata."""
+    if n_pairs <= 0:
+        raise ValueError(f"n_pairs must be > 0; got {n_pairs}")
+    try:
+        payload = bytes.fromhex(str(mask_hex))
+    except ValueError as exc:
+        raise ValueError("pair sign mask is not valid hex") from exc
+    expected_len = (int(n_pairs) * 2 + 7) // 8
+    if len(payload) != expected_len:
+        raise ValueError(
+            f"pair sign mask byte length {len(payload)} != expected {expected_len}"
+        )
+    signs: list[int] = []
+    sign_by_code = {0: 0, 1: 1, 2: -1}
+    for byte in payload:
+        for shift in (0, 2, 4, 6):
+            if len(signs) >= n_pairs:
+                break
+            code = (byte >> shift) & 0b11
+            if code not in sign_by_code:
+                raise ValueError("pair sign mask contains reserved 2-bit code 3")
+            signs.append(sign_by_code[code])
+    return tuple(signs)
+
+
+def overlay_sign_for_pair(
+    sign_policy: str,
+    pair_idx: int,
+    pair_sign_mask: Sequence[int] | None = None,
+) -> int:
     """Return the scalar sign multiplier for a pair under a D1 sign policy."""
     policy = sign_policy.strip().lower()
     if policy == "payload":
@@ -121,6 +182,19 @@ def overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
         return -1
     if policy == "alternating_pairs":
         return 1 if int(pair_idx) % 2 == 0 else -1
+    if policy == "pair_mask":
+        if pair_sign_mask is None:
+            raise ValueError("overlay_sign_policy='pair_mask' requires pair_sign_mask")
+        if pair_idx < 0 or pair_idx >= len(pair_sign_mask):
+            raise ValueError(
+                f"pair_idx {pair_idx} outside pair_sign_mask length {len(pair_sign_mask)}"
+            )
+        sign = int(pair_sign_mask[pair_idx])
+        if sign not in (-1, 0, 1):
+            raise ValueError(
+                f"pair_sign_mask[{pair_idx}] must be -1, 0, or 1; got {sign}"
+            )
+        return sign
     raise ValueError(
         f"unsupported D1 overlay_sign_policy={sign_policy!r}; "
         f"expected one of {sorted(D1_OVERLAY_SIGN_POLICIES)}"
@@ -320,6 +394,7 @@ def apply_polytope_overlay_inplace(
     channel_policy: str = "rgb",
     amplitude_scale: float = 1.0,
     sign_policy: str = "payload",
+    pair_sign_mask: Sequence[int] | None = None,
 ) -> dict[str, int | float | str]:
     """Apply the polytope noise overlay to every frame_1 in the .raw video.
 
@@ -376,7 +451,7 @@ def apply_polytope_overlay_inplace(
             f"{camera_w})"
         )
     weights = channel_policy_weights(channel_policy)
-    overlay_sign_for_pair(sign_policy, 0)
+    overlay_sign_for_pair(sign_policy, 0, pair_sign_mask)
     if nonzero_overlay_pixels == 0:
         # No-op overlay — write nothing, but report so the no-op detector
         # surfaces the dead-bytes condition.
@@ -399,7 +474,9 @@ def apply_polytope_overlay_inplace(
     bytes_changed = 0
     with open(raw_path, "r+b") as fp:
         for pair_idx in range(n_pairs):
-            sign = overlay_sign_for_pair(sign_policy, pair_idx)
+            sign = overlay_sign_for_pair(sign_policy, pair_idx, pair_sign_mask)
+            if sign == 0:
+                continue
             overlay_flat = (
                 overlay_flat_positive if sign > 0 else overlay_flat_negative
             )
@@ -452,6 +529,7 @@ def apply_l2_overlay_for_video_list(
     channel_policy: str = "rgb",
     amplitude_scale: float = 1.0,
     sign_policy: str = "payload",
+    pair_sign_mask: Sequence[int] | None = None,
     n_pairs_per_video: int | None = None,
 ) -> dict[str, int | float | str]:
     """Apply the L2 polytope overlay across every video's .raw output.
@@ -543,6 +621,7 @@ def apply_l2_overlay_for_video_list(
             channel_policy=channel_policy,
             amplitude_scale=amplitude_scale,
             sign_policy=sign_policy,
+            pair_sign_mask=pair_sign_mask,
         )
         total_pairs_modified += diag["pairs_modified"]
         total_bytes_changed += diag["bytes_changed"]
@@ -573,5 +652,7 @@ __all__ = [
     "channel_policy_weights",
     "normalize_overlay_amplitude_scale",
     "overlay_sign_for_pair",
+    "pack_pair_sign_mask",
+    "unpack_pair_sign_mask",
     "validate_polytope_margin_contract",
 ]

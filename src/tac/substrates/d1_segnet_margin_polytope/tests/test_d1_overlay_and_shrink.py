@@ -25,6 +25,8 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (
     channel_policy_weights,
     normalize_overlay_amplitude_scale,
     overlay_sign_for_pair,
+    pack_pair_sign_mask,
+    unpack_pair_sign_mask,
     validate_polytope_margin_contract,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
@@ -245,6 +247,36 @@ def test_apply_polytope_overlay_channel_policy_green_only(tmp_path):
     assert (frame_1[:, 2] == 128).all()
 
 
+def test_apply_polytope_overlay_pair_mask_skips_disabled_pairs(tmp_path):
+    raw = tmp_path / "0.raw"
+    n_pairs = 3
+    _write_synthetic_raw(raw, n_pairs=n_pairs)
+    frame_bytes = 874 * 1164 * 3
+    flat = np.ones(96 * 128, dtype=np.int8)
+    diag = apply_polytope_overlay_inplace(
+        raw,
+        noise_levels_flat=flat,
+        encoder_grid_h=96,
+        encoder_grid_w=128,
+        n_pairs=n_pairs,
+        channel_policy="green",
+        sign_policy="pair_mask",
+        pair_sign_mask=[1, 0, -1],
+    )
+    assert diag["pairs_modified"] == 2
+    payload = raw.read_bytes()
+    pair0_frame1 = np.frombuffer(payload[frame_bytes : 2 * frame_bytes], dtype=np.uint8)
+    pair1_frame1 = np.frombuffer(
+        payload[3 * frame_bytes : 4 * frame_bytes], dtype=np.uint8
+    )
+    pair2_frame1 = np.frombuffer(
+        payload[5 * frame_bytes : 6 * frame_bytes], dtype=np.uint8
+    )
+    assert (pair0_frame1 != 128).any()
+    assert (pair1_frame1 == 128).all()
+    assert (pair2_frame1 != 128).any()
+
+
 def test_channel_policy_weights_rejects_unknown():
     with pytest.raises(ValueError, match="overlay_channel_policy"):
         channel_policy_weights("cyan")
@@ -255,6 +287,13 @@ def test_overlay_policy_constants_cover_noop_half_and_sign_schedules():
     assert "payload" in D1_OVERLAY_SIGN_POLICIES
     assert "negate_payload" in D1_OVERLAY_SIGN_POLICIES
     assert "alternating_pairs" in D1_OVERLAY_SIGN_POLICIES
+    assert "pair_mask" in D1_OVERLAY_SIGN_POLICIES
+
+
+def test_pair_sign_mask_pack_unpack_roundtrip():
+    signs = (1, 0, -1, 1, -1, 0, 0, 1, 1)
+    encoded = pack_pair_sign_mask(signs)
+    assert unpack_pair_sign_mask(encoded, n_pairs=len(signs)) == signs
 
 
 def test_normalize_overlay_amplitude_scale_rejects_amplification():
@@ -280,6 +319,11 @@ def test_overlay_sign_policy_schedules_are_deterministic():
     assert overlay_sign_for_pair("negate_payload", 0) == -1
     assert overlay_sign_for_pair("alternating_pairs", 0) == 1
     assert overlay_sign_for_pair("alternating_pairs", 1) == -1
+    assert overlay_sign_for_pair("pair_mask", 0, [1, 0, -1]) == 1
+    assert overlay_sign_for_pair("pair_mask", 1, [1, 0, -1]) == 0
+    assert overlay_sign_for_pair("pair_mask", 2, [1, 0, -1]) == -1
+    with pytest.raises(ValueError, match="pair_sign_mask"):
+        overlay_sign_for_pair("pair_mask", 0)
     with pytest.raises(ValueError, match="overlay_sign_policy"):
         overlay_sign_for_pair("coinflip", 0)
 

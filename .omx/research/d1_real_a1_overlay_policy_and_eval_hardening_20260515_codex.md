@@ -492,3 +492,83 @@ Next D1 action is a post-fix *certified* sparse96 kink sweep below 5k:
 `channel={green,blue,red}`, `sign={payload,negate_payload,alternating_pairs}`.
 Only rows with `unsafe_nonzero_pixels=0`, nonzero xray, and lower changed-LSB
 surface than the measured 5k packets should be paired-dispatched.
+
+## Post-Fix Certified b3k Paired Recovery - 2026-05-15T18:23Z
+
+Recovered exact paired Modal auth eval for certified sparse96 3k packets:
+
+| candidate | axis | call id | bytes | score | pose | seg |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| `d1_cert_sparse96_b3k_L2_green_payload` | `[contest-CUDA]` | `fc-01KRPDEXYQKBC4WSFKVV8ZY7G6` | 185379 | 0.2317362548377786 | 0.00017128 | 0.00066914 |
+| `d1_cert_sparse96_b3k_L2_blue_payload` | `[contest-CUDA]` | `fc-01KRPDF3G9H1HCBAASJF5BY2SG` | 185378 | 0.231727964404999 | 0.00017125 | 0.00066910 |
+| `d1_cert_sparse96_b3k_L2_red_payload` | `[contest-CUDA]` | `fc-01KRPDEZR37GGGC6CRSEVAVEC2` | 185376 | 0.23175416774323881 | 0.00017142 | 0.00066917 |
+| `d1_cert_sparse96_b3k_L2_green_payload` | `[contest-CPU]` | `fc-01KRPDFEZ9QMPA4G3FDFACRV63` | 185379 | 0.19836541637745966 | 0.00003299 | 0.00056766 |
+| `d1_cert_sparse96_b3k_L2_blue_payload` | `[contest-CPU]` | `fc-01KRPDFKZHX8C0C8M05JHJ8XTT` | 185378 | 0.1982817145388956 | 0.00003291 | 0.00056705 |
+| `d1_cert_sparse96_b3k_L2_red_payload` | `[contest-CPU]` | `fc-01KRPDFG7E61AGF0CZYG5B64A2` | 185376 | 0.19839589432454263 | 0.00003293 | 0.00056815 |
+
+Interpretation:
+
+- b3k improves over the prior b5k CPU exact row (`0.2011587759556391` ->
+  `0.1982817145388956` best CPU), but remains above the sub-0.192 gate.
+- b3k CUDA remains around `0.23173`, so static global D1 overlay is not a
+  promotion path.
+- The valid next D1 optimization is not another static same-sign sweep; it is
+  a scorer-guided selector that applies the overlay only where pair-level xray
+  says it helps.
+
+## Pair-Mask Selector Wiring - 2026-05-15T18:58Z
+
+Implemented a byte-closed D1 `pair_mask` sign policy:
+
+- `pack_pair_sign_mask(...)` / `unpack_pair_sign_mask(...)` encode `-1/0/+1`
+  per pair in a deterministic 2-bit stream.
+- Runtime-generated `inflate.py` decodes `overlay_pair_sign_mask_bits_hex`,
+  validates exact `n_pairs`, skips disabled pairs, and applies positive or
+  negated overlays per selected pair.
+- `tools/build_d1_pair_mask_from_xray.py` converts pair-component xray JSON
+  into a selector packet. The selector is explicitly `score_claim=false`.
+- `tools/build_d1_overlay_policy_candidates.py` now materializes pair-mask
+  packets and records mask SHA, active pair counts, and dispatch blockers.
+
+Important math hardening:
+
+The first selector draft minimized per-pair
+`sqrt(10 * pose_dist) + 100 * seg_dist`. That is not the contest objective,
+which is `sqrt(10 * mean_pose_dist) + 100 * mean_seg_dist`. The selector now
+uses `contest_score_linearized_at_baseline_mean_pose_v1`:
+
+```text
+pose_weight = 5 / sqrt(10 * baseline_mean_pose_dist)
+seg_weight  = 100
+pair objective = pose_weight * pose_dist + seg_weight * seg_dist
+```
+
+This prevents a repeated objective-mismatch failure class where pairwise
+`sqrt(pose)` improvements look larger than their actual global-score effect.
+
+Local CPU xray evidence:
+
+| packet | pairs | pose | seg | component no-rate |
+| --- | ---: | ---: | ---: | ---: |
+| A1 baseline local CPU xray | 600 | 0.00003286083487049988 | 0.0005604044600234677 | 0.07416800371719073 |
+| D1 global green +payload local CPU xray | 600 | 0.000032985370828176505 | 0.0005676269537070766 | 0.07492457050192043 |
+| D1 positive-only pair mask local CPU xray | 600 | 0.00003272931126995597 | 0.0005596160889156939 | 0.07405285298089502 |
+| D1 `+/-/off` selector, first 64-pair runtime smoke | 64 | 0.000020995494973696793 | 0.0005544821442526882 | 0.06993803670633797 |
+
+The full 600-pair `+/-/off` selector from positive and negative xray chose
+235 pairs (`126` positive, `109` negative) and predicts
+`predicted_component_no_rate_delta=-0.00019934154650622093` before byte cost.
+Its materialized archive is:
+
+```text
+experiments/results/d1_pair_mask_cpu600_posneg_candidate_20260515_codex/d1_overlay_channel_green_amp_1_sign_pair_mask_pairmask_cpu600p235pn/archive.zip
+bytes=185700
+sha256=32443f4dbbcd41b4a3b7f7e86160e3b0a7f0e07541da4974aa0dded2a53cc4fd
+```
+
+The selector is technically valid and useful for future per-pair action masks,
+but it does **not** justify paired paid dispatch by itself: local predicted
+CPU score remains about `0.1976`, and the measured static CUDA axis is far
+above the gate. The next D1 frontier move, if reopened, should be a
+per-pair action selector over channel/sign/amplitude or a CUDA-native xray
+selector; single-channel `green + +/-/off` is not enough.

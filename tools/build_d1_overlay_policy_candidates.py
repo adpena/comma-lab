@@ -41,6 +41,7 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (  # noqa: E402
     channel_policy_weights,
     normalize_overlay_amplitude_scale,
     overlay_sign_for_pair,
+    pack_pair_sign_mask,
 )
 
 
@@ -155,6 +156,32 @@ def _parse_resolution(raw: str) -> tuple[int, int] | None:
     return h, w
 
 
+def _load_pair_sign_mask(path: Path | None) -> tuple[int, ...] | None:
+    if path is None:
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        raw_signs = payload
+    elif isinstance(payload, dict):
+        raw_signs = payload.get("pair_signs")
+        if raw_signs is None:
+            selector = payload.get("selector", {})
+            raw_signs = selector.get("pair_signs") if isinstance(selector, dict) else None
+    else:
+        raw_signs = None
+    if not isinstance(raw_signs, list) or not raw_signs:
+        raise SystemExit(
+            "--pair-sign-mask-json must contain a non-empty pair_signs list"
+        )
+    signs = tuple(int(value) for value in raw_signs)
+    bad = [value for value in signs if value not in (-1, 0, 1)]
+    if bad:
+        raise SystemExit(
+            f"--pair-sign-mask-json values must be -1, 0, or 1; got {bad[:8]}"
+        )
+    return signs
+
+
 def _scale_slug(scale: float) -> str:
     text = f"{normalize_overlay_amplitude_scale(scale):.6g}"
     return text.replace("-", "m").replace(".", "p")
@@ -172,6 +199,7 @@ def _candidate_id(
     payload_budget_bits: int | None,
     jacobian_lipschitz: float | None,
     margin_map_resolution: tuple[int, int] | None,
+    pair_mask_label: str | None,
 ) -> str:
     prefix = "d1_overlay"
     if payload_budget_bits is not None and jacobian_lipschitz is not None:
@@ -185,6 +213,7 @@ def _candidate_id(
         f"{prefix}_channel_{channel_policy}"
         f"_amp_{_scale_slug(amplitude_scale)}"
         f"_sign_{sign_policy}"
+        + (f"_pairmask_{pair_mask_label}" if sign_policy == "pair_mask" else "")
     )
 
 
@@ -196,6 +225,8 @@ def _overlay_effect_equivalence_key(
     payload_budget_bits: int | None,
     jacobian_lipschitz: float | None,
     margin_map_resolution: tuple[int, int] | None,
+    pair_sign_mask_sha256: str | None,
+    pair_sign_mask: tuple[int, ...] | None,
 ) -> str:
     """Return a key for variants that produce the same signed frame deltas.
 
@@ -205,8 +236,22 @@ def _overlay_effect_equivalence_key(
     spends time on an effect-equivalent packet.
     """
     weights = channel_policy_weights(channel_policy).astype(int)
-    pair0 = (weights * overlay_sign_for_pair(sign_policy, 0)).tolist()
-    pair1 = (weights * overlay_sign_for_pair(sign_policy, 1)).tolist()
+    pair0 = (
+        weights
+        * overlay_sign_for_pair(
+            sign_policy,
+            0,
+            pair_sign_mask if sign_policy == "pair_mask" else None,
+        )
+    ).tolist()
+    pair1 = (
+        weights
+        * overlay_sign_for_pair(
+            sign_policy,
+            1,
+            pair_sign_mask if sign_policy == "pair_mask" else None,
+        )
+    ).tolist()
     resolution = (
         f"{margin_map_resolution[0]}x{margin_map_resolution[1]}"
         if margin_map_resolution is not None
@@ -220,6 +265,7 @@ def _overlay_effect_equivalence_key(
             f"amp={normalize_overlay_amplitude_scale(amplitude_scale):.6g}",
             f"pair0={pair0}",
             f"pair1={pair1}",
+            f"pair_mask_sha256={pair_sign_mask_sha256 or ''}",
         ]
     )
 
@@ -338,6 +384,19 @@ def _build_parser() -> argparse.ArgumentParser:
             "96x128. Uses area downsample from the source margin map."
         ),
     )
+    parser.add_argument(
+        "--pair-sign-mask-json",
+        type=Path,
+        help=(
+            "Optional JSON containing pair_signs=[-1,0,1,...]. Required when "
+            "--sign-policies includes pair_mask."
+        ),
+    )
+    parser.add_argument(
+        "--pair-sign-mask-label",
+        default="",
+        help="Short label appended to pair_mask candidate IDs.",
+    )
     return parser
 
 
@@ -359,6 +418,22 @@ def main(argv: list[str] | None = None) -> int:
     payload_budgets = _parse_budget_bits(args.payload_budget_bits)
     lipschitz_values = _parse_lipschitz_values(args.jacobian_lipschitz)
     margin_map_resolution = _parse_resolution(args.margin_map_resolution)
+    pair_sign_mask = _load_pair_sign_mask(args.pair_sign_mask_json)
+    pair_sign_mask_hex: str | None = None
+    pair_sign_mask_sha256: str | None = None
+    pair_mask_label: str | None = None
+    if pair_sign_mask is not None:
+        pair_sign_mask_hex = pack_pair_sign_mask(pair_sign_mask)
+        pair_sign_mask_sha256 = hashlib.sha256(
+            bytes.fromhex(pair_sign_mask_hex)
+        ).hexdigest()
+        pair_mask_label = args.pair_sign_mask_label.strip() or pair_sign_mask_sha256[:12]
+    if "pair_mask" in sign_policies and pair_sign_mask is None:
+        raise SystemExit("--sign-policies=pair_mask requires --pair-sign-mask-json")
+    if pair_sign_mask is not None and "pair_mask" not in sign_policies:
+        raise SystemExit(
+            "--pair-sign-mask-json was provided but --sign-policies does not include pair_mask"
+        )
     if margin_map_resolution and not payload_budgets:
         raise SystemExit(
             "--margin-map-resolution requires --payload-budget-bits so the "
@@ -403,6 +478,7 @@ def main(argv: list[str] | None = None) -> int:
                         payload_budget_bits=payload_budget_bits,
                         jacobian_lipschitz=jacobian_lipschitz,
                         margin_map_resolution=margin_map_resolution,
+                        pair_mask_label=pair_mask_label,
                     )
                     candidate_root = args.output_dir / candidate_id
                     submission_dir = candidate_root / "submission_dir"
@@ -414,6 +490,15 @@ def main(argv: list[str] | None = None) -> int:
                             "overlay_channel_policy": policy,
                             "overlay_amplitude_scale": amplitude_scale,
                             "overlay_sign_policy": sign_policy,
+                            **(
+                                {
+                                    "overlay_pair_sign_mask_bits_hex": pair_sign_mask_hex,
+                                    "overlay_pair_sign_mask_n_pairs": len(pair_sign_mask or ()),
+                                    "overlay_pair_sign_mask_sha256": pair_sign_mask_sha256,
+                                }
+                                if sign_policy == "pair_mask"
+                                else {}
+                            ),
                         },
                     )
                     parsed_variant = parse_archive(d1_variant)
@@ -422,6 +507,11 @@ def main(argv: list[str] | None = None) -> int:
                         channel_policy=policy,
                         amplitude_scale=amplitude_scale,
                         sign_policy=sign_policy,
+                        pair_sign_mask=(
+                            pair_sign_mask
+                            if sign_policy == "pair_mask"
+                            else None
+                        ),
                     )
                     _write_runtime(submission_dir)
                     (submission_dir / "d1_polytope.bin").write_bytes(d1_variant)
@@ -473,10 +563,38 @@ def main(argv: list[str] | None = None) -> int:
                                 payload_budget_bits=payload_budget_bits,
                                 jacobian_lipschitz=jacobian_lipschitz,
                                 margin_map_resolution=margin_map_resolution,
+                                pair_sign_mask_sha256=(
+                                    pair_sign_mask_sha256
+                                    if sign_policy == "pair_mask"
+                                    else None
+                                ),
+                                pair_sign_mask=(
+                                    pair_sign_mask
+                                    if sign_policy == "pair_mask"
+                                    else None
+                                ),
                             )
                         ),
                         "duplicate_of_candidate_id": None,
                         "d1_overlay_diagnostics": overlay_diag.to_json_dict(),
+                        "pair_sign_mask": (
+                            {
+                                "n_pairs": len(pair_sign_mask or ()),
+                                "active_pairs": int(
+                                    sum(1 for value in (pair_sign_mask or ()) if value != 0)
+                                ),
+                                "positive_pairs": int(
+                                    sum(1 for value in (pair_sign_mask or ()) if value > 0)
+                                ),
+                                "negative_pairs": int(
+                                    sum(1 for value in (pair_sign_mask or ()) if value < 0)
+                                ),
+                                "sha256": pair_sign_mask_sha256,
+                                "label": pair_mask_label,
+                            }
+                            if sign_policy == "pair_mask"
+                            else None
+                        ),
                         "source_d1_bin_sha256": _sha256_bytes(d1_bytes),
                         "a1_bin_sha256": a1_sha,
                         "score_claim": False,
@@ -523,6 +641,24 @@ def main(argv: list[str] | None = None) -> int:
         "jacobian_lipschitz_values": lipschitz_values,
         "margin_map_resolution": (
             list(margin_map_resolution) if margin_map_resolution is not None else None
+        ),
+        "pair_sign_mask": (
+            {
+                "n_pairs": len(pair_sign_mask or ()),
+                "active_pairs": int(
+                    sum(1 for value in (pair_sign_mask or ()) if value != 0)
+                ),
+                "positive_pairs": int(
+                    sum(1 for value in (pair_sign_mask or ()) if value > 0)
+                ),
+                "negative_pairs": int(
+                    sum(1 for value in (pair_sign_mask or ()) if value < 0)
+                ),
+                "sha256": pair_sign_mask_sha256,
+                "label": pair_mask_label,
+            }
+            if pair_sign_mask is not None
+            else None
         ),
         "policy_count": len(rows),
         "candidates": rows,

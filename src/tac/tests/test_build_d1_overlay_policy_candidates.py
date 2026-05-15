@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import torch
@@ -244,6 +245,46 @@ def test_d1_policy_builder_can_rebuild_shrunk_margin_resolution(tmp_path: Path) 
     parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
     assert (parsed.height, parsed.width) == (4, 4)
     assert parsed.meta["source_margin_map_resolution"] == [8, 8]
+
+
+def test_d1_policy_builder_materializes_pair_mask_policy(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    out_dir = tmp_path / "out_pair_mask"
+    mask_path = tmp_path / "pair_mask.json"
+    signs = [1, 0, -1, 0, 1]
+    mask_path.write_text(json.dumps({"pair_signs": signs}) + "\n", encoding="utf-8")
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "green",
+            "--sign-policies",
+            "pair_mask",
+            "--pair-sign-mask-json",
+            str(mask_path),
+            "--pair-sign-mask-label",
+            "unit",
+        ]
+    )
+
+    assert rc == 0
+    summary = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")
+    assert summary["sign_policies"] == ["pair_mask"]
+    assert summary["pair_sign_mask"]["active_pairs"] == 3
+    row = summary["candidates"][0]
+    assert row["candidate_id"].endswith("_sign_pair_mask_pairmask_unit")
+    assert row["pair_sign_mask"]["positive_pairs"] == 2
+    parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
+    assert parsed.meta["overlay_sign_policy"] == "pair_mask"
+    assert parsed.meta["overlay_pair_sign_mask_n_pairs"] == len(signs)
+    assert parsed.meta["overlay_pair_sign_mask_sha256"] == row["pair_sign_mask"]["sha256"]
 
 
 def test_d1_policy_builder_rejects_bad_amplitude_scale() -> None:
