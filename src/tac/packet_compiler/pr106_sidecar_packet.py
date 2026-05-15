@@ -44,6 +44,9 @@ PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDE
     0x0A
 )
 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0B
+PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED = (
+    0x0C
+)
 PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -55,6 +58,7 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
 )
 PR106_HEADERLESS_INNER_FIRST_BYTE = 0xFF
 PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES = 169_974
@@ -84,6 +88,12 @@ PR106_PR101_FIXED_META_NOOP_RANK_BYTE = b"\x00"
 PR106_PR101_FIXED_META_PAYLOAD_BYTES = 526
 PR106_PR101_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = (
     PR106_PR101_FIXED_META_PAYLOAD_BYTES - PR106_PR101_FIXED_META_NOOP_RANK_BYTES
+)
+PR106_PR101_EXACT_RADIX_DIM_BYTES = 361
+PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = (
+    PR106_PR101_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    - PR106_PR101_FIXED_META_DIM_BYTES
+    + PR106_PR101_EXACT_RADIX_DIM_BYTES
 )
 PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
     n_pairs=600,
@@ -187,6 +197,16 @@ class PR106SidecarPacket:
             )
         ):
             return "pr101_ranked_no_op_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided"
+        if (
+            self.format_id
+            == (
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+            )
+        ):
+            return (
+                "pr101_ranked_no_op_hdm9_hlm3_magicless_exact_radix_dim_"
+                "fixed_meta_noop_rank_elided"
+            )
         return f"unknown_0x{self.format_id:02x}"
 
 
@@ -520,6 +540,16 @@ def _fixed_meta_framing_bytes() -> bytes:
     )
 
 
+def _exact_radix_fixed_meta_framing_bytes() -> bytes:
+    return struct.pack(
+        "<HHBB",
+        PR106_PR101_FIXED_META_NOOP_COUNT,
+        PR106_PR101_EXACT_RADIX_DIM_BYTES,
+        PR106_PR101_FIXED_META_RANK_BYTES,
+        PR106_PR101_FIXED_META_NOOP_RANK_BYTES,
+    )
+
+
 def _validate_fixed_meta_schema(schema: RankedSidecarSchema) -> None:
     expected = PR106_PR101_RANKED_SCHEMA
     if (
@@ -595,6 +625,59 @@ def reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(
         payload + PR106_PR101_FIXED_META_NOOP_RANK_BYTE,
         schema=schema,
     )
+
+
+def _encode_exact_radix_dim_payload(
+    dims: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> bytes:
+    """Pack no-op-free PR101 dims as one tight base-``n_dims`` integer."""
+
+    _validate_fixed_meta_schema(schema)
+    values = np.asarray(dims, dtype=np.int64).reshape(-1)
+    if values.size != schema.n_pairs:
+        raise ValueError(
+            f"exact-radix dim payload expects {schema.n_pairs} dims; got {values.size}"
+        )
+    if bool(np.any(values < 0)) or bool(np.any(values >= schema.n_dims)):
+        raise ValueError("exact-radix dim payload requires no-op-free dims in [0, n_dims)")
+    value = 0
+    for dim in reversed(values.tolist()):
+        value = value * int(schema.n_dims) + int(dim)
+    return value.to_bytes(PR106_PR101_EXACT_RADIX_DIM_BYTES, "little")
+
+
+def reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+    payload: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes]:
+    """Reconstruct format-0x02 bytes from format-0x0C exact-radix sidecar.
+
+    Format ``0x0C`` keeps the same fixed PR106/R2 sidecar semantics as 0x0B,
+    but stores the 600 no-op-free dim symbols as one base-28 integer instead of
+    the wider 375-byte PR101 dim container.
+    """
+
+    _validate_fixed_meta_schema(schema)
+    if PR106_PR101_FIXED_META_NOOP_COUNT != 0:
+        raise ValueError("exact-radix/noop-rank elision requires fixed noop_count=0")
+    if len(payload) != PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:
+        raise ValueError(
+            "format_id=0x0C exact-radix fixed-meta noop-rank-elided payload "
+            "length mismatch: "
+            f"got {len(payload)} bytes; "
+            f"expected {PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES}"
+        )
+    dim_bytes = PR106_PR101_EXACT_RADIX_DIM_BYTES
+    source_payload = (
+        payload[:dim_bytes]
+        + PR106_PR101_FIXED_META_RANK_BYTE
+        + payload[dim_bytes:]
+        + PR106_PR101_FIXED_META_NOOP_RANK_BYTE
+    )
+    return source_payload, _exact_radix_fixed_meta_framing_bytes()
 
 
 def _decompress_one_brotli_stream(payload: bytes, *, label: str) -> tuple[bytes, int]:
@@ -1150,18 +1233,7 @@ def recode_pr106_hdm8_hlm2_packet_to_hdm9(
     )
 
 
-def recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3(
-    packet: PR106SidecarPacket,
-) -> PR106SidecarPacket:
-    """Recode fixed HDM8/HLM2 or HDM9/HLM2 bytes to format 0x0A.
-
-    The caller supplies the already no-op-rank-elided sidecar payload. The
-    inner PR106 payload is converted to HDM9/HLM3, preserving the same decoded
-    HNeRV state and latent tensor.
-    """
-
-    reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(packet.sidecar_payload)
-    pr106_bytes = packet.pr106_bytes
+def _recode_hdm8_or_hdm9_hlm2_pr106_bytes_to_hdm9_hlm3(pr106_bytes: bytes) -> bytes:
     if len(pr106_bytes) < 4 or pr106_bytes[0] != PR106_HEADERLESS_INNER_FIRST_BYTE:
         raise ValueError("HLM3 recode requires a packed PR106 inner header")
     decoder_len = int.from_bytes(pr106_bytes[1:4], "little")
@@ -1186,11 +1258,27 @@ def recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3(
     if not latents.startswith(PR106_HDM8_HLM2_LATENT_MAGIC):
         raise ValueError("HLM3 recode requires HLM2 latent payload")
     hlm3_latents = encode_hlm3_latents_from_hlm2_payload(latents)
-    hdm9_hlm3_pr106_bytes = (
+    return (
         bytes([PR106_HEADERLESS_INNER_FIRST_BYTE])
         + len(hdm9_decoder).to_bytes(3, "little")
         + hdm9_decoder
         + hlm3_latents
+    )
+
+
+def recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3(
+    packet: PR106SidecarPacket,
+) -> PR106SidecarPacket:
+    """Recode fixed HDM8/HLM2 or HDM9/HLM2 bytes to format 0x0A.
+
+    The caller supplies the already no-op-rank-elided sidecar payload. The
+    inner PR106 payload is converted to HDM9/HLM3, preserving the same decoded
+    HNeRV state and latent tensor.
+    """
+
+    reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(packet.sidecar_payload)
+    hdm9_hlm3_pr106_bytes = _recode_hdm8_or_hdm9_hlm2_pr106_bytes_to_hdm9_hlm3(
+        packet.pr106_bytes
     )
     return PR106SidecarPacket(
         format_id=(
@@ -1274,6 +1362,26 @@ def decode_pr101_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
     )
 
 
+def decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
+    payload: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PR106 format-0x0C exact-radix fixed-meta sidecar payload."""
+
+    expanded_payload, expanded_meta = (
+        reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+            payload,
+            schema=schema,
+        )
+    )
+    return decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        expanded_payload,
+        expanded_meta,
+        schema=schema,
+    )
+
+
 def decode_pr106_sidecar_packet_dim_delta(
     packet: PR106SidecarPacket,
     *,
@@ -1329,6 +1437,14 @@ def decode_pr106_sidecar_packet_dim_delta(
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
     ):
         return decode_pr101_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
+            packet.sidecar_payload,
+            schema=schema,
+        )
+    if (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        return decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
             packet.sidecar_payload,
             schema=schema,
         )
@@ -1867,6 +1983,35 @@ def lossless_pr106_sidecar_recode_candidates(
                     ),
                 )
             )
+            exact_radix_dim = _encode_exact_radix_dim_payload(source_dims)
+            huff_payload = noop_rank_elided_payload[PR106_PR101_FIXED_META_DIM_BYTES:]
+            exact_radix_payload = exact_radix_dim + huff_payload
+            candidates.append(
+                _candidate(
+                    name=(
+                        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_"
+                        "noop_rank_elided_sidecar_format_0x0c"
+                    ),
+                    encoded_bytes=exact_radix_payload,
+                    decoded=(
+                        decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
+                            exact_radix_payload
+                        )
+                    ),
+                    sidecar_format_id=(
+                        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                    ),
+                    runtime_decoder_implemented=True,
+                    notes=(
+                        "runtime_reconstructs_pr106_inner_header_from_fixed_hdm9_hlm3_lengths",
+                        "runtime_reconstructs_fixed_hdm9_and_hlm3_section_magics",
+                        "runtime_derives_exact_radix_dim_bytes=361",
+                        "hdm9_requires_source_pr106_hdm8_or_hdm9_hlm2_decoder_payload",
+                        "hlm3_elides_hlm2_lo_brotli_len",
+                        "exact_radix_fixed_sidecar_noop_rank_elided_bytes=511",
+                    ),
+                )
+            )
 
     for candidate in candidates:
         if candidate.encoded_bytes and not (
@@ -1991,11 +2136,15 @@ def parse_pr106_sidecar_packet(
         hdm9_hlm3_magicless_format = (
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
         )
+        hdm9_hlm3_magicless_exact_radix_format = (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        )
         if (
             hdm8_inner_headerless_format not in supported_formats
             and hdm9_inner_headerless_format not in supported_formats
             and hdm9_hlm3_inner_headerless_format not in supported_formats
             and hdm9_hlm3_magicless_format not in supported_formats
+            and hdm9_hlm3_magicless_exact_radix_format not in supported_formats
         ):
             raise ValueError(
                 f"sidecar magic mismatch: got 0x{payload[0]:02X}, "
@@ -2047,6 +2196,33 @@ def parse_pr106_sidecar_packet(
             reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(sidecar)
             return PR106SidecarPacket(
                 format_id=hdm9_hlm3_magicless_format,
+                pr106_bytes=pr106_bytes,
+                sidecar_payload=sidecar,
+                framing_meta=None,
+            )
+        if (
+            hdm9_hlm3_magicless_exact_radix_format in supported_formats
+            and len(payload)
+            == (
+                PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+                - len(PR106_HDM9_HLM2_DECODER_MAGIC)
+                + PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES
+                - len(PR106_HDM9_HLM3_LATENT_MAGIC)
+                + PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+            )
+        ):
+            sidecar = payload[
+                -PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:
+            ]
+            magicless = payload[
+                :-PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+            ]
+            pr106_bytes = _reconstruct_hdm9_hlm3_magicless_pr106_bytes(magicless)
+            reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+                sidecar
+            )
+            return PR106SidecarPacket(
+                format_id=hdm9_hlm3_magicless_exact_radix_format,
                 pr106_bytes=pr106_bytes,
                 sidecar_payload=sidecar,
                 framing_meta=None,
@@ -2293,6 +2469,7 @@ def mutate_pr106_sidecar_semantic_correction(
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ):
         if packet.framing_meta is None:
             if packet.format_id not in (
@@ -2303,18 +2480,31 @@ def mutate_pr106_sidecar_semantic_correction(
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
             ):
                 raise ValueError("format_id=0x02 requires framing_meta")
             if packet.format_id in (
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
             ):
-                ranked_payload, ranked_meta = (
-                    reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(
-                        packet.sidecar_payload,
-                        schema=schema,
+                if (
+                    packet.format_id
+                    == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                ):
+                    ranked_payload, ranked_meta = (
+                        reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+                            packet.sidecar_payload,
+                            schema=schema,
+                        )
                     )
-                )
+                else:
+                    ranked_payload, ranked_meta = (
+                        reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(
+                            packet.sidecar_payload,
+                            schema=schema,
+                        )
+                    )
             else:
                 ranked_payload, ranked_meta = (
                     reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(
@@ -2358,25 +2548,48 @@ def mutate_pr106_sidecar_semantic_correction(
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
         ):
-            mutated_meta = _fixed_meta_framing_bytes()
+            exact_radix_format = (
+                packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+            )
+            mutated_meta = (
+                _exact_radix_fixed_meta_framing_bytes()
+                if exact_radix_format
+                else _fixed_meta_framing_bytes()
+            )
             if ranked_meta != mutated_meta:
                 raise ValueError(
                     f"format_id=0x{packet.format_id:02X} expanded metadata "
                     "did not match fixed meta"
                 )
-            mutated_sidecar_payload = (
-                mutated_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
-                + mutated_payload[
+            if exact_radix_format:
+                huff_start = (
                     PR106_PR101_FIXED_META_DIM_BYTES
-                    + PR106_PR101_FIXED_META_RANK_BYTES :
-                ]
-            )
+                    + PR106_PR101_FIXED_META_RANK_BYTES
+                )
+                huff_end = -PR106_PR101_FIXED_META_NOOP_RANK_BYTES
+                mutated_sidecar_payload = (
+                    _encode_exact_radix_dim_payload(dims, schema=schema)
+                    + mutated_payload[huff_start:huff_end]
+                    + PR106_PR101_FIXED_META_NOOP_RANK_BYTE
+                )
+            else:
+                mutated_sidecar_payload = (
+                    mutated_payload[:PR106_PR101_FIXED_META_DIM_BYTES]
+                    + mutated_payload[
+                        PR106_PR101_FIXED_META_DIM_BYTES
+                        + PR106_PR101_FIXED_META_RANK_BYTES :
+                    ]
+                )
             if (
                 packet.format_id
                 == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED
                 or packet.format_id
                 == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+                or packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
             ):
                 if mutated_sidecar_payload[-1:] != PR106_PR101_FIXED_META_NOOP_RANK_BYTE:
                     raise ValueError(
@@ -2421,6 +2634,7 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ) and len(packet.sidecar_payload) > 0xFFFF:
         raise ValueError("sidecar payload too large for u16 length field")
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI and packet.framing_meta is not None:
@@ -2462,6 +2676,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         )
         or packet.format_id
         == (PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED)
+        or packet.format_id
+        == (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        )
     ):
         if packet.framing_meta is not None:
             raise ValueError(
@@ -2474,6 +2692,13 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
             == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
         ):
             reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload(
+                packet.sidecar_payload
+            )
+        elif (
+            packet.format_id
+            == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        ):
+            reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
                 packet.sidecar_payload
             )
         else:
@@ -2508,6 +2733,11 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
     ):
         _hdm9_hlm3_magicless_payload(packet.pr106_bytes)
+    if (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        _hdm9_hlm3_magicless_payload(packet.pr106_bytes)
 
     if (
         packet.format_id
@@ -2537,6 +2767,8 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
     elif (
         packet.format_id
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+        or packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     ):
         prefix = _hdm9_hlm3_magicless_payload(packet.pr106_bytes)
     else:
@@ -2579,6 +2811,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         )
         or packet.format_id
         == (PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED)
+        or packet.format_id
+        == (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        )
     ):
         return prefix + packet.sidecar_payload
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
@@ -2646,6 +2882,8 @@ def pr106_sidecar_consumed_byte_proof(
         != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED
         and packet.format_id
         != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+        and packet.format_id
+        != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     ):
         add("magic", bytes([PR106_SIDECAR_MAGIC]), score_affecting=False)
         add("format_id", bytes([packet.format_id]), score_affecting=False)
@@ -2658,6 +2896,7 @@ def pr106_sidecar_consumed_byte_proof(
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
         )
     ):
         add(
@@ -2695,6 +2934,8 @@ def pr106_sidecar_consumed_byte_proof(
     elif (
         packet.format_id
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
+        or packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     ):
         add(
             "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
@@ -2712,6 +2953,7 @@ def pr106_sidecar_consumed_byte_proof(
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ):
         add(
             "sidecar_len_le_u16",
@@ -2784,18 +3026,44 @@ def pr106_sidecar_manifest(
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
         )
         else {
-            "fields": PR106_PR101_FIXED_META_FIELDS,
-            "framing_meta_bytes": len(_fixed_meta_framing_bytes()),
-            "framing_meta_sha256": sha256_hex(_fixed_meta_framing_bytes()),
+            "fields": (
+                {
+                    **PR106_PR101_FIXED_META_FIELDS,
+                    "dim_bytes": PR106_PR101_EXACT_RADIX_DIM_BYTES,
+                }
+                if packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                else PR106_PR101_FIXED_META_FIELDS
+            ),
+            "framing_meta_bytes": (
+                len(_exact_radix_fixed_meta_framing_bytes())
+                if packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                else len(_fixed_meta_framing_bytes())
+            ),
+            "framing_meta_sha256": (
+                sha256_hex(_exact_radix_fixed_meta_framing_bytes())
+                if packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                else sha256_hex(_fixed_meta_framing_bytes())
+            ),
             "sidecar_tail_bytes": len(packet.sidecar_payload),
             "noop_rank_elided": (
                 packet.format_id
                 in (
                     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
                     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
                 )
+            ),
+            "exact_radix_dim_bytes": (
+                PR106_PR101_EXACT_RADIX_DIM_BYTES
+                if packet.format_id
+                == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                else None
             ),
             "implicit_pr106_len": (
                 packet.format_id
@@ -2806,6 +3074,7 @@ def pr106_sidecar_manifest(
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
             )
             ),
             "headerless_packet": (
@@ -2836,6 +3105,12 @@ def pr106_sidecar_manifest(
                     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
                 )
             ),
+            "hdm9_hlm3_magicless_exact_radix_packet": (
+                packet.format_id
+                == (
+                    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+                )
+            ),
             "hdm8_hlm2_fixed_lengths": None
             if packet.format_id
             != PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
@@ -2864,6 +3139,7 @@ def pr106_sidecar_manifest(
             not in (
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
             )
             else {
                 "decoder_payload_bytes": PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES,
@@ -3076,6 +3352,7 @@ def build_pr106_sidecar_recode_candidate_packet(
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ):
         if candidate.framing_meta_bytes:
             raise ValueError(
@@ -3107,6 +3384,19 @@ def build_pr106_sidecar_recode_candidate_packet(
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED
     ):
         packet = recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3_magicless(packet)
+    if (
+        candidate.sidecar_format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        try:
+            _hdm9_hlm3_magicless_payload(packet.pr106_bytes)
+        except ValueError:
+            packet = replace(
+                packet,
+                pr106_bytes=_recode_hdm8_or_hdm9_hlm2_pr106_bytes_to_hdm9_hlm3(
+                    packet.pr106_bytes
+                ),
+            )
     emitted = emit_pr106_sidecar_packet(packet)
     reparsed = parse_pr106_sidecar_packet(emitted)
     reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(

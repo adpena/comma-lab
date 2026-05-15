@@ -13,9 +13,9 @@
       "rate_score_delta_if_components_equal": -9.3220253437104e-06,
       "ready_for_archive_preflight": false,
       "ready_for_exact_eval_dispatch": false,
-      "required_runtime_change": "Add a new PacketIR sidecar format with fixed dim_bytes=361 instead of 375.",
-      "requires_new_runtime_format": true,
-      "runtime_supported_now": false,
+      "required_runtime_change": "PacketIR format0C uses fixed dim_bytes=361 instead of 375.",
+      "requires_new_runtime_format": false,
+      "runtime_supported_now": true,
       "score_claim": false
     },
     "generic_compressor_best_by_source": [
@@ -63,22 +63,21 @@
     "generic_compressor_rate_positive_count": 0
   },
   "decision": {
-    "best_unimplemented_byte_savings": 14,
-    "best_unimplemented_rate_score_delta_if_components_equal": -9.3220253437104e-06,
+    "best_unimplemented_byte_savings": 0,
+    "best_unimplemented_rate_score_delta_if_components_equal": 0.0,
     "dispatch_blockers": [
       "planning_probe_only_no_archive_emitted",
-      "format0c_runtime_not_implemented",
       "requires_full_frame_parity_before_exact_eval",
       "requires_lane_dispatch_claim_before_exact_cuda",
       "generic_compressor_rows_do_not_have_runtime_decoder"
     ],
     "materiality": "below_cpu_sub_0_192_gap_and_not_cuda_frontier_material",
-    "realized_runtime_supported_byte_savings": 0,
-    "recommended_next": "Implement format0C only if we are doing a batch PacketIR runtime pass; otherwise prioritize decoder/latent stream transforms because the sidecar has only 14 byte-closed bytes of identified headroom.",
+    "realized_runtime_supported_byte_savings": 14,
+    "recommended_next": "Emit a byte-closed format0C archive and run same-runtime parity before any exact-eval dispatch; prioritize decoder/latent stream transforms because the sidecar has only 14 byte-closed bytes of headroom.",
     "verdict": "small_exact_radix_runtime_format_candidate_found"
   },
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-15T08:12:35.857521+00:00",
+  "generated_at_utc": "2026-05-15T08:59:24.710420+00:00",
   "planning_only": true,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
@@ -302,13 +301,14 @@
   "summary": {
     "current_sidecar_payload_bytes": 525,
     "exact_radix_candidate_payload_bytes": 511,
-    "identified_sidecar_savings_requires_runtime": 14,
+    "format0c_runtime_supported_savings": 14,
+    "identified_sidecar_savings_requires_runtime": 0,
     "realized_score_claim": false
   },
   "tool": "tools/probe_pr106_format0b_sidecar_compression.py",
   "tool_run_manifest": {
     "argv": [],
-    "canonical_payload_without_tool_manifest_sha256": "7955434ad6db73a57d02acea032a3785f93152b73e19d1c797f2fafee139ea4b",
+    "canonical_payload_without_tool_manifest_sha256": "710dede341ba82819715dd28f6ae204da54ff8a5487d9478c3d4a9a957bdc5ce",
     "dispatch_attempted": false,
     "input_files": [
       {

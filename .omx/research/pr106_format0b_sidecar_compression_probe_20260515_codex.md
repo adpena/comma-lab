@@ -17,8 +17,8 @@
 - current sidecar payload: `525` bytes
 - current dim container: `375` bytes
 - exact base-28 dim container: `361` bytes
-- candidate payload if runtime format lands: `511` bytes
-- identified savings requiring runtime: `14` bytes
+- format0C candidate payload: `511` bytes
+- runtime-supported format0C savings: `14` bytes
 - rate-only score delta if components equal: `-0.000009322025`
 
 ## Semantic Stats
@@ -39,11 +39,10 @@
 ## Blockers
 
 - `planning_probe_only_no_archive_emitted`
-- `format0c_runtime_not_implemented`
 - `requires_full_frame_parity_before_exact_eval`
 - `requires_lane_dispatch_claim_before_exact_cuda`
 - `generic_compressor_rows_do_not_have_runtime_decoder`
 
 ## Recommendation
 
-Implement format0C only if we are doing a batch PacketIR runtime pass; otherwise prioritize decoder/latent stream transforms because the sidecar has only 14 byte-closed bytes of identified headroom.
+Emit a byte-closed format0C archive and run same-runtime parity before any exact-eval dispatch; prioritize decoder/latent stream transforms because the sidecar has only 14 byte-closed bytes of headroom.

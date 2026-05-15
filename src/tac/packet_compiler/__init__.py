@@ -97,6 +97,8 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_PR101_FIXED_META_FIELDS,
     PR106_PR101_FIXED_META_RANK_BYTE,
     PR106_PR101_FIXED_META_RANK_BYTES,
+    PR106_PR101_EXACT_RADIX_DIM_BYTES,
+    PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES,
     PR106_PR101_RANKED_SCHEMA,
     PR106_HDM8_HLM2_DECODER_MAGIC,
     PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES,
@@ -117,6 +119,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
@@ -132,6 +135,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     decode_hlm3_latents_to_hlm2_payload,
     decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta,
     decode_pr101_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta,
+    decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta,
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
     decode_pr101_rank_elided_sidecar_payload_to_dim_delta,
     decode_hdm9_decoder_to_hdm8_payload,
@@ -156,6 +160,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     recode_pr106_hdm8_or_hdm9_hlm2_packet_to_hdm9_hlm3_magicless,
     reexpand_pr101_fixed_meta_rank_elided_sidecar_payload,
     reexpand_pr101_fixed_meta_noop_rank_elided_sidecar_payload,
+    reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload,
     reexpand_pr101_rank_elided_sidecar_payload,
 )
 from tac.packet_compiler.pr106_latent_sidecar_selection import (

@@ -20,6 +20,8 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
                     low-Brotli length and the fixed no-op rank byte elided
   format_id=0x0B — format_id=0x0A with fixed HDM9/HLM3 section magic bytes
                     elided and reconstructed by committed runtime grammar
+  format_id=0x0C — format_id=0x0B with the 600 dim symbols stored as an
+                    exact base-28 integer instead of the wider PR101 dim field
 
 All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
@@ -69,6 +71,7 @@ SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x08
 SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x09
 SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0A
 SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0B
+SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED = 0x0C
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -79,6 +82,7 @@ SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+    SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -91,6 +95,10 @@ FIXED_META_RANK_BYTE = b"\x00"
 FIXED_META_NOOP_RANK_BYTE = b"\x00"
 FIXED_META_PAYLOAD_BYTES = 526
 FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = 525
+EXACT_RADIX_DIM_BYTES = 361
+EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = (
+    FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES - FIXED_META_DIM_BYTES + EXACT_RADIX_DIM_BYTES
+)
 HEADERLESS_INNER_FIRST_BYTE = 0xFF
 HDM8_HLM2_DECODER_PAYLOAD_BYTES = 169_974
 HDM9_HLM2_DECODER_PAYLOAD_BYTES = 169_950
@@ -301,6 +309,22 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
                 bin_bytes[-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:],
                 None,
             )
+        expected_exact_radix_magicless_len = (
+            HDM9_HLM2_DECODER_PAYLOAD_BYTES
+            - len(HDM9_HLM2_DECODER_MAGIC)
+            + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+            - len(HDM9_HLM3_LATENT_MAGIC)
+            + EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+        )
+        if len(bin_bytes) == expected_exact_radix_magicless_len:
+            return (
+                SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+                reconstruct_hdm9_hlm3_magicless_pr106_bytes(
+                    bin_bytes[:-EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES]
+                ),
+                bin_bytes[-EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:],
+                None,
+            )
         if len(bin_bytes) < FIXED_META_PAYLOAD_BYTES + 1:
             raise ValueError("HDM8/HLM2 inner-headerless sidecar truncated before payload")
         inner_without_header = bin_bytes[:-FIXED_META_PAYLOAD_BYTES]
@@ -422,6 +446,16 @@ def fixed_meta_framing_bytes() -> bytes:
     )
 
 
+def exact_radix_fixed_meta_framing_bytes() -> bytes:
+    return struct.pack(
+        "<HHBB",
+        FIXED_META_NOOP_COUNT,
+        EXACT_RADIX_DIM_BYTES,
+        FIXED_META_RANK_BYTES,
+        FIXED_META_NOOP_RANK_BYTES,
+    )
+
+
 def decode_pr101_fixed_meta_rank_elided_sidecar(
     payload: bytes,
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -452,6 +486,28 @@ def decode_pr101_fixed_meta_noop_rank_elided_sidecar(
         )
     return decode_pr101_fixed_meta_rank_elided_sidecar(
         payload + FIXED_META_NOOP_RANK_BYTE
+    )
+
+
+def decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
+    payload: bytes,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode format_id=0x0C by restoring rank/no-op rank around exact-radix dims."""
+    expected_payload_bytes = EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    if len(payload) != expected_payload_bytes:
+        raise ValueError(
+            "exact-radix fixed-meta PR101 sidecar payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected_payload_bytes}"
+        )
+    expanded_payload = (
+        payload[:EXACT_RADIX_DIM_BYTES]
+        + FIXED_META_RANK_BYTE
+        + payload[EXACT_RADIX_DIM_BYTES:]
+        + FIXED_META_NOOP_RANK_BYTE
+    )
+    return decode_pr101_grammar_sidecar(
+        expanded_payload,
+        exact_radix_fixed_meta_framing_bytes(),
     )
 
 
@@ -534,6 +590,13 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     ):
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_noop_rank_elided_sidecar(
+            sidecar_blob
+        )
+    elif (
+        format_id
+        == SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        dim_arr, delta_q_arr = decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
             sidecar_blob
         )
     else:  # fixed-meta rank-elided formats 0x05, 0x06, 0x07, 0x08, and 0x09

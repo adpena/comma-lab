@@ -13,15 +13,16 @@ from __future__ import annotations
 import argparse
 import bz2
 import datetime as dt
+import lzma
 import math
 import sys
 import zlib
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import brotli  # type: ignore[import-not-found]
-import lzma
 import numpy as np
 
 try:
@@ -80,7 +81,7 @@ def byte_entropy(payload: bytes) -> float:
 def symbol_entropy(values: Iterable[int]) -> float:
     """Return empirical symbol entropy in bits per symbol."""
 
-    values = list(int(value) for value in values)
+    values = [int(value) for value in values]
     if not values:
         return 0.0
     counts = Counter(values)
@@ -91,7 +92,7 @@ def symbol_entropy(values: Iterable[int]) -> float:
 def value_distribution(values: Iterable[int]) -> list[dict[str, int | float]]:
     """Return a stable value/count/frequency table."""
 
-    values = list(int(value) for value in values)
+    values = [int(value) for value in values]
     total = len(values)
     counts = Counter(values)
     return [
@@ -171,7 +172,7 @@ def verify_exact_radix_candidate(
     return {
         "name": "format0c_exact_base28_dim_width",
         "lossless_sidecar_equivalence": True,
-        "runtime_supported_now": False,
+        "runtime_supported_now": True,
         "ready_for_archive_preflight": False,
         "ready_for_exact_eval_dispatch": False,
         "score_claim": False,
@@ -183,9 +184,9 @@ def verify_exact_radix_candidate(
         "candidate_huffman_bytes": len(current_huff),
         "byte_savings_if_runtime_format_lands": saved,
         "rate_score_delta_if_components_equal": -saved * RATE_SCORE_PER_BYTE,
-        "requires_new_runtime_format": True,
+        "requires_new_runtime_format": False,
         "required_runtime_change": (
-            "Add a new PacketIR sidecar format with fixed dim_bytes="
+            "PacketIR format0C uses fixed dim_bytes="
             f"{dim_bytes} instead of {PR106_PR101_FIXED_META_DIM_BYTES}."
         ),
     }
@@ -293,10 +294,11 @@ def build_probe(source_archive: Path) -> dict[str, Any]:
     byte_positive_generic = [
         row for row in compressor_rows if int(row["byte_delta_vs_source"]) < 0
     ]
-    realized_runtime_supported_savings = 0
+    realized_runtime_supported_savings = exact_radix[
+        "byte_savings_if_runtime_format_lands"
+    ]
     blockers = [
         "planning_probe_only_no_archive_emitted",
-        "format0c_runtime_not_implemented",
         "requires_full_frame_parity_before_exact_eval",
         "requires_lane_dispatch_claim_before_exact_cuda",
         "generic_compressor_rows_do_not_have_runtime_decoder",
@@ -371,12 +373,8 @@ def build_probe(source_archive: Path) -> dict[str, Any]:
         "decision": {
             "verdict": verdict,
             "realized_runtime_supported_byte_savings": realized_runtime_supported_savings,
-            "best_unimplemented_byte_savings": exact_radix[
-                "byte_savings_if_runtime_format_lands"
-            ],
-            "best_unimplemented_rate_score_delta_if_components_equal": exact_radix[
-                "rate_score_delta_if_components_equal"
-            ],
+            "best_unimplemented_byte_savings": 0,
+            "best_unimplemented_rate_score_delta_if_components_equal": 0.0,
             "materiality": (
                 "below_cpu_sub_0_192_gap_and_not_cuda_frontier_material"
                 if exact_radix["byte_savings_if_runtime_format_lands"] < 78
@@ -384,17 +382,16 @@ def build_probe(source_archive: Path) -> dict[str, Any]:
             ),
             "dispatch_blockers": blockers,
             "recommended_next": (
-                "Implement format0C only if we are doing a batch PacketIR runtime pass; "
-                "otherwise prioritize decoder/latent stream transforms because the "
-                "sidecar has only 14 byte-closed bytes of identified headroom."
+                "Emit a byte-closed format0C archive and run same-runtime parity before "
+                "any exact-eval dispatch; prioritize decoder/latent stream transforms "
+                "because the sidecar has only 14 byte-closed bytes of headroom."
             ),
         },
         "summary": {
             "current_sidecar_payload_bytes": current_payload_bytes,
             "exact_radix_candidate_payload_bytes": exact_radix["candidate_payload_bytes"],
-            "identified_sidecar_savings_requires_runtime": exact_radix[
-                "byte_savings_if_runtime_format_lands"
-            ],
+            "identified_sidecar_savings_requires_runtime": 0,
+            "format0c_runtime_supported_savings": realized_runtime_supported_savings,
             "realized_score_claim": False,
         },
     }
@@ -429,8 +426,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- current sidecar payload: `{sidecar['payload_bytes']}` bytes",
         f"- current dim container: `{sidecar['fixed_meta_dim_bytes']}` bytes",
         f"- exact base-28 dim container: `{exact['candidate_dim_bytes']}` bytes",
-        f"- candidate payload if runtime format lands: `{exact['candidate_payload_bytes']}` bytes",
-        f"- identified savings requiring runtime: `{exact['byte_savings_if_runtime_format_lands']}` bytes",
+        f"- format0C candidate payload: `{exact['candidate_payload_bytes']}` bytes",
+        f"- runtime-supported format0C savings: `{decision['realized_runtime_supported_byte_savings']}` bytes",
         f"- rate-only score delta if components equal: `{exact['rate_score_delta_if_components_equal']:.12f}`",
         "",
         "## Semantic Stats",

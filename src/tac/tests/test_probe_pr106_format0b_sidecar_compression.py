@@ -40,7 +40,7 @@ def test_exact_radix_candidate_saves_fourteen_sidecar_bytes() -> None:
     )
 
     assert candidate["lossless_sidecar_equivalence"] is True
-    assert candidate["runtime_supported_now"] is False
+    assert candidate["runtime_supported_now"] is True
     assert candidate["candidate_dim_bytes"] == 361
     assert candidate["candidate_payload_bytes"] == 511
     assert candidate["byte_savings_if_runtime_format_lands"] == 14
@@ -77,4 +77,5 @@ def test_live_format0b_probe_if_artifact_available() -> None:
         ]
         is True
     )
-    assert "format0c_runtime_not_implemented" in payload["decision"]["dispatch_blockers"]
+    assert payload["decision"]["realized_runtime_supported_byte_savings"] == 14
+    assert "format0c_runtime_not_implemented" not in payload["decision"]["dispatch_blockers"]

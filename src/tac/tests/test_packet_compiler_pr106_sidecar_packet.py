@@ -14,6 +14,7 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
@@ -39,6 +40,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_R2_ARCHIVE = REPO_ROOT / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_PR101_ARCHIVE = (
     REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
+)
+PR106_HDM8_FORMAT07_ARCHIVE = (
+    REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 )
 
 
@@ -866,3 +870,46 @@ def test_pr106_sidecar_fixed_meta_rank_elided_rejects_bad_payload_length() -> No
 
     with pytest.raises(ValueError, match="payload length mismatch"):
         parse_pr106_sidecar_packet(emitted + b"x")
+
+
+def test_pr106_sidecar_format0c_exact_radix_recode_is_lossless_and_smaller() -> None:
+    archive_bytes = PR106_HDM8_FORMAT07_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    candidates = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }
+    format0b = candidates[
+        "pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b"
+    ]
+    format0c = candidates[
+        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_"
+        "noop_rank_elided_sidecar_format_0x0c"
+    ]
+
+    packet0b = build_pr106_sidecar_recode_candidate_packet(packet, format0b)
+    packet0c = build_pr106_sidecar_recode_candidate_packet(packet, format0c)
+    emitted0b = emit_pr106_sidecar_packet(packet0b)
+    emitted0c = emit_pr106_sidecar_packet(packet0c)
+    reparsed = parse_pr106_sidecar_packet(emitted0c)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+
+    assert format0c.runtime_decoder_implemented is True
+    assert packet0c.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert len(packet0c.sidecar_payload) == 511
+    assert len(emitted0c) == len(emitted0b) - 14
+    assert (reparsed_dims == dims).all()
+    assert (reparsed_deltas == deltas).all()
+    assert proof["all_payload_bytes_accounted"] is True
+    assert proof["score_affecting_section_names"] == [
+        "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+        "sidecar_payload",
+    ]
+    assert manifest["derived_fixed_meta"]["hdm9_hlm3_magicless_exact_radix_packet"] is True
+    assert manifest["derived_fixed_meta"]["exact_radix_dim_bytes"] == 361

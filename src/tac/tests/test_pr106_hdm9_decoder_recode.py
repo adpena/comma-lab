@@ -13,13 +13,16 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_HDM9_HLM3_LATENT_PAYLOAD_BYTES,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+    build_pr106_sidecar_recode_candidate_packet,
     decode_hdm9_decoder_to_hdm8_payload,
     decode_hlm3_latents_to_hlm2_payload,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
     encode_hlm3_latents_from_hlm2_payload,
+    lossless_pr106_sidecar_recode_candidates,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
     pr106_sidecar_manifest,
@@ -199,6 +202,52 @@ def test_hdm9_hlm3_magicless_recode_saves_fixed_magic_bytes_and_runtime_decodes(
     assert manifest["derived_fixed_meta"]["hdm9_hlm3_fixed_lengths"][
         "elided_section_magic_bytes"
     ] == 8
+
+
+def test_hdm9_hlm3_magicless_exact_radix_recode_runtime_decodes() -> None:
+    member = read_single_stored_member_archive(HDM8_FORMAT07_ARCHIVE.read_bytes())
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    source_dims, source_deltas = decode_pr106_sidecar_packet_dim_delta(source_packet)
+    candidates = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(
+            source_dims,
+            source_deltas,
+        )
+    }
+    format0b = candidates[
+        "pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b"
+    ]
+    format0c = candidates[
+        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_"
+        "noop_rank_elided_sidecar_format_0x0c"
+    ]
+
+    packet0b = build_pr106_sidecar_recode_candidate_packet(source_packet, format0b)
+    packet0c = build_pr106_sidecar_recode_candidate_packet(source_packet, format0c)
+    emitted0c = emit_pr106_sidecar_packet(packet0c)
+    reparsed = parse_pr106_sidecar_packet(emitted0c)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    inflate = _load_module(RUNTIME_INFLATE, "pr106_hdm12_runtime_inflate")
+    parsed = inflate.parse_sidecar_archive(emitted0c)
+    runtime_dims, runtime_deltas = (
+        inflate.decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
+            parsed[2]
+        )
+    )
+
+    assert packet0c.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert parsed[0] == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert parsed[1] == packet0c.pr106_bytes
+    assert len(emitted0c) == len(emit_pr106_sidecar_packet(packet0b)) - 14
+    assert (reparsed_dims == source_dims).all()
+    assert (reparsed_deltas == source_deltas).all()
+    assert (runtime_dims == source_dims).all()
+    assert (runtime_deltas == source_deltas).all()
 
 
 def test_hdm9_hlm3_magicless_parser_rejects_same_length_garbage() -> None:
