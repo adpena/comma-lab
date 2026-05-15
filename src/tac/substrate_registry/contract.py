@@ -22,29 +22,30 @@ the API is narrow: 36 canonical fields, one error class, one factory.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields
-from typing import Any, Mapping
+from typing import Any
 
 __all__ = [
-    "SubstrateContract",
-    "SubstrateContractError",
-    "LEGAL_TARGET_MODES",
+    "KNOWN_CATALOG_COMPLIANCE_TOKENS",
+    "LEGAL_CANARY_STATUS",
     "LEGAL_DEPLOYMENT_TARGETS",
     "LEGAL_EXPORT_FORMATS",
-    "LEGAL_SCORE_AWARE_LOSS",
-    "LEGAL_OPERATIONAL_STATUS",
-    "LEGAL_MIN_SMOKE_GPU",
-    "LEGAL_PYAV_DECODE_STRATEGY",
-    "LEGAL_CANARY_STATUS",
-    "LEGAL_VIDEO_INPUT_STRATEGY",
-    "LEGAL_HOOK_SENSITIVITY",
-    "LEGAL_HOOK_PARETO",
+    "LEGAL_GPU_KEY",
     "LEGAL_HOOK_BIT_ALLOCATOR",
     "LEGAL_HOOK_CONTINUAL_LEARNING",
-    "LEGAL_GPU_KEY",
+    "LEGAL_HOOK_PARETO",
+    "LEGAL_HOOK_SENSITIVITY",
+    "LEGAL_MIN_SMOKE_GPU",
+    "LEGAL_OPERATIONAL_STATUS",
     "LEGAL_PLATFORM_KEY",
-    "KNOWN_CATALOG_COMPLIANCE_TOKENS",
+    "LEGAL_PYAV_DECODE_STRATEGY",
+    "LEGAL_SCORE_AWARE_LOSS",
+    "LEGAL_TARGET_MODES",
+    "LEGAL_VIDEO_INPUT_STRATEGY",
     "NOT_APPLICABLE_WITH_RATIONALE",
+    "SubstrateContract",
+    "SubstrateContractError",
 ]
 
 
@@ -339,17 +340,20 @@ class SubstrateContract:
             raise SubstrateContractError(
                 "runtime_overlay_consumed=True requires score_improvement_mechanism_status=OPERATIONAL"
             )
-        if self.archive_bytes_added is not None:
-            if self.score_improvement_mechanism_status == "SCAFFOLD_DEFERRED_INTEGRATION":
-                # Mirror of Catalog #220: a SCAFFOLD lane that adds bytes >1 KB
-                # without an operational mechanism is the research-substrate trap.
-                kb_match = re.search(r"(\d+)\s*KB", self.archive_bytes_added)
-                if kb_match and int(kb_match.group(1)) > 1:
-                    raise SubstrateContractError(
-                        f"archive_bytes_added={self.archive_bytes_added!r} declares >1 KB "
-                        "but score_improvement_mechanism_status=SCAFFOLD_DEFERRED_INTEGRATION "
-                        "(Catalog #220 forbidden anti-pattern). Use OPERATIONAL or RESEARCH_ONLY."
-                    )
+        if (
+            self.archive_bytes_added is not None
+            and self.score_improvement_mechanism_status
+            == "SCAFFOLD_DEFERRED_INTEGRATION"
+        ):
+            # Mirror of Catalog #220: a SCAFFOLD lane that adds bytes >1 KB
+            # without an operational mechanism is the research-substrate trap.
+            kb_match = re.search(r"(\d+)\s*KB", self.archive_bytes_added)
+            if kb_match and int(kb_match.group(1)) > 1:
+                raise SubstrateContractError(
+                    f"archive_bytes_added={self.archive_bytes_added!r} declares >1 KB "
+                    "but score_improvement_mechanism_status=SCAFFOLD_DEFERRED_INTEGRATION "
+                    "(Catalog #220 forbidden anti-pattern). Use OPERATIONAL or RESEARCH_ONLY."
+                )
 
         # Recipe
         if not isinstance(self.recipe_smoke_only, bool):
@@ -458,6 +462,72 @@ class SubstrateContract:
             if k not in legal_rationale_keys:
                 raise SubstrateContractError(
                     f"hook_not_applicable_rationale has illegal key {k!r}; legal={sorted(legal_rationale_keys)}"
+                )
+
+        # ------------------------------------------------------------------
+        # Adversarial-review cross-field invariants (2026-05-15).
+        # See ``feedback_meta_layer_adversarial_review_round_1_2_landed_20260515.md``
+        # for the per-finding rationale.
+        # ------------------------------------------------------------------
+
+        # Finding F1 (Fridrich MEDIUM): a contract that claims a monolithic
+        # archive grammar but lists multiple parser sections is internally
+        # inconsistent. Detect by token + section count.
+        if (
+            "monolithic" in self.archive_grammar.lower()
+            and "single_file" in self.archive_grammar.lower()
+            and len(self.parser_section_manifest) > 1
+        ):
+            # Allow the substrate to declare logical sections within the SAME
+            # monolithic file (e.g. header / weights / latents) — the rule
+            # fires only when the section *names* look like distinct files
+            # (suffixes ``.bin`` / ``.pt`` / ``.zip`` / ``.mkv`` / ``.br``).
+            file_like = [
+                k
+                for k in self.parser_section_manifest
+                if isinstance(k, str)
+                and any(
+                    k.lower().endswith(ext)
+                    for ext in (".bin", ".pt", ".zip", ".mkv", ".br", ".mp4", ".pkl")
+                )
+            ]
+            if len(file_like) > 1:
+                raise SubstrateContractError(
+                    f"archive_grammar={self.archive_grammar!r} claims monolithic single-file "
+                    f"but parser_section_manifest declares multiple file-like sections "
+                    f"{file_like!r}. Per HNeRV parity discipline lesson 3 a monolithic "
+                    "single-file archive must not enumerate distinct file members. Either "
+                    "rename the sections to logical labels (header/weights/latents) or "
+                    "change archive_grammar to a multi-file token."
+                )
+
+        # Finding M1 (MacKay MEDIUM): cost_band_gpu_key must be at least as
+        # capable as recipe_min_smoke_gpu, otherwise the cost-band budgets
+        # for a class the smoke literally cannot run on. Order is the
+        # observed Modal/Vast.ai capability ladder: T4 < L4 < A10G < L40S < A100 < H100.
+        _GPU_CAPABILITY_RANK = {
+            "T4": 0, "L4": 1, "A10G": 2, "L40S": 3, "A100": 4, "H100": 5,
+        }
+        full_rank = _GPU_CAPABILITY_RANK.get(self.cost_band_gpu_key, -1)
+        smoke_rank = _GPU_CAPABILITY_RANK.get(self.recipe_min_smoke_gpu, -1)
+        if full_rank >= 0 and smoke_rank >= 0 and full_rank < smoke_rank:
+            raise SubstrateContractError(
+                f"cost_band_gpu_key={self.cost_band_gpu_key!r} is cheaper than "
+                f"recipe_min_smoke_gpu={self.recipe_min_smoke_gpu!r}. The cost band "
+                "cannot budget for a class less capable than the smoke requires; the "
+                "smoke would never run. Promote cost_band_gpu_key OR demote "
+                "recipe_min_smoke_gpu so cost_band >= smoke."
+            )
+
+        # Finding Q1 (Quantizr LOW): catalog_compliance_declarations is
+        # advisory metadata; substrates can declare new catalog hooks as they
+        # land. We do NOT refuse unknown tokens (that would race with the
+        # canonical catalog table updates). But we raise when the tuple
+        # contains a value that is not a string, since that is always wrong.
+        for tok in self.catalog_compliance_declarations:
+            if not isinstance(tok, str) or not tok.strip():
+                raise SubstrateContractError(
+                    f"catalog_compliance_declarations contains non-string or empty entry: {tok!r}"
                 )
 
     # ------------------------------------------------------------------

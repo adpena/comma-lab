@@ -22,18 +22,32 @@ from tac.substrate_registry.contract import (
 from tac.substrate_registry.decorator import get_registered_substrates
 
 __all__ = [
-    "query_substrates_for_sensitivity_hook",
-    "query_substrates_for_pareto_hook",
-    "query_substrates_for_bit_allocator_hook",
-    "query_substrates_for_autopilot_ranker",
-    "query_substrates_for_continual_learning_anchor_kind",
-    "query_substrates_for_probe_disambiguators",
     "query_substrates_by_compliance_token",
+    "query_substrates_for_autopilot_ranker",
+    "query_substrates_for_bit_allocator_hook",
+    "query_substrates_for_continual_learning_anchor_kind",
+    "query_substrates_for_pareto_hook",
+    "query_substrates_for_probe_disambiguators",
+    "query_substrates_for_sensitivity_hook",
 ]
 
 
 def _all() -> list[SubstrateContract]:
-    return list(get_registered_substrates().values())
+    """Return every registered SubstrateContract.
+
+    Per adversarial-review finding Q2 (2026-05-15), the registry can be
+    mutated out-of-band (e.g., a test that injects a fake object or a
+    debugger that overwrites a row). Defensive consumers MUST NOT
+    AttributeError on a corrupt row — instead they SKIP it. Operators who
+    want corrupt rows surfaced should call
+    ``validate_all_registered(prune_corrupt=True)`` from the decorator
+    module before invoking any query helper.
+    """
+    return [
+        c
+        for c in get_registered_substrates().values()
+        if isinstance(c, SubstrateContract)
+    ]
 
 
 def query_substrates_for_sensitivity_hook() -> list[SubstrateContract]:

@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from tac.substrate_registry.contract import (
     NOT_APPLICABLE_WITH_RATIONALE,
     SubstrateContract,
@@ -22,50 +20,50 @@ from tac.substrate_registry.recipe_generator import (
 
 
 def _baseline_kwargs(**overrides: Any) -> dict[str, Any]:
-    base: dict[str, Any] = dict(
-        id="rgen_test",
-        lane_id="lane_rgen_test_20260515",
-        target_modes=("research_substrate",),
-        deployment_target="desktop_research",
-        council_verdict_provenance=None,
-        archive_grammar="g",
-        parser_section_manifest={"h": "magic"},
-        inflate_runtime_loc_budget=80,
-        runtime_dep_closure=("torch",),
-        export_format="fp16_brotli",
-        score_aware_loss="scorer_loss_terms_btchw",
-        bolt_on_loc_budget=200,
-        no_op_detector_planned=True,
-        archive_bytes_added=None,
-        score_improvement_mechanism_status="RESEARCH_ONLY",
-        runtime_overlay_consumed=False,
-        recipe_smoke_only=True,
-        recipe_research_only=True,
-        recipe_min_smoke_gpu="T4",
-        recipe_min_vram_gb=16,
-        recipe_pyav_decode_strategy="cpu_thread_async_upload",
-        recipe_canary_status="independent_substrate",
-        recipe_video_input_strategy="per_dispatch_local_copy",
-        recipe_canary_dependency=None,
-        cost_band_epochs=10,
-        cost_band_gpu_key="T4",
-        cost_band_platform_key="modal",
-        cost_band_p50_usd=0.10,
-        hook_sensitivity_contribution=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_pareto_constraint=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_bit_allocator_class=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_autopilot_ranker_class_shift_token=None,
-        hook_continual_learning_anchor_kind=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_probe_disambiguator=None,
-        catalog_compliance_declarations=("catalog_205_select_inflate_device_used",),
-        hook_not_applicable_rationale={
+    base: dict[str, Any] = {
+        "id": "rgen_test",
+        "lane_id": "lane_rgen_test_20260515",
+        "target_modes": ("research_substrate",),
+        "deployment_target": "desktop_research",
+        "council_verdict_provenance": None,
+        "archive_grammar": "g",
+        "parser_section_manifest": {"h": "magic"},
+        "inflate_runtime_loc_budget": 80,
+        "runtime_dep_closure": ("torch",),
+        "export_format": "fp16_brotli",
+        "score_aware_loss": "scorer_loss_terms_btchw",
+        "bolt_on_loc_budget": 200,
+        "no_op_detector_planned": True,
+        "archive_bytes_added": None,
+        "score_improvement_mechanism_status": "RESEARCH_ONLY",
+        "runtime_overlay_consumed": False,
+        "recipe_smoke_only": True,
+        "recipe_research_only": True,
+        "recipe_min_smoke_gpu": "T4",
+        "recipe_min_vram_gb": 16,
+        "recipe_pyav_decode_strategy": "cpu_thread_async_upload",
+        "recipe_canary_status": "independent_substrate",
+        "recipe_video_input_strategy": "per_dispatch_local_copy",
+        "recipe_canary_dependency": None,
+        "cost_band_epochs": 10,
+        "cost_band_gpu_key": "T4",
+        "cost_band_platform_key": "modal",
+        "cost_band_p50_usd": 0.10,
+        "hook_sensitivity_contribution": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_pareto_constraint": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_bit_allocator_class": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_autopilot_ranker_class_shift_token": None,
+        "hook_continual_learning_anchor_kind": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_probe_disambiguator": None,
+        "catalog_compliance_declarations": ("catalog_205_select_inflate_device_used",),
+        "hook_not_applicable_rationale": {
             "hook_sensitivity_contribution": "test",
             "hook_pareto_constraint": "test",
             "hook_bit_allocator_class": "test",
             "hook_continual_learning_anchor_kind": "test",
             "hook_probe_disambiguator": "test",
         },
-    )
+    }
     base.update(overrides)
     return base
 
@@ -159,7 +157,14 @@ def test_generate_recipe_yaml_target_modes_list_form() -> None:
 
 
 def test_generate_recipe_yaml_min_smoke_gpu_quoted() -> None:
-    c = SubstrateContract(**_baseline_kwargs(recipe_min_smoke_gpu="A100"))
+    # Note: per adversarial-review finding M1 (2026-05-15) the contract
+    # refuses recipe_min_smoke_gpu > cost_band_gpu_key (cost-band would
+    # budget for a class less capable than smoke can run on); promote
+    # cost_band_gpu_key to A100 so this YAML-quoting test still exercises
+    # the smoke-gpu='A100' code path.
+    c = SubstrateContract(
+        **_baseline_kwargs(recipe_min_smoke_gpu="A100", cost_band_gpu_key="A100")
+    )
     y = generate_recipe_yaml(c)
     assert 'min_smoke_gpu: "A100"' in y
 
