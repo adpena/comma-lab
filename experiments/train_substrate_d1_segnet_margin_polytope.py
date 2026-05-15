@@ -102,6 +102,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
+from tac.substrates.d1_segnet_margin_polytope.overlay import (
+    D1_OVERLAY_CHANNEL_POLICIES,
+)
 
 SUBSTRATE_TAG = "d1_polytope"
 SUBSTRATE_LANE_ID = "lane_d1_segnet_margin_polytope_encoder_20260514"
@@ -297,6 +300,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--margin-w", type=int, default=EVAL_HW[1],
         help="Margin map width (default 512 = scorer eval W).",
+    )
+    p.add_argument(
+        "--overlay-channel-policy",
+        choices=D1_OVERLAY_CHANNEL_POLICIES,
+        default="rgb",
+        help="D1 scalar overlay to RGB channel mapping.",
     )
 
     # Lagrangian weights (score-domain; HNeRV parity L6)
@@ -778,6 +787,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import struct
 import subprocess
@@ -848,6 +858,7 @@ def _parse_d1_sidecar(path: Path) -> dict[str, object]:
         )
     if not margin_blob or not poly_blob or not meta_blob:
         raise ValueError('D1 sidecar has empty required section')
+    meta = json.loads(meta_blob.decode('utf-8'))
     return {{
         'height': int(h),
         'width': int(w),
@@ -857,6 +868,7 @@ def _parse_d1_sidecar(path: Path) -> dict[str, object]:
         'expected_sha': expected_sha,
         'margin_blob': margin_blob,
         'poly_blob': poly_blob,
+        'meta': meta,
     }}
 
 
@@ -938,7 +950,30 @@ def _decode_overlay(
     return noise_2d[y_idx[:, None], x_idx[None, :]].astype(np.int8, copy=True)
 
 
-def _apply_overlay(raw_path: Path, overlay_hw: np.ndarray) -> dict[str, int]:
+def _channel_policy_weights(policy: str) -> np.ndarray:
+    weights_by_policy = {{
+        'rgb': (1, 1, 1),
+        'neg_rgb': (-1, -1, -1),
+        'red': (1, 0, 0),
+        'green': (0, 1, 0),
+        'blue': (0, 0, 1),
+        'neg_green': (0, -1, 0),
+        'rb_pos_g_neg': (1, -1, 1),
+    }}
+    if policy not in weights_by_policy:
+        raise ValueError(
+            f'unsupported D1 overlay_channel_policy={{policy!r}}; '
+            f'expected one of {{sorted(weights_by_policy)}}'
+        )
+    return np.asarray(weights_by_policy[policy], dtype=np.int16)
+
+
+def _apply_overlay(
+    raw_path: Path,
+    overlay_hw: np.ndarray,
+    *,
+    channel_policy: str,
+) -> dict[str, int]:
     actual_size = raw_path.stat().st_size
     pair_bytes = 2 * FRAME_BYTES
     if actual_size % pair_bytes != 0:
@@ -953,9 +988,10 @@ def _apply_overlay(raw_path: Path, overlay_hw: np.ndarray) -> dict[str, int]:
             'bytes_changed': 0,
             'nonzero_overlay_pixels': 0,
         }}
-    overlay_flat = np.repeat(
-        overlay_hw[:, :, np.newaxis], 3, axis=2
-    ).astype(np.int16).reshape(-1)
+    overlay_flat = (
+        overlay_hw[:, :, np.newaxis].astype(np.int16)
+        * _channel_policy_weights(channel_policy)
+    ).reshape(-1)
     pairs_modified = 0
     bytes_changed = 0
     with raw_path.open('r+b') as fp:
@@ -1024,6 +1060,7 @@ def main(argv: list[str] | None = None) -> int:
         width=int(d1['width']),
         scale=float(d1['scale']),
     )
+    channel_policy = str(d1['meta'].get('overlay_channel_policy', 'rgb'))
     overlay_hw = _decode_overlay(
         d1['poly_blob'],
         height=int(d1['height']),
@@ -1046,13 +1083,16 @@ def main(argv: list[str] | None = None) -> int:
             ],
             check=True,
         )
-        diag = _apply_overlay(dst_raw, overlay_hw)
+        diag = _apply_overlay(
+            dst_raw, overlay_hw, channel_policy=channel_policy
+        )
         total_pairs += diag['pairs_modified']
         total_bytes += diag['bytes_changed']
 
     print(
         f'[d1-inflate] OVERLAY_TOTAL pairs_modified={{total_pairs}} '
-        f'bytes_changed={{total_bytes}} videos_processed={{len(video_names)}}',
+        f'bytes_changed={{total_bytes}} videos_processed={{len(video_names)}} '
+        f'channel_policy={{channel_policy}}',
         file=sys.stderr,
     )
     if total_bytes <= 0:
@@ -1381,6 +1421,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 "ema_decay": float(ema_decay),
                 "requested_epochs": int(args.epochs),
                 "effective_margin_passes": int(effective_margin_passes),
+                "overlay_channel_policy": str(args.overlay_channel_policy),
                 "runtime_overlay_consumed": True,
                 "current_runtime_effect": "base_renderer_plus_d1_overlay",
                 "l2_projected_score_band_low": 0.181,
@@ -1533,6 +1574,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "effective_margin_passes": int(
             locals().get("effective_margin_passes", 1)
         ),
+        "overlay_channel_policy": str(args.overlay_channel_policy),
         "d1_overhead_bytes": d1_overhead_bytes,
         "d1_bin_sha256": d1_bin_sha,
         "archive_zip_bytes": archive_zip_size,

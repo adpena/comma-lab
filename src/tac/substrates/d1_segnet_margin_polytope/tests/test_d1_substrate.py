@@ -38,7 +38,9 @@ from tac.substrates.d1_segnet_margin_polytope import (
     encode_polytope_payload,
     pack_archive,
     parse_archive,
+    parse_d1poly1_archive_bytes,
     quantize_margin_map_int8,
+    update_d1poly1_meta,
 )
 from tac.substrates.d1_segnet_margin_polytope.architecture import (
     D1POLY_OVERHEAD_TARGET_BYTES_MAX,
@@ -901,6 +903,38 @@ def test_sidecar_payload_roundtrip_is_structurally_parseable(tmp_path):
     assert blob == blob2
 
 
+def test_update_d1poly1_meta_preserves_non_meta_sections():
+    cfg, mm, payload, base_sha = _make_dummy_archive_inputs()
+    blob = pack_archive(
+        margin_map=mm,
+        polytope_payload=payload,
+        jacobian_lipschitz=10.0,
+        base_substrate_id="a1",
+        base_archive_sha256=base_sha,
+        base_archive_bytes=100,
+        config=cfg,
+        extra_meta={"overlay_channel_policy": "rgb"},
+    )
+    sections_before = parse_d1poly1_archive_bytes(blob)
+    updated = update_d1poly1_meta(
+        blob, {"overlay_channel_policy": "green"}
+    )
+    parsed = parse_archive(updated)
+    assert parsed.meta["overlay_channel_policy"] == "green"
+    sections_after = parse_d1poly1_archive_bytes(updated)
+    for section in (
+        "base_substrate_id",
+        "base_archive_sha256_truncated",
+        "margin_map_blob",
+        "polytope_payload_blob",
+    ):
+        start_before, len_before = sections_before[section]
+        start_after, len_after = sections_after[section]
+        assert blob[start_before:start_before + len_before] == updated[
+            start_after:start_after + len_after
+        ]
+
+
 def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
     import importlib
 
@@ -930,7 +964,7 @@ def test_trainer_runtime_emits_d1_sidecar_verifier(tmp_path):
         base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
         base_archive_bytes=len(base_bytes),
         config=cfg,
-        extra_meta={},
+        extra_meta={"overlay_channel_policy": "green"},
     )
     d1_path = tmp_path / "d1_polytope.bin"
     d1_path.write_bytes(blob)
@@ -985,7 +1019,7 @@ def test_generated_d1_runtime_applies_overlay_and_fails_closed(tmp_path):
         base_archive_sha256=hashlib.sha256(base_bytes).hexdigest(),
         base_archive_bytes=len(base_bytes),
         config=cfg,
-        extra_meta={},
+        extra_meta={"overlay_channel_policy": "green"},
     )
     (archive_dir / "d1_polytope.bin").write_bytes(blob)
     file_list = tmp_path / "file_list.txt"
@@ -1043,8 +1077,14 @@ def test_generated_d1_runtime_applies_overlay_and_fails_closed(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert "OVERLAY_TOTAL" in result.stderr
+    assert "channel_policy=green" in result.stderr
     raw_bytes = (output_dir / "0.raw").read_bytes()
     assert raw_bytes != bytes([128]) * len(raw_bytes)
+    frame_bytes = 874 * 1164 * 3
+    frame_1 = np.frombuffer(raw_bytes[frame_bytes:], dtype=np.uint8).reshape(-1, 3)
+    assert (frame_1[:, 0] == 128).all()
+    assert (frame_1[:, 1] != 128).any()
+    assert (frame_1[:, 2] == 128).all()
 
     zero_archive_dir = tmp_path / "archive_zero"
     zero_archive_dir.mkdir()

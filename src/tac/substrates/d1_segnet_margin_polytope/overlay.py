@@ -54,6 +54,35 @@ _FRAME_BYTES: int = _CAMERA_H * _CAMERA_W * 3
 
 # Contest expects 600 pairs (= 1200 frames) per video.
 _N_PAIRS_PER_VIDEO: int = 600
+D1_OVERLAY_CHANNEL_POLICIES: tuple[str, ...] = (
+    "rgb",
+    "neg_rgb",
+    "red",
+    "green",
+    "blue",
+    "neg_green",
+    "rb_pos_g_neg",
+)
+
+
+def channel_policy_weights(channel_policy: str) -> np.ndarray:
+    """Return integer RGB weights for a D1 scalar overlay policy."""
+    policy = channel_policy.strip().lower()
+    weights_by_policy = {
+        "rgb": (1, 1, 1),
+        "neg_rgb": (-1, -1, -1),
+        "red": (1, 0, 0),
+        "green": (0, 1, 0),
+        "blue": (0, 0, 1),
+        "neg_green": (0, -1, 0),
+        "rb_pos_g_neg": (1, -1, 1),
+    }
+    if policy not in weights_by_policy:
+        raise ValueError(
+            f"unsupported D1 overlay_channel_policy={channel_policy!r}; "
+            f"expected one of {sorted(weights_by_policy)}"
+        )
+    return np.asarray(weights_by_policy[policy], dtype=np.int16)
 
 
 def validate_polytope_margin_contract(
@@ -216,6 +245,7 @@ def apply_polytope_overlay_inplace(
     n_pairs: int = _N_PAIRS_PER_VIDEO,
     camera_h: int = _CAMERA_H,
     camera_w: int = _CAMERA_W,
+    channel_policy: str = "rgb",
 ) -> dict[str, int]:
     """Apply the polytope noise overlay to every frame_1 in the .raw video.
 
@@ -277,10 +307,8 @@ def apply_polytope_overlay_inplace(
             "frame_bytes": frame_bytes,
             "nonzero_overlay_pixels": 0,
         }
-    # Broadcast the (H, W) int8 delta across 3 RGB channels.
-    overlay_hwc = np.repeat(
-        overlay_hw[:, :, np.newaxis], 3, axis=2
-    ).astype(np.int16)  # int16 so clamp arithmetic doesn't wrap uint8
+    weights = channel_policy_weights(channel_policy)
+    overlay_hwc = overlay_hw[:, :, np.newaxis].astype(np.int16) * weights
     overlay_flat = overlay_hwc.reshape(-1)  # length frame_bytes
 
     pairs_modified = 0
@@ -315,6 +343,7 @@ def apply_polytope_overlay_inplace(
         "bytes_changed": bytes_changed,
         "frame_bytes": frame_bytes,
         "nonzero_overlay_pixels": nonzero_overlay_pixels,
+        "channel_policy": channel_policy,
     }
 
 
@@ -328,6 +357,7 @@ def apply_l2_overlay_for_video_list(
     margin_map_int8: np.ndarray | None = None,
     margin_map_scale: float | None = None,
     archive_jacobian_lipschitz: float | None = None,
+    channel_policy: str = "rgb",
     n_pairs_per_video: int | None = None,
 ) -> dict[str, int]:
     """Apply the L2 polytope overlay across every video's .raw output.
@@ -416,6 +446,7 @@ def apply_l2_overlay_for_video_list(
             encoder_grid_h=encoder_grid_h,
             encoder_grid_w=encoder_grid_w,
             n_pairs=pairs,
+            channel_policy=channel_policy,
         )
         total_pairs_modified += diag["pairs_modified"]
         total_bytes_changed += diag["bytes_changed"]
@@ -428,11 +459,14 @@ def apply_l2_overlay_for_video_list(
             contract_diag.get("nonzero_noise_pixels", 0)
         ),
         "contract_boundary_pixels": int(contract_diag.get("boundary_pixels", 0)),
+        "channel_policy": channel_policy,
     }
 
 
 __all__ = [
+    "D1_OVERLAY_CHANNEL_POLICIES",
     "apply_l2_overlay_for_video_list",
     "apply_polytope_overlay_inplace",
+    "channel_policy_weights",
     "validate_polytope_margin_contract",
 ]

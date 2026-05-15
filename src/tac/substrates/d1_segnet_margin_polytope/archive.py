@@ -39,8 +39,8 @@ from __future__ import annotations
 
 import json
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 import brotli  # type: ignore[import-not-found]
 import numpy as np
@@ -371,6 +371,73 @@ D1POLY1_SECTION_ROLES: dict[str, str] = {
 }
 
 
+def update_d1poly1_meta(
+    archive_bytes: bytes,
+    meta_updates: Mapping[str, object],
+) -> bytes:
+    """Return D1POLY1 bytes with updated sorted-JSON metadata.
+
+    All non-meta sections are preserved byte-for-byte. This is the canonical
+    way to materialize D1 runtime-policy variants without retraining or
+    perturbing margin/polytope streams.
+    """
+    if not meta_updates:
+        raise ValueError("meta_updates must not be empty")
+    sections = parse_d1poly1_archive_bytes(archive_bytes)
+    (
+        magic,
+        version,
+        h,
+        w,
+        scale,
+        jacobian_lipschitz,
+        base_id_len,
+        sha_len,
+        margin_map_len,
+        polytope_len,
+        _meta_len,
+    ) = struct.unpack(
+        D1POLY1_HEADER_FMT, archive_bytes[:D1POLY1_HEADER_SIZE]
+    )
+    meta_start, meta_len = sections["meta_blob"]
+    old_meta = json.loads(
+        archive_bytes[meta_start:meta_start + meta_len].decode("utf-8")
+    )
+    if not isinstance(old_meta, dict):
+        raise ValueError("D1POLY1 meta_blob must decode to a JSON object")
+    new_meta = dict(old_meta)
+    new_meta.update(dict(meta_updates))
+    new_meta_bytes = json.dumps(
+        new_meta, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+    new_header = struct.pack(
+        D1POLY1_HEADER_FMT,
+        magic,
+        version,
+        h,
+        w,
+        scale,
+        jacobian_lipschitz,
+        base_id_len,
+        sha_len,
+        margin_map_len,
+        polytope_len,
+        len(new_meta_bytes),
+    )
+    base_start, base_len = sections["base_substrate_id"]
+    sha_start, sha_len2 = sections["base_archive_sha256_truncated"]
+    margin_start, margin_len = sections["margin_map_blob"]
+    poly_start, poly_len = sections["polytope_payload_blob"]
+    return (
+        new_header
+        + archive_bytes[base_start:base_start + base_len]
+        + archive_bytes[sha_start:sha_start + sha_len2]
+        + archive_bytes[margin_start:margin_start + margin_len]
+        + archive_bytes[poly_start:poly_start + poly_len]
+        + new_meta_bytes
+    )
+
+
 def parse_archive(blob: bytes) -> D1PolytopeArchive:
     """Parse D1POLY1 0.bin bytes back to a typed :class:`D1PolytopeArchive`."""
     if len(blob) < D1POLY1_HEADER_SIZE:
@@ -528,4 +595,5 @@ __all__ = [
     "pack_archive",
     "parse_archive",
     "parse_d1poly1_archive_bytes",
+    "update_d1poly1_meta",
 ]

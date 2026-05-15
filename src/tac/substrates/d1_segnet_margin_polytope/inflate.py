@@ -155,6 +155,9 @@ def main(argv: list[str] | None = None) -> int:
         margin_map_int8=d1_archive.margin_map_int8,
         margin_map_scale=d1_archive.margin_map_scale,
         archive_jacobian_lipschitz=d1_archive.jacobian_lipschitz,
+        channel_policy=str(
+            d1_archive.meta.get("overlay_channel_policy", "rgb")
+        ),
     )
     print(
         f"[d1-inflate] OVERLAY_TOTAL pairs_modified="
@@ -164,7 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         f"contract_nonzero_noise_pixels="
         f"{overlay_diag['contract_nonzero_noise_pixels']} "
         f"contract_boundary_pixels="
-        f"{overlay_diag['contract_boundary_pixels']}",
+        f"{overlay_diag['contract_boundary_pixels']} "
+        f"channel_policy={overlay_diag['channel_policy']}",
         file=sys.stderr,
     )
     if overlay_diag["total_bytes_changed"] <= 0:

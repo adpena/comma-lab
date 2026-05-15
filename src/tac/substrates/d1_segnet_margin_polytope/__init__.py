@@ -134,6 +134,7 @@ from tac.substrates.d1_segnet_margin_polytope.archive import (
     pack_archive,
     parse_archive,
     parse_d1poly1_archive_bytes,
+    update_d1poly1_meta,
 )
 from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     MARGIN_MAP_DEFAULT_RESOLUTION,
@@ -142,6 +143,9 @@ from tac.substrates.d1_segnet_margin_polytope.margin_map import (
     compute_logit_margin_map_dummy,
     dequantize_margin_map_int8,
     quantize_margin_map_int8,
+)
+from tac.substrates.d1_segnet_margin_polytope.overlay import (
+    D1_OVERLAY_CHANNEL_POLICIES,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
     POLYTOPE_DEFAULT_BUDGET_BITS,
@@ -169,16 +173,17 @@ __all__ = [
     "D1POLY_DEFAULT_BUDGET_BITS",
     "D1POLY_OVERHEAD_TARGET_BYTES_MAX",
     "D1POLY_OVERHEAD_TARGET_BYTES_MIN",
+    "D1_OVERLAY_CHANNEL_POLICIES",
+    "MARGIN_MAP_DEFAULT_RESOLUTION",
+    "POLYTOPE_DEFAULT_BUDGET_BITS",
+    "POLYTOPE_LATTICE_LEVELS",
+    "POLYTOPE_LATTICE_VALUES",
     "D1PolytopeArchive",
     "D1PolytopeConfig",
     "D1PolytopeLossWeights",
     "D1PolytopeScoreAwareLoss",
     "D1PolytopeSidecar",
-    "MARGIN_MAP_DEFAULT_RESOLUTION",
     "MarginMapMode",
-    "POLYTOPE_DEFAULT_BUDGET_BITS",
-    "POLYTOPE_LATTICE_LEVELS",
-    "POLYTOPE_LATTICE_VALUES",
     "PolytopeAllocationResult",
     "_BaseArchiveDescriptor",
     "allocate_noise_within_polytope",
@@ -195,4 +200,5 @@ __all__ = [
     "parse_archive",
     "parse_d1poly1_archive_bytes",
     "quantize_margin_map_int8",
+    "update_d1poly1_meta",
 ]

@@ -19,6 +19,7 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (
     _upsample_int8_levels_to_camera,
     apply_l2_overlay_for_video_list,
     apply_polytope_overlay_inplace,
+    channel_policy_weights,
     validate_polytope_margin_contract,
 )
 from tac.substrates.d1_segnet_margin_polytope.polytope_encoder import (
@@ -216,6 +217,32 @@ def test_apply_polytope_overlay_inplace_nonzero_modifies_frame_1(tmp_path):
         # frame_1 should have at least one pixel != 128.
         frame_1_arr = np.frombuffer(new_data[f1_start:f1_end], dtype=np.uint8)
         assert (frame_1_arr != 128).any()
+
+
+def test_apply_polytope_overlay_channel_policy_green_only(tmp_path):
+    raw = tmp_path / "0.raw"
+    n_pairs = 1
+    _write_synthetic_raw(raw, n_pairs=n_pairs)
+    frame_bytes = 874 * 1164 * 3
+    flat = np.ones(96 * 128, dtype=np.int8)
+    diag = apply_polytope_overlay_inplace(
+        raw,
+        noise_levels_flat=flat,
+        encoder_grid_h=96,
+        encoder_grid_w=128,
+        n_pairs=n_pairs,
+        channel_policy="green",
+    )
+    assert diag["channel_policy"] == "green"
+    frame_1 = np.frombuffer(raw.read_bytes()[frame_bytes:], dtype=np.uint8).reshape(-1, 3)
+    assert (frame_1[:, 0] == 128).all()
+    assert (frame_1[:, 1] != 128).any()
+    assert (frame_1[:, 2] == 128).all()
+
+
+def test_channel_policy_weights_rejects_unknown():
+    with pytest.raises(ValueError, match="overlay_channel_policy"):
+        channel_policy_weights("cyan")
 
 
 def test_apply_polytope_overlay_inplace_size_mismatch_raises(tmp_path):
