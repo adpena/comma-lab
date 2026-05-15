@@ -2,27 +2,26 @@
 
 **Operator directive:** *"we need a /codex:adversarial-review against the whole current state of the codebase chunked to avoid timeout"*
 
-**Completed:** 7/10 chunks. **Pending:** 3.
+**Completed:** 10/10 chunks (3 missing chunks re-run by `HARVEST-CHUNKED-CODEX-MISSING-AND-AGGREGATE-20260515` 2026-05-15).
 
 ## Per-chunk verdict + finding-count summary
 
-| Chunk | Name | Job ID | Verdict | Findings | Top finding |
-|---|---|---|---|---|---|
-| 1 | core_library | review-mp7f2a26-y972k4 | needs-attention | 4 | Catalog #242 validates only the example registry, not the trainer contracts |
-| 2 | preflight_infra | review-mp7ezp82-v24861 | needs-attention | 3 | Catalog drift coverage misses lambda-wired strict gates and unrowed references |
-| 4 | operator_authorize_dispatch | review-mp7f5zrb-q7gbkn | needs-attention | 4 | Risk scorer never gates dispatch and uses an empty verdict panel |
-| 6 | rudin_daubechies_autopilot | review-mp7fbln2-5fc65r | needs-attention | 6 | Preflight REFUSE cannot block dispatch |
-| 7 | substrates_ara_composition | review-mp7feoxg-f3m9k4 | needs-attention | 3 | Byte-mutation verifier cannot produce the new proof records |
-| 8 | commit_machinery_wave_d | review-mp7fh9pn-1ie8yr | needs-attention | 6 | Expected-hash protection can be partially satisfied |
-| 9 | claude_md_discipline_burden | review-mp7fjuiw-or9b0q | needs-attention | 3 | Strict memory-backed gate passes vacuously off the original machine |
-| 3 | substrate_meta_layer | review-mp7eym80-uoglph | PENDING | ? | (rc=1: No job found for "review-mp7eym80-uoglph". Run /codex:status to list known jobs.
-) |
-| 5 | modal_lightning_vastai | review-mp7fppo4-cayuya | PENDING | ? | (rc=1: No job found for "review-mp7fppo4-cayuya". Run /codex:status to list known jobs.
-) |
-| 10 | submissions_inflate_runtime | review-mp7f90ui-k4k4l9 | PENDING | ? | (rc=1: No job found for "review-mp7f90ui-k4k4l9". Run /codex:status to list known jobs.
-) |
+| Chunk | Name | Verdict | H | M | L | Total | Top finding |
+|---|---|---|---|---|---|---|---|
+| 1 | core_library | needs-attention | 2 | 2 | 0 | 4 | Catalog #242 validates only the example registry, not the trainer contracts |
+| 2 | preflight_infra | needs-attention | 2 | 1 | 0 | 3 | Catalog drift coverage misses lambda-wired strict gates and unrowed references |
+| 3 | substrate_meta_layer | needs-attention | 2 | 2 | 0 | 4 | DUPLICATE of chunk 1 (codex companion ran adversarial-review against working tree diff WITHOUT per-chunk path scoping) |
+| 4 | operator_authorize_dispatch | needs-attention | 2 | 2 | 0 | 4 | Risk scorer never gates dispatch and uses an empty verdict panel |
+| 5 | modal_lightning_vastai | needs-attention | 3 | 2 | 0 | 5 | Canonical Modal ledger is best-effort after paid spawn |
+| 6 | rudin_daubechies_autopilot | needs-attention | 3 | 3 | 0 | 6 | Preflight REFUSE cannot block dispatch |
+| 7 | substrates_ara_composition | needs-attention | 2 | 1 | 0 | 3 | Byte-mutation verifier cannot produce the new proof records |
+| 8 | commit_machinery_wave_d | needs-attention | 4 | 2 | 0 | 6 | Expected-hash protection can be partially satisfied |
+| 9 | claude_md_discipline_burden | needs-attention | 2 | 1 | 0 | 3 | Strict memory-backed gate passes vacuously off the original machine |
+| 10 | submissions_inflate_runtime | needs-attention | 1 | 0 | 0 | 1 | Zero-artifact partial harvests are closed as successful completed jobs |
 
-**Severity totals across 7 completed chunks:** HIGH=17 / MEDIUM=12 / LOW=0 / INFO=0.
+**Severity totals across 9 unique chunks (excluding chunk 3 dup):** HIGH=21 / MEDIUM=14 / LOW=0 / INFO=0 = **35 findings**.
+
+All chunks `needs-attention`. Codex's `needs-attention` is its standard adversarial verdict; the actual operator decision is per-finding. Per CLAUDE.md "KILL is the LAST RESORT" non-negotiable: every finding receives DEFERRED-pending-fix verdict with reactivation criteria. Zero kills.
 
 ## Per-chunk verbatim codex output
 
@@ -311,3 +310,245 @@
 - Split CLAUDE.md into active machine-checkable contract plus historical appendix before adding more catalog rows.
 
 ---
+
+### Chunk 3: substrate_meta_layer (re-run via `HARVEST-CHUNKED-CODEX-MISSING-AND-AGGREGATE-20260515`)
+
+**Verdict:** `needs-attention` (DUPLICATE of chunk 1).
+
+**Summary:** No-ship: the META and dispatch gates are still declaration-based and under-scoped; they can greenlight unvalidated substrate contracts, known L2 integration gaps, and unproven optimization/feature-consumption claims.
+
+**Note:** The codex companion `adversarial-review` invocation defaults to reviewing the working-tree diff, not a path-scoped subset. Chunks 1 and 3 produced byte-identical final assistant messages because both were dispatched against the same working-tree diff. Per CLAUDE.md "Forbidden premature KILL": chunk 3 is preserved in the registry for forensic continuity. If codex companion gains per-chunk `--paths` scoping in a future release, chunks 1 + 3 should be re-run with explicit path filters and the verdicts compared.
+
+Findings duplicate chunk 1 verbatim (H-1 + H-2 + recipe-vs-trainer + Tier-1 token grep). See chunk 1 above.
+
+---
+
+### Chunk 5: modal_lightning_vastai (re-run via `HARVEST-CHUNKED-CODEX-MISSING-AND-AGGREGATE-20260515`)
+
+**Verdict:** `needs-attention`
+
+**Summary:** No target-path working-tree hunks are present, but the live provider/runtime surfaces still have ship-blocking audit and concurrency gaps.
+
+**Findings:**
+
+#### 1. [HIGH] Canonical Modal ledger is best-effort after paid spawn
+
+- **File:** `experiments/modal_train_lane.py` lines 1393-1419
+- **Body:** The dispatch path launches the Modal job, writes per-dispatch sentinels, then attempts the canonical call_id ledger append inside a broad try/except that only prints a warning. If the ledger is corrupt, locked, or times out, the paid job still exists and the CLI can continue without the single queryable Catalog #245 index. That recreates the orphan call_id failure mode the ledger is supposed to eliminate.
+- **Recommendation:** Treat canonical ledger registration as a required post-spawn transaction: on failure, mark the lane claim with a loud terminal/recovery-needed row and exit nonzero, or create a durable pending dispatch record before spawn and atomically promote it with the call_id after spawn.
+
+#### 2. [HIGH] Call_id ledger append is O(N) full-file rewrite
+
+- **File:** `src/tac/deploy/modal/call_id_ledger.py` lines 387-428
+- **Body:** The ledger helper calls load_call_ids_strict(), appends in memory, then serializes and replaces the entire JSONL file for every event. This is logical append-only, but not append-amortized: at 10000 entries every dispatch/harvest holds the exclusive lock while reading, parsing, serializing, fsyncing, and replacing the full ledger. Under fan-out this can hit the 30s lock timeout, and the dispatcher currently swallows that registration failure.
+- **Recommendation:** Use true append under lock with O_APPEND plus strict tail validation, or move the primary index to SQLite/DuckDB with indexed call_id/status queries. Add a 10000-row contention test that proves registration latency and lock wait stay bounded.
+
+#### 3. [HIGH] Lightning lock reentry is process-global, not thread-owned
+
+- **File:** `src/tac/deploy/lightning/active_jobs_state.py` lines 123-131
+- **Body:** The active-jobs fcntl wrapper skips reacquiring the file lock whenever _active_jobs_lock_depth > 0. That counter is process-global, not thread-local. If two threads in the same process enter the helper concurrently, the second thread bypasses fcntl entirely and both can load/mutate/save the shared JSON state at once, dropping rows or corrupting job lifecycle state. This is especially risky because the repo explicitly promotes threaded parallel dispatch.
+- **Recommendation:** Track lock ownership by thread id with a threading.RLock, or remove same-process bypass except for same-thread reentry. Add a multithreaded stress test that calls register_pending_job_locked/update_pending_to_active_locked concurrently and verifies no rows are lost.
+
+#### 4. [MEDIUM] NVML block gate does not enforce canonical values
+
+- **File:** `src/tac/preflight.py` lines 54040-54053
+- **Body:** Catalog #244 only checks whether the three token strings appear anywhere in each script. A comment, a wrong value, a non-export assignment, or a legacy literal that drifts from tac.deploy.modal.runtime would still pass. The hand-written substrate scripts hard-code the current defaults, so runtime.py is not actually a single source of truth once constants change.
+- **Recommendation:** Parse the shell export assignments and require exact exports, exact default values from tac.deploy.modal.runtime, and placement before bootstrap/trainer imports. Add a generator golden test plus a legacy-driver drift test that fails when runtime constants change without regenerating/backfilling scripts.
+
+#### 5. [MEDIUM] Vast.ai cleanup treats corrupt tracker as empty
+
+- **File:** `src/tac/vastai_tracker.py` lines 90-113
+- **Body:** The read-only Vast.ai loader returns [] for malformed JSON, and the orphan cleanup tool uses that path, prints zero records, and exits successfully. A corrupt tracker can therefore hide active paid instances until some later mutating call happens to quarantine it. That is not fail-closed survival for the corruption scenario.
+- **Recommendation:** Expose a strict read path for cleanup and make tools/vastai_orphan_cleanup.py fail nonzero on corrupt tracker state, including pointers to any quarantined tracker files. Only dashboards should use the lossy [] fallback.
+
+**Next steps:**
+
+- Add regression tests for 10000-row Modal ledger contention, threaded Lightning state updates, corrupt Vast.ai cleanup behavior, and exact NVML export drift against runtime constants.
+- Decide whether direct experiments/modal_train_lane.py is a supported dispatch entrypoint; if yes, make clean-head or sentinel coverage mandatory by default.
+
+---
+
+### Chunk 10: submissions_inflate_runtime (re-run via `HARVEST-CHUNKED-CODEX-MISSING-AND-AGGREGATE-20260515`)
+
+**Verdict:** `needs-attention`
+
+**Summary:** No-ship: the live working diff only touches the Modal harvest summary, not the named submission runtimes. In that diff, partial zero-artifact recoveries are being recorded as successful completed terminal events, which can hide unrecovered jobs and close the recovery loop with no usable evidence.
+
+**Findings:**
+
+#### 1. [HIGH] Zero-artifact partial harvests are closed as successful completed jobs
+
+- **File:** `experiments/results/_modal_harvest_summary.json` lines 3356-3402
+- **Body:** This entry says n_artifacts is 0 and crash_kind is HARVESTED_PARTIAL, but the same record sets outcome to successful_dispatch, appends a terminal claim with status: completed_modal_training_recovered_no_score_claim, and appends terminal evidence. That converts an incomplete recovery with no logs/checkpoint/archive artifacts into a terminal success. The same pattern appears in other added entries, so downstream lane state can be closed and re-harvest suppressed even though there is no artifact custody to inspect or reuse.
+- **Recommendation:** Treat HARVESTED_PARTIAL or n_artifacts == 0 as incomplete/failed recovery regardless of provider rc. Do not append terminal evidence or completed terminal claims until a minimum artifact set is present, and use a distinct status such as failed_modal_harvest_partial or recovery_incomplete_needs_retry.
+
+**Next steps:**
+
+- Reclassify all zero-artifact HARVESTED_PARTIAL rows before shipping this ledger.
+- Add a guard in the harvester so n_artifacts == 0 cannot produce successful_dispatch or completed_modal_training_recovered_no_score_claim.
+
+---
+
+## Cross-cutting themes (appearing in 3+ chunks)
+
+### Theme A — Declaration-only / token-presence validation (chunks 1, 2, 5, 7, 9)
+Multiple gates accept text tokens, metadata booleans, or string paths as proof, instead of cryptographically binding to current archive bytes / runtime hashes / executed verifier output.
+- Catalog #220 accepts operational self-attestation via free-text lane evidence (chunk 7).
+- Catalog #242 only validates `tac.substrate_registry.example_template`, not the 27 decorated `train_substrate_*.py` files (chunk 1).
+- Catalog #244 NVML block check is token-grep, not exact-export-value matching against `tac.deploy.modal.runtime` constants (chunk 5).
+- Catalog #272 accepts `byte_mutation_smoke_passes=True` as proof (chunk 1) and accepts stale proof artifacts not bound to current `archive_sha256` (chunk 9).
+- `_verify_tier1` token-grep marks autocast/TF32/torch.compile as present from a CLI flag declaration alone (chunk 1).
+
+Cross-ref: CLAUDE.md "Comment-only contracts — FORBIDDEN" + "Apples-to-apples evidence discipline" + HNeRV parity discipline lesson 11 (No-op detector).
+
+### Theme B — Fail-open guards (chunks 2, 4, 6, 8, 10)
+Catalog gates that swallow exceptions or emit warnings instead of blocking.
+- Catalog #185 catches `TypeError` from gate signature drift and silently skips (chunk 2).
+- `_consult_preflight_risk_scorer` builds empty `GateVerdictPanel(verdicts={})` and only logs WARN/REFUSE without aborting (chunks 4 + 6).
+- Mandatory pre-deploy harness only warns when `tools/local_pre_deploy_check.py` is missing (chunk 4).
+- Modal harvest summary appends `outcome: successful_dispatch` for `n_artifacts == 0` partial recoveries (chunk 10).
+- Modal canonical ledger registration wrapped in broad try/except that only prints a warning (chunk 5).
+
+Cross-ref: CLAUDE.md "Forbidden silent-skip cascades (the bootstrap trap)" + Catalog #14 `preflight_loader_format_safety` (fail-loud loader pattern).
+
+### Theme C — Catalog drift between docs and code (chunks 2, 8, 9)
+The CLAUDE.md catalog table no longer matches `src/tac/preflight.py` callable surface.
+- Catalog #176 misses 63 lambda-wired strict callsites (39 without CLAUDE rows) e.g. `check_no_comment_only_contracts` at line 3606 (chunk 2).
+- 6 phantom catalog rows #273-#278 in CLAUDE.md without corresponding `check_*` callable in `src/tac/preflight.py` (chunk 8).
+- Catalog #216 referenced as sister gate but no `^216.` numbered row exists (chunk 8).
+- Catalog #185 only matches narrow live-count phrase list; rows with non-canonical wording escape (chunk 8).
+
+Cross-ref: Catalog #118 (no duplicate numbers) + #159 (text-matches-strict-value) + #176 (callsite-has-row) + #185 (live-count-zero) — the sister gate quartet that this theme says is itself drifting.
+
+### Theme D — Auto-bypass without independent attestation (chunks 4, 6, 9)
+Paired-env discipline (Catalog #199 / #202 / #243) defeated when wrappers auto-set both env vars themselves.
+- `tools/run_modal_smoke_before_full.py:748-751` automatically sets BOTH `OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1` AND `OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1` on dirty trees (chunk 4).
+- `_consult_preflight_risk_scorer` REFUSE class never aborts; bypasses the bypass (chunk 6).
+- Memory-backed gate (`PACT_MEMORY_DIR`) passes vacuously off original machine (chunk 9).
+
+Cross-ref: CLAUDE.md "Comment-only contracts — FORBIDDEN" pattern (assertion that a contract holds without runtime enforcement IS the bug class).
+
+### Theme E — Concurrency primitives have undeclared invariants (chunks 5, 8)
+- Lightning `_active_jobs_lock_depth` counter is process-global, not thread-local; threaded parallel dispatch can bypass the fcntl lock (chunk 5).
+- Catalog #157 expected-content-sha256 only checks paths in `--expected`, not every path passed via `--files`; partial coverage (chunk 8).
+- `claim_catalog_number.py` truncate-then-write race: process death between truncate and fsync resets the counter (chunk 8).
+- `subagent_checkpoint.py read_checkpoints` silently drops malformed JSONL rows (chunk 8).
+- Modal call_id ledger O(N) full-file rewrite under lock can exceed 30s timeout at 10K rows under fan-out (chunk 5).
+
+Cross-ref: CLAUDE.md Catalog #131 + #128 + #138 — sister gates that ALL apply to this theme but at different surfaces.
+
+---
+
+## Prioritized fix queue (HIGH severity, deduplicated)
+
+| # | File:line | Finding | Recommendation |
+|---|---|---|---|
+| H-1 | `src/tac/preflight.py:56580-56589` | Catalog #242 only imports `example_template`; misses 27 decorated trainers | Enumerate all `train_substrate_*.py`; validate each contract via safe isolated import |
+| H-2 | `src/tac/preflight.py:58375-58408` | Catalog #272 accepts `byte_mutation_smoke_passes=True` truthy metadata as proof | Parse canonical proof artifact; require per-section mutation + raw-output delta |
+| H-3 | `src/tac/preflight.py:45836-45860` | Catalog #176 misses 63 lambda-wired strict callsites | Replace regex with AST-backed preflight graph validator |
+| H-4 | `src/tac/preflight.py:408-436` | Clean cache hides warn-only violations; advisory_count ignored on next run | Don't store clean cache when `advisory_count > 0`; treat as cache miss |
+| H-5 | `tools/operator_authorize.py:1521-1551` | Risk scorer empty `GateVerdictPanel(verdicts={})`; never aborts on REFUSE | Feed real preflight gate verdicts; raise on REFUSE before claim creation |
+| H-6 | `tools/run_modal_smoke_before_full.py:748-751` | Smoke wrapper auto-sets `OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1` itself | Don't auto-set attestation; require operator-supplied sentinel hash or nonce |
+| H-7 | `tools/cathedral_autopilot_autonomous_loop.py:820-880` | `predicted_dispatch_risk` field exists but `rank_candidates` ignores it | Make risk explicit sort/filter input; refuse candidates above threshold |
+| H-8 | `src/tac/autopilot_rudin_daubechies/compressive_landscape.py:197-229` | "L1 recovery" is inverse-distance interpolation, not sparse recovery | Either implement real sparse recovery with diagnostics or downgrade to heuristic |
+| H-9 | `tools/verify_distinguishing_feature_byte_mutation.py:429-486` | Verifier instantiates `SectionResult` without required new fields → TypeError | Thread `MutationTarget` through verifier+CLI; populate new fields on every return |
+| H-10 | `src/tac/preflight.py:54458-54466` | Catalog #220 accepts free-text "operational" tokens as runtime-effect proof | Require structured proof reference; validate byte-mutation smoke JSON |
+| H-11 | `tools/subagent_commit_serializer.py:420-428` | Catalog #157 expected-hash protection only covers paths in `--expected`, not all `--files` | Require `set(expected_content_shas) == set(files)`; enforce one-hash-per-file |
+| H-12 | `tools/claim_catalog_number.py:149-157` | Truncate+rewrite race: crash mid-write resets counter; reissues old numbers | Fail closed on empty/corrupt; write via temp + fsync + rename |
+| H-13 | `src/tac/preflight.py:46923-46931` | Catalog #185 misses 6 phantom rows #273-#278 (no callable in preflight.py) | Unconditional CLAUDE-row-to-callable check; backfill or remove rows |
+| H-14 | `tools/subagent_commit_serializer.py:91-95` | Worktree isolation only defers edit collisions to merge time | Move lock/log to git-common-dir; require merge-helper that rejects overlapping paths |
+| H-15 | `src/tac/preflight.py:35316-35340` | Strict memory-backed gate passes vacuously off original machine (CI / fresh checkout) | Make canonical feedback corpus repo-relative; fail closed if missing |
+| H-16 | `src/tac/preflight.py:58446-58476` | Catalog #272 accepts stale proof artifacts not bound to current archive sha (sister of H-2) | Require lane to declare candidate archive/runtime identity; reject mismatched proofs |
+| H-17 | `experiments/modal_train_lane.py:1393-1419` | Canonical Modal ledger append wrapped in best-effort try/except | Treat ledger registration as required post-spawn transaction; mark recovery-needed on failure |
+| H-18 | `src/tac/deploy/modal/call_id_ledger.py:387-428` | Ledger O(N) full-file rewrite per event; 30s lock timeout under fan-out at 10K rows | Use true append (O_APPEND + tail validation) or move to SQLite/DuckDB |
+| H-19 | `src/tac/deploy/lightning/active_jobs_state.py:123-131` | `_active_jobs_lock_depth` process-global, not thread-local; bypasses fcntl in threaded dispatch | Track lock ownership by thread id; threading.RLock or remove same-process bypass |
+| H-20 | `experiments/results/_modal_harvest_summary.json:3356-3402` | Zero-artifact `HARVESTED_PARTIAL` rows recorded as `outcome: successful_dispatch` | Treat `n_artifacts == 0` as incomplete regardless of provider rc; use `recovery_incomplete_needs_retry` |
+| H-21 | (chunk 6 cross-ref to H-5) Preflight REFUSE cannot block dispatch — same root cause as H-5 | (deduplicated) | (deduplicated) |
+
+---
+
+## Op-routables (ranked by EV)
+
+### OP-1 (highest EV) — Promote Catalog #176 to AST-backed graph validator + backfill 6 phantom rows #273-#278
+**Surfaces:** chunks 2, 8.
+**Why high EV:** Catalog #176 + #185 + #159 + #118 are the META-meta gates that make the CLAUDE.md catalog table the canonical strictness ledger. Empirical: 39 of 63 strict callsites missing CLAUDE rows; 6 phantom rows without callables. Cost: ~3-5 hr editor, $0 GPU.
+
+### OP-2 — Fix Catalog #272 byte-mutation verifier (`tools/verify_distinguishing_feature_byte_mutation.py:429`)
+**Surfaces:** chunks 1, 7, 9.
+**Why high EV:** This is the EVIDENCE GENERATOR other gates need. Without it, Catalog #220, #272, and the operational-mechanism declaration are all self-attestation surfaces. Cost: ~2-4 hr editor, $0 GPU.
+
+### OP-3 — Wire `predicted_dispatch_risk` into `rank_candidates`
+**Surfaces:** chunks 4, 6.
+**Why high EV:** The Rudin-Daubechies autopilot ranker landed last week with full continual-learning loop, but the risk field is dead in the ranker. Cost: ~1-2 hr editor, $0 GPU.
+
+### OP-4 — Fix paired-env auto-bypass in `tools/run_modal_smoke_before_full.py:748-751`
+**Surfaces:** chunk 4.
+**Why high EV:** Catalog #199 + #202 paired-env discipline EXISTS specifically to prevent silent bypass, but the smoke wrapper auto-sets BOTH env vars. Cost: ~1 hr editor, $0 GPU.
+
+### OP-5 — Promote Catalog #185 to fail-closed on TypeError + canonical wording-agnostic live-count parsing
+**Surfaces:** chunks 2, 8.
+**Why high EV:** META-meta-meta gate that prevents Catalog drift IS the gate that's most subject to drift. Cost: ~2 hr editor, $0 GPU.
+
+### OP-6 — Atomicize `claim_catalog_number.py` truncate+rewrite to temp+fsync+rename
+**Surfaces:** chunk 8.
+**Why moderate-high EV:** Crash mid-write reissues old catalog numbers. Already empirically observed: catalog #183/#184 dual-claim collision 2026-05-09. Cost: ~30 min editor, $0 GPU.
+
+### OP-7 — Fix `_active_jobs_lock_depth` thread-safety in Lightning state
+**Surfaces:** chunk 5.
+**Why moderate EV:** Process-global counter bypasses fcntl in threaded dispatch. Cost: ~1 hr editor, $0 GPU.
+
+### OP-8 — Fix Modal harvest summary `n_artifacts==0` → `successful_dispatch` mislabeling
+**Surfaces:** chunk 10.
+**Why moderate EV:** Closes recovery loop with no usable evidence; suppresses re-harvest. Cost: ~30 min editor, $0 GPU.
+
+### OP-9 — Promote `_consult_preflight_risk_scorer` to populate `GateVerdictPanel` from real staged-file results
+**Surfaces:** chunks 4, 6.
+**Why moderate EV:** Sister of OP-3. The risk scorer Catalog #273-#278 are referenced as ship-blockers but have no real consumers (chunk 8 phantom rows finding). Cost: ~2-3 hr editor, $0 GPU.
+
+### OP-10 — Land canonical Modal ledger append-amortization (SQLite or O_APPEND + tail validation)
+**Surfaces:** chunk 5.
+**Why moderate EV:** Pre-emptive harden BEFORE the bug bites at 10K events. Cost: ~4-6 hr editor, $0 GPU.
+
+---
+
+## 6-hook wire-in declaration per Catalog #125
+
+This aggregation memo is text-only adversarial review consumption. Hook applicability:
+
+1. **Sensitivity-map contribution** — N/A — text-only ledger; no per-tensor importance signal produced.
+2. **Pareto constraint** — ACTIVE — every HIGH/MEDIUM finding is a PRE-DISPATCH CONSTRAINT on the operator's next paid GPU dispatch.
+3. **Bit-allocator hook** — N/A — no per-tensor allocation change proposed.
+4. **Cathedral autopilot dispatch hook** — ACTIVE — OP-3 wires `predicted_dispatch_risk` into `rank_candidates`; OP-9 populates `GateVerdictPanel` for the autopilot's risk scorer.
+5. **Continual-learning posterior update** — N/A with rationale: this aggregation does not produce empirical anchors; sister continual-learning posterior loop runs from the codex companion's own session-level audit ledger.
+6. **Probe-disambiguator** — N/A with rationale: codex's adversarial-review verdict format is single-verdict-per-finding; no two defensible interpretations were surfaced where ship/no-ship probe disambiguation would apply.
+
+---
+
+## Sister-subagent ownership-honored note per Catalog #230
+
+Scope: READ-ONLY codex invocations + READ existing chunk logs + WRITE-NEW to `.omx/research/chunked_codex_review_chunk{5,10}_20260515.log` + this aggregation memo + sister landing memo + lane registry mark via canonical helper. NO source files / preflight.py / contended files were modified.
+
+In-flight sister subagents:
+- `a21e31a4` (FIX-CODEX-WAVE-3 — touches `preflight.py` + 2 dispatch tools) — UNTOUCHED.
+- `aba0abf5` (OMNIBUS-BUG-CLASS-AUDIT — read-only audit) — UNTOUCHED (read-only scopes are non-overlapping).
+
+---
+
+## Premise verification per Catalog #229
+
+- PV-1: 8 chunk log files exist on disk via `ls .omx/research/chunked_codex_review_chunk*_20260515.log` (expected chunks 1, 2, 3, 4, 6, 7, 8, 9). CONFIRMED.
+- PV-2: Codex companion exists at `/Users/adpena/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs`. CONFIRMED.
+- PV-3: No predecessor checkpoint for this `subagent_id` via `tools/subagent_checkpoint.py read`. CONFIRMED (fresh start).
+- PV-4: Chunk 3 final assistant message is identical to chunk 1 (codex companion ran adversarial-review against working tree diff WITHOUT per-chunk path scoping). CONFIRMED via line-by-line comparison of final rendered sections.
+- PV-5: Chunks 5 + 10 codex calls completed cleanly with `# Codex Adversarial Review` rendered sections + `Verdict: needs-attention` + structured findings. CONFIRMED via `grep -n "^# Codex Adversarial Review"`.
+- PV-6: Existing partial ledger at `.omx/research/codex_chunked_full_codebase_review_20260515.md` from orchestrator `afe253c` (313 lines, chunks 1/2/4/6/7/8/9 verbatim). CONFIRMED.
+
+---
+
+## Reactivation criteria
+
+Per CLAUDE.md "Forbidden premature KILL": every finding above is DEFERRED-pending-fix, NOT KILLED. Reactivation criteria for re-validating each finding:
+
+1. **For each HIGH finding** — re-run the cited code path against synthetic inputs designed to trigger the bug class; if the bug is no longer reproducible AND a sister STRICT preflight gate exists at 0 live violations, the finding may be marked CLOSED in a follow-up ledger.
+2. **For each MEDIUM finding** — same as HIGH but the strict-preflight requirement may be waived if the cost of a strict gate exceeds the empirical cost of the bug class.
+3. **For dropped chunk 3 duplicate** — if codex companion gains per-chunk `--paths` scoping, re-run chunks 3 + 1 with explicit path filters and compare verdicts. Currently chunk 3 carries no unique evidence beyond chunk 1.

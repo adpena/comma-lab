@@ -30060,6 +30060,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_chunked_codex_full_codebase_review_20260515",
+      "name": "Chunked Codex Full Codebase Adversarial Review (10 chunks)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/codex_chunked_full_codebase_review_20260515.md (10 chunks aggregated, 35 findings, 5 cross-cutting themes, 10 op-routables)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_chunked_codex_full_codebase_review_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30069,5 +30110,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T21:40:16Z"
+  "updated_at": "2026-05-15T21:59:14Z"
 }
