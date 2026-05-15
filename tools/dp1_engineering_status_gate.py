@@ -22,15 +22,10 @@ from typing import Any
 
 DEFAULT_READINESS = Path("reports/cooperative_receiver/driving_prior_readiness.json")
 DEFAULT_SMOKE_MANIFEST = Path("experiments/results/dp1_smoke_v2_hardening/manifest.json")
-DEFAULT_TINY_FULL_MANIFEST = Path(
-    "experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/manifest.json"
-)
-DEFAULT_TINY_FULL_PROVENANCE = Path(
-    "experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/provenance.json"
-)
+DEFAULT_TINY_FULL_MANIFEST = Path("experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/manifest.json")
+DEFAULT_TINY_FULL_PROVENANCE = Path("experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/provenance.json")
 DEFAULT_TIER_C = Path(
-    "experiments/results/tier_c_real_scorer_fourway_codex_execute1_dp1fix_20260514/"
-    "dp1_smoke_tier_c_real_scorer.json"
+    "experiments/results/tier_c_real_scorer_fourway_codex_execute1_dp1fix_20260514/dp1_smoke_tier_c_real_scorer.json"
 )
 
 REAL_DP1_DATASET = "comma2k19"
@@ -47,6 +42,23 @@ _PRIVATE_SOURCE_PATH_FIELDS = (
     "cache_dir",
     "stream_log_dir",
     "codebook_path",
+)
+_AUTHORITATIVE_CONTEST_AXES = ("contest-cuda", "contest-cpu")
+_NON_AUTHORITATIVE_AXIS_TOKENS = (
+    "proxy",
+    "mps",
+    "macos",
+    "advisory",
+    "diagnostic",
+)
+_AXIS_METADATA_FIELDS = (
+    "score_axis",
+    "score_axis_tag",
+    "axis",
+    "hardware_axis",
+    "evidence_axis",
+    "evidence_grade",
+    "lane_tag",
 )
 
 
@@ -174,9 +186,7 @@ def _source_custody_preflight(
         }
         for row in rows
     ]
-    zero_byte_chunks = [
-        row["relative_path"] for row in public_rows if int(row["size_bytes"]) <= 0
-    ]
+    zero_byte_chunks = [row["relative_path"] for row in public_rows if int(row["size_bytes"]) <= 0]
     if not public_rows and not blockers:
         blockers.append("dp1_real_chunks_missing_video_hevc")
     for relpath in zero_byte_chunks:
@@ -195,9 +205,7 @@ def _source_custody_preflight(
     )
     if not blockers:
         chunk_ids = [row["relative_path"] for row in public_rows]
-        chunk_sha256s = {
-            row["relative_path"]: row["sha256"] for row in public_rows
-        }
+        chunk_sha256s = {row["relative_path"]: row["sha256"] for row in public_rows}
         base["dataset_source_manifest"] = {
             "schema": "dp1_dataset_source_manifest.v1",
             "dataset_name": REAL_DP1_DATASET,
@@ -237,9 +245,7 @@ def _artifact(path: Path, payload: dict[str, Any] | None) -> dict[str, Any]:
         "schema": payload.get("schema") if payload else None,
         "score_claim": payload.get("score_claim") if payload else None,
         "promotion_eligible": payload.get("promotion_eligible") if payload else None,
-        "ready_for_exact_eval_dispatch": (
-            payload.get("ready_for_exact_eval_dispatch") if payload else None
-        ),
+        "ready_for_exact_eval_dispatch": (payload.get("ready_for_exact_eval_dispatch") if payload else None),
         "evidence_grade": payload.get("evidence_grade") if payload else None,
         "archive_bytes": payload.get("archive_bytes") if payload else None,
         "archive_sha256": payload.get("archive_sha256") if payload else None,
@@ -254,30 +260,62 @@ def _finite_number(value: Any) -> bool:
     return math.isfinite(float(value))
 
 
-def _has_contest_score(payload: dict[str, Any]) -> bool:
+def _normalize_axis_token(value: str) -> str:
+    return value.strip().lower().replace("_", "-")
+
+
+def _axis_metadata_values(*payloads: dict[str, Any] | None) -> list[str]:
+    values: list[str] = []
+    for payload in payloads:
+        if not isinstance(payload, dict):
+            continue
+        for key in _AXIS_METADATA_FIELDS:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                values.append(value)
+    return values
+
+
+def _has_authoritative_contest_axis(*payloads: dict[str, Any] | None) -> bool:
+    values = _axis_metadata_values(*payloads)
+    normalized = [_normalize_axis_token(value) for value in values]
+    if any(any(token in value for token in _NON_AUTHORITATIVE_AXIS_TOKENS) for value in normalized):
+        return False
+    return any(any(axis in value for axis in _AUTHORITATIVE_CONTEST_AXES) for value in normalized)
+
+
+def _scope_has_contest_score(
+    scope: dict[str, Any],
+    *,
+    parent: dict[str, Any] | None = None,
+) -> bool:
     for key in (
         "contest_cuda_score",
         "contest_cpu_score",
         "score_recomputed",
+        "score_recomputed_from_components",
         "canonical_score",
     ):
-        if _finite_number(payload.get(key)):
+        if _finite_number(scope.get(key)) and _has_authoritative_contest_axis(parent, scope):
             return True
-    result = payload.get("result")
-    if isinstance(result, dict):
-        for key in ("contest_cuda_score", "contest_cpu_score", "score_recomputed"):
-            if _finite_number(result.get(key)):
-                return True
-    archive_result = payload.get("archive_result")
-    if isinstance(archive_result, dict):
-        for key in ("score_recomputed", "canonical_score"):
-            if _finite_number(archive_result.get(key)):
-                return True
     return False
 
 
+def _has_contest_score(payload: dict[str, Any]) -> bool:
+    if _scope_has_contest_score(payload):
+        return True
+    result = payload.get("result")
+    if isinstance(result, dict) and _scope_has_contest_score(result, parent=payload):
+        return True
+    archive_result = payload.get("archive_result")
+    return isinstance(archive_result, dict) and _scope_has_contest_score(
+        archive_result,
+        parent=payload,
+    )
+
+
 def _score_axis(payload: dict[str, Any]) -> str | None:
-    for key in ("score_axis_tag", "axis", "hardware_axis", "evidence_axis"):
+    for key in _AXIS_METADATA_FIELDS:
         value = payload.get(key)
         if isinstance(value, str) and value:
             return value
@@ -313,14 +351,9 @@ def _dataset_source_status(
         blockers.append(f"dp1_real_source_mode_invalid:{source_mode or '<missing>'}")
     coverage = manifest.get("chunk_sha256_coverage")
     if source_mode != "prebuilt_codebook":
-        selected_complete = (
-            isinstance(coverage, dict)
-            and coverage.get("complete_for_selected_chunks") is True
-        )
+        selected_complete = isinstance(coverage, dict) and coverage.get("complete_for_selected_chunks") is True
         if not selected_complete:
-            blockers.append(
-                "dp1_real_dataset_selected_chunk_sha256_coverage_incomplete"
-            )
+            blockers.append("dp1_real_dataset_selected_chunk_sha256_coverage_incomplete")
     return not blockers, blockers, manifest
 
 
@@ -340,11 +373,7 @@ def _false_claims(artifacts: dict[str, dict[str, Any] | None]) -> list[str]:
         if payload.get("rank_or_kill_eligible") is True and not has_score:
             problems.append(f"{path}: rank_or_kill_eligible=true without contest score")
         blockers = payload.get("dispatch_blockers")
-        if (
-            payload.get("ready_for_exact_eval_dispatch") is True
-            and isinstance(blockers, list)
-            and blockers
-        ):
+        if payload.get("ready_for_exact_eval_dispatch") is True and isinstance(blockers, list) and blockers:
             problems.append(f"{path}: ready_for_exact_eval_dispatch=true with blockers")
     return problems
 
@@ -403,13 +432,8 @@ def _next_gate(
     ]
     return {
         "id": "dp1_comma2k19_onechunk_cpu_advisory_source_custody",
-        "status": "blocked_until_source_supplied"
-        if not real_source_ready
-        else "executable_real_source_probe",
-        "purpose": (
-            "Produce the first real-source DP1 training/runtime custody artifact "
-            "without a score claim."
-        ),
+        "status": "blocked_until_source_supplied" if not real_source_ready else "executable_real_source_probe",
+        "purpose": ("Produce the first real-source DP1 training/runtime custody artifact without a score claim."),
         "blocked_by": real_source_blockers,
         "commands": [command],
         "success_criteria": [
@@ -464,9 +488,7 @@ def build_status(
         if source_chunks_dir is not None
         else _dataset_source_manifest(list(loaded.values()))
     )
-    real_source_ready, source_blockers, normalized_source = _dataset_source_status(
-        dataset_manifest
-    )
+    real_source_ready, source_blockers, normalized_source = _dataset_source_status(dataset_manifest)
     if source_chunks_dir is not None and source_custody.get("blockers"):
         source_blockers = list(
             dict.fromkeys(
@@ -476,14 +498,8 @@ def build_status(
                 ]
             )
         )
-    exact_scores_present = any(
-        _has_contest_score(payload)
-        for payload in loaded.values()
-        if isinstance(payload, dict)
-    )
-    smoke_ready = bool(
-        loaded["smoke_manifest"] and loaded["smoke_manifest"].get("archive_path")
-    )
+    exact_scores_present = any(_has_contest_score(payload) for payload in loaded.values() if isinstance(payload, dict))
+    smoke_ready = bool(loaded["smoke_manifest"] and loaded["smoke_manifest"].get("archive_path"))
     tier_c_ready = bool(
         loaded["tier_c"]
         and loaded["tier_c"].get("score_claim") is False
@@ -491,8 +507,7 @@ def build_status(
     )
     tiny_full_ran = bool(
         loaded["tiny_full_provenance"]
-        and loaded["tiny_full_provenance"].get("trainer")
-        == "experiments/train_substrate_pretrained_driving_prior.py"
+        and loaded["tiny_full_provenance"].get("trainer") == "experiments/train_substrate_pretrained_driving_prior.py"
     )
     if false_claims:
         status = "blocked_false_dp1_score_or_promotion_claim"
@@ -519,9 +534,7 @@ def build_status(
             "tier_c_advisory_present": tier_c_ready,
             "tiny_full_cpu_advisory_ran": tiny_full_ran,
             "real_dataset_source_ready": real_source_ready,
-            "real_source_custody_preflight_passed": (
-                source_custody.get("status") == "passed"
-            ),
+            "real_source_custody_preflight_passed": (source_custody.get("status") == "passed"),
             "exact_score_artifact_present": exact_scores_present,
         },
         "blockers": [
@@ -530,23 +543,12 @@ def build_status(
             "dp1_paired_contest_cpu_cuda_exact_eval_missing",
         ],
         "false_claims": false_claims,
-        "artifact_summary": {
-            label: _artifact(paths[label], payload)
-            for label, payload in loaded.items()
-        },
+        "artifact_summary": {label: _artifact(paths[label], payload) for label, payload in loaded.items()},
         "source_custody_preflight": {
-            key: value
-            for key, value in source_custody.items()
-            if key != "dataset_source_manifest"
+            key: value for key, value in source_custody.items() if key != "dataset_source_manifest"
         },
         "score_axes_observed": [
-            axis
-            for axis in (
-                _score_axis(payload)
-                for payload in loaded.values()
-                if isinstance(payload, dict)
-            )
-            if axis
+            axis for axis in (_score_axis(payload) for payload in loaded.values() if isinstance(payload, dict)) if axis
         ],
         "dataset_source_manifest": _sanitize_dataset_source_manifest(normalized_source),
         "next_gate": _next_gate(
@@ -628,12 +630,8 @@ def main(argv: list[str] | None = None) -> int:
                 "engineering_status": status["engineering_status"],
                 "classification": status["classification"],
                 "false_claims": len(status["false_claims"]),
-                "source_custody_preflight": status["source_custody_preflight"][
-                    "status"
-                ],
-                "source_chunk_count": status["source_custody_preflight"][
-                    "chunk_count"
-                ],
+                "source_custody_preflight": status["source_custody_preflight"]["status"],
+                "source_chunk_count": status["source_custody_preflight"]["chunk_count"],
                 "next_gate": status["next_gate"]["id"],
                 "next_gate_status": status["next_gate"]["status"],
                 "output_json": str(args.output_json) if args.output_json else None,
@@ -643,9 +641,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.strict and status["false_claims"]:
         return 2
-    if args.require_real_source and not status["capabilities_confirmed"][
-        "real_dataset_source_ready"
-    ]:
+    if args.require_real_source and not status["capabilities_confirmed"]["real_dataset_source_ready"]:
         return 3
     return 0
 

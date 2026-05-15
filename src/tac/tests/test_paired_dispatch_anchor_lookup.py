@@ -60,6 +60,7 @@ def _write_canonical_cuda_anchor(
     label: str = "z3_v2_full",
     grade: str = "contest-CUDA",
     score_claim_valid: bool = True,
+    runtime_tree_sha256: str = "a" * 64,
 ) -> Path:
     """Write a sister-of-c6 canonical contest_auth_eval_cuda.json shape."""
     lane_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal" / "harvested_artifacts"
@@ -78,6 +79,7 @@ def _write_canonical_cuda_anchor(
                 "scorer_device": "cuda",
                 "score_axis": "contest_cuda",
                 "n_samples": 600,
+                "runtime_tree_sha256": runtime_tree_sha256,
             },
             indent=2,
         )
@@ -92,6 +94,7 @@ def _write_canonical_cpu_anchor(
     score: float = 0.19663,
     label: str = "z3_v2_full",
     grade: str = "contest-CPU",
+    runtime_tree_sha256: str = "a" * 64,
 ) -> Path:
     """Write a CPU-axis anchor."""
     lane_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal" / "harvested_artifacts"
@@ -112,6 +115,7 @@ def _write_canonical_cpu_anchor(
                 "n_samples": 600,
                 "platform_system": "Linux",
                 "platform_machine": "x86_64",
+                "runtime_tree_sha256": runtime_tree_sha256,
             },
             indent=2,
         )
@@ -125,6 +129,7 @@ def _write_modal_cuda_result(
     archive_sha256: str,
     score: float = 0.21,
     label: str = "modal_legacy",
+    runtime_tree_sha256: str = "a" * 64,
 ) -> Path:
     """Write the older ``modal_cuda_auth_eval_result.json`` shape."""
     out_dir = repo_root / "experiments" / "results" / "modal_auth_eval" / label
@@ -141,6 +146,7 @@ def _write_modal_cuda_result(
                 "final_score": score,
                 "n_samples": 600,
                 "scorer_device": "cuda",
+                "runtime_tree_sha256": runtime_tree_sha256,
             },
             indent=2,
         )
@@ -357,6 +363,7 @@ def test_lookup_filesystem_finds_canonical_cuda_anchor(tmp_path):
     assert hit["axis"] == "contest_cuda"
     assert hit["archive_sha256"] == sha
     assert hit["score"] == pytest.approx(0.19869)
+    assert hit["runtime_tree_sha256"] == "a" * 64
     assert hit["custody_match"] is True
     assert hit["source"] == "filesystem_scan"
     assert hit["evidence_grade"] == "contest-CUDA"
@@ -396,16 +403,49 @@ def test_lookup_ledger_finds_nested_harvest_result(tmp_path):
                 "archive_sha256": sha,
                 "eval_archive_size_bytes": 456,
                 "score": 0.234,
+                "runtime_tree_sha256": "b" * 64,
             },
         },
     )
 
-    hit = find_promotable_anchor_for_axis_and_sha("contest_cuda", sha, repo_root=tmp_path)
+    hit = find_promotable_anchor_for_axis_and_sha(
+        "contest_cuda",
+        sha,
+        repo_root=tmp_path,
+        expected_runtime_tree_sha256="b" * 64,
+    )
 
     assert hit is not None
     assert hit["source"] == "modal_call_id_ledger"
     assert hit["archive_bytes"] == 456
     assert hit["score"] == pytest.approx(0.234)
+    assert hit["runtime_tree_sha256"] == "b" * 64
+
+
+def test_lookup_refuses_runtime_tree_mismatch_when_expected(tmp_path):
+    sha = "baddcafe" * 8
+    _write_canonical_cuda_anchor(
+        tmp_path,
+        archive_sha256=sha,
+        runtime_tree_sha256="a" * 64,
+    )
+    assert (
+        find_promotable_anchor_for_axis_and_sha(
+            "cuda",
+            sha,
+            repo_root=tmp_path,
+            expected_runtime_tree_sha256="b" * 64,
+        )
+        is None
+    )
+    hit = find_promotable_anchor_for_axis_and_sha(
+        "cuda",
+        sha,
+        repo_root=tmp_path,
+        expected_runtime_tree_sha256="a" * 64,
+    )
+    assert hit is not None
+    assert hit["runtime_tree_sha256"] == "a" * 64
 
 
 def test_lookup_ledger_preserves_falsey_numeric_zero_score(tmp_path):
@@ -532,7 +572,13 @@ def test_cli_flag_true_with_cuda_anchor_skips_cuda_only(tmp_path):
     """Anchor exists for CUDA only: cuda_skipped=True / cpu_skipped=False."""
     archive, sha = _make_archive_file(tmp_path)
     _write_canonical_cuda_anchor(tmp_path, archive_sha256=sha, score=0.19869)
-    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    proc = _run_cli(
+        tmp_path,
+        archive,
+        "--skip-axis-if-promotable-anchor-exists",
+        "--expected-runtime-tree-sha256",
+        "a" * 64,
+    )
     assert proc.returncode == 0, proc.stderr
     plan = json.loads(proc.stdout)
     assert plan["skip_axis_if_promotable_anchor_exists"] is True
@@ -546,7 +592,13 @@ def test_cli_flag_true_with_cuda_anchor_skips_cuda_only(tmp_path):
 def test_cli_flag_true_with_cpu_anchor_skips_cpu_only(tmp_path):
     archive, sha = _make_archive_file(tmp_path)
     _write_canonical_cpu_anchor(tmp_path, archive_sha256=sha, score=0.19663)
-    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    proc = _run_cli(
+        tmp_path,
+        archive,
+        "--skip-axis-if-promotable-anchor-exists",
+        "--expected-runtime-tree-sha256",
+        "a" * 64,
+    )
     assert proc.returncode == 0, proc.stderr
     plan = json.loads(proc.stdout)
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is False
@@ -558,7 +610,13 @@ def test_cli_flag_true_with_both_anchors_marks_both_skipped(tmp_path):
     archive, sha = _make_archive_file(tmp_path)
     _write_canonical_cuda_anchor(tmp_path, archive_sha256=sha)
     _write_canonical_cpu_anchor(tmp_path, archive_sha256=sha)
-    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    proc = _run_cli(
+        tmp_path,
+        archive,
+        "--skip-axis-if-promotable-anchor-exists",
+        "--expected-runtime-tree-sha256",
+        "a" * 64,
+    )
     assert proc.returncode == 0, proc.stderr
     plan = json.loads(proc.stdout)
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
@@ -568,7 +626,13 @@ def test_cli_flag_true_with_both_anchors_marks_both_skipped(tmp_path):
 def test_cli_flag_true_with_neither_anchor_dispatches_normally(tmp_path):
     archive, _ = _make_archive_file(tmp_path)
     # No anchors written
-    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    proc = _run_cli(
+        tmp_path,
+        archive,
+        "--skip-axis-if-promotable-anchor-exists",
+        "--expected-runtime-tree-sha256",
+        "a" * 64,
+    )
     assert proc.returncode == 0, proc.stderr
     plan = json.loads(proc.stdout)
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is False
@@ -582,8 +646,28 @@ def test_cli_skip_axis_when_anchor_grade_is_advisory_dispatches(tmp_path):
     """Advisory anchor must not cause skip; dispatch still fires."""
     archive, sha = _make_archive_file(tmp_path)
     _write_canonical_cpu_anchor(tmp_path, archive_sha256=sha, grade="macOS-CPU-advisory only")
-    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    proc = _run_cli(
+        tmp_path,
+        archive,
+        "--skip-axis-if-promotable-anchor-exists",
+        "--expected-runtime-tree-sha256",
+        "a" * 64,
+    )
     assert proc.returncode == 0, proc.stderr
     plan = json.loads(proc.stdout)
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
     assert plan["existing_anchors_reused"]["contest_cpu"] is None
+
+
+def test_cli_skip_flag_without_runtime_sha_does_not_reuse_runtime_blind_anchor(tmp_path):
+    archive, sha = _make_archive_file(tmp_path)
+    _write_canonical_cuda_anchor(tmp_path, archive_sha256=sha)
+    proc = _run_cli(tmp_path, archive, "--skip-axis-if-promotable-anchor-exists")
+    assert proc.returncode == 0, proc.stderr
+    plan = json.loads(proc.stdout)
+    assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is False
+    assert plan["existing_anchors_reused"]["contest_cuda"] is None
+    assert any(
+        "runtime-bound anchor reuse is disabled" in note
+        for note in plan["notes"]
+    )

@@ -14,6 +14,7 @@ import pytest
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
@@ -25,8 +26,10 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     canonicalize_brotli_dim_delta_sidecar_arrays,
     decode_brotli_dim_delta_sidecar_payload,
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
+    decode_pr106_sidecar_packet_correction_passes,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_format0c_semantic_candidate_archive,
+    emit_pr106_format0d_semantic_candidate_archive,
     emit_pr106_format07_semantic_candidate_archive,
     emit_pr106_sidecar_packet,
     emit_pr106_sidecar_recode_candidate_archive,
@@ -41,6 +44,9 @@ from tac.packet_compiler.pr106_sidecar_packet import (
 
 REPO = Path(__file__).resolve().parents[3]
 TOOL = REPO / "tools" / "profile_pr106_latent_sidecar_recode.py"
+PR106_R2_PR101_RUNTIME = (
+    REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py"
+)
 PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_PR101_ARCHIVE = (
     REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
@@ -64,6 +70,17 @@ def _sample_arrays(n: int = 12) -> tuple[np.ndarray, np.ndarray]:
 
 def _load_tool_module():
     spec = importlib.util.spec_from_file_location("profile_pr106_latent_sidecar_recode", TOOL)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_pr106_pr101_runtime_module():
+    spec = importlib.util.spec_from_file_location(
+        "pr106_latent_sidecar_r2_pr101_runtime_test",
+        PR106_R2_PR101_RUNTIME,
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -231,6 +248,80 @@ def test_format0c_semantic_materializer_rejects_second_dim_composition() -> None
             selected_dims,
             selected_deltas,
         )
+
+
+def test_format0d_semantic_materializer_roundtrips_second_additive_pass() -> None:
+    member, packet = _format0c_fixture_member_packet()
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    selected_dims = np.full(base_dims.shape, PR106_NO_OP_DIM, dtype=np.uint8)
+    selected_deltas = np.zeros(base_deltas.shape, dtype=np.int8)
+    selected_dims[0] = np.uint8((int(base_dims[0]) + 1) % 28)
+    selected_deltas[0] = _compatible_score_table_delta(int(base_deltas[0]))
+
+    candidate_member, candidate_archive, diagnostics = (
+        emit_pr106_format0d_semantic_candidate_archive(
+            member,
+            packet,
+            selected_dims,
+            selected_deltas,
+        )
+    )
+
+    reparsed_member = read_single_stored_member_archive(candidate_archive)
+    reparsed = parse_pr106_sidecar_packet(reparsed_member.payload)
+    passes = decode_pr106_sidecar_packet_correction_passes(reparsed)
+    assert candidate_member.name == "x"
+    assert reparsed.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+    assert emit_pr106_sidecar_packet(reparsed) == reparsed_member.payload
+    assert len(passes) == 2
+    (roundtrip_base_dims, roundtrip_base_deltas), (
+        roundtrip_extra_dims,
+        roundtrip_extra_deltas,
+    ) = passes
+    np.testing.assert_array_equal(roundtrip_base_dims, base_dims)
+    np.testing.assert_array_equal(roundtrip_base_deltas, base_deltas)
+    np.testing.assert_array_equal(roundtrip_extra_dims, selected_dims)
+    np.testing.assert_array_equal(roundtrip_extra_deltas, selected_deltas)
+    assert diagnostics["semantic_materializer"] == "format0d_packet_ir_native"
+    assert diagnostics["extra_second_dim_pair_count"] == 1
+
+
+def test_format0d_runtime_decodes_and_applies_base_then_extra_pass() -> None:
+    member, packet = _format0c_fixture_member_packet()
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    selected_dims = np.full(base_dims.shape, PR106_NO_OP_DIM, dtype=np.uint8)
+    selected_deltas = np.zeros(base_deltas.shape, dtype=np.int8)
+    selected_dims[0] = np.uint8((int(base_dims[0]) + 1) % 28)
+    selected_deltas[0] = _compatible_score_table_delta(int(base_deltas[0]))
+    candidate_member, _candidate_archive, _diagnostics = (
+        emit_pr106_format0d_semantic_candidate_archive(
+            member,
+            packet,
+            selected_dims,
+            selected_deltas,
+        )
+    )
+    runtime = _load_pr106_pr101_runtime_module()
+
+    format_id, pr106_bytes, sidecar_blob, framing_meta = runtime.parse_sidecar_archive(
+        candidate_member.payload
+    )
+    assert format_id == runtime.SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+    assert pr106_bytes == packet.pr106_bytes
+    assert framing_meta is None
+    rt_base_dims, rt_base_deltas, rt_extra_dims, rt_extra_deltas = (
+        runtime.decode_format0d_sidecar(sidecar_blob)
+    )
+    latents = runtime.torch.zeros((600, 28), dtype=runtime.torch.float32)
+    runtime.apply_sidecar_corrections(latents, rt_base_dims, rt_base_deltas)
+    runtime.apply_sidecar_corrections(latents, rt_extra_dims, rt_extra_deltas)
+
+    assert float(latents[0, int(base_dims[0])]) == pytest.approx(
+        int(base_deltas[0]) * runtime.DELTA_SCALE
+    )
+    assert float(latents[0, int(selected_dims[0])]) == pytest.approx(
+        int(selected_deltas[0]) * runtime.DELTA_SCALE
+    )
 
 
 def test_format07_semantic_materializer_composes_same_dim_delta() -> None:

@@ -61,9 +61,11 @@ import datetime as _dt
 import fcntl
 import json
 import os
+import threading
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ACTIVE_JOBS_PATH = REPO_ROOT / ".omx" / "state" / "lightning_active_jobs.json"
@@ -97,12 +99,45 @@ class ActiveJobsCorruptError(RuntimeError):
 # lock-held depth counter. Pairs with ``_active_jobs_lock_held()`` so
 # ``_save_active_jobs`` can runtime-assert "caller holds the lock"
 # instead of relying on a comment-only contract.
-_active_jobs_lock_depth: int = 0
+#
+# OP-7 fix (codex chunk 5, 2026-05-15): the depth counter MUST be
+# thread-local. Pre-fix, the counter was a module-level int shared across
+# threads. Two threads in the same process could observe depth>0
+# simultaneously and BOTH skip the fcntl acquire (lines 132-135 in the
+# original `_active_jobs_lock` body), since that block only runs on the
+# 0->1 transition. Thread A enters with depth=0, acquires fcntl,
+# increments to 1; thread B then enters, sees depth==1 (treats it as
+# "re-entrant within this process is safe"), increments to 2, and runs
+# the critical section concurrently with thread A — silently dropping
+# concurrent register/upsert/mark calls. Sister of Catalog #131
+# (`check_no_bare_writes_to_shared_state`) + Catalog #140
+# (`check_state_writers_own_their_lock_end_to_end`): #131 + #140 enforce
+# the lock-held contract; OP-7 makes the depth counter PER-THREAD so the
+# contract is honored across threaded dispatch (e.g. `concurrent.futures.
+# ThreadPoolExecutor` over `tools/parallel_dispatch_top_k.py`).
+_active_jobs_lock_depth_tls = threading.local()
+
+
+def _get_active_jobs_lock_depth() -> int:
+    """Return THIS thread's local depth counter (default 0)."""
+
+    return int(getattr(_active_jobs_lock_depth_tls, "depth", 0))
+
+
+def _set_active_jobs_lock_depth(value: int) -> None:
+    """Set THIS thread's local depth counter."""
+
+    _active_jobs_lock_depth_tls.depth = int(value)
 
 
 def _active_jobs_lock_held() -> bool:
-    """Return True if THIS process is currently inside ``_active_jobs_lock``."""
-    return _active_jobs_lock_depth > 0
+    """Return True if THIS THREAD is currently inside ``_active_jobs_lock``.
+
+    OP-7 fix (2026-05-15): thread-local query so ``_save_active_jobs``
+    refuses writes from sibling threads that did NOT acquire the lock,
+    even when another thread in the same process holds it.
+    """
+    return _get_active_jobs_lock_depth() > 0
 
 
 @contextlib.contextmanager
@@ -115,28 +150,34 @@ def _active_jobs_lock(lock_path: Path | None = None):
     Codex round 5 HIGH 2 fix sister landing (catalog #140): tracks an
     in-process depth counter so ``_save_active_jobs`` can refuse writes
     that bypass the canonical locked path. Re-entry within the same
-    process is counted (depth > 1); fcntl is only re-acquired on the
-    0→1 transition to avoid same-process deadlock.
+    THREAD is counted (depth > 1); fcntl is only re-acquired on the
+    0->1 transition to avoid same-process deadlock.
+
+    OP-7 fix (codex chunk 5, 2026-05-15): the depth counter is now
+    PER-THREAD. A different thread in the same process that enters this
+    context manager will see thread-local depth=0 and proceed to
+    fcntl-acquire; ``fcntl.flock`` blocks (LOCK_EX) until the holding
+    thread releases. This serializes inter-thread access correctly.
+    Re-entry within the SAME thread still short-circuits (no deadlock).
     """
-    global _active_jobs_lock_depth
 
     p = lock_path or ACTIVE_JOBS_LOCK
     p.parent.mkdir(parents=True, exist_ok=True)
-    if _active_jobs_lock_depth > 0:
-        _active_jobs_lock_depth += 1
+    if _get_active_jobs_lock_depth() > 0:
+        _set_active_jobs_lock_depth(_get_active_jobs_lock_depth() + 1)
         try:
             yield None
         finally:
-            _active_jobs_lock_depth -= 1
+            _set_active_jobs_lock_depth(_get_active_jobs_lock_depth() - 1)
         return
     fd = os.open(str(p), os.O_RDWR | os.O_CREAT, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        _active_jobs_lock_depth += 1
+        _set_active_jobs_lock_depth(_get_active_jobs_lock_depth() + 1)
         try:
             yield fd
         finally:
-            _active_jobs_lock_depth -= 1
+            _set_active_jobs_lock_depth(_get_active_jobs_lock_depth() - 1)
     finally:
         try:
             fcntl.flock(fd, fcntl.LOCK_UN)
@@ -182,7 +223,7 @@ def _quarantine_corrupt_file(path: Path) -> Path:
     """
     if not path.exists():
         return path
-    ts = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     quarantine = path.with_suffix(path.suffix + f".corrupt.{ts}")
     # Bump suffix if a same-second collision happens (unlikely but possible).
     counter = 0
@@ -310,14 +351,14 @@ def update_active_jobs_locked(
     with _active_jobs_lock(l_path):
         try:
             rows = load_active_jobs_strict(p_path)
-        except ActiveJobsCorruptError:
+        except ActiveJobsCorruptError as exc:
             if quarantine_on_corrupt:
                 quarantine_path = _quarantine_corrupt_file(p_path)
                 raise ActiveJobsCorruptError(
                     f"active-jobs file at {p_path} was corrupt; "
                     f"quarantined to {quarantine_path}. Mutate refused; "
                     "operator must repair (see ActiveJobsCorruptError docstring)."
-                )
+                ) from exc
             raise
         new_rows = mutate_fn(rows)
         _save_active_jobs(new_rows, p_path)
@@ -577,7 +618,7 @@ def mark_pending_failed_unknown_billing_locked(
                 row["status"] = FAILED_UNKNOWN_BILLING_STATUS_TOKEN
                 row["failure_reason"] = failure_reason
                 row["submit_status_unknown_at_utc"] = _dt.datetime.now(
-                    _dt.timezone.utc,
+                    _dt.UTC,
                 ).isoformat(timespec="seconds")
                 if submit_partial_result is not None:
                     row["submit_partial_result"] = submit_partial_result
@@ -638,21 +679,21 @@ def cancel_pending_job_locked(
 
 
 __all__ = [
-    "ACTIVE_JOBS_PATH",
     "ACTIVE_JOBS_LOCK",
+    "ACTIVE_JOBS_PATH",
     "ACTIVE_STATUS_TOKEN",
-    "PENDING_STATUS_TOKEN",
     "FAILED_UNKNOWN_BILLING_STATUS_TOKEN",  # Catalog #147
+    "PENDING_STATUS_TOKEN",
     "ActiveJobsCorruptError",
     "PendingJobNotFoundError",
+    "cancel_pending_job_locked",
     "load_active_jobs",
     "load_active_jobs_strict",
-    "update_active_jobs_locked",
-    "register_job",
-    "upsert_job",
     "mark_job_terminal",
-    "register_pending_job_locked",
-    "update_pending_to_active_locked",
-    "cancel_pending_job_locked",
     "mark_pending_failed_unknown_billing_locked",  # Catalog #147
+    "register_job",
+    "register_pending_job_locked",
+    "update_active_jobs_locked",
+    "update_pending_to_active_locked",
+    "upsert_job",
 ]

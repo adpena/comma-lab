@@ -2246,6 +2246,53 @@ def preflight_all(
         check_operator_authorize_missing_codex_pre_dispatch_helper_fails_closed(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #284 - nightly catalog-gate regression workflow
+        # must route through the canonical helper. This keeps the DX
+        # self-protection loop executable in CI instead of becoming a stale
+        # handwritten workflow.
+        check_nightly_catalog_gate_regression_workflow_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #285 / #286 / #287 / #288 / #289 - OMNIBUS-BUG-
+        # CLASS-AUDIT GAP-1/GAP-2/GAP-4a/GAP-4b/GAP-5 follow-on landings per
+        # `feedback_omnibus_bug_class_audit_landed_20260515.md` op-routables
+        # 1, 2, 5, 5, 3 respectively. Sister of Catalog #279/#280/#281/#282/
+        # #283 (per-instance fail-open fixes), #185 (LIVE_COUNT drift),
+        # #117/#157/#174 (commit-swap class). All 5 META-meta-meta gates land
+        # in the same commit batch driving live count to 0 (or strict-flip
+        # pending audit-+-backfill where noted). Memory:
+        # feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md.
+        # Lane: lane_phase_2_land_5_gap_gates_20260515.
+        # GAP-1 (#285): META-meta-meta fail-open guard; warn-only initially
+        # because legacy guard helpers may carry historical anti-patterns
+        # pending audit + waiver pass per CLAUDE.md "Strict-flip atomicity
+        # rule".
+        check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern(
+            strict=False, verbose=verbose,
+        )
+        # GAP-2 (#286): phantom catalog row gate; STRICT-from-byte-one because
+        # PHASE-1 commit 42665ce95 drove the 6 phantom #273-#278 rows to 0
+        # callable functions.
+        check_catalog_text_references_existing_gate_callable(
+            strict=True, verbose=verbose,
+        )
+        # GAP-4a (#287): docstring overstatement evidence-tag gate; warn-only
+        # initially - legacy docstrings need bulk audit + waiver backfill.
+        check_no_docstring_overstatement_without_evidence_tag(
+            strict=False, verbose=verbose,
+        )
+        # GAP-4b (#288): uv torch driver-version pin gate; STRICT-from-byte-one
+        # because the canonical wrapper scripts/remote_archive_only_eval.sh
+        # already auto-pins via INFLATE_TORCH_SPEC.
+        check_uv_torch_install_has_driver_version_pin(
+            strict=True, verbose=verbose,
+        )
+        # GAP-5 (#289): commit-serializer drop-flag-and-retry detection;
+        # STRICT-from-byte-one with a cutoff filter that exempts pre-2026-
+        # 05-15T22:00:00Z events per CLAUDE.md "Strict-flip atomicity rule".
+        check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -60102,6 +60149,913 @@ def check_operator_authorize_missing_codex_pre_dispatch_helper_fails_closed(
             "SystemExit when the helper is absent (matching missing-"
             "companion behavior inside the helper). Sister of Catalog "
             "#279.\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #285 - check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern
+#
+# OMNIBUS-BUG-CLASS-AUDIT GAP-1 (2026-05-15) META-meta-meta self-protection
+# per `feedback_omnibus_bug_class_audit_landed_20260515.md` op-routable #1.
+#
+# Bug class: every NEW dispatch / pre-deploy / review guard helper's v1 ships
+# with PASS-VACUOUS / silent-skip / advisory-as-pass branches that bypass the
+# strict gating contract. 6 distinct catalog surfaces this week alone:
+#   - Catalog #270 v1 (DISPATCH-OPTIMIZATION-PROTOCOL unresolved-recipe pass)
+#   - Catalog #271 v1 (PRE-DISPATCH-CODEX-REVIEW cache-key + helper-import +
+#     verdict-parsing fail-open)
+#   - Catalog #279 (local_pre_deploy_check.py ImportError vacuous PASS)
+#   - Catalog #280 (canonical_dispatch_optimization_protocol Tier 2/3 vacuous)
+#   - Catalog #281/#282/#283 (run_codex_review_for_dispatch.py 3-HIGH fail-open)
+#
+# Per-instance fixes leave the META class active at the next new guard. This
+# gate AST-scans every dispatch-guard-helper file in a curated allow-list for
+# 5 forbidden anti-patterns. Sister of Catalog #279/#280/#281/#282/#283 (per-
+# instance fix gates) + Catalog #270/#271 (umbrella protocol gates).
+#
+# Initial wire-in: WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule".
+# Strict-flip pending audit + backfill across all 7 scanned files.
+# ============================================================================
+
+_CHECK_285_TARGET_FILES: tuple[tuple[str, ...], ...] = (
+    ("tools", "operator_authorize.py"),
+    ("tools", "local_pre_deploy_check.py"),
+    ("tools", "canonical_dispatch_optimization_protocol.py"),
+    ("tools", "run_codex_review_for_dispatch.py"),
+)
+# Forbidden patterns (substring tokens that flag real anti-patterns inside
+# any function body). We scan body text rather than full AST to keep the
+# implementation tight; false positives are guarded by waiver.
+_CHECK_285_FORBIDDEN_VACUOUS_TOKENS: tuple[str, ...] = (
+    # Anti-pattern 1: ImportError → return True/PASS without raising or False
+    "except ImportError:\n        return True",
+    "except ImportError:\n            return True",
+    # Anti-pattern 5: recipe-None branch silently marks signals True
+    "verdict.pass_signals[\"recipe_declares_min_vram_gb\"] = True  # vacuous",
+)
+_CHECK_285_WAIVER_PATTERN = re.compile(
+    r"#\s*DISPATCH_GUARD_FAIL_OPEN_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_285_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def _is_placeholder_gate_waiver_rationale(
+    rationale: str,
+    placeholders: frozenset[str],
+) -> bool:
+    key = rationale.strip().lower().strip(" .,:;\"'`")
+    return not key or any(p and key.startswith(p) for p in placeholders)
+
+
+def check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #285 - GAP-1 META-meta-meta fail-open guard self-protection.
+
+    Refuses any state of the curated dispatch-guard-helper file allow-list
+    (``tools/operator_authorize.py``, ``tools/local_pre_deploy_check.py``,
+    ``tools/canonical_dispatch_optimization_protocol.py``,
+    ``tools/run_codex_review_for_dispatch.py``) that contains forbidden
+    fail-open anti-pattern tokens without a same-line
+    ``# DISPATCH_GUARD_FAIL_OPEN_OK:<rationale>`` waiver (placeholder
+    ``<rationale>`` / ``<reason>`` literals rejected so the docstring
+    example cannot self-waive).
+
+    Sister of Catalog #279/#280/#281/#282/#283 (per-instance fix gates).
+    Where those gates catch a SPECIFIC anti-pattern in a SPECIFIC file,
+    this gate catches the META class structurally so the next new guard
+    helper inherits the protection automatically.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+    against" + "Subagent coherence-by-default" non-negotiables. Per
+    CLAUDE.md "Strict-flip atomicity rule" — initial wire-in is warn-only
+    pending the bulk audit + backfill across all 4 scanned files.
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
+    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+
+    for parts in _CHECK_285_TARGET_FILES:
+        target = root.joinpath(*parts)
+        if not target.is_file():
+            continue
+        try:
+            text = target.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Per-line / per-window scan with same-line waiver opt-out.
+        lines = text.splitlines()
+        line_offsets: list[int] = []
+        offset = 0
+        for line in lines:
+            line_offsets.append(offset)
+            offset += len(line) + 1
+        for tok in _CHECK_285_FORBIDDEN_VACUOUS_TOKENS:
+            start = 0
+            while True:
+                hit = text.find(tok, start)
+                if hit < 0:
+                    break
+                # Find the zero-based line containing this hit.
+                line_no = None
+                for i, off in enumerate(line_offsets):
+                    if off > hit:
+                        line_no = max(0, i - 1)
+                        break
+                if line_no is None:
+                    line_no = max(0, len(lines) - 1)
+                # Check ±5-line waiver window (anti-pattern may span lines;
+                # waiver typically on the try: or above-line)
+                waived = False
+                lo = max(0, line_no - 5)
+                hi = min(len(lines), line_no + 5)
+                for j in range(lo, hi):
+                    waiver_match = _CHECK_285_WAIVER_PATTERN.search(lines[j])
+                    if waiver_match:
+                        rationale = waiver_match.group(1).strip()
+                        if not _is_placeholder_gate_waiver_rationale(
+                            rationale,
+                            _CHECK_285_WAIVER_PLACEHOLDERS,
+                        ):
+                            waived = True
+                            break
+                if not waived:
+                    rel = target.relative_to(root)
+                    violations.append(
+                        f"{rel}:{line_no}: forbidden fail-open anti-pattern "
+                        f"`{tok[:80]}...` per Catalog #285 META-meta-meta "
+                        "(OMNIBUS GAP-1). Sister of Catalog #279/#280/#281. "
+                        "Fix: replace with fail-CLOSED behavior (raise / "
+                        "return False / SystemExit) OR add same-line "
+                        "`# DISPATCH_GUARD_FAIL_OPEN_OK:<rationale>` waiver "
+                        "with non-placeholder rationale."
+                    )
+                start = hit + len(tok)
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern] "
+                f"{len(violations)} violation(s) (warn-only initially per "
+                "Strict-flip atomicity rule)"
+            )
+        else:
+            print(
+                "  [check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_new_dispatch_guard_helper_has_no_fail_open_anti_pattern "
+            f"found {len(violations)} violation(s). Per CLAUDE.md 'Bugs must "
+            "be permanently fixed AND self-protected against' non-negotiable + "
+            "Catalog #285 (OMNIBUS GAP-1 META-meta-meta fail-open guard "
+            "discipline). Every new dispatch / pre-deploy / review guard helper "
+            "MUST fail CLOSED on missing-helper / unresolved-state / parse-"
+            "failure / advisory-mode branches. Per-instance fixes leave the "
+            "META class active at the next new guard.\n  "
+            + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #286 - check_catalog_text_references_existing_gate_callable
+#
+# OMNIBUS-BUG-CLASS-AUDIT GAP-2 (2026-05-15) phantom-catalog-row sister gate
+# per `feedback_omnibus_bug_class_audit_landed_20260515.md` op-routable #2.
+#
+# Bug class: CLAUDE.md catalog table is the operator-facing strictness ledger.
+# Gates that reference a `check_X` function name that doesn't actually exist
+# in `src/tac/preflight.py` create a false sense of structural protection.
+# Sister of Catalog #185 (which catches LIVE_COUNT drift between catalog text
+# and gate empirical result); #286 catches the NAME-EXISTS dual surface.
+#
+# Anchors: WAVE-D Catalog #216 doc-only landing + #273-#278 phantom rows
+# (Rudin-Daubechies preflight composite, all 6 referenced functions undefined
+# at the time of the catalog row landing; recovered via PHASE-1 commit
+# 42665ce95). Without this gate the next phantom catalog row will recur.
+# ============================================================================
+
+_CHECK_286_CATALOG_ROW_RE = re.compile(
+    r"^(\d+)\.\s+`((?:check|preflight)_[a-z_0-9]+)`",
+    re.MULTILINE,
+)
+_CHECK_286_CATALOG_SECTION_HEADER = "## Meta-bug class catalog"
+
+
+def check_catalog_text_references_existing_gate_callable(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #286 - GAP-2 phantom-catalog-row gate.
+
+    For every ``^N. `check_<name>` `` row in the CLAUDE.md "Meta-bug class
+    catalog" section, asserts ``tac.preflight.check_<name>`` is importable +
+    callable. Sister of Catalog #185 (LIVE_COUNT drift) at the NAME-EXISTS
+    surface.
+
+    Anchor: 6 phantom rows #273-#278 (Rudin-Daubechies preflight composite)
+    landed in CLAUDE.md before the gate functions existed; the catalog made
+    false strictness claims. Recovered via PHASE-1 commit 42665ce95.
+
+    STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+    self-protected against" non-negotiable. Live count at landing should be
+    0 if PHASE-1 recovery succeeded for #273-#278.
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
+    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    claude_md = root / "CLAUDE.md"
+    if not claude_md.is_file():
+        return []
+    try:
+        text = claude_md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+
+    # Locate catalog section span
+    section_start = text.find(_CHECK_286_CATALOG_SECTION_HEADER)
+    if section_start < 0:
+        return []
+    section_text = text[section_start:]
+    # End at the next ## heading (or EOF)
+    next_h2 = re.search(r"^## ", section_text[len(_CHECK_286_CATALOG_SECTION_HEADER):], re.MULTILINE)
+    if next_h2:
+        section_text = section_text[: len(_CHECK_286_CATALOG_SECTION_HEADER) + next_h2.start()]
+
+    violations: list[str] = []
+    seen: dict[int, str] = {}
+
+    # Lazy import of self - we ARE tac.preflight. Use module-level globals().
+    module_globals = globals()
+
+    for m in _CHECK_286_CATALOG_ROW_RE.finditer(section_text):
+        num = int(m.group(1))
+        fn_name = m.group(2)
+        # Only first occurrence per row (Catalog #118 sister gate covers dup)
+        if num in seen:
+            continue
+        seen[num] = fn_name
+        # Check callable via module globals
+        fn = module_globals.get(fn_name)
+        if fn is None:
+            violations.append(
+                f"CLAUDE.md catalog row #{num} `{fn_name}` is PHANTOM — "
+                f"function `{fn_name}` does NOT exist in src/tac/preflight.py. "
+                "Per Catalog #286 (OMNIBUS GAP-2): every numbered catalog row "
+                "MUST reference an importable + callable gate function. Fix: "
+                "either land the gate function OR remove the catalog row."
+            )
+            continue
+        if not callable(fn):
+            violations.append(
+                f"CLAUDE.md catalog row #{num} `{fn_name}` is NOT callable "
+                f"(type={type(fn).__name__}) — Catalog #286 contract."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_catalog_text_references_existing_gate_callable] "
+                f"{len(violations)} phantom catalog row(s)"
+            )
+        else:
+            print(
+                "  [check_catalog_text_references_existing_gate_callable] OK "
+                f"({len(seen)} catalog rows verified callable)"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_catalog_text_references_existing_gate_callable found "
+            f"{len(violations)} phantom catalog row(s). Per CLAUDE.md 'Bugs "
+            "must be permanently fixed AND self-protected against' + Catalog "
+            "#286 (OMNIBUS GAP-2 phantom-catalog-row gate, sister of Catalog "
+            "#185). Phantom catalog rows make false strictness claims; the "
+            "operator-facing ledger MUST stay aligned with executable "
+            "preflight behavior.\n  "
+            + "\n  ".join(v[:600] for v in violations[:8])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #287 - check_no_docstring_overstatement_without_evidence_tag
+#
+# OMNIBUS-BUG-CLASS-AUDIT GAP-4a (2026-05-15) docstring-overstatement gate
+# per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag" forbidden
+# pattern + the OMNIBUS audit's FORBIDDEN_PATTERNS gap analysis.
+#
+# Bug class: docstrings / reports / scripts contain percentage / multiplier
+# claims ("saves 49%" / "improves N%" / "verified" / "beats baseline") that
+# are derivations or aspirations, not measurements. Lane PD anchor: docstring
+# stated 49% savings; empirical regression test caught actual 18.5%. The 49%
+# was a derivation, not a measurement. Per CLAUDE.md: tag every claim with an
+# adjacent `[empirical:<artifact path>]` / `[contest-CUDA]` / `[prediction]`
+# axis tag.
+#
+# Initial wire-in: WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" —
+# legacy docstrings need backfill + waiver pass. Strict-flip pending audit.
+# ============================================================================
+
+_CHECK_287_OVERSTATEMENT_PATTERNS: tuple[re.Pattern, ...] = (
+    re.compile(r"\bsaves\s+\d{1,3}\s*%", re.IGNORECASE),
+    re.compile(r"\b\d{1,3}\s*%\s+improvement", re.IGNORECASE),
+    re.compile(r"\b\d{1,3}\s*%\s+reduction", re.IGNORECASE),
+    re.compile(r"\b\d{1,2}\s*x\s+faster", re.IGNORECASE),
+    re.compile(r"\bbeats\s+baseline\s+by\s+\d+", re.IGNORECASE),
+    re.compile(r"\bimproves\s+(?:by\s+)?\d{1,3}\s*%", re.IGNORECASE),
+)
+_CHECK_287_EVIDENCE_TAG_PATTERNS: tuple[str, ...] = (
+    "[empirical:",
+    "[contest-CUDA",
+    "[contest-CPU",
+    "[prediction",
+    "[advisory only",
+    "[macOS-CPU advisory",
+    "[MPS-PROXY",
+    "[MPS-research-signal",
+    "[macOS-CPU-advisory",
+)
+_CHECK_287_WAIVER_RE = re.compile(
+    r"#\s*DOCSTRING_PERCENT_CLAIM_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_287_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+_CHECK_287_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+    "/tests/",
+    "/test_",
+    ".venv/",
+    "__pycache__/",
+)
+
+
+def check_no_docstring_overstatement_without_evidence_tag(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #287 - GAP-4a docstring-overstatement evidence-tag gate.
+
+    Scans ``src/tac/**/*.py`` (Python sources only - report scope is the
+    operationally-most-impactful surface for measurement claims) for
+    percentage / multiplier overstatement patterns without an adjacent
+    ``[empirical:<artifact>]`` / ``[contest-CUDA]`` / ``[prediction]`` /
+    ``[advisory only]`` axis tag within ±5 lines.
+
+    Per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag (the
+    docstring-overstatement trap)" forbidden pattern + OMNIBUS GAP-4a.
+
+    Same-line waiver: ``# DOCSTRING_PERCENT_CLAIM_OK:<rationale>`` (placeholder
+    ``<rationale>`` / ``<reason>`` literals rejected). Self-exempt:
+    ``src/tac/preflight.py`` (carries the regex literals + this docstring).
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule".
+    Strict-flip pending bulk docstring audit + waiver backfill.
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
+    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    src_dir = root / "src" / "tac"
+    if not src_dir.is_dir():
+        return []
+    self_exempt = {root / "src" / "tac" / "preflight.py"}
+    violations: list[str] = []
+    for path in src_dir.rglob("*.py"):
+        if path in self_exempt:
+            continue
+        rel = path.relative_to(root).as_posix()
+        if any(marker in rel for marker in _CHECK_287_EXCLUDED_PATH_MARKERS):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            for pat in _CHECK_287_OVERSTATEMENT_PATTERNS:
+                if pat.search(line):
+                    # Same-line waiver?
+                    waiver_match = _CHECK_287_WAIVER_RE.search(line)
+                    if waiver_match:
+                        rationale = waiver_match.group(1).strip()
+                        if not _is_placeholder_gate_waiver_rationale(
+                            rationale,
+                            _CHECK_287_WAIVER_PLACEHOLDERS,
+                        ):
+                            continue
+                    # Adjacent evidence tag (±5 lines)?
+                    lo = max(0, i - 5)
+                    hi = min(len(lines), i + 6)
+                    window = "\n".join(lines[lo:hi])
+                    if any(tag in window for tag in _CHECK_287_EVIDENCE_TAG_PATTERNS):
+                        continue
+                    violations.append(
+                        f"{path.relative_to(root)}:{i + 1}: empirical claim "
+                        f"`{line.strip()[:120]}` lacks adjacent evidence tag "
+                        "([empirical:<path>] / [contest-CUDA] / [prediction] "
+                        "/ [advisory only]) per CLAUDE.md 'Forbidden empirical-"
+                        "claim-without-evidence-tag' + Catalog #287. Same-line "
+                        "waiver: `# DOCSTRING_PERCENT_CLAIM_OK:<rationale>`."
+                    )
+                    break  # one violation per line is enough
+    if verbose:
+        if violations:
+            print(
+                f"  [check_no_docstring_overstatement_without_evidence_tag] "
+                f"{len(violations)} violation(s) (warn-only initially)"
+            )
+        else:
+            print(
+                "  [check_no_docstring_overstatement_without_evidence_tag] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_no_docstring_overstatement_without_evidence_tag found "
+            f"{len(violations)} violation(s). Per CLAUDE.md 'Forbidden "
+            "empirical-claim-without-evidence-tag' forbidden pattern + "
+            "Catalog #287 (OMNIBUS GAP-4a). Every percentage / multiplier "
+            "claim MUST carry an adjacent evidence tag.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #288 - check_uv_torch_install_has_driver_version_pin
+#
+# OMNIBUS-BUG-CLASS-AUDIT GAP-4b (2026-05-15) uv-torch driver-pin gate per
+# CLAUDE.md "Forbidden uv torch install without driver-version pin (the
+# cu13-vs-cu124 trap)" forbidden pattern.
+#
+# Bug class: `uv pip install torch` / `uv add torch` / `uv run --with torch`
+# (no local-version suffix) defaults to the LATEST CUDA wheel from PyPI
+# (currently `+cu13`). On a Vast.ai host with NVIDIA driver < 580 (CUDA 12.x),
+# the cu13 wheel will FAIL `torch.cuda.init()` and silently fall back to CPU
+# - every score becomes `[advisory only]` per the MPS-falsification rule.
+#
+# Anchor: 2026-05-01 instance 35957332 silently ran inflate on CPU for 5 min
+# before detection. Memory:
+# `feedback_vast_cuda_driver_too_old_silent_cpu_fallback_20260501.md`.
+# ============================================================================
+
+_CHECK_288_UV_TORCH_PATTERNS: tuple[re.Pattern, ...] = (
+    re.compile(r"\buv\s+pip\s+install\s+torch(?!\+cu\d{2,3})(?!\+cpu)"),
+    re.compile(r"\buv\s+add\s+torch(?!\+cu\d{2,3})(?!\+cpu)"),
+    re.compile(r"\buv\s+run\s+--with\s+torch(?!\+cu\d{2,3})(?!\+cpu)"),
+)
+_CHECK_288_INDEX_OPT_OUT_TOKENS: tuple[str, ...] = (
+    "--index https://download.pytorch.org/whl/cu",
+    "--index-url https://download.pytorch.org/whl/cu",
+    "--extra-index-url https://download.pytorch.org/whl/cu",
+    "INFLATE_TORCH_SPEC",
+    "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu",
+    "torch==2.5.1+cu",
+    "torch==2.6.0+cu",
+)
+_CHECK_288_WAIVER_RE = re.compile(
+    r"#\s*UV_TORCH_DRIVER_PIN_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_288_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+_CHECK_288_EXCLUDED_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+    "/tests/",
+    "/test_",
+    ".venv/",
+    "__pycache__/",
+)
+
+
+def check_uv_torch_install_has_driver_version_pin(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #288 - GAP-4b uv-torch driver-version pin gate.
+
+    Scans ``*.sh`` + ``*.yml`` + ``Dockerfile`` files under ``scripts/``,
+    ``tools/``, ``experiments/`` for ``uv pip install torch`` / ``uv add
+    torch`` / ``uv run --with torch`` invocations missing a local-version
+    suffix (``+cu124`` / ``+cu118`` / ``+cpu``) or an explicit
+    ``--index https://download.pytorch.org/whl/cuXXX`` flag.
+
+    Per CLAUDE.md "Forbidden uv torch install without driver-version pin
+    (the cu13-vs-cu124 trap)" forbidden pattern + OMNIBUS GAP-4b.
+
+    Same-line waiver: ``# UV_TORCH_DRIVER_PIN_OK:<rationale>`` (placeholder
+    ``<rationale>`` / ``<reason>`` literals rejected). Self-exempt:
+    ``src/tac/preflight.py`` (carries the regex literals).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — live
+    count at landing: 0 (the canonical wrapper
+    ``scripts/remote_archive_only_eval.sh:88-95`` already auto-pins).
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
+    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    self_exempt = {root / "src" / "tac" / "preflight.py"}
+    scan_dirs = ("scripts", "tools", "experiments")
+    file_globs = ("*.sh", "*.yml", "*.yaml", "Dockerfile")
+    violations: list[str] = []
+    for scan_dir in scan_dirs:
+        d = root / scan_dir
+        if not d.is_dir():
+            continue
+        for glob in file_globs:
+            for path in d.rglob(glob):
+                if path in self_exempt:
+                    continue
+                rel = path.relative_to(root).as_posix()
+                if any(marker in rel for marker in _CHECK_288_EXCLUDED_PATH_MARKERS):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+                # Quick filter: must contain `uv` and `torch`
+                if "uv" not in text or "torch" not in text:
+                    continue
+                # File-level opt-out tokens (centralized pin via env-var, etc.)
+                if any(tok in text for tok in _CHECK_288_INDEX_OPT_OUT_TOKENS):
+                    continue
+                lines = text.splitlines()
+                for i, line in enumerate(lines):
+                    for pat in _CHECK_288_UV_TORCH_PATTERNS:
+                        if pat.search(line):
+                            # Same-line waiver?
+                            waiver_match = _CHECK_288_WAIVER_RE.search(line)
+                            if waiver_match:
+                                rationale = waiver_match.group(1).strip()
+                                if not _is_placeholder_gate_waiver_rationale(
+                                    rationale,
+                                    _CHECK_288_WAIVER_PLACEHOLDERS,
+                                ):
+                                    break
+                            # Inline cu suffix on same line?
+                            if "+cu" in line or "+cpu" in line:
+                                break
+                            violations.append(
+                                f"{path.relative_to(root)}:{i + 1}: unpinned "
+                                f"`{line.strip()[:120]}` per CLAUDE.md "
+                                "'Forbidden uv torch install without driver-"
+                                "version pin (cu13-vs-cu124 trap)' + Catalog "
+                                "#288. Fix: add `+cu124` local-version suffix "
+                                "OR set `INFLATE_TORCH_SPEC=torch==2.5.1+cu124` "
+                                "+ `UV_EXTRA_INDEX_URL=https://download.pytorch."
+                                "org/whl/cu124` per "
+                                "scripts/remote_archive_only_eval.sh:88-95. "
+                                "Same-line waiver: `# UV_TORCH_DRIVER_PIN_OK:"
+                                "<rationale>`."
+                            )
+                            break
+    if verbose:
+        if violations:
+            print(
+                f"  [check_uv_torch_install_has_driver_version_pin] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_uv_torch_install_has_driver_version_pin] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_uv_torch_install_has_driver_version_pin found "
+            f"{len(violations)} violation(s). Per CLAUDE.md 'Forbidden uv "
+            "torch install without driver-version pin (cu13-vs-cu124 trap)' "
+            "forbidden pattern + Catalog #288 (OMNIBUS GAP-4b). Unpinned "
+            "torch installs silently fall back to CPU on driver < 580; "
+            "every score becomes [advisory only].\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #289 - check_serializer_log_no_dropped_expected_content_sha_retry_pattern
+#
+# OMNIBUS-BUG-CLASS-AUDIT GAP-5 (2026-05-15) commit-serializer drop-flag-and-
+# retry detection per WAVE-D `feedback_commit_swap_incident_2c957c31e_
+# forensic_analysis_landed_20260515.md` recommendation. META-meta-meta sister
+# of Catalog #117/#157/#174.
+#
+# Bug class: even with #117 (serializer usage) + #157 (pre-pre-lock hash) +
+# #174 (--expected-content-sha256 mandatory), the AGENT-RESPONSE failure mode
+# remained: when the serializer refuses with rc=4 (mismatch), the agent could
+# DROP the `--expected-content-sha256` flag on retry and silently absorb the
+# sister's edits under the wrong commit body. This gate scans the
+# `.omx/state/commit-serializer.log` JSONL for the WAVE-D 2c957c31e signature
+# and refuses repository state where the pattern recurs.
+#
+# Sister of Catalog #117 (last-50-commit serializer usage), #157 (pre-pre-lock
+# hash), #174 (--expected-content-sha256 mandatory), #216 (post-stage hash
+# doc-only, now promoted to callable function). Together they extinct the
+# commit-swap class at 4 surfaces: edit-time + pre-pre-lock + lock-arbitration
+# + agent-response retry pattern.
+# ============================================================================
+
+_CHECK_289_LOG_RELPATH = (".omx", "state", "commit-serializer.log")
+_CHECK_289_DROP_RETRY_WINDOW_SECONDS = 600  # 10 minutes per WAVE-D guidance
+_CHECK_289_DISCIPLINE_CUTOFF_UTC = "2026-05-15T22:00:00Z"
+
+
+def _check_289_parse_iso(s: str) -> float | None:
+    """Best-effort ISO-8601 parser; returns None on bad input."""
+    try:
+        from datetime import datetime
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        return datetime.fromisoformat(s).timestamp()
+    except Exception:
+        return None
+
+
+def check_serializer_log_no_dropped_expected_content_sha_retry_pattern(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #289 - GAP-5 commit-serializer drop-flag-and-retry detection.
+
+    Scans ``.omx/state/commit-serializer.log`` (JSONL append-only per Catalog
+    #131 sister discipline) for the WAVE-D 2c957c31e signature: same
+    ``message_head`` has ≥1 ``outcome=expected_content_sha_mismatch`` event
+    followed by an ``outcome=committed`` event WITHOUT ``expected_content_sha_diffs``
+    field within the next ~10-minute window.
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    + WAVE-D forensic recommendation. Sister of Catalog #117/#157/#174/#216.
+
+    Cutoff filter: only events at-or-after ``2026-05-15T22:00:00Z`` are
+    scanned per CLAUDE.md "Strict-flip atomicity rule" — pre-cutoff legacy
+    events are exempt as the discipline window had not opened.
+
+    STRICT-from-byte-one per the same non-negotiable. Live count at landing:
+    0 (no post-cutoff drop-flag-retry events expected; PHASE-1 + PHASE-2
+    landings will use the canonical pattern).
+
+    Memory: ``feedback_phase_2_land_5_gap_gates_omnibus_followon_landed_20260515.md``.
+    Lane: ``lane_phase_2_land_5_gap_gates_20260515``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    log_path = root.joinpath(*_CHECK_289_LOG_RELPATH)
+    if not log_path.is_file():
+        return []
+    cutoff_ts = _check_289_parse_iso(_CHECK_289_DISCIPLINE_CUTOFF_UTC)
+    if cutoff_ts is None:
+        return []
+    try:
+        with log_path.open("r", encoding="utf-8", errors="replace") as fh:
+            rows = []
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except (json.JSONDecodeError, ValueError):
+                    continue
+    except OSError:
+        return []
+
+    # Group events by message_head, sort by started_at_utc; detect mismatch
+    # followed by committed within window WITHOUT diffs field.
+    by_head: dict[str, list[dict]] = {}
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        head = r.get("message_head")
+        if not isinstance(head, str):
+            continue
+        ts_str = r.get("started_at_utc", "")
+        if not isinstance(ts_str, str):
+            continue
+        ts = _check_289_parse_iso(ts_str)
+        if ts is None or ts < cutoff_ts:
+            continue
+        r["_ts"] = ts
+        by_head.setdefault(head, []).append(r)
+
+    violations: list[str] = []
+    for head, events in by_head.items():
+        events.sort(key=lambda x: x.get("_ts", 0.0))
+        # Find mismatch then look for committed within window without diffs
+        for i, ev in enumerate(events):
+            if ev.get("outcome") != "expected_content_sha_mismatch":
+                continue
+            mismatch_ts = ev["_ts"]
+            mismatch_files = ev.get("files", [])
+            for j in range(i + 1, len(events)):
+                later = events[j]
+                if later["_ts"] - mismatch_ts > _CHECK_289_DROP_RETRY_WINDOW_SECONDS:
+                    break
+                if later.get("outcome") != "committed":
+                    continue
+                # Check overlap of files
+                later_files = later.get("files", [])
+                overlap = set(mismatch_files) & set(later_files)
+                if not overlap:
+                    continue
+                # The committed retry MUST carry expected_content_sha256_present=True
+                # (the new GAP-5 log field) if it re-passed the flag (correct
+                # pattern). If field is False or absent AND nfiles >= 3, it's
+                # the WAVE-D drop-flag pattern. Pre-GAP-5 events without the
+                # field are EXEMPT (legacy logging schema; cutoff handles).
+                if later.get("expected_content_sha256_present") is True:
+                    continue  # correct re-pass per GAP-5 log
+                if "expected_content_sha256_present" not in later:
+                    continue  # pre-GAP-5 schema; exempt
+                if len(later_files) < 3:
+                    continue  # small commit, less risky
+                violations.append(
+                    f"commit-serializer.log: message_head=`{head[:80]}` had "
+                    f"outcome=expected_content_sha_mismatch at {ev.get('started_at_utc')} "
+                    f"followed by outcome=committed at {later.get('started_at_utc')} "
+                    f"(nfiles={len(later_files)}) WITHOUT expected_content_sha_diffs "
+                    "field — WAVE-D drop-flag-and-retry pattern (Catalog #289). "
+                    "Fix: re-snapshot post-edit sha + re-pass --expected-content-"
+                    "sha256 on retry per CLAUDE.md docstring-corrected canonical "
+                    "contract; NEVER drop the flag."
+                )
+                break
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_serializer_log_no_dropped_expected_content_sha_retry_pattern] "
+                f"{len(violations)} drop-flag-retry pattern(s)"
+            )
+        else:
+            print(
+                "  [check_serializer_log_no_dropped_expected_content_sha_retry_pattern] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_serializer_log_no_dropped_expected_content_sha_retry_pattern "
+            f"found {len(violations)} drop-flag-retry pattern(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' + "
+            "Catalog #289 (OMNIBUS GAP-5 META-meta-meta sister of "
+            "#117/#157/#174). The agent-response failure mode (DROP the "
+            "--expected-content-sha256 flag on rc=4 retry) is the WAVE-D "
+            "2c957c31e root cause; this gate refuses repository state where "
+            "the pattern recurs.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #284 - check_nightly_catalog_gate_regression_workflow_canonical_use
+#
+# PHASE-3-CONTINUOUS-REGRESSION-CI-NIGHTLY-WORKFLOW 2026-05-15 self-protection
+# per OMNIBUS-BUG-CLASS-AUDIT GAP-3 + operator standing directive 2026-05-15
+# *"fix all bug classes and meta bugs and all versions permanently and self
+# protect against them"*.
+#
+# Refuses any state of `.github/workflows/nightly_catalog_gate_regression.yml`
+# that does not invoke the canonical helper
+# `tools/run_nightly_catalog_gate_regression.py`. Sister of Catalog #245
+# (canonical-use ledger-discipline pattern) + Catalog #117/#157/#174 (commit-
+# machinery canonical-use family). Without this gate a future workflow edit
+# could silently bypass the helper (and thus the META-meta drift detectors at
+# Catalogs #118/#159/#176/#185), breaking the daily green/red signal that the
+# operator depends on for <24h drift detection.
+#
+# STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — landing
+# commit batch ships the canonical helper + the workflow file + this gate
+# together, driving live count to 0.
+# ============================================================================
+
+_CHECK_284_WORKFLOW_RELPATH: tuple[str, ...] = (
+    ".github",
+    "workflows",
+    "nightly_catalog_gate_regression.yml",
+)
+_CHECK_284_CANONICAL_HELPER_TOKEN = "tools/run_nightly_catalog_gate_regression.py"
+_CHECK_284_WAIVER_PATTERN = re.compile(
+    r"#\s*NIGHTLY_CATALOG_GATE_REGRESSION_OK\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_284_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def check_nightly_catalog_gate_regression_workflow_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #284 — nightly catalog-gate regression workflow MUST route
+    through the canonical helper.
+
+    Refuses ``.github/workflows/nightly_catalog_gate_regression.yml`` whose
+    body does NOT contain the canonical helper invocation token
+    ``tools/run_nightly_catalog_gate_regression.py``. Acceptance: file-level
+    waiver ``# NIGHTLY_CATALOG_GATE_REGRESSION_OK:<rationale>`` in the first
+    25 lines (placeholder ``<rationale>`` / ``<reason>`` literals rejected so
+    the docstring example cannot self-waive).
+
+    Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+    + OMNIBUS-BUG-CLASS-AUDIT GAP-3: the canonical helper invokes the META-
+    meta drift detectors at Catalogs #118 / #159 / #176 / #185 in-process and
+    emits the per-day status JSON under ``.omx/state/`` that is the operator's
+    daily green/red signal. A future workflow edit that bypasses the helper
+    (e.g. inlining a different test invocation) would silently skip drift
+    detection — this gate refuses that regression structurally.
+
+    If the workflow file does not exist (e.g. clean checkout in tests), the
+    gate is a no-op. STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity
+    rule" — live count at landing: 0 (the canonical helper + workflow ship
+    in the same commit batch).
+
+    Memory:
+    ``feedback_phase_3_continuous_regression_ci_nightly_workflow_landed_20260515.md``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    workflow = root.joinpath(*_CHECK_284_WORKFLOW_RELPATH)
+    if not workflow.is_file():
+        if verbose:
+            try:
+                rel = workflow.relative_to(root)
+            except ValueError:
+                rel = workflow
+            print(
+                "  [check_nightly_catalog_gate_regression_workflow_canonical_use] "
+                f"{rel} not present; skipping"
+            )
+        return []
+    try:
+        text = workflow.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        if verbose:
+            print(
+                "  [check_nightly_catalog_gate_regression_workflow_canonical_use] "
+                f"unreadable: {exc}"
+            )
+        return []
+
+    # File-level waiver: scan first ~25 lines for the marker.
+    head = "\n".join(text.splitlines()[:25])
+    waiver_match = _CHECK_284_WAIVER_PATTERN.search(head)
+    if waiver_match is not None:
+        rationale = waiver_match.group(1).strip()
+        if rationale and rationale not in _CHECK_284_WAIVER_PLACEHOLDERS:
+            return []
+
+    if _CHECK_284_CANONICAL_HELPER_TOKEN in text:
+        return []
+
+    try:
+        rel = workflow.relative_to(root)
+    except ValueError:
+        rel = workflow
+    violation = (
+        f"{rel}: nightly catalog-gate regression workflow does NOT invoke "
+        f"the canonical helper `{_CHECK_284_CANONICAL_HELPER_TOKEN}`. Per "
+        "Catalog #284 every modification to this workflow MUST route through "
+        "the canonical helper so the META-meta drift detectors at Catalogs "
+        "#118/#159/#176/#185 fire in-process and the per-day status JSON "
+        "lands under .omx/state/. Add the canonical invocation OR carry a "
+        "file-level `# NIGHTLY_CATALOG_GATE_REGRESSION_OK:<rationale>` "
+        "waiver in the first 25 lines."
+    )
+    violations = [violation]
+    if verbose:
+        print(
+            "  [check_nightly_catalog_gate_regression_workflow_canonical_use] "
+            f"{len(violations)} violation(s)"
+        )
+    if strict:
+        raise PreflightError(
+            "check_nightly_catalog_gate_regression_workflow_canonical_use "
+            f"found {len(violations)} violation(s). Per CLAUDE.md 'Bugs "
+            "must be permanently fixed AND self-protected against' + "
+            "OMNIBUS-BUG-CLASS-AUDIT GAP-3 (Catalog #284): the nightly "
+            "regression workflow MUST route through the canonical helper "
+            "`tools/run_nightly_catalog_gate_regression.py`.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
         )
     return violations

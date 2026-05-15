@@ -94,6 +94,7 @@ def _normalize_inflate_sh_for_submission_dir(
 def _resolve_skipped_axes(
     *,
     archive_sha256: str,
+    expected_runtime_tree_sha256: str,
     skip_if_anchor_exists: bool,
     repo_root: Path,
 ) -> dict[str, dict[str, Any] | None]:
@@ -106,9 +107,21 @@ def _resolve_skipped_axes(
     """
     if not skip_if_anchor_exists:
         return {"contest_cuda": None, "contest_cpu": None}
+    if not expected_runtime_tree_sha256:
+        return {"contest_cuda": None, "contest_cpu": None}
     return {
-        "contest_cuda": find_promotable_anchor_for_axis_and_sha("cuda", archive_sha256, repo_root=repo_root),
-        "contest_cpu": find_promotable_anchor_for_axis_and_sha("cpu", archive_sha256, repo_root=repo_root),
+        "contest_cuda": find_promotable_anchor_for_axis_and_sha(
+            "cuda",
+            archive_sha256,
+            repo_root=repo_root,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        ),
+        "contest_cpu": find_promotable_anchor_for_axis_and_sha(
+            "cpu",
+            archive_sha256,
+            repo_root=repo_root,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        ),
     }
 
 
@@ -207,6 +220,7 @@ def build_plan(
     skip_root = repo_root if repo_root is not None else REPO_ROOT
     skipped = _resolve_skipped_axes(
         archive_sha256=archive_sha,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         skip_if_anchor_exists=skip_axis_if_promotable_anchor_exists,
         repo_root=skip_root,
     )
@@ -223,9 +237,14 @@ def build_plan(
     if skip_axis_if_promotable_anchor_exists:
         plan_notes.append(
             "skip_axis_if_promotable_anchor_exists=True; per-axis dispatch skipped if a "
-            "promotable anchor already exists for the archive sha "
+            "promotable anchor already exists for the archive sha and expected runtime tree "
             "(anchor_lookup.find_promotable_anchor_for_axis_and_sha)."
         )
+        if not expected_runtime_tree_sha256:
+            plan_notes.append(
+                "No expected_runtime_tree_sha256 was supplied, so runtime-bound anchor reuse "
+                "is disabled and both axes remain eligible for fresh dispatch."
+            )
 
     return {
         "schema": "modal_paired_auth_eval_dispatch_plan_v2",

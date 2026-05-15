@@ -91,15 +91,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 
 CACHE_PATH = REPO_ROOT / ".omx" / "state" / "codex_pre_dispatch_review_cache.jsonl"
-CACHE_LOCK_PATH = (
-    REPO_ROOT / ".omx" / "state" / ".codex_pre_dispatch_review_cache.lock"
-)
+CACHE_LOCK_PATH = REPO_ROOT / ".omx" / "state" / ".codex_pre_dispatch_review_cache.lock"
 CACHE_TTL_SECONDS = 3600  # 1 hour
 
-CODEX_COMPANION_SCRIPT = (
-    "/Users/adpena/.claude/plugins/cache/openai-codex/codex/1.0.3/scripts/"
-    "codex-companion.mjs"
+CODEX_COMPANION_SCRIPT_REL = (
+    ".claude/plugins/cache/openai-codex/codex/1.0.3/scripts/codex-companion.mjs"
 )
+CODEX_COMPANION_SCRIPT = str(Path.home() / CODEX_COMPANION_SCRIPT_REL)
+CODEX_COMPANION_SCRIPT_DISPLAY = f"~/{CODEX_COMPANION_SCRIPT_REL}"
 
 # Cost gate threshold: don't burn codex tokens on cheap smokes
 COST_GATE_THRESHOLD_USD = 1.00
@@ -112,9 +111,14 @@ VERDICTS_BLOCKING = frozenset({"needs-attention", "no-ship"})
 # Treated as BLOCKING by default (CLI exit=2) because the codex review did
 # not actually run; paired-env bypass per Catalog #199 still applies.
 VERDICT_INVOCATION_ERROR = "invocation-error"
-VERDICTS_ALL = (
-    VERDICTS_SAFE | VERDICTS_BLOCKING | frozenset({VERDICT_INVOCATION_ERROR})
-)
+VERDICTS_ALL = VERDICTS_SAFE | VERDICTS_BLOCKING | frozenset({VERDICT_INVOCATION_ERROR})
+VERDICT_RANK = {
+    "approve": 0,
+    "advisory": 1,
+    "needs-attention": 2,
+    "no-ship": 3,
+    VERDICT_INVOCATION_ERROR: 4,
+}
 
 # Schema version for the cache JSONL rows
 CACHE_SCHEMA_VERSION = "codex_pre_dispatch_review_cache_v1"
@@ -127,6 +131,16 @@ BYPASS_RATIONALE_ENV = "OPERATOR_AUTHORIZE_CODEX_REVIEW_BYPASS_RATIONALE"
 SEVERITY_CRITICAL_TOKENS = ("CRITICAL", "BLOCKER", "NO-SHIP", "no-ship")
 SEVERITY_HIGH_TOKENS = ("HIGH", "high")
 SEVERITY_LOW_TOKENS = ("LOW", "MEDIUM", "advisory", "ADVISORY")
+_SEVERITY_SUFFIX_RE = r"(?:\s+(?:F?\d+|[A-Z]\d+))?\s*[:\-]"
+SEVERITY_CRITICAL_RE = re.compile(
+    rf"\b(?:CRITICAL|BLOCKER|NO[-_ ]SHIP)\b{_SEVERITY_SUFFIX_RE}",
+    re.IGNORECASE,
+)
+SEVERITY_HIGH_RE = re.compile(rf"\bHIGH\b{_SEVERITY_SUFFIX_RE}", re.IGNORECASE)
+SEVERITY_LOW_RE = re.compile(
+    rf"\b(?:LOW|MEDIUM|ADVISORY)\b{_SEVERITY_SUFFIX_RE}",
+    re.IGNORECASE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +358,9 @@ def _git_head_sha(repo_root: Path) -> str:
 
 
 def lookup_cached_review(
-    cache_key: str, *, ttl_seconds: int = CACHE_TTL_SECONDS,
+    cache_key: str,
+    *,
+    ttl_seconds: int = CACHE_TTL_SECONDS,
     cache_path: Path | None = None,
 ) -> CodexReviewResult | None:
     """Look up a cached review by composite key; return None if missing/expired.
@@ -402,7 +418,9 @@ def lookup_cached_review(
 
 
 def append_cached_review(
-    result: CodexReviewResult, *, cache_path: Path | None = None,
+    result: CodexReviewResult,
+    *,
+    cache_path: Path | None = None,
 ) -> None:
     """Append a row to the cache JSONL (atomic via fcntl + append mode)."""
     cp = cache_path or CACHE_PATH
@@ -422,14 +440,16 @@ def append_cached_review(
 # ---------------------------------------------------------------------------
 
 
-def codex_companion_available(
-    *, script_path: str | None = None
-) -> bool:
+def codex_companion_available(*, script_path: str | None = None) -> bool:
     """Return True if the codex companion script is installed + node is in PATH."""
     target = Path(script_path or CODEX_COMPANION_SCRIPT)
     if not target.exists():
         return False
     return shutil.which("node") is not None
+
+
+def _display_companion_script_path(script_path: str | None) -> str:
+    return script_path if script_path is not None else CODEX_COMPANION_SCRIPT_DISPLAY
 
 
 def parse_verdict_from_codex_output(output: str) -> tuple[str, list[str]]:
@@ -465,7 +485,9 @@ def parse_verdict_from_codex_output(output: str) -> tuple[str, list[str]]:
         if normalized in VERDICTS_ALL:
             explicit_verdict = normalized
 
-    # Step 2: collect findings by severity
+    # Step 2: collect findings by explicit severity markers. Do not treat
+    # prose such as "HIGH frequency" as a blocking finding unless it has the
+    # finding-style delimiter.
     findings: list[str] = []
     has_critical = False
     has_high = False
@@ -475,29 +497,33 @@ def parse_verdict_from_codex_output(output: str) -> tuple[str, list[str]]:
         line_stripped = line.strip()
         if not line_stripped:
             continue
-        upper = line_stripped.upper()
-        if any(tok in upper for tok in ("CRITICAL", "BLOCKER", "NO-SHIP")):
+        if SEVERITY_CRITICAL_RE.search(line_stripped):
             has_critical = True
             findings.append(line_stripped[:200])
-        elif "HIGH" in upper and not upper.startswith("HIGHLIGHT"):
-            # Avoid false positives on words like "HIGHLIGHT"
+        elif SEVERITY_HIGH_RE.search(line_stripped):
             has_high = True
             findings.append(line_stripped[:200])
-        elif any(tok in upper for tok in ("LOW", "MEDIUM", "ADVISORY")):
+        elif SEVERITY_LOW_RE.search(line_stripped):
             has_low = True
             findings.append(line_stripped[:200])
         if len(findings) >= 50:
             break
 
     # Step 3: derive verdict
-    if explicit_verdict:
-        return (explicit_verdict, findings)
+    severity_verdict: str | None = None
     if has_critical:
-        return ("no-ship", findings)
-    if has_high:
-        return ("needs-attention", findings)
-    if has_low:
-        return ("advisory", findings)
+        severity_verdict = "no-ship"
+    elif has_high:
+        severity_verdict = "needs-attention"
+    elif has_low:
+        severity_verdict = "advisory"
+
+    if explicit_verdict:
+        if severity_verdict and VERDICT_RANK[severity_verdict] > VERDICT_RANK[explicit_verdict]:
+            return (severity_verdict, findings)
+        return (explicit_verdict, findings)
+    if severity_verdict:
+        return (severity_verdict, findings)
     return ("approve", findings)
 
 
@@ -643,7 +669,9 @@ def run_codex_review_for_dispatch(
     # a now-different working tree.
     if not skip_cache and not no_cache_for_paid_dispatch:
         cached = lookup_cached_review(
-            cache_key, ttl_seconds=cache_ttl_seconds, cache_path=cache_path,
+            cache_key,
+            ttl_seconds=cache_ttl_seconds,
+            cache_path=cache_path,
         )
         if cached is not None:
             return cached
@@ -656,8 +684,8 @@ def run_codex_review_for_dispatch(
             verdict="needs-attention",
             findings=[
                 "[codex-companion-missing] codex companion script not found "
-                f"at {script_path or CODEX_COMPANION_SCRIPT} OR `node` not in "
-                "PATH; install per CLAUDE.md \"Codex CLI invocation\" section "
+                f"at {_display_companion_script_path(script_path)} OR `node` not in "
+                'PATH; install per CLAUDE.md "Codex CLI invocation" section '
                 "before paid dispatch"
             ],
             cache_hit=False,
@@ -757,8 +785,7 @@ def check_paired_bypass_env_or_exit() -> bool:
         )
         raise SystemExit(13)
     print(
-        f"[run-codex-review] [CODEX REVIEW BYPASS ACTIVE] "
-        f"reason={rationale!r}",
+        f"[run-codex-review] [CODEX REVIEW BYPASS ACTIVE] reason={rationale!r}",
         file=sys.stderr,
     )
     return True

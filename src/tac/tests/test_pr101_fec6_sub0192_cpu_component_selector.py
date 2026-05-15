@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -112,3 +113,138 @@ def test_component_moving_k4_shape_can_clear_rate_but_fail_proxy_allowance() -> 
     assert row["component_moving_evidence"]["component_delta_within_rate_allowance"] is False
     assert row["component_moving_evidence"]["proxy_allows_sub0192_gate"] is False
     assert row["verdict"] == "component_moving_rate_feasible_proxy_blocks_gate"
+
+
+def test_build_axis_reference_requires_contest_cpu_axis(tmp_path: Path) -> None:
+    tool = _load_tool()
+    cpu_eval = tmp_path / "cpu.json"
+    cuda_eval = tmp_path / "cuda.json"
+    manifest = tmp_path / "manifest.json"
+    cpu_eval.write_text(
+        json.dumps(
+            {
+                "score_axis": "cpu_advisory",
+                "canonical_score": 0.192,
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 0.0001,
+                "score_rate_contribution": 0.1,
+            }
+        ),
+        encoding="utf-8",
+    )
+    cuda_eval.write_text(
+        json.dumps({"score_axis": "contest_cuda", "canonical_score": 0.226}),
+        encoding="utf-8",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "archive": {
+                    "bytes": 178_517,
+                    "sha256": "fec6sha",
+                    "selector_pack_manifest": {},
+                },
+                "selector": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        tool.build_axis_reference(
+            cpu_eval=cpu_eval,
+            cuda_eval=cuda_eval,
+            fec6_manifest=manifest,
+        )
+    except ValueError as exc:
+        assert "score_axis=contest_cpu" in str(exc)
+    else:
+        raise AssertionError("non-contest CPU axis must be rejected")
+
+
+def test_build_axis_reference_requires_contest_cuda_axis(tmp_path: Path) -> None:
+    tool = _load_tool()
+    cpu_eval = tmp_path / "cpu.json"
+    cuda_eval = tmp_path / "cuda.json"
+    manifest = tmp_path / "manifest.json"
+    cpu_eval.write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "canonical_score": 0.192,
+                "avg_segnet_dist": 0.001,
+                "avg_posenet_dist": 0.0001,
+                "score_rate_contribution": 0.1,
+            }
+        ),
+        encoding="utf-8",
+    )
+    cuda_eval.write_text(
+        json.dumps({"score_axis": "diagnostic_cuda", "canonical_score": 0.226}),
+        encoding="utf-8",
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "archive": {
+                    "bytes": 178_517,
+                    "sha256": "fec6sha",
+                    "selector_pack_manifest": {},
+                },
+                "selector": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        tool.build_axis_reference(
+            cpu_eval=cpu_eval,
+            cuda_eval=cuda_eval,
+            fec6_manifest=manifest,
+        )
+    except ValueError as exc:
+        assert "score_axis=contest_cuda" in str(exc)
+    else:
+        raise AssertionError("non-contest CUDA axis must be rejected")
+
+
+def test_render_markdown_labels_score_axes_inline() -> None:
+    tool = _load_tool()
+    profile = {
+        "reference": {
+            "archive_sha256": "fec6sha",
+            "archive_bytes": 178_517,
+            "cpu_score": 0.1920513168811056,
+            "cuda_score": 0.22621002169349796,
+        },
+        "strict_rate_target": {
+            "required_saving_bytes_at_unchanged_components": 78,
+            "archive_bytes_limit_at_unchanged_components": 178_439,
+        },
+        "rate_only_selector_compression": {
+            "fec6_selector": {
+                "payload_bytes": 249,
+                "entropy_floor_bytes": 241,
+            },
+            "fec7_best_charged_candidate": {
+                "saving_vs_fec6_selector_bytes": 4,
+            },
+            "blocker": {"blocked": True},
+        },
+        "best_rate_feasible_component_moving_candidate": None,
+        "candidates": [],
+        "conclusion": {
+            "verdict": "hard_blocker_no_rate_feasible_selector_candidate",
+            "found_feasible_sub0192_candidate_path": False,
+            "hard_blocker": True,
+            "reason": "fixture",
+        },
+    }
+
+    markdown = tool.render_markdown(profile)
+
+    assert "exact [contest-CPU] score" in markdown
+    assert "exact [contest-CUDA] score" in markdown
+    assert "rate-only [contest-CPU] score" in markdown
+    assert "proxy-est [contest-CPU] score" in markdown

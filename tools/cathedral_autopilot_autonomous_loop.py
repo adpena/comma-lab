@@ -90,10 +90,11 @@ import dataclasses
 import datetime as dt
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
@@ -117,6 +118,8 @@ ensure_repo_imports(REPO_ROOT)
 try:  # pragma: no cover - exercised by integration tests
     from tac.continual_learning import (
         load_posterior as load_continual_learning_posterior,
+    )
+    from tac.continual_learning import (
         posterior_query_track_correction,
     )
     from tac.cost_band_calibration import predict as predict_cost_band
@@ -142,7 +145,7 @@ CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
 # ── Events / decisions / verdicts ──────────────────────────────────────────
 
 
-class EventClass(str, Enum):
+class EventClass(StrEnum):
     """Operator-decision event classes."""
 
     DISPATCH = "dispatch"
@@ -152,7 +155,7 @@ class EventClass(str, Enum):
     RACE_MODE_TOGGLE = "race_mode_toggle"
 
 
-class OperatorDecision(str, Enum):
+class OperatorDecision(StrEnum):
     """Operator's response to a HALT event."""
 
     APPROVE = "approve"
@@ -210,15 +213,27 @@ class CandidateRow:
     # no Tier C evidence (don't penalize lack-of-evidence).
     mdl_tier_c_density: float | None = None
     # Catalog #227 composition matrix wire-in (2026-05-14):
-    # Substrate composition additivity factor α (0..1+). HIGH (> 0.7) =
+    # Substrate composition additivity factor alpha (0..1+). HIGH (> 0.7) =
     # ADDITIVE stacking (compound predicted_score_delta savings); MEDIUM
-    # (0.3-0.7) = SUB-ADDITIVE (halve savings); LOW (≤ 0.3) = SATURATING
+    # (0.3-0.7) = SUB-ADDITIVE (halve savings); LOW (<= 0.3) = SATURATING
     # (single-substrate dominates; floor predicted_score_delta near zero).
     # Sourced from `.omx/state/substrate_composition_matrix.json` per T1-F
     # `feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`.
     # None = no composition evidence (single-substrate candidate or untested
     # pair); the candidate is ranked without composition adjustment.
     composition_alpha: float | None = None
+    # OP-3 predicted_dispatch_risk wire-in (2026-05-15, codex chunk 6 finding):
+    # SLIM (Sparse Linear Integer Model) preflight risk score per
+    # `tac.preflight_rudin_daubechies.slim_risk_scorer.PreflightSLIMRiskScorer`.
+    # Range nominally 0..200 with the canonical refusal threshold at
+    # ``DISPATCH_RISK_REFUSAL_THRESHOLD = 50`` (see slim_risk_scorer.py:111).
+    # Bands consumed by :func:`adjust_predicted_delta_for_predicted_dispatch_risk`:
+    #   risk >= 50 → REFUSE (floor predicted_score_delta at 0)
+    #   risk 25-50 → MODERATE (halve predicted savings)
+    #   risk < 25  → LOW (no adjustment)
+    # None = no preflight evidence (don't penalize lack-of-evidence per the
+    # sister Z1 / Tier C / composition_alpha conventions).
+    predicted_dispatch_risk: float | None = None
 
     def eig_per_dollar(self) -> float:
         if self.estimated_dispatch_cost_usd <= 0.0:
@@ -247,7 +262,7 @@ class OperatorAuthorizedModeConfig:
     journal_path: Path | None = None
     cumulative_spent_usd: float = 0.0
 
-    def can_authorize(self, candidate: "CandidateRow") -> tuple[bool, str]:
+    def can_authorize(self, candidate: CandidateRow) -> tuple[bool, str]:
         """Return ``(authorized, reason)``.
 
         Authorization requires every precondition to hold. The first failing
@@ -283,7 +298,7 @@ class OperatorAuthorizedModeConfig:
             )
         return True, ""
 
-    def record_authorization(self, candidate: "CandidateRow") -> None:
+    def record_authorization(self, candidate: CandidateRow) -> None:
         """Increment the per-process cumulative-spent counter.
 
         The persistent ledger is :mod:`tools.claim_lane_dispatch`. This in-memory
@@ -492,7 +507,7 @@ CLASS_SHIFT_LITERATURE_ANCHOR_REWARD = 0.01
 #
 # REVERT: this halve is a conditional revision. Update to full reward IF Z5
 # (`lane_z5_predictive_coding_world_model_step3_20260514`) dispatch returns
-# dispositive positive evidence; revert to zero IF Z5 + Decision 1 α
+# dispositive positive evidence; revert to zero IF Z5 + Decision 1 alpha
 # (contest-scale C1) dispatch are jointly dispositive negative.
 _C1_HALVED_LITERATURE_TOKENS = (
     "Ha-Schmidhuber",
@@ -633,10 +648,20 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
         notes=c.notes,
     )
     # Catalog #227 composition matrix wire-in: stacking of two substrates
-    # has an additivity factor α ∈ [0, 1+] per the Z3×C6 probe-disambiguator
+    # has an additivity factor alpha in [0, 1+] per the Z3xC6 probe-disambiguator
     # (`tools/probe_z3_x_c6_composition_disambiguator.py`). The factor maps
     # to a predicted_score_delta scaling per the additivity verdict bands.
     d = adjust_predicted_delta_for_composition_alpha(d, c.composition_alpha)
+    # OP-3 predicted_dispatch_risk wire-in (codex chunk 6 finding,
+    # 2026-05-15): demote candidates whose RUDIN-DAUBECHIES preflight SLIM
+    # risk score crosses the canonical refusal threshold. Applied LAST in
+    # the chain so it can floor a candidate whose score-axis adjustments
+    # (Tier A / Tier C / class-shift / composition-alpha) would otherwise
+    # promote it past safer peers — preflight risk is a STRUCTURAL refusal,
+    # not a score-axis penalty, so it overrides the score-axis stack.
+    d = adjust_predicted_delta_for_predicted_dispatch_risk(
+        d, c.predicted_dispatch_risk
+    )
     return d
 
 
@@ -717,13 +742,13 @@ def adjust_predicted_delta_for_mdl_tier_c_density(
 # ── Substrate composition matrix factor (Catalog #227 wire-in, 2026-05-14) ─
 #
 # Per `feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`:
-# the Z3×C6 composition probe-disambiguator returns an additivity factor α
+# the Z3xC6 composition probe-disambiguator returns an additivity factor alpha
 # in the [0, 1+] band:
 #
-#   α > 0.7   (ADDITIVE) → stacking realizes additive savings; predicted_
+#   alpha > 0.7   (ADDITIVE) -> stacking realizes additive savings; predicted_
 #                          score_delta scaled by 1.0 (no penalty)
-#   α 0.3-0.7 (SUB-ADDITIVE) → marginal stacking; halve predicted savings
-#   α <= 0.3  (SATURATING) → single-substrate dominates; cap at floor
+#   alpha 0.3-0.7 (SUB-ADDITIVE) -> marginal stacking; halve predicted savings
+#   alpha <= 0.3  (SATURATING) -> single-substrate dominates; cap at floor
 #
 # The matrix is the canonical posterior surface
 # `.omx/state/substrate_composition_matrix.json` populated by every probe
@@ -748,10 +773,10 @@ def adjust_predicted_delta_for_composition_alpha(
     Per Catalog #227 composition matrix wire-in
     (`feedback_t1_f_z3_x_c6_composition_probe_build_landed_20260514.md`):
 
-      - α > 0.7  (ADDITIVE): no adjustment (full additive savings)
-      - α 0.3-0.7 (SUB-ADDITIVE): 50% penalty on predicted savings
-      - α <= 0.3 (SATURATING): floor at -0.005 (single-substrate dominates)
-      - α unknown (None): no adjustment (single-substrate candidate or
+      - alpha > 0.7  (ADDITIVE): no adjustment (full additive savings)
+      - alpha 0.3-0.7 (SUB-ADDITIVE): 50% penalty on predicted savings
+      - alpha <= 0.3 (SATURATING): floor at -0.005 (single-substrate dominates)
+      - alpha unknown (None): no adjustment (single-substrate candidate or
         composition evidence not yet collected)
 
     Returns the (possibly adjusted) predicted_score_delta. Lower is better.
@@ -768,8 +793,93 @@ def adjust_predicted_delta_for_composition_alpha(
     if a > COMPOSITION_ALPHA_SUB_ADDITIVE_THRESHOLD:
         # SUB-ADDITIVE: halve the predicted savings.
         return base_delta * COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR
-    # SATURATING (α <= 0.3): single-substrate dominates; cap at floor.
+    # SATURATING (alpha <= 0.3): single-substrate dominates; cap at floor.
     return max(base_delta, COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR)
+
+
+# ── Predicted dispatch risk adjuster (OP-3 wire-in, 2026-05-15) ───────────
+#
+# Per codex chunk 6 finding (`.omx/research/codex_chunked_full_codebase_review_
+# 20260515.md`): the RUDIN-DAUBECHIES preflight composite computes a SLIM
+# (Sparse Linear Integer Model) `predicted_dispatch_risk` score over the
+# preflight-gate verdict panel (see ``tac.preflight_rudin_daubechies.
+# slim_risk_scorer.PreflightSLIMRiskScorer``) but the cathedral autopilot
+# ranker did NOT consume it — the continual-learning loop closed on the
+# RANKER side but left the PREFLIGHT-RISK signal stranded outside the
+# rank_candidates composition chain.
+#
+# This adjuster wires the SLIM preflight risk into the same
+# `apply_z1_empirical_revision_to_candidate_delta` chain that already stacks
+# Tier A / Tier C / class-shift / composition-alpha so high-preflight-risk
+# candidates are demoted in the autopilot ordering BEFORE any operator-
+# authorized dispatch fires. The risk bands match the canonical
+# `DISPATCH_RISK_REFUSAL_THRESHOLD = 50` from
+# ``tac.preflight_rudin_daubechies.slim_risk_scorer`` (the SLIM scorer's own
+# refusal threshold) plus a halve-band at 25 for moderate-risk candidates so
+# the ranker degrades gracefully rather than cliff-edging at 50.
+#
+# Per CLAUDE.md "Forbidden score claims": this adjusts PREDICTED ΔS only;
+# measured anchors are untouched. The original ``predicted_score_delta`` on
+# the row is preserved.
+PREDICTED_DISPATCH_RISK_REFUSAL_THRESHOLD = 50.0  # mirrors slim_risk_scorer
+PREDICTED_DISPATCH_RISK_MODERATE_THRESHOLD = 25.0  # halve-band lower edge
+PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR = 0.0  # cliff at zero (no improvement)
+PREDICTED_DISPATCH_RISK_MODERATE_PENALTY_FACTOR = 0.5  # halve predicted savings
+
+
+def adjust_predicted_delta_for_predicted_dispatch_risk(
+    base_delta: float,
+    predicted_dispatch_risk: float | None,
+) -> float:
+    """Demote high-preflight-risk candidates per the OP-3 SLIM wire-in.
+
+    Per codex chunk 6 finding (2026-05-15): the RUDIN-DAUBECHIES preflight
+    SLIM scorer (``tac.preflight_rudin_daubechies.slim_risk_scorer``) emits
+    a per-candidate ``predicted_dispatch_risk`` denominated in the same
+    integer-coefficient space as the preflight gate panel (Tier-1 = +25 per
+    violation, META-meta = +50 per violation, refusal threshold = 50.0). The
+    ranker treats the score in three bands matching the SLIM scorer's own
+    semantics:
+
+      - risk >= ``PREDICTED_DISPATCH_RISK_REFUSAL_THRESHOLD`` (50.0):
+        REFUSE — floor at ``PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR``
+        (effectively zero predicted improvement; the candidate is structurally
+        unsafe to dispatch even if the predicted ΔS is strongly negative).
+      - risk 25-50 (``PREDICTED_DISPATCH_RISK_MODERATE_THRESHOLD`` <= risk <
+        refusal): MODERATE — halve predicted savings so the candidate falls
+        below clean-preflight peers in the ordering but is still rankable.
+      - risk < 25: LOW — no adjustment (gate-discipline is on the safe side
+        of the SLIM threshold).
+      - risk unknown (None) or non-numeric: no adjustment (don't penalize
+        lack-of-evidence per the sister Z1 / Tier C / composition_alpha
+        conventions).
+
+    Per CLAUDE.md "Forbidden score claims": this adjusts PREDICTED ΔS only.
+    Returns the (possibly demoted) predicted_score_delta. Lower is better in
+    the score-delta convention (negative = improvement).
+
+    [verified-against:
+     ``tac.preflight_rudin_daubechies.slim_risk_scorer.DISPATCH_RISK_REFUSAL_
+     THRESHOLD = 50.0``]
+    """
+    if predicted_dispatch_risk is None:
+        return base_delta
+    try:
+        r = float(predicted_dispatch_risk)
+    except (TypeError, ValueError):
+        return base_delta
+    if r >= PREDICTED_DISPATCH_RISK_REFUSAL_THRESHOLD:
+        # Refuse: floor at zero so no improvement is ranked from this row,
+        # regardless of how strongly negative its raw predicted_score_delta
+        # was. The SLIM scorer has flagged the candidate as structurally
+        # unsafe; the operator must clear the preflight panel first.
+        return max(base_delta, PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR)
+    if r >= PREDICTED_DISPATCH_RISK_MODERATE_THRESHOLD:
+        # Moderate: halve the predicted savings (only affects negative
+        # deltas; positive deltas stay the same magnitude under multiply).
+        return base_delta * PREDICTED_DISPATCH_RISK_MODERATE_PENALTY_FACTOR
+    # LOW (risk < 25): no adjustment.
+    return base_delta
 
 
 def rank_candidates(
@@ -899,10 +1009,11 @@ def discover_sensitivity_map_artifacts(
     files only. Per CLAUDE.md "Forbidden /tmp paths" the search is rooted at
     the repo's ``experiments/results`` tree.
     """
-    if search_dirs is None:
-        roots = [REPO_ROOT / "experiments" / "results"]
-    else:
-        roots = list(search_dirs)
+    roots = (
+        [REPO_ROOT / "experiments" / "results"]
+        if search_dirs is None
+        else list(search_dirs)
+    )
     artifact_paths: list[str] = []
     search_roots: list[str] = []
     for root in roots:
@@ -1500,6 +1611,10 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     read when present: ``mdl_tier_c_density`` (float) and
     ``composition_alpha`` (float). Backward-compat: rows without these
     fields use None defaults.
+
+    OP-3 predicted_dispatch_risk wire-in (codex chunk 6 finding, 2026-05-15)
+    also reads ``predicted_dispatch_risk`` (float) when present. Backward-
+    compat: rows without the field use the None default.
     """
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
@@ -1511,6 +1626,9 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
             mdl_density = _coerce_optional_float(raw.get("mdl_density"))
             mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
             composition_alpha = _coerce_optional_float(raw.get("composition_alpha"))
+            predicted_dispatch_risk = _coerce_optional_float(
+                raw.get("predicted_dispatch_risk")
+            )
             lane_class_raw = raw.get("lane_class")
             lane_class: str | None = (
                 str(lane_class_raw) if lane_class_raw is not None else None
@@ -1528,6 +1646,7 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 literature_anchor=str(raw.get("literature_anchor", "")),
                 mdl_tier_c_density=mdl_tier_c_density,
                 composition_alpha=composition_alpha,
+                predicted_dispatch_risk=predicted_dispatch_risk,
             ))
     return rows
 
@@ -1620,7 +1739,7 @@ def load_candidates_from_substrate_composition_ranking(
             notes_lines.append(f"campaign_metadata: {raw.get('campaign_metadata')!r}")
         lane_class_raw = raw.get("lane_class")
         # Catalog #227 wire-in: read optional composition_alpha if present
-        # (the canonical Z3×C6 probe-disambiguator emits this).
+        # (the canonical Z3xC6 probe-disambiguator emits this).
         composition_alpha_raw = raw.get("composition_alpha")
         composition_alpha: float | None = None
         if composition_alpha_raw is not None:
@@ -1989,10 +2108,10 @@ def load_candidates_from_macos_cpu_advisory_manifest(
 
 
 def tag_halt_events_with_proxy_evidence(
-    halt_events: list["HaltEvent"],
+    halt_events: list[HaltEvent],
     *,
     candidates: list[CandidateRow],
-) -> list["HaltEvent"]:
+) -> list[HaltEvent]:
     """Annotate halt events whose source candidate carries macOS-CPU advisory notes.
 
     Per operator routing 2026-05-13: when a halt event's underlying candidate
@@ -2211,7 +2330,7 @@ def update_rudin_daubechies_from_dispatch_outcome(
     ranker.update_from_anchor(observed_score, panel, axis=axis)
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )

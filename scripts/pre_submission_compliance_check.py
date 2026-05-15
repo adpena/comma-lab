@@ -108,6 +108,7 @@ ARCHIVE_RUNTIME_SHA_BINDING_RE = re.compile(
     r"[0-9a-fA-F]{64}\b",
     re.IGNORECASE,
 )
+PUBLIC_AXIS_LABELS = ("[contest-CUDA]", "[contest-CPU]")
 POST_DEADLINE_POLICY_NEGATED_RE = re.compile(
     r"\b(?:not|is\s+not|isn't|isn[\u2019']t)\s+(?:a\s+)?(?:competitive|innovative)\b"
     r"|\bnot\s+(?:competitive|innovative)\s+or\s+(?:competitive|innovative)\b"
@@ -1830,6 +1831,44 @@ def inspect_public_source_reproducibility(
     }, checks
 
 
+def inspect_public_evidence_axis_labels(
+    submission_dir: Path,
+    *,
+    required: bool,
+) -> tuple[dict[str, Any], list[Check]]:
+    """Require public packet text to keep CPU/CUDA score axes visibly separate."""
+
+    checks: list[Check] = []
+    text, sources = _submission_public_text(submission_dir)
+    present = {label: label in text for label in PUBLIC_AXIS_LABELS}
+    if required:
+        _add(
+            checks,
+            "public_evidence_contest_cuda_label_present",
+            present["[contest-CUDA]"],
+            "contest-final public text must label CUDA evidence as [contest-CUDA]",
+        )
+        _add(
+            checks,
+            "public_evidence_contest_cpu_label_present",
+            present["[contest-CPU]"],
+            "contest-final public text must label CPU evidence as [contest-CPU]",
+        )
+    else:
+        _add(
+            checks,
+            "public_evidence_axis_labels_optional",
+            True,
+            "not required for this non-final packet",
+            severity="info",
+        )
+    return {
+        "required": required,
+        "sources": sources,
+        "labels": present,
+    }, checks
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--submission-dir", type=Path, required=True)
@@ -1976,6 +2015,12 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     )
     sections["public_source_reproducibility"] = source_repro_record
     checks.extend(source_repro_checks)
+    axis_label_record, axis_label_checks = inspect_public_evidence_axis_labels(
+        submission_dir,
+        required=args.contest_final,
+    )
+    sections["public_evidence_axis_labels"] = axis_label_record
+    checks.extend(axis_label_checks)
     if args.contest_final:
         _add(
             checks,

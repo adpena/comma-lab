@@ -7,6 +7,9 @@ import pytest
 import torch
 import torch.nn as nn
 
+from tac.substrates.time_traveler_l5_autonomy.inflate import (
+    apply_quantized_per_pair_residual_for_training,
+)
 from tac.substrates.time_traveler_l5_autonomy.score_aware_loss import (
     TimeTravelerLossWeights,
     TimeTravelerScoreAwareLoss,
@@ -154,6 +157,73 @@ def test_forward_predictive_residual_gradient_flows() -> None:
     loss.backward()
     assert residual.grad is not None
     assert residual.grad.abs().sum().item() > 0
+
+
+def test_quantized_side_info_changes_score_objective_and_receives_gradient() -> None:
+    """The scorer objective sees and backprops through quantized side info."""
+    weights = TimeTravelerLossWeights(delta_predict=0.0)
+    loss_fn = TimeTravelerScoreAwareLoss(
+        _StandinSegScorer(), _StandinPoseScorer(), weights
+    )
+    loss_fn.eval()
+    rgb_0_unit = torch.full((1, 3, 32, 48), 0.5)
+    rgb_1_unit = torch.full((1, 3, 32, 48), 0.5)
+    gt_0 = rgb_0_unit * 255.0
+    gt_1 = rgb_1_unit * 255.0
+    bytes_proxy = torch.tensor(100_000.0)
+
+    zero_side = torch.zeros(45)
+    active_side = torch.zeros(45)
+    active_side[-9:] = 1.0
+    zero_0, zero_1, _ = apply_quantized_per_pair_residual_for_training(
+        rgb_0_unit,
+        rgb_1_unit,
+        zero_side,
+        int8_scale=64.0,
+    )
+    active_0, active_1, _ = apply_quantized_per_pair_residual_for_training(
+        rgb_0_unit,
+        rgb_1_unit,
+        active_side,
+        int8_scale=64.0,
+    )
+    zero_loss, _ = loss_fn(
+        zero_0 * 255.0,
+        zero_1 * 255.0,
+        gt_0,
+        gt_1,
+        bytes_proxy,
+        noise_std=0.0,
+    )
+    active_loss, _ = loss_fn(
+        active_0 * 255.0,
+        active_1 * 255.0,
+        gt_0,
+        gt_1,
+        bytes_proxy,
+        noise_std=0.0,
+    )
+    assert not torch.isclose(zero_loss, active_loss)
+
+    train_side = torch.zeros(45, requires_grad=True)
+    train_side.data[-9:] = 0.5
+    corrected_0, corrected_1, _ = apply_quantized_per_pair_residual_for_training(
+        rgb_0_unit,
+        rgb_1_unit,
+        train_side,
+        int8_scale=64.0,
+    )
+    loss, _ = loss_fn(
+        corrected_0 * 255.0,
+        corrected_1 * 255.0,
+        gt_0,
+        gt_1,
+        bytes_proxy,
+        noise_std=0.0,
+    )
+    loss.backward()
+    assert train_side.grad is not None
+    assert train_side.grad[-9:].abs().sum().item() > 0.0
 
 
 def test_forward_parts_dict_has_all_canonical_keys() -> None:

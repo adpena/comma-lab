@@ -16,12 +16,19 @@ from tac.substrates.time_traveler_l5_autonomy.archive import (
 from tac.substrates.time_traveler_l5_autonomy.inflate import (
     _apply_per_pair_residual,
     _build_substrate_from_archive,
+    apply_quantized_per_pair_residual_for_training,
     inflate_one_video,
+    quantize_per_pair_residual_for_inflate_ste,
 )
 
 
-def _build_toy_archive_bytes(num_pairs: int = 4) -> bytes:
+def _build_toy_archive_bytes(
+    num_pairs: int = 4,
+    *,
+    side_info: np.ndarray | None = None,
+) -> bytes:
     """Build a small TT5L archive from a freshly initialized substrate."""
+    torch.manual_seed(0)
     cfg = TimeTravelerConfig(
         hidden_dim=16,
         num_hidden_layers=2,
@@ -31,7 +38,8 @@ def _build_toy_archive_bytes(num_pairs: int = 4) -> bytes:
     )
     substrate = TimeTravelerSubstrate(cfg)
     sd = substrate.state_dict()
-    side_info = np.zeros((num_pairs, cfg.per_pair_side_info_bytes), dtype=np.int8)
+    if side_info is None:
+        side_info = np.zeros((num_pairs, cfg.per_pair_side_info_bytes), dtype=np.int8)
     meta = {
         "int8_scale": 64.0,
         "first_omega": cfg.first_omega,
@@ -91,6 +99,38 @@ def test_apply_per_pair_residual_zero_side_info_is_identity() -> None:
     assert torch.allclose(out_1, rgb_1)
 
 
+def test_training_side_info_transform_matches_inflate_quantized_path() -> None:
+    """Training applies the same quantized side-info residual as inflate."""
+    rgb_0 = torch.full((1, 3, 16, 16), 0.5)
+    rgb_1 = torch.full((1, 3, 16, 16), 0.25)
+    side_float = torch.zeros(45, requires_grad=True)
+    side_float.data[-9:] = torch.linspace(-0.5, 0.5, 9)
+
+    train_0, train_1, side_int8_ste = apply_quantized_per_pair_residual_for_training(
+        rgb_0,
+        rgb_1,
+        side_float,
+        int8_scale=64.0,
+    )
+    expected_side_int8 = quantize_per_pair_residual_for_inflate_ste(
+        side_float,
+        int8_scale=64.0,
+    ).detach()
+    inflate_0, inflate_1 = _apply_per_pair_residual(
+        rgb_0,
+        rgb_1,
+        expected_side_int8,
+        int8_scale=64.0,
+    )
+    assert torch.equal(side_int8_ste.detach(), expected_side_int8)
+    assert torch.allclose(train_0, inflate_0)
+    assert torch.allclose(train_1, inflate_1)
+
+    (train_0.mean() + train_1.mean()).backward()
+    assert side_float.grad is not None
+    assert side_float.grad[-9:].abs().sum().item() > 0.0
+
+
 def test_inflate_one_video_writes_expected_raw_byte_count(tmp_path) -> None:
     """The .raw output contains ``num_pairs * 2 * 874 * 1164 * 3`` uint8 bytes.
 
@@ -112,6 +152,22 @@ def test_inflate_one_video_handles_zero_side_info(tmp_path) -> None:
     n_frames = inflate_one_video(archive_bytes, out_path, device="cpu")
     assert n_frames == 2
     assert out_path.is_file()
+
+
+def test_inflate_one_video_side_info_bytes_affect_decoded_frames(tmp_path) -> None:
+    """Mutating side-info bytes changes the decoded raw frames."""
+    zero_side = np.zeros((1, 45), dtype=np.int8)
+    active_side = zero_side.copy()
+    active_side[0, -9:] = 64
+
+    zero_archive = _build_toy_archive_bytes(num_pairs=1, side_info=zero_side)
+    active_archive = _build_toy_archive_bytes(num_pairs=1, side_info=active_side)
+    zero_out = tmp_path / "zero.raw"
+    active_out = tmp_path / "active.raw"
+
+    assert inflate_one_video(zero_archive, zero_out, device="cpu") == 2
+    assert inflate_one_video(active_archive, active_out, device="cpu") == 2
+    assert zero_out.read_bytes() != active_out.read_bytes()
 
 
 def test_inflate_main_cli_three_arg_contract(tmp_path) -> None:

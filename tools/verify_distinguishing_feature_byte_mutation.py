@@ -73,6 +73,9 @@ Output JSON schema
         },
         ...
       ],
+      "baseline_inflated_output_sha256": "<sha>",
+      "baseline_repeat_inflated_output_sha256": "<sha>",
+      "baseline_repeat_deterministic": <bool>,
       "overall_passed": <bool>,
       "verdict": "PASSED" | "FAILED" | "INFRASTRUCTURE_ERROR",
       "elapsed_seconds": <float>
@@ -135,7 +138,7 @@ class MutationTarget:
             return member_bytes
         assert self.offset is not None and self.length is not None
         end = self.offset + self.length
-        return member_bytes[self.offset:end]
+        return member_bytes[self.offset : end]
 
 
 def _sha256_file(path: Path) -> str:
@@ -175,9 +178,7 @@ def _parse_byte_range_target(raw: str) -> MutationTarget:
     else:
         label, spec = text, text
     if "@" not in spec or ":" not in spec.rsplit("@", 1)[1]:
-        raise ValueError(
-            "byte range must be label=member@offset:length or member@offset:length"
-        )
+        raise ValueError("byte range must be label=member@offset:length or member@offset:length")
     member, range_spec = spec.rsplit("@", 1)
     offset_s, length_s = range_spec.split(":", 1)
     member = member.strip()
@@ -197,10 +198,7 @@ def _build_mutation_targets(
     distinguishing_bytes_paths: list[str],
     distinguishing_byte_ranges: list[str] | None = None,
 ) -> list[MutationTarget]:
-    targets = [
-        MutationTarget(label=path, member=path)
-        for path in distinguishing_bytes_paths
-    ]
+    targets = [MutationTarget(label=path, member=path) for path in distinguishing_bytes_paths]
     for raw in distinguishing_byte_ranges or []:
         targets.append(_parse_byte_range_target(raw))
     return targets
@@ -234,9 +232,10 @@ def _write_archive_with_mutated_target(
     mutated_bytes: bytes,
 ) -> None:
     """Copy src_archive to dst_archive, replacing one target's bytes."""
-    with zipfile.ZipFile(src_archive, "r") as src_zf, zipfile.ZipFile(
-        dst_archive, "w", compression=zipfile.ZIP_STORED
-    ) as dst_zf:
+    with (
+        zipfile.ZipFile(src_archive, "r") as src_zf,
+        zipfile.ZipFile(dst_archive, "w", compression=zipfile.ZIP_STORED) as dst_zf,
+    ):
         for info in src_zf.infolist():
             if info.filename == target.member:
                 if target.offset is None and target.length is None:
@@ -408,9 +407,7 @@ def verify_distinguishing_feature_byte_mutation(
             continue
         member_size = section_index[target.member]
         if target.offset + target.length > member_size:
-            bad_ranges.append(
-                f"{target.label} exceeds member {target.member!r} size {member_size}"
-            )
+            bad_ranges.append(f"{target.label} exceeds member {target.member!r} size {member_size}")
     if bad_ranges:
         result = _infra_error(
             "distinguishing byte range out of bounds: " + "; ".join(bad_ranges),
@@ -438,10 +435,15 @@ def verify_distinguishing_feature_byte_mutation(
         else:
             file_list_path = file_list
 
-        # Baseline inflate.
+        # Baseline inflates. Run the identical baseline twice before accepting
+        # any mutation difference, otherwise nondeterministic inflate output can
+        # masquerade as operational byte consumption.
         baseline_out = tmp / "baseline_out"
         rc, baseline_hash = _run_inflate(
-            inflate_sh, archive_dir, baseline_out, file_list_path,
+            inflate_sh,
+            archive_dir,
+            baseline_out,
+            file_list_path,
             timeout_seconds=inflate_timeout_seconds,
         )
         if rc != 0 or not baseline_hash:
@@ -455,9 +457,44 @@ def verify_distinguishing_feature_byte_mutation(
                 inflate_sh_sha256=inflate_sha,
             )
             return result
+        baseline_repeat_out = tmp / "baseline_repeat_out"
+        rc, baseline_repeat_hash = _run_inflate(
+            inflate_sh,
+            archive_dir,
+            baseline_repeat_out,
+            file_list_path,
+            timeout_seconds=inflate_timeout_seconds,
+        )
+        if rc != 0 or not baseline_repeat_hash:
+            result = _infra_error(
+                f"baseline repeat inflate failed rc={rc}",
+                distinguishing_bytes_paths,
+                output_json,
+                started,
+                archive_sha=archive_sha,
+                archive_size_bytes=archive_size,
+                inflate_sh_sha256=inflate_sha,
+                baseline_hash=baseline_hash,
+                baseline_repeat_hash=baseline_repeat_hash,
+            )
+            return result
+        if baseline_hash != baseline_repeat_hash:
+            result = _infra_error(
+                "baseline inflate nondeterministic: identical archive produced "
+                f"different aggregate hashes {baseline_hash} vs {baseline_repeat_hash}",
+                distinguishing_bytes_paths,
+                output_json,
+                started,
+                archive_sha=archive_sha,
+                archive_size_bytes=archive_size,
+                inflate_sh_sha256=inflate_sha,
+                baseline_hash=baseline_hash,
+                baseline_repeat_hash=baseline_repeat_hash,
+            )
+            return result
 
         if verbose:
-            print(f"[dfic] baseline inflate OK hash={baseline_hash[:16]}")
+            print(f"[dfic] repeated baseline inflate OK hash={baseline_hash[:16]}")
 
         # Per-section mutation runs.
         section_results: list[SectionResult] = []
@@ -483,13 +520,13 @@ def verify_distinguishing_feature_byte_mutation(
                 )
                 if verbose:
                     print(
-                        f"[dfic] target={target.label!r} EMPTY (0 bytes) "
-                        "FAIL — distinguishing feature has zero bytes"
+                        f"[dfic] target={target.label!r} EMPTY (0 bytes) FAIL — distinguishing feature has zero bytes"
                     )
                 continue
 
             mutations = _generate_mutations(
-                section_bytes, mutations_per_section,
+                section_bytes,
+                mutations_per_section,
                 seed_offset=sec_idx * 7,
             )
             changed = 0
@@ -497,7 +534,10 @@ def verify_distinguishing_feature_byte_mutation(
             for m_idx, mutated in enumerate(mutations):
                 mut_archive = tmp / f"mut_{sec_idx}_{m_idx}_{archive.name}"
                 _write_archive_with_mutated_target(
-                    staged_archive, mut_archive, target, mutated,
+                    staged_archive,
+                    mut_archive,
+                    target,
+                    mutated,
                 )
                 # Stage mutated archive and re-inflate.
                 mut_archive_dir = tmp / f"mut_archive_dir_{sec_idx}_{m_idx}"
@@ -505,7 +545,10 @@ def verify_distinguishing_feature_byte_mutation(
                 shutil.copy2(mut_archive, mut_archive_dir / archive.name)
                 mut_out = tmp / f"mut_out_{sec_idx}_{m_idx}"
                 rc, mut_hash = _run_inflate(
-                    inflate_sh, mut_archive_dir, mut_out, file_list_path,
+                    inflate_sh,
+                    mut_archive_dir,
+                    mut_out,
+                    file_list_path,
                     timeout_seconds=inflate_timeout_seconds,
                 )
                 if rc == 0 and mut_hash and mut_hash != baseline_hash:
@@ -546,6 +589,9 @@ def verify_distinguishing_feature_byte_mutation(
         "inflate_sh_sha256": inflate_sha,
         "distinguishing_bytes_paths": target_labels,
         "section_results": [s.to_dict() for s in section_results],
+        "baseline_inflated_output_sha256": baseline_hash,
+        "baseline_repeat_inflated_output_sha256": baseline_repeat_hash,
+        "baseline_repeat_deterministic": True,
         "overall_passed": overall_passed,
         "verdict": "PASSED" if overall_passed else "FAILED",
         "elapsed_seconds": round(time.time() - started, 3),
@@ -568,6 +614,8 @@ def _infra_error(
     archive_sha: str = "",
     archive_size_bytes: int = 0,
     inflate_sh_sha256: str = "",
+    baseline_hash: str = "",
+    baseline_repeat_hash: str = "",
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -576,6 +624,11 @@ def _infra_error(
         "inflate_sh_sha256": inflate_sh_sha256,
         "distinguishing_bytes_paths": list(distinguishing_bytes_paths),
         "section_results": [],
+        "baseline_inflated_output_sha256": baseline_hash,
+        "baseline_repeat_inflated_output_sha256": baseline_repeat_hash,
+        "baseline_repeat_deterministic": bool(
+            baseline_hash and baseline_repeat_hash and baseline_hash == baseline_repeat_hash
+        ),
         "overall_passed": False,
         "verdict": "INFRASTRUCTURE_ERROR",
         "infrastructure_error_reason": reason,
@@ -624,10 +677,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
     if not args.distinguishing_bytes_paths and not args.distinguishing_byte_ranges:
-        parser.error(
-            "at least one --distinguishing-bytes-path or "
-            "--distinguishing-byte-range is required"
-        )
+        parser.error("at least one --distinguishing-bytes-path or --distinguishing-byte-range is required")
 
     result = verify_distinguishing_feature_byte_mutation(
         archive=args.archive,

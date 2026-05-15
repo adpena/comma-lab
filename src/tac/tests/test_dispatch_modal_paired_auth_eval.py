@@ -130,12 +130,20 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     with ZipFile(archive, "w") as zf:
         zf.writestr("x", b"payload")
 
-    def fake_anchor(axis: str, archive_sha256: str, *, repo_root: Path):
+    def fake_anchor(
+        axis: str,
+        archive_sha256: str,
+        *,
+        repo_root: Path,
+        expected_runtime_tree_sha256: str = "",
+    ):
+        assert expected_runtime_tree_sha256 == "a" * 64
         if axis == "cuda":
             return {
                 "axis": "contest_cuda",
                 "archive_sha256": archive_sha256,
                 "score": 0.2,
+                "runtime_tree_sha256": expected_runtime_tree_sha256,
                 "result_path": "existing/cuda.json",
                 "source": "filesystem_scan",
                 "custody_match": True,
@@ -156,6 +164,7 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
         gpu="T4",
         claim_agent="codex:test",
         claim_notes="unit test",
+        expected_runtime_tree_sha256="a" * 64,
         skip_axis_if_promotable_anchor_exists=True,
         repo_root=tmp_path,
     )

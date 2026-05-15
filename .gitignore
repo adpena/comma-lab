@@ -171,6 +171,11 @@ src/tac.egg-info/
 .omx/state/modal_call_id_ledger.jsonl.lock
 .omx/state/modal_call_id_ledger.jsonl.tmp.*
 .omx/state/modal_call_id_ledger.jsonl.corrupt.*
+# OP-10: sidecar index for read-amortized query helpers (LIVE_STATE per
+# Catalog #113; lazily rebuilt from canonical JSONL - corruption / loss
+# has zero forensic cost; the canonical ledger is the source of truth).
+.omx/state/modal_call_id_ledger_index.json
+.omx/state/modal_call_id_ledger_index.json.tmp.*
 .omx/state/RACE_MODE_ACTIVE.flag
 .omx/status/
 .omx/cache/

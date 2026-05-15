@@ -22,10 +22,13 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
                     elided and reconstructed by committed runtime grammar
   format_id=0x0C — format_id=0x0B with the 600 dim symbols stored as an
                     exact base-28 integer instead of the wider PR101 dim field
+  format_id=0x0D — explicit wrapper carrying a format0C base stream plus an
+                    additive PR101 ranked/no-op extra stream
 
-All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
-parser/decoder-consumption evidence only. Score components require exact
-auth-eval evidence under the scored runtime.
+Formats through 0x0C reconstruct one (dims, delta_q) array. Format 0x0D
+reconstructs two additive passes and applies the format0C base pass first.
+This is parser/decoder-consumption evidence only. Score components require
+exact auth-eval evidence under the scored runtime.
 
 Reads <src>.bin (PR106 wrapper: magic 0xFE + format_id + PR106 bytes verbatim
 + appended sidecar), reconstructs PR106 state_dict + latents, applies the
@@ -72,6 +75,7 @@ SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x09
 SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0A
 SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0B
 SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED = 0x0C
+SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA = 0x0D
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -83,6 +87,7 @@ SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -365,8 +370,38 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
 
     (pr106_len,) = struct.unpack_from("<I", bin_bytes, pos)
     pos += 4
-    pr106_bytes = bin_bytes[pos : pos + pr106_len]
+    pr106_start = pos
+    pr106_bytes = bin_bytes[pr106_start : pr106_start + pr106_len]
     pos += pr106_len
+
+    if format_id == SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        base_end = pos + EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+        if base_end > len(bin_bytes):
+            raise ValueError("format0D archive truncated before base format0C sidecar")
+        pos = base_end
+        if pos + 2 > len(bin_bytes):
+            raise ValueError("format0D archive truncated before extra_payload_len")
+        (extra_len,) = struct.unpack_from("<H", bin_bytes, pos)
+        pos += 2
+        extra_end = pos + extra_len
+        if extra_end > len(bin_bytes):
+            raise ValueError(
+                f"format0D extra stream truncated: extra_len={extra_len} total={len(bin_bytes)}"
+            )
+        pos = extra_end
+        if pos + 6 > len(bin_bytes):
+            raise ValueError("format0D archive truncated before extra framing meta")
+        pos += 6
+        if pos != len(bin_bytes):
+            raise ValueError(
+                f"format0D archive trailing bytes: pos={pos} vs total={len(bin_bytes)}"
+            )
+        return (
+            format_id,
+            pr106_bytes,
+            bin_bytes[pr106_start + pr106_len :],
+            None,
+        )
 
     if format_id == SIDECAR_FORMAT_BROTLI:
         if pos + 2 > len(bin_bytes):
@@ -511,6 +546,35 @@ def decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
     )
 
 
+def decode_format0d_sidecar(
+    payload: bytes,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Decode format_id=0x0D into base and extra correction passes."""
+    base_len = EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    if len(payload) < base_len + 2 + 6:
+        raise ValueError("format0D sidecar payload too short")
+    base_payload = payload[:base_len]
+    pos = base_len
+    (extra_len,) = struct.unpack_from("<H", payload, pos)
+    pos += 2
+    extra_end = pos + extra_len
+    if extra_end + 6 != len(payload):
+        raise ValueError(
+            "format0D sidecar length mismatch: "
+            f"extra_len={extra_len} total={len(payload)}"
+        )
+    extra_payload = payload[pos:extra_end]
+    extra_meta = payload[extra_end:]
+    base_dim_arr, base_delta_q_arr = (
+        decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(base_payload)
+    )
+    extra_dim_arr, extra_delta_q_arr = decode_pr101_grammar_sidecar(
+        extra_payload,
+        extra_meta,
+    )
+    return base_dim_arr, base_delta_q_arr, extra_dim_arr, extra_delta_q_arr
+
+
 def apply_sidecar_corrections(
     latents: torch.Tensor,
     dim_arr: np.ndarray,
@@ -599,16 +663,31 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         dim_arr, delta_q_arr = decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar(
             sidecar_blob
         )
+    elif format_id == SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        base_dim_arr, base_delta_q_arr, dim_arr, delta_q_arr = decode_format0d_sidecar(
+            sidecar_blob
+        )
     else:  # fixed-meta rank-elided formats 0x05, 0x06, 0x07, 0x08, and 0x09
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
 
     n_corrections = int((dim_arr != NO_OP_DIM).sum())
-    print(
-        f"[inflate] format_id=0x{format_id:02X} sidecar applied: "
-        f"{n_corrections}/{len(dim_arr)} pairs corrected",
-        file=sys.stderr,
-    )
-    apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
+    if format_id == SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        n_base_corrections = int((base_dim_arr != NO_OP_DIM).sum())
+        print(
+            f"[inflate] format_id=0x{format_id:02X} sidecar applied: "
+            f"base={n_base_corrections}/{len(base_dim_arr)} pairs corrected, "
+            f"extra={n_corrections}/{len(dim_arr)} pairs corrected",
+            file=sys.stderr,
+        )
+        apply_sidecar_corrections(latents, base_dim_arr, base_delta_q_arr)
+        apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
+    else:
+        print(
+            f"[inflate] format_id=0x{format_id:02X} sidecar applied: "
+            f"{n_corrections}/{len(dim_arr)} pairs corrected",
+            file=sys.stderr,
+        )
+        apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
 
     try:
         device = select_inflate_device()

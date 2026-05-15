@@ -1,0 +1,157 @@
+name: nightly_catalog_gate_regression
+
+# Catalog #284 (PHASE-3-CONTINUOUS-REGRESSION-CI-NIGHTLY-WORKFLOW 2026-05-15) +
+# OMNIBUS-BUG-CLASS-AUDIT GAP-3 + operator standing directive 2026-05-15:
+# *"fix all bug classes and meta bugs and all versions permanently and self
+# protect against them"*.
+#
+# Runs every catalog gate's preflight checks + every empirical bug fixture +
+# the META-meta strictness-ledger drift detectors (Catalogs #118 / #159 /
+# #176 / #185) NIGHTLY at 02:00 UTC. The per-day status JSON under
+# .omx/state/nightly_catalog_gate_regression_<YYYYMMDD>.json is the canonical
+# operator-facing daily green/red signal — drift detection in <24h instead
+# of "ad-hoc subagent discovery" multi-day windows.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against"
+# every modification to this file MUST route through the canonical helper
+# tools/run_nightly_catalog_gate_regression.py (Catalog #284 STRICT preflight
+# gate `check_nightly_catalog_gate_regression_workflow_canonical_use`
+# refuses workflow-file mutations that bypass it).
+#
+# Per CLAUDE.md "Public Disclosure Hygiene" no secrets, no provider URLs, no
+# private paths. Status JSONs land under .omx/state/ and are HISTORICAL_PROVENANCE
+# per Catalog #110/#113 (one file per UTC day; never mutate prior days).
+
+on:
+  schedule:
+    # 02:00 UTC nightly. Selected because (a) operator timezones (UTC-5
+    # to UTC-8 typical) sleep through this window and (b) Modal/Lightning
+    # canary contention is lowest at this hour.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      run_id_override:
+        description: 'Optional run id override (default: gha-<run_id>).'
+        required: false
+        type: string
+        default: ''
+      skip_pytest:
+        description: 'Skip the pytest stage (preflight + meta-meta only).'
+        required: false
+        type: boolean
+        default: false
+
+# Concurrency: scope to the workflow + ref. cancel-in-progress=false because
+# we never want to lose an in-flight nightly run that is producing forensic
+# evidence about a regression.
+concurrency:
+  group: nightly_catalog_gate_regression-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  nightly_catalog_gate_regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      RUN_ID_OVERRIDE: ${{ github.event.inputs.run_id_override || '' }}
+      SKIP_PYTEST: ${{ github.event.inputs.skip_pytest || 'false' }}
+      INFLATE_TORCH_SPEC: 'torch==2.5.1+cpu'
+      UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
+      UV_INDEX_STRATEGY: 'unsafe-best-match'
+
+    steps:
+      - name: Checkout repo at the dispatched ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Resolve runner identity (audit trail only)
+        id: hw
+        run: |
+          set -euo pipefail
+          echo "uname_s=$(uname -s)" >> "$GITHUB_OUTPUT"
+          echo "uname_m=$(uname -m)" >> "$GITHUB_OUTPUT"
+          echo "runner_os=${RUNNER_OS}" >> "$GITHUB_OUTPUT"
+          echo "runner_arch=${RUNNER_ARCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: |
+          set -euo pipefail
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Create venv + install tac with dev+runtime extras
+        run: |
+          set -euo pipefail
+          uv venv
+          # CPU torch first via PyTorch CPU index — matches CI lane-1 and
+          # contest_cpu_eval workflows. Per CLAUDE.md "Forbidden CLI flag
+          # inventions" we pin torch explicitly to avoid the cu13/cu124 trap.
+          uv pip install --index-url https://download.pytorch.org/whl/cpu \
+            --extra-index-url https://pypi.org/simple \
+            "${INFLATE_TORCH_SPEC}"
+          uv pip install -e '.[dev,runtime]'
+          # Sanity: torch must be CPU-only here.
+          .venv/bin/python -c "import torch; assert not torch.cuda.is_available(), 'CUDA must NOT be available on the CI runner'; print('torch', torch.__version__, 'CPU-only OK')"
+
+      - name: Run canonical nightly catalog-gate regression helper
+        id: nightly
+        env:
+          PYTHONPATH: src:upstream
+        run: |
+          set -euo pipefail
+          mkdir -p .omx/tmp
+          RUN_ID="${RUN_ID_OVERRIDE:-gha-${GITHUB_RUN_ID}}"
+          ARGS=("--run-id" "$RUN_ID")
+          if [[ "${SKIP_PYTEST}" == "true" ]]; then
+            ARGS+=("--skip-pytest")
+          fi
+          # Helper exits rc=1 on any drift; we capture rc and surface via
+          # GITHUB_OUTPUT so the upload step always runs (if: always()).
+          set +e
+          .venv/bin/python tools/run_nightly_catalog_gate_regression.py "${ARGS[@]}" \
+            2>&1 | tee ".omx/tmp/nightly_catalog_gate_regression_${GITHUB_RUN_ID}.log"
+          NIGHTLY_RC=${PIPESTATUS[0]}
+          set -e
+          echo "nightly_rc=${NIGHTLY_RC}" >> "$GITHUB_OUTPUT"
+          # Locate the per-day status JSON for the upload step.
+          STATUS_JSON="$(ls -1t .omx/state/nightly_catalog_gate_regression_*.json 2>/dev/null | head -n 1 || true)"
+          echo "status_json=${STATUS_JSON}" >> "$GITHUB_OUTPUT"
+          # Surface the overall_pass + counts in the run log.
+          if [[ -n "${STATUS_JSON}" && -f "${STATUS_JSON}" ]]; then
+            .venv/bin/python -c "
+          import json, pathlib
+          j = json.loads(pathlib.Path('${STATUS_JSON}').read_text())
+          print('overall_pass:', j.get('overall_pass'))
+          print('preflight_pass:', j.get('preflight_pass'))
+          print('pytest_pass:', j.get('pytest_pass'))
+          print('meta_meta_drift:', j.get('meta_meta_drift'))
+          print('passed:', j.get('passed'))
+          print('failed:', j.get('failed'))
+          print('skipped:', j.get('skipped'))
+          print('errors:', j.get('errors'))
+          "
+          fi
+          # Re-raise the helper's rc so the workflow run shows red on drift.
+          exit "${NIGHTLY_RC}"
+
+      - name: Upload nightly status artifact (90-day retention)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly_catalog_gate_regression-${{ github.run_id }}
+          path: |
+            ${{ steps.nightly.outputs.status_json }}
+            .omx/tmp/nightly_catalog_gate_regression_${{ github.run_id }}.log
+          retention-days: 90
+          if-no-files-found: warn

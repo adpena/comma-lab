@@ -579,9 +579,58 @@ def harvest_modal_calls(
                 result.get("stdout_tail", "") or "",
                 encoding="utf-8",
             )
+            # OP-8 fix (codex chunk 5/10, 2026-05-15): n_artifacts==0
+            # mislabeling. When a Modal dispatch returns rc=0 + not timed_out
+            # but produces ZERO artifacts, the canonical
+            # ``append_platform_training_anchor`` (cost_band_calibration.py)
+            # would derive ``outcome=successful_dispatch`` from the rc=0
+            # signal alone — corrupting the cost-band posterior with anchors
+            # that look successful but produced no usable evidence (no
+            # archive, no auth-eval JSON, no checkpoint). The downstream
+            # cathedral-autopilot ranker then trusts these zero-evidence
+            # anchors as proof-of-feasibility and re-prioritizes the same
+            # config that just failed.
+            #
+            # The fix is to override the outcome to ``harvested_partial`` for
+            # the zero-artifact-rc-0 case so:
+            #   1. ``predict()`` excludes the anchor by default
+            #      (``successful_dispatch`` is the only default-included
+            #      outcome per VALID_OUTCOMES).
+            #   2. The cost-band posterior preserves the row for forensic
+            #      audit (HARVESTED_PARTIAL is in VALID_OUTCOMES).
+            #   3. Catalog #245 Modal call_id ledger keeps its own
+            #      EVENT_HARVESTED status independently (no schema change).
+            #   4. Catalog #185 live-count drift detection is no longer
+            #      poisoned by false-positive successful_dispatch counts.
+            #
+            # Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog
+            # #221 (`check_auth_eval_result_artifacts_fail_closed_for_score_claims`)
+            # the rc=0+zero-artifacts row is by definition non-promotable:
+            # there is nothing to score.
+            cost_meta_for_anchor = meta
+            if n_artifacts == 0 and rc == 0 and not timed_out:
+                base_cost_meta = dict(meta.get("cost_band_anchor") or {})
+                base_cost_meta["outcome"] = "harvested_partial"
+                base_notes = base_cost_meta.get("notes", "")
+                op8_note = (
+                    "OP-8 (2026-05-15): n_artifacts==0 with rc=0 → "
+                    "outcome overridden to harvested_partial; row preserved "
+                    "for forensic audit but excluded from predict() default."
+                )
+                base_cost_meta["notes"] = (
+                    f"{base_notes}; {op8_note}" if base_notes else op8_note
+                )
+                cost_meta_for_anchor = {**meta, "cost_band_anchor": base_cost_meta}
+                outcome_classification = "partial_harvest_zero_artifacts"
+            elif rc != 0:
+                outcome_classification = f"failed_rc_{rc}"
+            elif timed_out:
+                outcome_classification = "timed_out"
+            else:
+                outcome_classification = "successful_dispatch"
             cost_anchor = append_modal_training_cost_anchor(
                 out_dir=out_dir,
-                metadata=meta,
+                metadata=cost_meta_for_anchor,
                 result=result,
             )
             terminal_claim = append_modal_training_terminal_claim(
@@ -603,6 +652,7 @@ def harvest_modal_calls(
                 "n_artifacts": n_artifacts,
                 "artifact_files": artifact_files,
                 "crash_kind": crash_kind,
+                "outcome_classification": outcome_classification,
                 "cost_band_anchor": cost_anchor,
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
@@ -622,6 +672,7 @@ def harvest_modal_calls(
                     "n_artifacts": n_artifacts,
                     "artifact_files": artifact_files,
                     "crash_kind": crash_kind,
+                    "outcome_classification": outcome_classification,
                     "cost_band_anchor": cost_anchor,
                     "terminal_claim": terminal_claim,
                     "terminal_evidence": terminal_evidence,

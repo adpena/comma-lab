@@ -1,0 +1,44 @@
+{
+  "schema": "pact.pr106_format0d_materialized_candidate.v1",
+  "created_utc": "2026-05-15T22:07:02Z",
+  "score_claim": false,
+  "ready_for_exact_eval_dispatch": false,
+  "exact_eval_dispatch_blockers": [
+    "requires_paired_contest_cuda_auth_eval_on_materialized_archive",
+    "requires_paired_contest_cpu_auth_eval_on_materialized_archive",
+    "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate",
+    "requires_adjudicated_component_recompute_before_score_claim"
+  ],
+  "candidate_archive": {
+    "path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip",
+    "bytes": 186876,
+    "sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4"
+  },
+  "source_archive": {
+    "path": "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip",
+    "bytes": 186327,
+    "sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7"
+  },
+  "rate_delta_vs_source": {
+    "bytes": 549,
+    "score_units": 0.00036555656526407205
+  },
+  "materialization_manifest": {
+    "path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/materialization_manifest.json",
+    "sha256": "dd527859bf416da83302d07ff1f077f4ff3d3cdcb2606617e48c2f22956ef9e8"
+  },
+  "build_metadata": {
+    "path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/build_metadata.json",
+    "sha256": "bb64673057e3c92adbaa8185466a68e7b982bd954a50b99f439a63e921f02c6a"
+  },
+  "semantic_materialization": {
+    "output_format_id": "0x0D",
+    "extra_second_dim_pair_count": 552,
+    "extra_nonzero_pair_count": 570,
+    "output_packet_payload_sha256": "15a5dccba352838df7a8dd190a8782e51afa53b475bcf07921f05ce88c10785e"
+  },
+  "required_next_axes": [
+    "contest-CUDA",
+    "contest-CPU"
+  ]
+}

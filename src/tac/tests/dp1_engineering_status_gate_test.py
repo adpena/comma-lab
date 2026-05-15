@@ -90,9 +90,7 @@ def _base_artifacts(tmp_path: Path) -> dict[str, Path]:
                 "score_claim_valid": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
-                "archive_result": {
-                    "notes": ["[real-scorer CPU Tier-C delta curves; no score claim]"]
-                },
+                "archive_result": {"notes": ["[real-scorer CPU Tier-C delta curves; no score claim]"]},
             },
         ),
     }
@@ -104,17 +102,13 @@ def test_dp1_gate_reports_current_proxy_status_and_next_source_gate(
     tool = _load_tool()
     status = tool.build_status(**_base_artifacts(tmp_path))
 
-    assert status["engineering_status"] == (
-        "implemented_proxy_ready_untrained_real_prior_missing"
-    )
+    assert status["engineering_status"] == ("implemented_proxy_ready_untrained_real_prior_missing")
     assert status["classification"] == "untrained_unpromoted_promising_substrate"
     assert status["false_claims"] == []
     assert status["capabilities_confirmed"]["smoke_archive_materialized"] is True
     assert status["capabilities_confirmed"]["tiny_full_cpu_advisory_ran"] is True
     assert status["capabilities_confirmed"]["real_dataset_source_ready"] is False
-    assert status["next_gate"]["id"] == (
-        "dp1_comma2k19_onechunk_cpu_advisory_source_custody"
-    )
+    assert status["next_gate"]["id"] == ("dp1_comma2k19_onechunk_cpu_advisory_source_custody")
     assert status["next_gate"]["status"] == "blocked_until_source_supplied"
     assert "dp1_real_dataset_source_manifest_missing" in status["blockers"]
 
@@ -141,6 +135,112 @@ def test_dp1_gate_fails_closed_on_score_claim_without_score(tmp_path: Path) -> N
     assert status["engineering_status"] == "blocked_false_dp1_score_or_promotion_claim"
     assert len(status["false_claims"]) == 2
     assert all("without contest score field" in item for item in status["false_claims"])
+
+
+def test_dp1_gate_rejects_proxy_canonical_score_as_exact_score_claim(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    _write_json(
+        paths["smoke_manifest_path"],
+        {
+            "schema": "dp1_readiness_manifest_v1",
+            "archive_path": "archive.zip",
+            "archive_bytes": 12032,
+            "canonical_score": 0.91,
+            "evidence_grade": "[proxy]",
+            "score_axis": "proxy",
+            "score_claim": True,
+            "score_claim_valid": True,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    status = tool.build_status(**paths)
+
+    assert status["engineering_status"] == "blocked_false_dp1_score_or_promotion_claim"
+    assert status["capabilities_confirmed"]["exact_score_artifact_present"] is False
+    assert any("score_claim=true without contest score field" in item for item in status["false_claims"])
+    assert any("score_claim_valid=true without contest score field" in item for item in status["false_claims"])
+
+
+def test_dp1_gate_requires_authoritative_axis_metadata_for_generic_scores(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    _write_json(
+        paths["smoke_manifest_path"],
+        {
+            "schema": "dp1_readiness_manifest_v1",
+            "archive_path": "archive.zip",
+            "archive_bytes": 12032,
+            "canonical_score": 0.91,
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    status = tool.build_status(**paths)
+
+    assert status["capabilities_confirmed"]["exact_score_artifact_present"] is False
+    assert status["next_gate"]["id"] != "dp1_result_review_packet"
+
+
+def test_dp1_gate_accepts_authoritative_contest_axis_score_metadata(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    _write_json(
+        paths["smoke_manifest_path"],
+        {
+            "schema": "dp1_readiness_manifest_v1",
+            "archive_path": "archive.zip",
+            "archive_bytes": 12032,
+            "canonical_score": 0.91,
+            "evidence_grade": "[contest-CUDA]",
+            "score_axis": "contest_cuda",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    status = tool.build_status(**paths)
+
+    assert status["capabilities_confirmed"]["exact_score_artifact_present"] is True
+
+
+def test_dp1_gate_rejects_macos_cpu_advisory_score_as_exact_evidence(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    paths = _base_artifacts(tmp_path)
+    _write_json(
+        paths["smoke_manifest_path"],
+        {
+            "schema": "dp1_readiness_manifest_v1",
+            "archive_path": "archive.zip",
+            "archive_bytes": 12032,
+            "canonical_score": 0.91,
+            "evidence_grade": "[macOS-CPU advisory]",
+            "score_axis": "cpu_advisory",
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    status = tool.build_status(**paths)
+
+    assert status["capabilities_confirmed"]["exact_score_artifact_present"] is False
 
 
 def test_dp1_gate_recognizes_complete_real_comma2k19_source_manifest(
@@ -217,9 +317,7 @@ def test_dp1_gate_preflights_real_local_chunk_custody_without_private_paths(
     assert coverage["complete_for_selected_chunks"] is True
     assert coverage["full_dataset_complete"] is False
     assert str(chunks_root) not in json.dumps(custody, sort_keys=True)
-    assert str(chunks_root) not in json.dumps(
-        status["dataset_source_manifest"], sort_keys=True
-    )
+    assert str(chunks_root) not in json.dumps(status["dataset_source_manifest"], sort_keys=True)
     assert status["capabilities_confirmed"]["real_dataset_source_ready"] is True
     assert status["engineering_status"] == "real_source_probe_ready_no_exact_score"
     assert status["next_gate"]["status"] == "executable_real_source_probe"
@@ -315,9 +413,5 @@ def test_dp1_gate_redacts_private_paths_from_existing_source_manifest(
     assert str(tmp_path) not in manifest_json
     assert status["dataset_source_manifest"]["chunks_dir"] == "<redacted:chunks_dir:set>"
     assert status["dataset_source_manifest"]["cache_dir"] == "<redacted:cache_dir:set>"
-    assert status["dataset_source_manifest"]["stream_log_dir"] == (
-        "<redacted:stream_log_dir:set>"
-    )
-    assert status["dataset_source_manifest"]["codebook_path"] == (
-        "<redacted:codebook_path:set>"
-    )
+    assert status["dataset_source_manifest"]["stream_log_dir"] == ("<redacted:stream_log_dir:set>")
+    assert status["dataset_source_manifest"]["codebook_path"] == ("<redacted:codebook_path:set>")

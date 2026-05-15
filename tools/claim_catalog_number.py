@@ -84,6 +84,7 @@ import socket
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -93,6 +94,28 @@ LOG_PATH = REPO_ROOT / ".omx/state/catalog-claim.log"
 SERIALIZER_PATH = REPO_ROOT / "tools" / "subagent_commit_serializer.py"
 LOCK_TIMEOUT_SECONDS = 30
 DEFAULT_INITIAL_VALUE = 116  # First number after #115 (FIX-A-CUSTODY's renumber)
+
+
+class CatalogStateCorruptError(RuntimeError):
+    """Raised when the catalog-counter state file exists but is empty or malformed.
+
+    OP-6 fail-closed protection (codex chunk 8 HIGH, 2026-05-15): pre-fix,
+    ``claim_one()`` silently treated an empty state file as
+    ``DEFAULT_INITIAL_VALUE`` and reissued numbers that had already been
+    claimed. The pre-fix truncate+rewrite path could LEAVE the file empty
+    if the process died between ``truncate`` and ``write+fsync``. The fix
+    is twofold: (1) write atomically via temp+fsync+rename so the canonical
+    file is never empty mid-write; (2) refuse to claim from an empty/
+    malformed file so a corrupted state surface fails loudly instead of
+    silently re-issuing claimed numbers.
+
+    Operator recovery: inspect the corrupted file. If a sibling
+    ``.recover.<utc>`` file exists from quarantine, prefer its contents.
+    Otherwise, the highest already-claimed number can be recovered from
+    ``.omx/state/catalog-claim.log`` (JSONL) or from the CLAUDE.md catalog
+    table itself (max ``^[0-9]+\\.`` row). Once the correct value is known,
+    use ``python tools/claim_catalog_number.py set --value <N+1>``.
+    """
 
 
 def _now_iso() -> str:
@@ -108,18 +131,173 @@ def _append_log(record: dict) -> None:
         print(f"[claim-catalog] WARNING: log append failed: {e!r}", file=sys.stderr)
 
 
+def _lock_path() -> Path:
+    """Sibling lockfile path adjacent to STATE_PATH.
+
+    Per CLAUDE.md catalog #131 sister discipline: the canonical pattern is
+    ``fcntl.flock(LOCK_EX)`` on a SIBLING lockfile (not on the canonical
+    state file itself). Locking on the canonical file is incompatible with
+    ``os.replace``-based atomic writes because the rename swaps the inode
+    underneath any open fd; a process holding a lock on the OLD inode
+    no longer protects the NEW inode. The sibling-lockfile pattern lets
+    writers atomically rename the canonical file while every locker still
+    contends on the same lockfile inode.
+
+    Mirrors the canonical pattern in
+    ``tac.deploy.lightning.active_jobs_state.ACTIVE_JOBS_LOCK`` (catalog #131).
+    """
+    return STATE_PATH.with_suffix(STATE_PATH.suffix + ".lock")
+
+
 def _ensure_initialized() -> None:
-    """Create the state file with DEFAULT_INITIAL_VALUE if absent."""
+    """Create the state file with DEFAULT_INITIAL_VALUE if absent.
+
+    The bootstrap write goes through the atomic ``_atomic_write_state``
+    helper so even initialization is crash-safe (a process death mid-bootstrap
+    leaves the canonical file absent rather than empty).
+    """
     if STATE_PATH.exists():
         return
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(f"{DEFAULT_INITIAL_VALUE}\n")
+    _atomic_write_state(DEFAULT_INITIAL_VALUE)
+
+
+def _atomic_write_state(value: int) -> None:
+    """Write ``value`` to STATE_PATH atomically: temp+fsync+rename.
+
+    Per codex chunk 8 HIGH (2026-05-15) + CLAUDE.md catalog #131 sister:
+    the pre-fix ``seek(0); truncate(); write()`` pattern leaves a window
+    where the canonical file is empty if the process dies between
+    ``truncate`` and ``write+fsync``. Subsequent readers then either
+    (a) see an empty file and silently fall back to ``DEFAULT_INITIAL_VALUE``
+    (the original bug, reissuing claimed numbers) OR (b) raise
+    ``CatalogStateCorruptError`` (the new fail-closed contract).
+
+    The atomic pattern eliminates window (a) entirely: the canonical file
+    transitions from "old contents" to "new contents" in a single
+    ``os.replace`` syscall — no intermediate empty state is observable.
+    The temp file is fsync'd before rename so the new contents are durable
+    on disk before the rename publishes them.
+
+    Mirrors ``tac.deploy.lightning.active_jobs_state._save_active_jobs``
+    (catalog #140 sister).
+
+    The CALLER is responsible for holding the sibling-lockfile fcntl
+    lock; this helper does NOT acquire it. Concurrent atomic writes
+    without serialization would still race at the rename step (last
+    rename wins), losing increments.
+    """
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = f"{value}\n"
+    tmp = STATE_PATH.with_suffix(STATE_PATH.suffix + f".tmp.{uuid.uuid4().hex[:12]}")
+    try:
+        # Write payload to temp file, then fsync the temp fd so the bytes
+        # are durable on disk BEFORE the rename publishes them. Without
+        # the fsync, a power-loss between write and rename could leave
+        # the renamed-into-place file with stale or zero content depending
+        # on the filesystem's metadata-vs-data ordering.
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, STATE_PATH)
+    finally:
+        # Best-effort cleanup if we never reached os.replace (e.g., write
+        # failed before fsync, or fsync raised). The os.replace path
+        # already removed the tmp inode by atomically swapping it into
+        # STATE_PATH, so tmp.exists() is False on the success path.
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def _read_state_strict() -> int:
+    """Read the catalog counter or raise ``CatalogStateCorruptError``.
+
+    OP-6 fail-closed contract (codex chunk 8 HIGH, 2026-05-15): if the
+    state file exists but is empty or non-integer, refuse to return
+    a fallback value. The pre-fix ``int(text) if text else DEFAULT_INITIAL_VALUE``
+    silently re-issued claimed numbers when the file was empty (e.g., due
+    to the truncate-mid-write crash window the atomic-write fix closes).
+
+    The caller MUST hold the sibling-lockfile lock when invoking this
+    helper as part of a claim cycle, so the read+validate+write sequence
+    is atomic w.r.t. concurrent claimants. Standalone read-only consumers
+    (``peek``) may invoke without the lock — they observe a consistent
+    snapshot because writers use ``os.replace``.
+
+    Returns ``DEFAULT_INITIAL_VALUE`` only when the canonical file does
+    not exist (the bootstrap case is normal and not corruption).
+
+    Raises:
+        CatalogStateCorruptError: when the file exists and is empty,
+            whitespace-only, or cannot parse as an integer.
+    """
+    if not STATE_PATH.exists():
+        return DEFAULT_INITIAL_VALUE
+    try:
+        raw = STATE_PATH.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise CatalogStateCorruptError(
+            f"catalog state file at {STATE_PATH} could not be read: {exc!r}. "
+            "OP-6 fail-closed: refusing to claim from unreadable state to "
+            "avoid re-issuing claimed numbers. Operator: inspect file "
+            "permissions / filesystem health, then `python "
+            "tools/claim_catalog_number.py set --value <N>` once the "
+            "highest already-claimed number is known."
+        ) from exc
+    text = raw.strip()
+    if not text:
+        raise CatalogStateCorruptError(
+            f"catalog state file at {STATE_PATH} exists but is empty. "
+            "This indicates a crash during a pre-OP-6 truncate+rewrite "
+            "(now structurally extincted via atomic temp+fsync+rename), "
+            "OR explicit external truncation. OP-6 fail-closed: refusing "
+            "to fall back to DEFAULT_INITIAL_VALUE because doing so "
+            "silently re-issues numbers already claimed. Operator: "
+            "recover the highest claimed number from "
+            ".omx/state/catalog-claim.log (JSONL) or from CLAUDE.md "
+            "catalog table (max ^[0-9]+\\. row), then run `python "
+            "tools/claim_catalog_number.py set --value <N+1>`."
+        )
+    try:
+        return int(text)
+    except ValueError as exc:
+        raise CatalogStateCorruptError(
+            f"catalog state file at {STATE_PATH} contains non-integer "
+            f"content {text!r}: {exc!r}. OP-6 fail-closed: refusing to "
+            "claim from malformed state. Operator: recover the correct "
+            "value as documented in CatalogStateCorruptError docstring."
+        ) from exc
 
 
 def _acquire_lock(timeout_seconds: int):
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.touch(exist_ok=True)
-    fh = open(STATE_PATH, "r+")  # noqa: SIM115 - caller owns lock lifetime.
+    """Acquire fcntl exclusive lock on the SIBLING lockfile.
+
+    OP-6 hardening (codex chunk 8 HIGH, 2026-05-15): switched from
+    locking the canonical state file directly to locking a sibling
+    ``.lock`` file. This is required for the atomic-write fix because
+    ``os.replace`` swaps the canonical file's inode; an fd holding a
+    lock on the old inode does not arbitrate against writers locking
+    the new inode. The sibling-lockfile pattern (canonical per CLAUDE.md
+    catalog #131 + Lightning's ``ACTIVE_JOBS_LOCK``) guarantees every
+    locker contends on a stable inode that is never renamed.
+
+    Returns the open file handle so callers can release via
+    ``_release_lock``. Backwards-compatible API: the prior contract
+    "acquire returns a file-like with ``.fileno()``" is preserved.
+    """
+    lock_path = _lock_path()
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    # Open with O_RDWR | O_CREAT so the lockfile is auto-created if absent.
+    # The lockfile's contents are NEVER read or written; only its inode
+    # is used for fcntl arbitration. Opening for "r+" via Python's open()
+    # would fail if the file doesn't exist; using "a+" ensures creation
+    # while keeping a normal Python file handle (so .fileno() works for
+    # tests that mock the lock acquisition).
+    fh = open(lock_path, "a+")  # noqa: SIM115 - caller owns lock lifetime.
     deadline = time.monotonic() + timeout_seconds
     while True:
         try:
@@ -129,7 +307,7 @@ def _acquire_lock(timeout_seconds: int):
             if time.monotonic() >= deadline:
                 fh.close()
                 raise TimeoutError(
-                    f"Could not acquire {STATE_PATH} within {timeout_seconds}s"
+                    f"Could not acquire {lock_path} within {timeout_seconds}s"
                 ) from None
             time.sleep(0.05)
 
@@ -142,19 +320,36 @@ def _release_lock(fh) -> None:
 
 
 def claim_one() -> int:
-    """Atomic: return current N, increment file to N+1."""
+    """Atomic: return current N, increment file to N+1.
+
+    Per OP-6 hardening (codex chunk 8 HIGH, 2026-05-15) + CLAUDE.md
+    catalog #131 sister discipline:
+
+    1. Acquire fcntl exclusive lock on the SIBLING lockfile (so concurrent
+       claimants serialize) — NOT on the canonical state file (whose inode
+       is swapped by ``os.replace``).
+    2. Read current N via ``_read_state_strict`` (fail-closed on
+       empty/malformed; bootstrap-only fallback to ``DEFAULT_INITIAL_VALUE``
+       when the canonical file does not exist).
+    3. Write N+1 atomically via ``_atomic_write_state`` (temp file +
+       fsync + ``os.replace``) — eliminates the truncate-mid-write
+       window that pre-fix could leave the canonical file empty.
+    4. Append a ``catalog-claim.log`` JSONL audit row.
+    5. Release the lock.
+
+    Crash safety: a crash AT ANY point in steps 1-4 leaves the canonical
+    file in a consistent state — either with the OLD value (if crash
+    happened before ``os.replace``) or the NEW value (if crash happened
+    after). The empty-file / partial-write window the pre-fix had is
+    structurally extincted.
+    """
     _ensure_initialized()
     fh = _acquire_lock(LOCK_TIMEOUT_SECONDS)
     try:
-        fh.seek(0)
-        text = fh.read().strip()
-        n = int(text) if text else DEFAULT_INITIAL_VALUE
-        # Write n+1 back
-        fh.seek(0)
-        fh.truncate()
-        fh.write(f"{n + 1}\n")
-        fh.flush()
-        os.fsync(fh.fileno())
+        n = _read_state_strict()
+        # Atomic publish of n+1 via temp+fsync+rename. The CALLER
+        # (us, here) holds the sibling-lockfile lock for the duration.
+        _atomic_write_state(n + 1)
         _append_log({
             "ts": _now_iso(),
             "pid": os.getpid(),
@@ -243,20 +438,34 @@ def _commit_state_via_serializer(claimed_n: int, reason: str) -> None:
 
 
 def peek() -> int:
+    """Return the current next-available catalog number without claiming.
+
+    Read-only; safe to call without the sibling-lockfile lock because
+    writers use ``os.replace`` (every individual read sees either the
+    pre-write or post-write state, never an intermediate empty file).
+
+    Raises ``CatalogStateCorruptError`` if the file exists but is empty
+    or malformed (per OP-6 fail-closed contract — silent fallback to
+    ``DEFAULT_INITIAL_VALUE`` would mislead operators inspecting the
+    counter into believing the canonical state is intact).
+    """
     _ensure_initialized()
-    text = STATE_PATH.read_text().strip()
-    return int(text) if text else DEFAULT_INITIAL_VALUE
+    return _read_state_strict()
 
 
 def set_value(value: int) -> None:
+    """Set the catalog counter to a specific value (operator only).
+
+    Atomic write via ``_atomic_write_state`` (temp+fsync+rename) under
+    the sibling-lockfile lock, mirroring ``claim_one``'s OP-6 hardening
+    (2026-05-15). The pre-fix ``seek(0); truncate(); write()`` pattern
+    had the same crash-window vulnerability as ``claim_one`` and is
+    extincted via the same fix.
+    """
     _ensure_initialized()
     fh = _acquire_lock(LOCK_TIMEOUT_SECONDS)
     try:
-        fh.seek(0)
-        fh.truncate()
-        fh.write(f"{value}\n")
-        fh.flush()
-        os.fsync(fh.fileno())
+        _atomic_write_state(value)
         _append_log({
             "ts": _now_iso(),
             "pid": os.getpid(),

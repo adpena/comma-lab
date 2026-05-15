@@ -117,6 +117,52 @@ def _apply_per_pair_residual(
     return rgb_0_c, rgb_1_c
 
 
+def quantize_per_pair_residual_for_inflate_ste(
+    side_info_float: torch.Tensor,
+    *,
+    int8_scale: float,
+) -> torch.Tensor:
+    """Return inflate-equivalent int8 side-info values with STE gradients.
+
+    Forward values exactly match ``round(x * scale).clamp(-128, 127)`` before
+    archive serialization. Backward treats the quantizer as identity after the
+    divide-by-scale inside ``_apply_per_pair_residual`` so training optimizes
+    the same residual transform that inflate will consume.
+    """
+    if int8_scale <= 0.0:
+        raise ValueError(f"int8_scale must be > 0; got {int8_scale}")
+    scaled = side_info_float.float() * float(int8_scale)
+    quantized = scaled.round().clamp(-128.0, 127.0)
+    return scaled + (quantized - scaled).detach()
+
+
+def apply_quantized_per_pair_residual_for_training(
+    rgb_0: torch.Tensor,
+    rgb_1: torch.Tensor,
+    side_info_float: torch.Tensor,
+    *,
+    int8_scale: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Apply the inflate-time quantized side-info transform during training.
+
+    Returns corrected ``(rgb_0, rgb_1)`` in unit range plus the int8-domain
+    STE tensor used by the transform. The returned side-info tensor is useful
+    for logging and auxiliary residual penalties without drifting away from
+    archive/inflate behavior.
+    """
+    side_info_int8_ste = quantize_per_pair_residual_for_inflate_ste(
+        side_info_float,
+        int8_scale=int8_scale,
+    )
+    rgb_0_c, rgb_1_c = _apply_per_pair_residual(
+        rgb_0,
+        rgb_1,
+        side_info_int8_ste,
+        int8_scale=int8_scale,
+    )
+    return rgb_0_c, rgb_1_c, side_info_int8_ste
+
+
 def inflate_one_video(
     archive_bytes: bytes,
     output_raw_path: Path,
@@ -183,8 +229,10 @@ def main_cli() -> int:
 
 # Re-exported for trainer / test imports.
 __all__ = [
+    "apply_quantized_per_pair_residual_for_training",
     "inflate_one_video",
     "main_cli",
+    "quantize_per_pair_residual_for_inflate_ste",
 ]
 
 

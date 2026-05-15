@@ -229,8 +229,10 @@ def test_materializer_runs_builder_and_writes_nonpromotional_manifest(monkeypatc
     assert payload["score_table_manifest_audit"]["ready_for_exact_eval_dispatch"] is False
     assert "source_archive_sha256" in payload["score_table_manifest_audit"]["missing_custody_fields"]
     assert "score_table_manifest_missing_custody_fields" in payload["score_claim_blockers"]
+    assert payload["candidate_archive"] == payload["outputs"]["archive"]
     assert payload["outputs"]["archive"]["sha256"]
     written = read_json(output_dir / "materialization_manifest.json")
+    assert written["candidate_archive"] == written["outputs"]["archive"]
     assert written["outputs"]["materialization_manifest"]["sha256"]
     assert written["ready_for_exact_eval_dispatch"] is False
 
@@ -324,6 +326,10 @@ def test_manifest_audit_clears_missing_custody_blocker_for_complete_manifest(
     assert "requires_paired_contest_cpu_auth_eval_on_materialized_archive" in payload[
         "dispatch_blockers"
     ]
+    assert (
+        "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate"
+        in payload["exact_eval_dispatch_blockers"]
+    )
 
 
 def test_manifest_audit_accepts_x_member_custody(tmp_path: Path) -> None:
@@ -586,7 +592,63 @@ def test_format0c_materializer_uses_native_packet_ir_not_legacy_builder(
     assert payload["source_runtime"]["runtime_source_manifest"] == runtime_manifest
 
 
-def test_format0c_materializer_filters_incompatible_score_table_dims(
+def test_format0c_materializer_keeps_noop_score_table_as_format0c_noop(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    module = _load_tool()
+    source_archive, _base_dim0, _base_delta0 = _format0c_source_archive(tmp_path)
+    npy = tmp_path / "score_table.npy"
+    candidates = module.build_latent_candidate_grid(latent_dim=28, delta_radius=2)
+    np.save(npy, np.full((600, int(candidates.shape[0])), 10.0, dtype=np.float32))
+    with zipfile.ZipFile(source_archive) as zf:
+        source_payload = zf.read("x")
+    manifest = tmp_path / "score_table_manifest.json"
+    write_json(
+        manifest,
+        {
+            **_complete_score_table_manifest(source_archive, npy),
+            "source_archive_member_name": "x",
+            "source_archive_member_sha256": hashlib.sha256(source_payload).hexdigest(),
+            "source_zero_bin_sha256": None,
+            "source_payload_kind": "pr106_sidecar_packet",
+            "delta_radius": 2,
+            "candidate_count": int(candidates.shape[0]),
+            "score_table_shape": [600, int(candidates.shape[0])],
+            "candidate_grid_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+            "candidate_grid_npy_sha256": module.latent_candidate_grid_npy_sha256(candidates),
+        },
+    )
+
+    def fail_run(*_args, **_kwargs):
+        raise AssertionError("legacy builder subprocess must not run for format0C")
+
+    monkeypatch.setattr(module.subprocess, "run", fail_run)
+
+    output_dir = tmp_path / "out"
+    module.materialize_candidate(
+        source_archive=source_archive,
+        output_dir=output_dir,
+        score_table_root=tmp_path,
+        score_table_npy=npy,
+        score_table_manifest=manifest,
+        delta_radius=2,
+        top_k=600,
+        python_executable="python",
+    )
+
+    metadata = read_json(output_dir / "build_metadata.json")
+    member = module.read_single_stored_member_archive(
+        (output_dir / "sidecar_archive.zip").read_bytes()
+    )
+    assert metadata["materialization_engine"] == "format0c_packet_ir_native"
+    assert metadata["candidate_sidecar_format_id"] == "0x0C"
+    assert metadata["diagnostics"]["unfiltered_strict_improvement_pair_count"] == 0
+    assert metadata["semantic_materialization"]["changed_pair_count"] == 0
+    assert member.payload == source_payload
+
+
+def test_format0c_materializer_routes_incompatible_strict_score_table_dims_to_format0d(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
@@ -644,20 +706,43 @@ def test_format0c_materializer_filters_incompatible_score_table_dims(
     )
 
     metadata = read_json(output_dir / "build_metadata.json")
+    assert metadata["materialization_engine"] == "format0d_packet_ir_native"
+    assert metadata["candidate_sidecar_format_id"] == "0x0D"
+    assert materialization["candidate_archive"] == materialization["outputs"]["archive"]
+    assert materialization["packet_ir_score_affecting_payload_changed"] is True
+    assert materialization["packet_ir_charged_archive_bytes_changed"] is True
+    assert (
+        "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate"
+        in materialization["exact_eval_dispatch_blockers"]
+    )
     assert metadata["diagnostics"]["pairs_with_incompatible_original_best"] == 1
-    assert metadata["semantic_materialization"]["composed_same_dim_pair_count"] == 1
+    assert metadata["diagnostics"]["pairs_with_incompatible_original_strict_best"] == 1
+    assert (
+        metadata["diagnostics"]["score_table_selection_policy"]
+        == "format0d_unfiltered_strict_best_extra_stream"
+    )
+    assert metadata["semantic_materialization"]["extra_second_dim_pair_count"] == 1
     from tac.packet_compiler.pr106_sidecar_packet import (
-        decode_pr106_sidecar_packet_dim_delta,
+        PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+        decode_pr106_sidecar_packet_correction_passes,
         parse_pr106_sidecar_packet,
         read_single_stored_member_archive,
     )
 
     member = read_single_stored_member_archive((output_dir / "sidecar_archive.zip").read_bytes())
+    assert hashlib.sha256(member.payload).hexdigest() != hashlib.sha256(
+        source_payload
+    ).hexdigest()
     packet = parse_pr106_sidecar_packet(member.payload)
-    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
-    assert int(dims[0]) == base_dim0
-    assert int(deltas[0]) == base_delta0 + selected_delta
-    assert materialization["builder"]["materialization_engine"] == "format0c_packet_ir_native"
+    assert packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+    (base_dims, base_deltas), (extra_dims, extra_deltas) = (
+        decode_pr106_sidecar_packet_correction_passes(packet)
+    )
+    assert int(base_dims[0]) == base_dim0
+    assert int(base_deltas[0]) == base_delta0
+    assert int(extra_dims[0]) == incompatible_dim
+    assert int(extra_deltas[0]) == selected_delta
+    assert materialization["builder"]["materialization_engine"] == "format0d_packet_ir_native"
 
 
 def test_materializer_downgrades_builder_exact_ready_claim(monkeypatch, tmp_path: Path) -> None:

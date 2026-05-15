@@ -18,6 +18,7 @@ Memory: feedback_autopilot_tier_c_integration_catalog_227_landed_20260514.md.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -28,9 +29,6 @@ REPO = Path(__file__).resolve().parents[3]
 TOOLS = REPO / "tools"
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
-
-
-import importlib.util
 
 
 def _load_autopilot_module():
@@ -278,7 +276,7 @@ def test_load_composition_index_real_t1_f_artifact() -> None:
         pytest.skip("substrate_composition_matrix.json not present")
     idx = mod.load_substrate_composition_alpha_index(p)
     # The T1-F probe emitted z3_balle_hyperprior_bolton__x__c6_e4_mdl_ibps
-    # with α=1.0. Verify it's present and parseable.
+    # with alpha=1.0. Verify it's present and parseable.
     assert isinstance(idx, dict)
     if "z3_balle_hyperprior_bolton__x__c6_e4_mdl_ibps" in idx:
         assert idx["z3_balle_hyperprior_bolton__x__c6_e4_mdl_ibps"] == 1.0
@@ -715,3 +713,303 @@ def test_constants_remain_pinned_for_council_visibility() -> None:
     assert hasattr(mod, "COMPOSITION_ALPHA_SUB_ADDITIVE_THRESHOLD")
     assert hasattr(mod, "COMPOSITION_ALPHA_SUB_ADDITIVE_PENALTY_FACTOR")
     assert hasattr(mod, "COMPOSITION_ALPHA_SATURATING_DELTA_FLOOR")
+
+
+# ── OP-3 predicted_dispatch_risk wire-in (codex chunk 6, 2026-05-15) ──────
+
+
+def test_predicted_dispatch_risk_high_floors_at_zero() -> None:
+    """risk >= 50 (canonical refusal threshold) should floor predicted_score_
+    delta at 0 regardless of how strongly negative the raw delta was."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.10, predicted_dispatch_risk=75.0,
+    )
+    assert adjusted == mod.PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR
+    assert adjusted == 0.0
+
+
+def test_predicted_dispatch_risk_at_refusal_threshold_floors() -> None:
+    """risk EXACTLY at the refusal threshold (50.0) triggers REFUSAL band."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.05, predicted_dispatch_risk=50.0,
+    )
+    assert adjusted == 0.0
+
+
+def test_predicted_dispatch_risk_moderate_halves_savings() -> None:
+    """25 <= risk < 50 (MODERATE band) halves predicted savings."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.04, predicted_dispatch_risk=30.0,
+    )
+    assert adjusted == pytest.approx(-0.02)
+
+
+def test_predicted_dispatch_risk_at_moderate_threshold_halves() -> None:
+    """risk EXACTLY at the moderate threshold (25.0) triggers MODERATE band."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.06, predicted_dispatch_risk=25.0,
+    )
+    assert adjusted == pytest.approx(-0.03)
+
+
+def test_predicted_dispatch_risk_low_passthrough() -> None:
+    """risk < 25 (LOW band) leaves predicted_score_delta unchanged."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.05, predicted_dispatch_risk=10.0,
+    )
+    assert adjusted == pytest.approx(-0.05)
+
+
+def test_predicted_dispatch_risk_zero_passthrough() -> None:
+    """risk == 0 (clean preflight) leaves predicted_score_delta unchanged."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.07, predicted_dispatch_risk=0.0,
+    )
+    assert adjusted == pytest.approx(-0.07)
+
+
+def test_predicted_dispatch_risk_none_no_adjustment() -> None:
+    """risk == None (no preflight evidence) is non-penalizing per the
+    sister Z1/TierC/composition_alpha 'don't punish lack-of-evidence' rule."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.04, predicted_dispatch_risk=None,
+    )
+    assert adjusted == pytest.approx(-0.04)
+
+
+def test_predicted_dispatch_risk_non_numeric_no_adjustment() -> None:
+    """Non-numeric risk values (NaN-equivalent strings, malformed) fall back
+    to passthrough — never raise."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=-0.03, predicted_dispatch_risk="bad",  # type: ignore[arg-type]
+    )
+    assert adjusted == pytest.approx(-0.03)
+
+
+def test_predicted_dispatch_risk_positive_delta_under_floor_unchanged() -> None:
+    """A positive (worse-than-baseline) predicted_score_delta sits ABOVE the
+    refusal floor (0.0); the REFUSAL band must not promote it. The max()
+    behavior keeps it at base_delta."""
+    mod = _load_autopilot_module()
+    adjusted = mod.adjust_predicted_delta_for_predicted_dispatch_risk(
+        base_delta=0.05, predicted_dispatch_risk=80.0,
+    )
+    # max(0.05, 0.0) == 0.05 — refusal floor only floors negative deltas
+    # toward zero; positive deltas are unchanged (still demoted vs negative).
+    assert adjusted == pytest.approx(0.05)
+
+
+def test_predicted_dispatch_risk_field_default_is_none() -> None:
+    """CandidateRow constructed without explicit predicted_dispatch_risk
+    defaults to None per backward-compat with all pre-OP-3 callers."""
+    mod = _load_autopilot_module()
+    c = mod.CandidateRow(
+        candidate_id="legacy",
+        family="legacy",
+        predicted_score_delta=-0.03,
+        expected_information_gain=1.0,
+        estimated_dispatch_cost_usd=1.0,
+    )
+    assert c.predicted_dispatch_risk is None
+
+
+def test_predicted_dispatch_risk_constants_pinned() -> None:
+    """OP-3 threshold constants must remain accessible for council review."""
+    mod = _load_autopilot_module()
+    assert hasattr(mod, "PREDICTED_DISPATCH_RISK_REFUSAL_THRESHOLD")
+    assert hasattr(mod, "PREDICTED_DISPATCH_RISK_MODERATE_THRESHOLD")
+    assert hasattr(mod, "PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR")
+    assert hasattr(mod, "PREDICTED_DISPATCH_RISK_MODERATE_PENALTY_FACTOR")
+    # Mirror SLIM canonical refusal threshold (slim_risk_scorer.py:111).
+    assert mod.PREDICTED_DISPATCH_RISK_REFUSAL_THRESHOLD == 50.0
+    assert mod.PREDICTED_DISPATCH_RISK_REFUSAL_DELTA_FLOOR == 0.0
+    assert mod.PREDICTED_DISPATCH_RISK_MODERATE_THRESHOLD == 25.0
+    assert mod.PREDICTED_DISPATCH_RISK_MODERATE_PENALTY_FACTOR == 0.5
+
+
+def test_full_stack_with_high_predicted_dispatch_risk_overrides_score_axis() -> None:
+    """A candidate with strong score-axis improvement signals (across-class
+    Tier C + class-shift literature + composition ADDITIVE) but HIGH
+    preflight risk MUST be floored at 0 — preflight risk is structural and
+    overrides the score-axis stack per the OP-3 design ledger."""
+    mod = _load_autopilot_module()
+    c = mod.CandidateRow(
+        candidate_id="risky_class_shifter",
+        family="cooperative_receiver",
+        predicted_score_delta=-0.10,         # strong improvement raw
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        mdl_tier_c_density=0.13,             # Tier C across-class
+        lane_class="cooperative_receiver",   # +class-shift reward
+        literature_anchor="Wyner-Ziv",       # +literature reward
+        composition_alpha=0.95,              # ADDITIVE (no comp penalty)
+        predicted_dispatch_risk=75.0,        # >= 50 → REFUSE
+    )
+    rank_key = mod.apply_z1_empirical_revision_to_candidate_delta(c)
+    # The score-axis stack would push toward more-negative; preflight REFUSE
+    # floors at 0.
+    assert rank_key == 0.0
+
+
+def test_full_stack_moderate_risk_halves_AFTER_score_axis() -> None:
+    """A MODERATE preflight risk halves the predicted savings AFTER score-axis
+    adjustments are applied — the order matters because halve-after preserves
+    the score-axis ordering relative to risk-free peers."""
+    mod = _load_autopilot_module()
+    c = mod.CandidateRow(
+        candidate_id="moderate_risk",
+        family="mdl_ibps",
+        predicted_score_delta=-0.04,
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        mdl_tier_c_density=0.13,            # across-class → -0.01 bonus
+        predicted_dispatch_risk=30.0,       # MODERATE → halve at end
+    )
+    rank_key = mod.apply_z1_empirical_revision_to_candidate_delta(c)
+    # Step 1: Tier A None → -0.04
+    # Step 2: Tier C 0.13 across-class → -0.04 - 0.01 = -0.05
+    # Step 3-4: no class-shift/literature/composition signal
+    # Step 5: predicted_dispatch_risk=30.0 → halve → -0.025
+    assert rank_key == pytest.approx(-0.025)
+
+
+def test_full_stack_low_risk_no_adjustment() -> None:
+    """LOW preflight risk leaves the score-axis stack unmodified."""
+    mod = _load_autopilot_module()
+    c = mod.CandidateRow(
+        candidate_id="clean_preflight",
+        family="across_class_safe",
+        predicted_score_delta=-0.05,
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        mdl_tier_c_density=0.13,            # across-class → -0.01
+        predicted_dispatch_risk=5.0,        # LOW → no adjustment
+    )
+    rank_key = mod.apply_z1_empirical_revision_to_candidate_delta(c)
+    # Tier C bonus only.
+    assert rank_key == pytest.approx(-0.06)
+
+
+def test_jsonl_loader_loads_predicted_dispatch_risk_field(tmp_path: Path) -> None:
+    """The JSONL loader reads the new field when present."""
+    mod = _load_autopilot_module()
+    p = tmp_path / "queue.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "risky",
+            "family": "x",
+            "predicted_score_delta": -0.05,
+            "expected_information_gain": 5.0,
+            "estimated_dispatch_cost_usd": 2.0,
+            "predicted_dispatch_risk": 65.0,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    rows = mod.load_candidates_from_jsonl(p)
+    assert len(rows) == 1
+    assert rows[0].predicted_dispatch_risk == pytest.approx(65.0)
+
+
+def test_jsonl_loader_backward_compat_no_predicted_dispatch_risk(tmp_path: Path) -> None:
+    """Rows without the new field default to None (no penalty)."""
+    mod = _load_autopilot_module()
+    p = tmp_path / "queue.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "legacy",
+            "family": "legacy",
+            "predicted_score_delta": -0.03,
+            "expected_information_gain": 1.0,
+            "estimated_dispatch_cost_usd": 1.0,
+        }) + "\n",
+        encoding="utf-8",
+    )
+    rows = mod.load_candidates_from_jsonl(p)
+    assert rows[0].predicted_dispatch_risk is None
+
+
+def test_jsonl_loader_invalid_predicted_dispatch_risk_falls_back_to_none(tmp_path: Path) -> None:
+    """Malformed risk values fall back to None instead of raising."""
+    mod = _load_autopilot_module()
+    p = tmp_path / "queue.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "bad_risk",
+            "family": "x",
+            "predicted_score_delta": -0.03,
+            "expected_information_gain": 1.0,
+            "estimated_dispatch_cost_usd": 1.0,
+            "predicted_dispatch_risk": "not_a_float",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    rows = mod.load_candidates_from_jsonl(p)
+    assert rows[0].predicted_dispatch_risk is None
+
+
+def test_rank_candidates_high_risk_loses_to_clean_peer() -> None:
+    """A high-preflight-risk candidate must rank LOWER than a clean-preflight
+    peer with the same raw predicted_score_delta."""
+    mod = _load_autopilot_module()
+    risky = mod.CandidateRow(
+        candidate_id="risky",
+        family="x",
+        predicted_score_delta=-0.05,
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        predicted_dispatch_risk=80.0,  # REFUSE band
+    )
+    clean = mod.CandidateRow(
+        candidate_id="clean",
+        family="y",
+        predicted_score_delta=-0.05,
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        predicted_dispatch_risk=5.0,   # LOW band
+    )
+    ranked = mod.rank_candidates(
+        [risky, clean],
+        rank_axis="predicted_score_delta",
+        apply_z1_empirical_revision=True,
+    )
+    # `clean` ranks first (effective delta = -0.05 unchanged); `risky` is
+    # floored at 0.
+    assert ranked[0].candidate_id == "clean"
+    assert ranked[1].candidate_id == "risky"
+
+
+def test_rank_candidates_disable_z1_revision_ignores_predicted_dispatch_risk() -> None:
+    """With apply_z1_empirical_revision=False, the risk adjuster is bypassed
+    along with the rest of the Z1 chain."""
+    mod = _load_autopilot_module()
+    risky = mod.CandidateRow(
+        candidate_id="risky",
+        family="x",
+        predicted_score_delta=-0.10,  # MORE negative raw
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        predicted_dispatch_risk=80.0,  # would REFUSE if z1 on
+    )
+    clean = mod.CandidateRow(
+        candidate_id="clean",
+        family="y",
+        predicted_score_delta=-0.05,
+        expected_information_gain=10.0,
+        estimated_dispatch_cost_usd=5.0,
+        predicted_dispatch_risk=5.0,
+    )
+    ranked = mod.rank_candidates(
+        [risky, clean],
+        rank_axis="predicted_score_delta",
+        apply_z1_empirical_revision=False,
+    )
+    # With Z1 revision OFF, raw predicted_score_delta wins → risky first.
+    assert ranked[0].candidate_id == "risky"

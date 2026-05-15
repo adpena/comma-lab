@@ -36,7 +36,6 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 import diagnose_time_traveler_per_pair_breakdown as diag  # noqa: E402
 import smoke_time_traveler_l5_autonomy_macos_cpu as smoke  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # smoke_time_traveler_l5_autonomy_macos_cpu
 # ---------------------------------------------------------------------------

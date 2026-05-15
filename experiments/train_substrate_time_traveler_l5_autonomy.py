@@ -800,6 +800,9 @@ def _full_main(args: argparse.Namespace) -> int:
         pack_archive,
         quantize_per_pair_residual_int8,
     )
+    from tac.substrates.time_traveler_l5_autonomy.inflate import (
+        apply_quantized_per_pair_residual_for_training,
+    )
     from tac.substrates.time_traveler_l5_autonomy.score_aware_loss import (
         TimeTravelerLossWeights,
         TimeTravelerScoreAwareLoss,
@@ -1029,11 +1032,21 @@ def _full_main(args: argparse.Namespace) -> int:
                     residual_list = []
                     for pair_idx in batch_indices:
                         rgb_0, rgb_1 = substrate.render_pair(pair_idx)
+                        (
+                            rgb_0,
+                            rgb_1,
+                            side_info_int8_ste,
+                        ) = apply_quantized_per_pair_residual_for_training(
+                            rgb_0,
+                            rgb_1,
+                            per_pair_side_info_float[pair_idx],
+                            int8_scale=args.int8_scale,
+                        )
                         rgb_0_list.append(rgb_0 * 255.0)
                         rgb_1_list.append(rgb_1 * 255.0)
                         gt_0_list.append(gt_pair_tensor[pair_idx, 0:1])
                         gt_1_list.append(gt_pair_tensor[pair_idx, 1:2])
-                        residual_list.append(per_pair_side_info_float[pair_idx])
+                        residual_list.append(side_info_int8_ste / args.int8_scale)
 
                     pred_a = torch.cat(rgb_0_list, dim=0)
                     pred_b = torch.cat(rgb_1_list, dim=0)
@@ -1309,9 +1322,9 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     bolt_on_loc_budget=1290,
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (3 per Catalog #220)
-    archive_bytes_added=None,
-    score_improvement_mechanism_status="RESEARCH_ONLY",
-    runtime_overlay_consumed=False,
+    archive_bytes_added="27 KB per-pair side-info stream before brotli",
+    score_improvement_mechanism_status="OPERATIONAL",
+    runtime_overlay_consumed=True,
     # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
     recipe_smoke_only=False,
     recipe_research_only=False,

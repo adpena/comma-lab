@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import struct
 import subprocess
 import sys
 import time
@@ -49,11 +50,13 @@ from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_NO_OP_DIM,
     PR106_PR101_RANKED_SCHEMA,
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_format0c_semantic_candidate_archive,
+    emit_pr106_format0d_semantic_candidate_archive,
     emit_pr106_format07_semantic_candidate_archive,
     parse_pr106_sidecar_packet,
     pr106_sidecar_consumed_byte_proof,
@@ -120,6 +123,7 @@ MATERIALIZATION_DISPATCH_BLOCKERS = (
     "requires_lane_dispatch_claim_before_exact_eval",
     "requires_paired_contest_cuda_auth_eval_on_materialized_archive",
     "requires_paired_contest_cpu_auth_eval_on_materialized_archive",
+    "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate",
     "requires_adjudicated_component_recompute_before_score_claim",
 )
 
@@ -465,7 +469,7 @@ def _packet_ir_compatible_score_table(
     score_table_npy: Path,
     source_packet: Any,
     delta_radius: int,
-) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, object], np.ndarray]:
     candidates = build_latent_candidate_grid(
         latent_dim=PR106_LATENT_N_DIMS,
         delta_radius=delta_radius,
@@ -523,6 +527,10 @@ def _packet_ir_compatible_score_table(
         )
 
     original_best = loaded.argmin(axis=1)
+    noop_idx = int(noop_cols[0])
+    noop_scores = loaded[:, noop_idx]
+    original_best_scores = loaded[np.arange(loaded.shape[0]), original_best]
+    original_best_strict = (noop_scores - original_best_scores) > 0.0
     original_best_compatible = compatible[np.arange(loaded.shape[0]), original_best]
     masked_scores = loaded.astype(np.float64, copy=True)
     finite_min = float(masked_scores.min())
@@ -535,25 +543,42 @@ def _packet_ir_compatible_score_table(
         "compatible_score_table_candidate_count": int(compatible.sum()),
         "incompatible_score_table_candidate_count": int(compatible.size - compatible.sum()),
         "pairs_with_incompatible_original_best": int((~original_best_compatible).sum()),
-        "noop_candidate_index": int(noop_cols[0]),
+        "pairs_with_incompatible_original_strict_best": int(
+            (original_best_strict & ~original_best_compatible).sum()
+        ),
+        "unfiltered_strict_improvement_pair_count": int(original_best_strict.sum()),
+        "noop_candidate_index": noop_idx,
     }
-    return masked_scores, candidates, diagnostics
+    return masked_scores, candidates, diagnostics, loaded
 
 
-def _choose_packet_ir_compatible_corrections(
+def _choose_packet_ir_corrections(
     *,
     score_table_npy: Path,
     source_packet: Any,
     delta_radius: int,
     top_k: int,
-) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
-    score_table, candidates, filter_diagnostics = _packet_ir_compatible_score_table(
-        score_table_npy=score_table_npy,
-        source_packet=source_packet,
-        delta_radius=delta_radius,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object], int]:
+    score_table, candidates, filter_diagnostics, unfiltered_score_table = (
+        _packet_ir_compatible_score_table(
+            score_table_npy=score_table_npy,
+            source_packet=source_packet,
+            delta_radius=delta_radius,
+        )
     )
+    output_format_id = int(source_packet.format_id)
+    selection_scores = score_table
+    selection_policy = "packet_ir_grammar_compatible_filter"
+    if (
+        source_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+        and int(filter_diagnostics["pairs_with_incompatible_original_strict_best"]) > 0
+    ):
+        output_format_id = PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        selection_scores = unfiltered_score_table
+        selection_policy = "format0d_unfiltered_strict_best_extra_stream"
     dim_arr, delta_q_arr, diagnostics = choose_latent_corrections_from_scores(
-        score_table,
+        selection_scores,
         candidates,
         top_k=top_k,
         require_improvement=True,
@@ -564,10 +589,15 @@ def _choose_packet_ir_compatible_corrections(
             "latent_dim": int(PR106_LATENT_N_DIMS),
             "delta_radius": int(delta_radius),
             "candidate_grid_sha256": latent_candidate_grid_npy_sha256(candidates),
-            "score_table_shape": [int(score_table.shape[0]), int(score_table.shape[1])],
+            "score_table_shape": [
+                int(selection_scores.shape[0]),
+                int(selection_scores.shape[1]),
+            ],
+            "score_table_selection_policy": selection_policy,
+            "output_format_id": f"0x{output_format_id:02X}",
         }
     )
-    return dim_arr, delta_q_arr, diagnostics
+    return dim_arr, delta_q_arr, diagnostics, output_format_id
 
 
 def _emit_packet_ir_semantic_candidate_archive(
@@ -575,6 +605,8 @@ def _emit_packet_ir_semantic_candidate_archive(
     source_packet: Any,
     dim_arr: Any,
     delta_q_arr: Any,
+    *,
+    output_format_id: int,
 ) -> tuple[Any, bytes, dict[str, object]]:
     if (
         source_packet.format_id
@@ -590,6 +622,13 @@ def _emit_packet_ir_semantic_candidate_archive(
         source_packet.format_id
         == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
     ):
+        if output_format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+            return emit_pr106_format0d_semantic_candidate_archive(
+                source_member,
+                source_packet,
+                dim_arr,
+                delta_q_arr,
+            )
         return emit_pr106_format0c_semantic_candidate_archive(
             source_member,
             source_packet,
@@ -599,6 +638,19 @@ def _emit_packet_ir_semantic_candidate_archive(
     raise RuntimeError(
         "native score-table materialization does not support source packet "
         f"format_id=0x{source_packet.format_id:02X}"
+    )
+
+
+def _candidate_sidecar_tail(packet: Any) -> bytes:
+    if packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        return packet.sidecar_payload
+    if packet.extra_framing_meta is None:
+        raise ValueError("format0D candidate packet missing extra_framing_meta")
+    return (
+        packet.sidecar_payload
+        + struct.pack("<H", len(packet.extra_sidecar_payload))
+        + packet.extra_sidecar_payload
+        + packet.extra_framing_meta
     )
 
 
@@ -619,8 +671,6 @@ def _materialize_packet_ir_native(
             "native score-table materialization only supports PacketIR source "
             f"packets; got 0x{source_packet.format_id:02X}"
         )
-    materialization_engine = _packet_ir_materialization_engine(source_packet.format_id)
-
     candidates = build_latent_candidate_grid(
         latent_dim=PR106_LATENT_N_DIMS,
         delta_radius=delta_radius,
@@ -637,25 +687,28 @@ def _materialize_packet_ir_native(
     )
     runtime_dir = _resolve_runtime_dir_from_manifest(score_table_manifest)
     runtime_source = _public_runtime_source_manifest(runtime_dir)
-    dim_arr, delta_q_arr, diagnostics = _choose_packet_ir_compatible_corrections(
+    dim_arr, delta_q_arr, diagnostics, output_format_id = _choose_packet_ir_corrections(
         score_table_npy=score_table_npy,
         source_packet=source_packet,
         delta_radius=delta_radius,
         top_k=top_k,
     )
+    materialization_engine = _packet_ir_materialization_engine(output_format_id)
     candidate_member, candidate_archive, semantic_diagnostics = (
         _emit_packet_ir_semantic_candidate_archive(
             source_member,
             source_packet,
             dim_arr,
             delta_q_arr,
+            output_format_id=output_format_id,
         )
     )
     candidate_packet = parse_pr106_sidecar_packet(candidate_member.payload)
     sidecar_bin_path = output_dir / "sidecar.bin"
     archive_path = output_dir / "sidecar_archive.zip"
     metadata_path = output_dir / "build_metadata.json"
-    sidecar_bin_path.write_bytes(candidate_packet.sidecar_payload)
+    candidate_sidecar_tail = _candidate_sidecar_tail(candidate_packet)
+    sidecar_bin_path.write_bytes(candidate_sidecar_tail)
     archive_path.write_bytes(candidate_archive)
     archive_size = archive_path.stat().st_size
     source_archive_size = source_archive.stat().st_size
@@ -678,6 +731,7 @@ def _materialize_packet_ir_native(
         "source_archive_member_name": source_member.name,
         "source_archive_member_sha256": sha256_hex(source_member.payload),
         "source_sidecar_format_id": f"0x{source_packet.format_id:02X}",
+        "candidate_sidecar_format_id": f"0x{candidate_packet.format_id:02X}",
         "source_runtime": {
             "runtime_dir": repo_relative(runtime_dir, REPO_ROOT),
             "runtime_source_manifest": runtime_source,
@@ -685,7 +739,8 @@ def _materialize_packet_ir_native(
         "pr106_bin_bytes": len(source_packet.pr106_bytes),
         "pr106_bin_sha256": sha256_hex(source_packet.pr106_bytes),
         "sidecar_path": str(sidecar_bin_path),
-        "sidecar_bytes": len(candidate_packet.sidecar_payload),
+        "sidecar_bytes": len(candidate_sidecar_tail),
+        "sidecar_sha256": sha256_hex(candidate_sidecar_tail),
         "archive_path": str(archive_path),
         "archive_blob_bytes": len(candidate_member.payload),
         "archive_zip_bytes": archive_size,
@@ -791,7 +846,6 @@ def materialize_candidate(
 
     if source_format_id in PACKET_IR_NATIVE_SCORE_TABLE_FORMATS:
         assert source_format_id is not None
-        materialization_engine = _packet_ir_materialization_engine(source_format_id)
         build_metadata = _materialize_packet_ir_native(
             source_archive=source_archive,
             output_dir=output_dir,
@@ -799,6 +853,12 @@ def materialize_candidate(
             score_table_manifest=manifest_path,
             delta_radius=delta_radius,
             top_k=top_k,
+        )
+        materialization_engine = str(
+            build_metadata.get(
+                "materialization_engine",
+                _packet_ir_materialization_engine(source_format_id),
+            )
         )
     else:
         if source_info is not None and source_info.packet_magic_present and source_format_id is None:
@@ -895,10 +955,23 @@ def materialize_candidate(
         "builder_metadata_audit": builder_metadata_audit,
         "source_runtime": build_metadata.get("source_runtime"),
         "source_archive": _artifact(source_archive),
+        "candidate_archive": _artifact(archive_path),
         "score_table_npy": _artifact(npy_path),
         "score_table_manifest": _artifact(manifest_path),
         "delta_radius": int(delta_radius),
         "top_k": int(top_k),
+        "packet_ir_score_affecting_payload_changed": (
+            build_metadata.get("packet_ir", {})
+            .get("source", {})
+            .get("emitted_payload_sha256")
+            != build_metadata.get("packet_ir", {})
+            .get("candidate", {})
+            .get("emitted_payload_sha256")
+        ),
+        "packet_ir_charged_archive_bytes_changed": (
+            build_metadata.get("source_archive_bytes")
+            != build_metadata.get("archive_zip_bytes")
+        ),
         "builder": {
             "path": repo_relative(BUILDER, REPO_ROOT),
             "command": command,

@@ -523,3 +523,190 @@ def test_spawn_smoke_dispatch_threads_cost_band_gpu_override(
     env = calls[0]["env"]
     assert env["MODAL_GPU"] == "T4"
     assert env["UNIT_EPOCHS"] == "100"
+
+
+# ---------------------------------------------------------------------------
+# OP-4 fix tests (codex chunk 5, 2026-05-15): paired-env auto-bypass
+# anti-pattern. Per CLAUDE.md "Comment-only contracts — FORBIDDEN" + Catalog
+# #199/#202 paired-env discipline: the wrapper MUST refuse bare-intent
+# without rationale (do NOT auto-fabricate the rationale).
+# ---------------------------------------------------------------------------
+
+
+def _fake_dirty_run_factory(dirty_count: int):
+    """Build a fake subprocess.run that pretends git status reports N dirty files.
+
+    Returns ``--porcelain`` lines that ``_count_dirty_paths`` parses. The
+    operator_authorize subprocess invocation (cmd[0] != git) is captured for
+    inspection by the caller.
+    """
+
+    def fake_run(cmd, **kwargs):
+        if list(cmd[:2]) == ["git", "status"]:
+            stdout = "\n".join(f" M file_{i}.py" for i in range(dirty_count))
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout=stdout,
+                stderr="",
+            )
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="✓ DISPATCHED via .spawn() - call_id=fc-test\ninstance_job_id=job-test\n",
+            stderr="",
+        )
+
+    return fake_run
+
+
+def test_op4_clean_tree_runs_normally_without_paired_env(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """OP-4: clean tree → no bypass env vars → standard dispatch path."""
+
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK", raising=False)
+    monkeypatch.delenv(
+        "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED", raising=False
+    )
+    monkeypatch.setattr(subprocess, "run", _fake_dirty_run_factory(dirty_count=0))
+
+    call_id, _ = _spawn_smoke_dispatch(
+        tmp_path / "unit_recipe.yaml",
+        epoch_env_var="UNIT_EPOCHS",
+        smoke_epochs=100,
+        smoke_gpu="T4",
+        smoke_timeout_hours=1.0,
+        operator_handle="codex:test",
+        repo_root=REPO_ROOT,
+    )
+    assert call_id == "fc-test"
+
+
+def test_op4_dirty_tree_bare_intent_without_rationale_refuses(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    """OP-4: dirty tree + bare intent (no paired rationale) → SystemExit."""
+
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK", "1")
+    monkeypatch.delenv(
+        "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED", raising=False
+    )
+    monkeypatch.setattr(subprocess, "run", _fake_dirty_run_factory(dirty_count=3))
+
+    import pytest
+
+    with pytest.raises(SystemExit) as excinfo:
+        _spawn_smoke_dispatch(
+            tmp_path / "unit_recipe.yaml",
+            epoch_env_var="UNIT_EPOCHS",
+            smoke_epochs=100,
+            smoke_gpu="T4",
+            smoke_timeout_hours=1.0,
+            operator_handle="codex:test",
+            repo_root=REPO_ROOT,
+        )
+
+    msg = str(excinfo.value)
+    assert "OP-4" in msg
+    assert "Catalog #199/#202" in msg or "paired-env" in msg
+    assert "WITHOUT" in msg or "refuses" in msg.lower()
+
+
+def test_op4_dirty_tree_paired_env_both_set_honored(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """OP-4: dirty tree + BOTH env vars set → bypass honored, dispatch proceeds."""
+
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK", "1")
+    monkeypatch.setenv(
+        "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED",
+        "operator-attests-sentinel-clean-2026-05-15",
+    )
+    monkeypatch.setattr(subprocess, "run", _fake_dirty_run_factory(dirty_count=5))
+
+    call_id, _ = _spawn_smoke_dispatch(
+        tmp_path / "unit_recipe.yaml",
+        epoch_env_var="UNIT_EPOCHS",
+        smoke_epochs=100,
+        smoke_gpu="T4",
+        smoke_timeout_hours=1.0,
+        operator_handle="codex:test",
+        repo_root=REPO_ROOT,
+    )
+    assert call_id == "fc-test"
+
+
+def test_op4_dirty_tree_neither_env_set_runs_with_warning(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    """OP-4: dirty tree + neither var set → standard --require-clean-head path."""
+
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK", raising=False)
+    monkeypatch.delenv(
+        "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED", raising=False
+    )
+    monkeypatch.setattr(subprocess, "run", _fake_dirty_run_factory(dirty_count=2))
+
+    call_id, _ = _spawn_smoke_dispatch(
+        tmp_path / "unit_recipe.yaml",
+        epoch_env_var="UNIT_EPOCHS",
+        smoke_epochs=100,
+        smoke_gpu="T4",
+        smoke_timeout_hours=1.0,
+        operator_handle="codex:test",
+        repo_root=REPO_ROOT,
+    )
+    assert call_id == "fc-test"
+    captured = capsys.readouterr()
+    # The warning text mentions OP-4 + Catalog #202 + the operator-action
+    # path to set both vars to take the bypass.
+    assert "OP-4" in captured.err
+    assert "Catalog #202" in captured.err
+
+
+def test_op4_does_not_auto_set_rationale_env_var_in_subprocess(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """OP-4 regression guard: rationale env var MUST NOT be auto-set even when
+    intent is set on dirty tree."""
+
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK", raising=False)
+    monkeypatch.delenv(
+        "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED", raising=False
+    )
+    captured_envs: list[dict] = []
+
+    def fake_run(cmd, **kwargs):
+        if list(cmd[:2]) == ["git", "status"]:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout=" M dirty_file.py",
+                stderr="",
+            )
+        captured_envs.append(dict(kwargs.get("env") or {}))
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="✓ DISPATCHED via .spawn() - call_id=fc-test\ninstance_job_id=job-test\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    _spawn_smoke_dispatch(
+        tmp_path / "unit_recipe.yaml",
+        epoch_env_var="UNIT_EPOCHS",
+        smoke_epochs=100,
+        smoke_gpu="T4",
+        smoke_timeout_hours=1.0,
+        operator_handle="codex:test",
+        repo_root=REPO_ROOT,
+    )
+    assert len(captured_envs) == 1
+    env = captured_envs[0]
+    # CRITICAL OP-4 invariant: neither env var should be auto-fabricated
+    # when neither was supplied externally.
+    assert env.get("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK") in (None, "")
+    assert env.get("OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED") in (None, "")

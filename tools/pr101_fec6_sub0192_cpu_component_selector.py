@@ -32,6 +32,10 @@ ensure_repo_imports(REPO_ROOT)
 
 RATE_DENOMINATOR_BYTES = 37_545_489
 DEFAULT_THRESHOLD = 0.192
+CONTEST_CPU_AXIS = "contest_cpu"
+CONTEST_CUDA_AXIS = "contest_cuda"
+CONTEST_CPU_LABEL = "[contest-CPU]"
+CONTEST_CUDA_LABEL = "[contest-CUDA]"
 DEFAULT_FEC6_ARCHIVE = (
     REPO_ROOT
     / "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip"
@@ -40,15 +44,9 @@ DEFAULT_FEC6_MANIFEST = (
     REPO_ROOT
     / "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packet_manifest.json"
 )
-DEFAULT_CPU_EVAL = (
-    REPO_ROOT / "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json"
-)
-DEFAULT_CUDA_EVAL = (
-    REPO_ROOT / "experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json"
-)
-DEFAULT_CANDIDATE_GLOBS = (
-    "experiments/results/pr101_frame_exploit_selector*/packet_manifest.json",
-)
+DEFAULT_CPU_EVAL = REPO_ROOT / "experiments/results/modal_auth_eval_cpu/archive_6bae0201fb08/contest_auth_eval.json"
+DEFAULT_CUDA_EVAL = REPO_ROOT / "experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json"
+DEFAULT_CANDIDATE_GLOBS = ("experiments/results/pr101_frame_exploit_selector*/packet_manifest.json",)
 
 
 @dataclass(frozen=True)
@@ -110,6 +108,13 @@ def _score_axis(eval_json: dict[str, Any]) -> str:
     return str(eval_json.get("score_axis") or "unknown")
 
 
+def _require_score_axis(eval_json: dict[str, Any], expected_axis: str, label: str) -> str:
+    axis = _score_axis(eval_json)
+    if axis != expected_axis:
+        raise ValueError(f"{label} eval JSON must have score_axis={expected_axis}, got {axis!r}")
+    return axis
+
+
 def _canonical_score(eval_json: dict[str, Any]) -> float:
     value = eval_json.get("canonical_score", eval_json.get("score_recomputed_from_components"))
     if value is None:
@@ -127,6 +132,8 @@ def build_axis_reference(
     cpu = load_json(cpu_eval)
     manifest = load_json(fec6_manifest)
     cuda = load_json(cuda_eval) if cuda_eval is not None and Path(cuda_eval).is_file() else None
+    cpu_axis = _require_score_axis(cpu, CONTEST_CPU_AXIS, "CPU")
+    cuda_axis = _require_score_axis(cuda, CONTEST_CUDA_AXIS, "CUDA") if cuda is not None else None
     archive = manifest["archive"]
     selector = manifest.get("selector", {})
     pack = archive.get("selector_pack_manifest", {})
@@ -134,9 +141,9 @@ def build_axis_reference(
     return AxisReference(
         threshold=float(threshold),
         cpu_score=_canonical_score(cpu),
-        cpu_score_axis=_score_axis(cpu),
+        cpu_score_axis=cpu_axis,
         cuda_score=_canonical_score(cuda) if cuda is not None else None,
-        cuda_score_axis=_score_axis(cuda) if cuda is not None else None,
+        cuda_score_axis=cuda_axis,
         archive_bytes=int(archive["bytes"]),
         archive_sha256=str(archive["sha256"]),
         avg_segnet_dist=float(cpu["avg_segnet_dist"]),
@@ -144,9 +151,7 @@ def build_axis_reference(
         score_rate_contribution=float(cpu["score_rate_contribution"]),
         effective_selector_policy_sha256=selector.get("effective_selector_policy_sha256"),
         selector_payload_sha256=pack.get("selector_payload_sha256"),
-        selector_payload_bytes=(
-            int(pack["selector_payload_bytes"]) if "selector_payload_bytes" in pack else None
-        ),
+        selector_payload_bytes=(int(pack["selector_payload_bytes"]) if "selector_payload_bytes" in pack else None),
         proxy_charged_score=(
             float(proxy["selector_score_proxy_charged_formula"])
             if "selector_score_proxy_charged_formula" in proxy
@@ -204,14 +209,11 @@ def classify_candidate_manifest(
         proxy_net_delta_vs_fec6 = float(proxy_charged_score) - reference.proxy_charged_score
         proxy_estimated_exact_cpu_score = reference.cpu_score + proxy_net_delta_vs_fec6
     if proxy_uncharged_score is not None and reference.proxy_uncharged_score is not None:
-        proxy_component_delta_vs_fec6 = (
-            float(proxy_uncharged_score) - reference.proxy_uncharged_score
-        )
+        proxy_component_delta_vs_fec6 = float(proxy_uncharged_score) - reference.proxy_uncharged_score
 
     rate_only_passes = rate_only_score < reference.threshold
     proxy_allows_gate = (
-        proxy_estimated_exact_cpu_score is not None
-        and proxy_estimated_exact_cpu_score < reference.threshold
+        proxy_estimated_exact_cpu_score is not None and proxy_estimated_exact_cpu_score < reference.threshold
     )
     component_delta_within_allowance = (
         proxy_component_delta_vs_fec6 is not None and proxy_component_delta_vs_fec6 <= allowance
@@ -336,13 +338,11 @@ def profile_rate_only_selector_compression(
         "fec7_best_charged_candidate": best,
         "target_saving_bytes": int(target_saving_bytes),
         "can_rate_only_compression_meet_target": bool(
-            max(global_floor_saving, int(best["saving_vs_fec6_selector_bytes"]))
-            >= int(target_saving_bytes)
+            max(global_floor_saving, int(best["saving_vs_fec6_selector_bytes"])) >= int(target_saving_bytes)
         ),
         "blocker": {
             "blocked": bool(
-                max(global_floor_saving, int(best["saving_vs_fec6_selector_bytes"]))
-                < int(target_saving_bytes)
+                max(global_floor_saving, int(best["saving_vs_fec6_selector_bytes"])) < int(target_saving_bytes)
             ),
             "reason": (
                 "Decoded-selector-preserving compression cannot save the required bytes: "
@@ -368,17 +368,14 @@ def build_profile(
         fec6_manifest=fec6_manifest,
         threshold=threshold,
     )
-    required_saving = required_saving_bytes_for_strict_gate(
-        reference.cpu_score, reference.threshold
-    )
+    required_saving = required_saving_bytes_for_strict_gate(reference.cpu_score, reference.threshold)
     rate_only = profile_rate_only_selector_compression(
         archive=fec6_archive,
         target_saving_bytes=required_saving,
     )
     patterns = list(candidate_globs or DEFAULT_CANDIDATE_GLOBS)
     candidate_rows = [
-        classify_candidate_manifest(reference, path, manifest)
-        for path, manifest in load_candidate_manifests(patterns)
+        classify_candidate_manifest(reference, path, manifest) for path, manifest in load_candidate_manifests(patterns)
     ]
     candidate_rows.sort(
         key=lambda row: (
@@ -404,16 +401,13 @@ def build_profile(
         and not row["selector"].get("byte_closed_archive_charged", False)
     ]
     proxy_allowed = [
-        row
-        for row in rate_feasible_component_moving
-        if row["component_moving_evidence"]["proxy_allows_sub0192_gate"]
+        row for row in rate_feasible_component_moving if row["component_moving_evidence"]["proxy_allows_sub0192_gate"]
     ]
     best_rate_feasible = min(
         rate_feasible_component_moving,
         key=lambda row: (
             row["component_moving_evidence"]["proxy_estimated_exact_cpu_score_from_fec6_anchor"]
-            if row["component_moving_evidence"]["proxy_estimated_exact_cpu_score_from_fec6_anchor"]
-            is not None
+            if row["component_moving_evidence"]["proxy_estimated_exact_cpu_score_from_fec6_anchor"] is not None
             else float("inf"),
             row["archive"]["bytes"],
         ),
@@ -440,6 +434,10 @@ def build_profile(
         "score_claim": False,
         "dispatch_attempted": False,
         "ready_for_exact_eval_dispatch": False,
+        "axis_labels": {
+            "contest_cpu": CONTEST_CPU_LABEL,
+            "contest_cuda": CONTEST_CUDA_LABEL,
+        },
         "threshold": reference.threshold,
         "reference": {
             "archive_bytes": reference.archive_bytes,
@@ -457,14 +455,9 @@ def build_profile(
         },
         "strict_rate_target": {
             "required_saving_bytes_at_unchanged_components": required_saving,
-            "archive_bytes_limit_at_unchanged_components": reference.archive_bytes
-            - required_saving,
-            "score_after_required_saving": score_after_byte_delta(
-                reference.cpu_score, -required_saving
-            ),
-            "score_after_one_byte_less_saving": score_after_byte_delta(
-                reference.cpu_score, -(required_saving - 1)
-            )
+            "archive_bytes_limit_at_unchanged_components": reference.archive_bytes - required_saving,
+            "score_after_required_saving": score_after_byte_delta(reference.cpu_score, -required_saving),
+            "score_after_one_byte_less_saving": score_after_byte_delta(reference.cpu_score, -(required_saving - 1))
             if required_saving > 0
             else reference.cpu_score,
         },
@@ -472,16 +465,12 @@ def build_profile(
         "candidate_count": len(candidate_rows),
         "candidates": candidate_rows,
         "best_rate_feasible_component_moving_candidate": best_rate_feasible,
-        "rate_feasible_component_moving_non_byte_closed_candidates": (
-            rate_feasible_component_moving_non_byte_closed
-        ),
+        "rate_feasible_component_moving_non_byte_closed_candidates": (rate_feasible_component_moving_non_byte_closed),
         "exact_feasible_rate_only_candidates": exact_feasible_rate_only,
         "proxy_allowed_component_moving_candidates": proxy_allowed,
         "conclusion": {
             "verdict": conclusion,
-            "found_feasible_sub0192_candidate_path": bool(
-                exact_feasible_rate_only or proxy_allowed
-            ),
+            "found_feasible_sub0192_candidate_path": bool(exact_feasible_rate_only or proxy_allowed),
             "hard_blocker": not bool(exact_feasible_rate_only or proxy_allowed),
             "reason": _conclusion_reason(conclusion, rate_only, best_rate_feasible),
         },
@@ -506,9 +495,7 @@ def _conclusion_reason(
             "and rate-only selector compression is blocked."
         )
     allowance = best_rate_feasible["rate_only_gate"]["allowable_component_score_delta_vs_fec6"]
-    proxy_delta = best_rate_feasible["component_moving_evidence"][
-        "proxy_component_delta_uncharged_vs_fec6"
-    ]
+    proxy_delta = best_rate_feasible["component_moving_evidence"]["proxy_component_delta_uncharged_vs_fec6"]
     return (
         "Rate-only selector compression is blocked; the smallest rate-feasible "
         "byte-closed component-moving packet changes selector codes and its proxy component "
@@ -522,16 +509,16 @@ def render_markdown(profile: dict[str, Any]) -> str:
     rate_only = profile["rate_only_selector_compression"]
     best = profile["best_rate_feasible_component_moving_candidate"]
     lines = [
-        "# PR101/FEC6 CPU Component Selector Sub-0.192 Profile",
+        "# PR101/FEC6 [contest-CPU] Component Selector Sub-0.192 Profile",
         "",
         "- score_claim: `false`",
         "- dispatch_attempted: `false`",
         "- ready_for_exact_eval_dispatch: `false`",
         f"- reference archive: `{ref['archive_sha256']}`",
         f"- reference bytes: `{ref['archive_bytes']}`",
-        f"- exact CPU score: `{ref['cpu_score']}`",
-        f"- exact CUDA score: `{ref['cuda_score']}`",
-        f"- strict CPU byte target at unchanged components: `{target['required_saving_bytes_at_unchanged_components']}`",
+        f"- exact [contest-CPU] score: `{ref['cpu_score']}`",
+        f"- exact [contest-CUDA] score: `{ref['cuda_score']}`",
+        f"- strict [contest-CPU] byte target at unchanged components: `{target['required_saving_bytes_at_unchanged_components']}`",
         f"- unchanged-component archive byte limit: `{target['archive_bytes_limit_at_unchanged_components']}`",
         "",
         "## Rate-Only Selector Compression",
@@ -543,13 +530,11 @@ def render_markdown(profile: dict[str, Any]) -> str:
         "",
         "## Component-Moving Selector Scan",
         "",
-        "| packet | bytes | saved vs FEC6 | byte-closed | kind | rate-only CPU score | proxy-est CPU score | verdict |",
+        "| packet | bytes | saved vs FEC6 | byte-closed | kind | rate-only [contest-CPU] score | proxy-est [contest-CPU] score | verdict |",
         "|---|---:|---:|---|---|---:|---:|---|",
     ]
     for row in profile["candidates"][:12]:
-        proxy_score = row["component_moving_evidence"][
-            "proxy_estimated_exact_cpu_score_from_fec6_anchor"
-        ]
+        proxy_score = row["component_moving_evidence"]["proxy_estimated_exact_cpu_score_from_fec6_anchor"]
         lines.append(
             "| {path} | {bytes} | {saved} | {byte_closed} | {kind} | {rate:.12f} | {proxy} | {verdict} |".format(
                 path=row["path"],
@@ -577,7 +562,7 @@ def render_markdown(profile: dict[str, Any]) -> str:
                 f"- packet: `{best['path']}`",
                 f"- bytes: `{best['archive']['bytes']}`",
                 f"- saved vs FEC6: `{best['archive']['saved_bytes_vs_fec6']}`",
-                f"- rate-only CPU score if components unchanged: `{best['rate_only_gate']['score_if_fec6_components_unchanged']}`",
+                f"- rate-only [contest-CPU] score if components unchanged: `{best['rate_only_gate']['score_if_fec6_components_unchanged']}`",
                 f"- allowable component delta vs FEC6: `{best['rate_only_gate']['allowable_component_score_delta_vs_fec6']}`",
                 f"- proxy component delta vs FEC6: `{best['component_moving_evidence']['proxy_component_delta_uncharged_vs_fec6']}`",
                 f"- verdict: `{best['verdict']}`",
@@ -596,7 +581,7 @@ def render_markdown(profile: dict[str, Any]) -> str:
             "## 6-Hook Wire-In",
             "",
             "1. Sensitivity-map contribution: `N/A - no new empirical score anchor; selector rows preserve score_claim=false`.",
-            "2. Pareto constraint: `CPU-axis gate only; CUDA axis recorded separately and remains non-promotional`.",
+            "2. Pareto constraint: `[contest-CPU] gate only; [contest-CUDA] axis recorded separately and remains non-promotional`.",
             "3. Bit-allocator hook: strict byte target and per-candidate archive deltas are machine-readable.",
             "4. Cathedral autopilot dispatch hook: `ready_for_exact_eval_dispatch=false`; no dispatch row emitted.",
             "5. Continual-learning posterior update: blocker/candidate classification is recorded here; no score posterior update.",

@@ -794,11 +794,33 @@ def _full_main(args: argparse.Namespace) -> int:
                         rgb_0u, rgb_1u, _, _ = substrate(val_idx, frames_for_encoder=None)
                         rgb_0v = rgb_0u * 255.0
                         rgb_1v = rgb_1u * 255.0
-                        # Use pixel-MSE proxy as val signal (no scorer at val to keep eval cheap).
-                        val_loss = float(
-                            ((rgb_0v - gt_val[:, 0]).pow(2).mean()
-                             + (rgb_1v - gt_val[:, 1]).pow(2).mean()).item() / 2.0
+                        pixel_val_loss = (
+                            (rgb_0v - gt_val[:, 0]).pow(2).mean()
+                            + (rgb_1v - gt_val[:, 1]).pow(2).mean()
+                        ) / 2.0
+                        val_gt_pose_batch = val_gt_seg_batch = None
+                        val_gt_seg_already_probs = None
+                        if gt_cache is not None:
+                            val_gt_pose_batch, val_gt_seg_batch = gt_cache.lookup(
+                                val_idx, device=device
+                            )
+                            val_gt_seg_already_probs = gt_cache.seg_already_probs
+                        val_score_loss, val_parts = score_loss(
+                            reconstructed_rgb_0=rgb_0v,
+                            reconstructed_rgb_1=rgb_1v,
+                            gt_rgb_0=gt_val[:, 0],
+                            gt_rgb_1=gt_val[:, 1],
+                            archive_bytes_proxy=archive_bytes_proxy,
+                            apply_eval_roundtrip=True,
+                            noise_std=0.0,
+                            gt_pose_batch=val_gt_pose_batch,
+                            gt_seg_batch=val_gt_seg_batch,
+                            gt_seg_already_probs=val_gt_seg_already_probs,
                         )
+                        val_loss = float(val_score_loss.detach().cpu())
+                        pixel_val_loss_float = float(pixel_val_loss.detach().cpu())
+                        val_seg_term = float(val_parts["seg_term"].detach().cpu())
+                        val_pose_term = float(val_parts["pose_term"].detach().cpu())
                 finally:
                     substrate.load_state_dict(live_state)
                     substrate.train()
@@ -808,7 +830,10 @@ def _full_main(args: argparse.Namespace) -> int:
                 )
                 print(
                     f"[z4-full] epoch {epoch:4d}: train_loss={avg_train:.5f} "
-                    f"val_loss={val_loss:.5f} (best={best_val_loss:.5f})"
+                    f"val_score_loss={val_loss:.5f} "
+                    f"pixel_val_loss={pixel_val_loss_float:.5f} "
+                    f"val_seg={val_seg_term:.6f} val_pose={val_pose_term:.6f} "
+                    f"(best={best_val_loss:.5f})"
                 )
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
@@ -830,6 +855,10 @@ def _full_main(args: argparse.Namespace) -> int:
                             "config": asdict(cfg),
                             "epoch": epoch,
                             "val_loss": val_loss,
+                            "val_loss_metric": "score_aware_cooperative_receiver_loss",
+                            "pixel_val_loss": pixel_val_loss_float,
+                            "val_seg_term": val_seg_term,
+                            "val_pose_term": val_pose_term,
                         },
                         ckpt_best_path,
                     )

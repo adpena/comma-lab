@@ -182,6 +182,48 @@ def _score_claim_present(payload: dict[str, Any]) -> bool:
     return payload.get("score_claim") is True
 
 
+def _runtime_tree_sha256(payload: dict[str, Any]) -> str:
+    """Return the best available runtime-tree SHA from auth-eval custody JSON."""
+    if not isinstance(payload, dict):
+        return ""
+    provenance = _provenance(payload)
+    for container in (payload, provenance):
+        for key in (
+            "runtime_tree_sha256",
+            "inflate_runtime_tree_sha256",
+            "expected_runtime_tree_sha256",
+        ):
+            value = container.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip().lower()
+        for key in (
+            "inflate_runtime_manifest",
+            "runtime_manifest",
+            "submission_runtime",
+        ):
+            nested = container.get(key)
+            if not isinstance(nested, dict):
+                continue
+            for nested_key in (
+                "runtime_tree_sha256",
+                "portable_runtime_tree_sha256",
+                "tree_sha256",
+            ):
+                value = nested.get(nested_key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip().lower()
+    return ""
+
+
+def _runtime_tree_sha_matches(payload: dict[str, Any], expected_runtime_tree_sha256: str) -> bool:
+    """True iff payload runtime SHA exactly matches the expected runtime SHA."""
+    expected = expected_runtime_tree_sha256.strip().lower()
+    if not expected:
+        return True
+    actual = _runtime_tree_sha256(payload)
+    return bool(actual) and actual == expected
+
+
 def _provenance(payload: dict[str, Any]) -> dict[str, Any]:
     value = payload.get("provenance")
     return value if isinstance(value, dict) else {}
@@ -243,8 +285,9 @@ def _validate_payload_for_axis_and_sha(
     *,
     canonical_axis: str,
     archive_sha256: str,
+    expected_runtime_tree_sha256: str = "",
 ) -> bool:
-    """Apply all 4 custody checks. True iff ALL pass."""
+    """Apply archive, axis, score, and optional runtime custody checks."""
     if not isinstance(payload, dict):
         return False
     grade = payload.get("evidence_grade")
@@ -260,6 +303,8 @@ def _validate_payload_for_axis_and_sha(
         or payload.get("submission_archive_sha256")
     )
     if not _archive_sha_matches(payload_sha, archive_sha256):
+        return False
+    if not _runtime_tree_sha_matches(payload, expected_runtime_tree_sha256):
         return False
     score = (
         payload.get("score")
@@ -296,6 +341,7 @@ def _build_anchor_dict(
         "score": float(score) if score is not None else None,
         "evidence_grade": str(payload.get("evidence_grade") or ""),
         "hardware_substrate": str(payload.get("hardware_substrate") or payload.get("scorer_device") or ""),
+        "runtime_tree_sha256": _runtime_tree_sha256(payload) or None,
         "result_path": str(result_path),
         "dispatched_at_utc": str(
             payload.get("dispatched_at_utc") or (payload.get("provenance") or {}).get("started_at_utc") or ""
@@ -309,6 +355,7 @@ def _lookup_via_ledger(
     *,
     canonical_axis: str,
     archive_sha256: str,
+    expected_runtime_tree_sha256: str,
     repo_root: Path,
 ) -> dict[str, Any] | None:
     """PRIMARY lookup: query the canonical Modal call_id ledger."""
@@ -411,12 +458,24 @@ def _lookup_via_ledger(
                 (row, "platform_machine"),
                 (harvest_result, "platform_machine"),
             ),
+            "runtime_tree_sha256": _first_present(
+                (row, "runtime_tree_sha256"),
+                (row, "inflate_runtime_tree_sha256"),
+                (harvest_result, "runtime_tree_sha256"),
+                (harvest_result, "inflate_runtime_tree_sha256"),
+            ),
+            "inflate_runtime_manifest": _first_present(
+                (row, "inflate_runtime_manifest"),
+                (harvest_result, "inflate_runtime_manifest"),
+                (harvest_result, "runtime_manifest"),
+            ),
             "dispatched_at_utc": row.get("dispatched_at_utc"),
         }
         if not _validate_payload_for_axis_and_sha(
             synthesized,
             canonical_axis=canonical_axis,
             archive_sha256=archive_sha256,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         ):
             continue
         return _build_anchor_dict(
@@ -456,6 +515,7 @@ def _lookup_via_filesystem(
     *,
     canonical_axis: str,
     archive_sha256: str,
+    expected_runtime_tree_sha256: str,
     repo_root: Path,
 ) -> dict[str, Any] | None:
     """FALLBACK lookup: scan canonical anchor JSON paths."""
@@ -471,6 +531,7 @@ def _lookup_via_filesystem(
             payload,
             canonical_axis=canonical_axis,
             archive_sha256=archive_sha256,
+            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         ):
             continue
         candidates.append((path, payload))
@@ -500,6 +561,8 @@ def find_promotable_anchor_for_axis_and_sha(
     axis: str,
     archive_sha256: str,
     repo_root: Path | str = ".",
+    *,
+    expected_runtime_tree_sha256: str = "",
 ) -> dict[str, Any] | None:
     """Find an existing promotable anchor for ``(axis, archive_sha256)``.
 
@@ -513,6 +576,11 @@ def find_promotable_anchor_for_axis_and_sha(
         ``None`` (fail-safe).
     repo_root
         Repository root; defaults to ``"."``. Tests pass a tmp dir.
+    expected_runtime_tree_sha256
+        Optional runtime-tree sha256. When provided, an anchor is promotable
+        only if its runtime custody exactly matches this SHA. This prevents
+        paired dispatch skip-logic from reusing old scores after ``inflate.py``
+        or ``inflate.sh`` changed while archive bytes stayed constant.
 
     Returns
     -------
@@ -556,6 +624,7 @@ def find_promotable_anchor_for_axis_and_sha(
     hit = _lookup_via_ledger(
         canonical_axis=canonical_axis,
         archive_sha256=archive_sha256,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         repo_root=root,
     )
     if hit is not None:
@@ -565,6 +634,7 @@ def find_promotable_anchor_for_axis_and_sha(
     return _lookup_via_filesystem(
         canonical_axis=canonical_axis,
         archive_sha256=archive_sha256,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
         repo_root=root,
     )
 

@@ -26,7 +26,10 @@ must:
 """
 from __future__ import annotations
 
+import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -252,6 +255,108 @@ def test_z4_remote_lane_threads_lambda_pixel() -> None:
     body = _script_body("remote_lane_substrate_z4_cooperative_receiver_loss.sh")
     assert "Z4_LAMBDA_PIXEL" in body
     assert "--lambda-pixel" in body
+
+
+def test_z4_remote_lane_threads_tier1_engineering_flags() -> None:
+    """Z4 recipe Tier-1 env vars must become trainer CLI flags."""
+    body = _script_body("remote_lane_substrate_z4_cooperative_receiver_loss.sh")
+    expected = {
+        "Z4_ENABLE_TF32": "--enable-tf32",
+        "Z4_ENABLE_TORCH_COMPILE": "--enable-torch-compile",
+        "Z4_ENABLE_GT_SCORER_CACHE": "--enable-gt-scorer-cache",
+        "Z4_RELAX_DETERMINISM": "--relax-determinism-for-backward",
+    }
+    for env_name, flag in expected.items():
+        assert env_name in body
+        assert flag in body
+
+    for args_name in (
+        "TF32_FLAG_ARGS",
+        "TORCH_COMPILE_FLAG_ARGS",
+        "GT_SCORER_CACHE_FLAG_ARGS",
+        "RELAX_DETERMINISM_FLAG_ARGS",
+    ):
+        assert f'${{{args_name}[@]+"${{{args_name}[@]}}"}}' in body
+
+
+def test_z4_remote_lane_invokes_trainer_with_tier1_recipe_flags(tmp_path: Path) -> None:
+    """Runtime proof: true recipe env values reach the trainer argv."""
+    workspace = tmp_path / "workspace"
+    trainer_dir = workspace / "experiments"
+    trainer_dir.mkdir(parents=True)
+    trainer_path = trainer_dir / "train_substrate_z4_cooperative_receiver_loss.py"
+    trainer_path.write_text(
+        """#!/usr/bin/env python3
+import json
+import sys
+from pathlib import Path
+
+argv = sys.argv[1:]
+out = Path(argv[argv.index("--output-dir") + 1])
+out.mkdir(parents=True, exist_ok=True)
+(out / "argv.json").write_text(json.dumps(argv))
+(out / "stats.json").write_text(json.dumps({"evidence_grade": "training-artifact-no-score-claim"}))
+""",
+    )
+    trainer_path.chmod(0o755)
+
+    output_dir = tmp_path / "output"
+    env = os.environ.copy()
+    env.update(
+        {
+            "WORKSPACE": str(workspace),
+            "PYBIN": sys.executable,
+            "LOG_DIR": str(tmp_path / "logs"),
+            "OUTPUT_DIR": str(output_dir),
+            "Z4_OUTPUT_DIR": str(output_dir),
+            "Z4_DISPATCH_INSTANCE_JOB_ID": "z4-test-job",
+            "SMOKE_ONLY": "0",
+            "Z4_ENABLE_AUTOCAST_FP16": "true",
+            "Z4_ENABLE_TF32": "true",
+            "Z4_ENABLE_TORCH_COMPILE": "true",
+            "Z4_ENABLE_GT_SCORER_CACHE": "true",
+            "Z4_RELAX_DETERMINISM": "true",
+        }
+    )
+
+    stdout_path = tmp_path / "remote.stdout"
+    stderr_path = tmp_path / "remote.stderr"
+    with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
+        result = subprocess.run(
+            ["bash", str(_SCRIPTS_DIR / "remote_lane_substrate_z4_cooperative_receiver_loss.sh")],
+            stdout=stdout,
+            stderr=stderr,
+            text=True,
+            cwd=_REPO_ROOT,
+            env=env,
+            timeout=30,
+        )
+    assert result.returncode == 0, (
+        "Z4 remote lane script failed\n"
+        f"stdout:\n{stdout_path.read_text()}\n"
+        f"stderr:\n{stderr_path.read_text()}"
+    )
+
+    argv = json.loads((output_dir / "argv.json").read_text())
+    for flag in (
+        "--enable-autocast-fp16",
+        "--enable-tf32",
+        "--enable-torch-compile",
+        "--enable-gt-scorer-cache",
+        "--relax-determinism-for-backward",
+    ):
+        assert flag in argv
+
+
+def test_z4_full_trainer_selects_checkpoint_by_score_aware_validation_loss() -> None:
+    """Z4 best checkpoint must not regress to pixel-MSE proxy selection."""
+    body = (_REPO_ROOT / "experiments" / "train_substrate_z4_cooperative_receiver_loss.py").read_text()
+    assert "val_score_loss, val_parts = score_loss(" in body
+    assert "noise_std=0.0" in body
+    assert '"val_loss_metric": "score_aware_cooperative_receiver_loss"' in body
+    assert '"pixel_val_loss": pixel_val_loss_float' in body
+    assert "pixel_val_loss={pixel_val_loss_float:.5f}" in body
+    assert "Use pixel-MSE proxy as val signal" not in body
 
 
 def test_z5_remote_lane_threads_predictor_layers_and_identity_predictor() -> None:

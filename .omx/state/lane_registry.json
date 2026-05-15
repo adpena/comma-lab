@@ -30250,8 +30250,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_op3_predicted_dispatch_risk_rank_candidates_wire_in_landed_20260515.md (pending serializer commit)"
         },
         "deploy_runbook": {
           "status": false,
@@ -30264,11 +30264,11 @@
       "id": "lane_op4_7_8_batch_3_small_fixes_20260515",
       "name": "OP-4/OP-7/OP-8 batch: paired-env auto-bypass + lock-depth thread-safety + n_artifacts==0 mislabeling",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "tools/run_modal_smoke_before_full.py + src/tac/deploy/lightning/active_jobs_state.py + tools/harvest_modal_calls.py \u2014 3 small surgical codex fixes (OP-4 paired-env auto-bypass, OP-7 thread-local lock-depth, OP-8 n_artifacts==0 outcome classification)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30291,8 +30291,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_op4_7_8_batch_paired_env_lock_depth_n_artifacts_landed_20260515.md (pending write)"
         },
         "deploy_runbook": {
           "status": false,
@@ -30332,8 +30332,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_op6_claim_catalog_number_atomic_write_landed_20260515.md (in user-private memory dir per CLAUDE.md convention)"
         },
         "deploy_runbook": {
           "status": false,
@@ -30383,6 +30383,211 @@
       },
       "notes": "",
       "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_phase_3_continuous_regression_ci_20260515",
+      "name": "Phase 3 Continuous Regression CI Nightly Workflow",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_nightly_catalog_gate_regression.py + .github/workflows/nightly_catalog_gate_regression.yml + check_nightly_catalog_gate_regression_workflow_canonical_use Catalog #284 STRICT @ 0 + 37/37 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #284 wired strict=True in preflight_all() \u2014 see preflight.py line ~2253; gate function at ~line 60990"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_phase_3_continuous_regression_ci_nightly_workflow_landed_20260515.md committed to ~/.claude/projects/-Users-adpena-Projects-pact/memory/"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #284 + canonical helper tools/run_nightly_catalog_gate_regression.py + workflow .github/workflows/nightly_catalog_gate_regression.yml + 37 tests. Sister of Catalog #245 (canonical-use ledger pattern). research_only=true (operational tooling lane, no contest archive bytes added)."
+    },
+    {
+      "id": "lane_op10_modal_ledger_amortization_20260515",
+      "name": "OP-10 Modal call_id ledger append amortization",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/deploy/modal/call_id_ledger.py +320 LOC; 35 dedicated tests pass (33 fast + 2 slow); 10000-entry stress: amortized 3.83ms vs legacy 58.35ms = 15.3x speedup; HISTORICAL_PROVENANCE invariant preserved (canonical JSONL APPEND-ONLY; sidecar LIVE_STATE)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_op10_modal_ledger_append_amortization_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_stc_dasher_scaffold_v1_20260515",
+      "name": "STC-Dasher arithmetic-coding maximalism v1",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_atw_codec_design_v1_20260515",
+      "name": "ATW Codec V1 (Atick-Tishby-Wyner Cooperative-Receiver Codec) \u2014 design + scaffold",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z3_g1_entropy_coded_v2_20260515",
+      "name": "Z3-G1 entropy-coded v2: sigma-table + class-index variant of Z3HG1 wire grammar",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30392,5 +30597,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T22:16:38Z"
+  "updated_at": "2026-05-15T22:38:12Z"
 }

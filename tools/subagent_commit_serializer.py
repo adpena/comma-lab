@@ -548,6 +548,14 @@ def main() -> int:
         "files": files,
         "message_head": args.message.splitlines()[0][:160],
         "no_stage": bool(args.no_stage),
+        # OMNIBUS GAP-5 (Catalog #289): log whether the caller passed
+        # --expected-content-sha256 so Catalog #289 can detect the WAVE-D
+        # drop-flag-and-retry pattern (rc=4 mismatch followed by committed
+        # WITHOUT the flag = silent absorption of sister's edits).
+        "expected_content_sha256_present": bool(args.expected_content_sha256),
+        "expected_content_sha256_file_count": (
+            len(args.expected_content_sha256) if args.expected_content_sha256 else 0
+        ),
     }
 
     # FIX-92aba3ca (2026-05-12 Catalog #157): pre-lock-vs-EXPECTED check.
@@ -564,6 +572,40 @@ def main() -> int:
     except ValueError as exc:
         print(f"[subagent-commit-serializer] FATAL: {exc!s}", file=sys.stderr)
         return 2
+
+    # OMNIBUS GAP-5 (Catalog #289): high-risk files MUST carry
+    # --expected-content-sha256. Per WAVE-D 2c957c31e forensic analysis: the
+    # agent-response failure mode (DROP the flag on rc=4 retry) is the root
+    # cause of the recurring commit-swap class. Flip opt-in -> opt-out for
+    # files with high concurrency risk so they cannot be committed without
+    # the post-edit sha guard.
+    _OMNIBUS_GAP5_HIGH_RISK_FILES = (
+        "src/tac/preflight.py",
+        "CLAUDE.md",
+    )
+    if files and not expected_content_shas:
+        high_risk_in_commit = [
+            f for f in files
+            if any(f.endswith(hr) or f == hr for hr in _OMNIBUS_GAP5_HIGH_RISK_FILES)
+        ]
+        if high_risk_in_commit:
+            _append_log({
+                **base_record,
+                "outcome": "high_risk_file_missing_expected_content_sha",
+                "high_risk_files": high_risk_in_commit,
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED: high-risk file(s) "
+                f"{high_risk_in_commit!r} REQUIRE --expected-content-sha256 "
+                "per OMNIBUS GAP-5 (Catalog #289). These files have high "
+                "concurrency risk; the WAVE-D 2c957c31e drop-flag-and-retry "
+                "pattern is structurally extincted by making the flag "
+                "MANDATORY for them. Compute the post-edit sha via "
+                "`sha256sum <file> | awk '{print $1}'` and re-pass via "
+                "`--expected-content-sha256 <file>=<sha>`.",
+                file=sys.stderr,
+            )
+            return 5
     if expected_content_shas:
         diffs = _expected_content_sha256_check(expected_content_shas)
         if diffs:

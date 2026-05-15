@@ -66,6 +66,10 @@ Z4_GAMMA_POSE="${Z4_GAMMA_POSE:-3.1622776601683795}"
 Z4_DEVICE="${Z4_DEVICE:-cuda}"
 Z4_UPSTREAM_DIR="${Z4_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 Z4_ENABLE_AUTOCAST_FP16="${Z4_ENABLE_AUTOCAST_FP16:-false}"
+Z4_ENABLE_TF32="${Z4_ENABLE_TF32:-true}"
+Z4_ENABLE_TORCH_COMPILE="${Z4_ENABLE_TORCH_COMPILE:-false}"
+Z4_ENABLE_GT_SCORER_CACHE="${Z4_ENABLE_GT_SCORER_CACHE:-false}"
+Z4_RELAX_DETERMINISM="${Z4_RELAX_DETERMINISM:-true}"
 
 # Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke (default for first-anchor v1).
 SMOKE_ONLY="${SMOKE_ONLY:-1}"
@@ -174,6 +178,10 @@ cat > "$PROVENANCE" <<EOF
   "beta_seg": "$Z4_BETA_SEG",
   "gamma_pose": "$Z4_GAMMA_POSE",
   "enable_autocast_fp16": "$Z4_ENABLE_AUTOCAST_FP16",
+  "enable_tf32": "$Z4_ENABLE_TF32",
+  "enable_torch_compile": "$Z4_ENABLE_TORCH_COMPILE",
+  "enable_gt_scorer_cache": "$Z4_ENABLE_GT_SCORER_CACHE",
+  "relax_determinism": "$Z4_RELAX_DETERMINISM",
   "smoke_only": "$SMOKE_ONLY",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"
@@ -181,7 +189,7 @@ cat > "$PROVENANCE" <<EOF
 EOF
 
 # Stage 4: invoke trainer.
-log "stage_4_trainer_begin epochs=$Z4_EPOCHS lambda_pixel=$Z4_LAMBDA_PIXEL smoke=$SMOKE_ONLY autocast=$Z4_ENABLE_AUTOCAST_FP16"
+log "stage_4_trainer_begin epochs=$Z4_EPOCHS lambda_pixel=$Z4_LAMBDA_PIXEL smoke=$SMOKE_ONLY autocast=$Z4_ENABLE_AUTOCAST_FP16 tf32=$Z4_ENABLE_TF32 torch_compile=$Z4_ENABLE_TORCH_COMPILE gt_cache=$Z4_ENABLE_GT_SCORER_CACHE relax_determinism=$Z4_RELAX_DETERMINISM"
 TRAINER_PY="$WORKSPACE/experiments/train_substrate_z4_cooperative_receiver_loss.py"
 if [ ! -f "$TRAINER_PY" ]; then
     log "FATAL: trainer missing at $TRAINER_PY"
@@ -208,6 +216,58 @@ case "$Z4_ENABLE_AUTOCAST_FP16" in
         ;;
 esac
 
+TF32_FLAG_ARGS=()
+case "$Z4_ENABLE_TF32" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        TF32_FLAG_ARGS+=(--enable-tf32)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z4_ENABLE_TF32=$Z4_ENABLE_TF32; expected 0/1/true/false"
+        exit 25
+        ;;
+esac
+
+TORCH_COMPILE_FLAG_ARGS=()
+case "$Z4_ENABLE_TORCH_COMPILE" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        TORCH_COMPILE_FLAG_ARGS+=(--enable-torch-compile)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z4_ENABLE_TORCH_COMPILE=$Z4_ENABLE_TORCH_COMPILE; expected 0/1/true/false"
+        exit 26
+        ;;
+esac
+
+GT_SCORER_CACHE_FLAG_ARGS=()
+case "$Z4_ENABLE_GT_SCORER_CACHE" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        GT_SCORER_CACHE_FLAG_ARGS+=(--enable-gt-scorer-cache)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z4_ENABLE_GT_SCORER_CACHE=$Z4_ENABLE_GT_SCORER_CACHE; expected 0/1/true/false"
+        exit 27
+        ;;
+esac
+
+RELAX_DETERMINISM_FLAG_ARGS=()
+case "$Z4_RELAX_DETERMINISM" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        RELAX_DETERMINISM_FLAG_ARGS+=(--relax-determinism-for-backward)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z4_RELAX_DETERMINISM=$Z4_RELAX_DETERMINISM; expected 0/1/true/false"
+        exit 28
+        ;;
+esac
+
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --video-path "$Z4_VIDEO_PATH" \
     --output-dir "$Z4_OUTPUT_DIR" \
@@ -221,6 +281,10 @@ esac
     --gamma-pose "$Z4_GAMMA_POSE" \
     ${SMOKE_FLAG_ARGS[@]+"${SMOKE_FLAG_ARGS[@]}"} \
     ${AUTOCAST_FLAG_ARGS[@]+"${AUTOCAST_FLAG_ARGS[@]}"} \
+    ${TF32_FLAG_ARGS[@]+"${TF32_FLAG_ARGS[@]}"} \
+    ${TORCH_COMPILE_FLAG_ARGS[@]+"${TORCH_COMPILE_FLAG_ARGS[@]}"} \
+    ${GT_SCORER_CACHE_FLAG_ARGS[@]+"${GT_SCORER_CACHE_FLAG_ARGS[@]}"} \
+    ${RELAX_DETERMINISM_FLAG_ARGS[@]+"${RELAX_DETERMINISM_FLAG_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).

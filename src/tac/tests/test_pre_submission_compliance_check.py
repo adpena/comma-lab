@@ -140,6 +140,8 @@ def _write_submission(
             f"archive_sha256: {archive_sha}\n"
             f"archive_size_bytes: {archive_bytes}\n"
             f"score: {score}\n"
+            f"CUDA axis score: {score} [contest-CUDA]\n"
+            f"CPU axis score: {score} [contest-CPU]\n"
             "source code: https://github.com/adpena/tac\n"
             f"pinned source: https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}\n"
             f"runtime_tree_sha256: {runtime_tree}\n"
@@ -798,6 +800,62 @@ def test_contest_final_accepts_pinned_source_and_reproduce_command(
     assert report["passed"], [c for c in report["checks"] if not c["passed"]]
     assert report["public_source_reproducibility"]["pinned_source_refs"]
     assert report["public_source_reproducibility"]["has_reproduce_command"] is True
+    assert report["public_evidence_axis_labels"]["labels"] == {
+        "[contest-CUDA]": True,
+        "[contest-CPU]": True,
+    }
+
+
+def test_contest_final_requires_public_cpu_and_cuda_axis_labels(tmp_path: Path) -> None:
+    mod = _load_module()
+    expected = _write_submission(tmp_path / "submission")
+    report_path = tmp_path / "submission" / "report.txt"
+    report_path.write_text(
+        f"archive_sha256: {expected['archive_sha256']}\n"
+        f"archive_size_bytes: {expected['archive_size_bytes']}\n"
+        "score: 0.1\n"
+        "source code: https://github.com/adpena/tac\n"
+        f"pinned source: https://github.com/adpena/tac/commit/{PINNED_GIT_SHA}\n"
+        f"runtime_tree_sha256: {expected['runtime_tree']}\n"
+        "reproduce command: .venv/bin/python experiments/contest_auth_eval.py "
+        "--archive archive.zip --inflate-sh inflate.sh --device cuda\n",
+        encoding="utf-8",
+    )
+    claims = tmp_path / "claims.md"
+    _write_terminal_claim(
+        claims,
+        archive_sha256=expected["archive_sha256"],
+        runtime_tree_sha256=expected["runtime_tree"],
+    )
+
+    report = mod.build_report(
+        mod.build_arg_parser().parse_args(
+            [
+                "--submission-dir",
+                str(tmp_path / "submission"),
+                "--contest-final",
+                "--expect-single-member",
+                "x",
+                "--expected-archive-sha256",
+                expected["archive_sha256"],
+                "--expected-archive-size-bytes",
+                str(expected["archive_size_bytes"]),
+                "--expected-runtime-tree-sha256",
+                expected["runtime_tree"],
+                "--dispatch-claims-md",
+                str(claims),
+                "--expected-lane-id",
+                "lane-a",
+                "--expected-job-id",
+                "job-a",
+            ]
+        )
+    )
+
+    failed = _failed_check_names(report)
+    assert not report["passed"]
+    assert "public_evidence_contest_cuda_label_present" in failed
+    assert "public_evidence_contest_cpu_label_present" in failed
 
 
 def test_pre_submission_check_contest_final_rejects_runtime_tree_mismatch(

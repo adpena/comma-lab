@@ -739,23 +739,62 @@ def _spawn_smoke_dispatch(
     }
     if epoch_env_var:
         env[epoch_env_var] = str(smoke_epochs)
-    # DX-POLISH-WAVE Catalog #238 / DX-4: SMOKE-relaxed clean-head bypass.
-    # Activate the Catalog #202 paired-env-var attestation iff the smoke
-    # phase is about to fire AND the working tree is dirty. The bypass
-    # binds at process-environment level so the spawned operator_authorize
-    # subprocess sees both env vars and skips appending --require-clean-head
-    # to the modal_train_lane command.
+    # OP-4 fix (codex chunk 5, 2026-05-15): paired-env auto-bypass anti-pattern.
+    # Per CLAUDE.md "Comment-only contracts — FORBIDDEN" + Catalog #199/#202
+    # paired-env discipline: the wrapper MUST NOT auto-set the rationale env
+    # var alongside the intent env var. Doing so defeats the entire purpose of
+    # the paired-env design (an attestation must be SUPPLIED EXTERNALLY, not
+    # auto-fabricated by the same code path that also opts into the bypass).
+    #
+    # Pre-fix: on dirty tree, this wrapper auto-set BOTH
+    #   OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1 AND
+    #   OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1
+    # which made the Catalog #202 paired-env contract a no-op for the smoke
+    # phase — operator never had to attest sentinel cleanliness.
+    #
+    # Post-fix: the wrapper inherits whatever the operator (or upstream
+    # caller) supplied via os.environ. If only the SKIP intent var is set,
+    # tools/operator_authorize.py::_whole_tree_clean_check_bypass_active()
+    # will refuse with SystemExit per Catalog #202 paired-env discipline. If
+    # neither var is set, the dispatcher will fall through to the standard
+    # --require-clean-head path on dirty trees. Operator must explicitly set
+    # BOTH (with a real sentinel-clean attestation) to take the bypass path.
     dirty_count = _count_dirty_paths(repo_root)
-    if dirty_count > 0:
-        env["OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"] = "1"
-        env["OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"] = "1"
+    intent_set = bool(os.environ.get("OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"))
+    rationale_set = bool(
+        os.environ.get("OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED")
+    )
+    if dirty_count > 0 and intent_set and not rationale_set:
+        # Bare-intent-without-rationale: per Catalog #199/#202 paired-env
+        # discipline this is an invalid configuration. Refuse loudly so the
+        # operator does not silently lose the protection.
+        raise SystemExit(
+            "[smoke-before-full] OP-4 / Catalog #199/#202 paired-env "
+            "discipline: OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1 "
+            "is set WITHOUT the paired "
+            "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=<text>. "
+            "Either set BOTH (with an externally-attested sentinel-clean "
+            "rationale) or set NEITHER and let --require-clean-head run. "
+            "This wrapper REFUSES to auto-fabricate the rationale because "
+            "doing so would defeat the paired-env contract."
+        )
+    if dirty_count > 0 and intent_set and rationale_set:
         print(
-            f"[smoke-before-full] DX-POLISH-WAVE Catalog #238 / DX-4: dirty "
-            f"tree detected ({dirty_count} paths); SMOKE phase auto-activates "
-            "Catalog #202 paired-env bypass (--require-clean-head is "
-            "RELAXED for smoke). Catalog #166 worker-side sentinel hash "
-            "check still runs. The FULL phase will RE-CHECK and fail-closed "
-            "on dirty tree by default.",
+            f"[smoke-before-full] OP-4 / Catalog #199/#202: dirty tree "
+            f"({dirty_count} paths) AND operator-supplied paired-env "
+            "bypass detected; honoring externally-attested sentinel-clean "
+            "rationale. Catalog #166 worker-side sentinel hash check still "
+            "runs INDEPENDENTLY for the smoke dispatch.",
+            file=sys.stderr,
+        )
+    elif dirty_count > 0:
+        print(
+            f"[smoke-before-full] OP-4 / Catalog #202: dirty tree "
+            f"({dirty_count} paths); --require-clean-head will run on the "
+            "spawned operator_authorize subprocess. To bypass for smoke, set "
+            "BOTH OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1 AND "
+            "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED='<rationale>' "
+            "before invoking this tool.",
             file=sys.stderr,
         )
     cmd = [

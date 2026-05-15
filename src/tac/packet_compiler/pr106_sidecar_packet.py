@@ -47,6 +47,7 @@ PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0
 PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED = (
     0x0C
 )
+PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA = 0x0D
 PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -59,6 +60,7 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
 )
 PR106_HEADERLESS_INNER_FIRST_BYTE = 0xFF
 PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES = 169_974
@@ -95,6 +97,7 @@ PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = (
     - PR106_PR101_FIXED_META_DIM_BYTES
     + PR106_PR101_EXACT_RADIX_DIM_BYTES
 )
+PR106_FORMAT0D_EXTRA_FRAMING_META_BYTES = 6
 PR106_PR101_RANKED_SCHEMA = RankedSidecarSchema(
     n_pairs=600,
     n_dims=28,
@@ -148,6 +151,8 @@ class PR106SidecarPacket:
     pr106_bytes: bytes
     sidecar_payload: bytes
     framing_meta: bytes | None = None
+    extra_sidecar_payload: bytes = b""
+    extra_framing_meta: bytes | None = None
 
     @property
     def sidecar_kind(self) -> str:
@@ -207,6 +212,8 @@ class PR106SidecarPacket:
                 "pr101_ranked_no_op_hdm9_hlm3_magicless_exact_radix_dim_"
                 "fixed_meta_noop_rank_elided"
             )
+        if self.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+            return "format0c_base_plus_pr101_ranked_no_op_extra"
         return f"unknown_0x{self.format_id:02x}"
 
 
@@ -275,9 +282,17 @@ def canonical_expected_sha256(expected_sha256: str | None) -> tuple[str | None, 
 
 
 def _sidecar_charged_bytes(packet: PR106SidecarPacket) -> int:
-    return len(packet.sidecar_payload) + (
+    base_bytes = len(packet.sidecar_payload) + (
         0 if packet.framing_meta is None else len(packet.framing_meta)
     )
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        return (
+            base_bytes
+            + 2
+            + len(packet.extra_sidecar_payload)
+            + (0 if packet.extra_framing_meta is None else len(packet.extra_framing_meta))
+        )
+    return base_bytes
 
 
 def canonicalize_brotli_dim_delta_sidecar_arrays(
@@ -1539,7 +1554,108 @@ def decode_pr106_sidecar_packet_dim_delta(
             packet.sidecar_payload,
             schema=schema,
         )
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        raise ValueError(
+            "format_id=0x0D carries two additive correction passes; use "
+            "decode_pr106_sidecar_packet_correction_passes"
+        )
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
+
+
+def decode_pr106_sidecar_packet_correction_passes(
+    packet: PR106SidecarPacket,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[tuple[np.ndarray, np.ndarray], ...]:
+    """Decode packet corrections as the runtime applies them.
+
+    Most PacketIR formats carry one per-pair correction pass. Format ``0x0D``
+    is deliberately multi-pass: the fixed format0C base stream is applied first,
+    then the appended PR101 ranked/no-op extra stream is applied additively.
+    """
+
+    if packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        return (decode_pr106_sidecar_packet_dim_delta(packet, schema=schema),)
+    if packet.extra_framing_meta is None:
+        raise ValueError("format_id=0x0D requires extra_framing_meta")
+    base = decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
+        packet.sidecar_payload,
+        schema=schema,
+    )
+    extra = decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        packet.extra_sidecar_payload,
+        packet.extra_framing_meta,
+        schema=schema,
+    )
+    return (base, extra)
+
+
+def encode_pr106_format0d_sidecar_payload(
+    base_format0c_sidecar_payload: bytes,
+    extra_dim_arr: np.ndarray,
+    extra_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes, bytes]:
+    """Encode format 0x0D's base-0C plus extra PR101 correction streams."""
+
+    _validate_fixed_meta_schema(schema)
+    reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+        base_format0c_sidecar_payload,
+        schema=schema,
+    )
+    extra_payload, extra_meta = encode_pr101_ranked_sidecar_payload(
+        extra_dim_arr,
+        extra_delta_q_arr,
+        schema=schema,
+    )
+    if len(extra_payload) > 0xFFFF:
+        raise ValueError("format_id=0x0D extra PR101 payload too large for u16 length")
+    return (
+        base_format0c_sidecar_payload
+        + struct.pack("<H", len(extra_payload))
+        + extra_payload
+        + extra_meta,
+        extra_payload,
+        extra_meta,
+    )
+
+
+def split_pr106_format0d_sidecar_payload(
+    payload: bytes,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[bytes, bytes, bytes]:
+    """Split and validate format 0x0D's stacked sidecar payload."""
+
+    _validate_fixed_meta_schema(schema)
+    base_len = PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    if len(payload) < base_len + 2 + PR106_FORMAT0D_EXTRA_FRAMING_META_BYTES:
+        raise ValueError(
+            "format_id=0x0D sidecar payload truncated before base/extra streams"
+        )
+    base_payload = payload[:base_len]
+    reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+        base_payload,
+        schema=schema,
+    )
+    pos = base_len
+    (extra_len,) = struct.unpack_from("<H", payload, pos)
+    pos += 2
+    extra_end = pos + int(extra_len)
+    if extra_end + PR106_FORMAT0D_EXTRA_FRAMING_META_BYTES != len(payload):
+        raise ValueError(
+            "format_id=0x0D extra stream length mismatch: "
+            f"extra_len={extra_len} total={len(payload)}"
+        )
+    extra_payload = payload[pos:extra_end]
+    extra_meta = payload[extra_end:]
+    decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        extra_payload,
+        extra_meta,
+        schema=schema,
+    )
+    return base_payload, extra_payload, extra_meta
 
 
 def _pack_fixed_width_symbols(symbols: np.ndarray, *, bit_width: int) -> bytes:
@@ -2378,6 +2494,44 @@ def parse_pr106_sidecar_packet(
     pr106_bytes = payload[pos:end_pr106]
     pos = end_pr106
 
+    if format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        base_end = pos + PR106_PR101_EXACT_RADIX_FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+        if base_end > len(payload):
+            raise ValueError("format0D packet truncated before base format0C sidecar")
+        base_sidecar = payload[pos:base_end]
+        pos = base_end
+        reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+            base_sidecar
+        )
+        if pos + 2 > len(payload):
+            raise ValueError("format0D packet truncated before extra_payload_len")
+        (extra_len,) = struct.unpack_from("<H", payload, pos)
+        pos += 2
+        extra_end = pos + extra_len
+        if extra_end > len(payload):
+            raise ValueError(
+                f"format0D extra stream truncated: extra_len={extra_len} total={len(payload)}"
+            )
+        extra_sidecar = payload[pos:extra_end]
+        pos = extra_end
+        if pos + 6 > len(payload):
+            raise ValueError("format0D packet truncated before extra framing_meta")
+        extra_meta = payload[pos : pos + 6]
+        pos += 6
+        if pos != len(payload):
+            raise ValueError(
+                f"format0D packet trailing bytes: pos={pos} total={len(payload)}"
+            )
+        decode_pr101_ranked_sidecar_payload_to_dim_delta(extra_sidecar, extra_meta)
+        return PR106SidecarPacket(
+            format_id=format_id,
+            pr106_bytes=pr106_bytes,
+            sidecar_payload=base_sidecar,
+            framing_meta=None,
+            extra_sidecar_payload=extra_sidecar,
+            extra_framing_meta=extra_meta,
+        )
+
     if format_id == PR106_SIDECAR_FORMAT_BROTLI:
         if pos + 2 > len(payload):
             raise ValueError("brotli sidecar truncated before sidecar_len")
@@ -2828,6 +2982,11 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ) and len(packet.sidecar_payload) > 0xFFFF:
         raise ValueError("sidecar payload too large for u16 length field")
+    if (
+        packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        and len(packet.extra_sidecar_payload) > 0xFFFF
+    ):
+        raise ValueError("format0D extra sidecar payload too large for u16 length field")
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI and packet.framing_meta is not None:
         raise ValueError("format_id=0x01 must not carry framing_meta")
     if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
@@ -2894,6 +3053,23 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
             )
         else:
             reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(packet.sidecar_payload)
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        if packet.framing_meta is not None:
+            raise ValueError("format_id=0x0D must not carry base framing_meta")
+        if packet.extra_framing_meta is None:
+            raise ValueError("format_id=0x0D requires extra_framing_meta")
+        if len(packet.extra_framing_meta) != 6:
+            raise ValueError(
+                "format_id=0x0D extra_framing_meta must be 6 bytes; "
+                f"got {len(packet.extra_framing_meta)}"
+            )
+        reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+            packet.sidecar_payload
+        )
+        decode_pr101_ranked_sidecar_payload_to_dim_delta(
+            packet.extra_sidecar_payload,
+            packet.extra_framing_meta,
+        )
     if (
         packet.format_id
         == PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
@@ -2975,6 +3151,15 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
             + struct.pack("<H", len(packet.sidecar_payload))
             + packet.sidecar_payload
             + packet.framing_meta
+        )
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        assert packet.extra_framing_meta is not None
+        return (
+            prefix
+            + packet.sidecar_payload
+            + struct.pack("<H", len(packet.extra_sidecar_payload))
+            + packet.extra_sidecar_payload
+            + packet.extra_framing_meta
         )
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI:
         return prefix + struct.pack("<H", len(packet.sidecar_payload)) + packet.sidecar_payload
@@ -3145,13 +3330,30 @@ def pr106_sidecar_consumed_byte_proof(
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     ):
         add(
             "sidecar_len_le_u16",
             struct.pack("<H", len(packet.sidecar_payload)),
             score_affecting=False,
         )
-    add("sidecar_payload", packet.sidecar_payload, score_affecting=True)
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        if packet.extra_framing_meta is None:
+            raise ValueError("format_id=0x0D requires extra_framing_meta")
+        add("base_format0c_sidecar_payload", packet.sidecar_payload, score_affecting=True)
+        add(
+            "extra_payload_len_le_u16",
+            struct.pack("<H", len(packet.extra_sidecar_payload)),
+            score_affecting=False,
+        )
+        add(
+            "extra_pr101_ranked_no_op_payload",
+            packet.extra_sidecar_payload,
+            score_affecting=True,
+        )
+        add("extra_framing_meta", packet.extra_framing_meta, score_affecting=True)
+    else:
+        add("sidecar_payload", packet.sidecar_payload, score_affecting=True)
     if packet.format_id in (
         PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
         PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
@@ -3207,6 +3409,31 @@ def pr106_sidecar_manifest(
         "framing_meta_sha256": None
         if packet.framing_meta is None
         else sha256_hex(packet.framing_meta),
+        "extra_sidecar_bytes": len(packet.extra_sidecar_payload),
+        "extra_sidecar_sha256": sha256_hex(packet.extra_sidecar_payload)
+        if packet.extra_sidecar_payload
+        else None,
+        "extra_framing_meta_bytes": 0
+        if packet.extra_framing_meta is None
+        else len(packet.extra_framing_meta),
+        "extra_framing_meta_sha256": None
+        if packet.extra_framing_meta is None
+        else sha256_hex(packet.extra_framing_meta),
+        "format0d_layout": None
+        if packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        else {
+            "base_format": "0x0C",
+            "base_sidecar_bytes": len(packet.sidecar_payload),
+            "extra_payload_len_field_bytes": 2,
+            "extra_payload_bytes": len(packet.extra_sidecar_payload),
+            "extra_framing_meta_bytes": 0
+            if packet.extra_framing_meta is None
+            else len(packet.extra_framing_meta),
+            "runtime_apply_order": [
+                "base_format0c_corrections",
+                "extra_pr101_ranked_no_op_corrections",
+            ],
+        },
         "derived_fixed_meta": None
         if packet.format_id
         not in (
@@ -3704,6 +3931,113 @@ def build_pr106_format0c_semantic_sidecar_packet(
     return packet, diagnostics
 
 
+def build_pr106_format0d_semantic_sidecar_packet(
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[PR106SidecarPacket, dict[str, object]]:
+    """Build format-0x0D: format0C base plus an additive PR101 extra stream."""
+
+    if (
+        source_packet.format_id
+        != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        raise ValueError(
+            "format0D semantic materialization requires source packet "
+            "format_id=0x0C; got "
+            f"0x{source_packet.format_id:02X}"
+        )
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(
+        source_packet,
+        schema=schema,
+    )
+    extra_dims, extra_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        selected_dim_arr,
+        selected_delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if base_dims.shape != extra_dims.shape:
+        raise ValueError(
+            "base and extra correction shapes differ: "
+            f"{base_dims.shape} vs {extra_dims.shape}"
+        )
+    extra_payload, extra_meta = encode_pr101_ranked_sidecar_payload(
+        extra_dims,
+        extra_deltas,
+        schema=schema,
+    )
+    base_nonzero = (base_dims != schema.no_op_sentinel) & (base_deltas != 0)
+    extra_nonzero = (extra_dims != schema.no_op_sentinel) & (extra_deltas != 0)
+    same_dim = extra_nonzero & base_nonzero & (extra_dims == base_dims)
+    second_dim = extra_nonzero & base_nonzero & (extra_dims != base_dims)
+    into_base_noop = extra_nonzero & ~base_nonzero
+    combined = base_deltas.astype(np.int16, copy=False) + extra_deltas.astype(
+        np.int16,
+        copy=False,
+    )
+    allowed_deltas = {int(value) for value in schema.deltas}
+    same_dim_out_of_vocab = same_dim & ~np.isin(combined, list(allowed_deltas))
+    packet = PR106SidecarPacket(
+        format_id=PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+        pr106_bytes=source_packet.pr106_bytes,
+        sidecar_payload=source_packet.sidecar_payload,
+        framing_meta=None,
+        extra_sidecar_payload=extra_payload,
+        extra_framing_meta=extra_meta,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(packet))
+    passes = decode_pr106_sidecar_packet_correction_passes(reparsed, schema=schema)
+    if len(passes) != 2:
+        raise ValueError("format0D semantic materialization did not roundtrip two passes")
+    (roundtrip_base_dims, roundtrip_base_deltas), (
+        roundtrip_extra_dims,
+        roundtrip_extra_deltas,
+    ) = passes
+    if not (
+        np.array_equal(roundtrip_base_dims, base_dims)
+        and np.array_equal(roundtrip_base_deltas, base_deltas)
+        and np.array_equal(roundtrip_extra_dims, extra_dims)
+        and np.array_equal(roundtrip_extra_deltas, extra_deltas)
+    ):
+        raise ValueError("format0D semantic materialization parse/reemit mismatch")
+    diagnostics: dict[str, object] = {
+        "schema": "pr106_format0d_semantic_materialization_v1",
+        "semantic_materializer": "format0d_packet_ir_native",
+        "source_format_id": f"0x{source_packet.format_id:02X}",
+        "output_format_id": f"0x{packet.format_id:02X}",
+        "runtime_apply_order": [
+            "base_format0c_corrections",
+            "extra_pr101_ranked_no_op_corrections",
+        ],
+        "n_pairs": int(base_dims.size),
+        "base_nonzero_pair_count": int(base_nonzero.sum()),
+        "extra_nonzero_pair_count": int(extra_nonzero.sum()),
+        "extra_same_dim_pair_count": int(same_dim.sum()),
+        "extra_second_dim_pair_count": int(second_dim.sum()),
+        "extra_into_base_noop_pair_count": int(into_base_noop.sum()),
+        "extra_same_dim_out_of_format0c_vocab_pair_count": int(
+            same_dim_out_of_vocab.sum()
+        ),
+        "base_format0c_sidecar_payload_bytes": len(source_packet.sidecar_payload),
+        "base_format0c_sidecar_payload_sha256": sha256_hex(
+            source_packet.sidecar_payload
+        ),
+        "extra_sidecar_payload_bytes": len(extra_payload),
+        "extra_sidecar_payload_sha256": sha256_hex(extra_payload),
+        "extra_framing_meta_bytes": len(extra_meta),
+        "extra_framing_meta_sha256": sha256_hex(extra_meta),
+        "output_packet_payload_sha256": sha256_hex(emit_pr106_sidecar_packet(packet)),
+        "base_dim_sha256": sha256_hex(base_dims.astype(np.uint8).tobytes()),
+        "base_delta_q_sha256": sha256_hex(base_deltas.astype(np.int8).tobytes()),
+        "extra_dim_sha256": sha256_hex(extra_dims.astype(np.uint8).tobytes()),
+        "extra_delta_q_sha256": sha256_hex(extra_deltas.astype(np.int8).tobytes()),
+    }
+    return packet, diagnostics
+
+
 def build_pr106_format07_semantic_sidecar_packet(
     source_packet: PR106SidecarPacket,
     selected_dim_arr: np.ndarray,
@@ -3792,6 +4126,36 @@ def emit_pr106_format0c_semantic_candidate_archive(
             f"'x'; got {source_member.name!r}"
         )
     candidate_packet, diagnostics = build_pr106_format0c_semantic_sidecar_packet(
+        source_packet,
+        selected_dim_arr,
+        selected_delta_q_arr,
+        schema=schema,
+    )
+    candidate_member = replace(
+        source_member,
+        name="x",
+        payload=emit_pr106_sidecar_packet(candidate_packet),
+    )
+    candidate_archive = emit_single_stored_member_archive(candidate_member)
+    return candidate_member, candidate_archive, diagnostics
+
+
+def emit_pr106_format0d_semantic_candidate_archive(
+    source_member: StoredZipMember,
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[StoredZipMember, bytes, dict[str, object]]:
+    """Emit a single-member ZIP for a format-0x0D semantic candidate."""
+
+    if source_member.name != "x":
+        raise ValueError(
+            "format0D semantic materialization requires source archive member "
+            f"'x'; got {source_member.name!r}"
+        )
+    candidate_packet, diagnostics = build_pr106_format0d_semantic_sidecar_packet(
         source_packet,
         selected_dim_arr,
         selected_delta_q_arr,
