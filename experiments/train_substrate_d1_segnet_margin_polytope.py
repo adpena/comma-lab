@@ -1696,6 +1696,9 @@ def _full_main(args: argparse.Namespace) -> int:
             decoded_noise_nonzero_pixels=overlay_diag.decoded_noise_nonzero_pixels,
             camera_overlay_nonzero_pixels=overlay_diag.camera_overlay_nonzero_pixels,
             integer_feasible_pixels=overlay_diag.integer_feasible_pixels,
+            unsafe_nonzero_pixels=overlay_diag.unsafe_nonzero_pixels,
+            pair_mask_active_pairs=overlay_diag.pair_mask_active_pairs,
+            overlay_dispatch_blockers=overlay_diag.dispatch_blockers,
         )
         readiness["lane_id"] = SUBSTRATE_LANE_ID
         readiness["archive_zip_bytes"] = archive_zip_size

@@ -195,6 +195,8 @@ def build_dp1_dataset_source(
         "prebuilt_codebook",
     }:
         blockers.append("dp1_comma2k19_requires_one_real_source_mode")
+    if dataset_name in {"comma10k", "comma10k19"}:
+        blockers.append("dp1_comma10k_is_segnet_image_prior_not_video_pretraining")
     if dataset_name in {"bdd100k", "waymo", "waymo_open_dataset"}:
         blockers.append(f"dp1_dataset_not_trainer_wired_{dataset_name}")
     if dataset_name == "comma2k19" and source_mode != "prebuilt_codebook":

@@ -8,6 +8,7 @@ gpu: "${MODAL_GPU:-T4}"
 smoke_only: true
 smoke_validation_contract: training_artifact_v1
 min_vram_gb: 16
+min_smoke_gpu: "T4"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:
@@ -87,9 +88,14 @@ required_input_files_trainer: experiments/train_substrate_pretrained_driving_pri
 # a sibling-subagent edit triggers rc=13 BEFORE the GPU meter starts.
 sentinel_files:
   - src/tac/substrates/pretrained_driving_prior/__init__.py
+  - src/tac/substrates/pretrained_driving_prior/dataset_source.py
   - src/tac/substrates/pretrained_driving_prior/codebook.py
   - src/tac/substrates/pretrained_driving_prior/distillation.py
+  - src/tac/substrates/pretrained_driving_prior/local_chunk_cache.py
+  - src/tac/substrates/pretrained_driving_prior/local_chunk_streamer.py
+  - src/tac/substrates/pretrained_driving_prior/log_incremental_feeder.py
   - src/tac/substrates/pretrained_driving_prior/prior_application.py
+  - src/tac/substrates/pretrained_driving_prior/composition.py
   - src/tac/substrates/pretrained_driving_prior/archive.py
   - src/tac/substrates/pretrained_driving_prior/inflate.py
   - src/tac/substrates/pretrained_driving_prior/architecture.py

@@ -239,6 +239,65 @@ Any DP1 dispatch must record these env vars in provenance so a later score canno
 4. Measure whether DP1 stacks with packetIR/compiler/CMA-ES/Optuna/water-filling by comparing deltas under a single archive/runtime pipeline.
 5. Promote only if the composed result beats the current operator threshold and survives paired-axis audit.
 
+## Addendum - 2026-05-15 DP1 Source Identity And Dynamic Chunking Contract
+
+Fresh adversarial review found a concrete source-identity hazard: the operator
+phrase "comma10k19" can blur two different public comma datasets. The code now
+keeps them distinct:
+
+- `comma2k19` remains the only DP1 real dashcam-video pretraining source wired
+  by the trainer.
+- `comma10k` and `comma10k19` are explicitly rejected by the trainer and by the
+  dataset-source custody contract. They are semantic-segmentation image sources
+  for a future SegNet-prior adapter, not a drop-in DP1 video source.
+
+Dynamic streamer chunking now has a typed surface:
+
+- `ChunkSpec`
+- `DynamicChunkingStrategy`
+- modes: `frame_range`, `motion_class`, `entropy`, `saliency`, `byte_size`,
+  `temporal_window`
+- trainer flags: `--stream-chunking-mode`, `--stream-frame-range-size`,
+  `--stream-byte-size-target`, `--stream-temporal-window-sec`,
+  `--stream-motion-threshold`, `--stream-entropy-threshold`,
+  `--stream-saliency-topk`
+
+Streamer-mode distillation writes the chunking strategy and first 16 planned
+chunks into schedule provenance. The remote driver forwards all new flags, and
+the Modal recipe sentinel list now includes the source-custody-critical files:
+`dataset_source.py`, `local_chunk_cache.py`, `local_chunk_streamer.py`,
+`log_incremental_feeder.py`, and `composition.py`.
+
+This is still not a trained prior and still not a score claim. It is a
+source-custody and performance-contract landing that makes the first real
+Comma2k19 one-chunk run less ambiguous.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/pretrained_driving_prior/tests \
+  src/tac/tests/test_dp1_remote_driver_contract.py \
+  src/tac/tests/test_dp1_inflate_consumes_codebook.py \
+  src/tac/tests/test_check_209_dp1_contest_video_leakage_caller_check.py \
+  src/tac/tests/test_check_210_211_dp1_hardening.py \
+  src/tac/tests/test_check_213_comma2k19_canonical_download.py \
+  src/tac/tests/test_driving_prior_readiness.py
+# 292 passed
+
+bash -n scripts/remote_lane_substrate_pretrained_driving_prior.sh
+
+PYTHONPATH=src .venv/bin/python - <<'PY'
+from tac.preflight import check_comma2k19_downloads_route_through_canonical_cache
+check_comma2k19_downloads_route_through_canonical_cache(strict=True, verbose=True)
+PY
+# [comma2k19-canonical-download] OK
+```
+
+Next DP1 score-bearing step remains unchanged: run a tiny real Comma2k19
+one-chunk, no-auth-eval training probe with explicit source custody and build a
+result-review packet classified as training/runtime custody only.
+
 ### T5 - Production-grade DP1
 
 1. Dynamic Comma2k19 chunking modes: frame range, motion class, entropy, saliency, byte size, temporal window.
@@ -336,3 +395,45 @@ PYTHONPATH=src .venv/bin/python experiments/train_substrate_pretrained_driving_p
 
 This is still not a score claim. It is the first reproducibility-gated step
 toward a real pretrained prior artifact.
+
+## Dynamic Chunking And Dispatch Umbrella Addendum - 2026-05-15T22:20Z
+
+DP1 hardening moved from dataset-source custody into dispatch feasibility and
+streaming design:
+
+- `comma2k19` remains the only currently valid DP1 real video-pretraining
+  source. `comma10k` / `comma10k19` are now rejected explicitly in the trainer
+  and dataset-source contract for DP1 because they are segmentation image-prior
+  sources, not dashcam-video pretraining streams. A future SegNet-prior lane
+  can use them, but not by pretending they are DP1 video data.
+- `local_chunk_streamer.py` now exposes `DynamicChunkingStrategy` and
+  `ChunkSpec` with deterministic modes for frame ranges, motion class,
+  entropy, saliency, byte-size, and temporal windows. The trainer threads the
+  selected strategy into streaming provenance.
+- The Modal recipe now declares `min_smoke_gpu: "T4"` alongside
+  `min_vram_gb: 16`, so it satisfies the new `dispatch_protocol_complete`
+  umbrella at all three tiers for native dispatch.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/pretrained_driving_prior/tests \
+  src/tac/tests/test_dp1_remote_driver_contract.py \
+  src/tac/tests/test_dp1_inflate_consumes_codebook.py \
+  src/tac/tests/test_check_209_dp1_contest_video_leakage_caller_check.py \
+  src/tac/tests/test_check_210_211_dp1_hardening.py \
+  src/tac/tests/test_check_213_comma2k19_canonical_download.py \
+  src/tac/tests/test_driving_prior_readiness.py
+# 291 passed
+
+PYTHONPATH=src .venv/bin/python tools/check_dispatch_protocol_complete.py \
+  --recipe .omx/operator_authorize_recipes/substrate_pretrained_driving_prior_modal_t4_dispatch.yaml \
+  --strict
+# dispatch_protocol_complete=true across tier1/tier2/tier3.
+```
+
+This still has not produced a trained driving prior, deployment packet, or
+legitimate contest CPU/CUDA score. The next score-bearing DP1 step remains a
+tiny one-source Comma2k19 run with source hashes, followed by byte accounting
+and paired exact eval only after a byte-closed archive/runtime packet exists.

@@ -28,3 +28,16 @@ def test_d1_operator_recipe_uses_shrunk_margin_resolution() -> None:
 
     assert 'D1_POLYTOPE_MARGIN_H: "96"' in recipe
     assert 'D1_POLYTOPE_MARGIN_W: "128"' in recipe
+
+
+def test_d1_operator_recipe_declares_hardware_feasibility_contract() -> None:
+    recipe = (
+        REPO
+        / ".omx/operator_authorize_recipes/"
+        / "substrate_d1_segnet_margin_polytope_modal_t4_dispatch.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "min_vram_gb: 14" in recipe
+    assert 'min_smoke_gpu: "T4"' in recipe
+    assert "pyav_decode_strategy: cpu_thread_async_upload" in recipe
+    assert "video_input_strategy: per_dispatch_local_copy" in recipe

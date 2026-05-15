@@ -179,7 +179,7 @@ def build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dataset-name",
         default="synthetic_test",
-        choices=("synthetic_test", "comma2k19", "bdd100k"),
+        choices=("synthetic_test", "comma2k19", "comma10k", "comma10k19", "bdd100k"),
     )
     parser.add_argument(
         "--allow-bdd100k-dataset-images",
@@ -341,6 +341,58 @@ def build_argparser() -> argparse.ArgumentParser:
             "Max frames decoded per streamed chunk in --use-streamer mode "
             "(cost+memory). Streamed bytes are discarded after decode."
         ),
+    )
+    parser.add_argument(
+        "--stream-chunking-mode",
+        default="frame_range",
+        choices=(
+            "frame_range",
+            "motion_class",
+            "entropy",
+            "saliency",
+            "byte_size",
+            "temporal_window",
+        ),
+        help=(
+            "Dynamic streamer chunk planner. frame_range preserves source "
+            "order; motion/entropy/saliency prioritize metadata-scored chunks."
+        ),
+    )
+    parser.add_argument(
+        "--stream-frame-range-size",
+        type=int,
+        default=256,
+        help="Frame window used by frame_range/motion/entropy/saliency chunking.",
+    )
+    parser.add_argument(
+        "--stream-byte-size-target",
+        type=int,
+        default=0,
+        help="Target bytes per chunk for byte_size chunking; 0 uses streamer default.",
+    )
+    parser.add_argument(
+        "--stream-temporal-window-sec",
+        type=float,
+        default=0.0,
+        help="Seconds per chunk for temporal_window chunking; 0 uses 1 second.",
+    )
+    parser.add_argument(
+        "--stream-motion-threshold",
+        type=float,
+        default=None,
+        help="Optional minimum metadata score for motion_class chunking.",
+    )
+    parser.add_argument(
+        "--stream-entropy-threshold",
+        type=float,
+        default=None,
+        help="Optional minimum metadata score for entropy chunking.",
+    )
+    parser.add_argument(
+        "--stream-saliency-topk",
+        type=int,
+        default=None,
+        help="Optional top-k metadata chunks for saliency chunking.",
     )
     parser.add_argument(
         "--max-distillation-frames",
@@ -640,6 +692,13 @@ def _validate_dataset_source_args(
     codebook_path: Path | None,
 ) -> None:
     """Fail closed on unsupported or ambiguous DP1 dataset-source modes."""
+    if args.dataset_name in {"comma10k", "comma10k19"}:
+        raise SystemExit(
+            "ERROR: comma10k is a semantic-segmentation image dataset/source "
+            "for SegNet-prior work, not a DP1 dashcam-video pretraining source. "
+            "Use --dataset-name=comma2k19 for DP1 video priors, or build a "
+            "separate SegNet-prior adapter with its own source-custody contract."
+        )
     if args.dataset_name == "bdd100k":
         raise SystemExit(
             "ERROR: --dataset-name=bdd100k is declared as future/opt-in "
@@ -750,6 +809,27 @@ def _build_local_streamer(args: argparse.Namespace):
     )
 
 
+def _build_dynamic_chunking_strategy(args: argparse.Namespace):
+    """Build the streamer chunking strategy from explicit CLI flags."""
+    from tac.substrates.pretrained_driving_prior import DynamicChunkingStrategy
+
+    return DynamicChunkingStrategy(
+        mode=str(args.stream_chunking_mode),
+        frame_range_size=int(args.stream_frame_range_size)
+        if args.stream_frame_range_size
+        else None,
+        motion_threshold=args.stream_motion_threshold,
+        entropy_threshold=args.stream_entropy_threshold,
+        saliency_topk=args.stream_saliency_topk,
+        byte_size_target=int(args.stream_byte_size_target)
+        if args.stream_byte_size_target
+        else None,
+        temporal_window_sec=float(args.stream_temporal_window_sec)
+        if args.stream_temporal_window_sec
+        else None,
+    )
+
+
 def _log_incremental_streaming_path(
     args: argparse.Namespace,
 ):
@@ -766,6 +846,14 @@ def _log_incremental_streaming_path(
     )
 
     streamer = _build_local_streamer(args)
+    chunking_strategy = _build_dynamic_chunking_strategy(args)
+    chunk_specs = streamer.plan_chunks(
+        chunking_strategy,
+        video_metadata={
+            "frames_per_chunk": int(args.streamer_frames_per_chunk),
+        },
+    )
+    chunk_ids = [spec.chunk_id for spec in chunk_specs]
     schedule = LogIncrementalSchedule(
         base=int(args.log_incremental_base),
         initial_chunks=1,
@@ -780,8 +868,16 @@ def _log_incremental_streaming_path(
     return log_incremental_distillation_streaming(
         streamer=streamer,
         schedule=schedule,
+        chunk_ids=chunk_ids,
         distill_cfg_template=distill_cfg_template,
         frames_per_chunk=int(args.streamer_frames_per_chunk),
+        extra_provenance={
+            "dynamic_chunking_strategy": chunking_strategy.to_dict(),
+            "dynamic_chunking_plan_count": len(chunk_specs),
+            "dynamic_chunking_plan_preview": [
+                spec.to_dict() for spec in chunk_specs[:16]
+            ],
+        },
     )
 
 
@@ -1946,6 +2042,11 @@ def main() -> int:
     parser = build_argparser()
     args = parser.parse_args()
     _validate_full_cpu_flags(args)
+    if args.dataset_name in {"comma10k", "comma10k19"}:
+        raise SystemExit(
+            "ERROR: comma10k is not a DP1 dashcam-video pretraining source; "
+            "use comma2k19 for DP1 or a separate SegNet-prior lane."
+        )
     _maybe_set_tf32(args.enable_tf32)
     if args.smoke:
         return _smoke_main(args)

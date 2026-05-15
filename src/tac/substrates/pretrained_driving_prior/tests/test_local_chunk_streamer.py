@@ -9,7 +9,6 @@ injection point lets tests pass a mock fetcher for explicit-bytes paths.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import numpy as np
@@ -17,16 +16,15 @@ import pytest
 
 from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     CANONICAL_SOURCE_URL,
-    Comma2k19LocalStreamer,
     DATASET_LICENSE,
-    DEFAULT_LOG_DIR,
     DEFAULT_RAM_BUFFER_GB,
+    Comma2k19LocalStreamer,
+    DynamicChunkingStrategy,
     SHA256MismatchError,
+    _log_file_for_today,
     replay_stream_log,
     summarize_stream_log,
-    _log_file_for_today,
 )
-
 
 # ---------------------------------------------------------------------------
 # Constructor + provenance
@@ -63,6 +61,92 @@ def test_streamer_refuses_zero_or_negative_buffer(tmp_path: Path) -> None:
 def test_streamer_license_attribution() -> None:
     assert DATASET_LICENSE == "MIT"
     assert "comma2k19" in CANONICAL_SOURCE_URL.lower()
+
+
+# ---------------------------------------------------------------------------
+# Dynamic chunking
+# ---------------------------------------------------------------------------
+
+
+def test_dynamic_chunking_frame_range_preserves_source_order(tmp_path: Path) -> None:
+    s = Comma2k19LocalStreamer(
+        log_dir=tmp_path / "logs",
+        synthetic=True,
+        synthetic_n_chunks=3,
+    )
+
+    specs = s.plan_chunks(
+        DynamicChunkingStrategy(mode="frame_range", frame_range_size=12)
+    )
+
+    assert [spec.chunk_id for spec in specs] == [
+        "synthetic_chunk_0000",
+        "synthetic_chunk_0001",
+        "synthetic_chunk_0002",
+    ]
+    assert all(spec.frame_start == 0 and spec.frame_end == 12 for spec in specs)
+    assert specs[0].decode_hint["chunking_mode"] == "frame_range"
+
+
+def test_dynamic_chunking_saliency_topk_prioritizes_metadata_scores(
+    tmp_path: Path,
+) -> None:
+    s = Comma2k19LocalStreamer(
+        log_dir=tmp_path / "logs",
+        synthetic=True,
+        synthetic_n_chunks=4,
+    )
+
+    specs = s.plan_chunks(
+        DynamicChunkingStrategy(mode="saliency", saliency_topk=2),
+        video_metadata={"saliency_scores": [0.1, 0.9, 0.2, 0.8]},
+    )
+
+    assert [spec.chunk_id for spec in specs] == [
+        "synthetic_chunk_0001",
+        "synthetic_chunk_0003",
+    ]
+    assert [spec.decode_hint["priority_rank"] for spec in specs] == [0, 1]
+
+
+def test_dynamic_chunking_motion_threshold_keeps_only_high_motion(
+    tmp_path: Path,
+) -> None:
+    s = Comma2k19LocalStreamer(
+        log_dir=tmp_path / "logs",
+        synthetic=True,
+        synthetic_n_chunks=4,
+    )
+
+    specs = s.plan_chunks(
+        DynamicChunkingStrategy(mode="motion_class", motion_threshold=0.5),
+        video_metadata={"motion_scores": [0.1, 0.6, 0.4, 0.7]},
+    )
+
+    assert [spec.chunk_id for spec in specs] == [
+        "synthetic_chunk_0003",
+        "synthetic_chunk_0001",
+    ]
+
+
+def test_stream_chunks_yields_specs_and_frames(tmp_path: Path) -> None:
+    s = Comma2k19LocalStreamer(
+        log_dir=tmp_path / "logs",
+        synthetic=True,
+        synthetic_n_chunks=1,
+    )
+
+    rows = list(
+        s.stream_chunks(
+            chunking=DynamicChunkingStrategy(mode="frame_range", frame_range_size=3),
+            max_frames_per_chunk=2,
+        )
+    )
+
+    assert len(rows) == 1
+    spec, frames = rows[0]
+    assert spec.chunk_id == "synthetic_chunk_0000"
+    assert len(frames) == 2
 
 
 # ---------------------------------------------------------------------------

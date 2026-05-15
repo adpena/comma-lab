@@ -9,6 +9,7 @@ import tools.operator_authorize as op
 @pytest.fixture(autouse=True)
 def _isolate_local_pre_deploy(monkeypatch) -> None:
     """Operator routing tests mock dispatch gates; local harness has own coverage."""
+    monkeypatch.setattr(op, "_run_dispatch_protocol_complete", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(op, "_run_local_pre_deploy_check", lambda *_: None)
 
 
@@ -197,6 +198,69 @@ def test_operator_authorize_allows_smoke_wrapper_epoch_override_for_smoke_only_r
 
     assert rc == 0
     assert events == ["preflight", "claim", "dispatch"]
+
+
+def test_operator_authorize_runs_dispatch_protocol_before_claim(monkeypatch) -> None:
+    events: list[str] = []
+    monkeypatch.setattr(op, "_predict_cost_band", lambda **_: _band())
+    monkeypatch.setattr(op, "_validate_declared_local_paths", lambda *_: None)
+    monkeypatch.setattr(op, "_validate_required_input_files", lambda *_: None)
+    monkeypatch.setattr(
+        op,
+        "_run_dispatch_protocol_complete",
+        lambda *_args, **_kwargs: events.append("dispatch_protocol"),
+    )
+    monkeypatch.setattr(
+        op,
+        "_run_local_pre_deploy_check",
+        lambda *_args, **_kwargs: events.append("local_pre_deploy"),
+    )
+    monkeypatch.setattr(
+        op,
+        "_native_dispatch_preflight",
+        lambda *_args, **_kwargs: events.append("native_preflight"),
+    )
+    monkeypatch.setattr(op, "_claim_lane", lambda **_: events.append("claim"))
+    monkeypatch.setattr(
+        op,
+        "_run_dispatch",
+        lambda *_args, **_kwargs: events.append("dispatch") or 0,
+    )
+
+    rc = op.main(
+        [
+            "--recipe",
+            "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch",
+            "--yes",
+            "--cost-band-epochs-override",
+            "100",
+        ]
+    )
+
+    assert rc == 0
+    assert events == [
+        "dispatch_protocol",
+        "local_pre_deploy",
+        "native_preflight",
+        "claim",
+        "dispatch",
+    ]
+
+
+def test_operator_authorize_source_wires_protocol_before_native_preflight() -> None:
+    text = (op.REPO_ROOT / "tools/operator_authorize.py").read_text(encoding="utf-8")
+    main_body = text[text.index("def main(") :]
+
+    assert "_run_dispatch_protocol_complete(" in main_body
+    assert main_body.index("_run_dispatch_protocol_complete(") < main_body.index(
+        "_run_local_pre_deploy_check("
+    )
+    assert main_body.index("_run_dispatch_protocol_complete(") < main_body.index(
+        "_native_dispatch_preflight("
+    )
+    assert main_body.index("_run_dispatch_protocol_complete(") < main_body.index(
+        "_claim_lane("
+    )
 
 
 def test_z3_operator_recipe_explicitly_selects_v2_latent_replacement() -> None:

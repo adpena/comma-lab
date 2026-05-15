@@ -860,3 +860,42 @@ improvement and a useful selector-guard artifact, but the full A1-relative,
 manifest-sourced rate audit blocks it. It remains non-promotional and should
 not be submitted; useful D1 work now needs CUDA-native pair/action xray or a
 new action family with enough component movement to pay the full sidecar cost.
+
+## Xray And Dispatch-Protocol Hardening Addendum - 2026-05-15T22:20Z
+
+Additional D1 hardening landed after the adversarial review:
+
+- `tools/xray_d1_overlay_payload.py` now decodes pair-mask archives from
+  metadata and also supports an explicit `--pair-sign-mask-json` override for
+  selector debugging. Pair-mask xray reports now name the mask source instead
+  of silently analyzing a zero-action or wrong-action payload.
+- `build_readiness_manifest(...)` now consumes `unsafe_nonzero_pixels`,
+  `pair_mask_active_pairs`, and overlay dispatch blockers. A D1 packet with
+  unsafe pixels, zero active pair-mask pairs, or unresolved overlay blockers is
+  `ready_for_exact_eval_dispatch=false`.
+- Both D1 and DP1 recipes now declare the full hardware feasibility contract
+  (`min_vram_gb` plus `min_smoke_gpu`), so the new Boyd-style
+  `dispatch_protocol_complete` umbrella can reason about the conjunction of
+  engineering, hardware, and substrate correctness before any paid dispatch.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/d1_segnet_margin_polytope/tests \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py \
+  src/tac/tests/test_build_d1_pair_mask_from_xray.py \
+  src/tac/tests/test_xray_d1_overlay_payload.py
+# 142 passed
+
+PYTHONPATH=src .venv/bin/python tools/check_dispatch_protocol_complete.py \
+  --recipe .omx/operator_authorize_recipes/substrate_d1_segnet_margin_polytope_modal_t4_dispatch.yaml
+# dispatch_protocol_complete=false; tier1 blocks on dispatch_enabled=false
+# and the explicit D1 L1/L2 overlay blockers; tier2/tier3 pass.
+```
+
+Status remains unchanged: D1 is still non-promotional. The correct next D1
+frontier step is not another static film-grain sweep; it is CUDA-native
+pair/action xray with a rate-aware selector over channel, sign, amplitude, and
+pair subset, followed by paired CPU/CUDA exact eval only if the readiness
+manifest turns green.

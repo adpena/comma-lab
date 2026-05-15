@@ -64,10 +64,10 @@ import logging
 import os
 import time
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -126,6 +126,203 @@ class StreamAccessRecord:
     dispatch_label: str | None
     license: str = DATASET_LICENSE
     source_url: str = CANONICAL_SOURCE_URL
+
+
+@dataclass(frozen=True)
+class ChunkSpec:
+    """One deterministic chunking decision for streamer-mode distillation."""
+
+    chunk_id: str
+    frame_start: int
+    frame_end: int
+    predicted_bytes: int | None = None
+    decode_hint: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "chunk_id": self.chunk_id,
+            "frame_start": int(self.frame_start),
+            "frame_end": int(self.frame_end),
+            "predicted_bytes": self.predicted_bytes,
+            "decode_hint": dict(self.decode_hint),
+        }
+
+
+ChunkingMode = Literal[
+    "frame_range",
+    "motion_class",
+    "entropy",
+    "saliency",
+    "byte_size",
+    "temporal_window",
+]
+
+
+@dataclass(frozen=True)
+class DynamicChunkingStrategy:
+    """Deterministic streamer chunk planner.
+
+    The strategy consumes cheap video metadata and produces an ordered list of
+    :class:`ChunkSpec` rows. Score-aware callers can prioritize high-motion,
+    high-entropy, or high-saliency segments without changing dataset custody:
+    every produced ``chunk_id`` still routes through
+    :class:`Comma2k19LocalStreamer`, SHA-256 verification, and the JSONL log.
+    """
+
+    mode: ChunkingMode = "frame_range"
+    frame_range_size: int | None = None
+    motion_threshold: float | None = None
+    entropy_threshold: float | None = None
+    saliency_topk: int | None = None
+    byte_size_target: int | None = None
+    temporal_window_sec: float | None = None
+
+    def __post_init__(self) -> None:
+        modes = {
+            "frame_range",
+            "motion_class",
+            "entropy",
+            "saliency",
+            "byte_size",
+            "temporal_window",
+        }
+        if self.mode not in modes:
+            raise ValueError(f"unsupported chunking mode {self.mode!r}")
+        if self.frame_range_size is not None and self.frame_range_size <= 0:
+            raise ValueError("frame_range_size must be > 0")
+        if self.saliency_topk is not None and self.saliency_topk <= 0:
+            raise ValueError("saliency_topk must be > 0")
+        if self.byte_size_target is not None and self.byte_size_target <= 0:
+            raise ValueError("byte_size_target must be > 0")
+        if self.temporal_window_sec is not None and self.temporal_window_sec <= 0:
+            raise ValueError("temporal_window_sec must be > 0")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "mode": self.mode,
+            "frame_range_size": self.frame_range_size,
+            "motion_threshold": self.motion_threshold,
+            "entropy_threshold": self.entropy_threshold,
+            "saliency_topk": self.saliency_topk,
+            "byte_size_target": self.byte_size_target,
+            "temporal_window_sec": self.temporal_window_sec,
+        }
+
+    def chunk_video(self, video_metadata: dict[str, Any]) -> Iterator[ChunkSpec]:
+        """Yield chunk specs from deterministic metadata.
+
+        ``video_metadata`` may include ``chunk_ids``, ``frame_count``, ``fps``,
+        ``estimated_bytes``, and one of ``motion_scores``, ``entropy_scores``,
+        or ``saliency_scores``. Score lists may be per-frame or per-window.
+        Missing scores fall back to stable source order.
+        """
+        metadata = dict(video_metadata)
+        chunk_ids = [str(value) for value in metadata.get("chunk_ids", [])]
+        fps = _positive_float(metadata.get("fps"), default=20.0)
+        base_window = self._window_size(metadata=metadata, fps=fps)
+        frame_count = _positive_int(
+            metadata.get("frame_count") or metadata.get("n_frames"),
+            default=max(base_window, len(chunk_ids) * base_window),
+        )
+        windows = list(
+            _iter_frame_windows(
+                frame_count=frame_count,
+                window_size=base_window,
+                chunk_ids=chunk_ids,
+                estimated_bytes=metadata.get("estimated_bytes"),
+            )
+        )
+        scored = self._score_windows(windows, metadata)
+        ordered = self._order_windows(scored)
+        for rank, (idx, spec, score) in enumerate(ordered):
+            hint = dict(spec.decode_hint)
+            hint.update(
+                {
+                    "chunking_mode": self.mode,
+                    "source_order": idx,
+                    "priority_rank": rank,
+                    "priority_score": score,
+                }
+            )
+            yield ChunkSpec(
+                chunk_id=spec.chunk_id,
+                frame_start=spec.frame_start,
+                frame_end=spec.frame_end,
+                predicted_bytes=spec.predicted_bytes,
+                decode_hint=hint,
+            )
+
+    def _window_size(self, *, metadata: dict[str, Any], fps: float) -> int:
+        if self.mode == "temporal_window":
+            seconds = self.temporal_window_sec or _positive_float(
+                metadata.get("temporal_window_sec"),
+                default=1.0,
+            )
+            return max(1, round(seconds * fps))
+        if self.mode == "byte_size":
+            frame_count = _positive_int(
+                metadata.get("frame_count") or metadata.get("n_frames"),
+                default=1,
+            )
+            estimated_bytes = _positive_int(metadata.get("estimated_bytes"), default=0)
+            bytes_per_frame = estimated_bytes / max(1, frame_count)
+            if bytes_per_frame > 0:
+                target = self.byte_size_target or _positive_int(
+                    metadata.get("byte_size_target"),
+                    default=DEFAULT_HTTP_CHUNK_SIZE,
+                )
+                return max(1, round(target / bytes_per_frame))
+        return self.frame_range_size or _positive_int(
+            metadata.get("frames_per_chunk"),
+            default=256,
+        )
+
+    def _score_windows(
+        self,
+        windows: list[ChunkSpec],
+        metadata: dict[str, Any],
+    ) -> list[tuple[int, ChunkSpec, float | None]]:
+        score_key = {
+            "motion_class": "motion_scores",
+            "entropy": "entropy_scores",
+            "saliency": "saliency_scores",
+        }.get(self.mode)
+        raw_scores = metadata.get(score_key) if score_key else None
+        return [
+            (idx, spec, _window_score(raw_scores, idx, spec, len(windows)))
+            for idx, spec in enumerate(windows)
+        ]
+
+    def _order_windows(
+        self,
+        scored: list[tuple[int, ChunkSpec, float | None]],
+    ) -> list[tuple[int, ChunkSpec, float | None]]:
+        if self.mode not in {"motion_class", "entropy", "saliency"}:
+            return scored
+        candidates = list(scored)
+        if self.mode == "motion_class" and self.motion_threshold is not None:
+            candidates = [
+                row
+                for row in candidates
+                if row[2] is not None and row[2] >= self.motion_threshold
+            ]
+        if self.mode == "entropy" and self.entropy_threshold is not None:
+            candidates = [
+                row
+                for row in candidates
+                if row[2] is not None and row[2] >= self.entropy_threshold
+            ]
+        if not candidates:
+            candidates = list(scored)
+        candidates.sort(
+            key=lambda row: (
+                float("-inf") if row[2] is None else -float(row[2]),
+                row[0],
+            )
+        )
+        if self.mode == "saliency" and self.saliency_topk is not None:
+            candidates = candidates[: self.saliency_topk]
+        return candidates
 
 
 @dataclass
@@ -287,6 +484,48 @@ class Comma2k19LocalStreamer:
         if self._synthetic:
             return [f"synthetic_chunk_{i:04d}" for i in range(self._synthetic_n_chunks)]
         return list(self._sha256_manifest.keys())
+
+    def plan_chunks(
+        self,
+        chunking: DynamicChunkingStrategy | None = None,
+        *,
+        video_metadata: dict[str, Any] | None = None,
+    ) -> list[ChunkSpec]:
+        """Plan streamer chunks without fetching data.
+
+        The returned specs are custody-neutral: they only order logical
+        ``chunk_id`` values. Actual bytes still pass through
+        :meth:`stream_chunk`, in-flight SHA verification, and the JSONL log.
+        """
+        strategy = chunking or DynamicChunkingStrategy()
+        metadata = {
+            "chunk_ids": self.list_chunk_ids(),
+            "frames_per_chunk": 256,
+        }
+        metadata.update(video_metadata or {})
+        if not metadata.get("chunk_ids") and not self._synthetic:
+            return []
+        return list(strategy.chunk_video(metadata))
+
+    def stream_chunks(
+        self,
+        *,
+        chunking: DynamicChunkingStrategy | None = None,
+        video_metadata: dict[str, Any] | None = None,
+        max_frames_per_chunk: int | None = None,
+    ) -> Iterator[tuple[ChunkSpec, list[np.ndarray]]]:
+        """Stream chunk specs and decoded frames in planned order.
+
+        This is a convenience API for probes and benchmark harnesses. Training
+        code may still call :meth:`plan_chunks` and then :meth:`stream_frames`
+        directly when it needs tighter memory control.
+        """
+        for spec in self.plan_chunks(chunking, video_metadata=video_metadata):
+            local_indices = list(range(spec.frame_start, spec.frame_end))
+            if max_frames_per_chunk is not None:
+                local_indices = local_indices[:max_frames_per_chunk]
+            frames = list(self.stream_frames(spec.chunk_id, frame_indices=local_indices))
+            yield spec, frames
 
     def stream_chunk(self, chunk_id: str) -> Iterator[bytes]:
         """HTTP range-byte stream the chunk; yield chunks of bytes.
@@ -625,6 +864,96 @@ def _default_http_fetcher(chunk_id: str, source_url: str) -> Iterator[bytes]:
         for piece in resp.iter_content(chunk_size=DEFAULT_HTTP_CHUNK_SIZE):
             if piece:
                 yield piece
+
+
+def _positive_int(value: object, *, default: int) -> int:
+    try:
+        parsed = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return int(default)
+    return parsed if parsed > 0 else int(default)
+
+
+def _positive_float(value: object, *, default: float) -> float:
+    try:
+        parsed = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return float(default)
+    return parsed if parsed > 0.0 else float(default)
+
+
+def _iter_frame_windows(
+    *,
+    frame_count: int,
+    window_size: int,
+    chunk_ids: list[str],
+    estimated_bytes: object,
+) -> Iterator[ChunkSpec]:
+    bytes_total = _positive_int(estimated_bytes, default=0)
+    bytes_per_frame = bytes_total / max(1, frame_count) if bytes_total else 0.0
+    if chunk_ids:
+        for idx, chunk_id in enumerate(chunk_ids):
+            predicted = round(window_size * bytes_per_frame) if bytes_per_frame else None
+            yield ChunkSpec(
+                chunk_id=chunk_id,
+                frame_start=0,
+                frame_end=window_size,
+                predicted_bytes=predicted,
+                decode_hint={"source": "chunk_id_list", "chunk_index": idx},
+            )
+        return
+    start = 0
+    idx = 0
+    while start < frame_count:
+        end = min(frame_count, start + window_size)
+        predicted = round((end - start) * bytes_per_frame) if bytes_per_frame else None
+        yield ChunkSpec(
+            chunk_id=f"frames_{start:06d}_{end:06d}",
+            frame_start=start,
+            frame_end=end,
+            predicted_bytes=predicted,
+            decode_hint={"source": "frame_range", "chunk_index": idx},
+        )
+        start = end
+        idx += 1
+
+
+def _window_score(
+    raw_scores: object,
+    idx: int,
+    spec: ChunkSpec,
+    window_count: int,
+) -> float | None:
+    if raw_scores is None:
+        return None
+    if isinstance(raw_scores, dict):
+        value = raw_scores.get(spec.chunk_id, raw_scores.get(str(idx), raw_scores.get(idx)))
+        try:
+            return None if value is None else float(value)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(raw_scores, (list, tuple)):
+        return None
+    values = list(raw_scores)
+    if not values:
+        return None
+    if len(values) == window_count:
+        # Per-window scores: one value per chunk/window.
+        window = [values[idx]]
+    elif len(values) >= spec.frame_end:
+        # Per-frame scores: average over the spec's local frame interval.
+        window = values[spec.frame_start : spec.frame_end]
+    else:
+        return None
+    numeric: list[float] = []
+    for value in window:
+        try:
+            numeric.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    if not numeric:
+        return None
+    return float(sum(numeric) / len(numeric))
 
 
 def _str_seed(*tokens: Any) -> int:

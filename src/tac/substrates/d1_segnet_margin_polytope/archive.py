@@ -536,6 +536,9 @@ def build_readiness_manifest(
     decoded_noise_nonzero_pixels: int | None = None,
     camera_overlay_nonzero_pixels: int | None = None,
     integer_feasible_pixels: int | None = None,
+    unsafe_nonzero_pixels: int | None = None,
+    pair_mask_active_pairs: int | None = None,
+    overlay_dispatch_blockers: list[str] | None = None,
 ) -> dict[str, object]:
     """Build a non-promotable readiness manifest for autopilot consumption.
 
@@ -576,6 +579,16 @@ def build_readiness_manifest(
     if integer_feasible_pixels is not None and integer_feasible_pixels <= 0:
         overlay_ready = False
         dispatch_blockers.append("d1_no_integer_feasible_pixels_under_lipschitz_bound")
+    if unsafe_nonzero_pixels is not None and unsafe_nonzero_pixels > 0:
+        overlay_ready = False
+        dispatch_blockers.append("d1_overlay_exceeds_integer_safe_budget")
+    if pair_mask_active_pairs == 0:
+        overlay_ready = False
+        dispatch_blockers.append("d1_pair_mask_has_no_active_pairs")
+    for blocker in overlay_dispatch_blockers or []:
+        if blocker not in dispatch_blockers:
+            dispatch_blockers.append(str(blocker))
+            overlay_ready = False
     return {
         "d1poly_schema_version": D1POLY1_SCHEMA_VERSION,
         "base_substrate_id": base_substrate_id,
@@ -587,6 +600,8 @@ def build_readiness_manifest(
         "decoded_noise_nonzero_pixels": decoded_noise_nonzero_pixels,
         "camera_overlay_nonzero_pixels": camera_overlay_nonzero_pixels,
         "integer_feasible_pixels": integer_feasible_pixels,
+        "unsafe_nonzero_pixels": unsafe_nonzero_pixels,
+        "pair_mask_active_pairs": pair_mask_active_pairs,
         "current_runtime_effect": (
             "d1_overlay_active" if overlay_ready else "base_renderer_plus_rate_only"
         ),

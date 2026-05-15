@@ -12,6 +12,7 @@ dispatch_blockers:
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
 min_vram_gb: 14
+min_smoke_gpu: "T4"
 video_input_strategy: per_dispatch_local_copy
 pyav_decode_strategy: cpu_thread_async_upload
 target_modes:

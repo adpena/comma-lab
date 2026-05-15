@@ -69,6 +69,13 @@ DPP_USE_STREAMER="${DPP_USE_STREAMER:-0}"
 DPP_STREAM_LOG_DIR="${DPP_STREAM_LOG_DIR:-$LOG_DIR/stream_logs}"
 DPP_RAM_BUFFER_GB="${DPP_RAM_BUFFER_GB:-2.0}"
 DPP_STREAMER_FRAMES_PER_CHUNK="${DPP_STREAMER_FRAMES_PER_CHUNK:-256}"
+DPP_STREAM_CHUNKING_MODE="${DPP_STREAM_CHUNKING_MODE:-frame_range}"
+DPP_STREAM_FRAME_RANGE_SIZE="${DPP_STREAM_FRAME_RANGE_SIZE:-256}"
+DPP_STREAM_BYTE_SIZE_TARGET="${DPP_STREAM_BYTE_SIZE_TARGET:-0}"
+DPP_STREAM_TEMPORAL_WINDOW_SEC="${DPP_STREAM_TEMPORAL_WINDOW_SEC:-0}"
+DPP_STREAM_MOTION_THRESHOLD="${DPP_STREAM_MOTION_THRESHOLD:-}"
+DPP_STREAM_ENTROPY_THRESHOLD="${DPP_STREAM_ENTROPY_THRESHOLD:-}"
+DPP_STREAM_SALIENCY_TOPK="${DPP_STREAM_SALIENCY_TOPK:-}"
 DPP_MAX_DISTILLATION_FRAMES="${DPP_MAX_DISTILLATION_FRAMES:-4096}"
 DPP_MAX_DISTILLATION_CHUNKS="${DPP_MAX_DISTILLATION_CHUNKS:-8}"
 DPP_MAX_PAIRS="${DPP_MAX_PAIRS:-600}"
@@ -179,6 +186,7 @@ cat > "$PROVENANCE" <<EOF
   "comma2k19_chunks_dir_set": $(if [ -n "$DPP_COMMA2K19_CHUNKS_DIR" ]; then echo true; else echo false; fi),
   "cache_dir_set": $(if [ -n "$DPP_CACHE_DIR" ]; then echo true; else echo false; fi),
   "use_streamer": $(if [ "$DPP_USE_STREAMER" = "1" ]; then echo true; else echo false; fi),
+  "stream_chunking_mode": "$DPP_STREAM_CHUNKING_MODE",
   "max_distillation_frames": $DPP_MAX_DISTILLATION_FRAMES,
   "max_distillation_chunks": $DPP_MAX_DISTILLATION_CHUNKS,
   "max_pairs": $DPP_MAX_PAIRS,
@@ -259,7 +267,20 @@ if [ "$DPP_RUN_FULL" = "1" ]; then
             --stream-log-dir "$DPP_STREAM_LOG_DIR"
             --ram-buffer-gb "$DPP_RAM_BUFFER_GB"
             --streamer-frames-per-chunk "$DPP_STREAMER_FRAMES_PER_CHUNK"
+            --stream-chunking-mode "$DPP_STREAM_CHUNKING_MODE"
+            --stream-frame-range-size "$DPP_STREAM_FRAME_RANGE_SIZE"
+            --stream-byte-size-target "$DPP_STREAM_BYTE_SIZE_TARGET"
+            --stream-temporal-window-sec "$DPP_STREAM_TEMPORAL_WINDOW_SEC"
         )
+        if [ -n "$DPP_STREAM_MOTION_THRESHOLD" ]; then
+            DPP_FULL_ARGS+=(--stream-motion-threshold "$DPP_STREAM_MOTION_THRESHOLD")
+        fi
+        if [ -n "$DPP_STREAM_ENTROPY_THRESHOLD" ]; then
+            DPP_FULL_ARGS+=(--stream-entropy-threshold "$DPP_STREAM_ENTROPY_THRESHOLD")
+        fi
+        if [ -n "$DPP_STREAM_SALIENCY_TOPK" ]; then
+            DPP_FULL_ARGS+=(--stream-saliency-topk "$DPP_STREAM_SALIENCY_TOPK")
+        fi
     fi
     if [ "$DPP_ENABLE_AUTOCAST_FP16" = "1" ]; then
         DPP_FULL_ARGS+=(--enable-autocast-fp16)

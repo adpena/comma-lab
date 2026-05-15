@@ -199,7 +199,7 @@ def _smoke_scaled_fallback_p50(
 
 
 def _resolve_cost_band_request(
-    recipe: "Recipe",
+    recipe: Recipe,
     *,
     cost_band_epochs_override: int | None = None,
     cost_band_gpu_override: str | None = None,
@@ -464,6 +464,46 @@ def _run_local_pre_deploy_check(
             "OPERATOR_AUTHORIZE_SKIP_LOCAL_PRE_DEPLOY_CHECK=1 with paired "
             "OPERATOR_AUTHORIZE_LOCAL_PRE_DEPLOY_BYPASS_REASON=<text>."
         )
+
+
+def _run_dispatch_protocol_complete(
+    recipe: Recipe,
+    trainer_path: str | None,
+    *,
+    native_dispatch: bool,
+) -> None:
+    """Require the full dispatch feasibility conjunction before lane claims.
+
+    This is the Boyd-style umbrella over the narrow catalog gates:
+    dispatch_protocol_complete =
+    AND(tier1_engineering, tier2_hardware_correctness, tier3_substrate_correctness).
+    It runs before claim creation/provider setup, so a partial feasibility
+    intersection cannot burn GPU or create a phantom active dispatch row.
+    """
+
+    if not native_dispatch:
+        return
+    src = REPO_ROOT / "src"
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+    from tac.deploy.dispatch_protocol import require_dispatch_protocol_complete
+
+    modal_cfg = recipe.raw.get("modal", {}) or {}
+    lane_script = (
+        modal_cfg.get("lane_script") if isinstance(modal_cfg, dict) else None
+    ) or recipe.remote_driver
+    report = require_dispatch_protocol_complete(
+        recipe.raw,
+        repo_root=REPO_ROOT,
+        recipe_path=recipe.path,
+        trainer_path=trainer_path,
+        remote_driver_path=str(lane_script) if lane_script else None,
+        native_dispatch=native_dispatch,
+    )
+    print(
+        "[operator-authorize] dispatch_protocol_complete=PASS "
+        f"recipe={report.recipe_name}"
+    )
 
 
 def _normalize_declared_local_path(value: Any) -> str | None:
@@ -1824,7 +1864,18 @@ def main(argv: list[str] | None = None) -> int:
     # have caught. Only runs for native-dispatch platforms (modal/vastai/local)
     # since recipe-only platforms do not actually start trainer code.
     if native_dispatch and trainer:
+        _run_dispatch_protocol_complete(
+            recipe,
+            str(trainer),
+            native_dispatch=native_dispatch,
+        )
         _run_local_pre_deploy_check(str(trainer), recipe.name)
+    elif native_dispatch:
+        _run_dispatch_protocol_complete(
+            recipe,
+            None,
+            native_dispatch=native_dispatch,
+        )
 
     if native_dispatch:
         _native_dispatch_preflight(recipe)

@@ -136,7 +136,9 @@ from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
     DEFAULT_RAM_BUFFER_GB as STREAMER_DEFAULT_RAM_BUFFER_GB,
 )
 from tac.substrates.pretrained_driving_prior.local_chunk_streamer import (
+    ChunkSpec,
     Comma2k19LocalStreamer,
+    DynamicChunkingStrategy,
     SHA256MismatchError,
     StreamAccessRecord,
     StreamingError,
@@ -182,6 +184,7 @@ __all__ = [
     "STREAMER_DEFAULT_LOG_DIR",
     "STREAMER_DEFAULT_RAM_BUFFER_GB",
     "VEHICLE_APPEARANCE_BASIS_SHAPE",
+    "ChunkSpec",
     "Comma2k19CacheError",
     "Comma2k19ChunkManifestEntry",
     "Comma2k19FrameIterator",
@@ -200,6 +203,7 @@ __all__ = [
     "DrivingPriorRenderer",
     "DrivingPriorRendererConfig",
     "DrivingPriorScoreAwareLoss",
+    "DynamicChunkingStrategy",
     "LogIncrementalSchedule",
     "PriorApplicationWeights",
     "SHA256MismatchError",

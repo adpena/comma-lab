@@ -87,3 +87,33 @@ def test_dp1_dataset_source_rejects_unwired_dataset() -> None:
     assert "dp1_dataset_not_trainer_wired_bdd100k" in source[
         "reproducibility_blockers"
     ]
+
+
+def test_dp1_dataset_source_rejects_comma10k_as_video_prior() -> None:
+    source = build_dp1_dataset_source(
+        dataset_name="comma10k",
+        source_mode="local_chunks",
+        distillation_mode="single_pass",
+        seed=1,
+        max_distillation_frames=32,
+        max_distillation_chunks=1,
+    ).to_dict()
+
+    assert "dp1_comma10k_is_segnet_image_prior_not_video_pretraining" in source[
+        "reproducibility_blockers"
+    ]
+
+
+def test_dp1_dataset_source_rejects_comma10k19_alias_as_video_prior() -> None:
+    source = build_dp1_dataset_source(
+        dataset_name="comma10k19",
+        source_mode="local_chunks",
+        distillation_mode="single_pass",
+        seed=1,
+        max_distillation_frames=32,
+        max_distillation_chunks=1,
+    ).to_dict()
+
+    assert "dp1_comma10k_is_segnet_image_prior_not_video_pretraining" in source[
+        "reproducibility_blockers"
+    ]

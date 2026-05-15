@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REMOTE_SCRIPT = REPO_ROOT / "scripts" / "remote_lane_substrate_pretrained_driving_prior.sh"
 RECIPE = (
@@ -42,6 +41,13 @@ def test_dp1_remote_driver_forwards_full_run_controls() -> None:
         "--stream-log-dir",
         "--ram-buffer-gb",
         "--streamer-frames-per-chunk",
+        "--stream-chunking-mode",
+        "--stream-frame-range-size",
+        "--stream-byte-size-target",
+        "--stream-temporal-window-sec",
+        "--stream-motion-threshold",
+        "--stream-entropy-threshold",
+        "--stream-saliency-topk",
         "--enable-gt-scorer-cache",
         "--enable-torch-compile",
         "--skip-auth-eval",
@@ -60,3 +66,24 @@ def test_dp1_recipe_no_longer_claims_full_main_not_implemented() -> None:
     assert "DPP_ENABLE_GT_SCORER_CACHE" in recipe
     assert "paired contest-CPU / contest-CUDA auth eval" in recipe
 
+
+def test_dp1_recipe_watches_source_custody_files() -> None:
+    recipe = RECIPE.read_text(encoding="utf-8")
+
+    for path in (
+        "src/tac/substrates/pretrained_driving_prior/dataset_source.py",
+        "src/tac/substrates/pretrained_driving_prior/local_chunk_cache.py",
+        "src/tac/substrates/pretrained_driving_prior/local_chunk_streamer.py",
+        "src/tac/substrates/pretrained_driving_prior/log_incremental_feeder.py",
+        "src/tac/substrates/pretrained_driving_prior/composition.py",
+    ):
+        assert path in recipe
+
+
+def test_dp1_recipe_declares_full_hardware_feasibility_contract() -> None:
+    recipe = RECIPE.read_text(encoding="utf-8")
+
+    assert "min_vram_gb: 16" in recipe
+    assert 'min_smoke_gpu: "T4"' in recipe
+    assert "pyav_decode_strategy: cpu_thread_async_upload" in recipe
+    assert "video_input_strategy: per_dispatch_local_copy" in recipe

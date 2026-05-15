@@ -17,6 +17,9 @@ from tac.substrates.d1_segnet_margin_polytope import (  # noqa: E402
     analyze_d1_overlay_effect,
     parse_archive,
 )
+from tac.substrates.d1_segnet_margin_polytope.overlay import (  # noqa: E402
+    pair_sign_mask_from_meta,
+)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -30,18 +33,55 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--channel-policy", default=None)
     parser.add_argument("--amplitude-scale", type=float, default=None)
     parser.add_argument("--sign-policy", default=None)
+    parser.add_argument(
+        "--pair-sign-mask-json",
+        type=Path,
+        help=(
+            "Optional selector JSON from build_d1_pair_mask_from_xray.py. "
+            "Overrides archive metadata for pair_mask debugging."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     return parser
+
+
+def _load_pair_sign_mask(path: Path) -> tuple[int, ...]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    signs = payload.get("pair_signs")
+    if not isinstance(signs, list):
+        raise ValueError(f"{path}: missing list field pair_signs")
+    parsed: list[int] = []
+    for idx, value in enumerate(signs):
+        sign = int(value)
+        if sign not in (-1, 0, 1):
+            raise ValueError(
+                f"{path}: pair_signs[{idx}] must be -1, 0, or 1; got {value!r}"
+            )
+        parsed.append(sign)
+    return tuple(parsed)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     archive = parse_archive(args.d1_bin.read_bytes())
+    sign_policy = (
+        str(args.sign_policy)
+        if args.sign_policy is not None
+        else str(archive.meta.get("overlay_sign_policy", "payload"))
+    )
+    pair_sign_mask = None
+    if sign_policy.strip().lower() == "pair_mask":
+        pair_sign_mask = (
+            _load_pair_sign_mask(args.pair_sign_mask_json)
+            if args.pair_sign_mask_json is not None
+            else pair_sign_mask_from_meta(archive.meta)
+        )
     diag = analyze_d1_overlay_effect(
         archive,
         channel_policy=args.channel_policy,
         amplitude_scale=args.amplitude_scale,
-        sign_policy=args.sign_policy,
+        sign_policy=sign_policy,
+        pair_sign_mask=pair_sign_mask,
     )
     payload = {
         "d1_bin": args.d1_bin.as_posix(),
@@ -50,6 +90,11 @@ def main(argv: list[str] | None = None) -> int:
         "base_archive_sha256_truncated": archive.base_archive_sha256_truncated,
         "margin_map_resolution": [archive.height, archive.width],
         "d1_overlay_diagnostics": diag.to_json_dict(),
+        "pair_sign_mask_source": (
+            args.pair_sign_mask_json.as_posix()
+            if args.pair_sign_mask_json is not None
+            else ("archive_meta" if pair_sign_mask is not None else None)
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

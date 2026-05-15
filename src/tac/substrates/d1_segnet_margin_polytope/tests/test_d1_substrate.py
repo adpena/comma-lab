@@ -802,6 +802,32 @@ def test_readiness_manifest_blocks_decoded_zero_overlay_payload():
     ]
 
 
+def test_readiness_manifest_blocks_unsafe_pair_mask_and_external_blockers():
+    cfg = D1PolytopeConfig()
+    manifest = build_readiness_manifest(
+        base_substrate_id="a1",
+        base_archive_bytes=178_162,
+        d1_overhead_bytes=7_431,
+        config=cfg,
+        runtime_overlay_consumed=True,
+        decoded_noise_nonzero_pixels=10,
+        camera_overlay_nonzero_pixels=10,
+        integer_feasible_pixels=10,
+        unsafe_nonzero_pixels=3,
+        pair_mask_active_pairs=0,
+        overlay_dispatch_blockers=["d1_pair_mask_partial_smoke_not_contest_packet"],
+    )
+
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["unsafe_nonzero_pixels"] == 3
+    assert manifest["pair_mask_active_pairs"] == 0
+    assert "d1_overlay_exceeds_integer_safe_budget" in manifest["dispatch_blockers"]
+    assert "d1_pair_mask_has_no_active_pairs" in manifest["dispatch_blockers"]
+    assert "d1_pair_mask_partial_smoke_not_contest_packet" in manifest[
+        "dispatch_blockers"
+    ]
+
+
 # ---------------------------------------------------------------------------
 # D1 substrate handle
 # ---------------------------------------------------------------------------
