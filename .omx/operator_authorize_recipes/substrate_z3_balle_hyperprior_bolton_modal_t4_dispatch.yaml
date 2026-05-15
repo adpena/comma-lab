@@ -1,8 +1,8 @@
 schema_version: 1
 name: substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch
 lane_id: lane_z3_balle_hyperprior_bolton_recover_20260514
-smoke_only: true
-smoke_validation_contract: training_artifact_v1
+smoke_only: false
+smoke_validation_contract: contest_cuda_auth_eval_v1
 summary: |
   Z3 Ballé 2018 scale-hyperprior v2 latent-replacement bolt-on on the FROZEN
   A1 base — across-class staircase Step 1 per zen-floor band v2 council
@@ -28,7 +28,8 @@ summary: |
   zero distortion change.
 
   Predicted ΔS = −0.005 to −0.010 vs A1 0.1928 [contest-CPU 1to1]
-  ``[prediction; first-principles-bound]``. Cost $2 (Modal T4 smoke).
+  ``[prediction; first-principles-bound]``. Cost $2 (Modal T4 full run
+  after the 2026-05-15 smoke anchor landed green).
 
   This is the cheapest across-class validation that a recognized class-shift
   literature anchor (Ballé hyperprior; Catalog #219 ranker reward -0.01 for
@@ -92,12 +93,15 @@ literature_anchor: |
 council_phase_5_prediction: 0.190
 
 risk: |
-  Z3 direct-residual v2 latent-replacement smoke. Predicted band [0.183, 0.190] is a literature-
+  Z3 direct-residual v2 latent-replacement full dispatch. Predicted band [0.183, 0.190] is a literature-
   prediction synthesis (Ballé 2018 + Z1 MDL ablation at 99.29% density), NOT
-  measurement. The recipe is smoke_only with training_artifact_v1 validation
-  and explicitly sets Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1 so the remote
-  driver passes --enable-v2-latent-replacement to the trainer. Z3 production
-  dispatch is v2-only; append-only Z3HP1 is forensic-only historical code.
+  measurement. The recipe is now full-dispatchable after the 2026-05-15
+  Modal T4 smoke anchor completed green (`fc-01KRNPJM15X4NH28375SCE954M`) and
+  the local pre-deploy gate passed. It explicitly sets
+  Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1 and SMOKE_ONLY=0 so the remote
+  driver passes --enable-v2-latent-replacement and runs `_full_main`.
+  Z3 production dispatch is v2-only; append-only Z3HP1 is forensic-only
+  historical code.
 
   Architectural risk:
   - At A1's 99.29% scorer-conditional MDL density the realistic delta is at
@@ -155,6 +159,7 @@ sentinel_files:
 
 env_overrides:
   Z3_BALLE_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  SMOKE_ONLY: "0"
   Z3_BALLE_A1_ARCHIVE_PATH: /workspace/pact/submissions/a1/archive.zip
   Z3_BALLE_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
   Z3_BALLE_OUTPUT_DIR: /workspace/pact/lane_substrate_z3_balle_hyperprior_bolton_results/output
@@ -173,7 +178,7 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  Z3 Ballé hyperprior v2 latent-replacement first-anchor SMOKE dispatch
+  Z3 Ballé hyperprior v2 latent-replacement first-anchor FULL dispatch
   recipe.
 
   This recipe explicitly selects v2 by setting
@@ -190,8 +195,8 @@ notes: |
 
   Per the long-term campaign C5 ranking, Z3 is the cheapest across-class
   validation that a literature-anchored class-shift mechanism reduces A1
-  bytes without distortion regression. The smoke is the canonical empirical
-  test; full training remains routed through smoke-before-full and active
+  bytes without distortion regression. The smoke anchor landed green on
+  2026-05-15; this recipe now runs the score-bearing full path through active
   lane-claim discipline.
 
   PHASE 2 COUNCIL APPROVED 6/6 unanimous 2026-05-14 per

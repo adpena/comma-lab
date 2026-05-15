@@ -59,8 +59,10 @@ Z3_BALLE_DEVICE="${Z3_BALLE_DEVICE:-cuda}"
 Z3_BALLE_HYPER_LATENT_DIM="${Z3_BALLE_HYPER_LATENT_DIM:-8}"
 Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT="${Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-1}"
 
-# Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke.
-SMOKE_ONLY="${SMOKE_ONLY:-1}"
+# Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke. Default is full because
+# the recipe-level smoke anchor has landed green and full dispatch is now the
+# score-bearing path.
+SMOKE_ONLY="${SMOKE_ONLY:-0}"
 
 DISPATCH_INSTANCE_JOB_ID="${Z3_BALLE_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${Z3_BALLE_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"

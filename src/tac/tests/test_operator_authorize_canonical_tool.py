@@ -205,6 +205,8 @@ def test_z3_operator_recipe_explicitly_selects_v2_latent_replacement() -> None:
     env_overrides = op._build_env_overrides(recipe, "unit_job_z3_v2")
 
     assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1" in env_overrides.split(",")
+    assert "SMOKE_ONLY=0" in env_overrides.split(",")
+    assert recipe.smoke_only is False
     assert recipe.raw["active_dispatch_contract"] == "z3_v2_latent_replacement_a1_base"
     assert recipe.raw["dispatch_contracts"][0]["archive_role"] == (
         "z3hv2_section_replaces_a1_latent_blob"
@@ -228,6 +230,7 @@ def test_z3_remote_driver_defaults_to_v2_latent_replacement() -> None:
         '${V2_LATENT_REPLACEMENT_ARGS[@]+"${V2_LATENT_REPLACEMENT_ARGS[@]}"}'
         in text
     )
+    assert 'SMOKE_ONLY="${SMOKE_ONLY:-0}"' in text
     assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-0" not in text
 
 
