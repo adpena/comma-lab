@@ -22,6 +22,18 @@ LANE_ID="lane_d1_segnet_margin_polytope_encoder_20260514"
 TAG="${TAG:-substrate_d1_segnet_margin_polytope}"
 LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_d1_polytope_results}"
 
+# Catalog #224 sister fix (parity with D4/Z3/Z4/Z5 lane scripts): set
+# deterministic CUDA/runtime environment before bootstrap or trainer code can
+# import torch and hit cuBLAS or DALI/NVDEC. Empirical anchor: D1 dispatch
+# 2026-05-15T08:26:38Z (substrate_d1_segnet_margin_polytope_modal_t4_dispatch_
+# 20260515T082638Z__smoke__50ep) reached upstream/evaluate.py and crashed at
+# `nvml error (999): A nvml internal driver error occurred` inside DALI fn.
+# experimental.inputs.video pipeline. The 4 sister lane scripts (D4/Z3/Z4/Z5)
+# already export DALI_DISABLE_NVML; D1 was the missing wire-in.
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
+export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+
 # Catalog #204 (PR95++ Modal smoke score-custody harden 2026-05-14):
 # contest_auth_eval.py refuses score-grade evidence under /tmp. Modal workers
 # run from /tmp/pact, so when MODAL_RUNTIME=1 + /modal_results exists, write
