@@ -1415,12 +1415,18 @@ def _write_runtime(submission_dir: Path) -> None:
 
 
 def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes) -> None:
-    """Build a deterministic archive.zip with a single member ``x`` (Z3 0.bin).
+    """Build a deterministic archive.zip with canonical single member ``0.bin``.
 
     Per Catalog #19: use ZipInfo + writestr with fixed timestamps for
-    deterministic byte output.
+    deterministic byte output. Per HNeRV parity discipline lesson 3 +
+    Catalog #146: monolithic single-file ``0.bin`` is the canonical contest
+    archive grammar. Empirical anchor 2026-05-15: Z3 v2 smoke
+    ``fc-01KRNHEGC9ZE48Y68GGJHP7FXN`` SMOKE RED with diagnostic
+    ``zip_members=['x'] expected=['0.bin']`` ($2 wasted) caught by local
+    pre-deploy harness post-fix. Bug class extincted via
+    ``tools/local_pre_deploy_check.py::check_archive_grammar``.
     """
-    info = zipfile.ZipInfo(filename="x", date_time=(1980, 1, 1, 0, 0, 0))
+    info = zipfile.ZipInfo(filename="0.bin", date_time=(1980, 1, 1, 0, 0, 0))
     info.compress_type = zipfile.ZIP_STORED
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr(info, bin_bytes)
