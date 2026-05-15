@@ -250,3 +250,38 @@ Sweep summary:
 
 No score claim. These are exact-eval candidates only after paired dispatch
 claim + paired `[contest-CUDA]`/`[contest-CPU]` auth eval recovery.
+
+## Nonzero D1 Paired Dispatch - 2026-05-15T17:49Z
+
+Two nonzero payload-regenerated D1 candidates were dispatched as paired Modal
+auth evals. Each pair uses the same archive/runtime on both axes.
+
+| candidate | axis | call id | first recovery at 2026-05-15T17:50Z |
+| --- | --- | --- | --- |
+| `d1_b50k_L2_rgb_payload` | `[contest-CUDA]` | `fc-01KRPC42FCBHPYZ6M8WFDDKVQW` | pending |
+| `d1_b50k_L2_rgb_payload` | `[contest-CPU]` | `fc-01KRPC4K5N0N1FK8D3PQGWQT51` | pending |
+| `d1_b100k_L2_green_payload` | `[contest-CUDA]` | `fc-01KRPC42FWFAPZMXNDMNWVZFBX` | pending |
+| `d1_b100k_L2_green_payload` | `[contest-CPU]` | `fc-01KRPC4K0RDQPR7JTFMFM7SC4B` | pending |
+
+Dispatch plan artifacts:
+
+- `experiments/results/d1_b50k_L2_rgb_payload_paired_auth_dispatch_plan_20260515T1755Z.json`
+- `experiments/results/d1_b100k_L2_green_payload_paired_auth_dispatch_plan_20260515T1755Z.json`
+
+Recovery commands:
+
+```bash
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval/d1_b50k_L2_rgb_payload_paired_auth_20260515T1755Z_cuda
+
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval_cpu/d1_b50k_L2_rgb_payload_paired_auth_20260515T1755Z_cpu
+
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval/d1_b100k_L2_green_payload_paired_auth_20260515T1755Z_cuda
+
+.venv/bin/python tools/recover_modal_auth_eval.py \
+  --output-dir experiments/results/modal_auth_eval_cpu/d1_b100k_L2_green_payload_paired_auth_20260515T1755Z_cpu
+```
+
+No score claim yet; all four calls were pending on first recovery.
