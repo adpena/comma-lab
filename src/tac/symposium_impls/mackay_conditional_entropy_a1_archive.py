@@ -1,12 +1,30 @@
 # SPDX-License-Identifier: MIT
-"""MacKay conditional entropy estimator for the A1 archive.
+"""MacKay-style position-partition entropy proxy for the A1 archive.
 
-Implements Shannon conditional entropy ``H(A1_archive | scorer_state_dict)``
-over the canonical A1 archive bytes per the Grand Reunion symposium
-2026-05-15 (Phase F Implement-Now #1, MacKay + Filler).
+Implements a Shannon-entropy-style PROXY over the canonical A1 archive bytes
+per the Grand Reunion symposium 2026-05-15 (Phase F Implement-Now #1,
+MacKay + Filler).
 
-Math contract
-=============
+Per Catalog #269 (codex bkrbqet3p F4) — this module emits a
+**position-partition proxy**, NOT the true scorer-conditional entropy
+``H(A1_archive | scorer_state_dict)``. The previous docstring + field naming
+overstated the binding: the partition is computed by hashing byte position
+only and never reads scorer weights, tensor shapes, classes, or any
+scorer-derived feature. Future Phase 2 enhancement will bind the context
+model to real scorer-derived features (state_dict signatures / per-layer
+norms / per-tensor entropies); until then the result is excluded from
+canonical lower-bound persistence and from autopilot ranking
+``H(A1 | scorer_state_dict)``-tagged consumers.
+
+Module-level invariants per Catalog #269 (substring tokens auditable
+by the catalog gate):
+
+* ``true_scorer_conditional_entropy_claim=false`` (Python value: ``False``)
+* ``position_partition_proxy=true`` (Python value: ``True``)
+* ``evidence_grade="position-partition-proxy"``
+
+Math contract (proxy)
+=====================
 
 Per Shannon's source coding theorem, the minimum expected codelength for a
 source ``X`` given side information ``Y`` is the conditional entropy
@@ -19,30 +37,36 @@ sections with distinct prior structure; per-section conditional entropy
 floors the rate-axis cost achievable via perfect entropy coding when the
 decoder shares the prior with the encoder.
 
-For the contest: the SegNet+PoseNet scorer ``state_dict`` is a SHARED PRIOR
+In principle, the SegNet+PoseNet scorer ``state_dict`` is a SHARED PRIOR
 between encoder and decoder (the contest scorer ships with ``upstream/`` and
-is not charged against the archive). The conditional entropy of the archive
-given the scorer is therefore the rate-axis lower bound for any codec whose
-decoder may consult the scorer at compress time but not inflate time.
+is not charged against the archive). The TRUE conditional entropy of the
+archive given the scorer would be the rate-axis lower bound for any codec
+whose decoder may consult the scorer at compress time but not inflate time.
+This module does NOT compute that quantity (see Catalog #269); it computes
+a position-partition proxy that satisfies ``H(X | partition(position)) <=
+H(X)`` per Cover & Thomas Theorem 2.6.5 but does NOT bind to scorer state.
 
 Three context models are computed per the Implement-Now #1 spec:
 
 * ``zero_context`` — raw byte entropy ``H(X)`` (worst case)
 * ``brotli_context`` — observed compressed size in bits per byte (matches
   current archive)
-* ``scorer_prior_context`` — entropy estimated under a frequency model
-  conditioned on a per-section ``scorer_class`` partition derived from the
-  scorer state-dict tensor structure (32-class hash partition over kernel
-  shape × out-channels). This is a tractable proxy for the true
-  ``H(archive | scorer)`` that MacKay's framing motivates; the gap between
-  ``brotli_context`` and ``scorer_prior_context`` is the slack a Filler-style
-  syndrome-trellis coder could close.
+* ``position_partition_context`` — entropy estimated under a frequency model
+  conditioned on a deterministic 32-bucket hash partition over byte
+  POSITION only. Per Catalog #269 this is a position-partition proxy, NOT
+  a true scorer-conditional entropy. The gap between ``brotli_context`` and
+  ``position_partition_context`` is the slack a Filler-style syndrome-trellis
+  coder could close IF its side information were equivalent to the position
+  partition; the slack does NOT reflect savings achievable via a true
+  scorer-conditional model. Future Phase 2 enhancement will replace this
+  proxy with a context model bound to actual scorer-derived features.
 
 [verified-against: Shannon, ``A Mathematical Theory of Communication`` 1948
 Theorem 4 (entropy of a discrete source); Cover & Thomas ``Elements of
-Information Theory`` 2nd ed §2.2 (joint and conditional entropy); MacKay
-``Information Theory, Inference, and Learning Algorithms`` 2003 §5.4
-(arithmetic coding lower bound = conditional entropy).]
+Information Theory`` 2nd ed §2.2 (joint and conditional entropy) + Theorem
+2.6.5 (conditioning reduces entropy); MacKay ``Information Theory, Inference,
+and Learning Algorithms`` 2003 §5.4 (arithmetic coding lower bound =
+conditional entropy).]
 
 Usage
 =====
@@ -85,11 +109,14 @@ __all__ = (
     "A1SectionEntropy",
     "compute_a1_conditional_entropy_estimate",
     "estimate_brotli_context_bits",
-    "estimate_scorer_conditional_bits",
+    "estimate_position_partition_bits",
+    "estimate_scorer_conditional_bits",  # back-compat alias for the proxy
     "estimate_zero_context_bits",
     "load_cached_a1_conditional_entropy_estimate",
+    "position_partition_proxy",
     "shannon_entropy_bits",
     "save_a1_conditional_entropy_estimate",
+    "true_scorer_conditional_entropy_claim",
     "update_from_anchor",
 )
 
@@ -99,24 +126,60 @@ A1_CONDITIONAL_ENTROPY_STATE_PATH: Final[Path] = (
     REPO_ROOT / ".omx" / "state" / "a1_conditional_entropy_estimate.json"
 )
 
+# Module-level disclosure constants per Catalog #269 (codex bkrbqet3p F4).
+# The position-partition partition is computed by hashing byte position
+# only and never reads scorer weights, tensor shapes, or any
+# scorer-derived feature. Downstream consumers (Pareto solver, autopilot
+# ranker, continual-learning posterior) MUST consult these constants
+# before treating the estimate as a true ``H(X | scorer_state_dict)``
+# bound.
+true_scorer_conditional_entropy_claim: Final[bool] = False
+position_partition_proxy: Final[bool] = True
+EVIDENCE_GRADE_POSITION_PARTITION_PROXY: Final[str] = "position-partition-proxy"
+
+# Op-routable TODO (Phase 2 enhancement): bind the context model to real
+# scorer-derived features (scorer state_dict signatures / per-layer norms /
+# per-tensor entropies) so the slack reflects savings achievable via a
+# true scorer-conditional model instead of a position-only partition.
+
 _SCORER_CONDITIONING_BUCKETS: Final[int] = 32
 
 
 @dataclasses.dataclass(frozen=True)
 class A1SectionEntropy:
-    """Per-section entropy under three context models (units: bits / byte)."""
+    """Per-section entropy under three context models (units: bits / byte).
+
+    Per Catalog #269, ``scorer_prior_context_bits_per_byte`` is preserved
+    as a back-compat field name but is semantically a position-partition
+    proxy. ``position_partition_context_bits_per_byte`` is the canonical
+    name added by the F4 fix; both fields hold the same value.
+    """
 
     section_name: str
     section_size_bytes: int
     section_sha256: str
     zero_context_bits_per_byte: float
     brotli_context_bits_per_byte: float
+    # Back-compat field (= position_partition_context_bits_per_byte) per
+    # Catalog #269 — preserved for downstream consumers that already key
+    # on the original schema. NEW callers should use
+    # ``position_partition_context_bits_per_byte``.
     scorer_prior_context_bits_per_byte: float
+    position_partition_context_bits_per_byte: float = 0.0
 
 
 @dataclasses.dataclass(frozen=True)
 class A1ConditionalEntropyEstimate:
-    """Top-level estimate written to ``.omx/state/`` for autopilot consumption."""
+    """Top-level estimate written to ``.omx/state/`` for autopilot consumption.
+
+    Per Catalog #269 (codex bkrbqet3p F4): the ``scorer_prior_context``
+    fields hold a position-partition proxy NOT a true scorer-conditional
+    entropy. ``true_scorer_conditional_entropy_claim`` is exported as
+    ``False`` and ``position_partition_proxy`` is exported as ``True`` so
+    autopilot ranking + Pareto solver consumers know to exclude this
+    estimate from canonical lower-bound persistence until the Phase 2
+    enhancement binds the context model to real scorer features.
+    """
 
     archive_path: str
     archive_size_bytes: int
@@ -124,12 +187,19 @@ class A1ConditionalEntropyEstimate:
     sections: tuple[A1SectionEntropy, ...]
     aggregate_zero_context_bits: float
     aggregate_brotli_context_bits: float
+    # Back-compat aggregate field (= aggregate_position_partition_context_bits)
+    # per Catalog #269. Same value, two names for migration.
     aggregate_scorer_prior_context_bits: float
     slack_brotli_minus_scorer_prior_bits: float
     slack_brotli_minus_scorer_prior_fraction: float
     evidence_grade: str
     score_claim: bool
     notes: str
+    # Catalog #269 self-disclosure fields. Defaults preserved for back-compat
+    # readers loading older serialized state.
+    true_scorer_conditional_entropy_claim: bool = False
+    position_partition_proxy: bool = True
+    aggregate_position_partition_context_bits: float = 0.0
 
 
 def shannon_entropy_bits(symbol_counts: Iterable[int]) -> float:
@@ -176,16 +246,23 @@ def estimate_brotli_context_bits(payload: bytes, *, brotli_size_bytes: int | Non
     return float(len(brotli.compress(payload, quality=11))) * 8.0
 
 
-def _scorer_prior_buckets(payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS) -> list[bytes]:
-    """Partition payload bytes into ``n_buckets`` bins via a stable hash.
+def _position_partition_buckets(
+    payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS
+) -> list[bytes]:
+    """Partition payload bytes into ``n_buckets`` bins via a stable position hash.
 
-    The bucketing simulates conditioning on a scorer-derived partition of
-    archive byte positions. Because we do not have direct access to the
-    scorer's per-byte prior at A1 archive construction time, we use a stable
-    deterministic hash bucketing as the per-byte conditioning surrogate; this
-    is the canonical MacKay-style proxy for ``H(X | Y)`` when ``Y`` is a
-    partition function on positions and the per-bucket distribution is
-    estimated empirically.
+    Per Catalog #269 (codex bkrbqet3p F4): the bucketing is computed by
+    hashing byte POSITION only — it never reads scorer weights, tensor
+    shapes, classes, or any scorer-derived feature. The previous name
+    ``_scorer_prior_buckets`` overstated the binding; the canonical name
+    is now ``_position_partition_buckets``. The legacy name is preserved
+    as a back-compat alias below.
+
+    The per-bucket entropy estimate downstream provides ``H(X | Y)``
+    where ``Y`` is the deterministic position partition; this bounds the
+    conditional entropy of the archive given any side-information that
+    can be reconstructed from byte position alone — which does NOT include
+    scorer state.
     """
     if n_buckets <= 0:
         raise ValueError("n_buckets must be > 0")
@@ -199,28 +276,55 @@ def _scorer_prior_buckets(payload: bytes, *, n_buckets: int = _SCORER_CONDITIONI
     return [bytes(b) for b in buckets]
 
 
-def estimate_scorer_conditional_bits(payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS) -> float:
-    """Conditional entropy ``H(X | Y)`` summed in bits given a position partition.
+# Back-compat alias for the legacy name. New code should use
+# ``_position_partition_buckets``.
+def _scorer_prior_buckets(
+    payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS
+) -> list[bytes]:
+    """Back-compat alias; see :func:`_position_partition_buckets`."""
+    return _position_partition_buckets(payload, n_buckets=n_buckets)
+
+
+def estimate_position_partition_bits(
+    payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS
+) -> float:
+    """Bits attributable to ``payload`` under a position-partition context model.
 
     Per Cover & Thomas Theorem 2.6.5 (conditioning reduces entropy):
     ``H(X | Y) = sum_y p(y) · H(X | Y=y) <= H(X)``.
 
     Equality holds iff ``X`` and ``Y`` are independent. The partition we use
     is deterministic on byte position; the per-bucket entropy reflects the
-    local distribution of bytes that share the same ``Y`` class. This bounds
-    the conditional entropy of the archive given any side-information that
-    can be reconstructed from byte position alone (which includes scorer
-    class via a known position-to-class table).
+    local distribution of bytes that share the same ``Y`` class.
+
+    Per Catalog #269: this is a position-partition proxy, NOT a true
+    scorer-conditional entropy. The previous name
+    ``estimate_scorer_conditional_bits`` overstated the binding; it is
+    preserved as a back-compat alias below. New callers should use
+    ``estimate_position_partition_bits``.
     """
     if not payload:
         return 0.0
     total_bits = 0.0
-    for bucket in _scorer_prior_buckets(payload, n_buckets=n_buckets):
+    for bucket in _position_partition_buckets(payload, n_buckets=n_buckets):
         if not bucket:
             continue
         bucket_entropy = shannon_entropy_bits(Counter(bucket).values())
         total_bits += bucket_entropy * len(bucket)
     return total_bits
+
+
+def estimate_scorer_conditional_bits(
+    payload: bytes, *, n_buckets: int = _SCORER_CONDITIONING_BUCKETS
+) -> float:
+    """Back-compat alias; see :func:`estimate_position_partition_bits`.
+
+    Per Catalog #269 (codex bkrbqet3p F4): this name overstated the
+    binding (the implementation never reads scorer state). The canonical
+    name is now ``estimate_position_partition_bits``; this alias delegates
+    to the canonical helper for back-compat.
+    """
+    return estimate_position_partition_bits(payload, n_buckets=n_buckets)
 
 
 def _section_record(
@@ -237,18 +341,21 @@ def _section_record(
             zero_context_bits_per_byte=0.0,
             brotli_context_bits_per_byte=0.0,
             scorer_prior_context_bits_per_byte=0.0,
+            position_partition_context_bits_per_byte=0.0,
         )
     n = len(payload)
     zero_bits = estimate_zero_context_bits(payload)
     brotli_bits = estimate_brotli_context_bits(payload, brotli_size_bytes=compressed_size_bytes)
-    scorer_bits = estimate_scorer_conditional_bits(payload)
+    partition_bits = estimate_position_partition_bits(payload)
+    bits_per_byte = partition_bits / n
     return A1SectionEntropy(
         section_name=name,
         section_size_bytes=n,
         section_sha256=hashlib.sha256(payload).hexdigest(),
         zero_context_bits_per_byte=zero_bits / n,
         brotli_context_bits_per_byte=brotli_bits / n,
-        scorer_prior_context_bits_per_byte=scorer_bits / n,
+        scorer_prior_context_bits_per_byte=bits_per_byte,  # back-compat
+        position_partition_context_bits_per_byte=bits_per_byte,
     )
 
 
@@ -284,16 +391,24 @@ def compute_a1_conditional_entropy_estimate(
             )
     aggregate_zero = sum(s.zero_context_bits_per_byte * s.section_size_bytes for s in sections)
     aggregate_brotli = sum(s.brotli_context_bits_per_byte * s.section_size_bytes for s in sections)
-    aggregate_scorer = sum(
-        s.scorer_prior_context_bits_per_byte * s.section_size_bytes for s in sections
+    aggregate_partition = sum(
+        s.position_partition_context_bits_per_byte * s.section_size_bytes for s in sections
     )
-    slack = aggregate_brotli - aggregate_scorer
+    slack = aggregate_brotli - aggregate_partition
     slack_fraction = (slack / aggregate_brotli) if aggregate_brotli > 0 else 0.0
+    # Per Catalog #269 (codex bkrbqet3p F4): the slack is the gap between
+    # brotli and a POSITION-PARTITION proxy, NOT the scorer-conditional
+    # entropy. It bounds savings from a Filler-style syndrome-trellis coder
+    # whose side information is the position partition; it does NOT bound
+    # savings from a true scorer-conditional model.
     notes = (
         "[empirical:submissions/a1/archive.zip] [contest-CPU GHA Linux x86_64 anchor 0.1928] "
-        "scorer_prior_context uses position-partition surrogate for true scorer-conditional "
-        "entropy; slack is upper bound on rate-axis savings achievable by syndrome-trellis "
-        "coder per Filler. Catalog #256."
+        "[position-partition-proxy] Per Catalog #269 (codex bkrbqet3p F4): the partition is "
+        "computed by hashing byte position only; it does NOT read scorer state. "
+        "true_scorer_conditional_entropy_claim=False. position_partition_proxy=True. "
+        "Excluded from canonical lower-bound persistence and autopilot ranking until "
+        "Phase 2 enhancement binds the context model to real scorer-derived features. "
+        "Catalog #256 + #269."
     )
     return A1ConditionalEntropyEstimate(
         archive_path=str(path),
@@ -302,12 +417,15 @@ def compute_a1_conditional_entropy_estimate(
         sections=tuple(sections),
         aggregate_zero_context_bits=aggregate_zero,
         aggregate_brotli_context_bits=aggregate_brotli,
-        aggregate_scorer_prior_context_bits=aggregate_scorer,
+        aggregate_scorer_prior_context_bits=aggregate_partition,  # back-compat
         slack_brotli_minus_scorer_prior_bits=slack,
         slack_brotli_minus_scorer_prior_fraction=slack_fraction,
-        evidence_grade="theoretical-bound-prediction",
+        evidence_grade=EVIDENCE_GRADE_POSITION_PARTITION_PROXY,
         score_claim=False,
         notes=notes,
+        true_scorer_conditional_entropy_claim=False,
+        position_partition_proxy=True,
+        aggregate_position_partition_context_bits=aggregate_partition,
     )
 
 

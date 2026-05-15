@@ -100,10 +100,12 @@ import numpy as np
 
 __all__ = (
     "BLAHUT_ARIMOTO_FLOOR_STATE_PATH",
+    "CONTEST_RATE_DENOM_BYTES",
     "ContestTheoreticalFloor",
     "ParetoSubProblem",
     "RateDistortionResult",
     "binary_entropy",
+    "bits_per_unit_to_contest_rate_term",
     "blahut_arimoto_rate_distortion",
     "compute_contest_theoretical_floor",
     "dykstra_project_onto_pareto_frontier",
@@ -119,8 +121,60 @@ BLAHUT_ARIMOTO_FLOOR_STATE_PATH: Final[Path] = (
     REPO_ROOT / ".omx" / "state" / "blahut_arimoto_theoretical_floor_estimate.json"
 )
 
+# Contest rate denominator per ``upstream/evaluate.py:92`` verbatim:
+# ``rate = 25 * archive_bytes / sum(uncompressed_video_bytes)``. For the
+# canonical contest video corpus (``upstream/videos/0.mkv`` decoded raw)
+# the denominator is 37,545,489 bytes. Per CLAUDE.md "Contest compliance
+# canonical constraints" + Catalog #268 (codex bkrbqet3p F3) — the rate
+# term in the contest score is normalized archive bytes, not bits per
+# unit; the symposium F3 implementation must convert via this constant
+# before adding to ``contest_score_floor``.
+CONTEST_RATE_DENOM_BYTES: Final[int] = 37_545_489
+
 DEFAULT_MAX_ITERATIONS: Final[int] = 1024
 DEFAULT_CONVERGENCE_TOLERANCE: Final[float] = 1e-9
+
+
+def bits_per_unit_to_contest_rate_term(
+    r_bits_per_unit: float, num_units: int
+) -> float:
+    """Convert a bits-per-unit rate to the contest's ``25 * R`` term.
+
+    Parameters
+    ----------
+    r_bits_per_unit:
+        Rate in bits per unit (e.g. bits per pixel, bits per pose component,
+        bits per source symbol). Must be ``>= 0``.
+    num_units:
+        Number of units the rate is averaged over (e.g. total pixels in the
+        scored video corpus, or total pose-component samples). Must be ``> 0``.
+
+    Returns
+    -------
+    The contest score's rate term: ``25 * archive_bytes_estimate /
+    CONTEST_RATE_DENOM_BYTES``, where ``archive_bytes_estimate =
+    (r_bits_per_unit * num_units) / 8``.
+
+    Notes
+    -----
+    Per Catalog #268 (codex bkrbqet3p F3): the previous implementation
+    added ``25.0 * r_combined`` directly to the contest score where
+    ``r_combined`` was bits-per-unit. The contest formula at
+    ``upstream/evaluate.py:92`` divides bytes by 37,545,489 first; the
+    correct rate term is therefore ``25 * (r_bits_per_unit * num_units / 8)
+    / CONTEST_RATE_DENOM_BYTES``. Without this conversion the
+    ``contest_score_floor`` was dimensionally invalid and could be orders
+    of magnitude wrong for realistic distortions.
+
+    [verified-against: ``upstream/evaluate.py:92`` (rate computation);
+    Catalog #268 acceptance contract.]
+    """
+    if r_bits_per_unit < 0:
+        raise ValueError("r_bits_per_unit must be >= 0")
+    if num_units <= 0:
+        raise ValueError("num_units must be > 0")
+    archive_bytes_estimate = (r_bits_per_unit * float(num_units)) / 8.0
+    return 25.0 * archive_bytes_estimate / float(CONTEST_RATE_DENOM_BYTES)
 
 
 def binary_entropy(p: float) -> float:
@@ -349,6 +403,21 @@ def dykstra_project_onto_pareto_frontier(
     return r_seg, r_pose, max_iterations, False
 
 
+# Default per-axis unit counts for the canonical contest video corpus
+# (``upstream/videos/0.mkv`` decoded raw). These are used when the caller
+# does not supply explicit ``num_units_seg`` / ``num_units_pose`` so the
+# bits-per-unit rates emitted by ``_segmentation_rate_function`` and
+# ``_pose_rate_function`` can be converted to contest-normalized archive
+# bytes via :func:`bits_per_unit_to_contest_rate_term` per Catalog #268.
+#
+# Segmentation: 5-class logits at 384x512 over 600 frames →
+#   600 * 384 * 512 = 117,964,800 pixels (per-pixel-bit unit).
+# Pose: 6 pose components per frame-pair over 600 frame-pairs →
+#   600 * 6 = 3,600 pose-component samples.
+DEFAULT_NUM_UNITS_SEG: Final[int] = 600 * 384 * 512
+DEFAULT_NUM_UNITS_POSE: Final[int] = 600 * 6
+
+
 @dataclasses.dataclass(frozen=True)
 class ContestTheoreticalFloor:
     """The Blahut-Arimoto + Dykstra theoretical floor for the contest."""
@@ -359,7 +428,11 @@ class ContestTheoreticalFloor:
     rate_lower_bound_seg_bits_per_unit: float
     rate_lower_bound_pose_bits_per_unit: float
     rate_lower_bound_combined_bits_per_unit: float
+    num_units_seg: int
+    num_units_pose: int
+    rate_term_contest_normalized: float
     contest_score_floor: float
+    theoretical_floor_units_calibrated: bool
     dykstra_iterations: int
     dykstra_converged: bool
     evidence_grade: str
@@ -372,18 +445,29 @@ def compute_contest_theoretical_floor(
     target_d_seg: float,
     target_d_pose: float,
     operating_point_anchor: str = "A1 [contest-CPU GHA Linux x86_64] 0.1928",
+    num_units_seg: int = DEFAULT_NUM_UNITS_SEG,
+    num_units_pose: int = DEFAULT_NUM_UNITS_POSE,
 ) -> ContestTheoreticalFloor:
     """Compute the contest theoretical floor at a given operating point.
 
     Per the symposium Phase F #2 spec:
     1. Compute ``R_seg*`` via :func:`_segmentation_rate_function` at
-       ``target_d_seg``.
+       ``target_d_seg`` (in bits per pixel).
     2. Compute ``R_pose*`` via :func:`_pose_rate_function` at
-       ``target_d_pose``.
+       ``target_d_pose`` (in bits per pose-component sample).
     3. Project onto the convex Pareto frontier via Dykstra.
-    4. Compose with contest formula coefficients.
+    4. Convert each per-axis bits-per-unit rate to its share of contest
+       archive bytes via :func:`bits_per_unit_to_contest_rate_term`,
+       then compose with contest formula coefficients per
+       ``upstream/evaluate.py:92``.
 
-    Returns the typed floor + iteration trace.
+    Per Catalog #268 (codex bkrbqet3p F3): the rate term is normalized
+    archive bytes (``25 * archive_bytes / 37,545,489``), NOT
+    ``25 * bits_per_unit`` as the previous implementation incorrectly
+    composed. The conversion is applied per axis (seg + pose) so the
+    sum of bits maps to the sum of bytes correctly.
+
+    Returns the typed floor + iteration trace + calibration flag.
     """
     if target_d_seg <= 0:
         raise ValueError("target_d_seg must be > 0")
@@ -396,15 +480,27 @@ def compute_contest_theoretical_floor(
         target_d_pose=target_d_pose,
     )
     r_combined = r_seg + r_pose
-    # Contest formula floor:
-    #   S* = 100 · D_seg + sqrt(10 · D_pose) + 25 · R*
+    # Per Catalog #268 — convert bits-per-unit to contest-normalized
+    # archive bytes BEFORE adding to the contest score. Each axis
+    # contributes its own share of the rate term; the seg axis uses
+    # bits-per-pixel × pixels, the pose axis uses bits-per-pose-component
+    # × pose-component samples.
+    rate_term_seg = bits_per_unit_to_contest_rate_term(r_seg, num_units_seg)
+    rate_term_pose = bits_per_unit_to_contest_rate_term(r_pose, num_units_pose)
+    rate_term_contest_normalized = rate_term_seg + rate_term_pose
+    # Contest formula floor (calibrated):
+    #   S* = 100 · D_seg + sqrt(10 · D_pose) + 25 · archive_bytes / 37545489
     contest_floor = (
-        100.0 * target_d_seg + math.sqrt(10.0 * target_d_pose) + 25.0 * r_combined
+        100.0 * target_d_seg
+        + math.sqrt(10.0 * target_d_pose)
+        + rate_term_contest_normalized
     )
     notes = (
         "[prediction; first-principles theoretical bound] Tao hidden-symmetry derivation "
         "(6D Gaussian pose) + Boyd Dykstra projection onto Pareto frontier + Cover-Thomas "
-        "Gaussian R(D). Catalog #257."
+        "Gaussian R(D). Rate term calibrated per Catalog #268 "
+        "(bits-per-unit → contest-normalized archive bytes via "
+        "bits_per_unit_to_contest_rate_term). Catalog #257."
     )
     return ContestTheoreticalFloor(
         operating_point_anchor=operating_point_anchor,
@@ -413,7 +509,11 @@ def compute_contest_theoretical_floor(
         rate_lower_bound_seg_bits_per_unit=float(r_seg),
         rate_lower_bound_pose_bits_per_unit=float(r_pose),
         rate_lower_bound_combined_bits_per_unit=float(r_combined),
+        num_units_seg=int(num_units_seg),
+        num_units_pose=int(num_units_pose),
+        rate_term_contest_normalized=float(rate_term_contest_normalized),
         contest_score_floor=float(contest_floor),
+        theoretical_floor_units_calibrated=True,
         dykstra_iterations=iterations,
         dykstra_converged=converged,
         evidence_grade="theoretical-bound-prediction",

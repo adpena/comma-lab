@@ -146,8 +146,12 @@ def test_compute_estimate_synthetic_archive_yields_expected_aggregates(tmp_path:
     assert uniform_section.zero_context_bits_per_byte == pytest.approx(8.0, abs=1e-12)
     assert estimate.aggregate_zero_context_bits >= estimate.aggregate_scorer_prior_context_bits - 1e-6
     assert estimate.score_claim is False
-    assert estimate.evidence_grade == "theoretical-bound-prediction"
-    # Slack non-negative iff brotli >= scorer-prior; not guaranteed for synthetic, but typed correctly.
+    # Per Catalog #269 (codex bkrbqet3p F4): the estimate is a
+    # position-partition proxy, NOT a true scorer-conditional entropy.
+    assert estimate.evidence_grade == "position-partition-proxy"
+    assert estimate.true_scorer_conditional_entropy_claim is False
+    assert estimate.position_partition_proxy is True
+    # Slack non-negative iff brotli >= partition-proxy; not guaranteed for synthetic, but typed correctly.
     assert isinstance(estimate.slack_brotli_minus_scorer_prior_fraction, float)
 
 

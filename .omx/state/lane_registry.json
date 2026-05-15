@@ -29519,7 +29519,7 @@
           "evidence": "scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh + scripts/operator_authorize_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch.sh + heartbeat + claim_lane_dispatch terminal hook"
         }
       },
-      "notes": "FULL CPU paired ABORTED 2026-05-15 per operator-approved recommendation: smoke fc-01KRPKCXARWP7NBGJCXB2P9QEP returned 0.19869 [diagnostic-CPU] EXACTLY matching Z3 v2 baseline because production-safe direct-residual mode ships IDENTICAL Z3HV2 wire bytes regardless of training-time loss. Codex review bkrbqet3p F1 EMPIRICALLY CONFIRMED: G1 archive does not consume hyperprior/class bytes (empty hyperprior_weights_int8 + w_hat_int8 slots). FULL CUDA fc-01KRPMDRH2VNVKFFAYTWD4X0SD already dispatched (sunk cost approx $5-10); when harvested MUST be tagged DIRECT_RESIDUAL_Z3HV2_REPRODUCTION not G1 evidence; do NOT update autopilot ranking on this result; expected score approx 0.23171 [contest-CUDA] matching Z3 v2 paired CUDA. FULL CPU paired NOT FIRED \u2014 would have wasted $0.10-0.50 measuring identical Z3HV2 bytes already anchored at Z3 v2 contest-CPU 0.19778969 per dual-eval discipline. research_only=true until grammar fix lands. REACTIVATION CRITERIA: G1 entropy-coded sigma-table+class-index variant of wire grammar landed (~$5-10 + ~2 days substrate engineering per Z3-G1 sub c5b9f38d2 op-routables). CODEX-FIX-WAVE subagent a038fba in flight will land STRICT preflight gate (catalog # TBD via canonical-claim) that would have caught this BEFORE smoke spend.",
+      "notes": "FULL CPU paired ABORTED 2026-05-15 per operator-approved recommendation: smoke fc-01KRPKCXARWP7NBGJCXB2P9QEP returned 0.19869 [diagnostic-CPU] EXACTLY matching Z3 v2 baseline because production-safe direct-residual mode ships IDENTICAL Z3HV2 wire bytes regardless of training-time loss. Codex review bkrbqet3p F1 EMPIRICALLY CONFIRMED: G1 archive does not consume hyperprior/class bytes (empty hyperprior_weights_int8 + w_hat_int8 slots). FULL CUDA fc-01KRPMDRH2VNVKFFAYTWD4X0SD already dispatched (sunk cost approx $5-10); when harvested MUST be tagged DIRECT_RESIDUAL_Z3HV2_REPRODUCTION not G1 evidence; do NOT update autopilot ranking on this result; expected score approx 0.23171 [contest-CUDA] matching Z3 v2 paired CUDA. FULL CPU paired NOT FIRED \u2014 would have wasted $0.10-0.50 measuring identical Z3HV2 bytes already anchored at Z3 v2 contest-CPU 0.19778969 per dual-eval discipline. research_only=true until grammar fix lands. REACTIVATION CRITERIA: G1 entropy-coded sigma-table+class-index variant of wire grammar landed (~$5-10 + ~2 days substrate engineering per Z3-G1 sub c5b9f38d2 op-routables). CODEX-FIX-WAVE subagent a038fba in flight will land STRICT preflight gate (catalog # TBD via canonical-claim) that would have caught this BEFORE smoke spend. [WAVE-B AUDIT RE-TAG 2026-05-15] HISTORICAL-EVIDENCE-AUDIT a80299c4 manifest classifies 8 gate-evidence rows on this lane (impl_complete + real_archive_empirical + contest_cuda + contest_cpu + strict_preflight + three_clean_review + memory_entry + deploy_runbook) as POTENTIALLY-CORRUPTED diagnostic_cpu_non_promotable signature: the 0.19869 score quoted in real_archive_empirical evidence is [diagnostic-CPU non-promotable] per Catalog #221, NOT [contest-CUDA] / NOT [contest-CPU GHA Linux x86_64]. Per CLAUDE.md Apples-to-apples evidence discipline + Catalog #221 fail-closed for score claims: this score is non-promotable, score_claim=false, rank_or_kill_eligible=false. NO KILL \u2014 DEFERRED-pending-re-verification per CLAUDE.md KILL-LAST-RESORT. Reactivation criteria: paired Modal A100 CUDA dispatch on Z3 v2 archive sha c55e2d0d on 1:1 contest-compliant hardware (Linux x86_64 / NVIDIA T4|A100|4090) with paired Linux x86_64 contest-CPU eval per CLAUDE.md Submission auth eval \u2014 BOTH CPU AND CUDA non-negotiable. Phantom-score directory class hardened structurally via Catalog #249. Original notes preserved verbatim per HISTORICAL_PROVENANCE Catalog #110 + #113.",
       "research_only": true,
       "reactivation_criteria": [
         "g1_entropy_coded_sigma_table_and_class_index_wire_grammar_landed",
@@ -29690,6 +29690,171 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_pre_dispatch_codex_review_automation_20260515",
+      "name": "Pre-dispatch codex adversarial-review automation (Catalog #271)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/run_codex_review_for_dispatch.py + tools/operator_authorize.py::_run_codex_pre_dispatch_review wire-in + Catalog #271 strict gate"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Preflight check check_dispatch_runs_codex_adversarial_review_for_paid_dispatch wired warn-only in preflight_all (file: tools/run_codex_review_for_dispatch.py)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_pre_dispatch_codex_review_automation_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_distinguishing_feature_integration_contract_20260515",
+      "name": "Distinguishing-Feature Integration Contract (Catalog #272)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Catalog #272 gate function + tools/verify_distinguishing_feature_byte_mutation.py canonical helper + 94 tests pass; WARN-ONLY wired in preflight_all() (live count 6); per CLAUDE.md Strict-flip atomicity rule strict-flip pending operator-routed backfill"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #272 wired strict=False (WARN-ONLY) per CLAUDE.md Strict-flip atomicity rule; 6 live violations across 6 unexempt L2+ substrate lanes; strict-flip pending operator-routed backfill"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #272 STRICT preflight gate landed WARN-ONLY (live count 6) per CLAUDE.md Strict-flip atomicity rule; companion canonical helper tools/verify_distinguishing_feature_byte_mutation.py emits per-section byte-mutation proofs (rc 0/1/2); 4 contract fields added to lane_maturity.py set-field allowlist (distinguishing_feature_name / distinguishing_bytes_path / inflate_consumer_function / byte_mutation_smoke_passes); 94 dedicated tests pass; sister of Catalog #220/#139/#105/#226/#240/#249. lane_class=substrate_engineering for this protection-layer lane (NO byte addition, NO archive output).",
+      "lane_class": "substrate_engineering"
+    },
+    {
+      "id": "lane_wave_a_f3_f4_symposium_fix_20260515",
+      "name": "WAVE-A: F3+F4 symposium_impls source fixes (Catalog #268+#269)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/symposium_impls/blahut_arimoto_theoretical_floor.py + src/tac/symposium_impls/mackay_conditional_entropy_a1_archive.py production fixes per codex bkrbqet3p F3+F4; Catalog #268+#269 live counts driven to 0; back-compat preserved via aliases"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #268 + #269 ALREADY landed warn-only by sister CODEX-FIX-WAVE; this lane drives both live counts to 0 enabling future strict-flip atomically"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wave_a_f3_f4_symposium_impls_fix_landed_20260515.md (this landing)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_fix_wave_2_dispatch_protocol_fail_open_20260515",
+      "name": "Codex bklem3v5j fix wave 2 (F1+F2 dispatch protocol fail-open)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "F1 fix at tools/local_pre_deploy_check.py:572-602 (fail-closed-on-import) + F2 fix at tools/canonical_dispatch_optimization_protocol.py:_verify_tier2/_verify_tier3 (paired-env discipline) + Catalog #279/#280 STRICT preflight gates wired in src/tac/preflight.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #279 + #280 STRICT-from-byte-one wired in preflight_all() at src/tac/preflight.py:2211/2228; live count 0/0; META-meta #118/#159/#176/#185 all 0"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "codex review bklem3v5j adversarial finding fixed; runtime+preflight tests verified strict-rc=1 per codex's explicit recommendation; sister CODEX-FIX-WAVE-bkrbqet3p (Catalog #266-#269) precedent"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_codex_fix_wave_2_dispatch_optimization_protocol_fail_open_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -29699,5 +29864,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T20:31:10Z"
+  "updated_at": "2026-05-15T20:59:21Z"
 }
