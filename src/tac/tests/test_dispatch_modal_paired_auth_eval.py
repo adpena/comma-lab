@@ -82,6 +82,45 @@ def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
     assert "experiments/modal_auth_eval_cpu.py" in cpu_cmd
 
 
+def test_paired_modal_plan_relativizes_inflate_sh_under_submission_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    submission_dir = tmp_path / "candidate" / "submission_dir"
+    submission_dir.mkdir(parents=True)
+    inflate_sh = submission_dir / "inflate.sh"
+    inflate_sh.write_text("#!/bin/sh\n")
+
+    monkeypatch.setattr(
+        mod,
+        "find_promotable_anchor_for_axis_and_sha",
+        lambda *_args, **_kwargs: None,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        submission_dir=str(submission_dir),
+        inflate_sh=str(inflate_sh),
+        run_id="unit_pair_run",
+        pair_group_id="unit_pair_group",
+        lane_id_base="lane_unit_pair",
+        output_root=Path("experiments/results"),
+        modal_bin=".venv/bin/modal",
+        gpu="T4",
+        claim_agent="codex:test",
+        claim_notes="unit test",
+    )
+
+    assert plan["runtime"]["inflate_sh"] == "inflate.sh"
+    assert plan["runtime"]["inflate_sh_original"] == str(inflate_sh)
+    for cmd in (plan["commands"]["contest_cuda"], plan["commands"]["contest_cpu"]):
+        assert cmd[cmd.index("--inflate-sh") + 1] == "inflate.sh"
+
+
 def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -66,6 +66,31 @@ def _optional_arg(cmd: list[str], flag: str, value: str) -> None:
         cmd.extend([flag, value])
 
 
+def _normalize_inflate_sh_for_submission_dir(
+    *, submission_dir: str, inflate_sh: str
+) -> str:
+    """Return the Modal-wrapper inflate path for an uploaded submission dir.
+
+    ``experiments/modal_auth_eval*.py`` treats ``--inflate-sh`` as relative to
+    the uploaded ``--submission-dir`` when that directory is provided. Operators
+    naturally pass the local full path (`candidate/submission_dir/inflate.sh`);
+    normalize that to `inflate.sh` here so paired dispatch remains the safe
+    default instead of failing after Modal app startup.
+    """
+    if not submission_dir or not inflate_sh:
+        return inflate_sh
+    submission_path = Path(submission_dir)
+    inflate_path = Path(inflate_sh)
+    try:
+        rel = inflate_path.resolve().relative_to(submission_path.resolve())
+    except ValueError:
+        try:
+            rel = inflate_path.relative_to(submission_path)
+        except ValueError:
+            return inflate_sh
+    return rel.as_posix()
+
+
 def _resolve_skipped_axes(
     *,
     archive_sha256: str,
@@ -112,6 +137,10 @@ def build_plan(
     notes = claim_notes or (
         "paired Modal auth eval; same archive/runtime required on contest_cuda and contest_cpu axes"
     )
+    inflate_sh_for_cmd = _normalize_inflate_sh_for_submission_dir(
+        submission_dir=submission_dir,
+        inflate_sh=inflate_sh,
+    )
     cuda_output = output_root / "modal_auth_eval" / f"{run_id}_cuda"
     cpu_output = output_root / "modal_auth_eval_cpu" / f"{run_id}_cpu"
     cuda_lane = f"{lane_id_base}_contest_cuda"
@@ -125,7 +154,7 @@ def build_plan(
         "--archive",
         str(archive),
         "--inflate-sh",
-        inflate_sh,
+        inflate_sh_for_cmd,
         "--output-dir",
         str(cuda_output),
         "--gpu",
@@ -151,7 +180,7 @@ def build_plan(
         "--archive",
         str(archive),
         "--inflate-sh",
-        inflate_sh,
+        inflate_sh_for_cmd,
         "--output-dir",
         str(cpu_output),
         "--detach",
@@ -210,7 +239,8 @@ def build_plan(
         },
         "runtime": {
             "submission_dir": submission_dir or None,
-            "inflate_sh": inflate_sh,
+            "inflate_sh": inflate_sh_for_cmd,
+            "inflate_sh_original": inflate_sh if inflate_sh_for_cmd != inflate_sh else None,
             "expected_runtime_tree_sha256": expected_runtime_tree_sha256 or None,
         },
         "outputs": {
