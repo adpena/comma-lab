@@ -72,6 +72,48 @@ high-byte bitmask.
 This does not escape the `<0.192` local minimum; it is a small exact compiler
 recode and a cleaner launch point for PacketIR/range-coder work.
 
+## Exact CUDA closure
+
+After this ledger was opened, the HDM9 format09 packet was dispatched through
+Modal T4 exact CUDA auth eval:
+
+```bash
+PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
+  experiments/modal_auth_eval.py \
+  --archive experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip \
+  --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar \
+  --inflate-sh inflate.sh \
+  --output-dir experiments/results/modal_auth_eval/pr106_hdm9_fmt09_t4_20260515T043733Z \
+  --expected-runtime-tree-sha256 cfdfb0ab801162207222c43f3701e8232e89f80e739d27bf52f35bee76a81291 \
+  --detach --provider-detach-ack \
+  --lane-id lane_pr106_hdm9_packetir_format09_20260515 \
+  --instance-job-id pr106_hdm9_fmt09_t4_20260515T043733Z
+```
+
+Recovered result:
+
+- call id: `fc-01KRMYVF8A08TKG09HSV5Q8R0D`
+- output dir:
+  `experiments/results/modal_auth_eval/pr106_hdm9_fmt09_t4_20260515T043733Z`
+- result:
+  `experiments/results/modal_auth_eval/pr106_hdm9_fmt09_t4_20260515T043733Z/modal_cuda_auth_eval_result.json`
+- status: `recovered`
+- score axis: `[contest-CUDA]`
+- score: `0.20633303308963796`
+- bytes: `186352`
+- archive SHA-256:
+  `09bcd867c2778d38d5ac04b648d44cb3bdfcfd3e3db402beb8886826cced50e9`
+- avg SegNet dist: `0.0006426`
+- avg PoseNet dist: `0.00003236`
+- dispatch claim:
+  `completed_contest_cuda_modal_auth_eval_recovered`
+
+The score exactly matches the pure rate prediction from format08:
+`0.2063490137045129 - 25*24/37545489 = 0.20633303308963796`.
+
+Verdict: confirmed legitimate `[contest-CUDA]` byte-only improvement over
+PR106 HDM8 format08, but not a frontier escape.
+
 ## Proofs
 
 - profile:
