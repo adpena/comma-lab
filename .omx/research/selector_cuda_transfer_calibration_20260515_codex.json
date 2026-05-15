@@ -1,0 +1,264 @@
+{
+  "decision": {
+    "best_score_delta_vs_baseline": 0.00011799785677868435,
+    "blockers": [
+      "exact_cuda_positive_or_neutral_selector_control_missing",
+      "measured_selector_controls_transfer_negative_on_cuda",
+      "pr101_cpu_cuda_inflated_output_aggregate_mismatch",
+      "cpu_cuda_gap_component_dominated_not_rate_limited"
+    ],
+    "calibration_status": "blocked",
+    "exact_cuda_selector_rows": 8,
+    "policy": "Do not route broad proxy-ranked film-grain/selector/water-fill dispatch until a CUDA-in-loop selector control is positive or neutral, or a transfer model explains the current regressions.",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_broad_waterfill_dispatch": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "selector_positive_or_neutral_rows": 0,
+    "selector_regression_rows": 8,
+    "worst_score_delta_vs_baseline": 0.0218036209247984
+  },
+  "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-15T08:04:32.799077+00:00",
+  "next_actions": [
+    "Build a CUDA-in-loop selector objective before broad water-fill dispatch.",
+    "Continue PR101 CPU-only selector work only when the candidate changes components by more than the charged byte cost.",
+    "Treat rate-only PR101 FEC6 polishing as insufficient for CUDA while the paired aggregate hashes differ.",
+    "Use PR106 format0B as the closed PacketIR reference; do not redispatch identical archives."
+  ],
+  "paired_axis_xray": {
+    "classification": "cpu_positive_cuda_miss_due_to_component_drift",
+    "contest_cpu_score": 0.1920513168811056,
+    "contest_cuda_score": 0.22621002169349796,
+    "cpu_aggregate_sha256": "10c68e4266e79fc3e878fd20136e8aaa56262b3a2ff45eed7b8d5a4b1e1ee66d",
+    "cuda_aggregate_sha256": "6fe2b1941f10e4f984dcda96f84acb60b06c353cc8868fba33b7f3a32508f9ed",
+    "cuda_minus_cpu_score_delta": 0.03415870481239236,
+    "dominant_score_delta_component": "pose",
+    "path": "experiments/results/xray_paired_cpu_cuda_axis_delta_pr101_fec6_20260515_codex/paired_axis_delta.json",
+    "raw_output_aggregate_sha256_match": false,
+    "score_delta_byte_equivalent": 51300.21103151698,
+    "target_gaps": {
+      "contest_cpu": {
+        "already_below_target": false,
+        "byte_gap_if_components_unchanged": 78,
+        "score_gap": 5.131688110560084e-05,
+        "target_score": 0.192
+      },
+      "contest_cuda": {
+        "already_below_target": false,
+        "byte_gap_if_components_unchanged": 51378,
+        "score_gap": 0.03421002169349796,
+        "target_score": 0.192
+      }
+    }
+  },
+  "schema": "selector_cuda_transfer_calibration_v1",
+  "score_claim": false,
+  "selector_rows": [
+    {
+      "archive_bytes": 186518,
+      "archive_sha256": "98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223",
+      "avg_posenet_dist": 3.249e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 177,
+      "canonical_score": 0.2064796628814009,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_cuda_selector_sparse_top001_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.00011799785677868435,
+      "technique": "hdm8_cuda_selector_sparse_top001_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 186395,
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "avg_posenet_dist": 3.39e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 635,
+      "canonical_score": 0.2067847322067291,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_fixed_even_rgb_bias_m1_p05_p05_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.0004230671821068843,
+      "technique": "hdm8_fixed_even_rgb_bias_m1_p05_p05_positive_control_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 186395,
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "avg_posenet_dist": 3.406e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 701,
+      "canonical_score": 0.20682813109460968,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_fixed_even_grain_chroma_1_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.000466466069987459,
+      "technique": "hdm8_fixed_even_grain_chroma_1_positive_control_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 186395,
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "avg_posenet_dist": 3.423e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 770,
+      "canonical_score": 0.20687413086920664,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_fixed_even_rgb_bias_m05_p05_0_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.0005124658445844199,
+      "technique": "hdm8_fixed_even_rgb_bias_m05_p05_0_positive_control_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 186395,
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "avg_posenet_dist": 3.468e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 952,
+      "canonical_score": 0.20699534652238277,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_fixed_even_rgb_bias_0_p05_m05_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.000633681497760552,
+      "technique": "hdm8_fixed_even_rgb_bias_0_p05_m05_positive_control_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 186760,
+      "archive_sha256": "b0645ee705cf7fe34300f5b4586efe03d5c3262c66ac72a503b90599a996d004",
+      "avg_posenet_dist": 3.71e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 2276,
+      "canonical_score": 0.20787717836935493,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_cuda_selector_sparse_budget128_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.0015155133447327107,
+      "technique": "hdm8_cuda_selector_sparse_budget128_exact_cuda_review"
+    },
+    {
+      "archive_bytes": 187366,
+      "archive_sha256": "793747837bb1d71987e4a7055f35e25620f8eb530e6f297cc2020e5e00f1d798",
+      "avg_posenet_dist": 7.339e-05,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 14640,
+      "canonical_score": 0.2161099173824375,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_film_grain_selector_charged_mps_aggressive_v2_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.00974825235781529,
+      "technique": "hdm8_film_grain_selector_charged_mps_aggressive_v2_cuda_review"
+    },
+    {
+      "archive_bytes": 188756,
+      "archive_sha256": "f44cabbdcbac50e49f1d67e5075bb6912919877f6566e34053ab6423eeb165fe",
+      "avg_posenet_dist": 0.00014608,
+      "avg_segnet_dist": 0.0006426,
+      "baseline_score": 0.20636166502462222,
+      "byte_equivalent_delta": 32745,
+      "canonical_score": 0.22816528594942062,
+      "exact_cuda_evidence": true,
+      "failure_class": "legitimate_score_regression_or_component_collapse",
+      "measured_config_status": "measured_config_retired",
+      "outcome": "cuda_regression",
+      "path": ".omx/research/hdm8_even_frame_selector_exact_cuda_result_review_20260515_codex.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_axis": "contest_cuda",
+      "score_delta_vs_baseline": 0.0218036209247984,
+      "technique": "hdm8_even_frame_selector_cuda_review"
+    }
+  ],
+  "tool": "tools/build_selector_cuda_transfer_calibration.py",
+  "tool_run_manifest": {
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 5157,
+        "path": ".omx/research/hdm8_cuda_selector_sparse_top001_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "25419398076b7b742386115f2b865aec8d19e732e63a4147b62b5950727dc9bd"
+      },
+      {
+        "bytes": 5064,
+        "path": ".omx/research/hdm8_cuda_selector_sparse_budget128_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "2a0406f00d2a936fdc0ec9d9608cc867f84ac56e49ee69271766c2b1616c14bc"
+      },
+      {
+        "bytes": 5024,
+        "path": ".omx/research/hdm8_even_frame_selector_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "6fea31bf25f82f7c6b82c53026e3eceb4efcaf86d9611818682f708ed3817f96"
+      },
+      {
+        "bytes": 5076,
+        "path": ".omx/research/hdm8_film_grain_selector_charged_mps_aggressive_v2_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "bd2283c99553fc1fbdf25b796cff69dfa4aed33c69545263117d79c15aa439f2"
+      },
+      {
+        "bytes": 5208,
+        "path": ".omx/research/hdm8_fixed_even_grain_chroma_1_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "f9282c36d7509b78b40b477c8e2eb6635ce357f3c021a6d00f03ee83ede1e2cf"
+      },
+      {
+        "bytes": 5236,
+        "path": ".omx/research/hdm8_fixed_even_rgb_bias_0_p05_m05_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "f3bf174ab3c6fbdb0799e35a9c705c900ecbee53446089a936ea54fde660b1b4"
+      },
+      {
+        "bytes": 5255,
+        "path": ".omx/research/hdm8_fixed_even_rgb_bias_m05_p05_0_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "ec873bad924f417325ea70dc8a7cacf1627c1eb27475bad169756b8c15fa07eb"
+      },
+      {
+        "bytes": 5216,
+        "path": ".omx/research/hdm8_fixed_even_rgb_bias_m1_p05_p05_exact_cuda_result_review_20260515_codex.json",
+        "sha256": "ea7b5a2313720e18c998a9f005f30183d6697cef56c1fc324ef4f6f163d35528"
+      },
+      {
+        "bytes": 6154,
+        "path": "experiments/results/xray_paired_cpu_cuda_axis_delta_pr101_fec6_20260515_codex/paired_axis_delta.json",
+        "sha256": "0fd05987de6317675390f7fca9a5f850581530b7e5749470894dc1a30124558c"
+      }
+    ],
+    "score_claim": false
+  }
+}
