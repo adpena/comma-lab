@@ -323,6 +323,20 @@ def gate_auth_eval_call(
         return None
 
     # 6. Run the canonical contest_auth_eval.py invocation.
+    #
+    # The evaluator's custody guard rejects score-grade evidence whose work
+    # dir is silently deleted or parked under the process temp root. Keep the
+    # exact-eval work tree next to the requested JSON by default so trainer
+    # artifacts remain inspectable after harvest. Modal training wrappers are
+    # a narrow exception: they intentionally force AUTH_EVAL_DEVICE=cpu and
+    # MODAL_AUTH_EVAL_ADVISORY_ONLY=1 because the training container does not
+    # provide NVDEC. That path is diagnostic/advisory only, so the evaluator's
+    # explicit temp bypass is appropriate and keeps the failure mode visible.
+    work_dir = output_json.parent / f"{output_json.stem}_work"
+    modal_cpu_advisory = (
+        auth_eval_device_type == "cpu"
+        and os.environ.get("MODAL_AUTH_EVAL_ADVISORY_ONLY", "").strip() == "1"
+    )
     cmd = [
         sys.executable,
         str(contest_auth_eval_script),
@@ -336,7 +350,12 @@ def gate_auth_eval_call(
         auth_eval_device_type,
         "--json-out",
         str(output_json),
+        "--keep-work-dir",
+        "--work-dir",
+        str(work_dir),
     ]
+    if modal_cpu_advisory:
+        cmd.append("--allow-temp-work-dir")
     if extra_argv:
         cmd.extend(str(a) for a in extra_argv)
     print(f"[{substrate_tag}-auth-eval] {' '.join(cmd)}", flush=True)

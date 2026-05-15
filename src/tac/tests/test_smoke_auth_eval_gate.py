@@ -384,6 +384,46 @@ def test_gate_subprocess_command_contains_required_flags(tmp_path: Path) -> None
     assert "--device" in cmd
     assert "cuda" in cmd
     assert "--json-out" in cmd
+    assert "--keep-work-dir" in cmd
+    assert "--work-dir" in cmd
+    assert cmd[cmd.index("--work-dir") + 1] == str(
+        out_json.parent / f"{out_json.stem}_work"
+    )
+    assert "--allow-temp-work-dir" not in cmd
+
+
+def test_gate_modal_cpu_advisory_uses_explicit_temp_bypass(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modal train-lane CPU auth eval is advisory, not score custody."""
+
+    monkeypatch.setenv("AUTH_EVAL_DEVICE", "cpu")
+    monkeypatch.setenv("MODAL_AUTH_EVAL_ADVISORY_ONLY", "1")
+    args = _make_args(smoke=False, skip_auth_eval=False)
+    out_json = tmp_path / "contest_auth_eval_cpu.json"
+    out_json.write_text(json.dumps(_coherent_score_payload()), encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    captured = {}
+
+    def _capture(cmd, **kw):
+        captured["cmd"] = cmd
+        return fake_proc
+
+    with mock.patch.object(subprocess, "run", side_effect=_capture):
+        out = gate_auth_eval_call(
+            args=args,
+            device="cuda",
+            **_gate_kwargs(tmp_path, output_json=out_json),
+        )
+
+    assert out is None
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("--device") + 1] == "cpu"
+    assert "--keep-work-dir" in cmd
+    assert "--work-dir" in cmd
+    assert "--allow-temp-work-dir" in cmd
+    assert args.auth_eval_skipped_reason == EXPLICIT_NON_CUDA_AUTH_EVAL_RESULT_REASON
 
 
 def test_gate_extra_argv_appended(tmp_path: Path) -> None:
