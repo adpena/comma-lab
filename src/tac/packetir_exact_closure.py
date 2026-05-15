@@ -658,11 +658,11 @@ def _runtime_score_affecting_sections_match(
     """Return whether runtime proof consumption covers PacketIR sections.
 
     Most PacketIR recodes preserve the same section names through runtime
-    decode. Format 0x08 deliberately elides the PR106 inner header from an
-    HDM8/HLM2 payload; the runtime reconstructs that header and consumes the
-    reconstructed generic ``pr106_payload``. Accept that alias only when the
-    proof binds the fixed HDM8/HLM2 format and records unchanged inner PR106
-    semantics.
+    decode. Formats 0x08 and 0x09 deliberately elide the PR106 inner header
+    from fixed HDM8/HLM2 or HDM9/HLM2 payloads; the runtime reconstructs that
+    header and consumes the reconstructed generic ``pr106_payload``. Accept
+    that alias only when the proof binds the fixed format and records unchanged
+    inner PR106 semantics.
     """
 
     if actual_sections == expected_sections:
@@ -671,25 +671,36 @@ def _runtime_score_affecting_sections_match(
             "mode": "exact_section_names",
             "evidence": {},
         }
-    hdm8_expected = {"pr106_hdm8_hlm2_payload_without_inner_header", "sidecar_payload"}
     generic_actual = {"pr106_payload", "sidecar_payload"}
-    if (
-        expected_sections == hdm8_expected
-        and actual_sections == generic_actual
-        and proof.get("format_id") == "0x08"
-        and proof.get("inner_pr106_payload_sha256_unchanged") is True
-    ):
-        return {
-            "matched": True,
-            "mode": "format_0x08_hdm8_hlm2_reconstructed_pr106_payload_alias",
-            "evidence": {
-                "expected_headerless_section": "pr106_hdm8_hlm2_payload_without_inner_header",
-                "runtime_consumed_reconstructed_section": "pr106_payload",
-                "inner_pr106_payload_sha256_unchanged": proof.get(
-                    "inner_pr106_payload_sha256_unchanged"
-                ),
-            },
-        }
+    headerless_aliases = {
+        "0x08": (
+            "pr106_hdm8_hlm2_payload_without_inner_header",
+            "format_0x08_hdm8_hlm2_reconstructed_pr106_payload_alias",
+        ),
+        "0x09": (
+            "pr106_hdm9_hlm2_payload_without_inner_header",
+            "format_0x09_hdm9_hlm2_reconstructed_pr106_payload_alias",
+        ),
+    }
+    alias = headerless_aliases.get(str(proof.get("format_id")))
+    if alias is not None:
+        expected_headerless_section, mode = alias
+        if (
+            expected_sections == {expected_headerless_section, "sidecar_payload"}
+            and actual_sections == generic_actual
+            and proof.get("inner_pr106_payload_sha256_unchanged") is True
+        ):
+            return {
+                "matched": True,
+                "mode": mode,
+                "evidence": {
+                    "expected_headerless_section": expected_headerless_section,
+                    "runtime_consumed_reconstructed_section": "pr106_payload",
+                    "inner_pr106_payload_sha256_unchanged": proof.get(
+                        "inner_pr106_payload_sha256_unchanged"
+                    ),
+                },
+            }
     return {
         "matched": False,
         "mode": "mismatch",

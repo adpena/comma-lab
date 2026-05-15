@@ -13,11 +13,14 @@ import pytest
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106SidecarPacket,
     canonicalize_brotli_dim_delta_sidecar_arrays,
     decode_brotli_dim_delta_sidecar_payload,
     decode_pr101_ranked_sidecar_payload_to_dim_delta,
+    decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
     emit_pr106_sidecar_recode_candidate_archive,
     encode_brotli_dim_delta_sidecar_payload,
@@ -40,6 +43,7 @@ PR106_R2_PR101_RUNTIME_PROOF = (
 PR106_R2_PR101_FULL_FRAME_PARITY = (
     REPO / "experiments/results/pr106_r2_same_runtime_full_frame_parity_local_cpu.json"
 )
+PR106_HDM8_FORMAT07_FIXTURE = REPO / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 
 
 def _sample_arrays(n: int = 12) -> tuple[np.ndarray, np.ndarray]:
@@ -219,6 +223,51 @@ def test_recode_profile_tool_reads_implicit_len_fixed_meta_archive(tmp_path: Pat
     assert implicit_row["delta_bytes_vs_current_charged_sidecar"] == 0
     assert implicit_row["runtime_decoder_implemented"] is True
     assert report["score_claim"] is False
+
+
+def test_recode_profile_tool_reads_hdm8_and_hdm9_headerless_archives(
+    tmp_path: Path,
+) -> None:
+    fixture_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_FIXTURE.read_bytes())
+    fixture_packet = parse_pr106_sidecar_packet(fixture_member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(fixture_packet)
+    candidates = lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    tool = _load_tool_module()
+
+    for format_id in (
+        PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    ):
+        candidate = next(
+            item for item in candidates if item.sidecar_format_id == format_id
+        )
+        candidate_member, candidate_archive = emit_pr106_sidecar_recode_candidate_archive(
+            fixture_member,
+            fixture_packet,
+            candidate,
+        )
+        candidate_packet = parse_pr106_sidecar_packet(candidate_member.payload)
+        archive = tmp_path / f"format{format_id:02x}.zip"
+        archive.write_bytes(candidate_archive)
+
+        report = tool.build_report(
+            tool.parse_args(
+                [
+                    "--sidecar-archive",
+                    str(archive),
+                    "--json-out",
+                    str(tmp_path / f"unused{format_id:02x}.json"),
+                ]
+            )
+        )
+
+        assert report["source"]["sidecar_format_id"] == f"0x{format_id:02X}"
+        assert (
+            report["source"]["semantic_source_format"]
+            == f"{candidate_packet.sidecar_kind}_decoded_then_profiled"
+        )
+        assert report["current_charged_sidecar_bytes"] == 526
+        assert report["score_claim"] is False
 
 
 def test_recode_candidate_manifest_carries_packetir_consumed_byte_proof() -> None:

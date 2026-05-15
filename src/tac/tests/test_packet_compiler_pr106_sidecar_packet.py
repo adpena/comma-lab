@@ -13,10 +13,12 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     build_pr106_sidecar_recode_candidate_packet,
+    decode_hdm9_decoder_to_hdm8_payload,
     decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta,
     decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
@@ -30,6 +32,7 @@ from tac.packet_compiler import (
     pr106_sidecar_mutation_manifest,
     prove_pr106_sidecar_packet_ir_identity,
     read_single_stored_member_archive,
+    recode_pr106_hdm8_hlm2_packet_to_hdm9,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -669,6 +672,71 @@ def test_pr106_sidecar_hdm8_hlm2_inner_headerless_candidate_roundtrips() -> None
         "decoder_magic": "HDM8",
         "latent_magic": "HLM2",
         "elided_inner_header_bytes": 4,
+    }
+    assert (reparsed_dims == dims).all()
+    assert (reparsed_deltas == deltas).all()
+
+
+def test_pr106_sidecar_hdm9_hlm2_inner_headerless_candidate_roundtrips() -> None:
+    source_archive = REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+    archive_bytes = source_archive.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    candidates = {candidate.name: candidate for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)}
+    hdm8_candidate = candidates[
+        "pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08"
+    ]
+    hdm9_candidate = candidates[
+        "pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09"
+    ]
+
+    hdm8_packet = build_pr106_sidecar_recode_candidate_packet(packet, hdm8_candidate)
+    hdm9_packet = build_pr106_sidecar_recode_candidate_packet(packet, hdm9_candidate)
+    direct_hdm9_packet = recode_pr106_hdm8_hlm2_packet_to_hdm9(hdm8_packet)
+    emitted_hdm8 = emit_pr106_sidecar_packet(hdm8_packet)
+    emitted_hdm9 = emit_pr106_sidecar_packet(hdm9_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted_hdm9)
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+
+    assert hdm9_candidate.sidecar_format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    assert hdm9_candidate.runtime_decoder_implemented is True
+    assert hdm9_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    assert hdm9_packet.pr106_bytes == direct_hdm9_packet.pr106_bytes
+    assert hdm9_packet.framing_meta is None
+    assert emitted_hdm9.startswith(b"HDM9")
+    assert len(emitted_hdm9) == len(emitted_hdm8) - 24
+    assert reparsed.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    )
+    hdm8_decoder = hdm8_packet.pr106_bytes[4 : 4 + 169_974]
+    hdm9_decoder = reparsed.pr106_bytes[4 : 4 + 169_950]
+    assert decode_hdm9_decoder_to_hdm8_payload(hdm9_decoder) == hdm8_decoder
+    assert [row["name"] for row in proof["sections"]] == [
+        "pr106_hdm9_hlm2_payload_without_inner_header",
+        "sidecar_payload",
+    ]
+    assert proof["score_affecting_section_names"] == [
+        "pr106_hdm9_hlm2_payload_without_inner_header",
+        "sidecar_payload",
+    ]
+    assert proof["all_payload_bytes_accounted"] is True
+    assert manifest["derived_fixed_meta"]["hdm9_hlm2_inner_headerless_packet"] is True
+    assert manifest["derived_fixed_meta"]["hdm9_hlm2_fixed_lengths"] == {
+        "decoder_payload_bytes": 169950,
+        "latent_payload_bytes": 15776,
+        "decoder_magic": "HDM9",
+        "latent_magic": "HLM2",
+        "elided_inner_header_bytes": 4,
+        "scale_low3_bytes": 84,
+        "scale_high_mask_bytes": 4,
+        "scale_high_base": 59,
     }
     assert (reparsed_dims == dims).all()
     assert (reparsed_deltas == deltas).all()

@@ -57,6 +57,7 @@ FIXED_STATE_SCHEMA = [
 
 PACKED_STATE_SCHEMA = sorted(FIXED_STATE_SCHEMA, key=lambda item: -int(np.prod(item[1])))
 HDM8_CHUNK_BROTLI_BYTES = (130887, 2769, 4397, 31805)
+HDM9_SCALE_HIGH_BASE = 0x3B
 DECODER_STORAGE_ORDER = (
     14, 22, 7, 6, 19, 10, 25, 4, 20, 9, 12, 15, 5, 11,
     18, 1, 21, 3, 27, 13, 2, 26, 24, 17, 16, 23, 8, 0,
@@ -111,7 +112,7 @@ def decode_packed_decoder(data):
     try:
         raw = brotli.decompress(data)
     except brotli.error as legacy_error:
-        if data[:4] in (b"HDM3", b"HDM4", b"HDM6", b"HDM7", b"HDM8"):
+        if data[:4] in (b"HDM3", b"HDM4", b"HDM6", b"HDM7", b"HDM8", b"HDM9"):
             raw = decode_hdm_decoder_raw(data)
         else:
             raw = decode_pr101_schema_decoder_raw(data, legacy_error=legacy_error)
@@ -191,10 +192,11 @@ def decode_pr101_schema_decoder_raw(data, *, legacy_error=None):
 
 
 def decode_hdm_decoder_raw(data):
-    """Decode HDM3/HDM4/HDM6/HDM7/HDM8 fixed-schema q-Brotli/raw-scale decoder bytes.
+    """Decode HDM3/HDM4/HDM6/HDM7/HDM8/HDM9 fixed-schema decoder bytes.
 
-    HDM3, HDM4, HDM6, HDM7, and HDM8 are lossless section recodes for the same
-    packed HNeRV decoder contract. Unknown or malformed HDM bytes fail closed.
+    HDM3, HDM4, HDM6, HDM7, HDM8, and HDM9 are lossless section recodes for the
+    same packed HNeRV decoder contract. Unknown or malformed HDM bytes fail
+    closed.
     """
     if data[:4] == b"HDM3":
         return decode_hdm3_decoder_raw(data)
@@ -206,6 +208,8 @@ def decode_hdm_decoder_raw(data):
         return decode_hdm7_decoder_raw(data)
     if data[:4] == b"HDM8":
         return decode_hdm8_decoder_raw(data)
+    if data[:4] == b"HDM9":
+        return decode_hdm9_decoder_raw(data)
     raise ValueError("invalid HDM decoder magic")
 
 
@@ -282,7 +286,7 @@ def decode_hdm4_decoder_raw(data):
     )
     records_by_name = {}
     split_start = 0
-    for chunk, split_end in zip(chunks, split_points):
+    for chunk, split_end in zip(chunks, split_points, strict=True):
         schema_slice = ordered_schema[split_start:split_end]
         expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
         if len(chunk) != expected:
@@ -350,7 +354,7 @@ def decode_hdm6_decoder_raw(data):
     )
     records_by_name = {}
     split_start = 0
-    for chunk, split_end in zip(chunks, split_points):
+    for chunk, split_end in zip(chunks, split_points, strict=True):
         schema_slice = ordered_schema[split_start:split_end]
         expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
         if len(chunk) != expected:
@@ -431,7 +435,7 @@ def decode_hdm7_decoder_raw(data):
     )
     records_by_name = {}
     split_start = 0
-    for chunk, split_end in zip(chunks, split_points):
+    for chunk, split_end in zip(chunks, split_points, strict=True):
         schema_slice = ordered_schema[split_start:split_end]
         expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
         if len(chunk) != expected:
@@ -505,7 +509,7 @@ def decode_hdm8_decoder_raw(data):
     )
     records_by_name = {}
     split_start = 0
-    for chunk, split_end in zip(chunks, split_points):
+    for chunk, split_end in zip(chunks, split_points, strict=True):
         schema_slice = ordered_schema[split_start:split_end]
         expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
         if len(chunk) != expected:
@@ -523,6 +527,100 @@ def decode_hdm8_decoder_raw(data):
         q = records_by_name.get(name)
         if q is None or len(q) != int(np.prod(shape)):
             raise ValueError(f"HDM8 decoded schema mismatch for {name}")
+        raw_parts.append(q)
+    return b"".join(raw_parts) + scale_stream
+
+
+def decode_hdm9_decoder_raw(data):
+    """Decode HDM9 q-Brotli/raw-scale-low3/scale-high-mask decoder bytes.
+
+    HDM9 preserves HDM8's fixed q-Brotli chunks and stores each fp32 scale's low
+    three bytes verbatim. The high byte is bit-packed because the PR106/R2 HDM8
+    scale stream uses only 0x3B and 0x3C in that byte position. The bitmask is
+    archive payload, so this remains byte-closed rather than source-embedded
+    model state.
+    """
+    if data[:4] != b"HDM9":
+        raise ValueError("invalid HDM9 decoder magic")
+    cursor = 4
+    split_points = (6, 9, 26, 28)
+    lengths = list(HDM8_CHUNK_BROTLI_BYTES[:-1])
+    chunks = []
+    for index, length in enumerate(lengths):
+        compressed = read_exact(data, cursor, length, f"HDM9 q_brotli_{index}")
+        cursor += length
+        try:
+            chunks.append(brotli.decompress(compressed))
+        except brotli.error as exc:
+            raise ValueError(f"HDM9 q stream chunk {index} brotli decode failed: {exc}") from exc
+    scale_count = len(PACKED_STATE_SCHEMA)
+    scale_low3_len = 3 * scale_count
+    scale_mask_len = (scale_count + 7) // 8
+    final_len = len(data) - cursor - scale_low3_len - scale_mask_len
+    if final_len <= 0:
+        raise ValueError("HDM9 derived final q stream chunk length must be positive")
+    if final_len != HDM8_CHUNK_BROTLI_BYTES[-1]:
+        raise ValueError(
+            "HDM9 derived final q stream chunk length mismatch: "
+            f"expected {HDM8_CHUNK_BROTLI_BYTES[-1]}, got {final_len}"
+        )
+    compressed = read_exact(data, cursor, final_len, "HDM9 q_brotli_final")
+    cursor += final_len
+    try:
+        chunks.append(brotli.decompress(compressed))
+    except brotli.error as exc:
+        raise ValueError(f"HDM9 q stream chunk {len(chunks)} brotli decode failed: {exc}") from exc
+    scale_low3 = read_exact(data, cursor, scale_low3_len, "HDM9 scale_low3_stream")
+    cursor += scale_low3_len
+    scale_hi_mask = read_exact(data, cursor, scale_mask_len, "HDM9 scale_high_mask")
+    cursor += scale_mask_len
+    if cursor != len(data):
+        raise ValueError("HDM9 decoder has trailing bytes")
+
+    padding_bits = scale_mask_len * 8 - scale_count
+    if padding_bits:
+        padding_mask = ((1 << padding_bits) - 1) << (8 - padding_bits)
+        if scale_hi_mask[-1] & padding_mask:
+            raise ValueError("HDM9 scale high-byte mask padding must be zero")
+    scale_parts = []
+    for index in range(scale_count):
+        bit = (scale_hi_mask[index // 8] >> (index % 8)) & 1
+        hi = HDM9_SCALE_HIGH_BASE + bit
+        start = 3 * index
+        scale_parts.append(scale_low3[start:start + 3] + bytes([hi]))
+    scale_stream = b"".join(scale_parts)
+
+    ordered_schema = sorted(
+        PACKED_STATE_SCHEMA,
+        key=lambda item: (
+            0 if len(item[1]) == 4 and item[1][2:] == (3, 3)
+            else 1 if len(item[1]) == 4
+            else 2 if item[0].endswith(".bias")
+            else 3,
+            -int(np.prod(item[1])),
+            item[0],
+        ),
+    )
+    records_by_name = {}
+    split_start = 0
+    for chunk, split_end in zip(chunks, split_points, strict=True):
+        schema_slice = ordered_schema[split_start:split_end]
+        expected = sum(int(np.prod(shape)) for _, shape in schema_slice)
+        if len(chunk) != expected:
+            raise ValueError("HDM9 q chunk length mismatch")
+        q_cursor = 0
+        for name, shape in schema_slice:
+            value_count = int(np.prod(shape))
+            records_by_name[name] = chunk[q_cursor:q_cursor + value_count]
+            q_cursor += value_count
+        split_start = split_end
+    if len(records_by_name) != len(PACKED_STATE_SCHEMA):
+        raise ValueError("HDM9 decoded record count mismatch")
+    raw_parts = []
+    for name, shape in PACKED_STATE_SCHEMA:
+        q = records_by_name.get(name)
+        if q is None or len(q) != int(np.prod(shape)):
+            raise ValueError(f"HDM9 decoded schema mismatch for {name}")
         raw_parts.append(q)
     return b"".join(raw_parts) + scale_stream
 

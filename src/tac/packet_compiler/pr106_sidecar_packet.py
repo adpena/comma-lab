@@ -39,6 +39,7 @@ PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED = 0x05
 PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x06
 PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x07
 PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x08
+PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x09
 PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -47,12 +48,19 @@ PR106_SUPPORTED_SIDECAR_FORMATS = (
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
 )
 PR106_HEADERLESS_INNER_FIRST_BYTE = 0xFF
 PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES = 169_974
+PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES = 169_950
 PR106_HDM8_HLM2_LATENT_PAYLOAD_BYTES = 15_776
 PR106_HDM8_HLM2_DECODER_MAGIC = b"HDM8"
+PR106_HDM9_HLM2_DECODER_MAGIC = b"HDM9"
 PR106_HDM8_HLM2_LATENT_MAGIC = b"HLM2"
+PR106_HDM9_SCALE_HIGH_BASE = 0x3B
+PR106_HDM9_SCALE_COUNT = 28
+PR106_HDM9_SCALE_LOW3_BYTES = 3 * PR106_HDM9_SCALE_COUNT
+PR106_HDM9_SCALE_HIGH_MASK_BYTES = (PR106_HDM9_SCALE_COUNT + 7) // 8
 PR106_LATENT_N_PAIRS = 600
 PR106_LATENT_N_DIMS = 28
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
@@ -145,6 +153,13 @@ class PR106SidecarPacket:
             )
         ):
             return "pr101_ranked_no_op_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided"
+        if (
+            self.format_id
+            == (
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+            )
+        ):
+            return "pr101_ranked_no_op_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided"
         return f"unknown_0x{self.format_id:02x}"
 
 
@@ -594,6 +609,213 @@ def _reconstruct_hdm8_hlm2_inner_headerless_pr106_bytes(inner_without_header: by
     )
 
 
+def _pack_hdm9_scale_tail(scale_stream: bytes) -> bytes:
+    """Pack 28 fp32 scale bytes as low3 stream plus 0x3B/0x3C high-byte mask."""
+
+    expected = 4 * PR106_HDM9_SCALE_COUNT
+    if len(scale_stream) != expected:
+        raise ValueError(
+            f"HDM9 scale stream must be {expected} bytes; got {len(scale_stream)}"
+        )
+    low3 = bytearray()
+    mask = bytearray(PR106_HDM9_SCALE_HIGH_MASK_BYTES)
+    for index in range(PR106_HDM9_SCALE_COUNT):
+        start = 4 * index
+        low3.extend(scale_stream[start : start + 3])
+        high = scale_stream[start + 3]
+        if high not in (PR106_HDM9_SCALE_HIGH_BASE, PR106_HDM9_SCALE_HIGH_BASE + 1):
+            raise ValueError(
+                "HDM9 scale high byte outside fixed two-symbol alphabet at "
+                f"index {index}: 0x{high:02X}"
+            )
+        if high == PR106_HDM9_SCALE_HIGH_BASE + 1:
+            mask[index // 8] |= 1 << (index % 8)
+    return bytes(low3) + bytes(mask)
+
+
+def _unpack_hdm9_scale_tail(scale_tail: bytes) -> bytes:
+    """Unpack HDM9 low3+high-mask scale bytes back to the 112-byte f32 tail."""
+
+    expected = PR106_HDM9_SCALE_LOW3_BYTES + PR106_HDM9_SCALE_HIGH_MASK_BYTES
+    if len(scale_tail) != expected:
+        raise ValueError(f"HDM9 scale tail must be {expected} bytes; got {len(scale_tail)}")
+    low3 = scale_tail[:PR106_HDM9_SCALE_LOW3_BYTES]
+    mask = scale_tail[PR106_HDM9_SCALE_LOW3_BYTES:]
+    padding_bits = len(mask) * 8 - PR106_HDM9_SCALE_COUNT
+    if padding_bits:
+        padding_mask = ((1 << padding_bits) - 1) << (8 - padding_bits)
+        if mask[-1] & padding_mask:
+            raise ValueError("HDM9 scale high-byte mask padding must be zero")
+    out = bytearray()
+    for index in range(PR106_HDM9_SCALE_COUNT):
+        start = 3 * index
+        bit = (mask[index // 8] >> (index % 8)) & 1
+        out.extend(low3[start : start + 3])
+        out.append(PR106_HDM9_SCALE_HIGH_BASE + bit)
+    return bytes(out)
+
+
+def encode_hdm9_decoder_from_hdm8_payload(hdm8_decoder_payload: bytes) -> bytes:
+    """Return the HDM9 byte-closed decoder recode for a fixed HDM8 payload.
+
+    HDM9 keeps HDM8's fixed q-Brotli chunks byte-for-byte and recodes only the
+    raw fp32 scale tail. The scale high-byte sequence is stored in a four-byte
+    mask, so no model parameter bytes are moved into runtime source.
+    """
+
+    if not hdm8_decoder_payload.startswith(PR106_HDM8_HLM2_DECODER_MAGIC):
+        raise ValueError("HDM9 recode source decoder must start with HDM8 magic")
+    if len(hdm8_decoder_payload) != PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES:
+        raise ValueError(
+            "HDM9 recode source HDM8 decoder length mismatch: "
+            f"got {len(hdm8_decoder_payload)} bytes; "
+            f"expected {PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES}"
+        )
+    q_payload_bytes = PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES - 4 - 4 * PR106_HDM9_SCALE_COUNT
+    q_payload = hdm8_decoder_payload[4 : 4 + q_payload_bytes]
+    scale_stream = hdm8_decoder_payload[4 + q_payload_bytes :]
+    hdm9 = PR106_HDM9_HLM2_DECODER_MAGIC + q_payload + _pack_hdm9_scale_tail(scale_stream)
+    if len(hdm9) != PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES:
+        raise ValueError(
+            "HDM9 recode length constant is stale: "
+            f"got {len(hdm9)} bytes; expected {PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES}"
+        )
+    return hdm9
+
+
+def decode_hdm9_decoder_to_hdm8_payload(hdm9_decoder_payload: bytes) -> bytes:
+    """Expand HDM9 decoder bytes to HDM8-equivalent bytes for compiler proofing."""
+
+    if not hdm9_decoder_payload.startswith(PR106_HDM9_HLM2_DECODER_MAGIC):
+        raise ValueError("HDM9 decoder payload must start with HDM9 magic")
+    if len(hdm9_decoder_payload) != PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES:
+        raise ValueError(
+            "HDM9 decoder length mismatch: "
+            f"got {len(hdm9_decoder_payload)} bytes; "
+            f"expected {PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES}"
+        )
+    q_payload_bytes = (
+        PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        - 4
+        - PR106_HDM9_SCALE_LOW3_BYTES
+        - PR106_HDM9_SCALE_HIGH_MASK_BYTES
+    )
+    q_payload = hdm9_decoder_payload[4 : 4 + q_payload_bytes]
+    scale_tail = hdm9_decoder_payload[4 + q_payload_bytes :]
+    return PR106_HDM8_HLM2_DECODER_MAGIC + q_payload + _unpack_hdm9_scale_tail(scale_tail)
+
+
+def _reconstruct_hdm9_hlm2_inner_headerless_pr106_bytes(inner_without_header: bytes) -> bytes:
+    """Reconstruct PR106 bytes from format 0x09's fixed HDM9/HLM2 payload."""
+
+    expected_len = (
+        PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        + PR106_HDM8_HLM2_LATENT_PAYLOAD_BYTES
+    )
+    if len(inner_without_header) != expected_len:
+        raise ValueError(
+            "format_id=0x09 HDM9/HLM2 headerless payload length mismatch: "
+            f"got {len(inner_without_header)} bytes; expected {expected_len}"
+        )
+    if inner_without_header[:4] != PR106_HDM9_HLM2_DECODER_MAGIC:
+        raise ValueError("format_id=0x09 headerless payload missing HDM9 magic")
+    latent_offset = PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+    if (
+        inner_without_header[latent_offset : latent_offset + 4]
+        != PR106_HDM8_HLM2_LATENT_MAGIC
+    ):
+        raise ValueError("format_id=0x09 headerless payload missing HLM2 magic")
+    return (
+        bytes([PR106_HEADERLESS_INNER_FIRST_BYTE])
+        + PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES.to_bytes(3, "little")
+        + inner_without_header
+    )
+
+
+def _hdm9_hlm2_inner_without_header_payload(pr106_bytes: bytes) -> bytes:
+    """Return HDM9/HLM2 inner payload with the PR106 four-byte header elided."""
+
+    expected_total = (
+        4
+        + PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+        + PR106_HDM8_HLM2_LATENT_PAYLOAD_BYTES
+    )
+    if len(pr106_bytes) != expected_total:
+        raise ValueError(
+            "format_id=0x09 HDM9/HLM2 PR106 inner payload length mismatch: "
+            f"got {len(pr106_bytes)} bytes; expected {expected_total}"
+        )
+    if pr106_bytes[0] != PR106_HEADERLESS_INNER_FIRST_BYTE:
+        raise ValueError(
+            "format_id=0x09 requires PR106 inner header byte "
+            f"0x{PR106_HEADERLESS_INNER_FIRST_BYTE:02X}; got 0x{pr106_bytes[0]:02X}"
+        )
+    decoder_len = int.from_bytes(pr106_bytes[1:4], "little")
+    if decoder_len != PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES:
+        raise ValueError(
+            "format_id=0x09 requires fixed HDM9 decoder length "
+            f"{PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES}; got {decoder_len}"
+        )
+    inner_without_header = pr106_bytes[4:]
+    if inner_without_header[:4] != PR106_HDM9_HLM2_DECODER_MAGIC:
+        raise ValueError(
+            "format_id=0x09 requires HDM9 decoder section magic at inner offset 4"
+        )
+    latent_offset = PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES
+    if (
+        inner_without_header[latent_offset : latent_offset + 4]
+        != PR106_HDM8_HLM2_LATENT_MAGIC
+    ):
+        raise ValueError(
+            "format_id=0x09 requires HLM2 latent section magic at fixed decoder boundary"
+        )
+    return inner_without_header
+
+
+def recode_pr106_hdm8_hlm2_packet_to_hdm9(
+    packet: PR106SidecarPacket,
+) -> PR106SidecarPacket:
+    """Recode a fixed HDM8/HLM2 PR106 packet to the HDM9 decoder prototype."""
+
+    reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(packet.sidecar_payload)
+    pr106_bytes = packet.pr106_bytes
+    expected_total = (
+        4
+        + PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES
+        + PR106_HDM8_HLM2_LATENT_PAYLOAD_BYTES
+    )
+    if len(pr106_bytes) != expected_total:
+        raise ValueError(
+            "HDM9 recode requires fixed HDM8/HLM2 PR106 bytes: "
+            f"got {len(pr106_bytes)} bytes; expected {expected_total}"
+        )
+    if pr106_bytes[0] != PR106_HEADERLESS_INNER_FIRST_BYTE:
+        raise ValueError("HDM9 recode requires a packed PR106 inner header")
+    decoder_len = int.from_bytes(pr106_bytes[1:4], "little")
+    if decoder_len != PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES:
+        raise ValueError(
+            "HDM9 recode requires HDM8 decoder length "
+            f"{PR106_HDM8_HLM2_DECODER_PAYLOAD_BYTES}; got {decoder_len}"
+        )
+    decoder = pr106_bytes[4 : 4 + decoder_len]
+    latents = pr106_bytes[4 + decoder_len :]
+    if not latents.startswith(PR106_HDM8_HLM2_LATENT_MAGIC):
+        raise ValueError("HDM9 recode requires HLM2 latent payload")
+    hdm9_decoder = encode_hdm9_decoder_from_hdm8_payload(decoder)
+    hdm9_pr106_bytes = (
+        bytes([PR106_HEADERLESS_INNER_FIRST_BYTE])
+        + len(hdm9_decoder).to_bytes(3, "little")
+        + hdm9_decoder
+        + latents
+    )
+    return PR106SidecarPacket(
+        format_id=PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        pr106_bytes=hdm9_pr106_bytes,
+        sidecar_payload=packet.sidecar_payload,
+        framing_meta=None,
+    )
+
+
 def decode_pr101_rank_elided_sidecar_payload_to_dim_delta(
     payload: bytes,
     framing_meta: bytes,
@@ -670,6 +892,10 @@ def decode_pr106_sidecar_packet_dim_delta(
         or packet.format_id
         == (
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+        )
+        or packet.format_id
+        == (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
         )
     ):
         return decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
@@ -1132,6 +1358,29 @@ def lossless_pr106_sidecar_recode_candidates(
                     ),
                 )
             )
+            candidates.append(
+                _candidate(
+                    name=(
+                        "pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_"
+                        "sidecar_format_0x09"
+                    ),
+                    encoded_bytes=fixed_payload,
+                    decoded=decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta(
+                        fixed_payload,
+                    ),
+                    sidecar_format_id=(
+                        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+                    ),
+                    runtime_decoder_implemented=True,
+                    notes=(
+                        "runtime_reconstructs_pr106_inner_header_from_fixed_hdm9_hlm2_lengths",
+                        "hdm9_requires_source_pr106_hdm8_hlm2_decoder_payload",
+                        "fixed_decoder_bytes=169950",
+                        "fixed_latent_bytes=15776",
+                        "fixed_sidecar_bytes=526",
+                    ),
+                )
+            )
 
     for candidate in candidates:
         if candidate.encoded_bytes and not (
@@ -1243,21 +1492,40 @@ def parse_pr106_sidecar_packet(
         hdm8_inner_headerless_format = (
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
         )
-        if hdm8_inner_headerless_format not in supported_formats:
+        hdm9_inner_headerless_format = (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+        )
+        if (
+            hdm8_inner_headerless_format not in supported_formats
+            and hdm9_inner_headerless_format not in supported_formats
+        ):
             raise ValueError(
                 f"sidecar magic mismatch: got 0x{payload[0]:02X}, "
                 f"expected 0x{PR106_SIDECAR_MAGIC:02X}"
             )
         if len(payload) < PR106_PR101_FIXED_META_PAYLOAD_BYTES + 1:
-            raise ValueError("HDM8/HLM2 inner-headerless sidecar truncated before payload")
+            raise ValueError("HDM inner-headerless sidecar truncated before payload")
         inner_without_header = payload[:-PR106_PR101_FIXED_META_PAYLOAD_BYTES]
         sidecar = payload[-PR106_PR101_FIXED_META_PAYLOAD_BYTES:]
-        pr106_bytes = _reconstruct_hdm8_hlm2_inner_headerless_pr106_bytes(
-            inner_without_header
-        )
+        if inner_without_header.startswith(PR106_HDM8_HLM2_DECODER_MAGIC):
+            if hdm8_inner_headerless_format not in supported_formats:
+                raise ValueError("format_id=0x08 HDM8/HLM2 packet not supported")
+            pr106_bytes = _reconstruct_hdm8_hlm2_inner_headerless_pr106_bytes(
+                inner_without_header
+            )
+            format_id = hdm8_inner_headerless_format
+        elif inner_without_header.startswith(PR106_HDM9_HLM2_DECODER_MAGIC):
+            if hdm9_inner_headerless_format not in supported_formats:
+                raise ValueError("format_id=0x09 HDM9/HLM2 packet not supported")
+            pr106_bytes = _reconstruct_hdm9_hlm2_inner_headerless_pr106_bytes(
+                inner_without_header
+            )
+            format_id = hdm9_inner_headerless_format
+        else:
+            raise ValueError("HDM inner-headerless payload missing HDM8/HDM9 magic")
         reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(sidecar)
         return PR106SidecarPacket(
-            format_id=hdm8_inner_headerless_format,
+            format_id=format_id,
             pr106_bytes=pr106_bytes,
             sidecar_payload=sidecar,
             framing_meta=None,
@@ -1474,6 +1742,7 @@ def mutate_pr106_sidecar_semantic_correction(
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     ):
         if packet.framing_meta is None:
             if packet.format_id not in (
@@ -1481,6 +1750,7 @@ def mutate_pr106_sidecar_semantic_correction(
                 PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
                 PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+                PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
             ):
                 raise ValueError("format_id=0x02 requires framing_meta")
             ranked_payload, ranked_meta = reexpand_pr101_fixed_meta_rank_elided_sidecar_payload(
@@ -1520,6 +1790,7 @@ def mutate_pr106_sidecar_semantic_correction(
             PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         ):
             mutated_meta = _fixed_meta_framing_bytes()
             if ranked_meta != mutated_meta:
@@ -1569,6 +1840,7 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     ) and len(packet.sidecar_payload) > 0xFFFF:
         raise ValueError("sidecar payload too large for u16 length field")
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI and packet.framing_meta is not None:
@@ -1600,6 +1872,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         == (
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
         )
+        or packet.format_id
+        == (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+        )
     ):
         if packet.framing_meta is not None:
             raise ValueError(
@@ -1622,6 +1898,11 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         == PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
     ):
         _hdm8_hlm2_inner_without_header_payload(packet.pr106_bytes)
+    if (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    ):
+        _hdm9_hlm2_inner_without_header_payload(packet.pr106_bytes)
 
     if (
         packet.format_id
@@ -1638,6 +1919,11 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         == PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
     ):
         prefix = _hdm8_hlm2_inner_without_header_payload(packet.pr106_bytes)
+    elif (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    ):
+        prefix = _hdm9_hlm2_inner_without_header_payload(packet.pr106_bytes)
     else:
         prefix = (
             bytes([PR106_SIDECAR_MAGIC, packet.format_id])
@@ -1667,6 +1953,10 @@ def emit_pr106_sidecar_packet(packet: PR106SidecarPacket) -> bytes:
         or packet.format_id
         == (
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+        )
+        or packet.format_id
+        == (
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
         )
     ):
         return prefix + packet.sidecar_payload
@@ -1729,6 +2019,8 @@ def pr106_sidecar_consumed_byte_proof(
         != PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
         and packet.format_id
         != PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+        and packet.format_id
+        != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
     ):
         add("magic", bytes([PR106_SIDECAR_MAGIC]), score_affecting=False)
         add("format_id", bytes([packet.format_id]), score_affecting=False)
@@ -1738,6 +2030,7 @@ def pr106_sidecar_consumed_byte_proof(
             PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         )
     ):
         add(
@@ -1754,6 +2047,15 @@ def pr106_sidecar_consumed_byte_proof(
             _hdm8_hlm2_inner_without_header_payload(packet.pr106_bytes),
             score_affecting=True,
         )
+    elif (
+        packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    ):
+        add(
+            "pr106_hdm9_hlm2_payload_without_inner_header",
+            _hdm9_hlm2_inner_without_header_payload(packet.pr106_bytes),
+            score_affecting=True,
+        )
     else:
         add("pr106_payload", packet.pr106_bytes, score_affecting=True)
     if packet.format_id not in (
@@ -1762,6 +2064,7 @@ def pr106_sidecar_consumed_byte_proof(
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     ):
         add(
             "sidecar_len_le_u16",
@@ -1831,6 +2134,7 @@ def pr106_sidecar_manifest(
             PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
             PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+            PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         )
         else {
             "fields": PR106_PR101_FIXED_META_FIELDS,
@@ -1843,6 +2147,7 @@ def pr106_sidecar_manifest(
                     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
                     PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
                     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+                    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
                 )
             ),
             "headerless_packet": (
@@ -1855,6 +2160,12 @@ def pr106_sidecar_manifest(
                     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
                 )
             ),
+            "hdm9_hlm2_inner_headerless_packet": (
+                packet.format_id
+                == (
+                    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+                )
+            ),
             "hdm8_hlm2_fixed_lengths": None
             if packet.format_id
             != PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
@@ -1864,6 +2175,19 @@ def pr106_sidecar_manifest(
                 "decoder_magic": PR106_HDM8_HLM2_DECODER_MAGIC.decode("ascii"),
                 "latent_magic": PR106_HDM8_HLM2_LATENT_MAGIC.decode("ascii"),
                 "elided_inner_header_bytes": 4,
+            },
+            "hdm9_hlm2_fixed_lengths": None
+            if packet.format_id
+            != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+            else {
+                "decoder_payload_bytes": PR106_HDM9_HLM2_DECODER_PAYLOAD_BYTES,
+                "latent_payload_bytes": PR106_HDM8_HLM2_LATENT_PAYLOAD_BYTES,
+                "decoder_magic": PR106_HDM9_HLM2_DECODER_MAGIC.decode("ascii"),
+                "latent_magic": PR106_HDM8_HLM2_LATENT_MAGIC.decode("ascii"),
+                "elided_inner_header_bytes": 4,
+                "scale_low3_bytes": PR106_HDM9_SCALE_LOW3_BYTES,
+                "scale_high_mask_bytes": PR106_HDM9_SCALE_HIGH_MASK_BYTES,
+                "scale_high_base": PR106_HDM9_SCALE_HIGH_BASE,
             },
             "contest_compliance_rationale": (
                 "metadata is fixed by the committed runtime grammar and runtime tree SHA; "
@@ -2056,6 +2380,7 @@ def build_pr106_sidecar_recode_candidate_packet(
         PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     ):
         if candidate.framing_meta_bytes:
             raise ValueError(
@@ -2072,6 +2397,11 @@ def build_pr106_sidecar_recode_candidate_packet(
         sidecar_payload=candidate.encoded_bytes,
         framing_meta=framing_meta,
     )
+    if (
+        candidate.sidecar_format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED
+    ):
+        packet = recode_pr106_hdm8_hlm2_packet_to_hdm9(packet)
     emitted = emit_pr106_sidecar_packet(packet)
     reparsed = parse_pr106_sidecar_packet(emitted)
     reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(
