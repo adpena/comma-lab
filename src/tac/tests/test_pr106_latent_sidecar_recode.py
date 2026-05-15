@@ -16,6 +16,9 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106SidecarPacket,
     canonicalize_brotli_dim_delta_sidecar_arrays,
@@ -226,7 +229,7 @@ def test_recode_profile_tool_reads_implicit_len_fixed_meta_archive(tmp_path: Pat
     assert report["score_claim"] is False
 
 
-def test_recode_profile_tool_reads_hdm8_and_hdm9_headerless_archives(
+def test_recode_profile_tool_reads_hdm8_hdm9_and_magicless_archives(
     tmp_path: Path,
 ) -> None:
     fixture_member = read_single_stored_member_archive(PR106_HDM8_FORMAT07_FIXTURE.read_bytes())
@@ -238,6 +241,9 @@ def test_recode_profile_tool_reads_hdm8_and_hdm9_headerless_archives(
     for format_id in (
         PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ):
         candidate = next(
             item for item in candidates if item.sidecar_format_id == format_id
@@ -267,7 +273,7 @@ def test_recode_profile_tool_reads_hdm8_and_hdm9_headerless_archives(
             report["source"]["semantic_source_format"]
             == f"{candidate_packet.sidecar_kind}_decoded_then_profiled"
         )
-        assert report["current_charged_sidecar_bytes"] == 526
+        assert report["current_charged_sidecar_bytes"] == len(candidate.encoded_bytes)
         assert report["score_claim"] is False
 
 
