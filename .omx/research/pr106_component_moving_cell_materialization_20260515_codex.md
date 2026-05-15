@@ -128,3 +128,47 @@ Result: `format_id=0x02`, `blockers=[]`,
 `runtime_all_score_affecting_sections_consumed=true`. This is local runtime
 decode evidence only; exact paired `[contest-CUDA]` and `[contest-CPU]` evals
 remain required before any score language.
+
+## Paired Modal Auth Eval - 2026-05-15
+
+The strongest local proxy candidate (`prefix_top_16`, archive SHA
+`4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365`,
+`186278` bytes) was dispatched through paired Modal auth eval under pair group
+`pr106_component_prefix16_pr101grammar_pair_20260515T191614Z`.
+
+Runtime-tree custody nuance: Modal CUDA and Modal CPU wrappers compute
+different uploaded-runtime tree hashes for the same `submission_dir` because
+the wrappers mount different auxiliary runtime assets. CUDA accepted
+`ae5cfc4d1ea1f7cd920623f44209e18147825c46f6698e6b3acad8325358864a`; CPU
+accepted `b6b453a5c288c42d3069494f7cbea67e07219e2fb4b2f0bac36426ca861b22c4`.
+Both use runtime content tree
+`128604ad742deb46008fc312424801ac8a2e607c924266bdedaa763c059aaf72` and the
+same archive SHA.
+
+Recovered artifacts:
+
+```text
+[contest-CUDA]
+call_id=fc-01KRPH3B57X94Q3Y024WYYEBN3
+artifact=experiments/results/modal_auth_eval/pr106_component_prefix16_pr101grammar_paired_20260515T191614Z_cuda/contest_auth_eval.json
+score_recomputed_from_components=0.20934621522786373
+avg_segnet_dist=0.00067022
+avg_posenet_dist=0.00003345
+archive_size_bytes=186278
+score_claim=true
+
+[contest-CPU]
+call_id=fc-01KRPH5KWP3WHXZHWAE6CFRP47
+artifact=experiments/results/modal_auth_eval_cpu/pr106_component_prefix16_pr101grammar_paired_20260515T191614Z_cpu/contest_auth_eval.json
+score_recomputed_from_components=0.23010997767094082
+avg_segnet_dist=0.00065535
+avg_posenet_dist=0.00016435
+archive_size_bytes=186278
+score_claim=false
+```
+
+Classification: legitimate paired negative for this component-moving candidate.
+The runtime consumed the sidecar, but the component move damages the scorer more
+than the byte savings help. This does not falsify PacketIR/format0C; it
+falsifies this `prefix_top_16` sparse component-moving configuration as a
+frontier candidate.

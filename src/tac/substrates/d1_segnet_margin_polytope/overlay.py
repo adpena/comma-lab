@@ -36,7 +36,8 @@ hardware per CLAUDE.md "Submission auth eval" non-negotiable.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import base64
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -114,13 +115,12 @@ def normalize_overlay_amplitude_scale(amplitude_scale: float) -> float:
     return scale
 
 
-def pack_pair_sign_mask(signs: Sequence[int]) -> str:
-    """Pack per-pair D1 signs into a deterministic 2-bit hex string.
+def _pack_pair_sign_mask_bytes(signs: Sequence[int]) -> bytes:
+    """Pack per-pair D1 signs into deterministic 2-bit bytes.
 
     Values are ``0`` = disabled, ``1`` = payload sign, ``-1`` = negated sign.
     Four signs fit in one byte. This keeps a 600-pair selector to 150 bytes
-    before JSON/ZIP compression and avoids a noisy list of integers in the
-    archive metadata.
+    before JSON/ZIP compression.
     """
     if len(signs) == 0:
         raise ValueError("pair sign mask must not be empty")
@@ -140,17 +140,27 @@ def pack_pair_sign_mask(signs: Sequence[int]) -> str:
             nbits = 0
     if nbits:
         out.append(acc)
-    return out.hex()
+    return bytes(out)
 
 
-def unpack_pair_sign_mask(mask_hex: str, *, n_pairs: int) -> tuple[int, ...]:
-    """Unpack a D1 2-bit pair-sign mask from metadata."""
+def pack_pair_sign_mask(signs: Sequence[int]) -> str:
+    """Pack per-pair D1 signs into canonical base64 2-bit bytes.
+
+    Hex encoding costs 2 JSON characters per byte. Base64 costs 4/3
+    characters per byte and is the canonical D1 metadata representation because
+    selector overhead is score-bearing.
+    """
+    return base64.b64encode(_pack_pair_sign_mask_bytes(signs)).decode("ascii")
+
+
+def unpack_pair_sign_mask(mask_b64: str, *, n_pairs: int) -> tuple[int, ...]:
+    """Unpack a canonical base64 D1 2-bit pair-sign mask from metadata."""
     if n_pairs <= 0:
         raise ValueError(f"n_pairs must be > 0; got {n_pairs}")
     try:
-        payload = bytes.fromhex(str(mask_hex))
-    except ValueError as exc:
-        raise ValueError("pair sign mask is not valid hex") from exc
+        payload = base64.b64decode(str(mask_b64).encode("ascii"), validate=True)
+    except (ValueError, UnicodeEncodeError) as exc:
+        raise ValueError("pair sign mask is not valid base64") from exc
     expected_len = (int(n_pairs) * 2 + 7) // 8
     if len(payload) != expected_len:
         raise ValueError(
@@ -167,6 +177,22 @@ def unpack_pair_sign_mask(mask_hex: str, *, n_pairs: int) -> tuple[int, ...]:
                 raise ValueError("pair sign mask contains reserved 2-bit code 3")
             signs.append(sign_by_code[code])
     return tuple(signs)
+
+
+def pair_sign_mask_from_meta(
+    meta: Mapping[str, object],
+    *,
+    default_n_pairs: int = _N_PAIRS_PER_VIDEO,
+) -> tuple[int, ...] | None:
+    """Decode the canonical D1 pair-mask metadata, or return None."""
+    policy = str(meta.get("overlay_sign_policy", "payload")).strip().lower()
+    if policy != "pair_mask":
+        return None
+    mask_b64 = meta.get("overlay_pair_sign_mask_b64")
+    n_pairs = int(meta.get("overlay_pair_sign_mask_n_pairs", default_n_pairs))
+    if not isinstance(mask_b64, str) or not mask_b64:
+        raise ValueError("D1 pair_mask policy missing overlay_pair_sign_mask_b64")
+    return unpack_pair_sign_mask(mask_b64, n_pairs=n_pairs)
 
 
 def overlay_sign_for_pair(
@@ -653,6 +679,7 @@ __all__ = [
     "normalize_overlay_amplitude_scale",
     "overlay_sign_for_pair",
     "pack_pair_sign_mask",
+    "pair_sign_mask_from_meta",
     "unpack_pair_sign_mask",
     "validate_polytope_margin_contract",
 ]

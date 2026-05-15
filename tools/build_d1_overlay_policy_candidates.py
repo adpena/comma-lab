@@ -10,6 +10,7 @@ submission runtime tree and deterministic archive.zip for each policy tuple.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import subprocess
@@ -419,13 +420,13 @@ def main(argv: list[str] | None = None) -> int:
     lipschitz_values = _parse_lipschitz_values(args.jacobian_lipschitz)
     margin_map_resolution = _parse_resolution(args.margin_map_resolution)
     pair_sign_mask = _load_pair_sign_mask(args.pair_sign_mask_json)
-    pair_sign_mask_hex: str | None = None
+    pair_sign_mask_b64: str | None = None
     pair_sign_mask_sha256: str | None = None
     pair_mask_label: str | None = None
     if pair_sign_mask is not None:
-        pair_sign_mask_hex = pack_pair_sign_mask(pair_sign_mask)
+        pair_sign_mask_b64 = pack_pair_sign_mask(pair_sign_mask)
         pair_sign_mask_sha256 = hashlib.sha256(
-            bytes.fromhex(pair_sign_mask_hex)
+            base64.b64decode(pair_sign_mask_b64.encode("ascii"), validate=True)
         ).hexdigest()
         pair_mask_label = args.pair_sign_mask_label.strip() or pair_sign_mask_sha256[:12]
     if "pair_mask" in sign_policies and pair_sign_mask is None:
@@ -492,8 +493,10 @@ def main(argv: list[str] | None = None) -> int:
                             "overlay_sign_policy": sign_policy,
                             **(
                                 {
-                                    "overlay_pair_sign_mask_bits_hex": pair_sign_mask_hex,
-                                    "overlay_pair_sign_mask_n_pairs": len(pair_sign_mask or ()),
+                                    "overlay_pair_sign_mask_b64": pair_sign_mask_b64,
+                                    "overlay_pair_sign_mask_n_pairs": len(
+                                        pair_sign_mask or ()
+                                    ),
                                     "overlay_pair_sign_mask_sha256": pair_sign_mask_sha256,
                                 }
                                 if sign_policy == "pair_mask"

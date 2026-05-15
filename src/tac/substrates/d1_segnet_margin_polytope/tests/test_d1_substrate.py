@@ -1209,7 +1209,7 @@ def test_generated_d1_runtime_consumes_pair_mask(tmp_path):
         extra_meta={
             "overlay_channel_policy": "green",
             "overlay_sign_policy": "pair_mask",
-            "overlay_pair_sign_mask_bits_hex": pack_pair_sign_mask(signs),
+            "overlay_pair_sign_mask_b64": pack_pair_sign_mask(signs),
             "overlay_pair_sign_mask_n_pairs": len(signs),
         },
     )

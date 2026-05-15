@@ -611,3 +611,65 @@ Result: `potential_pairs=235`, `best_component_prefix_size=235`, but
 mask costs `0.000213740723952217` score, so the rate-aware selector correctly
 blocks the packet. This prevents another paid paired eval of a candidate whose
 own local model says it cannot pay for its selector bytes.
+
+## Pair-Mask Metadata Compression - 2026-05-15
+
+The rate-aware selector exposed a narrow but real engineering gap: the
+235-pair CPU600 `+/-/off` mask missed break-even by only about 22 archive bytes.
+D1 pair masks are now canonicalized as base64-encoded 2-bit bytes instead of
+hex metadata. For a 600-pair selector this changes the metadata payload from
+300 JSON characters to 200 JSON characters while keeping the same 150 raw
+selector bytes and the same `[-1, 0, +1]` semantics.
+
+Code surfaces:
+
+- `src/tac/substrates/d1_segnet_margin_polytope/overlay.py`
+- `src/tac/substrates/d1_segnet_margin_polytope/inflate.py`
+- `experiments/train_substrate_d1_segnet_margin_polytope.py`
+- `tools/build_d1_overlay_policy_candidates.py`
+
+Regression guards:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py \
+  src/tac/tests/test_build_d1_pair_mask_from_xray.py
+# 119 passed
+```
+
+```bash
+.venv/bin/ruff check \
+  src/tac/substrates/d1_segnet_margin_polytope/overlay.py \
+  src/tac/substrates/d1_segnet_margin_polytope/inflate.py \
+  experiments/train_substrate_d1_segnet_margin_polytope.py \
+  tools/build_d1_overlay_policy_candidates.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py
+# All checks passed
+```
+
+Materialized byte-closed candidate:
+
+```text
+experiments/results/d1_pair_mask_cpu600_posneg_b64_rateaware_candidate_20260515_codex/d1_overlay_channel_green_amp_1_sign_pair_mask_pairmask_cpu600p235pn_b64_rateaware/archive.zip
+bytes=185673
+sha256=6dae91c151b083b391ec88fd045dc86f5c89fb783c0cbf74d27c25b780a3065f
+```
+
+This is 27 bytes smaller than the previous hex pair-mask packet (`185700`).
+Using the same CPU600 xray component estimate:
+
+```text
+component delta no-rate = -0.00019934154650622093
+old selector rate bytes = 321 -> net +0.000014399177445996057
+new selector rate bytes = 294 -> net -0.000003579014288302557
+```
+
+The expected win is tiny and CPU-xray-derived, so this is **not** a promotion
+or submission result. It does mean the D1 pair-mask branch is no longer
+self-blocked by its own selector bytes. Next score-bearing step, if D1 is
+reopened, is a paired exact eval or a CUDA-native xray selector; the current
+forecast remains above the operator's `<0.192` submission threshold.

@@ -283,6 +283,8 @@ def test_d1_policy_builder_materializes_pair_mask_policy(tmp_path: Path) -> None
     assert row["pair_sign_mask"]["positive_pairs"] == 2
     parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
     assert parsed.meta["overlay_sign_policy"] == "pair_mask"
+    assert "overlay_pair_sign_mask_b64" in parsed.meta
+    assert "overlay_pair_sign_mask_bits_hex" not in parsed.meta
     assert parsed.meta["overlay_pair_sign_mask_n_pairs"] == len(signs)
     assert parsed.meta["overlay_pair_sign_mask_sha256"] == row["pair_sign_mask"]["sha256"]
 

@@ -144,8 +144,10 @@ def main(argv: list[str] | None = None) -> int:
     # L2 INTEGRATION per Catalog #220 NON-NEGOTIABLE.
     from tac.substrates.d1_segnet_margin_polytope.overlay import (
         apply_l2_overlay_for_video_list,
+        pair_sign_mask_from_meta,
     )
 
+    sign_policy = str(d1_archive.meta.get("overlay_sign_policy", "payload"))
     overlay_diag = apply_l2_overlay_for_video_list(
         output_dir=output_dir,
         video_names=video_names,
@@ -161,9 +163,8 @@ def main(argv: list[str] | None = None) -> int:
         amplitude_scale=float(
             d1_archive.meta.get("overlay_amplitude_scale", 1.0)
         ),
-        sign_policy=str(
-            d1_archive.meta.get("overlay_sign_policy", "payload")
-        ),
+        sign_policy=sign_policy,
+        pair_sign_mask=pair_sign_mask_from_meta(d1_archive.meta),
     )
     print(
         f"[d1-inflate] OVERLAY_TOTAL pairs_modified="
