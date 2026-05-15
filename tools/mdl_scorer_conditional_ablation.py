@@ -1082,6 +1082,108 @@ def _score_components(pose_dist: float, seg_dist: float) -> float:
 
 
 # ----------------------------------------------------------------------
+# Tier C noise-scaling methods (MACKAY-1, R2 MEDIUM, 2026-05-15)
+# ----------------------------------------------------------------------
+#
+# Per the R2 review (`recursive_review_r2_wave_a_*` MACKAY-1 + Boyd
+# consultative): Tier C's per-tensor std-based noise scaling assumes the
+# weight distribution is approximately Gaussian. For substrates with
+# sparse / long-tail weight distributions (DP1's coordinate-MLP at
+# hidden=64 has very different distribution shape than A1's HNeRV decoder
+# at 162KB), per-tensor std UNDERESTIMATES the perturbation needed to
+# reach a fixed fractional information loss.
+#
+# MacKay's MDL framing: from an MDL perspective, the canonical noise
+# scale for fixed information loss is ``sigma * sqrt(Var(W))`` ONLY when
+# W is Gaussian. For long-tail W:
+#
+#   * ``mad_robust``  = sigma * MAD(W) * 1.4826 (Gaussian-equivalent
+#     constant; MAD is the median absolute deviation)
+#   * ``iqr_robust``  = sigma * IQR(W) / 1.349  (Gaussian-equivalent
+#     constant; IQR is the interquartile range, p75 - p25)
+#   * ``gaussian_std`` = sigma * std(W).clamp(min=1e-8)  (legacy default;
+#     back-compat, matches all pre-MACKAY-1 Tier C results)
+#
+# Boyd's framing: this is NOT a correctness bug — Δscore(σ) is well-
+# defined for any noise scaling — but the SEMANTIC of "within-class
+# density 0.95 vs 0.45" depends on the noise-scaling normalization.
+# Cross-substrate Tier C density comparison is unreliable when the
+# underlying weight distribution shape varies. Documenting the choice
+# in result schemas is the operator-facing fix.
+
+TIER_C_NOISE_SCALING_METHODS: tuple[str, ...] = (
+    "gaussian_std",
+    "mad_robust",
+    "iqr_robust",
+)
+"""Canonical Tier C noise-scaling method names (MACKAY-1)."""
+
+DEFAULT_TIER_C_NOISE_SCALING_METHOD: str = "gaussian_std"
+"""Default for back-compat with pre-MACKAY-1 Tier C results."""
+
+
+def _compute_noise_scale(
+    tensor: torch.Tensor,
+    method: str = DEFAULT_TIER_C_NOISE_SCALING_METHOD,
+    *,
+    floor: float = 1e-8,
+) -> torch.Tensor:
+    """Return a scalar noise-scale tensor for a flattened weight/latent tensor.
+
+    Per MACKAY-1 (R2 MEDIUM, 2026-05-15): the canonical Tier C
+    perturbation magnitude depends on the assumed weight distribution.
+    This helper centralizes the choice so all 4 ``_run_tier_c_*`` funcs
+    can switch via a single ``noise_scaling_method`` kwarg.
+
+    Args:
+        tensor: the weight or latent tensor to compute the scale FROM
+            (the perturbation noise will be scaled by this value).
+        method: one of ``TIER_C_NOISE_SCALING_METHODS``:
+
+            * ``"gaussian_std"`` — std(W).clamp(min=floor); legacy default
+              that matches all pre-MACKAY-1 Tier C results.
+            * ``"mad_robust"``  — MAD(W) * 1.4826; robust to long-tail W.
+              Gaussian-equivalent constant 1.4826 = 1 / Φ⁻¹(0.75).
+            * ``"iqr_robust"``  — IQR(W) / 1.349; robust to long-tail W.
+              Gaussian-equivalent constant 1.349 = 2 * Φ⁻¹(0.75).
+        floor: lower bound for the returned scale; protects against
+            degenerate (constant) tensors with zero spread.
+
+    Returns:
+        A scalar tensor (same device as ``tensor``) giving the
+        per-tensor noise scale. Multiply by ``sigma`` at the call site.
+
+    Raises:
+        ValueError: if ``method`` is not in ``TIER_C_NOISE_SCALING_METHODS``.
+    """
+    if method not in TIER_C_NOISE_SCALING_METHODS:
+        raise ValueError(
+            f"unknown noise_scaling_method={method!r}; "
+            f"must be one of {TIER_C_NOISE_SCALING_METHODS}"
+        )
+    flat = tensor.detach().reshape(-1).float()
+    if flat.numel() == 0:
+        return torch.tensor(floor, device=tensor.device, dtype=torch.float32)
+    if method == "gaussian_std":
+        return flat.std().clamp(min=floor)
+    if method == "mad_robust":
+        # MAD(W) = median(|W - median(W)|); * 1.4826 → Gaussian-equivalent std.
+        median = flat.median()
+        mad = (flat - median).abs().median()
+        scale = (mad * 1.4826).clamp(min=floor)
+        return scale
+    if method == "iqr_robust":
+        # IQR(W) = p75 - p25; / 1.349 → Gaussian-equivalent std.
+        # torch.quantile requires float on certain backends; flat is float32.
+        q = torch.quantile(flat, torch.tensor([0.25, 0.75], device=flat.device))
+        iqr = q[1] - q[0]
+        scale = (iqr / 1.349).clamp(min=floor)
+        return scale
+    # Unreachable due to membership check above.
+    raise ValueError(f"unhandled noise_scaling_method={method!r}")  # pragma: no cover
+
+
+# ----------------------------------------------------------------------
 # Tier A: structural ablation
 # ----------------------------------------------------------------------
 
@@ -1520,10 +1622,19 @@ def _run_tier_c_a1(
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
     scorer_batch_size: int = 4,
+    noise_scaling_method: str = DEFAULT_TIER_C_NOISE_SCALING_METHOD,
 ) -> list[TierCResult]:
     """A1 / PR101 Tier C: perturb HNeRVDecoder state_dict + latents.
 
-    Original A1-only implementation; preserved verbatim for back-compat.
+    Args:
+        noise_scaling_method: per-tensor noise scaling. Default
+            ``"gaussian_std"`` for back-compat with all pre-MACKAY-1
+            Tier C results. Set to ``"mad_robust"`` or ``"iqr_robust"``
+            for substrate-class comparisons across long-tail weight
+            distributions. See :func:`_compute_noise_scale` for the math.
+
+    Original A1-only implementation; preserved verbatim for back-compat
+    when ``noise_scaling_method="gaussian_std"`` (the default).
     """
     if noise_sigmas is None:
         noise_sigmas = [0.001, 0.01, 0.1, 1.0]
@@ -1593,12 +1704,12 @@ def _run_tier_c_a1(
                 perturbed_sd = {}
                 for k, v in base_decoder_sd.items():
                     v_dev = v.to(device)
-                    rel_std = v_dev.std().clamp(min=1e-8)
+                    rel_std = _compute_noise_scale(v_dev, noise_scaling_method)
                     noise = torch.randn_like(v_dev) * (rel_std * sigma)
                     perturbed_sd[k] = (v_dev + noise).cpu()
                 cand_frames = _render(perturbed_sd, base_latents)
             else:  # latents
-                rel_std = base_latents.std().clamp(min=1e-8)
+                rel_std = _compute_noise_scale(base_latents, noise_scaling_method)
                 noise = torch.randn_like(base_latents) * (rel_std * sigma)
                 perturbed_latents = base_latents + noise
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
@@ -1633,8 +1744,14 @@ def _run_tier_c_pr106(
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
     scorer_batch_size: int = 4,
+    noise_scaling_method: str = DEFAULT_TIER_C_NOISE_SCALING_METHOD,
 ) -> list[TierCResult]:
-    """PR106 Tier C: perturb decoder state_dict + sidecar-applied latents."""
+    """PR106 Tier C: perturb decoder state_dict + sidecar-applied latents.
+
+    Args:
+        noise_scaling_method: see :func:`_compute_noise_scale`. Default
+            ``"gaussian_std"`` for back-compat (MACKAY-1).
+    """
 
     if noise_sigmas is None:
         noise_sigmas = [0.001, 0.01, 0.1, 1.0]
@@ -1671,13 +1788,13 @@ def _run_tier_c_pr106(
                 perturbed_sd: dict[str, torch.Tensor] = {}
                 for k, v in base_decoder_sd.items():
                     v_dev = v.to(device).float()
-                    rel_std = v_dev.std().clamp(min=1e-8)
+                    rel_std = _compute_noise_scale(v_dev, noise_scaling_method)
                     noise = torch.randn_like(v_dev) * (rel_std * sigma)
                     perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
                 cand_frames = _render(perturbed_sd, base_latents)
             else:
                 base_latents_dev = base_latents.to(device).float()
-                rel_std = base_latents_dev.std().clamp(min=1e-8)
+                rel_std = _compute_noise_scale(base_latents_dev, noise_scaling_method)
                 noise = torch.randn_like(base_latents_dev) * (rel_std * sigma)
                 perturbed_latents = (base_latents_dev + noise).cpu()
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
@@ -1716,8 +1833,13 @@ def _run_tier_c_ibps1(
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
     scorer_batch_size: int = 4,
+    noise_scaling_method: str = DEFAULT_TIER_C_NOISE_SCALING_METHOD,
 ) -> list[TierCResult]:
     """IBPS1 (C6 MDL-IBPS) Tier C: perturb decoder state_dict + latents.
+
+    Args:
+        noise_scaling_method: see :func:`_compute_noise_scale`. Default
+            ``"gaussian_std"`` for back-compat (MACKAY-1).
 
     Per CLAUDE.md "Forbidden in-place edits to public PR intake clones"
     we re-construct the substrate from the parsed archive (mirrors
@@ -1867,15 +1989,16 @@ def _run_tier_c_ibps1(
                 for k, v in base_decoder_sd.items():
                     v_dev = v.to(device).float()
                     # Tensors with <2 elements have std()=0 (degenerate);
-                    # clamp keeps the noise scale finite + non-zero so
-                    # sigma=0 reliably produces zero noise.
-                    rel_std = v_dev.std().clamp(min=1e-8)
+                    # _compute_noise_scale clamps to floor=1e-8 keeping
+                    # the noise scale finite + non-zero so sigma=0
+                    # reliably produces zero noise.
+                    rel_std = _compute_noise_scale(v_dev, noise_scaling_method)
                     noise = torch.randn_like(v_dev) * (rel_std * sigma)
                     perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
                 cand_frames = _render(perturbed_sd, base_latents)
             else:  # latents
                 base_latents_dev = base_latents.to(device).float()
-                rel_std = base_latents_dev.std().clamp(min=1e-8)
+                rel_std = _compute_noise_scale(base_latents_dev, noise_scaling_method)
                 noise = torch.randn_like(base_latents_dev) * (rel_std * sigma)
                 perturbed_latents = (base_latents_dev + noise).cpu()
                 cand_frames = _render(base_decoder_sd, perturbed_latents)
@@ -1910,8 +2033,13 @@ def _run_tier_c_dp1(
     rng: random.Random,
     noise_sigmas: list[float] | None = None,
     scorer_batch_size: int = 4,
+    noise_scaling_method: str = DEFAULT_TIER_C_NOISE_SCALING_METHOD,
 ) -> list[TierCResult]:
     """DP1 (pre-trained driving prior) Tier C: perturb renderer state_dict + per-pair residual.
+
+    Args:
+        noise_scaling_method: see :func:`_compute_noise_scale`. Default
+            ``"gaussian_std"`` for back-compat (MACKAY-1).
 
     Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" and
     the operator's grand council Decision 7 (omnibus commit ``7872c9f4b``,
@@ -2017,16 +2145,31 @@ def _run_tier_c_dp1(
         output_width=int(arc.output_width),
     )
 
+    # SELFCOMP-3 (R2 MEDIUM, 2026-05-15): construct the renderer ONCE
+    # outside the per-pair loop. Pre-fix: ``DrivingPriorRenderer(cfg)``
+    # was called inside ``_render_pair_with_residual`` → 4800 constructor
+    # calls per Tier C run (600 pairs × 4 sigmas × 2 targets). At
+    # ~10ms/construct on real GPU = ~2 min wasted overhead per Tier C
+    # invocation. Now: construct once, ``load_state_dict(perturbed_sd)``
+    # per perturbation. Mirrors ``_run_tier_c_a1``'s sister pattern.
+    _shared_renderer = DrivingPriorRenderer(cfg).to(device).eval()
+
     def _render_pair_with_residual(
         renderer_sd: dict[str, torch.Tensor],
         residual_bytes: bytes,
         pair_idx: int,
     ) -> torch.Tensor:
-        """Render one pair through a fresh renderer + residual application.
+        """Render one pair using the cached renderer + residual application.
 
         Returns shape (2, CAMERA_H, CAMERA_W, 3) uint8 CPU tensor.
+
+        SELFCOMP-3 (R2 MEDIUM, 2026-05-15): reuses the cached
+        ``_shared_renderer`` from the enclosing scope; loads the
+        (possibly perturbed) state_dict per call instead of constructing
+        a fresh renderer. Per-pair construction was a 4800× regression
+        vs the canonical pattern.
         """
-        renderer = DrivingPriorRenderer(cfg).to(device).eval()
+        renderer = _shared_renderer
         incompat = renderer.load_state_dict(renderer_sd, strict=False)
         if set(incompat.missing_keys) or set(incompat.unexpected_keys):
             raise ValueError(
@@ -2107,17 +2250,18 @@ def _run_tier_c_dp1(
                 perturbed_sd: dict[str, torch.Tensor] = {}
                 for k, v in base_renderer_sd.items():
                     v_dev = v.to(device).float()
-                    rel_std = v_dev.std().clamp(min=1e-8)
+                    rel_std = _compute_noise_scale(v_dev, noise_scaling_method)
                     noise = torch.randn_like(v_dev) * (rel_std * sigma)
                     perturbed_sd[k] = (v_dev + noise).to(dtype=v.dtype).cpu()
                 cand_frames = _render(perturbed_sd, base_residual_bytes)
             else:  # latents (per-pair int8 residual)
                 # Perturb the per-pair residual in int8 space. The
                 # mechanically-honest analogue to "perturb latents":
-                # dequantize → add Gaussian noise scaled by std → re-
-                # quantize to int8 (clamped to [-128, 127] before .tobytes()).
-                # If the residual is empty (per_pair_bytes == 0) the
-                # perturbation is a no-op + we record the row with Δ=0.
+                # dequantize → add noise scaled per noise_scaling_method
+                # (MACKAY-1) → re-quantize to int8 (clamped to [-128, 127]
+                # before .tobytes()). If the residual is empty
+                # (per_pair_bytes == 0) the perturbation is a no-op + we
+                # record the row with Δ=0.
                 if not base_residual_bytes:
                     perturbed_residual_bytes = base_residual_bytes
                 else:
@@ -2125,7 +2269,7 @@ def _run_tier_c_dp1(
                         base_residual_bytes, dtype=np.int8
                     ).astype(np.float32)
                     res_t = torch.from_numpy(res_int8.copy()).to(device)
-                    rel_std = res_t.std().clamp(min=1e-8)
+                    rel_std = _compute_noise_scale(res_t, noise_scaling_method)
                     noise = torch.randn_like(res_t) * (rel_std * sigma)
                     perturbed = (res_t + noise).clamp(-128.0, 127.0)
                     perturbed_int8 = (

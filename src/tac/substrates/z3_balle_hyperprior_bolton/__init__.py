@@ -12,8 +12,33 @@ so callers can ``from tac.substrates.z3_balle_hyperprior_bolton import ...``.
 
 NO score claim. NO promotion. NO exact-eval dispatch from this module.
 Tagged ``research_only=true`` until empirical smoke + full-run anchors land.
+
+Versioning + supersession (SELFCOMP-1, R2 MEDIUM, 2026-05-15):
+
+* **v1 (``archive`` / ``inflate`` / ``score_aware_loss``)** is the LEGACY
+  append-only Z3HP1 sidecar grammar. Council omnibus Decision 3 (commit
+  ``7872c9f4b``, 2026-05-14) resolved that v1 is **DEPRECATED-pending-v2-
+  empirical-confirmation**: v2 is the operational latent-replacement path,
+  but v1 is preserved as the production default until v2 has a
+  ``[contest-CUDA]`` empirical anchor on Modal/Vast.ai. Per CLAUDE.md
+  "Forbidden premature KILL" + "KILL is LAST RESORT": v1 stays LIVE with a
+  deprecation warning at import; reactivation/retirement criterion =
+  v2 paired Modal A100 anchor lands.
+* **v2 (``archive_v2`` / ``inflate_v2`` / ``score_aware_loss_v2``)** is the
+  Z3HV2 latent-replacement archive grammar that REPLACES A1's
+  ``latent_blob`` in-place. Trainer opt-in via
+  ``--enable-v2-latent-replacement``.
+
+To suppress the v1 deprecation warning during legitimate v1 use (forensic
+replay, regression tests, etc.), set the environment variable
+``Z3_BALLE_USE_V1=1`` before importing. The warning is a one-shot per
+process; disable warnings entirely via ``warnings.filterwarnings("ignore")``
+if a downstream tool floods the operator console.
 """
 from __future__ import annotations
+
+import os as _os
+import warnings as _warnings
 
 from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     A1_BASE_CHANNELS,
@@ -29,6 +54,42 @@ from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     factorized_uniform_rate_bits,
     total_balle_rate_bits,
 )
+
+
+def _emit_v1_deprecation_warning() -> bool:
+    """One-shot DeprecationWarning when v1 surfaces are imported without opt-in.
+
+    Returns True if a warning was emitted, False if suppressed via the
+    ``Z3_BALLE_USE_V1=1`` environment opt-in (set when the operator
+    legitimately wants v1 — forensic replay, regression test, etc.).
+
+    Per SELFCOMP-1 (R2 MEDIUM, 2026-05-15) + CLAUDE.md "Bugs must be
+    permanently fixed AND self-protected against": surface drift between
+    code reality (v1 LIVE) and commit-message claims (v1 retired) is now
+    a runtime warning so future trainer authors do not import v1 by
+    accident. Cross-ref ``feedback_recursive_review_r2_wave_a_*`` SELFCOMP-1
+    + Council omnibus Decision 3 (commit ``7872c9f4b``).
+    """
+    if _os.environ.get("Z3_BALLE_USE_V1", "").strip() == "1":
+        return False
+    _warnings.warn(
+        "Z3 Ballé hyperprior bolt-on v1 (Z3HP1 append-only sidecar grammar) "
+        "is DEPRECATED-pending-v2-empirical-confirmation per Council omnibus "
+        "Decision 3 (commit 7872c9f4b, 2026-05-14). v2 (Z3HV2 latent-replacement) "
+        "is the operational path; v1 is preserved as production default until "
+        "v2 has a [contest-CUDA] empirical anchor. To suppress this warning "
+        "for legitimate v1 use (forensic replay, regression tests), set "
+        "Z3_BALLE_USE_V1=1 in the environment. Use v2 by passing "
+        "--enable-v2-latent-replacement to the Z3 trainer.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return True
+
+
+_emit_v1_deprecation_warning()
+
+
 from tac.substrates.z3_balle_hyperprior_bolton.archive import (
     Z3_APPEND_ONLY_CONTRACT_BLOCKER,
     Z3_BYTE_IDENTICAL_CONTRACT_BLOCKER,
@@ -64,6 +125,7 @@ from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
 )
 
 __all__ = [
+    "_emit_v1_deprecation_warning",
     "A1_BASE_CHANNELS",
     "A1_CAMERA_H",
     "A1_CAMERA_W",
