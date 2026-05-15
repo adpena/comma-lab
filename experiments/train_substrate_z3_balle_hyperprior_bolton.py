@@ -82,6 +82,9 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -102,9 +105,6 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
-from tac.substrates._shared.smoke_auth_eval_gate import (
-    gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 from tac.substrates.z3_balle_hyperprior_bolton import (
     A1_LATENT_DIM,
@@ -223,7 +223,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Train Z3 Ballé hyperprior bolt-on (across-class staircase Step 1). "
             "Re-encodes the FROZEN A1 latent_blob via a tiny per-pair Ballé-2018 "
             "scale-hyperprior to reduce archive bytes by ~5-15% with zero "
-            "distortion change. Predicted ΔS = −0.005 to −0.010."
+            "distortion change. Predicted ΔS = -0.005 to -0.010."
         ),
     )
     p.add_argument("--a1-archive-path", type=Path, default=DEFAULT_A1_ARCHIVE)
@@ -331,7 +331,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     losses = []
     rate_bits = []
     n_epochs = max(args.epochs, 3)
-    for epoch in range(n_epochs):
+    for _epoch in range(n_epochs):
         optimizer.zero_grad()
         out = z3_lagrangian(
             hyperprior=hyperprior,
@@ -456,6 +456,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
     (out_dir / "stats.json").write_text(
         json.dumps(stats, sort_keys=True, indent=2),
         encoding="utf-8",
+    )
+    _write_training_artifact_manifest(
+        out_dir,
+        stats=stats,
+        training_mode="smoke",
+        research_only=True,
     )
     print(
         f"[z3-smoke] OK final_loss={final_loss:.6f} "
@@ -884,12 +890,15 @@ def _full_main(args: argparse.Namespace) -> int:
             # v2 latent-replacement path (council omnibus Decision 3).
             from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
                 A1_LATENT_BLOB_LEN as _V2_A1_LATENT_BLOB_LEN,
-                build_z3v2_composition_archive_contract as _v2_build_contract,
-                build_z3v2_payload_bytes as _v2_build_payload,
-                encode_z3hv2_section as _v2_encode_section,
             )
-            from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss_v2 import (
-                estimate_z3v2_section_overhead_bytes as _v2_estimate_overhead,
+            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+                build_z3v2_composition_archive_contract as _v2_build_contract,
+            )
+            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+                build_z3v2_payload_bytes as _v2_build_payload,
+            )
+            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+                encode_z3hv2_section as _v2_encode_section,
             )
 
             # Per-dim affine for the v2 grammar: derive from current A1 latents
@@ -1178,6 +1187,12 @@ def _full_main(args: argparse.Namespace) -> int:
         json.dumps(stats, sort_keys=True, indent=2),
         encoding="utf-8",
     )
+    _write_training_artifact_manifest(
+        out_dir,
+        stats=stats,
+        training_mode="full",
+        research_only=not auth_eval_score_claim_valid,
+    )
     print(
         f"[z3-full] DONE archive={composition_size}B sha={composition_sha[:12]}... "
         f"auth_score={auth_eval_score} grade={auth_eval_evidence_grade} "
@@ -1409,6 +1424,54 @@ def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes) -> None:
     info.compress_type = zipfile.ZIP_STORED
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr(info, bin_bytes)
+
+
+def _write_training_artifact_manifest(
+    out_dir: Path,
+    *,
+    stats: dict[str, Any],
+    training_mode: str,
+    research_only: bool,
+) -> Path:
+    """Emit the canonical smoke-training artifact manifest.
+
+    ``tools/run_modal_smoke_before_full.py`` validates smoke-only research
+    outputs through ``training_artifact_v1``. The validator deliberately
+    requires a manifest distinct from free-form ``stats.json`` so Modal smoke
+    gates do not accidentally treat stale or authority-bearing artifacts as
+    green.
+    """
+
+    manifest = {
+        "schema": "training_artifact_v1",
+        "lane_id": stats["lane_id"],
+        "substrate_tag": stats["substrate_tag"],
+        "training_mode": training_mode,
+        "research_only": bool(research_only),
+        "archive_bytes": int(stats["archive_bytes"]),
+        "archive_sha256": stats["archive_sha256"],
+        "archive_zip_bytes": int(stats["archive_zip_bytes"]),
+        "archive_zip_sha256": stats["archive_zip_sha256"],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "result": {
+            "training_mode": training_mode,
+            "archive_bytes": int(stats["archive_bytes"]),
+            "archive_sha256": stats["archive_sha256"],
+            "archive_zip_bytes": int(stats["archive_zip_bytes"]),
+            "archive_zip_sha256": stats["archive_zip_sha256"],
+            "archive_contract": stats.get("archive_contract", {}),
+        },
+        "result_review_blockers": list(stats.get("result_review_blockers", ())),
+        "stats_path": "stats.json",
+        "archive_path": "archive.zip",
+    }
+    path = out_dir / "manifest.json"
+    path.write_text(json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8")
+    return path
 
 
 # ---------------------------------------------------------------------------

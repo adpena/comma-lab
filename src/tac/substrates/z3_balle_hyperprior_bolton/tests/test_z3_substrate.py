@@ -10,7 +10,6 @@ NO score claim. NO real-scorer dispatch. NO MPS device.
 """
 from __future__ import annotations
 
-import math
 import importlib.util
 import json
 import py_compile
@@ -23,10 +22,7 @@ import torch
 from tac.substrates.z3_balle_hyperprior_bolton import (
     A1_LATENT_DIM,
     A1_N_PAIRS,
-    Z3HP1_HEADER_STRUCT,
     Z3HP1_MAGIC,
-    Z3HP1_VERSION,
-    Z3HP1SidecarMeta,
     Z3HyperpriorConfig,
     Z3HyperpriorMLP,
     build_composition_archive_contract,
@@ -45,7 +41,6 @@ from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss import (
     estimate_sidecar_overhead_bytes,
     z3_lagrangian,
 )
-
 
 # ---------------------------------------------------------------------------
 # Architecture
@@ -551,6 +546,45 @@ def _load_trainer_module():
     return module
 
 
+def test_smoke_main_emits_training_artifact_manifest(tmp_path):
+    """Smoke-only Modal artifacts must satisfy training_artifact_v1."""
+
+    trainer = _load_trainer_module()
+    out_dir = tmp_path / "z3_smoke"
+    args = trainer._build_parser().parse_args(
+        [
+            "--a1-archive-path",
+            str(_repo_root() / "submissions" / "a1" / "archive.zip"),
+            "--output-dir",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--device",
+            "cpu",
+            "--smoke",
+        ]
+    )
+
+    assert trainer._smoke_main(args) == 0
+
+    stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["schema"] == "training_artifact_v1"
+    assert manifest["lane_id"] == stats["lane_id"]
+    assert manifest["training_mode"] == "smoke"
+    assert manifest["research_only"] is True
+    assert manifest["archive_bytes"] == stats["archive_bytes"]
+    assert manifest["archive_sha256"] == stats["archive_sha256"]
+    assert manifest["archive_zip_bytes"] == stats["archive_zip_bytes"]
+    assert manifest["archive_zip_sha256"] == stats["archive_zip_sha256"]
+    assert manifest["score_claim"] is False
+    assert manifest["score_claim_valid"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["rank_or_kill_eligible"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert manifest["result"]["training_mode"] == "smoke"
+
+
 def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
     """The Phase-2 full path must be executable without remote dispatch.
 
@@ -581,6 +615,7 @@ def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
     assert trainer._full_main(args) == 0
 
     stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     assert stats["smoke"] is False
     assert stats["sidecar_shipped"] is False
     assert stats["archive_bytes"] == stats["base_archive_bytes"]
@@ -589,6 +624,10 @@ def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
     assert stats["archive_contract"]["ready_for_exact_eval_dispatch"] is False
     assert stats["ready_for_exact_eval_dispatch"] is False
     assert "append-only grammar cannot realize predicted byte savings" in stats["dispatch_blocker"]
+    assert manifest["schema"] == "training_artifact_v1"
+    assert manifest["training_mode"] == "full"
+    assert manifest["research_only"] is True
+    assert manifest["archive_sha256"] == stats["archive_sha256"]
 
     with zipfile.ZipFile(_repo_root() / "submissions" / "a1" / "archive.zip") as zf:
         a1_inner = zf.read("x")
