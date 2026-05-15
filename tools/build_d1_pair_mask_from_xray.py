@@ -11,6 +11,7 @@ for ``tools/build_d1_overlay_policy_candidates.py --sign-policies pair_mask``.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from datetime import UTC, datetime
@@ -18,6 +19,17 @@ from pathlib import Path
 from typing import Any
 
 _CONTEST_ARCHIVE_DENOMINATOR_BYTES = 37_545_489
+_EVIDENCE_AXES = (
+    "contest_cpu",
+    "contest_cuda",
+    "local_cpu_xray",
+    "local_cuda_xray",
+    "macos_cpu_advisory",
+)
+_XRAY_AXIS_BY_DIAGNOSTIC_DEVICE = {
+    "cpu": "local_cpu_xray",
+    "cuda": "local_cuda_xray",
+}
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -27,8 +39,59 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _rows_by_pair(path: Path) -> dict[int, dict[str, Any]]:
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _xray_axis_from_payload(payload: dict[str, Any], *, path: Path) -> str:
+    raw_axis = payload.get("evidence_axis") or payload.get("score_axis")
+    if isinstance(raw_axis, str) and raw_axis:
+        normalized = raw_axis.strip().lower().replace("-", "_")
+        if normalized in _EVIDENCE_AXES:
+            return normalized
+        raise ValueError(
+            f"{path} declares unsupported evidence axis {raw_axis!r}; "
+            f"expected one of {_EVIDENCE_AXES}"
+        )
+
+    evidence_grade = str(payload.get("evidence_grade", "")).strip().lower()
+    device = str(payload.get("device", "")).strip().lower()
+    if evidence_grade.startswith("diagnostic_pair_component_xray_"):
+        suffix = evidence_grade.removeprefix("diagnostic_pair_component_xray_")
+        axis = _XRAY_AXIS_BY_DIAGNOSTIC_DEVICE.get(suffix or device)
+        if axis is not None:
+            return axis
+    if device in _XRAY_AXIS_BY_DIAGNOSTIC_DEVICE:
+        return _XRAY_AXIS_BY_DIAGNOSTIC_DEVICE[device]
+
+    raise ValueError(
+        f"{path} does not declare a verifiable evidence axis; add evidence_axis "
+        "or a diagnostic_pair_component_xray_<device> evidence_grade"
+    )
+
+
+def _xray_provenance(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "sha256": _sha256_file(path),
+        "schema": payload.get("schema"),
+        "label": payload.get("label"),
+        "evidence_grade": payload.get("evidence_grade"),
+        "device": payload.get("device"),
+        "evidence_axis": _xray_axis_from_payload(payload, path=path),
+        "n_pairs": payload.get("n_pairs"),
+        "archive": payload.get("archive"),
+    }
+
+
+def _load_xray(path: Path) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
     payload = _read_json(path)
+    schema = payload.get("schema")
+    if schema is not None and schema != "pair_component_error_xray_v1":
+        raise ValueError(
+            f"{path} schema must be pair_component_error_xray_v1; got {schema!r}"
+        )
+    provenance = _xray_provenance(path, payload)
     rows = payload.get("rows")
     if not isinstance(rows, list) or not rows:
         raise ValueError(f"{path} must contain non-empty rows[]")
@@ -42,7 +105,12 @@ def _rows_by_pair(path: Path) -> dict[int, dict[str, Any]]:
         if pair_idx in out:
             raise ValueError(f"{path} duplicate pair_idx={pair_idx}")
         out[pair_idx] = row
-    return out
+    if isinstance(provenance.get("n_pairs"), int) and provenance["n_pairs"] != len(out):
+        raise ValueError(
+            f"{path} n_pairs={provenance['n_pairs']} does not match rows={len(out)}"
+        )
+    provenance["n_pairs"] = len(out)
+    return out, provenance
 
 
 def _pose_seg(row: dict[str, Any]) -> tuple[float, float]:
@@ -53,10 +121,8 @@ def _component_from_means(mean_pose: float, mean_seg: float) -> float:
     return math.sqrt(10.0 * max(0.0, mean_pose)) + 100.0 * mean_seg
 
 
-def _rate_penalty_from_bytes(rate_cost_bytes: int) -> float:
-    if rate_cost_bytes < 0:
-        raise ValueError(f"rate_cost_bytes must be >= 0; got {rate_cost_bytes}")
-    return 25.0 * float(rate_cost_bytes) / float(_CONTEST_ARCHIVE_DENOMINATOR_BYTES)
+def _rate_score_from_bytes_delta(byte_delta: int) -> float:
+    return 25.0 * float(byte_delta) / float(_CONTEST_ARCHIVE_DENOMINATOR_BYTES)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -90,14 +156,61 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--rate-cost-bytes",
+        "--evidence-axis",
+        choices=_EVIDENCE_AXES,
+        required=True,
+        help="Evidence axis for the pair xray inputs; never inferred.",
+    )
+    parser.add_argument(
+        "--baseline-archive-bytes",
         type=int,
-        default=0,
         help=(
-            "Fixed archive-byte overhead for carrying the pair mask. The selector "
-            "converts it through the contest rate term and emits an all-zero mask "
-            "when no nonzero prefix pays for the bytes."
+            "Archive bytes for the same baseline represented by --baseline-xray. "
+            "Use with --candidate-archive-bytes for full A/B rate accounting."
         ),
+    )
+    parser.add_argument(
+        "--candidate-archive-bytes",
+        type=int,
+        help=(
+            "Archive bytes for the D1 candidate that will carry the emitted mask. "
+            "Use with --baseline-archive-bytes."
+        ),
+    )
+    parser.add_argument(
+        "--rate-from-candidate-manifest",
+        type=Path,
+        help=(
+            "Preferred full A/B rate source. Reads archive_bytes plus "
+            "source_base_archive_bytes from a D1 candidate_manifest.json emitted "
+            "by tools/build_d1_overlay_policy_candidates.py."
+        ),
+    )
+    parser.add_argument(
+        "--allow-negative-archive-delta",
+        action="store_true",
+        help=(
+            "Allow candidate archive bytes below baseline bytes. This is not "
+            "expected for D1 sidecar selectors and requires a rationale."
+        ),
+    )
+    parser.add_argument(
+        "--negative-archive-delta-rationale",
+        help="Required text when --allow-negative-archive-delta is used.",
+    )
+    parser.add_argument(
+        "--incremental-rate-cost-bytes",
+        type=int,
+        help=(
+            "Incremental selector bytes versus a named D1-family baseline. This "
+            "is only valid when the xray baseline is the same D1 packet family; "
+            "A1-relative selectors must use --baseline-archive-bytes and "
+            "--candidate-archive-bytes."
+        ),
+    )
+    parser.add_argument(
+        "--incremental-baseline-label",
+        help="Required rationale label when --incremental-rate-cost-bytes is used.",
     )
     parser.add_argument(
         "--max-active-pairs",
@@ -121,8 +234,47 @@ def _build_parser() -> argparse.ArgumentParser:
             "pads unmeasured pairs as disabled zeros."
         ),
     )
+    parser.add_argument(
+        "--expected-pairs",
+        type=int,
+        default=600,
+        help=(
+            "Contest pair count used when --output-n-pairs is omitted. The "
+            "default pads shorter xray reports to 600 disabled pairs."
+        ),
+    )
+    parser.add_argument(
+        "--allow-partial-smoke",
+        action="store_true",
+        help=(
+            "Do not pad to --expected-pairs when --output-n-pairs is omitted. "
+            "Only valid for local smoke artifacts, not contest packets."
+        ),
+    )
     parser.add_argument("--output-json", type=Path, required=True)
     return parser
+
+
+def _load_rate_from_candidate_manifest(path: Path) -> tuple[int, int, dict[str, Any]]:
+    payload = _read_json(path)
+    archive_bytes = payload.get("archive_bytes")
+    baseline_bytes = payload.get("source_base_archive_bytes")
+    if baseline_bytes is None:
+        baseline_bytes = payload.get("base_member_bytes")
+    if not isinstance(archive_bytes, int) or not isinstance(baseline_bytes, int):
+        raise ValueError(
+            f"{path} must contain integer archive_bytes and "
+            "source_base_archive_bytes/base_member_bytes"
+        )
+    provenance = {
+        "path": str(path),
+        "sha256": _sha256_file(path),
+        "candidate_id": payload.get("candidate_id"),
+        "archive_sha256": payload.get("archive_sha256"),
+        "source_d1_bin_sha256": payload.get("source_d1_bin_sha256"),
+        "base_member_sha256": payload.get("base_member_sha256"),
+    }
+    return int(baseline_bytes), int(archive_bytes), provenance
 
 
 def build_pair_sign_mask(
@@ -133,6 +285,17 @@ def build_pair_sign_mask(
     improvement_guard: float = 0.0,
     selection_mode: str = "waterfill_prefix",
     rate_cost_bytes: int = 0,
+    evidence_axis: str,
+    rate_scope: str,
+    baseline_archive_bytes: int | None = None,
+    candidate_archive_bytes: int | None = None,
+    rate_source_manifest: dict[str, Any] | None = None,
+    allow_negative_archive_delta: bool = False,
+    negative_archive_delta_rationale: str | None = None,
+    incremental_baseline_label: str | None = None,
+    xray_provenance: dict[str, Any] | None = None,
+    expected_pairs: int | None = None,
+    partial_smoke_allowed: bool = False,
     max_active_pairs: int | None = None,
     min_net_improvement: float = 0.0,
     output_n_pairs: int | None = None,
@@ -146,6 +309,38 @@ def build_pair_sign_mask(
         raise ValueError("negative xray pair rows do not match baseline")
 
     n_measured = len(pair_indices)
+    if evidence_axis not in _EVIDENCE_AXES:
+        raise ValueError(
+            f"evidence_axis={evidence_axis!r} must be one of {_EVIDENCE_AXES}"
+        )
+    if rate_scope not in {"archive_delta", "incremental"}:
+        raise ValueError("rate_scope must be 'archive_delta' or 'incremental'")
+    if rate_scope == "archive_delta":
+        if baseline_archive_bytes is None or candidate_archive_bytes is None:
+            raise ValueError(
+                "archive_delta rate scope requires baseline_archive_bytes and "
+                "candidate_archive_bytes"
+            )
+        if int(baseline_archive_bytes) <= 0 or int(candidate_archive_bytes) <= 0:
+            raise ValueError(
+                "archive_delta rate scope requires positive baseline and "
+                "candidate archive bytes"
+            )
+        rate_cost_bytes = int(candidate_archive_bytes) - int(baseline_archive_bytes)
+        if rate_cost_bytes < 0 and (
+            not allow_negative_archive_delta or not negative_archive_delta_rationale
+        ):
+            raise ValueError(
+                "negative archive deltas require allow_negative_archive_delta "
+                "and negative_archive_delta_rationale"
+            )
+    else:
+        if rate_cost_bytes < 0:
+            raise ValueError(f"incremental rate_cost_bytes must be >= 0; got {rate_cost_bytes}")
+        if not incremental_baseline_label:
+            raise ValueError(
+                "incremental rate scope requires incremental_baseline_label"
+            )
     baseline_mean_pose = (
         sum(_pose_seg(baseline_rows[pair_idx])[0] for pair_idx in pair_indices)
         / n_measured
@@ -165,7 +360,7 @@ def build_pair_sign_mask(
         _pose_seg(baseline_rows[pair_idx])[1] for pair_idx in pair_indices
     )
     baseline_component = _component_from_means(baseline_mean_pose, baseline_mean_seg)
-    rate_penalty_score = _rate_penalty_from_bytes(int(rate_cost_bytes))
+    rate_penalty_score = _rate_score_from_bytes_delta(int(rate_cost_bytes))
     if max_active_pairs is not None and max_active_pairs < 0:
         raise ValueError(f"max_active_pairs must be >= 0; got {max_active_pairs}")
     if min_net_improvement < 0:
@@ -326,6 +521,13 @@ def build_pair_sign_mask(
                 f"pair count {measured_pairs}"
             )
         signs.extend([0] * (int(output_n_pairs) - measured_pairs))
+    elif expected_pairs is not None and not partial_smoke_allowed:
+        if expected_pairs < measured_pairs:
+            raise ValueError(
+                f"expected_pairs={expected_pairs} is smaller than measured "
+                f"pair count {measured_pairs}"
+            )
+        signs.extend([0] * (int(expected_pairs) - measured_pairs))
 
     active_pairs = sum(1 for value in signs if value != 0)
     component_delta = selected_component - baseline_component
@@ -336,6 +538,8 @@ def build_pair_sign_mask(
         "schema": "d1_pair_sign_mask_from_xray_v1",
         "generated_at_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "objective": "contest_score_linearized_at_baseline_mean_pose_v1",
+        "evidence_axis": evidence_axis,
+        "xray_provenance": xray_provenance,
         "selection_mode": mode,
         "pair_signs": signs,
         "n_pairs": len(signs),
@@ -356,6 +560,21 @@ def build_pair_sign_mask(
         "max_active_pairs": max_active_pairs,
         "improvement_guard": guard,
         "rate_cost_bytes": int(rate_cost_bytes),
+        "rate_scope": rate_scope,
+        "baseline_archive_bytes": baseline_archive_bytes,
+        "candidate_archive_bytes": candidate_archive_bytes,
+        "archive_byte_delta": (
+            int(rate_cost_bytes) if rate_scope == "archive_delta" else None
+        ),
+        "incremental_rate_cost_bytes": (
+            int(rate_cost_bytes) if rate_scope == "incremental" else None
+        ),
+        "incremental_baseline_label": incremental_baseline_label,
+        "rate_source_manifest": rate_source_manifest,
+        "allow_negative_archive_delta": bool(allow_negative_archive_delta),
+        "negative_archive_delta_rationale": negative_archive_delta_rationale,
+        "expected_pairs": expected_pairs,
+        "partial_smoke_allowed": bool(partial_smoke_allowed),
         "rate_penalty_score": rate_penalty_score,
         "min_net_improvement": float(min_net_improvement),
         "baseline_mean_pose_dist": baseline_mean_pose,
@@ -378,20 +597,92 @@ def build_pair_sign_mask(
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    baseline_rows, baseline_provenance = _load_xray(args.baseline_xray)
+    positive_rows, positive_provenance = _load_xray(args.positive_xray)
+    negative_rows: dict[int, dict[str, Any]] | None = None
+    negative_provenance: dict[str, Any] | None = None
+    if args.negative_xray is not None:
+        negative_rows, negative_provenance = _load_xray(args.negative_xray)
+    xray_provenance = {
+        "baseline": baseline_provenance,
+        "positive": positive_provenance,
+        "negative": negative_provenance,
+    }
+    observed_axes = {
+        str(item["evidence_axis"])
+        for item in (baseline_provenance, positive_provenance, negative_provenance)
+        if item is not None
+    }
+    if observed_axes != {str(args.evidence_axis)}:
+        raise SystemExit(
+            f"--evidence-axis={args.evidence_axis!r} does not match xray "
+            f"provenance axes {sorted(observed_axes)}"
+        )
+
+    manifest_rate = args.rate_from_candidate_manifest is not None
+    full_rate = (
+        args.baseline_archive_bytes is not None
+        or args.candidate_archive_bytes is not None
+    )
+    incremental_rate = args.incremental_rate_cost_bytes is not None
+    rate_modes = sum(int(flag) for flag in (manifest_rate, full_rate, incremental_rate))
+    if rate_modes != 1:
+        raise SystemExit(
+            "choose exactly one rate scope: "
+            "--rate-from-candidate-manifest, or "
+            "--baseline-archive-bytes + --candidate-archive-bytes, or "
+            "--incremental-rate-cost-bytes + --incremental-baseline-label"
+        )
+    if full_rate and (
+        args.baseline_archive_bytes is None or args.candidate_archive_bytes is None
+    ):
+        raise SystemExit(
+            "--baseline-archive-bytes and --candidate-archive-bytes are required together"
+        )
+    if incremental_rate and not args.incremental_baseline_label:
+        raise SystemExit(
+            "--incremental-rate-cost-bytes requires --incremental-baseline-label"
+        )
+    rate_source_manifest = None
+    baseline_archive_bytes = args.baseline_archive_bytes
+    candidate_archive_bytes = args.candidate_archive_bytes
+    if manifest_rate:
+        baseline_archive_bytes, candidate_archive_bytes, rate_source_manifest = (
+            _load_rate_from_candidate_manifest(args.rate_from_candidate_manifest)
+        )
+    rate_scope = "archive_delta" if (full_rate or manifest_rate) else "incremental"
+    rate_cost_bytes = (
+        int(candidate_archive_bytes) - int(baseline_archive_bytes)
+        if rate_scope == "archive_delta"
+        else int(args.incremental_rate_cost_bytes)
+    )
+    if args.allow_negative_archive_delta and not args.negative_archive_delta_rationale:
+        raise SystemExit(
+            "--allow-negative-archive-delta requires --negative-archive-delta-rationale"
+        )
+    output_n_pairs = args.output_n_pairs
+    expected_pairs = None if args.allow_partial_smoke else int(args.expected_pairs)
     result = build_pair_sign_mask(
-        baseline_rows=_rows_by_pair(args.baseline_xray),
-        positive_rows=_rows_by_pair(args.positive_xray),
-        negative_rows=(
-            _rows_by_pair(args.negative_xray)
-            if args.negative_xray is not None
-            else None
-        ),
+        baseline_rows=baseline_rows,
+        positive_rows=positive_rows,
+        negative_rows=negative_rows,
         improvement_guard=float(args.improvement_guard),
         selection_mode=str(args.selection_mode),
-        rate_cost_bytes=int(args.rate_cost_bytes),
+        rate_cost_bytes=rate_cost_bytes,
+        evidence_axis=str(args.evidence_axis),
+        rate_scope=rate_scope,
+        baseline_archive_bytes=baseline_archive_bytes,
+        candidate_archive_bytes=candidate_archive_bytes,
+        rate_source_manifest=rate_source_manifest,
+        allow_negative_archive_delta=bool(args.allow_negative_archive_delta),
+        negative_archive_delta_rationale=args.negative_archive_delta_rationale,
+        incremental_baseline_label=args.incremental_baseline_label,
+        xray_provenance=xray_provenance,
+        expected_pairs=expected_pairs,
+        partial_smoke_allowed=bool(args.allow_partial_smoke),
         max_active_pairs=args.max_active_pairs,
         min_net_improvement=float(args.min_net_improvement),
-        output_n_pairs=args.output_n_pairs,
+        output_n_pairs=output_n_pairs,
     )
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(
@@ -411,10 +702,12 @@ def main(argv: list[str] | None = None) -> int:
                 "negative_pairs": result["negative_pairs"],
                 "potential_pairs": result["potential_pairs"],
                 "selection_mode": result["selection_mode"],
+                "evidence_axis": result["evidence_axis"],
                 "best_prefix_size": result["best_prefix_size"],
                 "best_component_prefix_size": result["best_component_prefix_size"],
                 "improvement_guard": result["improvement_guard"],
                 "rate_cost_bytes": result["rate_cost_bytes"],
+                "rate_scope": result["rate_scope"],
                 "predicted_component_no_rate_delta": result[
                     "predicted_component_no_rate_delta"
                 ],

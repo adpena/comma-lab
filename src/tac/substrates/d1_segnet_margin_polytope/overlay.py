@@ -144,23 +144,24 @@ def _pack_pair_sign_mask_bytes(signs: Sequence[int]) -> bytes:
 
 
 def pack_pair_sign_mask(signs: Sequence[int]) -> str:
-    """Pack per-pair D1 signs into canonical base64 2-bit bytes.
+    """Pack per-pair D1 signs into canonical base85 2-bit bytes.
 
-    Hex encoding costs 2 JSON characters per byte. Base64 costs 4/3
-    characters per byte and is the canonical D1 metadata representation because
-    selector overhead is score-bearing.
+    Pair selectors are charged archive bytes, so D1 uses the shortest safe
+    stdlib ASCII armoring for raw 2-bit selector bytes. Python's b85 alphabet
+    avoids JSON quotes/backslashes for these payloads and is 12 bytes shorter
+    than base64 for the 600-pair contest selector.
     """
-    return base64.b64encode(_pack_pair_sign_mask_bytes(signs)).decode("ascii")
+    return base64.b85encode(_pack_pair_sign_mask_bytes(signs)).decode("ascii")
 
 
-def unpack_pair_sign_mask(mask_b64: str, *, n_pairs: int) -> tuple[int, ...]:
-    """Unpack a canonical base64 D1 2-bit pair-sign mask from metadata."""
+def unpack_pair_sign_mask(mask_b85: str, *, n_pairs: int) -> tuple[int, ...]:
+    """Unpack a canonical base85 D1 2-bit pair-sign mask from metadata."""
     if n_pairs <= 0:
         raise ValueError(f"n_pairs must be > 0; got {n_pairs}")
     try:
-        payload = base64.b64decode(str(mask_b64).encode("ascii"), validate=True)
+        payload = base64.b85decode(str(mask_b85).encode("ascii"))
     except (ValueError, UnicodeEncodeError) as exc:
-        raise ValueError("pair sign mask is not valid base64") from exc
+        raise ValueError("pair sign mask is not valid base85") from exc
     expected_len = (int(n_pairs) * 2 + 7) // 8
     if len(payload) != expected_len:
         raise ValueError(
@@ -188,11 +189,11 @@ def pair_sign_mask_from_meta(
     policy = str(meta.get("overlay_sign_policy", "payload")).strip().lower()
     if policy != "pair_mask":
         return None
-    mask_b64 = meta.get("overlay_pair_sign_mask_b64")
-    n_pairs = int(meta.get("overlay_pair_sign_mask_n_pairs", default_n_pairs))
-    if not isinstance(mask_b64, str) or not mask_b64:
-        raise ValueError("D1 pair_mask policy missing overlay_pair_sign_mask_b64")
-    return unpack_pair_sign_mask(mask_b64, n_pairs=n_pairs)
+    mask_b85 = meta.get("pair_mask_b85")
+    n_pairs = int(meta.get("pair_mask_n", default_n_pairs))
+    if not isinstance(mask_b85, str) or not mask_b85:
+        raise ValueError("D1 pair_mask policy missing pair_mask_b85")
+    return unpack_pair_sign_mask(mask_b85, n_pairs=n_pairs)
 
 
 def overlay_sign_for_pair(

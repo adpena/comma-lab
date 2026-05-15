@@ -296,10 +296,11 @@ def test_pair_sign_mask_pack_unpack_roundtrip():
     assert unpack_pair_sign_mask(encoded, n_pairs=len(signs)) == signs
 
 
-def test_pair_sign_mask_base64_is_smaller_than_hex_for_contest_mask():
+def test_pair_sign_mask_base85_is_smaller_than_base64_for_contest_mask():
     signs = tuple(1 if idx % 5 == 0 else -1 if idx % 7 == 0 else 0 for idx in range(600))
     encoded = pack_pair_sign_mask(signs)
-    assert len(encoded) == 200
+    assert len(encoded) == 188
+    assert len(encoded) < 200
     assert len(encoded) < 300
     assert unpack_pair_sign_mask(encoded, n_pairs=len(signs)) == signs
 

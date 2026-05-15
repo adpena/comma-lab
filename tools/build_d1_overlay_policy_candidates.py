@@ -157,9 +157,16 @@ def _parse_resolution(raw: str) -> tuple[int, int] | None:
     return h, w
 
 
-def _load_pair_sign_mask(path: Path | None) -> tuple[int, ...] | None:
+def _load_pair_sign_mask(
+    path: Path | None,
+    *,
+    expected_pairs: int,
+    allow_partial_smoke: bool,
+) -> tuple[int, ...] | None:
     if path is None:
         return None
+    if expected_pairs <= 0:
+        raise SystemExit(f"--expected-pairs must be > 0; got {expected_pairs}")
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, list):
         raw_signs = payload
@@ -179,6 +186,12 @@ def _load_pair_sign_mask(path: Path | None) -> tuple[int, ...] | None:
     if bad:
         raise SystemExit(
             f"--pair-sign-mask-json values must be -1, 0, or 1; got {bad[:8]}"
+        )
+    if len(signs) != expected_pairs and not allow_partial_smoke:
+        raise SystemExit(
+            "--pair-sign-mask-json pair count mismatch: "
+            f"got {len(signs)}, expected {expected_pairs}. Use "
+            "--allow-partial-smoke only for non-contest local smoke packets."
         )
     return signs
 
@@ -398,6 +411,20 @@ def _build_parser() -> argparse.ArgumentParser:
         default="",
         help="Short label appended to pair_mask candidate IDs.",
     )
+    parser.add_argument(
+        "--expected-pairs",
+        type=int,
+        default=600,
+        help="Expected contest pair count for pair-mask materialization.",
+    )
+    parser.add_argument(
+        "--allow-partial-smoke",
+        action="store_true",
+        help=(
+            "Permit pair masks shorter than --expected-pairs. This keeps local "
+            "smoke tests possible but emits a non-contest blocker."
+        ),
+    )
     return parser
 
 
@@ -419,14 +446,18 @@ def main(argv: list[str] | None = None) -> int:
     payload_budgets = _parse_budget_bits(args.payload_budget_bits)
     lipschitz_values = _parse_lipschitz_values(args.jacobian_lipschitz)
     margin_map_resolution = _parse_resolution(args.margin_map_resolution)
-    pair_sign_mask = _load_pair_sign_mask(args.pair_sign_mask_json)
-    pair_sign_mask_b64: str | None = None
+    pair_sign_mask = _load_pair_sign_mask(
+        args.pair_sign_mask_json,
+        expected_pairs=int(args.expected_pairs),
+        allow_partial_smoke=bool(args.allow_partial_smoke),
+    )
+    pair_sign_mask_b85: str | None = None
     pair_sign_mask_sha256: str | None = None
     pair_mask_label: str | None = None
     if pair_sign_mask is not None:
-        pair_sign_mask_b64 = pack_pair_sign_mask(pair_sign_mask)
+        pair_sign_mask_b85 = pack_pair_sign_mask(pair_sign_mask)
         pair_sign_mask_sha256 = hashlib.sha256(
-            base64.b64decode(pair_sign_mask_b64.encode("ascii"), validate=True)
+            base64.b85decode(pair_sign_mask_b85.encode("ascii"))
         ).hexdigest()
         pair_mask_label = args.pair_sign_mask_label.strip() or pair_sign_mask_sha256[:12]
     if "pair_mask" in sign_policies and pair_sign_mask is None:
@@ -493,11 +524,8 @@ def main(argv: list[str] | None = None) -> int:
                             "overlay_sign_policy": sign_policy,
                             **(
                                 {
-                                    "overlay_pair_sign_mask_b64": pair_sign_mask_b64,
-                                    "overlay_pair_sign_mask_n_pairs": len(
-                                        pair_sign_mask or ()
-                                    ),
-                                    "overlay_pair_sign_mask_sha256": pair_sign_mask_sha256,
+                                    "pair_mask_b85": pair_sign_mask_b85,
+                                    "pair_mask_n": len(pair_sign_mask or ()),
                                 }
                                 if sign_policy == "pair_mask"
                                 else {}
@@ -528,6 +556,18 @@ def main(argv: list[str] | None = None) -> int:
                     )
                     archive_bytes = archive_zip.read_bytes()
                     (submission_dir / "archive.zip").write_bytes(archive_bytes)
+                    base_member_bytes = len(a1_bytes)
+                    source_base_archive_bytes = int(
+                        source.meta.get("base_archive_bytes", base_member_bytes)
+                    )
+                    partial_smoke_blockers = (
+                        ["d1_pair_mask_partial_smoke_not_contest_packet"]
+                        if sign_policy == "pair_mask"
+                        and bool(args.allow_partial_smoke)
+                        and pair_sign_mask is not None
+                        and len(pair_sign_mask) != int(args.expected_pairs)
+                        else []
+                    )
                     row = {
                         "candidate_id": candidate_id,
                         "overlay_channel_policy": policy,
@@ -540,6 +580,18 @@ def main(argv: list[str] | None = None) -> int:
                         "archive_sha256": _sha256_bytes(archive_bytes),
                         "d1_bin_bytes": len(d1_variant),
                         "d1_bin_sha256": _sha256_bytes(d1_variant),
+                        "base_member_name": "a1.bin",
+                        "base_member_bytes": base_member_bytes,
+                        "base_member_sha256": a1_sha,
+                        "source_base_archive_bytes": source_base_archive_bytes,
+                        "archive_delta_vs_base_member_bytes": (
+                            len(archive_bytes) - base_member_bytes
+                        ),
+                        "archive_delta_vs_source_base_archive_bytes": (
+                            len(archive_bytes) - source_base_archive_bytes
+                        ),
+                        "d1_sidecar_bytes": len(d1_variant),
+                        "d1_sidecar_sha256": _sha256_bytes(d1_variant),
                         "payload_budget_bits": payload_budget_bits,
                         "jacobian_lipschitz_override": jacobian_lipschitz,
                         "margin_map_resolution_override": (
@@ -594,6 +646,8 @@ def main(argv: list[str] | None = None) -> int:
                                 ),
                                 "sha256": pair_sign_mask_sha256,
                                 "label": pair_mask_label,
+                                "expected_pairs": int(args.expected_pairs),
+                                "partial_smoke_allowed": bool(args.allow_partial_smoke),
                             }
                             if sign_policy == "pair_mask"
                             else None
@@ -607,6 +661,7 @@ def main(argv: list[str] | None = None) -> int:
                             "not_paired_contest_cpu_cuda_exact_eval",
                             "no_dispatch_claim_for_policy_candidate",
                             *overlay_diag.dispatch_blockers,
+                            *partial_smoke_blockers,
                         ],
                     }
                     rows.append(row)
@@ -637,6 +692,10 @@ def main(argv: list[str] | None = None) -> int:
         "source_a1_bin": args.a1_bin,
         "source_d1_bin_sha256": _sha256_bytes(d1_bytes),
         "a1_bin_sha256": a1_sha,
+        "base_member_bytes": len(a1_bytes),
+        "source_base_archive_bytes": int(
+            source.meta.get("base_archive_bytes", len(a1_bytes))
+        ),
         "channel_policies": policies,
         "amplitude_scales": amplitude_scales,
         "sign_policies": sign_policies,

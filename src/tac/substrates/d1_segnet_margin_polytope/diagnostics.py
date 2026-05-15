@@ -41,6 +41,7 @@ class D1OverlayDiagnostics:
     estimated_changed_lsb_l2_energy_upper_bound_per_pair: int
     integer_feasible_pixels: int
     unsafe_nonzero_pixels: int
+    pair_mask_active_pairs: int | None
     max_safe_budget_lsb: float
     mean_safe_budget_lsb: float
     payload_jacobian_lipschitz: float
@@ -67,6 +68,8 @@ class D1OverlayDiagnostics:
             blockers.append("d1_no_integer_feasible_pixels_under_lipschitz_bound")
         if self.unsafe_nonzero_pixels > 0:
             blockers.append("d1_overlay_exceeds_integer_safe_budget")
+        if self.pair_mask_active_pairs == 0:
+            blockers.append("d1_pair_mask_has_no_active_pairs")
         return blockers
 
     def to_json_dict(self) -> dict[str, Any]:
@@ -90,6 +93,7 @@ class D1OverlayDiagnostics:
             ),
             "integer_feasible_pixels": self.integer_feasible_pixels,
             "unsafe_nonzero_pixels": self.unsafe_nonzero_pixels,
+            "pair_mask_active_pairs": self.pair_mask_active_pairs,
             "max_safe_budget_lsb": self.max_safe_budget_lsb,
             "mean_safe_budget_lsb": self.mean_safe_budget_lsb,
             "payload_jacobian_lipschitz": self.payload_jacobian_lipschitz,
@@ -133,6 +137,15 @@ def analyze_d1_overlay_effect(
         else archive.meta.get("overlay_sign_policy", "payload")
     )
     overlay_sign_for_pair(sign, 0, pair_sign_mask)
+    pair_mask_active_pairs: int | None = None
+    if sign.strip().lower() == "pair_mask":
+        if pair_sign_mask is None:
+            raise ValueError("overlay_sign_policy='pair_mask' requires pair_sign_mask")
+        pair_mask_active_pairs = 0
+        for pair_idx in range(len(pair_sign_mask)):
+            pair_mask_active_pairs += int(
+                overlay_sign_for_pair(sign, pair_idx, pair_sign_mask) != 0
+            )
 
     decoded = decode_polytope_payload(archive.polytope_payload)
     camera_overlay = _build_camera_resolution_overlay(
@@ -179,6 +192,7 @@ def analyze_d1_overlay_effect(
             np.count_nonzero(safe_budget >= float(min_integer_delta_lsb))
         ),
         unsafe_nonzero_pixels=int(np.count_nonzero(decoded_abs > max_safe_abs)),
+        pair_mask_active_pairs=pair_mask_active_pairs,
         max_safe_budget_lsb=float(safe_budget.max()) if safe_budget.size else 0.0,
         mean_safe_budget_lsb=float(safe_budget.mean()) if safe_budget.size else 0.0,
         payload_jacobian_lipschitz=float(decoded.jacobian_lipschitz),

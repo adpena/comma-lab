@@ -1052,8 +1052,8 @@ def _overlay_sign_for_pair(sign_policy: str, pair_idx: int) -> int:
     )
 
 
-def _unpack_pair_sign_mask(mask_b64: str, *, n_pairs: int) -> tuple[int, ...]:
-    payload = base64.b64decode(str(mask_b64).encode('ascii'), validate=True)
+def _unpack_pair_sign_mask(mask_b85: str, *, n_pairs: int) -> tuple[int, ...]:
+    payload = base64.b85decode(str(mask_b85).encode('ascii'))
     expected_len = (int(n_pairs) * 2 + 7) // 8
     if len(payload) != expected_len:
         raise ValueError(
@@ -1076,15 +1076,15 @@ def _pair_sign_mask_from_meta(meta: dict[str, object], n_pairs: int) -> tuple[in
     policy = str(meta.get('overlay_sign_policy', 'payload')).strip().lower()
     if policy != 'pair_mask':
         return None
-    mask_b64 = meta.get('overlay_pair_sign_mask_b64')
-    mask_pairs = int(meta.get('overlay_pair_sign_mask_n_pairs', n_pairs))
-    if not isinstance(mask_b64, str) or not mask_b64:
-        raise ValueError('D1 pair_mask policy missing overlay_pair_sign_mask_b64')
+    mask_b85 = meta.get('pair_mask_b85')
+    mask_pairs = int(meta.get('pair_mask_n', n_pairs))
+    if not isinstance(mask_b85, str) or not mask_b85:
+        raise ValueError('D1 pair_mask policy missing pair_mask_b85')
     if mask_pairs != n_pairs:
         raise ValueError(
             f'D1 pair mask n_pairs={{mask_pairs}} does not match inflated n_pairs={{n_pairs}}'
         )
-    return _unpack_pair_sign_mask(mask_b64, n_pairs=n_pairs)
+    return _unpack_pair_sign_mask(mask_b85, n_pairs=n_pairs)
 
 
 def _overlay_sign_for_pair_masked(

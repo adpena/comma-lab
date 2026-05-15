@@ -97,6 +97,13 @@ def test_d1_policy_builder_materializes_channel_amplitude_sign_product(tmp_path:
     )
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+    assert row["base_member_name"] == "a1.bin"
+    assert row["base_member_bytes"] == len(b"synthetic-a1-base")
+    assert row["source_base_archive_bytes"] == len(b"synthetic-a1-base")
+    assert row["archive_delta_vs_source_base_archive_bytes"] == (
+        row["archive_bytes"] - len(b"synthetic-a1-base")
+    )
+    assert row["d1_sidecar_bytes"] == row["d1_bin_bytes"]
     candidate_d1 = Path(row["submission_dir"]) / "d1_polytope.bin"
     parsed = parse_archive(candidate_d1.read_bytes())
     assert parsed.meta["overlay_channel_policy"] == "neg_green"
@@ -271,6 +278,8 @@ def test_d1_policy_builder_materializes_pair_mask_policy(tmp_path: Path) -> None
             str(mask_path),
             "--pair-sign-mask-label",
             "unit",
+            "--expected-pairs",
+            str(len(signs)),
         ]
     )
 
@@ -281,12 +290,115 @@ def test_d1_policy_builder_materializes_pair_mask_policy(tmp_path: Path) -> None
     row = summary["candidates"][0]
     assert row["candidate_id"].endswith("_sign_pair_mask_pairmask_unit")
     assert row["pair_sign_mask"]["positive_pairs"] == 2
+    assert row["pair_sign_mask"]["expected_pairs"] == len(signs)
+    assert row["pair_sign_mask"]["partial_smoke_allowed"] is False
+    assert row["d1_overlay_diagnostics"]["pair_mask_active_pairs"] == 3
     parsed = parse_archive((Path(row["submission_dir"]) / "d1_polytope.bin").read_bytes())
     assert parsed.meta["overlay_sign_policy"] == "pair_mask"
-    assert "overlay_pair_sign_mask_b64" in parsed.meta
+    assert "pair_mask_b85" in parsed.meta
+    assert "pair_mask_n" in parsed.meta
+    assert "overlay_pair_sign_mask_b64" not in parsed.meta
     assert "overlay_pair_sign_mask_bits_hex" not in parsed.meta
-    assert parsed.meta["overlay_pair_sign_mask_n_pairs"] == len(signs)
-    assert parsed.meta["overlay_pair_sign_mask_sha256"] == row["pair_sign_mask"]["sha256"]
+    assert "overlay_pair_sign_mask_sha256" not in parsed.meta
+    assert parsed.meta["pair_mask_n"] == len(signs)
+
+
+def test_d1_policy_builder_blocks_all_zero_pair_mask(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    out_dir = tmp_path / "out_zero_pair_mask"
+    mask_path = tmp_path / "pair_mask_zero.json"
+    mask_path.write_text(json.dumps({"pair_signs": [0, 0, 0]}) + "\n", encoding="utf-8")
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "green",
+            "--sign-policies",
+            "pair_mask",
+            "--pair-sign-mask-json",
+            str(mask_path),
+            "--expected-pairs",
+            "3",
+        ]
+    )
+
+    assert rc == 0
+    row = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")[
+        "candidates"
+    ][0]
+    assert row["d1_overlay_diagnostics"]["pair_mask_active_pairs"] == 0
+    assert "d1_pair_mask_has_no_active_pairs" in row["dispatch_blockers"]
+
+
+def test_d1_policy_builder_rejects_partial_pair_mask_by_default(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    mask_path = tmp_path / "partial_pair_mask.json"
+    mask_path.write_text(json.dumps({"pair_signs": [1, 0, -1]}) + "\n", encoding="utf-8")
+
+    try:
+        module.main(
+            [
+                "--d1-bin",
+                str(d1_path),
+                "--a1-bin",
+                str(a1_path),
+                "--output-dir",
+                str(tmp_path / "out_partial_reject"),
+                "--policies",
+                "green",
+                "--sign-policies",
+                "pair_mask",
+                "--pair-sign-mask-json",
+                str(mask_path),
+            ]
+        )
+    except SystemExit as exc:
+        assert "pair count mismatch" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("partial pair mask should require explicit smoke waiver")
+
+
+def test_d1_policy_builder_marks_partial_pair_mask_smoke(tmp_path: Path) -> None:
+    module = _load_tool()
+    d1_path, a1_path = _write_d1_inputs(tmp_path)
+    out_dir = tmp_path / "out_partial_smoke"
+    mask_path = tmp_path / "partial_pair_mask.json"
+    mask_path.write_text(json.dumps({"pair_signs": [1, 0, -1]}) + "\n", encoding="utf-8")
+
+    rc = module.main(
+        [
+            "--d1-bin",
+            str(d1_path),
+            "--a1-bin",
+            str(a1_path),
+            "--output-dir",
+            str(out_dir),
+            "--policies",
+            "green",
+            "--sign-policies",
+            "pair_mask",
+            "--pair-sign-mask-json",
+            str(mask_path),
+            "--allow-partial-smoke",
+        ]
+    )
+
+    assert rc == 0
+    row = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")[
+        "candidates"
+    ][0]
+    assert row["pair_sign_mask"]["n_pairs"] == 3
+    assert row["pair_sign_mask"]["expected_pairs"] == 600
+    assert row["pair_sign_mask"]["partial_smoke_allowed"] is True
+    assert "d1_pair_mask_partial_smoke_not_contest_packet" in row["dispatch_blockers"]
 
 
 def test_d1_policy_builder_rejects_bad_amplitude_scale() -> None:

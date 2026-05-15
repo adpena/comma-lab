@@ -522,9 +522,11 @@ Implemented a byte-closed D1 `pair_mask` sign policy:
 
 - `pack_pair_sign_mask(...)` / `unpack_pair_sign_mask(...)` encode `-1/0/+1`
   per pair in a deterministic 2-bit stream.
-- Runtime-generated `inflate.py` decodes `overlay_pair_sign_mask_bits_hex`,
+- Runtime-generated `inflate.py` decodes the compact pair-mask metadata,
   validates exact `n_pairs`, skips disabled pairs, and applies positive or
-  negated overlays per selected pair.
+  negated overlays per selected pair. The current canonical metadata surface is
+  `pair_mask_b85` + `pair_mask_n`; the earlier hex/base64 surfaces are
+  superseded below.
 - `tools/build_d1_pair_mask_from_xray.py` converts pair-component xray JSON
   into a selector packet. The selector is explicitly `score_claim=false`.
 - `tools/build_d1_overlay_policy_candidates.py` now materializes pair-mask
@@ -600,7 +602,9 @@ pair-mask overhead (`185700 - 185379 = 321` bytes):
   --baseline-xray experiments/results/d1_pair_component_xray_a1_baseline_cpu_20260515_codex/pair_component_xray.json \
   --positive-xray experiments/results/d1_pair_component_xray_cert_sparse96_b3k_green_cpu_20260515_codex/pair_component_xray.json \
   --negative-xray experiments/results/d1_pair_component_xray_negative_green_b3k_20260515_codex/pair_component_xray.json \
-  --rate-cost-bytes 321 \
+  --evidence-axis local_cpu_xray \
+  --incremental-rate-cost-bytes 321 \
+  --incremental-baseline-label d1_static_b3k_green_packet \
   --output-n-pairs 600 \
   --output-json experiments/results/d1_pair_mask_selector_cpu600_posneg_rateaware_20260515_codex/pair_mask_600.json
 ```
@@ -614,12 +618,14 @@ own local model says it cannot pay for its selector bytes.
 
 ## Pair-Mask Metadata Compression - 2026-05-15
 
-The rate-aware selector exposed a narrow but real engineering gap: the
-235-pair CPU600 `+/-/off` mask missed break-even by only about 22 archive bytes.
-D1 pair masks are now canonicalized as base64-encoded 2-bit bytes instead of
-hex metadata. For a 600-pair selector this changes the metadata payload from
-300 JSON characters to 200 JSON characters while keeping the same 150 raw
-selector bytes and the same `[-1, 0, +1]` semantics.
+The rate-aware selector exposed a narrow but real engineering gap under a
+same-family incremental accounting model: the 235-pair CPU600 `+/-/off` mask
+missed break-even by only about 22 archive bytes. This was first tightened by
+moving from hex metadata to base64-encoded 2-bit bytes, and was later
+superseded by the base85 minimum-metadata packet below. For a 600-pair selector
+the base64 intermediate changed the metadata payload from 300 JSON characters
+to 200 JSON characters while keeping the same 150 raw selector bytes and the
+same `[-1, 0, +1]` semantics.
 
 Code surfaces:
 
@@ -668,8 +674,189 @@ old selector rate bytes = 321 -> net +0.000014399177445996057
 new selector rate bytes = 294 -> net -0.000003579014288302557
 ```
 
-The expected win is tiny and CPU-xray-derived, so this is **not** a promotion
-or submission result. It does mean the D1 pair-mask branch is no longer
-self-blocked by its own selector bytes. Next score-bearing step, if D1 is
-reopened, is a paired exact eval or a CUDA-native xray selector; the current
-forecast remains above the operator's `<0.192` submission threshold.
+This was an intermediate same-family incremental estimate only. It is
+CPU-xray-derived and **not** a promotion or submission result. Full A1-relative
+archive accounting is recorded in the supersession block below and blocks the
+pair-mask packet.
+
+## Pair-Mask Minimum Metadata Tightening - 2026-05-15T19:34Z
+
+Further D1 review found one more score-bearing selector leak: the archive
+metadata stored `overlay_pair_sign_mask_sha256` inside `d1_polytope.bin`.
+That hash is useful custody signal, but inflate does not need it; keeping it
+inside the scored packet spends bytes. D1 now keeps the selector hash in the
+candidate manifest only, and the scored D1 metadata carries only:
+
+```text
+pair_mask_b85=<base85 2-bit selector bytes>
+pair_mask_n=<pair count>
+```
+
+The runtime and reusable overlay decoder consume `pair_mask_b85` directly.
+The old long metadata keys are removed from newly materialized packets:
+`overlay_pair_sign_mask_b64`, `overlay_pair_sign_mask_bits_hex`, and
+`overlay_pair_sign_mask_sha256`.
+
+Regression hardening:
+
+- `analyze_d1_overlay_effect(...)` now reports `pair_mask_active_pairs`.
+- All-zero pair-mask packets now get the explicit blocker
+  `d1_pair_mask_has_no_active_pairs`, preventing a repeat dead-rate dispatch
+  where static overlay diagnostics are nonzero but every pair is disabled.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py \
+  src/tac/tests/test_build_d1_pair_mask_from_xray.py \
+  src/tac/tests/test_xray_d1_overlay_payload.py
+# 121 passed
+
+.venv/bin/ruff check \
+  src/tac/substrates/d1_segnet_margin_polytope/overlay.py \
+  src/tac/substrates/d1_segnet_margin_polytope/diagnostics.py \
+  experiments/train_substrate_d1_segnet_margin_polytope.py \
+  tools/build_d1_overlay_policy_candidates.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py
+# All checks passed
+```
+
+Materialized byte-closed candidate:
+
+```text
+experiments/results/d1_pair_mask_cpu600_posneg_b85_minmeta_candidate_20260515_codex/d1_overlay_channel_green_amp_1_sign_pair_mask_pairmask_cpu600p235pn_b85_minmeta/archive.zip
+bytes=185593
+sha256=d3f21f3512d61d6d5d4f7625cb38d54fac9f389f2ef7af766e64622d62d0848e
+pair_mask_active_pairs=235
+```
+
+Byte delta versus previous D1 pair-mask packets:
+
+```text
+hex metadata packet: 185700 bytes
+base64 packet:       185673 bytes
+base85 min-meta:     185593 bytes
+```
+
+Using the same CPU600 xray component estimate against the static D1 packet
+family:
+
+```text
+component delta no-rate = -0.00019934154650622093
+old b64 selector rate bytes = 294 -> net -0.000003579014288302557
+new min-meta rate bytes = 214 -> net -0.00005684523562047961
+```
+
+Important correction: this incremental accounting is valid only inside the D1
+static-packet family. It is **not** valid for an A1-relative promotion claim,
+because the xray baseline rows were A1. Full A1-relative rate accounting must
+charge the whole D1 packet delta.
+
+Full-rate selector audit:
+
+```bash
+.venv/bin/python tools/build_d1_pair_mask_from_xray.py \
+  --baseline-xray experiments/results/d1_pair_component_xray_a1_baseline_cpu_20260515_codex/pair_component_xray.json \
+  --positive-xray experiments/results/d1_pair_component_xray_cert_sparse96_b3k_green_cpu_20260515_codex/pair_component_xray.json \
+  --negative-xray experiments/results/d1_pair_component_xray_negative_green_b3k_20260515_codex/pair_component_xray.json \
+  --evidence-axis local_cpu_xray \
+  --baseline-archive-bytes 178162 \
+  --candidate-archive-bytes 185593 \
+  --output-n-pairs 600 \
+  --output-json experiments/results/d1_pair_mask_selector_cpu600_posneg_fullrate_20260515_codex/pair_mask_600.json
+```
+
+Result:
+
+```text
+potential_pairs=235
+best_component_prefix_size=235
+best_component_no_rate_delta=-0.00019934154650622093
+archive_byte_delta=7431
+rate_penalty_score=0.004947997880650855
+active_pairs=0
+predicted_score_lowering_after_rate=false
+```
+
+`tools/build_d1_pair_mask_from_xray.py` now requires an explicit
+`--evidence-axis` plus exactly one rate scope:
+`--baseline-archive-bytes/--candidate-archive-bytes` for full A/B accounting,
+or `--incremental-rate-cost-bytes/--incremental-baseline-label` for
+same-family incremental selector accounting. This permanently prevents the
+specific false-positive class where an A1-relative xray selector charges only
+incremental D1 metadata bytes.
+
+This is still not a submission candidate and does not fix D1's CUDA-axis
+weakness. It is a real byte-closed D1 packet-size improvement and a stronger
+selector guard; the next meaningful D1 move remains CUDA-native pair/action
+xray or a per-pair action selector over channel/sign/amplitude, not another
+static same-sign sweep.
+
+## Pair-Mask Adversarial Guardrail Supersession - 2026-05-15T19:48Z
+
+Recursive adversarial review found two remaining false-positive paths:
+
+1. `tools/build_d1_pair_mask_from_xray.py` trusted a caller-supplied axis string
+   instead of verifying xray provenance.
+2. Full-rate accounting still allowed hand-typed archive bytes, which could
+   reintroduce the exact A1-relative-vs-incremental selector mistake.
+
+Hardening landed:
+
+- Xray reports now must expose verifiable provenance (`schema`,
+  `evidence_grade`/`device`, row count, file SHA), and `--evidence-axis` must
+  match all input xray axes. The current CPU xray artifacts are therefore
+  fixed as `local_cpu_xray`; they cannot be relabeled as `contest_cuda`.
+- D1 policy candidate manifests now record `base_member_bytes`,
+  `source_base_archive_bytes`, `archive_delta_vs_source_base_archive_bytes`,
+  `d1_sidecar_bytes`, and the relevant SHA-256 custody fields.
+- The pair-mask selector can read full-rate bytes directly from
+  `--rate-from-candidate-manifest`, avoiding manual byte transcription.
+- Pair-mask materialization defaults to `--expected-pairs 600`; partial masks
+  require `--allow-partial-smoke` and receive a non-contest dispatch blocker.
+- Negative archive deltas require an explicit waiver and rationale.
+
+Manifest-sourced full-rate audit:
+
+```bash
+PYTHONPATH=src .venv/bin/python tools/build_d1_pair_mask_from_xray.py \
+  --baseline-xray experiments/results/d1_pair_component_xray_a1_baseline_cpu_20260515_codex/pair_component_xray.json \
+  --positive-xray experiments/results/d1_pair_component_xray_cert_sparse96_b3k_green_cpu_20260515_codex/pair_component_xray.json \
+  --negative-xray experiments/results/d1_pair_component_xray_negative_green_b3k_20260515_codex/pair_component_xray.json \
+  --evidence-axis local_cpu_xray \
+  --rate-from-candidate-manifest experiments/results/d1_pair_mask_cpu600_posneg_b85_minmeta_candidate_20260515_codex/d1_overlay_channel_green_amp_1_sign_pair_mask_pairmask_cpu600p235pn_b85_minmeta/candidate_manifest.json \
+  --output-json experiments/results/d1_pair_mask_selector_cpu600_posneg_manifest_fullrate_20260515_codex/pair_mask_600.json
+```
+
+Result:
+
+```text
+archive_byte_delta=7431
+rate_penalty_score=0.004947997880650855
+best_component_no_rate_delta=-0.00019934154650622093
+active_pairs=0
+predicted_score_lowering_after_rate=false
+```
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py \
+  src/tac/tests/test_build_d1_pair_mask_from_xray.py \
+  src/tac/tests/test_xray_d1_overlay_payload.py
+# 127 passed
+```
+
+Conclusion: D1 pair-mask min-meta is a legitimate byte-closed engineering
+improvement and a useful selector-guard artifact, but the full A1-relative,
+manifest-sourced rate audit blocks it. It remains non-promotional and should
+not be submitted; useful D1 work now needs CUDA-native pair/action xray or a
+new action family with enough component movement to pay the full sidecar cost.
