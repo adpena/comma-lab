@@ -29479,6 +29479,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+      "name": "Z3-G1 scorer-softmax-hyperprior-gating substitution",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "trainer + substrate package + recipe + remote driver + operator-authorize wrapper landed at commit c5b9f38d2; local CPU smoke green archive=163963B sidecar=1188B byte_saving=True; pre-deploy harness 8/8 passed; Modal smoke spawn fc-01KRPKCXARWP7NBGJCXB2P9QEP at 2026-05-15T19:56:44Z"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[diagnostic-CPU Modal T4] smoke fc-01KRPKCXARWP7NBGJCXB2P9QEP archive=179022B sha=c55e2d0d canonical_score=0.19869; FULL CUDA fc-01KRPMDRH2VNVKFFAYTWD4X0SD pending harvest"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "preflight scope=dev returns no Z3-G1 violations; pre-existing solver-wire-in violation in sister rudin_daubechies memo unrelated; check_substrate_uses_register_decorator_or_explicitly_legacy_tagged Catalog #241 honored"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z3_g1_variant_modal_dispatch_paired_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_z3_g1_scorer_softmax_hyperprior_gating.sh + scripts/operator_authorize_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch.sh + heartbeat + claim_lane_dispatch terminal hook"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z4_v2_wunderkind_e1_tier1_modal_paired_20260515",
+      "name": "Z4-V2 Wunderkind E1 Tier-1 engineering modal-paired CPU+CUDA dispatch",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_symposium_implementation_coordinator_full_math_engineering_scientific_rigor_20260515",
+      "name": "Symposium implementation queue (Catalog #256-#265)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[empirical:src/tac/symposium_impls/] 9 implementations (Catalog #256-#264) + META gate (Catalog #265); 244 tests pass; 0 STRICT violations"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "[empirical] Catalog #265 META gate check_symposium_impls_canonical_contract STRICT=True wired in preflight.py at line 2261; live count: 0; 15 tests in src/tac/symposium_impls/tests/test_check_265_symposium_impls_canonical_contract.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_symposium_implementation_coordinator_full_math_engineering_scientific_rigor_landed_20260515.md (forthcoming in same commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_canonical_dispatch_optimization_protocol_20260515",
+      "name": "Canonical dispatch optimization protocol (Tier 1/2/3 umbrella)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -29488,5 +29652,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T16:54:22Z"
+  "updated_at": "2026-05-15T20:16:14Z"
 }
