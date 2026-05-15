@@ -14,6 +14,8 @@ FORMAT0C_SOURCE_ARCHIVE = (
     "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip"
 )
 FORMAT0C_ARCHIVE_MEMBER = "x"
+FORMAT0C_SOURCE_ARCHIVE_SHA256 = "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7"
+FORMAT0C_ARCHIVE_MEMBER_SHA256 = "852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749"
 DEFAULT_RUNTIME_DIR = "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 DEFAULT_DELTA_RADIUS = 2
 
@@ -25,6 +27,8 @@ class Pr106LatentScoreTableSpec:
     job_name: str
     pr106_archive: str = FORMAT0C_SOURCE_ARCHIVE
     archive_member: str = FORMAT0C_ARCHIVE_MEMBER
+    expected_archive_sha256: str = FORMAT0C_SOURCE_ARCHIVE_SHA256
+    expected_archive_member_sha256: str = FORMAT0C_ARCHIVE_MEMBER_SHA256
     runtime_dir: str = DEFAULT_RUNTIME_DIR
     delta_radius: int = DEFAULT_DELTA_RADIUS
     latent_dim: int = 28
@@ -45,6 +49,11 @@ class Pr106LatentScoreTableSpec:
             raise ValueError("archive_member must be explicit; use 0.bin or x")
         if "/" in self.archive_member or self.archive_member in {".", ".."}:
             raise ValueError("archive_member must be a single ZIP member name")
+        _validate_sha256(self.expected_archive_sha256, field_name="expected_archive_sha256")
+        _validate_sha256(
+            self.expected_archive_member_sha256,
+            field_name="expected_archive_member_sha256",
+        )
         if not self.runtime_dir.strip():
             raise ValueError("runtime_dir must be non-empty")
         if self.runtime_dir.startswith("/"):
@@ -78,6 +87,8 @@ def score_table_env(
         "PR106_LATENT_MODE": "score_table",
         "PR106_ARCHIVE": spec.pr106_archive,
         "PR106_ARCHIVE_MEMBER": spec.archive_member,
+        "PR106_EXPECTED_ARCHIVE_SHA256": spec.expected_archive_sha256,
+        "PR106_EXPECTED_ARCHIVE_MEMBER_SHA256": spec.expected_archive_member_sha256,
         "PR106_RUNTIME_DIR": spec.runtime_dir,
         "PR106_LATENT_DELTA_RADIUS": str(spec.delta_radius),
         "PR106_LATENT_N_PAIRS": str(spec.n_pairs),
@@ -93,6 +104,14 @@ def score_table_env(
             raise ValueError("output_dir is required when include_log_dir=True")
         env["PR106_LATENT_LOG_DIR"] = f"{output_dir}/latent_run"
     return env
+
+
+def _validate_sha256(value: str, *, field_name: str) -> None:
+    text = value.strip()
+    if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text.lower()):
+        raise ValueError(f"{field_name} must be a lowercase 64-hex SHA-256")
+    if text != value or text.lower() != text:
+        raise ValueError(f"{field_name} must be a lowercase 64-hex SHA-256")
 
 
 def dispatch_claim_spec(
@@ -122,7 +141,9 @@ __all__ = [
     "DEFAULT_DELTA_RADIUS",
     "DEFAULT_RUNTIME_DIR",
     "FORMAT0C_ARCHIVE_MEMBER",
+    "FORMAT0C_ARCHIVE_MEMBER_SHA256",
     "FORMAT0C_SOURCE_ARCHIVE",
+    "FORMAT0C_SOURCE_ARCHIVE_SHA256",
     "REMOTE_SCRIPT",
     "SCORE_TABLE_LANE_ID",
     "SCORE_TABLE_ROLE",

@@ -10,6 +10,7 @@ import pytest
 from tac.deploy.kaggle.pr106_latent_score_table import (
     DEFAULT_JOB_NAME,
     DEFAULT_SOURCE_BUNDLE_NAME,
+    PINNED_UPSTREAM_COMMIT,
     KagglePr106LatentBundleSpec,
     render_launcher,
     write_bundle,
@@ -55,6 +56,8 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "'PR106_LATENT_MODE': 'score_table'" in launcher
     assert "'PR106_LATENT_DELTA_RADIUS': '2'" in launcher
     assert "'PR106_ARCHIVE_MEMBER': 'x'" in launcher
+    assert "'PR106_EXPECTED_ARCHIVE_SHA256': '56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7'" in launcher
+    assert "'PR106_EXPECTED_ARCHIVE_MEMBER_SHA256': '852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749'" in launcher
     assert "'PR106_RUNTIME_DIR': 'submissions/pr106_latent_sidecar_r2_pr101_grammar'" in launcher
     assert "'PR106_LATENT_SCORE_TABLE_BATCH_PAIRS': '3'" in launcher
     assert "'PR106_LATENT_SCORE_TABLE_CANDIDATE_BATCH_SIZE': '5'" in launcher
@@ -62,6 +65,11 @@ def test_render_launcher_uses_canonical_latent_score_table_env() -> None:
     assert "'SIDECAR_TOP_K': '400'" in launcher
     assert '"bash", \'scripts/remote_lane_pr106_latent_sidecar.sh\'' in launcher
     assert "torch==2.4.1+cu121" in launcher
+    assert "constriction==0.4.2" in launcher
+    assert "segmentation-models-pytorch==0.5.0" in launcher
+    assert f"UPSTREAM_COMMIT = '{PINNED_UPSTREAM_COMMIT}'" in launcher
+    assert '"git", "fetch", "--depth", "1", "origin", UPSTREAM_COMMIT' in launcher
+    assert '"TAC_UPSTREAM_COMMIT": upstream_commit' in launcher
     assert "PR106_LATENT_TORCH_FALLBACK_REEXEC" in launcher
     assert "PYTORCH_CUDA_ALLOC_CONF" in launcher
     assert "archive_member = 'x'" in launcher
@@ -92,8 +100,11 @@ def test_write_source_bundle_contains_latent_runtime_contract_and_claim_ledger(t
 
     assert manifest["schema"] == "kaggle_pr106_latent_source_bundle_v1"
     assert manifest["archive_member"] == "x"
+    assert manifest["expected_archive_sha256"] == "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7"
+    assert manifest["expected_archive_member_sha256"] == "852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749"
     assert manifest["runtime_dir"] == "submissions/pr106_latent_sidecar_r2_pr101_grammar"
     assert manifest["delta_radius"] == 2
+    assert manifest["upstream_commit"] == PINNED_UPSTREAM_COMMIT
     with tarfile.open(bundle / DEFAULT_SOURCE_BUNDLE_NAME, "r:gz") as tar:
         names = set(tar.getnames())
 
@@ -171,6 +182,7 @@ def test_write_bundle_declares_latent_source_dataset_and_inlines_fresh_source_bu
     assert manifest["schema"] == "kaggle_pr106_latent_score_table_bundle_v1"
     assert manifest["score_claim"] is False
     assert manifest["inline_source_bundle"] == DEFAULT_SOURCE_BUNDLE_NAME
+    assert manifest["upstream_commit"] == PINNED_UPSTREAM_COMMIT
     assert (bundle / DEFAULT_SOURCE_BUNDLE_NAME).is_file()
     assert not (bundle / "inputs/pr106_archive.zip").exists()
     assert "score_claim" in launcher

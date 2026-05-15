@@ -38,6 +38,10 @@ PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"
 PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID="${PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID:-${INSTANCE_JOB_ID:-}}"
 PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"
 PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-x}"
+PR106_EXPECTED_ARCHIVE_SHA256="${PR106_EXPECTED_ARCHIVE_SHA256:-56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7}"
+PR106_EXPECTED_ARCHIVE_MEMBER_SHA256="${PR106_EXPECTED_ARCHIVE_MEMBER_SHA256:-852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749}"
+CLOUD_PLATFORM="${CLOUD_PLATFORM:-unknown}"
+TAC_UPSTREAM_COMMIT="${TAC_UPSTREAM_COMMIT:-unknown}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 
@@ -52,6 +56,8 @@ log() { echo "[lane-pr106-sidecar] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run
 SOURCE_PREFLIGHT_JSON="$LOG_DIR/source_preflight.json"
 PR106_ARCHIVE="$PR106_ARCHIVE" \
 PR106_ARCHIVE_MEMBER="$PR106_ARCHIVE_MEMBER" \
+PR106_EXPECTED_ARCHIVE_SHA256="$PR106_EXPECTED_ARCHIVE_SHA256" \
+PR106_EXPECTED_ARCHIVE_MEMBER_SHA256="$PR106_EXPECTED_ARCHIVE_MEMBER_SHA256" \
 PR106_RUNTIME_DIR="$PR106_RUNTIME_DIR" \
 PR106_SOURCE_PREFLIGHT_JSON="$SOURCE_PREFLIGHT_JSON" \
 "$PYBIN" - <<'PY'
@@ -64,6 +70,8 @@ from pathlib import Path
 
 archive = Path(os.environ["PR106_ARCHIVE"])
 archive_member = os.environ["PR106_ARCHIVE_MEMBER"]
+expected_archive_sha256 = os.environ["PR106_EXPECTED_ARCHIVE_SHA256"]
+expected_archive_member_sha256 = os.environ["PR106_EXPECTED_ARCHIVE_MEMBER_SHA256"]
 runtime_dir = Path(os.environ["PR106_RUNTIME_DIR"])
 output_json = Path(os.environ["PR106_SOURCE_PREFLIGHT_JSON"])
 errors: list[str] = []
@@ -71,6 +79,8 @@ record: dict[str, object] = {
     "schema": "pr106_latent_source_preflight_v1",
     "pr106_archive": str(archive),
     "archive_member": archive_member,
+    "expected_archive_sha256": expected_archive_sha256,
+    "expected_archive_member_sha256": expected_archive_member_sha256,
     "runtime_dir": str(runtime_dir),
 }
 
@@ -79,6 +89,11 @@ if not archive.is_file():
 else:
     record["source_archive_bytes"] = archive.stat().st_size
     record["source_archive_sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+    if record["source_archive_sha256"] != expected_archive_sha256:
+        errors.append(
+            f"PR106 archive SHA mismatch: got {record['source_archive_sha256']} "
+            f"expected {expected_archive_sha256}"
+        )
     try:
         with zipfile.ZipFile(archive) as zf:
             names = zf.namelist()
@@ -92,6 +107,12 @@ else:
                 payload = zf.read(archive_member)
                 record["source_archive_member_bytes"] = len(payload)
                 record["source_archive_member_sha256"] = hashlib.sha256(payload).hexdigest()
+                if record["source_archive_member_sha256"] != expected_archive_member_sha256:
+                    errors.append(
+                        "PR106 archive member SHA mismatch: "
+                        f"got {record['source_archive_member_sha256']} "
+                        f"expected {expected_archive_member_sha256}"
+                    )
     except zipfile.BadZipFile as exc:
         errors.append(f"invalid PR106 archive zip {archive}: {exc}")
 
@@ -150,6 +171,8 @@ PR106_STAGE0_SCORE_TABLE_LANE_ID="$PR106_LATENT_SCORE_TABLE_LANE_ID" \
 PR106_STAGE0_INSTANCE_JOB_ID="$PR106_LATENT_SCORE_TABLE_INSTANCE_JOB_ID" \
 PR106_STAGE0_RUNTIME_DIR="$PR106_RUNTIME_DIR" \
 PR106_STAGE0_ARCHIVE_MEMBER="$PR106_ARCHIVE_MEMBER" \
+PR106_STAGE0_CLOUD_PLATFORM="$CLOUD_PLATFORM" \
+PR106_STAGE0_UPSTREAM_COMMIT="$TAC_UPSTREAM_COMMIT" \
 PR106_STAGE0_SIDECAR_TOP_K="$SIDECAR_TOP_K" \
 PR106_STAGE0_PROVENANCE_JSON="$LOG_DIR/provenance.json" \
 "$PYBIN" - <<'PY'
@@ -177,6 +200,8 @@ prov = {
     'latent_score_table_instance_job_id': os.environ['PR106_STAGE0_INSTANCE_JOB_ID'],
     'pr106_runtime_dir': os.environ['PR106_STAGE0_RUNTIME_DIR'],
     'pr106_archive_member': os.environ['PR106_STAGE0_ARCHIVE_MEMBER'],
+    'cloud_platform': os.environ['PR106_STAGE0_CLOUD_PLATFORM'],
+    'upstream_commit': os.environ['PR106_STAGE0_UPSTREAM_COMMIT'],
     'sidecar_top_k': int(os.environ['PR106_STAGE0_SIDECAR_TOP_K']),
 }
 with open(os.environ['PR106_STAGE0_PROVENANCE_JSON'], 'w') as f:
@@ -296,7 +321,12 @@ log "=== Stage 2: parser-roundtrip sanity (no GPU forward) ==="
     --output-json "$LOG_DIR/runtime_consumption.json" 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Stage 3: Contest auth eval (CUDA T4) ─────────────────────────────────
-log "=== Stage 3: contest auth eval (CUDA) ==="
+if [ "$CLOUD_PLATFORM" = "kaggle" ]; then
+    AUTH_AXIS_LABEL="[provider-CUDA:kaggle advisory]"
+else
+    AUTH_AXIS_LABEL="[contest-CUDA]"
+fi
+log "=== Stage 3: auth eval (CUDA; axis=$AUTH_AXIS_LABEL) ==="
 INFLATE_SH="$WORKSPACE/$PR106_RUNTIME_DIR/inflate.sh"
 EVAL_DIR="$LOG_DIR/eval"
 mkdir -p "$EVAL_DIR"
@@ -312,11 +342,15 @@ SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
 if [ -f "$SCORE_JSON" ]; then
     AUTH_SUMMARY=$("$PYBIN" -m tac.auth_eval_schema completion-summary "$SCORE_JSON")
     SCORE=$("$PYBIN" -m tac.auth_eval_schema completion-summary "$SCORE_JSON" --field score 2>/dev/null || echo "PARSE_FAIL")
-    log "DONE [contest-CUDA]: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
-    log "  beats PR106 baseline 0.20946? $("$PYBIN" -c "
+    log "DONE $AUTH_AXIS_LABEL: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES auth_eval_summary=$AUTH_SUMMARY"
+    if [ "$AUTH_AXIS_LABEL" = "[contest-CUDA]" ]; then
+        log "  beats PR106 baseline 0.20946? $("$PYBIN" -c "
 s = $SCORE
 print('YES — new public-frontier candidate' if isinstance(s, (int, float)) and s < 0.20946 else f'no (score {s} >= 0.20946)')
 " 2>/dev/null || echo "?")"
+    else
+        log "  provider advisory only: no public-frontier or promotion claim until paired contest-axis adjudication"
+    fi
 else
     log "FATAL: stage 3 did not produce $SCORE_JSON"
     exit 4

@@ -7,7 +7,9 @@ from tac.deploy.pr106_latent import (
     DEFAULT_DELTA_RADIUS,
     DEFAULT_RUNTIME_DIR,
     FORMAT0C_ARCHIVE_MEMBER,
+    FORMAT0C_ARCHIVE_MEMBER_SHA256,
     FORMAT0C_SOURCE_ARCHIVE,
+    FORMAT0C_SOURCE_ARCHIVE_SHA256,
     Pr106LatentScoreTableSpec,
     dispatch_claim_spec,
     score_table_env,
@@ -21,10 +23,14 @@ def test_pr106_latent_score_table_defaults_target_format0c_packet() -> None:
 
     assert spec.pr106_archive == FORMAT0C_SOURCE_ARCHIVE
     assert spec.archive_member == FORMAT0C_ARCHIVE_MEMBER
+    assert spec.expected_archive_sha256 == FORMAT0C_SOURCE_ARCHIVE_SHA256
+    assert spec.expected_archive_member_sha256 == FORMAT0C_ARCHIVE_MEMBER_SHA256
     assert spec.runtime_dir == DEFAULT_RUNTIME_DIR
     assert spec.delta_radius == DEFAULT_DELTA_RADIUS
     assert env["PR106_ARCHIVE"] == FORMAT0C_SOURCE_ARCHIVE
     assert env["PR106_ARCHIVE_MEMBER"] == "x"
+    assert env["PR106_EXPECTED_ARCHIVE_SHA256"] == FORMAT0C_SOURCE_ARCHIVE_SHA256
+    assert env["PR106_EXPECTED_ARCHIVE_MEMBER_SHA256"] == FORMAT0C_ARCHIVE_MEMBER_SHA256
     assert env["PR106_RUNTIME_DIR"] == "submissions/pr106_latent_sidecar_r2_pr101_grammar"
     assert env["PR106_LATENT_DELTA_RADIUS"] == "2"
 
@@ -34,6 +40,8 @@ def test_pr106_latent_score_table_env_declares_score_table_contract() -> None:
         job_name="kaggle_pr106_latent_test",
         pr106_archive="inputs/pr106_archive.zip",
         archive_member="0.bin",
+        expected_archive_sha256="a" * 64,
+        expected_archive_member_sha256="b" * 64,
         runtime_dir="submissions/pr106_latent_sidecar",
         delta_radius=2,
         latent_dim=28,
@@ -47,6 +55,8 @@ def test_pr106_latent_score_table_env_declares_score_table_contract() -> None:
     assert env["PR106_LATENT_MODE"] == "score_table"
     assert env["PR106_ARCHIVE"] == "inputs/pr106_archive.zip"
     assert env["PR106_ARCHIVE_MEMBER"] == "0.bin"
+    assert env["PR106_EXPECTED_ARCHIVE_SHA256"] == "a" * 64
+    assert env["PR106_EXPECTED_ARCHIVE_MEMBER_SHA256"] == "b" * 64
     assert env["PR106_RUNTIME_DIR"] == "submissions/pr106_latent_sidecar"
     assert env["PR106_LATENT_DELTA_RADIUS"] == "2"
     assert env["PR106_LATENT_DIM"] == "28"
@@ -72,6 +82,9 @@ def test_pr106_latent_score_table_rejects_nonportable_archive_path() -> None:
     [
         ("archive_member", "", "archive_member"),
         ("archive_member", "nested/x", "single ZIP member"),
+        ("expected_archive_sha256", "", "expected_archive_sha256"),
+        ("expected_archive_sha256", "A" * 64, "expected_archive_sha256"),
+        ("expected_archive_member_sha256", "0" * 63, "expected_archive_member_sha256"),
         ("runtime_dir", "", "runtime_dir"),
         ("runtime_dir", "/tmp/runtime", "repo-relative"),
     ],

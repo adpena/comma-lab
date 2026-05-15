@@ -10,9 +10,8 @@
 ## Post-Deadline PR Signal
 
 - PR #101: `https://github.com/commaai/comma_video_compression_challenge/pull/101`
-  - Public body reports CPU-style component score around `0.19`.
-  - GitHub action CUDA eval comment at 2026-05-04 16:36 UTC reports `Final score ... = 0.23`.
-  - GitHub action CPU eval comment at 2026-05-05 16:58 UTC reports `Final score ... = 0.19`.
+  - Public CPU-axis bot rescore at 2026-05-05 reports approximately `0.192845`, with pose `0.00003286`, seg `0.00056023`, archive bytes `178258`.
+  - Initial CUDA-axis bot score at 2026-05-04 reports approximately `0.226354`.
   - Actionable: CPU and CUDA axes remain separate promotion surfaces; paired eval is mandatory.
 - PR #95: `https://github.com/commaai/comma_video_compression_challenge/pull/95`
   - HNeRV source/root submission. Body documents 229K-parameter HNeRV decoder, 28-d per frame-pair latents, 8-stage curriculum, Muon, and C1a entropy-shaping.
@@ -21,6 +20,10 @@
 - PR #106: `https://github.com/commaai/comma_video_compression_challenge/pull/106`
   - `belt_and_suspenders`; CUDA report score `0.20946`, archive bytes `186239`, GPU required for evaluation.
   - Actionable: PR106 remains a useful sidecar/format laboratory, not a standalone frontier.
+- PR #103: `https://github.com/commaai/comma_video_compression_challenge/pull/103`
+  - Public CPU-axis score approximately `0.194881`, archive bytes `178223`.
+  - Body/comment signal: range-coded the eight largest weight tensors plus latent-hi stream, saving about `290 B` over Brotli.
+  - Actionable: PR103 is the highest-signal arithmetic/range-coding public lesson for PR101/PR106 export discipline.
 - PR #107: `https://github.com/commaai/comma_video_compression_challenge/pull/107`
   - Our apogee PR received official eval at `0.23`.
   - 2026-05-05 maintainer comment: email comma with a link to the PR for job/internship follow-up.
@@ -35,4 +38,5 @@
 1. Keep hard threshold: only submit if exact, contest-compliant score is `<0.192`.
 2. Record `[contest-CUDA]`, `[contest-CPU]`, and provider/advisory axes separately in every artifact.
 3. Favor byte-closed PR95/PR101-style HNeRV-family exact replay and PR106 format0C sidecar deconstruction for short-term moves.
-4. Treat generic video-codec tweaks as low priority unless xray/scorer evidence proves orthogonality to the HNeRV basin.
+4. Promote PR101/PR103 microcodec/range-coded payload sections to first-class TAC packet compiler surfaces rather than another ad hoc sidecar.
+5. Treat generic video-codec tweaks as low priority unless xray/scorer evidence proves orthogonality to the HNeRV basin.

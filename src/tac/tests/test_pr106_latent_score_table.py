@@ -377,12 +377,24 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
         in text
     )
     assert 'PR106_ARCHIVE_MEMBER="${PR106_ARCHIVE_MEMBER:-x}"' in text
+    assert (
+        'PR106_EXPECTED_ARCHIVE_SHA256="${PR106_EXPECTED_ARCHIVE_SHA256:-'
+        '56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7}"'
+        in text
+    )
+    assert (
+        'PR106_EXPECTED_ARCHIVE_MEMBER_SHA256="${PR106_EXPECTED_ARCHIVE_MEMBER_SHA256:-'
+        '852a4cb1231413cf1a8fc867e2a808de9ec78511d2ebf283df2c5b608cb4a749}"'
+        in text
+    )
     assert 'PR106_LATENT_DELTA_RADIUS="${PR106_LATENT_DELTA_RADIUS:-2}"' in text
     assert 'LANE_ID="lane_pr106_latent_sidecar"' in text
     assert 'PR106_LATENT_SCORE_TABLE_LANE_ID="${PR106_LATENT_SCORE_TABLE_LANE_ID:-$LANE_ID}"' in text
     assert "source preflight OK" in text
     assert "pr106_latent_source_preflight_v1" in text
     assert "archive member {archive_member!r} not found" in text
+    assert "PR106 archive SHA mismatch" in text
+    assert "PR106 archive member SHA mismatch" in text
     assert "experiments/build_pr106_latent_score_table.py" in text
     assert "tools/materialize_pr106_latent_score_table_candidate.py" in text
     assert 'PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"' in text
@@ -400,6 +412,10 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
     assert "SCORE_TABLE_ARGS+=(--resume-checkpoint)" in text
     assert "--python-executable \"$PYBIN\"" in text
     assert "--score-table-manifest \"$PR106_LATENT_SCORE_TABLE_MANIFEST\"" in text
+    assert 'AUTH_AXIS_LABEL="[provider-CUDA:kaggle advisory]"' in text
+    assert 'AUTH_AXIS_LABEL="[contest-CUDA]"' in text
+    assert "provider advisory only: no public-frontier or promotion claim" in text
+    assert "TAC_UPSTREAM_COMMIT" in text
 
 
 def test_remote_latent_lane_defines_log_before_nvdec_probe():

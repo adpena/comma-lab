@@ -23,6 +23,7 @@ from tac.deploy.kaggle.pr106_latent_score_table import (  # noqa: E402
     DEFAULT_KERNEL_TITLE,
     DEFAULT_SOURCE_BUNDLE_NAME,
     DEFAULT_SOURCE_DATASET_SLUG,
+    PINNED_UPSTREAM_COMMIT,
     KagglePr106LatentBundleSpec,
     write_bundle,
     write_source_bundle,
@@ -31,7 +32,9 @@ from tac.deploy.pr106_latent import (  # noqa: E402
     DEFAULT_DELTA_RADIUS,
     DEFAULT_RUNTIME_DIR,
     FORMAT0C_ARCHIVE_MEMBER,
+    FORMAT0C_ARCHIVE_MEMBER_SHA256,
     FORMAT0C_SOURCE_ARCHIVE,
+    FORMAT0C_SOURCE_ARCHIVE_SHA256,
     dispatch_claim_spec,
 )
 
@@ -67,11 +70,14 @@ def build_spec(args: argparse.Namespace) -> KagglePr106LatentBundleSpec:
         latent_dim=args.latent_dim,
         n_pairs=args.n_pairs,
         archive_member=args.archive_member,
+        expected_archive_sha256=args.expected_archive_sha256,
+        expected_archive_member_sha256=args.expected_archive_member_sha256,
         runtime_dir=args.runtime_dir,
         batch_pairs=args.batch_pairs,
         candidate_batch_size=args.candidate_batch_size,
         sidecar_top_k=args.sidecar_top_k,
         source_bundle_name=args.source_bundle_name,
+        upstream_commit=args.upstream_commit,
     )
 
 
@@ -104,6 +110,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--source-bundle-root", type=Path, default=DEFAULT_SOURCE_BUNDLE_ROOT)
     parser.add_argument("--source-bundle-name", default=DEFAULT_SOURCE_BUNDLE_NAME)
+    parser.add_argument("--upstream-commit", default=PINNED_UPSTREAM_COMMIT)
     parser.add_argument(
         "--write-source-bundle",
         action="store_true",
@@ -118,6 +125,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr106-archive", type=Path, default=DEFAULT_PR106_ARCHIVE)
     parser.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS_PATH)
     parser.add_argument("--archive-member", default=FORMAT0C_ARCHIVE_MEMBER)
+    parser.add_argument("--expected-archive-sha256", default=FORMAT0C_SOURCE_ARCHIVE_SHA256)
+    parser.add_argument("--expected-archive-member-sha256", default=FORMAT0C_ARCHIVE_MEMBER_SHA256)
     parser.add_argument("--runtime-dir", default=DEFAULT_RUNTIME_DIR)
     parser.add_argument("--delta-radius", type=int, default=DEFAULT_DELTA_RADIUS)
     parser.add_argument("--latent-dim", type=int, default=28)

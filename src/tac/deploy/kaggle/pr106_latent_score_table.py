@@ -18,6 +18,8 @@ from tac.deploy.pr106_latent import (
     DEFAULT_DELTA_RADIUS,
     DEFAULT_RUNTIME_DIR,
     FORMAT0C_ARCHIVE_MEMBER,
+    FORMAT0C_ARCHIVE_MEMBER_SHA256,
+    FORMAT0C_SOURCE_ARCHIVE_SHA256,
     REMOTE_SCRIPT,
     Pr106LatentScoreTableSpec,
     score_table_env,
@@ -36,6 +38,7 @@ PYTORCH_P100_FALLBACK_DEPS = (
     "torchaudio==2.4.1+cu121",
 )
 PYTORCH_CU121_INDEX_URL = "https://download.pytorch.org/whl/cu121"
+PINNED_UPSTREAM_COMMIT = "11ad728f563d8970929e8947a1cf6124ee6303e4"
 
 REQUIRED_REPO_PATHS: tuple[str, ...] = (
     "src/tac",
@@ -65,6 +68,8 @@ class KagglePr106LatentBundleSpec:
     dataset_ref: str | None = None
     source_dataset_ref: str | None = None
     archive_member: str = FORMAT0C_ARCHIVE_MEMBER
+    expected_archive_sha256: str = FORMAT0C_SOURCE_ARCHIVE_SHA256
+    expected_archive_member_sha256: str = FORMAT0C_ARCHIVE_MEMBER_SHA256
     runtime_dir: str = DEFAULT_RUNTIME_DIR
     delta_radius: int = DEFAULT_DELTA_RADIUS
     latent_dim: int = 28
@@ -74,12 +79,15 @@ class KagglePr106LatentBundleSpec:
     sidecar_top_k: int = 600
     pr106_archive_in_bundle: str = DEFAULT_PR106_ARCHIVE_IN_BUNDLE
     source_bundle_name: str = DEFAULT_SOURCE_BUNDLE_NAME
+    upstream_commit: str = PINNED_UPSTREAM_COMMIT
 
     def score_table_spec(self) -> Pr106LatentScoreTableSpec:
         return Pr106LatentScoreTableSpec(
             job_name=self.job_name,
             pr106_archive=self.pr106_archive_in_bundle,
             archive_member=self.archive_member,
+            expected_archive_sha256=self.expected_archive_sha256,
+            expected_archive_member_sha256=self.expected_archive_member_sha256,
             runtime_dir=self.runtime_dir,
             delta_radius=self.delta_radius,
             latent_dim=self.latent_dim,
@@ -134,8 +142,11 @@ def write_source_bundle(
         "job_name": spec.job_name,
         "lane_id": spec.score_table_spec().lane_id,
         "archive_member": spec.archive_member,
+        "expected_archive_sha256": spec.expected_archive_sha256,
+        "expected_archive_member_sha256": spec.expected_archive_member_sha256,
         "runtime_dir": spec.runtime_dir,
         "delta_radius": spec.delta_radius,
+        "upstream_commit": spec.upstream_commit,
         "score_claim": False,
     }
 
@@ -164,16 +175,18 @@ from pathlib import Path
 SCRIPT_PATH = Path(__file__).resolve()
 
 PIP_DEPS = (
-    "av",
-    "brotli",
-    "einops",
-    "safetensors",
-    "segmentation-models-pytorch",
-    "timm",
+    ("av==17.0.1", "av"),
+    ("Brotli==1.2.0", "brotli"),
+    ("constriction==0.4.2", "constriction"),
+    ("einops==0.8.2", "einops"),
+    ("safetensors==0.7.0", "safetensors"),
+    ("segmentation-models-pytorch==0.5.0", "segmentation_models_pytorch"),
+    ("timm==1.0.26", "timm"),
 )
 PYTORCH_P100_FALLBACK_DEPS = {PYTORCH_P100_FALLBACK_DEPS!r}
 PYTORCH_CU121_INDEX_URL = {PYTORCH_CU121_INDEX_URL!r}
 UPSTREAM_REPO = "https://github.com/commaai/comma_video_compression_challenge.git"
+UPSTREAM_COMMIT = {spec.upstream_commit!r}
 SOURCE_BUNDLE_NAME = {spec.source_bundle_name!r}
 SOURCE_TREE_NAME = SOURCE_BUNDLE_NAME.removesuffix(".tar.gz")
 WORKSPACE = Path("/kaggle/working/pact_pr106_latent_workspace")
@@ -181,17 +194,9 @@ WORKSPACE = Path("/kaggle/working/pact_pr106_latent_workspace")
 
 def _install_missing_deps() -> None:
     missing = []
-    import_names = {{
-        "av": "av",
-        "brotli": "brotli",
-        "einops": "einops",
-        "safetensors": "safetensors",
-        "segmentation-models-pytorch": "segmentation_models_pytorch",
-        "timm": "timm",
-    }}
-    for dep in PIP_DEPS:
+    for dep, import_name in PIP_DEPS:
         try:
-            __import__(import_names[dep])
+            __import__(import_name)
         except ImportError:
             missing.append(dep)
     if missing:
@@ -314,15 +319,31 @@ def _ensure_git_lfs() -> None:
     subprocess.check_call(["bash", "-lc", "apt-get update && apt-get install -y git-lfs"])
 
 
+def _checkout_pinned_upstream(upstream: Path) -> str:
+    current = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=upstream, text=True).strip()
+    if current == UPSTREAM_COMMIT:
+        return current
+    subprocess.check_call(["git", "fetch", "--depth", "1", "origin", UPSTREAM_COMMIT], cwd=upstream)
+    subprocess.check_call(["git", "checkout", "--detach", UPSTREAM_COMMIT], cwd=upstream)
+    current = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=upstream, text=True).strip()
+    if current != UPSTREAM_COMMIT:
+        raise RuntimeError(f"upstream commit mismatch: got {{current}} expected {{UPSTREAM_COMMIT}}")
+    return current
+
+
 def _ensure_upstream(workspace: Path) -> Path:
     upstream = workspace / "upstream"
-    if (upstream / "models").exists():
-        return upstream
     _ensure_git_lfs()
-    subprocess.check_call(["git", "clone", "--depth", "1", UPSTREAM_REPO, str(upstream)])
+    if upstream.exists() and not (upstream / ".git").exists():
+        shutil.rmtree(upstream)
+    if not (upstream / ".git").exists():
+        subprocess.check_call(["git", "clone", "--depth", "1", UPSTREAM_REPO, str(upstream)])
+    _checkout_pinned_upstream(upstream)
     for attempt in range(1, 4):
         try:
             subprocess.check_call(["git", "lfs", "pull"], cwd=upstream)
+            if not (upstream / "models").exists():
+                raise FileNotFoundError(f"pinned upstream checkout missing models directory: {{upstream}}")
             return upstream
         except subprocess.CalledProcessError:
             if attempt == 3:
@@ -353,6 +374,7 @@ def main() -> int:
     _install_missing_deps()
     _ensure_torch_supports_visible_cuda()
     upstream = _ensure_upstream(workspace)
+    upstream_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=upstream, text=True).strip()
 
     pythonpath_parts = [
         str(workspace / "src"),
@@ -367,6 +389,7 @@ def main() -> int:
         "PYBIN": sys.executable,
         "PYTHONPATH": ":".join(part for part in pythonpath_parts if part),
         "TAC_UPSTREAM_DIR": str(upstream),
+        "TAC_UPSTREAM_COMMIT": upstream_commit,
         "WORKSPACE": str(workspace),
     }})
 
@@ -387,6 +410,7 @@ def main() -> int:
         "returncode": result.returncode,
         "job_name": {spec.job_name!r},
         "lane_id": env["PR106_LATENT_SCORE_TABLE_LANE_ID"],
+        "upstream_commit": upstream_commit,
         "log_dir": env["PR106_LATENT_LOG_DIR"],
         "contest_auth_eval_json": str(Path(env["PR106_LATENT_LOG_DIR"]) / "eval" / "contest_auth_eval.json"),
     }}
@@ -462,6 +486,7 @@ def write_bundle(
         "source_bundle_name": spec.source_bundle_name,
         "job_name": spec.job_name,
         "lane_id": spec.score_table_spec().lane_id,
+        "upstream_commit": spec.upstream_commit,
     }
     (bundle_dir / "bundle_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
@@ -475,6 +500,7 @@ __all__ = [
     "DEFAULT_PR106_ARCHIVE_IN_BUNDLE",
     "DEFAULT_SOURCE_BUNDLE_NAME",
     "DEFAULT_SOURCE_DATASET_SLUG",
+    "PINNED_UPSTREAM_COMMIT",
     "REQUIRED_REPO_PATHS",
     "KagglePr106LatentBundleSpec",
     "render_launcher",
