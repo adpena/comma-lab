@@ -265,7 +265,107 @@ def _hash_path_fingerprint_entry(
         hasher.update(f"\x00SYMLINK\x00{target}\x00".encode())
 
 
-def _hash_mount_set_fingerprint(paths: Iterable[Path]) -> tuple[str, list[Path]]:
+MountFingerprintEntry = Path | tuple[Path, tuple[str, ...] | None]
+
+
+def _normalize_fingerprint_entry(
+    entry: MountFingerprintEntry,
+) -> tuple[Path, tuple[str, ...] | None]:
+    if isinstance(entry, tuple):
+        path, ignore = entry
+        return path, ignore
+    return entry, None
+
+
+def _modal_ignore_matcher(patterns: tuple[str, ...] | None) -> Any | None:
+    """Build the same pattern matcher Modal uses for ``Image.add_local_dir``."""
+
+    if not patterns:
+        return None
+
+    from modal.file_pattern_matcher import FilePatternMatcher
+
+    return FilePatternMatcher(*patterns)
+
+
+def _normalized_descendant_prune_prefixes(
+    patterns: tuple[str, ...] | None,
+) -> tuple[str, ...]:
+    """Return directory prefixes where ``dir/**`` ignores every descendant.
+
+    Modal receives patterns such as ``results/**``. The stability guard must
+    honor the same uploaded-file set. Modal's matcher is authoritative for
+    file inclusion; this helper only adds safe early pruning for plain
+    descendant-only patterns so the guard does not walk/read large result
+    trees that Modal will never upload.
+    """
+
+    if not patterns:
+        return ()
+    prefixes: list[str] = []
+    for pattern in patterns:
+        normalized = pattern.strip()
+        if not normalized or normalized.startswith("!"):
+            continue
+        normalized = os.path.normpath(normalized.strip(os.path.sep)).replace(os.path.sep, "/")
+        if normalized.endswith("/**"):
+            prefix = normalized[:-3].rstrip("/")
+            if prefix and prefix not in prefixes:
+                prefixes.append(prefix)
+    return tuple(prefixes)
+
+
+def _can_prune_modal_ignored_dir(
+    rel: Path,
+    patterns: tuple[str, ...] | None,
+    matcher: Any | None,
+) -> bool:
+    """Return whether the guard may skip recursing into ``rel`` entirely."""
+
+    if matcher is None:
+        return False
+    can_prune = getattr(matcher, "can_prune_directories", lambda: False)
+    if not can_prune():
+        return False
+    rel_text = rel.as_posix()
+    for prefix in _normalized_descendant_prune_prefixes(patterns):
+        if rel_text == prefix:
+            return True
+    return bool(matcher(rel))
+
+
+def _iter_modal_upload_fingerprint_paths(
+    root: Path,
+    patterns: tuple[str, ...] | None,
+) -> Iterable[Path]:
+    """Yield local paths that affect Modal's upload set for one mounted dir."""
+
+    matcher = _modal_ignore_matcher(patterns)
+    for current, dir_names, file_names in os.walk(root, topdown=True):
+        current_path = Path(current)
+        dir_names.sort()
+        file_names.sort()
+        if matcher is not None:
+            dir_names[:] = [
+                name
+                for name in dir_names
+                if not _can_prune_modal_ignored_dir(
+                    (current_path / name).relative_to(root),
+                    patterns,
+                    matcher,
+                )
+            ]
+        for name in file_names:
+            local_path = current_path / name
+            rel_path = local_path.relative_to(root)
+            if matcher is not None and matcher(rel_path):
+                continue
+            yield local_path
+
+
+def _hash_mount_set_fingerprint(
+    paths: Iterable[MountFingerprintEntry],
+) -> tuple[str, list[Path]]:
     """Return ``(sha256_hex, missing_paths)`` for every path in ``paths``.
 
     Directories are walked recursively. Symlinks are stat'd, not followed,
@@ -279,7 +379,8 @@ def _hash_mount_set_fingerprint(paths: Iterable[Path]) -> tuple[str, list[Path]]
     missing: list[Path] = []
     # Deterministic ordering: caller's order is preserved, then each
     # directory walked in sorted order.
-    for p in paths:
+    for entry in paths:
+        p, ignore = _normalize_fingerprint_entry(entry)
         try:
             st = p.lstat()
         except FileNotFoundError:
@@ -290,8 +391,9 @@ def _hash_mount_set_fingerprint(paths: Iterable[Path]) -> tuple[str, list[Path]]
             hasher.update(f"\x00OSERR\x00{p!s}\x00".encode())
             continue
         if p.is_dir() and not p.is_symlink():
-            # Walk the dir deterministically.
-            for sub in sorted(p.rglob("*")):
+            # Walk the same uploaded-file set Modal sees, with safe pruning
+            # for ignored result trees.
+            for sub in _iter_modal_upload_fingerprint_paths(p, ignore):
                 try:
                     sub_st = sub.lstat()
                 except FileNotFoundError:
@@ -306,7 +408,7 @@ def _hash_mount_set_fingerprint(paths: Iterable[Path]) -> tuple[str, list[Path]]
 
 
 def verify_mount_set_mtime_stability(
-    paths: Iterable[Path],
+    paths: Iterable[MountFingerprintEntry],
     *,
     window_seconds: float = DEFAULT_MTIME_STABILITY_WINDOW_SECONDS,
     max_retries: int = DEFAULT_MTIME_STABILITY_MAX_RETRIES,
@@ -357,7 +459,7 @@ def verify_mount_set_mtime_stability(
 
 
 def stabilize_mount_set_for_modal_upload(
-    paths: Iterable[Path],
+    paths: Iterable[MountFingerprintEntry],
     *,
     window_seconds: float = DEFAULT_MTIME_STABILITY_WINDOW_SECONDS,
     max_attempts: int = DEFAULT_MTIME_STABILIZATION_ATTEMPTS,
@@ -415,19 +517,19 @@ def _collect_paths_for_stability_check(
     optional_files: Iterable[str],
     trainer_required_files: Iterable[Path] = (),
     trainer_extra_paths: Iterable[Path] = (),
-) -> list[Path]:
+) -> list[MountFingerprintEntry]:
     """Return the unioned list of local on-disk paths that ``build_training_image``
     will hand to Modal for upload. Used by ``verify_mount_set_mtime_stability``.
     """
 
-    paths: list[Path] = []
+    paths: list[MountFingerprintEntry] = []
     if not skip_structural:
-        for rel, _ in STRUCTURAL_MINIMUM_DIRS:
-            paths.append(root / rel)
+        for rel, ignore in STRUCTURAL_MINIMUM_DIRS:
+            paths.append((root / rel, ignore))
         for rel in STRUCTURAL_MINIMUM_FILES:
             paths.append(root / rel)
-    for rel, _ in extra_dirs:
-        paths.append(root / rel)
+    for rel, ignore in extra_dirs:
+        paths.append((root / rel, ignore))
     for rel in extra_files:
         paths.append(root / rel)
     for rel in optional_dirs:
@@ -827,12 +929,12 @@ def build_training_image(
 
 
 __all__ = [
+    "DEFAULT_MODAL_MOUNT_UPLOAD_CLI_MAX_ATTEMPTS",
+    "DEFAULT_MODAL_MOUNT_UPLOAD_CLI_RETRY_SLEEP_SECONDS",
     "DEFAULT_MTIME_STABILITY_MAX_RETRIES",
     "DEFAULT_MTIME_STABILITY_WINDOW_SECONDS",
     "DEFAULT_MTIME_STABILIZATION_ATTEMPTS",
     "DEFAULT_MTIME_STABILIZATION_COOLDOWN_SECONDS",
-    "DEFAULT_MODAL_MOUNT_UPLOAD_CLI_MAX_ATTEMPTS",
-    "DEFAULT_MODAL_MOUNT_UPLOAD_CLI_RETRY_SLEEP_SECONDS",
     "DEFAULT_REMOTE_REPO",
     "MODAL_DISPATCH_SPAWN_MARKERS",
     "MODAL_MOUNT_UPLOAD_RACE_MARKERS",

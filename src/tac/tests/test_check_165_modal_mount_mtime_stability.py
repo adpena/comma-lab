@@ -386,6 +386,96 @@ def test_hash_fingerprint_changes_on_same_size_content_with_restored_mtime_ns(
     assert h1 != h2
 
 
+def test_hash_fingerprint_honors_modal_ignore_patterns(tmp_path: Path) -> None:
+    """Ignored Modal mount paths must not affect the stability fingerprint."""
+
+    experiments = tmp_path / "experiments"
+    results = experiments / "results"
+    nested_results = results / "m5max_sweep" / "work" / "inflated"
+    nested_results.mkdir(parents=True)
+    included = experiments / "trainer.py"
+    ignored = results / "large.raw"
+    nested_ignored = nested_results / "0.raw"
+    included.write_text("x = 1\n")
+    ignored.write_bytes(b"a" * 1024)
+    nested_ignored.write_bytes(b"c" * 1024)
+
+    h1, _ = _hash_mount_set_fingerprint([(experiments, ("results/**",))])
+    ignored.write_bytes(b"b" * 1024)
+    nested_ignored.write_bytes(b"d" * 1024)
+    h2, _ = _hash_mount_set_fingerprint([(experiments, ("results/**",))])
+    included.write_text("x = 2\n")
+    h3, _ = _hash_mount_set_fingerprint([(experiments, ("results/**",))])
+
+    assert h1 == h2
+    assert h2 != h3
+
+
+def test_hash_fingerprint_uses_modal_ignore_semantics(tmp_path: Path) -> None:
+    """Basename and negation patterns follow Modal's FilePatternMatcher."""
+
+    root = tmp_path / "mount"
+    (root / "sub").mkdir(parents=True)
+    ignored_root_py = root / "x.py"
+    re_included_root_py = root / "keep.py"
+    included_nested_py = root / "sub" / "x.py"
+    ignored_root_py.write_text("x = 1\n")
+    re_included_root_py.write_text("keep = 1\n")
+    included_nested_py.write_text("nested = 1\n")
+
+    patterns = ("*.py", "!keep.py")
+    h1, _ = _hash_mount_set_fingerprint([(root, patterns)])
+    ignored_root_py.write_text("x = 2\n")
+    h2, _ = _hash_mount_set_fingerprint([(root, patterns)])
+    re_included_root_py.write_text("keep = 2\n")
+    h3, _ = _hash_mount_set_fingerprint([(root, patterns)])
+    included_nested_py.write_text("nested = 2\n")
+    h4, _ = _hash_mount_set_fingerprint([(root, patterns)])
+
+    assert h1 == h2
+    assert h2 != h3
+    assert h3 != h4
+
+
+def test_build_training_image_stability_threads_structural_results_ignore(
+    tmp_path: Path,
+) -> None:
+    """The canonical builder ignores nested ``experiments/results/**`` churn."""
+
+    root = _make_fake_repo(tmp_path)
+    nested_results = (
+        root
+        / "experiments"
+        / "results"
+        / "m5max_sweep"
+        / "work"
+        / "inflated"
+    )
+    nested_results.mkdir(parents=True)
+    ignored = nested_results / "0.raw"
+    included = root / "experiments" / "trainer.py"
+    ignored.write_bytes(b"a" * 1024)
+    included.write_text("x = 1\n")
+    image = FakeImage()
+    state = {"calls": 0}
+
+    def mutate_ignored(_s: float) -> None:
+        state["calls"] += 1
+        ignored.write_bytes(b"b" * 1024)
+
+    build_training_image(
+        image,
+        repo_root=root,
+        mtime_stability_check=True,
+        mtime_stability_window_seconds=0.0,
+        mtime_stability_max_retries=1,
+        mtime_stability_sleep_fn=mutate_ignored,
+    )
+
+    assert state["calls"] == 1
+    assert ("experiments", "/workspace/pact/experiments", ["results/**"]) in image.dirs
+
+
 def test_content_rewrite_same_size_restored_mtime_ns_detected(
     tmp_path: Path,
 ) -> None:
