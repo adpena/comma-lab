@@ -4,7 +4,7 @@ Date: 2026-05-15
 
 score_claim: false
 ready_for_exact_eval_dispatch: false
-dispatch_attempted: false
+dispatch_attempted: true
 
 ## Summary
 
@@ -33,8 +33,9 @@ This is a byte-closed parser/runtime improvement, not a contest score claim.
 - inferred rate-only score from HDM9 exact CUDA if exact CUDA components match:
   `0.2063310355127786`
 
-The inferred score is not promoted because no exact CUDA auth eval was
-dispatched for the format0A archive.
+The inferred score was later confirmed by exact `[contest-CUDA]` auth eval.
+The result is still not promotion-eligible by itself; it is a byte-preserving
+PacketIR compiler improvement and a new PR106/R2 PacketIR CUDA reference.
 
 ## Proofs
 
@@ -128,10 +129,56 @@ PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest \
 
 Observed: `69 passed`.
 
+## Exact CUDA Recovery
+
+After the initial low-EV dispatch decision, the candidate was dispatched as a
+fail-fast detached Modal T4 exact CUDA auth eval to close the final
+byte-preserving PacketIR row.
+
+Recovered result:
+
+- call id: `fc-01KRN2Z850CG0DTHD3KBDEBHQ8`
+- output dir:
+  `experiments/results/modal_auth_eval/pr106_hdm10_hlm3_fmt0a_t4_20260515T055017Z`
+- result:
+  `experiments/results/modal_auth_eval/pr106_hdm10_hlm3_fmt0a_t4_20260515T055017Z/modal_cuda_auth_eval_result.json`
+- status: `recovered`
+- score axis: `[contest-CUDA]`
+- score: `0.2063310355127786`
+- bytes: `186349`
+- archive SHA-256:
+  `186a3d59f2038be61bfda7aa97cdc7abcf970ce4f2d20cd84d42386e894d2ce7`
+- avg SegNet dist: `0.0006426`
+- avg PoseNet dist: `0.00003236`
+- dispatch claim:
+  `completed_contest_cuda_modal_auth_eval_recovered`
+
+The score exactly matches the rate-only prediction from format09:
+`0.20633303308963796 - 25*3/37545489 = 0.2063310355127786`.
+
+Review and closure artifacts:
+
+- result review:
+  `.omx/research/pr106_hdm10_hlm3_format0a_exact_cuda_result_review_20260515_codex.json`
+- evidence row:
+  `.omx/research/pr106_hdm10_hlm3_format0a_exact_cuda_evidence_row_20260515_codex.json`
+- exact closure:
+  `experiments/results/pr106_hdm10_hlm3_packetir_exact_closure_20260515_codex/closure.json`
+- closure markdown:
+  `experiments/results/pr106_hdm10_hlm3_packetir_exact_closure_20260515_codex/closure.md`
+
+Closure classification:
+
+- `classification=exact_measured_improves_packetir_source_cuda`
+- `blockers=[]`
+- `ready_for_exact_eval_dispatch=false`
+- duplicate-dispatch blocker:
+  `same_candidate_archive_already_exact_evaluated`
+
 ## Dispatch decision
 
-No CUDA dispatch was launched for format0A in this turn. The archive is
-full-frame identical to HDM9 under the same runtime and saves only three bytes,
-so a paid exact CUDA run is low EV unless it is bundled with another PacketIR
-candidate batch. Promotion still requires exact contest auth eval with explicit
-`[contest-CUDA]` or `[contest-CPU]` axis labels.
+Format0A is now exact-evaluated. Do not dispatch this archive again. Future
+PacketIR byte-preserving dispatches should beat `186349` bytes by enough margin
+to justify exact eval, or they should be bundled with component-moving work.
+Promotion still requires explicit `[contest-CUDA]` or `[contest-CPU]` axis
+labels and archive/runtime custody.
