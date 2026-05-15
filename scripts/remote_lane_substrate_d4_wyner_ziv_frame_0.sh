@@ -32,6 +32,12 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_substrate_d4_wyner_ziv_frame_0_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
+# Catalog #224 sister fix: set deterministic CUDA/runtime environment before
+# bootstrap or trainer code can import torch and hit cuBLAS.
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
+export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 D4_WYNER_ZIV_FRAME_0_VIDEO_PATH="${D4_WYNER_ZIV_FRAME_0_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR="${D4_WYNER_ZIV_FRAME_0_OUTPUT_DIR:-$OUTPUT_DIR}"
@@ -145,6 +151,9 @@ cat > "$PROVENANCE" <<EOF
   "motion_mode": "$D4_WYNER_ZIV_FRAME_0_MOTION_MODE",
   "residual_coarse_h": "$D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_H",
   "residual_coarse_w": "$D4_WYNER_ZIV_FRAME_0_RESIDUAL_COARSE_W",
+  "cublas_workspace_config": "$CUBLAS_WORKSPACE_CONFIG",
+  "dali_disable_nvml": "$DALI_DISABLE_NVML",
+  "pytorch_cuda_alloc_conf": "$PYTORCH_CUDA_ALLOC_CONF",
   "base_archive_path": "$D4_WYNER_ZIV_FRAME_0_BASE_ARCHIVE_PATH",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
   "started_at_utc": "$(date -u +%FT%TZ)"

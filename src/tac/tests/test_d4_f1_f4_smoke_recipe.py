@@ -47,6 +47,26 @@ def test_d4_remote_driver_defaults_to_t03_smoke_cap() -> None:
     assert '${AUTH_EVAL_ARGS[@]+"${AUTH_EVAL_ARGS[@]}"}' in driver
 
 
+def test_d4_remote_driver_exports_cuda_determinism_env_before_bootstrap() -> None:
+    driver = (
+        REPO_ROOT / "scripts" / "remote_lane_substrate_d4_wyner_ziv_frame_0.sh"
+    ).read_text()
+
+    cublas_export = 'export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"'
+    bootstrap_marker = "stage_1_bootstrap_via_canonical_sourced_helper"
+    trainer_marker = 'log "stage_4_trainer_begin'
+
+    assert cublas_export in driver
+    assert 'export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"' in driver
+    assert (
+        'export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"'
+        in driver
+    )
+    assert driver.index(cublas_export) < driver.index(bootstrap_marker)
+    assert driver.index(cublas_export) < driver.index(trainer_marker)
+    assert '"cublas_workspace_config": "$CUBLAS_WORKSPACE_CONFIG"' in driver
+
+
 def test_d4_remote_driver_contest_cuda_marker_requires_valid_auth_eval_json() -> None:
     driver = (
         REPO_ROOT / "scripts" / "remote_lane_substrate_d4_wyner_ziv_frame_0.sh"
