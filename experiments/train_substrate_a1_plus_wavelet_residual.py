@@ -95,25 +95,25 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
-    build_optimized_training_context as _build_optimized_training_context,
-)
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
-    detect_hardware_substrate as _canon_detect_hardware_substrate,
-)
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
-    load_upstream_yuv420_to_rgb as _canon_load_upstream_yuv420_to_rgb,
-)
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
-    utc_now_iso as _canon_utc_now_iso,
-)
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
-    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
-from tac.substrates._shared.smoke_auth_eval_gate import (  # noqa: E402
+from tac.substrate_registry import SubstrateContract, register_substrate
+from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
-
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _build_optimized_training_context,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    load_upstream_yuv420_to_rgb as _canon_load_upstream_yuv420_to_rgb,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _canon_utc_now_iso,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
+)
 
 # ---------------------------------------------------------------------------
 # Module paths + constants (META-COUNCIL memo + CLAUDE.md anchors)
@@ -1194,6 +1194,91 @@ def _write_runtime(submission_dir: Path, a1_archive: Path) -> None:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+A1_PLUS_WAVELET_RESIDUAL_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="a1_plus_wavelet_residual",
+    lane_id="lane_a1_plus_wavelet_residual_retarget_20260513",
+    target_modes=("contest_one_video_replay", "research_substrate",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_omnibus_design_decisions_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "A1WAV1 monolithic single-file 0.bin: header + A1 base archive (fp16 + brotli) + wavelet residual (fp4_lsq + brotli per Mallat wavelet) + per-pair composition embeddings"
+    ),
+    parser_section_manifest={
+        "header": "A1WAV1_magic_and_version",
+        "a1_base_archive": "fp16_brotli_blob",
+        "wavelet_residual": "fp4_lsq_brotli",
+        "composition_embeddings": "fp16_per_pair",
+    },
+    inflate_runtime_loc_budget=160,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1220,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=False,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="T4",
+    recipe_min_vram_gb=14,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="independent_substrate",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=2000,
+    cost_band_gpu_key="T4",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=2.0,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "A1 + Mallat wavelet residual; sensitivity captured by wavelet sparsity"
+        ),
+        "hook_bit_allocator_class": (
+            "fp16 brotli on A1 + fp4_lsq on wavelet; no per-tensor bit allocator"
+        ),
+        "hook_probe_disambiguator": (
+            "two-branch (A1 + wavelet residual) composition; ablation handled by --disable-wavelet flag"
+        ),
+    },
+)
+
+
+@register_substrate(A1_PLUS_WAVELET_RESIDUAL_SUBSTRATE_CONTRACT)
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()

@@ -68,6 +68,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
@@ -820,6 +821,88 @@ def _full_main(args: argparse.Namespace) -> int:
         f"auth_score={auth_eval_score} grade={auth_eval_evidence_grade}"
     )
     return 0
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+C6_E4_MDL_IBPS_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="c6_e4_mdl_ibps",
+    lane_id="lane_c6_e4_mdl_ibps_substrate_20260514",
+    target_modes=("contest_one_video_replay", "contest_generalized", "research_substrate",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_omnibus_design_decisions_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "C6IBPS1 monolithic single-file 0.bin: header + MDL-IBPS sorted-keys-packed decoder weights (fp4_packed_sorted_keys_ibps1) + IBPS metadata (fp16 + brotli)"
+    ),
+    parser_section_manifest={
+        "header": "C6IBPS1_magic_and_version",
+        "ibps_packed_weights": "fp4_packed_sorted_keys_ibps1",
+        "ibps_metadata": "fp16_brotli_blob",
+    },
+    inflate_runtime_loc_budget=150,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp4_packed_sorted_keys_ibps1",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=850,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=False,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="A10G",
+    recipe_min_vram_gb=16,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="independent_substrate",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=200,
+    cost_band_gpu_key="A10G",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=1.2,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="ibps_kkt",
+    hook_autopilot_ranker_class_shift_token="MDL-IBPS",
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+        "catalog_227_class_shift_tier_c_evidence_required",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "MDL-IBPS sorted-keys packing; sensitivity is the IBPS-KKT bit allocation"
+        ),
+        "hook_probe_disambiguator": (
+            "tools/probe_c6_e4_mdl_ibps_disambiguator.py (planned); IBPS vs uniform vs LSQ"
+        ),
+    },
+)
+
+
+@register_substrate(C6_E4_MDL_IBPS_SUBSTRATE_CONTRACT)
+
 
 
 def main(argv: list[str] | None = None) -> int:

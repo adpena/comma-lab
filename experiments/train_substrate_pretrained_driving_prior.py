@@ -50,6 +50,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.substrate_registry import SubstrateContract, register_substrate
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # CLAUDE.md Catalog #151 + #152: declare required flags so operator wrappers
@@ -1725,6 +1727,100 @@ def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes) -> None:
         zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
         zi.compress_type = zipfile.ZIP_DEFLATED
         zf.writestr(zi, bin_bytes)
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+PRETRAINED_DRIVING_PRIOR_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="pretrained_driving_prior",
+    lane_id="lane_pretrained_driving_prior_phase_2_20260514",
+    target_modes=("contest_one_video_replay", "production_generalized", "production_edge_adaptive", "research_substrate",),
+    deployment_target="comma_ai_production",
+    council_verdict_provenance=(
+        ".omx/research/dpp_phase_2_training_design_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "DP1 monolithic single-file 0.bin: header (DP1 magic + version + length-prefixed) + Comma2k19-distilled codebook (fp16 + brotli) + per-frame index codebook lookups + license_tags + dataset_provenance + distillation_version + random_seed + basis_sha256 + num_frames_used (forensic provenance per Catalog #210)"
+    ),
+    parser_section_manifest={
+        "header": "DP1_magic_and_version_length_prefixed",
+        "codebook_weights": "fp16_brotli_blob",
+        "frame_index_lookups": "uint16_brotli_per_frame",
+        "license_tags": "json_inline",
+        "dataset_provenance": "json_inline",
+        "distillation_version": "json_inline",
+        "random_seed": "json_inline",
+        "basis_sha256": "json_inline",
+        "num_frames_used": "json_inline",
+    },
+    inflate_runtime_loc_budget=160,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1750,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=True,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="T4",
+    recipe_min_vram_gb=16,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="independent_substrate",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=100,
+    cost_band_gpu_key="T4",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=0.5,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+        "catalog_209_no_contest_video_leakage_in_distillation_callers",
+        "catalog_210_dp1_codebook_provenance_metadata_present",
+        "catalog_211_dp1_composition_routes_through_canonical_helper",
+        "catalog_213_comma2k19_downloads_route_through_canonical_cache",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "DP1 is the canonical pretraining lane reused across A1/PR101/HDM8/YUCR/TT5L/sane_hnerv; sensitivity captured by codebook entropy + per-frame lookup entropy"
+        ),
+        "hook_bit_allocator_class": (
+            "fp16 brotli on codebook + uint16 lookups; per-substream not per-tensor bit allocator"
+        ),
+        "hook_probe_disambiguator": (
+            "tools/probe_dp1_disambiguator.py (planned); codebook-size + license-tag verifier"
+        ),
+    },
+)
+
+
+@register_substrate(PRETRAINED_DRIVING_PRIOR_SUBSTRATE_CONTRACT)
+
 
 
 def main() -> int:

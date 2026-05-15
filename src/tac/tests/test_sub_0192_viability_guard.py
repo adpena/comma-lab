@@ -175,3 +175,56 @@ def test_forced_axes_choose_matching_paired_score(tmp_path: Path) -> None:
     assert cpu["current_score_source"] == "exact_results.contest_cpu_score"
     assert cuda["current_score"] == 0.2262
     assert cuda["current_score_source"] == "exact_results.contest_cuda_score"
+
+
+def test_below_threshold_proxy_score_requires_validated_exact_claim(tmp_path: Path) -> None:
+    module = _load_module()
+    artifact = tmp_path / "proxy_below_threshold.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "proxy_score_row",
+                "score_axis": "contest_cpu",
+                "canonical_score": 0.1919,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "remaining_byte_mass_bytes": 10_000,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    row = module.build_report([artifact], axis="contest_cpu")["reviews"][0]
+
+    assert row["axis"] == "contest_cpu"
+    assert row["current_score"] == 0.1919
+    assert row["frontier_eligible"] is False
+    assert row["classification"] == "not_frontier_eligible"
+    assert "below_threshold_score_without_validated_exact_claim" in row["blockers"]
+
+
+def test_below_threshold_exact_cpu_claim_can_clear_threshold_shortcut(tmp_path: Path) -> None:
+    module = _load_module()
+    artifact = tmp_path / "exact_cpu_below_threshold.json"
+    artifact.write_text(
+        json.dumps(
+            {
+                "schema": "tac_result_review_packet_v1",
+                "score_axis": "contest_cpu",
+                "score_claim_valid": True,
+                "exact_cpu_evidence": True,
+                "canonical_score": 0.1919,
+                "custody": {
+                    "archive_sha256": "a" * 64,
+                    "archive_bytes": 180_000,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    row = module.build_report([artifact], axis="contest_cpu")["reviews"][0]
+
+    assert row["frontier_eligible"] is True
+    assert row["classification"] == "already_below_or_equal_threshold"
+    assert "validated_exact_score_claim_for_axis" in row["reasons"]

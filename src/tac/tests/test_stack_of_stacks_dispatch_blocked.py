@@ -43,6 +43,35 @@ def _write_fake_base_runtime(path: Path) -> None:
     inflate_sh.chmod(0o755)
 
 
+def _write_fake_base_archive(path: Path, payload: bytes = b"BASE_BYTES") -> None:
+    with zipfile.ZipFile(path, mode="w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo(filename="x", date_time=(2026, 5, 15, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        zf.writestr(info, payload)
+
+
+def _write_fake_uv(path: Path) -> None:
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "#!/bin/sh\n"
+        "set -eu\n"
+        "if [ \"$#\" -gt 0 ] && [ \"$1\" = run ]; then shift; fi\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  case \"$1\" in\n"
+        "    --quiet) shift ;;\n"
+        "    --with|--extra-index-url) shift 2 ;;\n"
+        "    --*) shift ;;\n"
+        "    *) break ;;\n"
+        "  esac\n"
+        "done\n"
+        "cmd=\"$1\"\n"
+        "shift\n"
+        "exec \"${PYTHON:-python3}\" \"$cmd\" \"$@\"\n",
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
 def test_stack_of_stacks_recipe_has_no_missing_local_dispatch_paths() -> None:
     text = RECIPE.read_text(encoding="utf-8")
 
@@ -115,6 +144,75 @@ def test_stack_of_stacks_single_arm_trainer_builds_exact_eval_canary(tmp_path: P
     assert "--with brotli==1.1.0" in inflate_text
     assert "--with numpy" in inflate_text
     assert (output_dir / "submission_dir/base_runtime/inflate.sh").is_file()
+
+
+def test_generated_canary_inflate_sh_accepts_extracted_archive_dir(tmp_path: Path) -> None:
+    base_archive = tmp_path / "base_archive.zip"
+    base_runtime = tmp_path / "base_runtime"
+    output_dir = tmp_path / "sos_canary"
+    _write_fake_base_archive(base_archive)
+    _write_fake_base_runtime(base_runtime)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TRAINER),
+            "--base-archive",
+            str(base_archive),
+            "--base-runtime-dir",
+            str(base_runtime),
+            "--video-path",
+            str(REPO / "upstream/videos/0.mkv"),
+            "--output-dir",
+            str(output_dir),
+            "--epochs",
+            "0",
+            "--device",
+            "cpu",
+            "--smoke",
+            "--max-pairs",
+            "1",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+    submission_dir = output_dir / "submission_dir"
+    extracted_dir = tmp_path / "extracted"
+    with zipfile.ZipFile(submission_dir / "archive.zip", "r") as zf:
+        zf.extractall(extracted_dir)
+    assert (extracted_dir / "x").is_file()
+
+    fake_bin = tmp_path / "fake_bin"
+    _write_fake_uv(fake_bin / "uv")
+    raw_out = tmp_path / "inflated"
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("000001\n", encoding="utf-8")
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+    env["PYTHON"] = sys.executable
+
+    inflate_result = subprocess.run(
+        [
+            "bash",
+            str(submission_dir / "inflate.sh"),
+            str(extracted_dir),
+            str(raw_out),
+            str(file_list),
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        timeout=10,
+        env=env,
+    )
+
+    assert inflate_result.returncode == 0, inflate_result.stderr
+    assert (raw_out / "000001.raw").read_bytes() == b"BASE_BYTES"
+    assert "archive.zip missing" not in inflate_result.stderr
 
 
 def test_emitted_runtime_strips_sos_and_delegates_single_arm(tmp_path: Path) -> None:

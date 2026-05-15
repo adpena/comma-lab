@@ -85,6 +85,7 @@ from tac.composition.stack_of_stacks import (
     validate_byte_budget,
 )
 from tac.optimization.langevin_optimizer import LangevinOptimizer
+from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -681,6 +682,27 @@ def _parse_sos(archive_bytes: bytes):
     }
 
 
+def _read_x_blob(archive_dir: Path) -> bytes:
+    extracted_x = archive_dir / "x"
+    if extracted_x.is_file():
+        return extracted_x.read_bytes()
+
+    # Local developer fallback only. Canonical contest auth-eval extracts
+    # archive.zip first and passes the extracted directory to inflate.sh.
+    archive_zip = archive_dir / "archive.zip"
+    if archive_zip.is_file():
+        with zipfile.ZipFile(archive_zip, "r") as zf:
+            if "x" not in zf.namelist():
+                print("FATAL: archive missing single 'x' member", file=sys.stderr)
+                sys.exit(4)
+            return zf.read("x")
+
+    print(
+        f"FATAL: extracted archive member 'x' missing at {extracted_x}",
+        file=sys.stderr,
+    )
+    sys.exit(3)
+
 def main():
     if len(sys.argv) != 4:
         print("usage: inflate.py <archive_dir> <output_dir> <file_list>", file=sys.stderr)
@@ -689,15 +711,7 @@ def main():
     output_dir = Path(sys.argv[2])
     file_list_path = Path(sys.argv[3])
     output_dir.mkdir(parents=True, exist_ok=True)
-    archive_zip = archive_dir / "archive.zip"
-    if not archive_zip.is_file():
-        print(f"FATAL: archive.zip missing at {archive_zip}", file=sys.stderr)
-        sys.exit(3)
-    with zipfile.ZipFile(archive_zip, "r") as zf:
-        if "x" not in zf.namelist():
-            print("FATAL: archive missing single 'x' member", file=sys.stderr)
-            sys.exit(4)
-        x_blob = zf.read("x")
+    x_blob = _read_x_blob(archive_dir)
     parsed = _parse_sos(x_blob)
     if parsed is None:
         # No SOS1 trailer: treat as straight base substrate; defer to arm 0.
@@ -760,6 +774,88 @@ def _is_single_arm_passthrough_build(
     )
 
 
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). This belongs on the
+# trainer entry point, never inside the emitted contest inflate runtime.
+# ---------------------------------------------------------------------------
+
+STACK_OF_STACKS_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="stack_of_stacks",
+    lane_id="lane_stack_of_stacks_composition_implementation_20260513",
+    target_modes=("contest_one_video_replay", "research_substrate"),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_omnibus_design_decisions_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "SOS1 single-member ZIP `x`: arm-0 base archive bytes followed by "
+        "a stack-of-stacks trailer (magic=SOS1, version, layer mask, pair "
+        "selector, metadata length). Generated inflate.py reads extracted "
+        "archive_dir / 'x', strips a supported single-arm trailer, then "
+        "delegates to bundled base_runtime/inflate.sh."
+    ),
+    parser_section_manifest={
+        "x": "base_archive_bytes_plus_optional_sos1_trailer",
+        "SOS1": "stack_selector_trailer",
+        "base_runtime": "bundled_delegate_inflate_runtime",
+    },
+    inflate_runtime_loc_budget=200,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av"),
+    export_format="custom",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=970,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) - mirrors substrate recipe YAML
+    recipe_smoke_only=False,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="A100",
+    recipe_min_vram_gb=40,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="independent_substrate",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=800,
+    cost_band_gpu_key="A100",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=3.0,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_227_composition_alpha_required",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "stack-of-stacks composition; sensitivity captured by per-substrate "
+            "alpha values and composition matrix"
+        ),
+        "hook_bit_allocator_class": "per-substrate, not per-tensor",
+        "hook_probe_disambiguator": (
+            "tools/probe_stack_of_stacks_disambiguator.py (planned); "
+            "composition_alpha and ablation per substrate"
+        ),
+    },
+)
+
+
+@register_substrate(STACK_OF_STACKS_SUBSTRATE_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     output_dir = args.output_dir

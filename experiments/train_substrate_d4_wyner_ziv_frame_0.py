@@ -87,6 +87,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
@@ -1226,6 +1227,92 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+D4_WYNER_ZIV_FRAME_0_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="d4_wyner_ziv_frame_0",
+    lane_id="lane_d4_wyner_ziv_frame_0_substrate_20260514",
+    target_modes=("contest_one_video_replay", "contest_generalized",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_omnibus_design_decisions_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "D4WZ1 monolithic single-file 0.bin: header + frame_0 anchor (fp16 + brotli) + per-pair Wyner-Ziv side-information weights (fp16 + brotli) + per-pair index embeddings"
+    ),
+    parser_section_manifest={
+        "header": "D4WZ1_magic_and_version",
+        "frame_0_anchor": "fp16_brotli_blob",
+        "wyner_ziv_side_info": "fp16_brotli_blob",
+        "pair_embeddings": "fp16_per_pair",
+    },
+    inflate_runtime_loc_budget=130,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1250,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=True,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="T4",
+    recipe_min_vram_gb=16,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="independent_substrate",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency=None,
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=100,
+    cost_band_gpu_key="T4",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=0.5,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token="Wyner-Ziv",
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+        "catalog_227_class_shift_tier_c_evidence_pending",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "Wyner-Ziv side-information at frame_0; sensitivity captured by side-info entropy"
+        ),
+        "hook_bit_allocator_class": (
+            "fp16 brotli on side-info weights; no per-tensor bit allocator"
+        ),
+        "hook_probe_disambiguator": (
+            "single mechanism (Wyner-Ziv frame-0 side-information); no 2+ defensible interpretations"
+        ),
+    },
+)
+
+
+@register_substrate(D4_WYNER_ZIV_FRAME_0_SUBSTRATE_CONTRACT)
+
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)

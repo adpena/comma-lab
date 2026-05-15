@@ -58,6 +58,7 @@ from tac.packet_compiler.pr106_runtime_consumption import (
 )
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_MAGIC,
     parse_pr106_sidecar_packet,
 )
 from tac.repo_io import json_text, sha256_bytes, sha256_file
@@ -140,10 +141,14 @@ def _read_source_archive_member(
                     f"available members: {names!r}"
                 )
             return SourceArchiveMember(name=member_name, payload=z.read(member_name))
-        if "0.bin" in names:
-            selected = "0.bin"
-        elif "x" in names:
-            selected = "x"
+        known_members = [name for name in ("0.bin", "x") if name in names]
+        if len(known_members) > 1:
+            raise ValueError(
+                f"ambiguous PR106 archive members for {pr106_archive}: "
+                f"{known_members!r}; pass --archive-member"
+            )
+        if len(known_members) == 1:
+            selected = known_members[0]
         elif len(names) == 1:
             selected = names[0]
         else:
@@ -170,6 +175,18 @@ def _source_member_contract(source_member: SourceArchiveMember) -> dict[str, Any
         "source_payload_kind": payload_kind,
         "sidecar_format_id": sidecar_format_id,
     }
+
+
+def _payload_is_known_pr106_sidecar(payload: bytes) -> bool:
+    if len(payload) < 8:
+        return False
+    if payload[0] == PR106_SIDECAR_MAGIC:
+        return True
+    try:
+        parse_pr106_sidecar_packet(payload)
+    except Exception:
+        return False
+    return True
 
 
 def _score_table_contract(
@@ -307,12 +324,18 @@ def _load_pr106_decoder(
 ):
     source_member = _read_source_archive_member(pr106_archive, member_name=archive_member)
     runtime = load_pr106_runtime_module(runtime_dir, "inflate.py", module_tag="latent_score_table")
+    source_is_sidecar_packet = _payload_is_known_pr106_sidecar(source_member.payload)
     try:
         format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
             runtime,
             source_member.payload,
         )
-    except Exception:
+    except Exception as exc:
+        if source_is_sidecar_packet:
+            raise RuntimeError(
+                "runtime failed to decode a PR106 sidecar packet; refusing raw "
+                "PR106 fallback for score-table custody"
+            ) from exc
         pr106_bytes = source_member.payload
         decoder_sd, latents, meta = runtime.parse_packed_archive(pr106_bytes)
         source_payload_kind = "raw_pr106_packed_archive"

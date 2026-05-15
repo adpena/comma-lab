@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import importlib.util
 import inspect
 import py_compile
@@ -59,22 +60,195 @@ ARCHIVE_BUILD_PATTERN = re.compile(
     r'zipfile\.ZipInfo\s*\(\s*filename\s*=\s*["\']([^"\']+)["\']'
 )
 ARCHIVE_MEMBER_WAIVER = re.compile(r"#\s*ARCHIVE_MEMBER_OK:\s*\S")
+X_MEMBER_RUNTIME_EVIDENCE_PATTERNS = (
+    re.compile(r"\$\{?DATA_DIR\}?/x"),
+    re.compile(r"\barchive_dir\s*/\s*['\"]x['\"]"),
+    re.compile(r"\bPath\s*\([^)]*archive_dir[^)]*\)\s*/\s*['\"]x['\"]"),
+    re.compile(r"\bcandidates\s*=\s*\[[^\]]*['\"]x['\"]"),
+    re.compile(r"\barchive_dir/x\b"),
+    re.compile(r"\barchive_grammar\b[^\n]*['\"][^'\"]*\bx\b[^'\"]*['\"]", re.I),
+    re.compile(r"\bsingle\s+(?:zip\s+)?member\s+``?x``?", re.I),
+)
 
 AUTH_EVAL_CALL_NAMES = {
     "_canon_gate_auth_eval_call",
     "auth_eval_renderer",
     "gate_auth_eval_call",
 }
+AUTH_EVAL_ENTRYPOINTS = ("_full_main", "main")
+SUBPROCESS_AUTH_EVAL_CALLS = {
+    "subprocess.run",
+    "subprocess.call",
+    "subprocess.check_call",
+    "subprocess.check_output",
+    "subprocess.Popen",
+    "os.system",
+}
 
 
 def _import_trainer_module(trainer: Path):
-    module_name = f"_local_pre_deploy_{trainer.stem}"
+    digest = hashlib.sha256(str(trainer.resolve()).encode("utf-8")).hexdigest()[:12]
+    module_name = f"_local_pre_deploy_{trainer.stem}_{digest}"
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        return existing
     spec = importlib.util.spec_from_file_location(module_name, trainer)
     if spec is None or spec.loader is None:
         raise ImportError(f"cannot create import spec for {trainer}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    previous = sys.modules.get(spec.name)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        if previous is None:
+            sys.modules.pop(spec.name, None)
+        else:
+            sys.modules[spec.name] = previous
+        raise
     return module
+
+
+def _call_name(func: ast.AST) -> str:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return ""
+
+
+def _qualified_call_name(func: ast.AST) -> str:
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        prefix = _qualified_call_name(func.value)
+        return f"{prefix}.{func.attr}" if prefix else func.attr
+    return ""
+
+
+def _node_contains_contest_auth_eval_literal(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Constant)
+            and isinstance(child.value, str)
+            and "contest_auth_eval.py" in child.value
+        ):
+            return True
+    return False
+
+
+def _iter_calls_in_function(fn: ast.FunctionDef | ast.AsyncFunctionDef):
+    class Visitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.calls: list[ast.Call] = []
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            if node is fn:
+                self.generic_visit(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            if node is fn:
+                self.generic_visit(node)
+
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            return
+
+        def visit_Call(self, node: ast.Call) -> None:
+            self.calls.append(node)
+            self.generic_visit(node)
+
+    visitor = Visitor()
+    visitor.visit(fn)
+    return visitor.calls
+
+
+def _auth_eval_invocation_reason(call: ast.Call) -> str | None:
+    call_name = _call_name(call.func)
+    if call_name in AUTH_EVAL_CALL_NAMES:
+        return "canonical helper"
+    qualified = _qualified_call_name(call.func)
+    if (
+        qualified in SUBPROCESS_AUTH_EVAL_CALLS
+        and _node_contains_contest_auth_eval_literal(call)
+    ):
+        return "contest_auth_eval subprocess"
+    return None
+
+
+def _literal_zipinfo_members(text: str) -> list[tuple[str, int]]:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    members: list[tuple[str, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if _call_name(node.func) != "ZipInfo":
+            continue
+        member: str | None = None
+        if (
+            node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            member = node.args[0].value
+        for keyword in node.keywords:
+            if (
+                keyword.arg == "filename"
+                and isinstance(keyword.value, ast.Constant)
+                and isinstance(keyword.value.value, str)
+            ):
+                member = keyword.value.value
+        if member is not None:
+            members.append((member, getattr(node, "lineno", 0)))
+    return members
+
+
+def _archive_member_line_has_waiver(text: str, line_no: int | None) -> bool:
+    if line_no is not None and line_no > 0:
+        lines = text.splitlines()
+        if line_no <= len(lines) and ARCHIVE_MEMBER_WAIVER.search(lines[line_no - 1]):
+            return True
+    return False
+
+
+def _archive_member_has_any_waiver(text: str) -> bool:
+    return any(ARCHIVE_MEMBER_WAIVER.search(line) for line in text.splitlines())
+
+
+def _has_x_member_runtime_evidence(text: str) -> bool:
+    return any(pattern.search(text) for pattern in X_MEMBER_RUNTIME_EVIDENCE_PATTERNS)
+
+
+def _archive_member_supported(
+    member: str,
+    text: str,
+    *,
+    line_no: int | None = None,
+    allow_file_waiver: bool = False,
+) -> bool:
+    if member == CANONICAL_ARCHIVE_MEMBER:
+        return True
+    if _archive_member_line_has_waiver(text, line_no):
+        return True
+    if allow_file_waiver and _archive_member_has_any_waiver(text):
+        return True
+    return member == "x" and _has_x_member_runtime_evidence(text)
+
+
+def _unsupported_archive_member_message(member: str) -> str:
+    if member == "x":
+        return (
+            "member 'x' requires explicit runtime evidence that inflate.sh/"
+            "inflate.py consumes ${DATA_DIR}/x (or archive_dir / 'x'), "
+            "or same-line # ARCHIVE_MEMBER_OK:<rationale>"
+        )
+    return (
+        f"member {member!r} is not the repo learned-packet default "
+        f"{CANONICAL_ARCHIVE_MEMBER!r}; add runtime evidence or "
+        "same-line # ARCHIVE_MEMBER_OK:<rationale> if intentional"
+    )
 
 
 def check_py_compile(trainer: Path) -> tuple[bool, str]:
@@ -100,29 +274,25 @@ def check_archive_grammar(trainer: Path) -> tuple[bool, str]:
     """Refuse non-standard learned-packet member names without a waiver."""
     text = trainer.read_text()
     violations: list[str] = []
-    for match in ARCHIVE_BUILD_PATTERN.finditer(text):
-        member = match.group(1)
-        if member == CANONICAL_ARCHIVE_MEMBER:
-            continue
-        line_no = text.count("\n", 0, match.start()) + 1
-        line_text = (
-            text.splitlines()[line_no - 1] if line_no <= len(text.splitlines()) else ""
-        )
-        if ARCHIVE_MEMBER_WAIVER.search(line_text):
+    literal_members = _literal_zipinfo_members(text)
+    if not literal_members:
+        for match in ARCHIVE_BUILD_PATTERN.finditer(text):
+            literal_members.append((match.group(1), text.count("\n", 0, match.start()) + 1))
+    for member, line_no in literal_members:
+        if _archive_member_supported(member, text, line_no=line_no):
             continue
         violations.append(
-            f"  {trainer.name}:{line_no}: filename={member!r} "
-            f"(repo learned-packet standard: {CANONICAL_ARCHIVE_MEMBER!r}); "
-            f"contest rules only require archive.zip + inflate.sh, but this "
-            "trainer's inflate.sh expects x or ${base}.bin"
+            f"  {trainer.name}:{line_no}: filename={member!r}; "
+            f"{_unsupported_archive_member_message(member)}"
         )
     if violations:
         msg = (
-            "FAIL: learned-packet archive ZIP member must be '0.bin'; "
+            "FAIL: learned-packet archive ZIP member lacks matching runtime evidence; "
             "violations:\n" + "\n".join(violations)
         )
         msg += (
             "\n  Fix: change _build_archive_zip to filename=\"0.bin\""
+            "\n  OR prove the runtime consumes the intentional member (for example ${DATA_DIR}/x)"
             "\n  OR add same-line waiver only when inflate.sh consumes that member: "
             "# ARCHIVE_MEMBER_OK:<rationale>"
         )
@@ -141,22 +311,53 @@ def check_archive_grammar(trainer: Path) -> tuple[bool, str]:
                     "dynamic check skipped (_build_archive_zip has nonstandard "
                     "signature)",
                 )
+            parameters = list(signature.parameters.values())
+            provided_required = {parameters[0].name, "bin_bytes"} if parameters else {"bin_bytes"}
+            missing_required = [
+                param.name
+                for param in parameters
+                if param.default is inspect._empty
+                and param.kind
+                in (
+                    inspect.Parameter.POSITIONAL_ONLY,
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                )
+                and param.name not in provided_required
+            ]
+            if missing_required:
+                return (
+                    True,
+                    f"PASS: {trainer.name} archive source-text grammar passed "
+                    "dynamic check skipped (_build_archive_zip requires "
+                    f"additional arguments {missing_required!r})",
+                )
 
             with tempfile.TemporaryDirectory() as tmp_dir:
                 zip_path = Path(tmp_dir) / "archive.zip"
                 build_archive_zip(zip_path, bin_bytes=b"local-predeploy")
                 with zipfile.ZipFile(zip_path) as zf:
                     names = zf.namelist()
-                if names != [CANONICAL_ARCHIVE_MEMBER]:
+                unsupported = [
+                    name
+                    for name in names
+                    if not _archive_member_supported(
+                        name, text, allow_file_waiver=True
+                    )
+                ]
+                if unsupported:
                     return (
                         False,
-                        f"FAIL: _build_archive_zip emitted members {names!r}; "
-                        f"expected [{CANONICAL_ARCHIVE_MEMBER!r}] for this "
-                        "repo learned-packet trainer",
+                        f"FAIL: _build_archive_zip emitted unsupported members "
+                        f"{unsupported!r} from {names!r}; "
+                        + "; ".join(
+                            _unsupported_archive_member_message(name)
+                            for name in unsupported
+                        ),
                     )
     except Exception as exc:
         return False, f"FAIL: archive grammar dynamic check failed: {exc!r}"
-    return True, f"PASS: {trainer.name} archive ZIP member follows repo standard"
+    return True, f"PASS: {trainer.name} archive ZIP member follows repo standard/evidence"
 
 
 def check_auth_eval_reachability(trainer: Path) -> tuple[bool, str]:
@@ -166,35 +367,43 @@ def check_auth_eval_reachability(trainer: Path) -> tuple[bool, str]:
         tree = ast.parse(text, filename=str(trainer))
     except SyntaxError as exc:
         return False, f"FAIL: {trainer.name} cannot be parsed for auth_eval reachability: {exc}"
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
+    functions = {
+        node.name: node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    }
+    entrypoints = [name for name in AUTH_EVAL_ENTRYPOINTS if name in functions]
+    if not entrypoints:
+        return (
+            False,
+            f"FAIL: {trainer.name} has no auth_eval invocation; "
+            "no reachable auth_eval invocation; "
+            "no main/_full_main entrypoint was found for the local predeploy call graph.",
+        )
+
+    visited: set[str] = set()
+    stack = list(entrypoints)
+    while stack:
+        function_name = stack.pop()
+        if function_name in visited:
             continue
-        func = node.func
-        call_name = ""
-        if isinstance(func, ast.Name):
-            call_name = func.id
-        elif isinstance(func, ast.Attribute):
-            call_name = func.attr
-        if call_name in AUTH_EVAL_CALL_NAMES:
-            return True, f"PASS: {trainer.name} invokes auth_eval (canonical helper)"
-        for arg in [*node.args, *[keyword.value for keyword in node.keywords]]:
-            if (
-                isinstance(arg, ast.Constant)
-                and isinstance(arg.value, str)
-                and "contest_auth_eval.py" in arg.value
-            ):
-                return True, f"PASS: {trainer.name} invokes contest_auth_eval.py"
-            if isinstance(arg, ast.List | ast.Tuple):
-                for element in arg.elts:
-                    if (
-                        isinstance(element, ast.Constant)
-                        and isinstance(element.value, str)
-                        and "contest_auth_eval.py" in element.value
-                    ):
-                        return True, f"PASS: {trainer.name} invokes contest_auth_eval.py"
+        visited.add(function_name)
+        function = functions[function_name]
+        for call in _iter_calls_in_function(function):
+            reason = _auth_eval_invocation_reason(call)
+            if reason is not None:
+                return (
+                    True,
+                    f"PASS: {trainer.name} invokes auth_eval via reachable auth_eval invocation "
+                    f"from {function_name} ({reason})",
+                )
+            callee = _call_name(call.func)
+            if callee in functions and callee not in visited:
+                stack.append(callee)
     return (
         False,
-        f"FAIL: {trainer.name} has no auth_eval invocation; "
+        f"FAIL: {trainer.name} has no reachable auth_eval invocation from "
+        f"entrypoints {entrypoints!r}; "
         f"trainer will reach Modal but never produce auth_eval_*.json. "
         f"Per CLAUDE.md 'Auth eval EVERYWHERE' non-negotiable, every training script must end with CUDA auth eval. "
         f"Fix: import + call gate_auth_eval_call from tac.substrates._shared.smoke_auth_eval_gate per Catalog #226.",

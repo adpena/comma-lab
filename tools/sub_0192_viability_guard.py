@@ -103,6 +103,43 @@ def _record_metadata_matches_axis(data: Mapping[str, Any], axis: str) -> bool:
     return any(expected in value for value in fields)
 
 
+def _has_exact_score_claim_for_axis(data: Mapping[str, Any], axis: str) -> bool:
+    """Return whether a sub-threshold score is backed by exact reviewed custody.
+
+    The viability guard is allowed to reason about proxy and diagnostic rows,
+    but those rows must never become frontier-eligible merely because their
+    scalar score is below the threshold. A below-threshold shortcut needs an
+    explicit validated score claim on the same axis plus basic archive custody.
+    """
+
+    if axis not in {"contest_cpu", "contest_cuda"}:
+        return False
+    if data.get("score_claim_valid") is not True:
+        return False
+    if not _record_metadata_matches_axis(data, axis):
+        return False
+    custody = data.get("custody")
+    archive_sha = None
+    archive_bytes = None
+    if isinstance(custody, Mapping):
+        archive_sha = custody.get("archive_sha256")
+        archive_bytes = custody.get("archive_bytes")
+    if archive_sha is None:
+        archive_sha = _get_path(data, ("archive", "sha256"))
+    if archive_bytes is None:
+        archive_bytes = _get_path(data, ("archive", "bytes"))
+    if not isinstance(archive_sha, str) or len(archive_sha) != 64:
+        return False
+    if _as_int(archive_bytes) is None:
+        return False
+    if axis == "contest_cuda":
+        return data.get("exact_cuda_evidence") is True
+    return (
+        data.get("exact_cpu_evidence") is True
+        or _as_float(_get_path(data, ("exact_results", "contest_cpu_score"))) is not None
+    )
+
+
 def _score_paths(axis: str, data: Mapping[str, Any]) -> list[tuple[str, ...]]:
     score_axis = str(data.get("score_axis", "")).lower()
     paths: list[tuple[str, ...]] = []
@@ -323,9 +360,15 @@ def classify_record(
         byte_equivalent_gap = score_gap_to_bytes(score_gap)
         bytes_to_threshold = math.ceil(byte_equivalent_gap)
         if score_gap <= 0:
-            frontier_eligible = True
-            classification = "already_below_or_equal_threshold"
             reasons.append("current_score_at_or_below_threshold")
+            if _has_exact_score_claim_for_axis(data, effective_axis):
+                frontier_eligible = True
+                classification = "already_below_or_equal_threshold"
+                reasons.append("validated_exact_score_claim_for_axis")
+            else:
+                frontier_eligible = False
+                classification = "not_frontier_eligible"
+                blockers.append("below_threshold_score_without_validated_exact_claim")
         else:
             if remaining_bytes is not None:
                 if remaining_bytes < bytes_to_threshold:

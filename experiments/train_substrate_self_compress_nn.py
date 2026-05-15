@@ -85,21 +85,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-# Canonical substrate-trainer helpers (CANON-DEDUP-1 commit ac1cfc41).
-# Replaces ~70 LOC of inlined helpers with a single import per the
-# 2026-05-13 substrate-trainer dedup migration wave.
-from tac.substrates._shared.trainer_skeleton import (
-    decode_real_pairs as _canon_decode_real_pairs,
-    device_or_die as _canon_device_or_die,
-    git_head_sha as _canon_git_head_sha,
-    pin_seeds as _canon_pin_seeds,
-    sha256_bytes as _canon_sha256_bytes,
-    torch_version_string as _canon_torch_version_string,
-    utc_now_iso as _canon_utc_now_iso,
-)
-from tac.substrates._shared.trainer_skeleton import (
-    detect_hardware_substrate as _canon_detect_hardware_substrate,
-)
+from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
@@ -110,9 +96,33 @@ from tac.substrates._shared.smoke_auth_eval_gate import (
 from tac.substrates._shared.trainer_skeleton import (
     build_optimized_training_context as _canon_build_optimized_training_context,
 )
-from tac.training_optimization import (
-    autocast_aware_forward as _autocast_aware_forward,
-    compile_with_fallback as _compile_with_fallback,
+
+# Canonical substrate-trainer helpers (CANON-DEDUP-1 commit ac1cfc41).
+# Replaces ~70 LOC of inlined helpers with a single import per the
+# 2026-05-13 substrate-trainer dedup migration wave.
+from tac.substrates._shared.trainer_skeleton import (
+    decode_real_pairs as _canon_decode_real_pairs,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canon_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    git_head_sha as _canon_git_head_sha,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    pin_seeds as _canon_pin_seeds,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    sha256_bytes as _canon_sha256_bytes,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    torch_version_string as _canon_torch_version_string,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    utc_now_iso as _canon_utc_now_iso,
 )
 
 # ---------------------------------------------------------------------------
@@ -1385,6 +1395,91 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+SELF_COMPRESS_NN_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="self_compress_nn",
+    lane_id="lane_substrate_self_compress_nn_20260512",
+    target_modes=("contest_one_video_replay", "research_substrate",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "SCNN1 monolithic single-file 0.bin: header + self-compressing NN decoder weights (block-fp + brotli per Selfcomp PR#56 paradigm) + scale tables (fp16) + per-pair embeddings"
+    ),
+    parser_section_manifest={
+        "header": "SCNN1_magic_and_version",
+        "decoder_weights": "block_fp_brotli_blob",
+        "scale_tables": "fp16_brotli_blob",
+        "pair_embeddings": "fp16_per_pair",
+    },
+    inflate_runtime_loc_budget=130,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="custom",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=1400,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=False,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="A100",
+    recipe_min_vram_gb=40,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="post_canary_dependent",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency="sane_hnerv",
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=2000,
+    cost_band_gpu_key="A100",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=5.5,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token=None,
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "Selfcomp block-fp self-compression; sensitivity captured by block scale tables + Hessian quant per CLAUDE.md grand council"
+        ),
+        "hook_bit_allocator_class": (
+            "block-fp per-block bit allocation; per-substream not per-tensor"
+        ),
+        "hook_probe_disambiguator": (
+            "single mechanism (block-fp self-compression); no 2+ defensible interpretations"
+        ),
+    },
+)
+
+
+@register_substrate(SELF_COMPRESS_NN_SUBSTRATE_CONTRACT)
+
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)

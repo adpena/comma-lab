@@ -64,7 +64,6 @@ Usage (smoke; macOS CPU, tiny config, ~3 epochs)::
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
 import sys
@@ -75,27 +74,28 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-import torch  # noqa: E402
+import torch
 
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrate_registry import SubstrateContract, register_substrate
+from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrates._shared.trainer_skeleton import (
     device_or_die as _canon_device_or_die,
 )
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrates._shared.trainer_skeleton import (
     git_head_sha as _canon_git_head_sha,
 )
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrates._shared.trainer_skeleton import (
     pin_seeds as _canon_pin_seeds,
 )
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrates._shared.trainer_skeleton import (
     sha256_bytes as _canon_sha256_bytes,
 )
-from tac.substrates._shared.trainer_skeleton import (  # noqa: E402
+from tac.substrates._shared.trainer_skeleton import (
     utc_now_iso as _canon_utc_now_iso,
 )
-from tac.substrates.c1_world_model_foveation import (  # noqa: E402
+from tac.substrates.c1_world_model_foveation import (
     FoveationStrategy,
     WorldModelConfig,
     WorldModelFoveationConfig,
@@ -593,6 +593,92 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # CLI entry
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# META layer SubstrateContract (Catalog #241/#242 canonical migration; landed
+# 2026-05-15 by CATALOG-241-BACKFILL-29-TRAINERS subagent). Decoration extincts
+# the Z3 v2 silent-drift bug class for this substrate by binding (a) the
+# trainer's claimed contract, (b) the recipe schema, (c) the lane registry,
+# and (d) the cost-band envelope into ONE source-of-truth that fails-loud at
+# decoration time if the contract violates canonical invariants.
+# ---------------------------------------------------------------------------
+
+C1_WORLD_MODEL_FOVEATION_SUBSTRATE_CONTRACT = SubstrateContract(
+    # 2.1 Identity & lifecycle
+    id="c1_world_model_foveation",
+    lane_id="lane_c1_world_model_foveation_campaign_l1_scaffold_20260514",
+    target_modes=("contest_one_video_replay", "contest_generalized", "research_substrate",),
+    deployment_target="t4_contest_runtime",
+    council_verdict_provenance=(
+        ".omx/research/grand_council_omnibus_design_decisions_20260514.md"
+    ),
+    # 2.2 Architecture & runtime (8 per Catalog #124)
+    archive_grammar=(
+        "C1WMF1 monolithic single-file 0.bin: header + foveation parameters + world-model decoder weights (fp16 + brotli) + per-frame foveation map"
+    ),
+    parser_section_manifest={
+        "header": "C1WMF1_magic_and_version",
+        "foveation_params": "fp16_brotli_blob",
+        "world_model_weights": "fp16_brotli_blob",
+        "foveation_maps": "fp16_per_frame",
+    },
+    inflate_runtime_loc_budget=140,
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "av",),
+    export_format="fp16_brotli",
+    score_aware_loss="scorer_loss_terms_btchw",
+    bolt_on_loc_budget=620,
+    no_op_detector_planned=True,
+    # 2.3 Operational mechanism (3 per Catalog #220)
+    archive_bytes_added=None,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
+    # 2.4 Recipe schema (8) — mirrors substrate recipe YAML
+    recipe_smoke_only=True,
+    recipe_research_only=False,
+    recipe_min_smoke_gpu="T4",
+    recipe_min_vram_gb=16,
+    recipe_pyav_decode_strategy="cpu_thread_async_upload",
+    recipe_canary_status="post_canary_dependent",
+    recipe_video_input_strategy="per_dispatch_local_copy",
+    recipe_canary_dependency="substrate_a1",
+    # 2.5 Cost band & GPU envelope (4)
+    cost_band_epochs=100,
+    cost_band_gpu_key="T4",
+    cost_band_platform_key="modal",
+    cost_band_p50_usd=0.5,
+    # 2.6 6-hook wire-in (Catalog #125)
+    hook_sensitivity_contribution="not_applicable_with_rationale",
+    hook_pareto_constraint="rate_distortion_v1",
+    hook_bit_allocator_class="not_applicable_with_rationale",
+    hook_autopilot_ranker_class_shift_token="Hafner",
+    hook_continual_learning_anchor_kind="cuda_only",
+    hook_probe_disambiguator=None,
+    # 2.7 Compliance + 2.8 not-applicable rationales
+    catalog_compliance_declarations=(
+        "catalog_146_3arg_archive_grammar_honored",
+        "catalog_151_tier1_required_flags_declared",
+        "catalog_205_select_inflate_device_used",
+        "catalog_220_operational_mechanism_declared",
+        "catalog_226_gate_auth_eval_call_used",
+        "catalog_227_class_shift_tier_c_evidence_pending",
+    ),
+    hook_not_applicable_rationale={
+        "hook_sensitivity_contribution": (
+            "world-model + foveation; LA-pose + telescopic foveation per CLAUDE.md; rate-distortion captures sensitivity"
+        ),
+        "hook_bit_allocator_class": (
+            "fp16 brotli on world-model weights + fp16 per-frame foveation maps; no per-tensor bit allocator"
+        ),
+        "hook_probe_disambiguator": (
+            "two-branch (world-model + foveation) composition; ablation handled by --disable-foveation flag"
+        ),
+    },
+)
+
+
+@register_substrate(C1_WORLD_MODEL_FOVEATION_SUBSTRATE_CONTRACT)
+
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)

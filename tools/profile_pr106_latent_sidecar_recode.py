@@ -114,6 +114,8 @@ def _index_exact_result_reviews(paths: list[Path] | None = None) -> dict[str, li
             continue
         if review.get("schema") != "tac_result_review_packet_v1":
             continue
+        if review.get("score_axis") != "contest_cuda":
+            continue
         if review.get("exact_cuda_evidence") is not True:
             continue
         if review.get("score_claim_valid") is not True:

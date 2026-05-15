@@ -220,6 +220,52 @@ def test_latent_score_table_member_reader_autodetects_x_member(tmp_path):
     assert mod._source_member_contract(member)["source_archive_member_name"] == "x"
 
 
+def test_latent_score_table_member_reader_rejects_mixed_default_members(tmp_path):
+    mod = _load_module()
+    archive = tmp_path / "ambiguous.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
+        z.writestr("0.bin", b"raw-pr106")
+        z.writestr("x", b"\xfepr106-sidecar-packet")
+
+    with pytest.raises(ValueError, match="ambiguous PR106 archive members"):
+        mod._read_source_archive_member(archive)
+
+    member = mod._read_source_archive_member(archive, member_name="x")
+    assert member.name == "x"
+
+
+def test_load_pr106_decoder_rejects_sidecar_decode_failure_without_raw_fallback(
+    tmp_path,
+    monkeypatch,
+):
+    mod = _load_module()
+    archive = tmp_path / "packet.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as z:
+        z.writestr("x", b"\xfe\x01truncated-packet-like")
+
+    class FakeRuntime:
+        def parse_packed_archive(self, _payload):  # pragma: no cover - should not run
+            raise AssertionError("raw PR106 fallback should not run for sidecar packets")
+
+    monkeypatch.setattr(
+        mod,
+        "load_pr106_runtime_module",
+        lambda *_args, **_kwargs: FakeRuntime(),
+    )
+    monkeypatch.setattr(
+        mod,
+        "_decode_runtime_sidecar_payload",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("decode failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="refusing raw PR106 fallback"):
+        mod._load_pr106_decoder(
+            archive,
+            torch.device("cpu"),
+            runtime_dir=mod.DEFAULT_RUNTIME_DIR,
+        )
+
+
 def test_dry_run_plan_writes_candidate_grid_and_manifest(tmp_path):
     if not PR106_ARCHIVE.is_file():
         pytest.skip(f"missing PR106 archive at {PR106_ARCHIVE}")

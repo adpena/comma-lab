@@ -636,3 +636,73 @@ def test_recode_profile_links_matching_exact_cuda_result_review(tmp_path: Path) 
         "exact_eval_blockers"
     ]
     assert "exact_cuda_result_review_already_exists" in manifest["exact_eval_blockers"]
+
+
+def test_recode_profile_rejects_cpu_axis_review_as_exact_cuda_join(tmp_path: Path) -> None:
+    archive_bytes = PR106_R2_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_brotli_dim_delta_sidecar_payload(source_packet.sidecar_payload)
+    candidate = next(
+        item
+        for item in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+        if item.name == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    _candidate_member, candidate_archive = emit_pr106_sidecar_recode_candidate_archive(
+        member,
+        source_packet,
+        candidate,
+    )
+    review_path = tmp_path / "cpu_axis_review.json"
+    review_path.write_text(
+        json.dumps(
+            {
+                "schema": "tac_result_review_packet_v1",
+                "lane_id": "test_pr106_recode_cpu_axis_malformed",
+                "job_id": "test-job",
+                "score_axis": "contest_cpu",
+                "exact_cuda_evidence": True,
+                "score_claim_valid": True,
+                "custody": {
+                    "archive_sha256": hashlib.sha256(candidate_archive).hexdigest(),
+                    "archive_bytes": len(candidate_archive),
+                },
+                "score_recomputation": {
+                    "available": True,
+                    "recomputed_score": 0.1920513168811056,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "profile.json"
+    emitted_dir = tmp_path / "runtime_candidates"
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--sidecar-archive",
+            str(PR106_R2_ARCHIVE),
+            "--json-out",
+            str(out),
+            "--emit-runtime-candidates-dir",
+            str(emitted_dir),
+            "--no-default-exact-result-review-scan",
+            "--exact-result-review",
+            str(review_path),
+        ],
+        check=True,
+    )
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+    row = next(
+        item
+        for item in report["candidate_rows"]
+        if item["name"] == "pr101_ranked_no_op_sidecar_format_0x02"
+    )
+    assert row.get("exact_cuda_auth_eval_claim") is not True
+    assert "exact_cuda_auth_eval_missing" in row["candidate_exact_eval_blockers"]
+    assert "contest_auth_eval_adjudication_missing" in row[
+        "candidate_exact_eval_blockers"
+    ]
