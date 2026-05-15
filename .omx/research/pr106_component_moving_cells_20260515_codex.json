@@ -1,0 +1,701 @@
+{
+  "axis_labels": {
+    "contest_cpu": "[contest-CPU] paired public-axis check required before CPU-axis language",
+    "contest_cuda": "[contest-CUDA] required before promotion or frontier language",
+    "source_score_table": "[provider-CUDA:kaggle advisory score-table]"
+  },
+  "dispatch_attempted": false,
+  "dispatch_blockers": [
+    "planning_artifact_only",
+    "requires_byte_closed_archive_materialization",
+    "requires_lane_dispatch_claim_before_exact_eval",
+    "requires_paired_contest_cuda_auth_eval",
+    "requires_paired_contest_cpu_auth_eval",
+    "requires_adjudicated_component_recompute_before_score_claim"
+  ],
+  "from_state_hash": "d5e615a1fd4e3751",
+  "generated_at_utc": "2026-05-15T14:37:50.707700+00:00",
+  "inputs": {
+    "candidate_grid_npy": {
+      "bytes": 580,
+      "path": "reports/raw/kaggle_pr106_latent_score_table_latest/pr106_latent_score_table/latent_run/score_table/candidate_grid.npy",
+      "sha256": "35903b191807c4fb11c1484c0984cbb4c2c09fc3fa647e4d22e569b54528fb43"
+    },
+    "candidate_grid_source": "candidate_grid_npy",
+    "score_table_manifest": {
+      "bytes": 2962,
+      "path": "reports/raw/kaggle_pr106_latent_score_table_latest/pr106_latent_score_table/latent_run/score_table/score_table_manifest.json",
+      "sha256": "739871b37415caeef04acc6c3db6373a14dd7b3e7f1f8aee557d1a3ecaf7021f"
+    },
+    "score_table_npy": {
+      "bytes": 271328,
+      "path": "reports/raw/kaggle_pr106_latent_score_table_latest/pr106_latent_score_table/latent_run/score_table/score_table.npy",
+      "sha256": "326038a5e2dbb9daf8498e7e8c07fdfc15d832b443b7ad1758cab4f0517001fe"
+    },
+    "xray_json": null
+  },
+  "kind": "latent_sidecar",
+  "label": "pr106_latent_latest_component_moving_cells_20260515",
+  "manifest_authority_flags": {
+    "dispatch_attempted": false,
+    "ready_for_builder": true,
+    "ready_for_exact_eval_dispatch": false,
+    "remote_jobs_dispatched": false,
+    "score_claim": false
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_step": "Materialize a small top-k cell packet using the matching PR106 score-table builder, then run paired exact CPU/CUDA auth eval under claimed lanes.",
+  "remote_jobs_dispatched": false,
+  "schema": "pr106_component_moving_cell_plan_v1",
+  "score_claim": false,
+  "score_delta_semantics": "net_score_delta_charged = candidate_score_without_rate - baseline_score_without_rate + 25*byte_delta/37545489; negative is better",
+  "solver_hooks": {
+    "bit_allocator_hook": "rank by net_score_delta_charged per estimated cell byte",
+    "cathedral_autopilot_dispatch_hook": "materialize selected cells first, then claim exact CPU/CUDA eval lanes",
+    "continual_learning_posterior": "N/A until exact auth-eval empirical anchor exists",
+    "pareto_constraint": "all rows carry score_claim=false and exact-eval dispatch blockers",
+    "probe_disambiguator": "N/A single scorer-table reduction rule; alternate pack grammars must be probed separately",
+    "sensitivity_map": "top_cells expose pair/frame candidate component deltas for tac.sensitivity_map ingestion"
+  },
+  "table_summary": {
+    "baseline_candidate_index": 0,
+    "best_component_score_delta_no_rate": -0.0073326751589775085,
+    "best_net_score_delta_charged": -0.007331343441071264,
+    "candidate_count": 113,
+    "cell_byte_delta": 2.0,
+    "cell_byte_delta_source": "cli_cell_byte_delta",
+    "component_improving_cell_count": 28485,
+    "net_improving_cell_count": 28442,
+    "rate_score_delta_per_cell": 1.3317179062443428e-06,
+    "row_count": 600
+  },
+  "tool": "tools/plan_pr106_component_moving_cells.py",
+  "top_cells": [
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.11081172525882721,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 24
+      },
+      "candidate_index": 100,
+      "candidate_score_without_rate": 0.1034790500998497,
+      "cell_id": "latent_sidecar:row545:candidate100",
+      "component_score_delta_no_rate": -0.0073326751589775085,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.007331343441071264,
+      "pair_idx": 545,
+      "rank": 1,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 545,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.11410226672887802,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": -2,
+        "dim": 5
+      },
+      "candidate_index": 21,
+      "candidate_score_without_rate": 0.10702720284461975,
+      "cell_id": "latent_sidecar:row518:candidate21",
+      "component_score_delta_no_rate": -0.00707506388425827,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.007073732166352026,
+      "pair_idx": 518,
+      "rank": 2,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 518,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.1029147058725357,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": -2,
+        "dim": 16
+      },
+      "candidate_index": 65,
+      "candidate_score_without_rate": 0.09602518379688263,
+      "cell_id": "latent_sidecar:row513:candidate65",
+      "component_score_delta_no_rate": -0.006889522075653076,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006888190357746832,
+      "pair_idx": 513,
+      "rank": 3,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 513,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.08597969263792038,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 17
+      },
+      "candidate_index": 72,
+      "candidate_score_without_rate": 0.07911845296621323,
+      "cell_id": "latent_sidecar:row460:candidate72",
+      "component_score_delta_no_rate": -0.006861239671707153,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006859907953800909,
+      "pair_idx": 460,
+      "rank": 4,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 460,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.08461852371692657,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 17
+      },
+      "candidate_index": 72,
+      "candidate_score_without_rate": 0.07785829901695251,
+      "cell_id": "latent_sidecar:row108:candidate72",
+      "component_score_delta_no_rate": -0.00676022469997406,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006758892982067816,
+      "pair_idx": 108,
+      "rank": 5,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 108,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.07323551923036575,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 2
+      },
+      "candidate_index": 12,
+      "candidate_score_without_rate": 0.06649985909461975,
+      "cell_id": "latent_sidecar:row374:candidate12",
+      "component_score_delta_no_rate": -0.006735660135746002,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006734328417839758,
+      "pair_idx": 374,
+      "rank": 6,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 374,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.07557066529989243,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": -2,
+        "dim": 7
+      },
+      "candidate_index": 29,
+      "candidate_score_without_rate": 0.06890694797039032,
+      "cell_id": "latent_sidecar:row524:candidate29",
+      "component_score_delta_no_rate": -0.006663717329502106,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.0066623856115958615,
+      "pair_idx": 524,
+      "rank": 7,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 524,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.11410226672887802,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 8
+      },
+      "candidate_index": 36,
+      "candidate_score_without_rate": 0.10750014334917068,
+      "cell_id": "latent_sidecar:row518:candidate36",
+      "component_score_delta_no_rate": -0.006602123379707336,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006600791661801092,
+      "pair_idx": 518,
+      "rank": 8,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 518,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.08410841226577759,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 27
+      },
+      "candidate_index": 112,
+      "candidate_score_without_rate": 0.07752314954996109,
+      "cell_id": "latent_sidecar:row330:candidate112",
+      "component_score_delta_no_rate": -0.006585262715816498,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.0065839309979102536,
+      "pair_idx": 330,
+      "rank": 9,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 330,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.11410226672887802,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 27
+      },
+      "candidate_index": 112,
+      "candidate_score_without_rate": 0.10754280537366867,
+      "cell_id": "latent_sidecar:row518:candidate112",
+      "component_score_delta_no_rate": -0.006559461355209351,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006558129637303106,
+      "pair_idx": 518,
+      "rank": 10,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 518,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.09631253778934479,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": -2,
+        "dim": 5
+      },
+      "candidate_index": 21,
+      "candidate_score_without_rate": 0.08975818008184433,
+      "cell_id": "latent_sidecar:row142:candidate21",
+      "component_score_delta_no_rate": -0.006554357707500458,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.0065530259895942135,
+      "pair_idx": 142,
+      "rank": 11,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 142,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.0916924774646759,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 4
+      },
+      "candidate_index": 20,
+      "candidate_score_without_rate": 0.08516263961791992,
+      "cell_id": "latent_sidecar:row263:candidate20",
+      "component_score_delta_no_rate": -0.0065298378467559814,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006528506128849737,
+      "pair_idx": 263,
+      "rank": 12,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 263,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.10177815705537796,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 4
+      },
+      "candidate_index": 20,
+      "candidate_score_without_rate": 0.0952918753027916,
+      "cell_id": "latent_sidecar:row532:candidate20",
+      "component_score_delta_no_rate": -0.006486281752586365,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.0064849500346801205,
+      "pair_idx": 532,
+      "rank": 13,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 532,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.09125624597072601,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": -2,
+        "dim": 8
+      },
+      "candidate_index": 33,
+      "candidate_score_without_rate": 0.08484852313995361,
+      "cell_id": "latent_sidecar:row127:candidate33",
+      "component_score_delta_no_rate": -0.0064077228307724,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006406391112866156,
+      "pair_idx": 127,
+      "rank": 14,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 127,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.09631253778934479,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 10
+      },
+      "candidate_index": 44,
+      "candidate_score_without_rate": 0.08991596847772598,
+      "cell_id": "latent_sidecar:row142:candidate44",
+      "component_score_delta_no_rate": -0.006396569311618805,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006395237593712561,
+      "pair_idx": 142,
+      "rank": 15,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 142,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    },
+    {
+      "baseline_candidate": {
+        "delta_q": 0,
+        "dim": 255
+      },
+      "baseline_candidate_index": 0,
+      "baseline_score_without_rate": 0.07911674678325653,
+      "byte_delta": 2.0,
+      "byte_delta_source": "cli_cell_byte_delta",
+      "candidate": {
+        "delta_q": 2,
+        "dim": 23
+      },
+      "candidate_index": 96,
+      "candidate_score_without_rate": 0.07277533411979675,
+      "cell_id": "latent_sidecar:row410:candidate96",
+      "component_score_delta_no_rate": -0.006341412663459778,
+      "false_authority": {
+        "dispatch_attempted": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "reason": "score-table cells are compress-time marginal evidence only; interactions, byte packing, and CPU/CUDA scorer axes require byte-closed exact eval",
+        "remote_jobs_dispatched": false,
+        "score_claim": false
+      },
+      "frame_slot": null,
+      "negative_is_better": true,
+      "net_score_delta_charged": -0.006340080945553534,
+      "pair_idx": 410,
+      "rank": 16,
+      "rate_score_delta": 1.3317179062443428e-06,
+      "required_promotion_axes": [
+        "[contest-CUDA]",
+        "[contest-CPU]"
+      ],
+      "row_idx": 410,
+      "source_score_axis_label": "[provider-CUDA:kaggle advisory score-table]"
+    }
+  ]
+}
