@@ -80,3 +80,19 @@ def test_d4_full_pair_or_skip_auth_eval_pair_scope_is_allowed() -> None:
 
     _validate_auth_eval_pair_scope(full_args)
     _validate_auth_eval_pair_scope(skip_args)
+
+
+def test_d4_pair_capped_training_writes_false_authority_manifest() -> None:
+    trainer = Path("experiments/train_substrate_d4_wyner_ziv_frame_0.py").read_text(
+        encoding="utf-8",
+    )
+
+    assert '"schema": "d4_wzf0_training_artifact_manifest_v1"' in trainer
+    assert '"training_mode": "smoke" if pair_capped_smoke else "full"' in trainer
+    assert '"research_only": pair_capped_smoke' in trainer
+    assert '"score_claim": False' in trainer
+    assert '"score_claim_valid": False' in trainer
+    assert '"promotion_eligible": False' in trainer
+    assert '"ready_for_exact_eval_dispatch": False' in trainer
+    assert '"pair_capped_smoke_emits_truncated_raw_stream"' in trainer
+    assert 'args.output_dir / "manifest.json"' in trainer

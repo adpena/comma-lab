@@ -410,6 +410,11 @@ def _validate_auth_eval_pair_scope(args: argparse.Namespace) -> None:
         )
 
 
+def _is_pair_capped_smoke(args: argparse.Namespace) -> bool:
+    """Return True when the run intentionally emits fewer than contest pairs."""
+    return args.max_pairs is not None and args.max_pairs < N_PAIRS_FULL
+
+
 # ---------------------------------------------------------------------------
 # Smoke entry path
 # ---------------------------------------------------------------------------
@@ -1176,6 +1181,41 @@ def _full_main(args: argparse.Namespace) -> int:
     }
     (args.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    pair_capped_smoke = _is_pair_capped_smoke(args)
+    manifest = {
+        "schema": "d4_wzf0_training_artifact_manifest_v1",
+        "lane_id": SUBSTRATE_LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "training_mode": "smoke" if pair_capped_smoke else "full",
+        "research_only": pair_capped_smoke,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_bytes": bin_size,
+        "archive_sha256": bin_sha,
+        "archive_zip_bytes": archive_zip_size,
+        "archive_zip_sha256": archive_zip_sha,
+        "max_pairs": args.max_pairs,
+        "n_pairs_full_required_for_auth_eval": N_PAIRS_FULL,
+        "auth_eval_skipped": bool(args.skip_auth_eval),
+        "auth_eval_skipped_reason": (
+            "pair_capped_smoke_emits_truncated_raw_stream"
+            if pair_capped_smoke and args.skip_auth_eval
+            else ""
+        ),
+        "result": {
+            "training_mode": "smoke" if pair_capped_smoke else "full",
+            "archive_bytes": bin_size,
+            "archive_sha256": bin_sha,
+            "archive_zip_bytes": archive_zip_size,
+            "archive_zip_sha256": archive_zip_sha,
+        },
+    }
+    (args.output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
     )
     print(
         f"[{SUBSTRATE_TAG}-full] wrote {args.output_dir / 'provenance.json'}"

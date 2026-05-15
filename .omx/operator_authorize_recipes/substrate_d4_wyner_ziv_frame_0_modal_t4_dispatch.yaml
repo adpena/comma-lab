@@ -1,6 +1,8 @@
 schema_version: 1
 name: substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch
 lane_id: lane_d4_wyner_ziv_frame_0_substrate_20260514
+smoke_only: true
+smoke_validation_contract: training_artifact_v1
 summary: |
   D4 Wyner-Ziv frame-0 substrate (deep-math M7) — strongest single-substrate
   bet for sub-0.188 gate clearance per
@@ -170,7 +172,13 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  D4 Wyner-Ziv frame-0 substrate first-anchor dispatch recipe.
+  D4 Wyner-Ziv frame-0 substrate capped timing-smoke recipe.
+
+  `smoke_only: true` and `smoke_validation_contract: training_artifact_v1`
+  are intentional. The F4 smoke caps `D4_WYNER_ZIV_FRAME_0_MAX_PAIRS` at 200,
+  so the archive emits 400 frames, not the contest-required 1200. The first
+  score anchor must use a separate full-pair recipe or override that preserves
+  the contest-CUDA auth-eval contract at `max_pairs=600`.
 
   The substrate is a single-archive WZF01 packet at 30-80 KB target. Motion
   params (4-5 KB SE(3) OR 30-50 KB optical-flow after brotli) + photometric

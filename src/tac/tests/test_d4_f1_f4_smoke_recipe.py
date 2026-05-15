@@ -27,7 +27,10 @@ def test_d4_recipe_preserves_full_reference_and_f4_pair_cap() -> None:
 
     assert 'D4_WYNER_ZIV_FRAME_0_EPOCHS: "${D4_WYNER_ZIV_FRAME_0_EPOCHS:-2000}"' in recipe
     assert 'D4_WYNER_ZIV_FRAME_0_MAX_PAIRS: "${D4_WYNER_ZIV_FRAME_0_MAX_PAIRS:-200}"' in recipe
+    assert "smoke_only: true" in recipe
+    assert "smoke_validation_contract: training_artifact_v1" in recipe
     assert "50 epochs" in recipe
+    assert "max_pairs=600" in recipe
 
 
 def test_d4_remote_driver_defaults_to_t03_smoke_cap() -> None:

@@ -6,9 +6,10 @@
 #
 # This wrapper routes through `tools/run_modal_smoke_before_full.py` per
 # Catalog #167 (`check_substrate_dispatch_uses_smoke_before_full_pattern`).
-# A 100-epoch ~$0.30 Modal T4 smoke fires FIRST, validates rc=0 + auth-eval
-# JSON present + score in plausible band [0.05, 0.50], and only proceeds to
-# the full 2000-epoch T4 dispatch on smoke-green.
+# A 50-epoch capped Modal T4 smoke validates rc=0 + a fresh
+# training_artifact_v1 manifest/archive with score_claim=false. It does NOT
+# proceed to the full 2000-epoch T4 dispatch because the capped smoke uses
+# max_pairs=200 and cannot emit the contest-required 1200-frame raw stream.
 #
 # Per Catalog #162 (`check_operator_authorize_canonical_use`) the full
 # dispatch ultimately delegates to `tools/operator_authorize.py --recipe`.
