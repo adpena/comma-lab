@@ -30101,6 +30101,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_phase_1_recover_catalog_273_278_20260515",
+      "name": "Phase 1 recover Catalog #273-#278 phantom rows",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/preflight.py + src/tac/preflight_rudin_daubechies/ package; 28/28 tests pass; 6 STRICT gates wired with live count 0 each"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #273-#278 strict=True wire-in in preflight_all; META-meta gates #176 + #185 clean post-landing"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_phase_1_recover_catalog_273_278_phantom_rows_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30110,5 +30151,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T21:59:14Z"
+  "updated_at": "2026-05-15T22:07:45Z"
 }

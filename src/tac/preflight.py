@@ -2412,6 +2412,33 @@ def preflight_all(
         check_symposium_impls_canonical_contract(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #273-#278 - Rudin-Daubechies PREFLIGHT-COMPOSITE
+        # self-protection per
+        # `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`.
+        # Mirrors the autopilot sister Catalog #250-#255 (commit a2e479565).
+        # All 6 gates STRICT-from-byte-one per CLAUDE.md "Bugs must be
+        # permanently fixed AND self-protected against" + "Strict-flip
+        # atomicity rule" - live count at landing: 0 (canonical helpers in
+        # `src/tac/preflight_rudin_daubechies/` self-exempt; no callers
+        # outside the package).
+        check_preflight_slim_risk_scorer_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        check_preflight_falling_rule_list_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        check_preflight_rashomon_ensemble_continual_update_locked(
+            strict=True, verbose=verbose,
+        )
+        check_preflight_compressive_landscape_canonical_use(
+            strict=True, verbose=verbose,
+        )
+        check_preflight_wavelet_multi_scale_contract(
+            strict=True, verbose=verbose,
+        )
+        check_preflight_gosdt_dispatcher_whiteboard_discipline(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 sister gate - train_renderer auth-eval
         # wiring must stay aligned with experiments/auth_eval_renderer.py.
         # Initial wire-in is warn-only because this is a renderer-side sister
@@ -57299,6 +57326,508 @@ def check_gosdt_dispatcher_whiteboard_discipline(
             "check_gosdt_dispatcher_whiteboard_discipline "
             f"found {len(violations)} violation(s). Catalog #255 enforces "
             "operator-gated promotion per CLAUDE.md 'Design decisions':\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Catalog #273-#278 — RUDIN-DAUBECHIES PREFLIGHT-COMPOSITE self-protection.
+#
+# These 6 gates self-protect the WAVELET-DECOMPOSED RASHOMON-ENSEMBLE
+# FALLING-RULE-LIST PREFLIGHT RANKER package per
+# `feedback_rudin_daubechies_preflight_composite_landed_20260515.md`.
+# They mirror the autopilot sister Catalog #250-#255 (commit a2e479565) on
+# the preflight surface — same canonical contract enforced at the gate-ranker
+# layer instead of the dispatch-ranker layer.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CHECK_273_FORBIDDEN_FLOAT_COEF_TOKENS: tuple[str, ...] = (
+    "preflight_float_coef",
+    "preflight_non_integer_coef",
+    "preflight_lasso_coef",
+    "preflight_l1_relaxed_coef",
+    "preflight_round_to_int_post_fit",
+)
+
+_CHECK_273_SELF_EXEMPT_PATHS: tuple[str, ...] = (
+    "src/tac/preflight_rudin_daubechies/",
+    "src/tac/preflight.py",
+    "/tests/",
+    "test_",
+)
+
+
+def check_preflight_slim_risk_scorer_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #273 — refuses non-canonical preflight SLIM coefficient construction.
+
+    Mirrors the autopilot sister Catalog #250 (commit ``a2e479565``) on the
+    preflight ranker surface. The canonical preflight SLIM risk scorer per
+    Rudin's formulation requires INTEGER coefficients in ``[-K, K]``. Bypassing
+    the canonical :class:`PreflightSLIMRiskScorer` (which re-exports
+    :class:`SLIMCoefficient` from the autopilot sister) by hand-rolling float
+    coefficients re-introduces the interpretability-loss bug class.
+
+    Refuses any source file under ``src/tac/``, ``tools/``, or
+    ``experiments/`` that mentions a forbidden float-coef construction token
+    UNLESS it carries a same-line ``# PREFLIGHT_SLIM_FLOAT_COEF_OK:<rationale>``
+    waiver (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    scanned = 0
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_273_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            scanned += 1
+            for tok in _CHECK_273_FORBIDDEN_FLOAT_COEF_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_SLIM_FLOAT_COEF_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_SLIM_FLOAT_COEF_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: forbidden preflight float-coef token "
+                        f"{tok!r}; use PreflightSLIMRiskScorer (integer "
+                        "contract) or add same-line waiver "
+                        "'# PREFLIGHT_SLIM_FLOAT_COEF_OK:<concrete-rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-slim-risk-scorer-canonical] scanned {scanned}; "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_slim_risk_scorer_canonical_use "
+            f"found {len(violations)} violation(s). Catalog #273 enforces "
+            "Rudin's integer-coefficient SLIM contract on the preflight "
+            "ranker surface (sister of Catalog #250):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_274_NON_FALLING_TOKENS: tuple[str, ...] = (
+    "preflight_ascending_rule_list",
+    "preflight_rising_rule_list",
+    "preflight_fine_rule_overrides_coarse_gate",
+)
+
+_CHECK_274_SELF_EXEMPT_PATHS = _CHECK_273_SELF_EXEMPT_PATHS
+
+
+def check_preflight_falling_rule_list_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #274 — refuses non-falling preflight rule-list patterns.
+
+    Mirrors the autopilot sister Catalog #251 on the preflight surface. Per
+    Wang & Rudin 2015 "Falling Rule Lists" canonical discipline: rules MUST
+    be ordered with HIGHER-PRIORITY rules first; first-match-wins semantics
+    break otherwise. The fine-rule-overrides-coarse-gate antipattern inverts
+    the canonical ordering.
+
+    Same-line waiver: ``# PREFLIGHT_NON_FALLING_RULE_OK:<rationale>``
+    (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_274_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_274_NON_FALLING_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_NON_FALLING_RULE_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_NON_FALLING_RULE_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: non-falling preflight rule-list "
+                        f"pattern {tok!r}; use canonical "
+                        "PreflightFallingRuleEvaluator or add waiver "
+                        "'# PREFLIGHT_NON_FALLING_RULE_OK:<rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-falling-rule-list-canonical] "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_falling_rule_list_canonical_use "
+            f"found {len(violations)} violation(s). Catalog #274 enforces "
+            "Wang & Rudin 2015 falling-rule-list contract on the preflight "
+            "surface (sister of Catalog #251):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_275_FORBIDDEN_NON_PERSISTED_TOKENS: tuple[str, ...] = (
+    "PreflightRashomonEnsemble_NON_PERSISTED",
+    "preflight_rashomon_no_store_path",
+)
+
+_CHECK_275_SELF_EXEMPT_PATHS = _CHECK_273_SELF_EXEMPT_PATHS
+
+
+def check_preflight_rashomon_ensemble_continual_update_locked(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #275 — preflight Rashomon ensemble must persist anchors.
+
+    Mirrors the autopilot sister Catalog #252 on the preflight surface. The
+    canonical :class:`PreflightRashomonEnsemble` writes to a JSONL anchor
+    store under fcntl lock per Catalog #128/#131 sister discipline. Producing
+    a preflight Rashomon ensemble WITHOUT a persisted ``store_path`` means
+    anchors are NOT written — bootstrap-refit drift across K=8 members is
+    invisible and the continual-learning loop never closes.
+
+    Same-line waiver: ``# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:<rationale>``
+    (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_275_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_275_FORBIDDEN_NON_PERSISTED_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: non-persisted preflight Rashomon "
+                        f"token {tok!r}; pass store_path=<canonical> or add "
+                        "waiver "
+                        "'# PREFLIGHT_RASHOMON_NON_PERSISTED_OK:<rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-rashomon-ensemble-locked] "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_rashomon_ensemble_continual_update_locked "
+            f"found {len(violations)} violation(s). Catalog #275 enforces "
+            "fcntl-locked anchor persistence on the preflight surface "
+            "(sister of Catalog #252 + #128/#131):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_276_FORBIDDEN_DENSE_TOKENS: tuple[str, ...] = (
+    "preflight_dense_anchor_reconstruction",
+    "preflight_full_landscape_grid_search",
+)
+
+_CHECK_276_SELF_EXEMPT_PATHS = _CHECK_273_SELF_EXEMPT_PATHS
+
+
+def check_preflight_compressive_landscape_canonical_use(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #276 — refuses dense-anchor preflight coverage reconstruction.
+
+    Mirrors the autopilot sister Catalog #253 on the preflight surface. Per
+    Daubechies-DeVore-Fornasier-Gunturk 2010 compressive-sensing discipline:
+    a sparse signal recovers from FEW measurements via L1 reconstruction.
+    The canonical :class:`CompressiveCoverageEstimator` recovers the full
+    coverage manifest of all 270 catalog gates from K=8 representative
+    trainer/recipe fixtures with bounded uncertainty O(sqrt(N/K)). Bypassing
+    it and demanding a DENSE anchor grid defeats the Daubechies discipline
+    AND the cost-saving rationale.
+
+    Same-line waiver: ``# PREFLIGHT_DENSE_ANCHOR_OK:<rationale>``
+    (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_276_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_276_FORBIDDEN_DENSE_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_DENSE_ANCHOR_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_DENSE_ANCHOR_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: dense-anchor preflight reconstruction "
+                        f"token {tok!r}; use canonical "
+                        "CompressiveCoverageEstimator or add waiver "
+                        "'# PREFLIGHT_DENSE_ANCHOR_OK:<rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-compressive-landscape-canonical] "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_compressive_landscape_canonical_use "
+            f"found {len(violations)} violation(s). Catalog #276 enforces "
+            "Daubechies-DeVore-Fornasier-Gunturk 2010 compressive-sensing "
+            "discipline on the preflight surface (sister of Catalog "
+            "#253):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_277_FORBIDDEN_MULTI_SCALE_BYPASS_TOKENS: tuple[str, ...] = (
+    "preflight_single_scale_for_multi_scale_problem",
+    "preflight_fine_overrides_coarse_gate",
+    "preflight_skip_coarsest_scale_evaluation",
+)
+
+_CHECK_277_SELF_EXEMPT_PATHS = _CHECK_273_SELF_EXEMPT_PATHS
+
+
+def check_preflight_wavelet_multi_scale_contract(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #277 — refuses preflight multi-scale-bypass tokens.
+
+    Mirrors the autopilot sister Catalog #254 on the preflight surface. Per
+    Daubechies 1988 wavelet hierarchical-planning discipline: COARSE-scale
+    rules (file existence / schema compliance) GATE FINE-scale rules
+    (per-substrate distinguishing-feature contract). The
+    fine-rule-overrides-coarse-gate antipattern inverts the canonical
+    "coarsest dominates on disagreement" rule and re-introduces the bug
+    class where a downstream contract-detail violation masks a structural
+    upstream missing-file violation.
+
+    Same-line waiver: ``# PREFLIGHT_SINGLE_SCALE_OK:<rationale>``
+    (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_277_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_277_FORBIDDEN_MULTI_SCALE_BYPASS_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_SINGLE_SCALE_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_SINGLE_SCALE_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: preflight multi-scale-bypass token "
+                        f"{tok!r}; use canonical "
+                        "WaveletMultiScalePreflightRanker or add waiver "
+                        "'# PREFLIGHT_SINGLE_SCALE_OK:<rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-wavelet-multi-scale-canonical] "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_wavelet_multi_scale_contract "
+            f"found {len(violations)} violation(s). Catalog #277 enforces "
+            "Daubechies 1988 wavelet hierarchical-planning discipline "
+            "(coarse gates fine) on the preflight surface (sister of "
+            "Catalog #254):\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+_CHECK_278_FORBIDDEN_AUTO_PROMOTE_TOKENS: tuple[str, ...] = (
+    "preflight_auto_promote_whiteboard_rule",
+    "preflight_promote_whiteboard_rule_without_operator_review",
+)
+
+_CHECK_278_SELF_EXEMPT_PATHS = _CHECK_273_SELF_EXEMPT_PATHS
+
+
+def check_preflight_gosdt_dispatcher_whiteboard_discipline(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #278 — refuses auto-promotion of preflight whiteboard rules.
+
+    Mirrors the autopilot sister Catalog #255 on the preflight surface. Per
+    CLAUDE.md "Design decisions — non-negotiable": whiteboard rules are
+    DESIGN-time proposals; promotion to the canonical preflight falling-rule
+    list requires an explicit operator decision via
+    :meth:`GOSDTDispatchRouter.promote_whiteboard_rule`. Auto-promotion based
+    on empirical hit-rate alone bypasses the council-grade decision gate and
+    re-introduces the "ranker silently changed under us" bug class on the
+    preflight surface.
+
+    Same-line waiver: ``# PREFLIGHT_AUTO_PROMOTE_OK:<rationale>``
+    (placeholder ``<rationale>`` literal rejected).
+
+    STRICT-from-byte-one. Live count at landing: 0.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+    for sub in ("src/tac", "tools", "experiments"):
+        base = root / sub
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = str(path.relative_to(root))
+            if any(marker in rel for marker in _CHECK_278_SELF_EXEMPT_PATHS):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for tok in _CHECK_278_FORBIDDEN_AUTO_PROMOTE_TOKENS:
+                if tok not in text:
+                    continue
+                for ln_no, line in enumerate(text.split("\n"), 1):
+                    if tok not in line:
+                        continue
+                    if "# PREFLIGHT_AUTO_PROMOTE_OK:" in line:
+                        rationale = line.split(
+                            "# PREFLIGHT_AUTO_PROMOTE_OK:", 1
+                        )[1].strip()
+                        if rationale and rationale != "<rationale>":
+                            continue
+                    violations.append(
+                        f"{rel}:{ln_no}: auto-promotion of preflight "
+                        f"whiteboard rule {tok!r} bypasses the council-grade "
+                        "decision gate; use "
+                        "GOSDTDispatchRouter.promote_whiteboard_rule "
+                        "(operator-gated) or add waiver "
+                        "'# PREFLIGHT_AUTO_PROMOTE_OK:<rationale>'"
+                    )
+    if verbose:
+        print(
+            f"  [preflight-gosdt-whiteboard-discipline] "
+            f"{len(violations)} violations"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_preflight_gosdt_dispatcher_whiteboard_discipline "
+            f"found {len(violations)} violation(s). Catalog #278 enforces "
+            "operator-gated whiteboard promotion on the preflight surface "
+            "per CLAUDE.md 'Design decisions' (sister of Catalog #255):\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
