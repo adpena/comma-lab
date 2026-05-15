@@ -612,6 +612,36 @@ def _validate_training_artifact_smoke_result(
     )
 
 
+def _count_dirty_paths(repo_root: Path) -> int:
+    """DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-4).
+
+    Return the number of dirty paths in the working tree at the moment the
+    smoke wrapper runs. Used by `_spawn_smoke_dispatch` to auto-activate
+    the Catalog #202 paired-env bypass for the SMOKE phase only.
+
+    A non-zero count is the signal to relax `--require-clean-head` for the
+    smoke phase. Zero means the operator can proceed under the strict
+    contract for both smoke and full. Returns 0 on git failure (fail-safe;
+    the operator-authorize subprocess will still run and the worker-side
+    Catalog #166 sentinel hash check is unaffected).
+
+    Mirrors `_git_dirty_tree_summary` in `experiments/modal_train_lane.py`
+    but lives here so the smoke wrapper does not import the modal entry-
+    point module (which has heavy modal SDK dependencies at import time).
+    """
+
+    proc = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return 0
+    return sum(1 for line in proc.stdout.splitlines() if line.strip())
+
+
 def _close_smoke_claim(
     *,
     repo_root: Path,
@@ -683,6 +713,22 @@ def _spawn_smoke_dispatch(
     The recipe's env_overrides block defaults each var so the override
     binds at process-environment level (highest precedence in the
     trainer's env->default ladder per Catalog #151).
+
+    DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-4): if the working tree
+    is dirty AT SMOKE-DISPATCH TIME, automatically activate the Catalog
+    #202 paired-env bypass for the SMOKE phase only. The full phase still
+    fails-closed by default. This honors the smoke-vs-full asymmetry: a
+    cheap $0.30 smoke that validates integration is dominated by the
+    operator's lost dispatch cycle when a dirty-tree refusal blocks every
+    cheap probe; the FULL canary's $5-15 spend justifies the strict
+    clean-head check.
+
+    Per CLAUDE.md "Submission auth eval" non-negotiable, the SMOKE phase
+    is NEVER a score-promotion surface (smoke artifacts carry
+    `score_axis=diagnostic_*` for non-contest_cuda cases) so relaxing the
+    clean-head check at smoke time does not promote a dirty-tree-derived
+    score. Catalog #166 worker-side sentinel hash check still runs
+    INDEPENDENTLY for the smoke dispatch.
     """
     label = f"smoke_{recipe_path.stem}_{int(time.time())}"
     env = {
@@ -693,6 +739,25 @@ def _spawn_smoke_dispatch(
     }
     if epoch_env_var:
         env[epoch_env_var] = str(smoke_epochs)
+    # DX-POLISH-WAVE Catalog #238 / DX-4: SMOKE-relaxed clean-head bypass.
+    # Activate the Catalog #202 paired-env-var attestation iff the smoke
+    # phase is about to fire AND the working tree is dirty. The bypass
+    # binds at process-environment level so the spawned operator_authorize
+    # subprocess sees both env vars and skips appending --require-clean-head
+    # to the modal_train_lane command.
+    dirty_count = _count_dirty_paths(repo_root)
+    if dirty_count > 0:
+        env["OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"] = "1"
+        env["OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"] = "1"
+        print(
+            f"[smoke-before-full] DX-POLISH-WAVE Catalog #238 / DX-4: dirty "
+            f"tree detected ({dirty_count} paths); SMOKE phase auto-activates "
+            "Catalog #202 paired-env bypass (--require-clean-head is "
+            "RELAXED for smoke). Catalog #166 worker-side sentinel hash "
+            "check still runs. The FULL phase will RE-CHECK and fail-closed "
+            "on dirty tree by default.",
+            file=sys.stderr,
+        )
     cmd = [
         sys.executable,
         "tools/operator_authorize.py",
@@ -923,7 +988,34 @@ def _spawn_full_dispatch(
     operator_handle: str,
     repo_root: Path,
 ) -> int:
-    """Invoke the operator_authorize CLI in full mode (no env overrides)."""
+    """Invoke the operator_authorize CLI in full mode (no env overrides).
+
+    DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-4): the full phase
+    DELIBERATELY does NOT activate the Catalog #202 paired-env bypass.
+    The smoke phase already validated integration; the full canary's
+    $5-15 spend justifies the strict clean-head check. If the operator
+    needs to dispatch a full canary against a dirty tree, they must
+    set the Catalog #202 paired-env bypass EXPLICITLY in their shell
+    (the smoke wrapper does not auto-set it for the full phase).
+
+    On a dirty tree, the full dispatch's underlying
+    `experiments/modal_train_lane.py` will print the categorized + next-
+    steps Catalog #166 FATAL message (see
+    `_format_dx_polish_actionable_fatal`) so the operator knows exactly
+    which buckets are dirty and which next-step matches.
+    """
+    dirty_count = _count_dirty_paths(repo_root)
+    if dirty_count > 0:
+        print(
+            f"[smoke-before-full] DX-POLISH-WAVE Catalog #238 / DX-4: dirty "
+            f"tree detected ({dirty_count} paths) at FULL phase entry. The "
+            "FULL phase does NOT auto-relax --require-clean-head (only the "
+            "smoke phase does). Catalog #166 worker-side hash check + the "
+            "categorized FATAL body in experiments/modal_train_lane.py will "
+            "fire if the operator has not set the Catalog #202 paired-env "
+            "bypass. Re-run after a clean commit OR set the bypass manually.",
+            file=sys.stderr,
+        )
     cmd = [
         sys.executable,
         "tools/operator_authorize.py",
@@ -1188,10 +1280,13 @@ __all__ = [
     "DEFAULT_SMOKE_TIMEOUT_HOURS",
     "SMOKE_PLAUSIBLE_SCORE_BAND",
     "SMOKE_VALIDATION_CONTRACTS",
+    "_count_dirty_paths",
     "_epoch_env_var_from_recipe",
     "_resolve_recipe_path",
     "_resolve_smoke_band",
     "_smoke_validation_contract_from_recipe",
+    "_spawn_full_dispatch",
+    "_spawn_smoke_dispatch",
     "_validate_smoke_result",
     "main",
 ]

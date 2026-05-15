@@ -734,7 +734,8 @@ def _git_value(repo_root, *args: str) -> str:
 
 
 def _git_dirty_tree_summary(repo_root) -> dict:
-    """Return ``{"dirty": bool, "dirty_paths_count": int, "summary": str}``.
+    """Return ``{"dirty": bool, "dirty_paths_count": int, "summary": str,
+    "categorized": dict}``.
 
     Captures whether the working tree has uncommitted edits AT DISPATCH TIME.
     Catalog #166 (PHASE-B1-PIVOT 2026-05-12): a stale fix on disk silently
@@ -743,6 +744,14 @@ def _git_dirty_tree_summary(repo_root) -> dict:
     post-mortem distinguish "operator dispatched before fix landed" (clean
     tree, HEAD before fix-commit) from "Modal worker mounted stale snapshot"
     (clean tree, HEAD AT fix-commit, but worker hash differs from HEAD blob).
+
+    DX-POLISH-WAVE 2026-05-15 (Catalog #238): the returned dict now includes
+    a ``categorized`` field that groups dirty paths into actionable buckets so
+    the operator can immediately see whether the dirty tree is a sister
+    subagent's research artifact (typically safe to set the Catalog #202
+    bypass for trusted-sentinel-clean dispatch), an operator-owned source
+    edit (typically requires a commit), or a build artifact (typically a GC
+    cleanup / .gitignore update). See :func:`_categorize_dirty_paths`.
     """
 
     import subprocess
@@ -759,13 +768,279 @@ def _git_dirty_tree_summary(repo_root) -> dict:
             "dirty": False,
             "dirty_paths_count": 0,
             "summary": "unknown:git-status-failed",
+            "categorized": {},
         }
     lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    paths = [_extract_porcelain_path(line) for line in lines]
+    paths = [p for p in paths if p]
+    categorized = _categorize_dirty_paths(paths)
     return {
         "dirty": bool(lines),
         "dirty_paths_count": len(lines),
         "summary": "; ".join(line.strip() for line in lines[:10]),
+        "categorized": categorized,
     }
+
+
+def _extract_porcelain_path(line: str) -> str:
+    """Parse ``git status --porcelain`` line into the path component.
+
+    Handles XY-status prefix (2 chars + 1 space) and optional rename arrow
+    (``orig -> new``). Returns the destination path of a rename so the
+    categorization sees the path that lives on disk now.
+    """
+
+    raw = line[3:] if len(line) > 3 else line.strip()
+    if " -> " in raw:
+        raw = raw.rsplit(" -> ", 1)[1]
+    return raw.strip().strip('"')
+
+
+# DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-1): dirty-path categorization.
+# Each bucket name is a stable label that the FATAL error message references
+# in its actionable next-steps section. The patterns are intentionally
+# ordered: a path is assigned to the FIRST matching bucket. Sister/codex/
+# OSS-mirror buckets are checked BEFORE the broad source/test buckets so a
+# `_codex.md` research ledger is never miscategorized as "operator-owned
+# source edit".
+_DX_DIRTY_PATH_CATEGORIES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "codex_sister_research_ledger",
+        (
+            "_codex.md",
+            "_codex.json",
+            ".omx/research/",
+            "feedback_codex_",
+            "/codex_runs/",
+        ),
+    ),
+    (
+        "subagent_state_ephemeral",
+        (
+            ".omx/state/",
+            ".omx/tmp/",
+            ".omx/oss_export/",
+        ),
+    ),
+    (
+        "build_artifact_or_derived_output",
+        (
+            "experiments/results/",
+            "reports/raw/",
+            "build/lib/",
+            "__pycache__/",
+            ".pytest_cache/",
+        ),
+    ),
+    (
+        "vendored_intake_clone",
+        (
+            "_intake_",
+            "vendored/",
+            "submissions/exact_current/",
+        ),
+    ),
+    (
+        "operator_owned_source",
+        (
+            "src/tac/",
+            "tools/",
+            "experiments/",
+            "scripts/",
+            "submissions/",
+        ),
+    ),
+    (
+        "documentation_or_memo",
+        (
+            "docs/",
+            "feedback_",
+            "MEMORY.md",
+            "CLAUDE.md",
+            "AGENTS.md",
+            ".md",
+        ),
+    ),
+    (
+        "configuration_or_recipe",
+        (
+            ".omx/operator_authorize_recipes/",
+            "configs/",
+            ".ralph/",
+            "pyproject.toml",
+        ),
+    ),
+)
+
+
+def _categorize_dirty_paths(paths: list[str]) -> dict:
+    """Group dirty paths into actionable buckets.
+
+    Returns a dict with bucket-name keys and value
+    ``{"count": int, "examples": list[str]}``. Buckets with zero matches
+    are omitted. An ``unclassified`` bucket captures everything that
+    matches none of the canonical patterns; it surfaces as "see git status
+    --porcelain" in the actionable error message.
+    """
+
+    counts: dict[str, list[str]] = {bucket: [] for bucket, _ in _DX_DIRTY_PATH_CATEGORIES}
+    counts["unclassified"] = []
+    for path in paths:
+        normalized = path.replace("\\", "/")
+        assigned = False
+        for bucket, patterns in _DX_DIRTY_PATH_CATEGORIES:
+            for pattern in patterns:
+                if pattern in normalized:
+                    counts[bucket].append(path)
+                    assigned = True
+                    break
+            if assigned:
+                break
+        if not assigned:
+            counts["unclassified"].append(path)
+    out: dict[str, dict] = {}
+    for bucket, items in counts.items():
+        if not items:
+            continue
+        out[bucket] = {
+            "count": len(items),
+            "examples": items[:3],
+        }
+    return out
+
+
+def _format_dx_polish_actionable_fatal(
+    dirty_tree: dict, mounted_code_git_head: str
+) -> str:
+    """DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-1).
+
+    Build the actionable Catalog #166 FATAL message body. Replaces the
+    pre-DX-polish terse 4-line body with a categorized + next-steps body
+    so the operator can immediately tell:
+      (a) WHICH classes of dirty paths the working tree contains (sister
+          subagent research artifact vs operator-owned source edit vs
+          build artifact);
+      (b) WHICH next-step is appropriate for each class (commit / Catalog
+          #202 bypass / smoke-before-full path which auto-relaxes the
+          clean-head check / GC cleanup);
+      (c) The exact commands to invoke for each path.
+
+    Sister of CLAUDE.md "Beauty, simplicity, and developer experience" +
+    Catalog #208 (no local-absolute-paths) — the message uses repo-relative
+    canonical paths.
+    """
+
+    count = int(dirty_tree.get("dirty_paths_count", 0))
+    categorized = dirty_tree.get("categorized", {}) or {}
+    summary = dirty_tree.get("summary", "")
+    head_short = mounted_code_git_head[:12] if mounted_code_git_head else "unknown"
+
+    lines: list[str] = []
+    lines.append(
+        f"FATAL [Catalog #166]: --require-clean-head is set and the working "
+        f"tree has {count} uncommitted edit(s)."
+    )
+    lines.append("")
+    lines.append(
+        f"  Mounted git HEAD: {head_short}. Modal's add_local_dir snapshots "
+        "the WORKING TREE (not HEAD), so any uncommitted byte ships to the "
+        "worker - which is why this gate exists."
+    )
+    lines.append("")
+
+    if categorized:
+        lines.append("Categorized dirty paths:")
+        for bucket, info in categorized.items():
+            label = bucket.replace("_", " ")
+            example_str = ", ".join(info["examples"])
+            if info["count"] > len(info["examples"]):
+                example_str += f", + {info['count'] - len(info['examples'])} more"
+            lines.append(f"  - {label} ({info['count']}): {example_str}")
+        lines.append("")
+    elif summary:
+        lines.append(f"Raw porcelain summary (first 10): {summary}")
+        lines.append("")
+
+    lines.append("Actionable next-steps (pick the one that matches your dirty bucket):")
+    lines.append("")
+
+    if "operator_owned_source" in categorized:
+        lines.append(
+            "  [1] OPERATOR-OWNED SOURCE EDITS - commit through the canonical "
+            "serializer:"
+        )
+        lines.append(
+            "      .venv/bin/python tools/subagent_commit_serializer.py "
+            "--message '<one-liner>' --files <paths> "
+            "--expected-content-sha256 '<path>=<sha>'"
+        )
+        lines.append(
+            "      Per CLAUDE.md 'Subagent commits MUST use serializer'. "
+            "Re-run dispatch after the commit lands."
+        )
+        lines.append("")
+
+    if (
+        "codex_sister_research_ledger" in categorized
+        or "subagent_state_ephemeral" in categorized
+        or "documentation_or_memo" in categorized
+    ):
+        lines.append(
+            "  [2] SISTER-SUBAGENT RESEARCH LEDGER / .omx state / docs - if you "
+            "have INDEPENDENTLY VERIFIED that the Catalog #166 sentinel set is "
+            "clean (the dispatched files match HEAD), set the Catalog #202 "
+            "paired-env bypass:"
+        )
+        lines.append(
+            "      OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1 \\"
+        )
+        lines.append(
+            "      OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1 \\"
+        )
+        lines.append("      <re-run dispatch>")
+        lines.append(
+            "      Catalog #166 worker-side sentinel hash check still runs; the "
+            "bypass only relaxes the whole-tree refusal."
+        )
+        lines.append("")
+
+    if (
+        "build_artifact_or_derived_output" in categorized
+        or "subagent_state_ephemeral" in categorized
+    ):
+        lines.append(
+            "  [3] BUILD ARTIFACTS or .omx/tmp/ ephemeral - run the canonical "
+            "GC helper (refuses tracked-path deletion via Catalog #154/#156):"
+        )
+        lines.append(
+            "      .venv/bin/python tools/gc_experiments_results.py --dry-run "
+            "(then --apply with --operator-approved '<handle>:<UTC_timestamp>')"
+        )
+        lines.append("")
+
+    lines.append(
+        "  [4] PREFER SMOKE - the canonical smoke-before-full wrapper auto-"
+        "detects a dirty tree and routes the smoke phase through the Catalog "
+        "#202 bypass automatically (the cheap $0.30 smoke validates "
+        "integration; only the FULL phase fails-closed on dirty):"
+    )
+    lines.append(
+        "      .venv/bin/python tools/run_modal_smoke_before_full.py "
+        "--recipe <recipe-name> --smoke-only"
+    )
+    lines.append(
+        "      (then re-run without --smoke-only on a CLEAN tree for the FULL canary)"
+    )
+    lines.append("")
+
+    lines.append(
+        "  [5] OPERATOR OVERRIDE - if you accept the risk that the dirty bytes "
+        "ship to the Modal worker (Catalog #166 worker-side hash check still "
+        "runs), pass --require-clean-head=False to experiments/modal_train_lane.py "
+        "directly. NOT recommended for paid full dispatches."
+    )
+
+    return "\n".join(lines)
 
 
 def _infer_lane_id(lane_script: str, explicit_lane_id: str = "") -> str:
@@ -965,14 +1240,17 @@ def main(
         sys.exit(2)
 
     # Catalog #166: working-tree dirty-tree summary + optional fail-closed.
+    # DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-1): the FATAL message body
+    # is built by `_format_dx_polish_actionable_fatal`, which categorizes the
+    # dirty paths into actionable buckets (sister-subagent research ledger /
+    # operator-owned source / build artifact / ...) and prints the
+    # next-steps that match each bucket (commit through serializer / set
+    # Catalog #202 bypass / GC helper / smoke-before-full path / explicit
+    # operator override).
     dirty_tree = _git_dirty_tree_summary(repo_root)
     if require_clean_head and dirty_tree["dirty"]:
         print(
-            "FATAL: --require-clean-head is set and working tree has "
-            f"{dirty_tree['dirty_paths_count']} uncommitted edit(s):\n"
-            f"  {dirty_tree['summary']}\n"
-            "Commit the pending edits or pass --require-clean-head=False to "
-            "ship them to the Modal worker (Catalog #166).",
+            _format_dx_polish_actionable_fatal(dirty_tree, mounted_code_git_head),
             file=sys.stderr,
         )
         sys.exit(2)
@@ -981,7 +1259,8 @@ def main(
             f"WARN [Catalog #166]: working tree has {dirty_tree['dirty_paths_count']} "
             "uncommitted edit(s); Modal will mount the dirty snapshot, NOT "
             f"HEAD ({mounted_code_git_head[:12]}). Pass --require-clean-head "
-            "to fail-closed instead."
+            "to fail-closed instead. See `_format_dx_polish_actionable_fatal` "
+            "for the categorized + next-steps body the FATAL path emits."
         )
 
     _ensure_dispatch_claim(

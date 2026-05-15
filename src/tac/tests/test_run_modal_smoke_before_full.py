@@ -470,7 +470,20 @@ def test_spawn_smoke_dispatch_threads_cost_band_gpu_override(
     calls: list[dict[str, object]] = []
 
     def fake_run(cmd, **kwargs):
-        calls.append({"cmd": list(cmd), "env": dict(kwargs["env"])})
+        # DX-POLISH-WAVE 2026-05-15 (Catalog #238 / DX-4): the smoke
+        # wrapper now also calls `_count_dirty_paths(repo_root)` BEFORE
+        # the operator_authorize subprocess. That helper invokes
+        # `git status --porcelain` via subprocess.run WITHOUT an `env=`
+        # kwarg. Skip recording the porcelain call and only capture the
+        # operator_authorize subprocess invocation.
+        if list(cmd[:2]) == ["git", "status"]:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="",
+                stderr="",
+            )
+        calls.append({"cmd": list(cmd), "env": dict(kwargs.get("env") or {})})
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=0,
