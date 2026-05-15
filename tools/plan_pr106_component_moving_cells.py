@@ -20,6 +20,7 @@ import hashlib
 import json
 import math
 import sys
+import zipfile
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -63,6 +64,87 @@ def _artifact(path: Path) -> dict[str, Any]:
         "bytes": int(path.stat().st_size),
         "sha256": sha256_file(path),
     }
+
+
+def _single_member_zip_artifact(path: Path) -> dict[str, Any]:
+    with zipfile.ZipFile(path) as zf:
+        infos = zf.infolist()
+        if len(infos) != 1:
+            raise ValueError(f"{path} must contain exactly one ZIP member, got {len(infos)}")
+        info = infos[0]
+        payload = zf.read(info.filename)
+    return {
+        **_artifact(path),
+        "member_name": info.filename,
+        "member_bytes": len(payload),
+        "member_sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def _source_custody(
+    *,
+    manifest: Mapping[str, Any],
+    source_archive: Path | None,
+) -> dict[str, Any]:
+    manifest_member_name = manifest.get("source_archive_member_name")
+    manifest_member_sha256 = manifest.get("source_archive_member_sha256")
+    manifest_zero_bin_sha256 = manifest.get("source_zero_bin_sha256")
+    custody: dict[str, Any] = {
+        "manifest_source_archive_path": manifest.get("source_archive_path"),
+        "manifest_source_archive_bytes": manifest.get("source_archive_bytes"),
+        "manifest_source_archive_sha256": manifest.get("source_archive_sha256"),
+        "manifest_source_archive_member_name": manifest_member_name,
+        "manifest_source_archive_member_sha256": manifest_member_sha256,
+        "manifest_source_zero_bin_sha256": manifest_zero_bin_sha256,
+        "manifest_source_payload_kind": manifest.get("source_payload_kind"),
+        "source_archive_provided": source_archive is not None,
+        "local_source_archive": None,
+        "source_archive_bytes_match": None,
+        "source_archive_sha256_match": None,
+        "source_archive_member_name_match": None,
+        "source_archive_member_sha256_match": None,
+        "legacy_zero_bin_payload_sha256_match": None,
+        "source_archive_payload_match": None,
+        "blockers": [],
+        "warnings": [],
+    }
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if source_archive is None:
+        blockers.append("source_archive_unverified")
+    else:
+        local = _single_member_zip_artifact(source_archive)
+        local_member_name = str(local["member_name"])
+        local_member_sha256 = str(local["member_sha256"])
+        archive_bytes_match = manifest.get("source_archive_bytes") == local["bytes"]
+        archive_sha256_match = manifest.get("source_archive_sha256") == local["sha256"]
+        explicit_member_name_match = manifest_member_name == local_member_name
+        explicit_member_sha256_match = manifest_member_sha256 == local_member_sha256
+        zero_bin_payload_match = local_member_name == "0.bin" and manifest_zero_bin_sha256 == local_member_sha256
+        payload_match = bool(explicit_member_sha256_match or zero_bin_payload_match)
+        member_name_match = bool(explicit_member_name_match or zero_bin_payload_match)
+        if not archive_sha256_match and not payload_match:
+            blockers.append("source_archive_payload_mismatch")
+        if not member_name_match:
+            blockers.append("source_archive_member_name_mismatch")
+        if not archive_bytes_match:
+            warnings.append("source_archive_zip_bytes_mismatch")
+        if not archive_sha256_match and payload_match:
+            warnings.append("source_archive_zip_sha256_differs_but_payload_sha256_matches")
+        custody.update(
+            {
+                "local_source_archive": local,
+                "source_archive_bytes_match": archive_bytes_match,
+                "source_archive_sha256_match": archive_sha256_match,
+                "source_archive_member_name_match": member_name_match,
+                "source_archive_member_sha256_match": explicit_member_sha256_match,
+                "legacy_zero_bin_payload_sha256_match": zero_bin_payload_match,
+                "source_archive_payload_match": payload_match,
+            }
+        )
+    custody["blockers"] = blockers
+    custody["warnings"] = warnings
+    return custody
 
 
 def _build_yshift_candidate_grid(radius: int) -> np.ndarray:
@@ -225,6 +307,7 @@ def build_plan(
     score_table_npy: Path,
     score_table_manifest: Path,
     candidate_grid_npy: Path | None = None,
+    source_archive: Path | None = None,
     xray_json: Path | None = None,
     top_k: int = 32,
     cell_byte_delta: float | None = None,
@@ -232,6 +315,7 @@ def build_plan(
     label: str = "pr106_component_moving_cells",
 ) -> dict[str, Any]:
     manifest = _load_json(score_table_manifest)
+    custody = _source_custody(manifest=manifest, source_archive=source_archive)
     candidates, candidate_grid_source = _candidate_grid(
         manifest=manifest,
         candidate_grid_npy=candidate_grid_npy,
@@ -328,6 +412,15 @@ def build_plan(
         },
         sort_keys=True,
     )
+    dispatch_blockers = [
+        "planning_artifact_only",
+        "requires_byte_closed_archive_materialization",
+        "requires_lane_dispatch_claim_before_exact_eval",
+        "requires_paired_contest_cuda_auth_eval",
+        "requires_paired_contest_cpu_auth_eval",
+        "requires_adjudicated_component_recompute_before_score_claim",
+        *custody["blockers"],
+    ]
     return {
         "schema": SCHEMA,
         "tool": TOOL,
@@ -350,8 +443,10 @@ def build_plan(
             "score_table_manifest": _artifact(score_table_manifest),
             "candidate_grid_npy": _artifact(candidate_grid_npy) if candidate_grid_npy else None,
             "candidate_grid_source": candidate_grid_source,
+            "source_archive": _artifact(source_archive) if source_archive else None,
             "xray_json": _artifact(xray_json) if xray_json else None,
         },
+        "source_custody": custody,
         "manifest_authority_flags": {
             key: manifest.get(key)
             for key in (
@@ -390,14 +485,7 @@ def build_plan(
             "continual_learning_posterior": "N/A until exact auth-eval empirical anchor exists",
             "probe_disambiguator": "N/A single scorer-table reduction rule; alternate pack grammars must be probed separately",
         },
-        "dispatch_blockers": [
-            "planning_artifact_only",
-            "requires_byte_closed_archive_materialization",
-            "requires_lane_dispatch_claim_before_exact_eval",
-            "requires_paired_contest_cuda_auth_eval",
-            "requires_paired_contest_cpu_auth_eval",
-            "requires_adjudicated_component_recompute_before_score_claim",
-        ],
+        "dispatch_blockers": ordered_dispatch_blockers(dispatch_blockers),
         "recommended_next_step": (
             "Materialize a small top-k cell packet using the matching PR106 score-table "
             "builder, then run paired exact CPU/CUDA auth eval under claimed lanes."
@@ -405,8 +493,20 @@ def build_plan(
     }
 
 
+def ordered_dispatch_blockers(blockers: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for blocker in blockers:
+        if blocker not in seen:
+            out.append(blocker)
+            seen.add(blocker)
+    return out
+
+
 def render_markdown(plan: Mapping[str, Any]) -> str:
     summary = plan["table_summary"]
+    custody = plan["source_custody"]
+    local_source = custody.get("local_source_archive") or {}
     lines = [
         "# PR106 Component-Moving Cell Plan",
         "",
@@ -426,6 +526,20 @@ def render_markdown(plan: Mapping[str, Any]) -> str:
         f"- net_improving_cells: `{summary['net_improving_cell_count']}`",
         f"- cell_byte_delta: `{summary['cell_byte_delta']}` ({summary['cell_byte_delta_source']})",
         f"- best_net_score_delta_charged: `{summary['best_net_score_delta_charged']}`",
+        "",
+        "## Source Custody",
+        "",
+        f"- manifest_source_archive_path: `{custody.get('manifest_source_archive_path')}`",
+        f"- manifest_source_archive_sha256: `{custody.get('manifest_source_archive_sha256')}`",
+        f"- manifest_source_archive_member_name: `{custody.get('manifest_source_archive_member_name')}`",
+        f"- manifest_source_zero_bin_sha256: `{custody.get('manifest_source_zero_bin_sha256')}`",
+        f"- local_source_archive_path: `{local_source.get('path')}`",
+        f"- local_source_archive_sha256: `{local_source.get('sha256')}`",
+        f"- local_source_member_name: `{local_source.get('member_name')}`",
+        f"- local_source_member_sha256: `{local_source.get('member_sha256')}`",
+        f"- source_archive_payload_match: `{custody.get('source_archive_payload_match')}`",
+        f"- source_archive_blockers: `{custody.get('blockers')}`",
+        f"- source_archive_warnings: `{custody.get('warnings')}`",
         "",
         "## Top Cells",
         "",
@@ -457,6 +571,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--score-table-npy", type=Path, required=True)
     parser.add_argument("--score-table-manifest", type=Path, required=True)
     parser.add_argument("--candidate-grid-npy", type=Path)
+    parser.add_argument("--source-archive", type=Path)
     parser.add_argument("--xray-json", type=Path)
     parser.add_argument("--top-k", type=int, default=32)
     parser.add_argument("--cell-byte-delta", type=float)
@@ -473,6 +588,7 @@ def main(argv: list[str] | None = None) -> int:
         score_table_npy=args.score_table_npy,
         score_table_manifest=args.score_table_manifest,
         candidate_grid_npy=args.candidate_grid_npy,
+        source_archive=args.source_archive,
         xray_json=args.xray_json,
         top_k=args.top_k,
         cell_byte_delta=args.cell_byte_delta,

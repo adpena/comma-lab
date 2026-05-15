@@ -13,8 +13,8 @@
     "requires_paired_contest_cpu_auth_eval",
     "requires_adjudicated_component_recompute_before_score_claim"
   ],
-  "from_state_hash": "d5e615a1fd4e3751",
-  "generated_at_utc": "2026-05-15T14:37:50.707700+00:00",
+  "from_state_hash": "93105d3301077edb",
+  "generated_at_utc": "2026-05-15T14:43:37.154886+00:00",
   "inputs": {
     "candidate_grid_npy": {
       "bytes": 580,
@@ -32,10 +32,15 @@
       "path": "reports/raw/kaggle_pr106_latent_score_table_latest/pr106_latent_score_table/latent_run/score_table/score_table.npy",
       "sha256": "326038a5e2dbb9daf8498e7e8c07fdfc15d832b443b7ad1758cab4f0517001fe"
     },
+    "source_archive": {
+      "bytes": 186239,
+      "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+    },
     "xray_json": null
   },
   "kind": "latent_sidecar",
-  "label": "pr106_latent_latest_component_moving_cells_20260515",
+  "label": "pr106_public_r2_latest_component_moving_cells_20260515",
   "manifest_authority_flags": {
     "dispatch_attempted": false,
     "ready_for_builder": true,
@@ -58,6 +63,34 @@
     "pareto_constraint": "all rows carry score_claim=false and exact-eval dispatch blockers",
     "probe_disambiguator": "N/A single scorer-table reduction rule; alternate pack grammars must be probed separately",
     "sensitivity_map": "top_cells expose pair/frame candidate component deltas for tac.sensitivity_map ingestion"
+  },
+  "source_custody": {
+    "blockers": [],
+    "legacy_zero_bin_payload_sha256_match": true,
+    "local_source_archive": {
+      "bytes": 186239,
+      "member_bytes": 186131,
+      "member_name": "0.bin",
+      "member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+      "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+      "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+    },
+    "manifest_source_archive_bytes": 186239,
+    "manifest_source_archive_member_name": null,
+    "manifest_source_archive_member_sha256": null,
+    "manifest_source_archive_path": "inputs/pr106_archive.zip",
+    "manifest_source_archive_sha256": "cb9976bd33468475aac54a98c3baff996101c144b00e8d7e2c5107c86cda6182",
+    "manifest_source_payload_kind": null,
+    "manifest_source_zero_bin_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "source_archive_bytes_match": true,
+    "source_archive_member_name_match": true,
+    "source_archive_member_sha256_match": false,
+    "source_archive_payload_match": true,
+    "source_archive_provided": true,
+    "source_archive_sha256_match": false,
+    "warnings": [
+      "source_archive_zip_sha256_differs_but_payload_sha256_matches"
+    ]
   },
   "table_summary": {
     "baseline_candidate_index": 0,

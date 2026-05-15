@@ -5,6 +5,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -29,11 +30,21 @@ def _write_json(path: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def _stored_archive(path: Path, payload: bytes = b"payload", member: str = "0.bin") -> Path:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        info = zipfile.ZipInfo(member, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.external_attr = 0o644 << 16
+        zf.writestr(info, payload)
+    return path
+
+
 def test_latent_plan_ranks_charged_cells_and_keeps_false_authority(tmp_path: Path) -> None:
     module = _load_module()
     table_path = tmp_path / "score_table.npy"
     manifest_path = tmp_path / "score_table_manifest.json"
     xray_path = tmp_path / "pair_component_xray.json"
+    source_archive = _stored_archive(tmp_path / "source.zip", b"source-payload")
     table = np.array(
         [
             [1.0, 0.90, 0.80, 0.70, 0.60],
@@ -50,6 +61,12 @@ def test_latent_plan_ranks_charged_cells_and_keeps_false_authority(tmp_path: Pat
             "ready_for_builder": True,
             "ready_for_exact_eval_dispatch": False,
             "device": "cuda:0",
+            "source_archive_path": "source.zip",
+            "source_archive_bytes": source_archive.stat().st_size,
+            "source_archive_sha256": module.sha256_file(source_archive),
+            "source_archive_member_name": None,
+            "source_archive_member_sha256": None,
+            "source_zero_bin_sha256": module.hashlib.sha256(b"source-payload").hexdigest(),
             "latent_dim": 2,
             "delta_radius": 1,
             "score_table_shape": [2, 5],
@@ -76,6 +93,7 @@ def test_latent_plan_ranks_charged_cells_and_keeps_false_authority(tmp_path: Pat
     plan = module.build_plan(
         score_table_npy=table_path,
         score_table_manifest=manifest_path,
+        source_archive=source_archive,
         xray_json=xray_path,
         top_k=2,
         cell_byte_delta=0.0,
@@ -88,6 +106,9 @@ def test_latent_plan_ranks_charged_cells_and_keeps_false_authority(tmp_path: Pat
     assert plan["ready_for_exact_eval_dispatch"] is False
     assert plan["kind"] == "latent_sidecar"
     assert plan["axis_labels"]["source_score_table"] == "[compress-time CUDA scorer table]"
+    assert plan["source_custody"]["source_archive_payload_match"] is True
+    assert plan["source_custody"]["legacy_zero_bin_payload_sha256_match"] is True
+    assert plan["source_custody"]["warnings"] == []
     assert plan["table_summary"]["component_improving_cell_count"] == 8
     assert plan["top_cells"][0]["cell_id"] == "latent_sidecar:row0:candidate4"
     assert plan["top_cells"][0]["candidate"] == {"dim": 1, "delta_q": 1}
@@ -96,6 +117,48 @@ def test_latent_plan_ranks_charged_cells_and_keeps_false_authority(tmp_path: Pat
     assert plan["top_cells"][0]["xray_pair_context"]["component_score_no_rate"] == 0.4
     assert plan["top_cells"][0]["false_authority"]["rank_or_kill_eligible"] is False
     assert "requires_paired_contest_cuda_auth_eval" in plan["dispatch_blockers"]
+    assert "source_archive_unverified" not in plan["dispatch_blockers"]
+
+
+def test_source_custody_blocks_wrong_archive(tmp_path: Path) -> None:
+    module = _load_module()
+    table_path = tmp_path / "score_table.npy"
+    manifest_path = tmp_path / "score_table_manifest.json"
+    source_archive = _stored_archive(tmp_path / "source.zip", b"source-payload")
+    wrong_archive = _stored_archive(tmp_path / "wrong.zip", b"wrong-payload")
+    np.save(table_path, np.array([[1.0, 0.9, 0.8]], dtype=np.float32), allow_pickle=False)
+    _write_json(
+        manifest_path,
+        {
+            "manifest_schema": "pr106_latent_score_table_manifest_v1",
+            "score_claim": False,
+            "ready_for_builder": True,
+            "ready_for_exact_eval_dispatch": False,
+            "device": "cuda:0",
+            "source_archive_path": "source.zip",
+            "source_archive_bytes": source_archive.stat().st_size,
+            "source_archive_sha256": module.sha256_file(source_archive),
+            "source_archive_member_name": None,
+            "source_archive_member_sha256": None,
+            "source_zero_bin_sha256": module.hashlib.sha256(b"source-payload").hexdigest(),
+            "latent_dim": 1,
+            "delta_radius": 1,
+            "score_table_shape": [1, 3],
+            "noop_candidate_index": 0,
+        },
+    )
+
+    plan = module.build_plan(
+        score_table_npy=table_path,
+        score_table_manifest=manifest_path,
+        source_archive=wrong_archive,
+        top_k=1,
+        cell_byte_delta=0.0,
+    )
+
+    assert plan["source_custody"]["source_archive_payload_match"] is False
+    assert "source_archive_payload_mismatch" in plan["dispatch_blockers"]
+    assert "source_archive_member_name_mismatch" in plan["dispatch_blockers"]
 
 
 def test_yshift_plan_infers_frame_locations_and_rate_delta(tmp_path: Path) -> None:

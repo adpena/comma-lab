@@ -14,7 +14,7 @@ This is a routing ledger, not a score claim.
 | PR106 format0C | `[contest-CUDA]` | `0.2063163866158099`, bytes `186327`, sha `56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7` | live orthogonal component signal |
 | PR106 format0C paired | `[contest-CPU]` | `0.22776488386973992` | CPU not always better; pair every axis |
 | Kaggle PR106 score-table v3/v4 | provider advisory producer | v3 missing `constriction`; v4 provider-local claim mirror bug | infrastructure fixed; method untested |
-| PR106 latent component planner | `[provider-CUDA:kaggle advisory score-table]` | `28,442` net-improving cells after a 2-byte cell charge; best cell pair `545`, `dim=24`, `delta_q=2`, net `-0.007331343441071264` | materialize byte-closed packet; no score/frontier claim until paired exact eval |
+| PR106 public-r2 latent component planner | `[provider-CUDA:kaggle advisory score-table]` | `28,442` net-improving cells after a 2-byte cell charge; source is public PR106 `0.bin` payload `7f2cc905...`, not format0C `x`; best cell pair `545`, `dim=24`, `delta_q=2`, net `-0.007331343441071264` | materialize only against the matching source archive; no format0C reuse without a matching format0C table |
 
 ## Stop Rules
 
@@ -31,10 +31,11 @@ This is a routing ledger, not a score claim.
 
 1. PR106 score-table retry from the hardened provider-local claim/source-bundle
    path. Goal: component-moving latent/y-shift table, not another archive repack.
-2. PR106 component-moving cell materialization from
+2. PR106 public-r2 component-moving cell materialization from
    `.omx/research/pr106_component_moving_cells_20260515_codex.{json,md}`.
-   Goal: turn the top advisory cells into a member-`x` packet and run paired
-   exact CPU/CUDA auth eval under a lane claim.
+   Goal: isolate single-cell transfer on the matching public-r2 source. Do not
+   apply this table to format0C `x`; the materializer correctly rejects that
+   source mismatch.
 3. CUDA-in-loop xray/waterfill over hard pairs and hard frames. Goal: modify
    PoseNet/SegNet components, not only rate bytes.
 4. Time-traveler / predictive-receiver / C1 / C6 across-family lanes, but only

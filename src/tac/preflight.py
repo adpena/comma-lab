@@ -2101,6 +2101,13 @@ def preflight_all(
         check_modal_dispatches_register_call_id(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #246. Paired Modal auth-eval callers should use
+        # the anchor-skip flag so an existing promotable per-axis anchor does
+        # not trigger redundant CPU/CUDA spend. Warn-only at landing; live
+        # count is 0 in the current repo.
+        check_paired_dispatch_uses_anchor_skip_flag(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #226 - trainer auth_eval canonical-helper
         # routing. Anchor: C6 5ep Modal T4 smoke fc-01KRKG566Z2F48CVCGF8JFA0S1
         # returned auth_eval rc=2 because the trainer hand-wrote
@@ -53790,6 +53797,148 @@ def check_modal_dispatches_register_call_id(
             "register the call_id in the canonical ledger. Per CLAUDE.md "
             "'Modal `.spawn()` HARVEST OR LOSE' non-negotiable + Catalog "
             "#245 (canonical Modal call_id ledger):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #246 - check_paired_dispatch_uses_anchor_skip_flag
+# ----------------------------------------------------------------------------
+
+_CHECK_246_TOOL_BASENAME = "dispatch_modal_paired_auth_eval.py"
+_CHECK_246_REQUIRED_FLAG = "--skip-axis-if-promotable-anchor-exists"
+_CHECK_246_WAIVER_TOKEN = "# PAIRED_DISPATCH_FORCE_REFIRE_OK:"
+_CHECK_246_WAIVER_PLACEHOLDER_REJECT = "# PAIRED_DISPATCH_FORCE_REFIRE_OK:<rationale>"
+_CHECK_246_SCAN_DIRS = ("tools", "scripts", "experiments", "src/tac")
+_CHECK_246_EXEMPT_PATH_MARKERS = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "build/lib/",
+    "reports/raw/",
+)
+_CHECK_246_SELF_EXEMPT_FILES = frozenset(
+    {
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "src/tac/preflight.py",
+        "src/tac/tests/test_check_246_paired_dispatch_anchor_skip_flag.py",
+    }
+)
+
+
+def _check_246_path_is_exempt(rel_path: str) -> bool:
+    """True iff rel_path is in the Catalog #246 exemption set."""
+    if rel_path in _CHECK_246_SELF_EXEMPT_FILES:
+        return True
+    if any(marker in rel_path for marker in _CHECK_246_EXEMPT_PATH_MARKERS):
+        return True
+    if "/tests/" in rel_path or rel_path.endswith("_test.py"):
+        return True
+    if "/test_" in rel_path or ("/" not in rel_path and rel_path.startswith("test_")):
+        return True
+    base = rel_path.rsplit("/", 1)[-1]
+    return bool(base.startswith("test_"))
+
+
+def _check_246_line_invokes_canonical_tool(line: str) -> bool:
+    """True iff the line references the canonical paired-dispatch CLI."""
+    return _CHECK_246_TOOL_BASENAME in line
+
+
+def check_paired_dispatch_uses_anchor_skip_flag(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #246. Refuse paired-dispatch callers missing anchor-skip flag.
+
+    Same-window waiver:
+    ``# PAIRED_DISPATCH_FORCE_REFIRE_OK:<rationale>``. The placeholder
+    literal is rejected so examples cannot self-waive.
+    """
+    root = (repo_root or Path.cwd()).resolve()
+    violations: list[str] = []
+    invocation_markers = (
+        "subprocess",
+        "Popen(",
+        "run(",
+        "check_call",
+        "check_output",
+        "os.system",
+        "$(",
+        "python ",
+        "python3 ",
+        ".venv/bin/python",
+        "uv run",
+    )
+
+    for scan_dir in _CHECK_246_SCAN_DIRS:
+        scan_root = root / scan_dir
+        if not scan_root.is_dir():
+            continue
+        for ext in ("*.py", "*.sh"):
+            for source in scan_root.rglob(ext):
+                rel = source.relative_to(root).as_posix()
+                if _check_246_path_is_exempt(rel):
+                    continue
+                try:
+                    text = source.read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError):
+                    continue
+                if _CHECK_246_TOOL_BASENAME not in text:
+                    continue
+
+                lines = text.splitlines()
+                for idx, raw_line in enumerate(lines):
+                    if not _check_246_line_invokes_canonical_tool(raw_line):
+                        continue
+
+                    has_invocation_context = any(m in raw_line for m in invocation_markers)
+                    if rel.endswith(".sh") and (
+                        raw_line.lstrip().startswith(_CHECK_246_TOOL_BASENAME)
+                        or "/" + _CHECK_246_TOOL_BASENAME in raw_line
+                    ):
+                        has_invocation_context = True
+                    if not has_invocation_context:
+                        neighborhood = "\n".join(
+                            lines[max(0, idx - 5) : min(len(lines), idx + 6)]
+                        )
+                        has_invocation_context = any(m in neighborhood for m in invocation_markers)
+                    if not has_invocation_context:
+                        continue
+
+                    window = "\n".join(lines[idx : min(len(lines), idx + 30)])
+                    if _CHECK_246_REQUIRED_FLAG in window:
+                        continue
+                    if _CHECK_246_WAIVER_TOKEN in window:
+                        if _CHECK_246_WAIVER_PLACEHOLDER_REJECT in window:
+                            violations.append(
+                                f"{rel}:{idx + 1}: paired-dispatch caller carries "
+                                "PLACEHOLDER waiver token "
+                                f"'{_CHECK_246_WAIVER_PLACEHOLDER_REJECT}'"
+                            )
+                        continue
+                    violations.append(
+                        f"{rel}:{idx + 1}: invokes {_CHECK_246_TOOL_BASENAME} "
+                        f"without '{_CHECK_246_REQUIRED_FLAG}' flag and without "
+                        f"'{_CHECK_246_WAIVER_TOKEN}<rationale>' waiver "
+                        "(Catalog #246)"
+                    )
+
+    if verbose:
+        print(
+            f"check_paired_dispatch_uses_anchor_skip_flag: "
+            f"{len(violations)} violations"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_paired_dispatch_uses_anchor_skip_flag (Catalog #246) "
+            f"found {len(violations)} caller(s) of {_CHECK_246_TOOL_BASENAME} "
+            f"without {_CHECK_246_REQUIRED_FLAG}:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

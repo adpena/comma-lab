@@ -43,11 +43,18 @@ def test_pairing_contract_requires_pair_or_waiver() -> None:
 
 def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mod = _load_tool()
     archive = tmp_path / "archive.zip"
     with ZipFile(archive, "w") as zf:
         zf.writestr("x", b"payload")
+
+    monkeypatch.setattr(
+        mod,
+        "find_promotable_anchor_for_axis_and_sha",
+        lambda *_args, **_kwargs: None,
+    )
 
     plan = mod.build_plan(
         archive=archive,
@@ -73,3 +80,48 @@ def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
         assert "--single-axis-waiver-reason" not in cmd
     assert "experiments/modal_auth_eval.py" in cuda_cmd
     assert "experiments/modal_auth_eval_cpu.py" in cpu_cmd
+
+
+def test_paired_modal_plan_can_skip_existing_cuda_anchor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+
+    def fake_anchor(axis: str, archive_sha256: str, *, repo_root: Path):
+        if axis == "cuda":
+            return {
+                "axis": "contest_cuda",
+                "archive_sha256": archive_sha256,
+                "score": 0.2,
+                "result_path": "existing/cuda.json",
+                "source": "filesystem_scan",
+                "custody_match": True,
+            }
+        return None
+
+    monkeypatch.setattr(mod, "find_promotable_anchor_for_axis_and_sha", fake_anchor)
+
+    plan = mod.build_plan(
+        archive=archive,
+        submission_dir="submissions/pr106_latent_sidecar_r2_pr101_grammar",
+        inflate_sh="inflate.sh",
+        run_id="unit_pair_run",
+        pair_group_id="unit_pair_group",
+        lane_id_base="lane_unit_pair",
+        output_root=Path("experiments/results"),
+        modal_bin=".venv/bin/modal",
+        gpu="T4",
+        claim_agent="codex:test",
+        claim_notes="unit test",
+        skip_axis_if_promotable_anchor_exists=True,
+        repo_root=tmp_path,
+    )
+
+    assert plan["skip_axis_if_promotable_anchor_exists"] is True
+    assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
+    assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
+    assert plan["existing_anchors_reused"]["contest_cuda"]["score"] == 0.2

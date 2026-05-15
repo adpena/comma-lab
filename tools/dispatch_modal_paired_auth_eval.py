@@ -6,6 +6,18 @@ Plan-only by default. Pass ``--execute`` to spawn both detached Modal jobs.
 The individual Modal wrappers still own lane claims and artifact recovery; this
 tool is the canonical operator entry point so CPU/CUDA pairing is the default
 instead of an afterthought.
+
+PAIRED-DISPATCH-SKIP-IF-ANCHOR-EXISTS-ENHANCEMENT (2026-05-15)
+--------------------------------------------------------------
+``--skip-axis-if-promotable-anchor-exists`` opts the planner into auto-
+detecting per-axis anchors that ALREADY exist for the archive sha and
+skipping the per-axis re-dispatch. The skip-decision routes through
+``tac.deploy.modal.anchor_lookup.find_promotable_anchor_for_axis_and_sha``,
+which validates 4 custody invariants (axis-grade match / explicit
+``score_claim_valid=True`` / exact archive_sha256 match / finite numeric
+score) before declaring a hit. Empirical anchor: 2026-05-15 Z3 v2 FULL
+paired dispatch re-fired CUDA for an archive sha that already had a
+contest-CUDA anchor on disk.
 """
 
 from __future__ import annotations
@@ -16,10 +28,21 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+# Import the canonical anchor-lookup helper. We deliberately add REPO_ROOT/src
+# to sys.path so this CLI works when invoked outside an installed environment;
+# the package's normal import surface is still preferred when available.
+_SRC_DIR = REPO_ROOT / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from tac.deploy.modal.anchor_lookup import (  # noqa: E402
+    find_promotable_anchor_for_axis_and_sha,
+)
 
 
 def _utc_now_compact() -> str:
@@ -43,6 +66,27 @@ def _optional_arg(cmd: list[str], flag: str, value: str) -> None:
         cmd.extend([flag, value])
 
 
+def _resolve_skipped_axes(
+    *,
+    archive_sha256: str,
+    skip_if_anchor_exists: bool,
+    repo_root: Path,
+) -> dict[str, dict[str, Any] | None]:
+    """Return ``{"contest_cuda": <anchor|None>, "contest_cpu": <anchor|None>}``.
+
+    Each entry is the anchor dict the lookup helper returned (when an
+    existing promotable anchor was found) or ``None`` (dispatch normally).
+    When ``skip_if_anchor_exists=False`` this is always ``{cuda: None, cpu: None}``
+    so the planner falls back to the historical behavior (always dispatch).
+    """
+    if not skip_if_anchor_exists:
+        return {"contest_cuda": None, "contest_cpu": None}
+    return {
+        "contest_cuda": find_promotable_anchor_for_axis_and_sha("cuda", archive_sha256, repo_root=repo_root),
+        "contest_cpu": find_promotable_anchor_for_axis_and_sha("cpu", archive_sha256, repo_root=repo_root),
+    }
+
+
 def build_plan(
     *,
     archive: Path,
@@ -57,18 +101,16 @@ def build_plan(
     claim_agent: str,
     claim_notes: str,
     expected_runtime_tree_sha256: str = "",
+    skip_axis_if_promotable_anchor_exists: bool = False,
+    repo_root: Path | None = None,
 ) -> dict[str, Any]:
     archive = archive.resolve()
     if not archive.is_file():
         raise FileNotFoundError(f"archive not found: {archive}")
     archive_sha = _sha256(archive)
     archive_bytes = archive.stat().st_size
-    notes = (
-        claim_notes
-        or (
-            "paired Modal auth eval; same archive/runtime required on "
-            "contest_cuda and contest_cpu axes"
-        )
+    notes = claim_notes or (
+        "paired Modal auth eval; same archive/runtime required on contest_cuda and contest_cpu axes"
     )
     cuda_output = output_root / "modal_auth_eval" / f"{run_id}_cuda"
     cpu_output = output_root / "modal_auth_eval_cpu" / f"{run_id}_cpu"
@@ -129,8 +171,35 @@ def build_plan(
     _optional_arg(cpu_cmd, "--submission-dir", submission_dir)
     _optional_arg(cuda_cmd, "--expected-runtime-tree-sha256", expected_runtime_tree_sha256)
     _optional_arg(cpu_cmd, "--expected-runtime-tree-sha256", expected_runtime_tree_sha256)
+
+    # Resolve per-axis skip-decisions before assembling the plan dict so the
+    # plan carries an authoritative record of which axes were re-used vs
+    # freshly dispatched.
+    skip_root = repo_root if repo_root is not None else REPO_ROOT
+    skipped = _resolve_skipped_axes(
+        archive_sha256=archive_sha,
+        skip_if_anchor_exists=skip_axis_if_promotable_anchor_exists,
+        repo_root=skip_root,
+    )
+    cuda_anchor = skipped["contest_cuda"]
+    cpu_anchor = skipped["contest_cpu"]
+    cuda_skipped = cuda_anchor is not None
+    cpu_skipped = cpu_anchor is not None
+
+    plan_notes = [
+        "This tool is the default Modal auth-eval entry point for score-bearing archives.",
+        "Both commands carry the same pair_group_id and exact archive SHA.",
+        "Single-axis Modal wrapper use requires an explicit waiver reason.",
+    ]
+    if skip_axis_if_promotable_anchor_exists:
+        plan_notes.append(
+            "skip_axis_if_promotable_anchor_exists=True; per-axis dispatch skipped if a "
+            "promotable anchor already exists for the archive sha "
+            "(anchor_lookup.find_promotable_anchor_for_axis_and_sha)."
+        )
+
     return {
-        "schema": "modal_paired_auth_eval_dispatch_plan_v1",
+        "schema": "modal_paired_auth_eval_dispatch_plan_v2",
         "created_at_utc": dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "pair_group_id": pair_group_id,
         "required_axes": ["contest_cuda", "contest_cpu"],
@@ -156,13 +225,18 @@ def build_plan(
             "contest_cuda": cuda_cmd,
             "contest_cpu": cpu_cmd,
         },
+        "skip_axis_if_promotable_anchor_exists": bool(skip_axis_if_promotable_anchor_exists),
+        "axes_skipped_due_to_existing_anchor": {
+            "contest_cuda": cuda_skipped,
+            "contest_cpu": cpu_skipped,
+        },
+        "existing_anchors_reused": {
+            "contest_cuda": cuda_anchor,
+            "contest_cpu": cpu_anchor,
+        },
         "score_claim": False,
         "promotion_eligible": False,
-        "notes": [
-            "This tool is the default Modal auth-eval entry point for score-bearing archives.",
-            "Both commands carry the same pair_group_id and exact archive SHA.",
-            "Single-axis Modal wrapper use requires an explicit waiver reason.",
-        ],
+        "notes": plan_notes,
     }
 
 
@@ -183,12 +257,39 @@ def main() -> int:
     parser.add_argument("--expected-runtime-tree-sha256", default="")
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--skip-axis-if-promotable-anchor-exists",
+        action="store_true",
+        default=False,
+        help=(
+            "Auto-skip per-axis re-dispatch when a promotable contest anchor "
+            "already exists for the archive sha. Routes through "
+            "tac.deploy.modal.anchor_lookup.find_promotable_anchor_for_axis_and_sha "
+            "(custody-validates evidence_grade + score_claim_valid + "
+            "archive_sha256 + finite-numeric score). Default False preserves "
+            "the historical always-fire-both-axes behavior. "
+            "PAIRED-DISPATCH-SKIP-IF-ANCHOR-EXISTS-ENHANCEMENT 2026-05-15 "
+            "addressed empirical Z3 v2 FULL paired-dispatch redundant CUDA "
+            "re-fire on a sha that already had a promotable anchor on disk."
+        ),
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help=(
+            "Repository root used by --skip-axis-if-promotable-anchor-exists "
+            "to scan for existing anchors. Defaults to Path.cwd() so the "
+            "scope matches the directory the operator invoked the CLI from."
+        ),
+    )
     args = parser.parse_args()
 
     label = _safe_slug(args.label or args.archive.stem)
     run_id = _safe_slug(args.run_id or f"{label}_paired_modal_auth_{_utc_now_compact()}")
     pair_group_id = _safe_slug(args.pair_group_id or run_id)
     lane_id_base = _safe_slug(args.lane_id_base or f"lane_{pair_group_id}")
+    resolved_repo_root = (args.repo_root or Path.cwd()).resolve()
     plan = build_plan(
         archive=args.archive,
         submission_dir=args.submission_dir,
@@ -202,6 +303,8 @@ def main() -> int:
         claim_agent=args.claim_agent,
         claim_notes=args.claim_notes,
         expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
+        skip_axis_if_promotable_anchor_exists=args.skip_axis_if_promotable_anchor_exists,
+        repo_root=resolved_repo_root,
     )
     text = json.dumps(plan, indent=2, sort_keys=True)
     if args.json_out:
@@ -210,7 +313,73 @@ def main() -> int:
     print(text)
     if not args.execute:
         return 0
+
+    # Honor per-axis skip-decisions resolved by build_plan. When BOTH axes
+    # have promotable anchors on disk we exit cleanly with rc=0 and a loud
+    # log line so downstream harvesters know to re-point at the existing
+    # anchor instead of waiting for fresh JSONs that will never appear.
+    skipped_map = plan.get("axes_skipped_due_to_existing_anchor", {})
+    anchors_map = plan.get("existing_anchors_reused", {})
+    cuda_skipped = bool(skipped_map.get("contest_cuda"))
+    cpu_skipped = bool(skipped_map.get("contest_cpu"))
+
+    if args.skip_axis_if_promotable_anchor_exists and (cuda_skipped or cpu_skipped):
+        for axis in ("contest_cuda", "contest_cpu"):
+            if not skipped_map.get(axis):
+                continue
+            anchor = anchors_map.get(axis) or {}
+            short_sha = (plan["archive"]["sha256"] or "")[:12]
+            print(
+                "[ANCHOR-EXISTS-SKIP]"
+                f" axis={axis}"
+                f" sha={short_sha}"
+                f" score={anchor.get('score')!r}"
+                f" reusing existing anchor at {anchor.get('result_path')!r}"
+                f" (source={anchor.get('source')!r})",
+                flush=True,
+            )
+            # Write re-pointer manifest so harvest tools find the existing
+            # anchor under THIS dispatch's label rather than re-scanning.
+            output_dir = Path(plan["outputs"][axis])
+            try:
+                output_dir.mkdir(parents=True, exist_ok=True)
+                repointer = output_dir / f"anchor_repointer_{axis}.json"
+                repointer.write_text(
+                    json.dumps(
+                        {
+                            "schema": "anchor_repointer_v1",
+                            "axis": axis,
+                            "archive_sha256": plan["archive"]["sha256"],
+                            "pair_group_id": pair_group_id,
+                            "reused_anchor": anchor,
+                            "written_at_utc": dt.datetime.now(dt.UTC)
+                            .isoformat(timespec="seconds")
+                            .replace("+00:00", "Z"),
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            except OSError as exc:
+                print(
+                    f"[ANCHOR-EXISTS-SKIP] WARNING: failed to write repointer for axis={axis}: {exc!r}",
+                    flush=True,
+                )
+
+    if cuda_skipped and cpu_skipped:
+        print(
+            "[BOTH_AXES_REUSED_FROM_ANCHORS] Both contest_cuda and contest_cpu"
+            " anchors already exist for this archive sha;"
+            " no Modal dispatch fired (cost saved).",
+            flush=True,
+        )
+        return 0
+
     for axis in ("contest_cuda", "contest_cpu"):
+        if skipped_map.get(axis):
+            continue
         proc = subprocess.run(plan["commands"][axis], cwd=REPO_ROOT)
         if proc.returncode:
             return proc.returncode

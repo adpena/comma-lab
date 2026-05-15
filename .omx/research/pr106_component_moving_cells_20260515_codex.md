@@ -1,7 +1,7 @@
 # PR106 Component-Moving Cell Plan
 
 - schema: `pr106_component_moving_cell_plan_v1`
-- label: `pr106_latent_latest_component_moving_cells_20260515`
+- label: `pr106_public_r2_latest_component_moving_cells_20260515`
 - kind: `latent_sidecar`
 - source_score_table_axis: `[provider-CUDA:kaggle advisory score-table]`
 - score_claim: `false`
@@ -16,6 +16,20 @@
 - net_improving_cells: `28442`
 - cell_byte_delta: `2.0` (cli_cell_byte_delta)
 - best_net_score_delta_charged: `-0.007331343441071264`
+
+## Source Custody
+
+- manifest_source_archive_path: `inputs/pr106_archive.zip`
+- manifest_source_archive_sha256: `cb9976bd33468475aac54a98c3baff996101c144b00e8d7e2c5107c86cda6182`
+- manifest_source_archive_member_name: `None`
+- manifest_source_zero_bin_sha256: `7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7`
+- local_source_archive_path: `experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip`
+- local_source_archive_sha256: `3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58`
+- local_source_member_name: `0.bin`
+- local_source_member_sha256: `7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7`
+- source_archive_payload_match: `True`
+- source_archive_blockers: `[]`
+- source_archive_warnings: `['source_archive_zip_sha256_differs_but_payload_sha256_matches']`
 
 ## Top Cells
 
