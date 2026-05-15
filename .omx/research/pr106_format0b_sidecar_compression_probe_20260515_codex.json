@@ -1,0 +1,326 @@
+{
+  "candidates": {
+    "exact_radix_runtime_format": {
+      "byte_savings_if_runtime_format_lands": 14,
+      "candidate_charged_rank_bytes": 0,
+      "candidate_dim_bytes": 361,
+      "candidate_fixed_runtime_rank_bytes": 1,
+      "candidate_huffman_bytes": 150,
+      "candidate_payload_bytes": 511,
+      "current_payload_bytes": 525,
+      "lossless_sidecar_equivalence": true,
+      "name": "format0c_exact_base28_dim_width",
+      "rate_score_delta_if_components_equal": -9.3220253437104e-06,
+      "ready_for_archive_preflight": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_runtime_change": "Add a new PacketIR sidecar format with fixed dim_bytes=361 instead of 375.",
+      "requires_new_runtime_format": true,
+      "runtime_supported_now": false,
+      "score_claim": false
+    },
+    "generic_compressor_best_by_source": [
+      {
+        "byte_delta_vs_source": 1,
+        "codec": "brotli",
+        "encoded_bytes": 376,
+        "encoded_sha256": "bd899d357bb8831a2ec741795985307bae583b3ca9a09c5af31af09171ca71f0",
+        "params": {
+          "quality": 10
+        },
+        "source": "current_375b_dim_container"
+      },
+      {
+        "byte_delta_vs_source": 4,
+        "codec": "brotli",
+        "encoded_bytes": 529,
+        "encoded_sha256": "eaa256fd5e11f280cdfedd7f89d12d121db43c5f3405d95b4406870554c951e0",
+        "params": {
+          "quality": 0
+        },
+        "source": "current_525b_sidecar_payload"
+      },
+      {
+        "byte_delta_vs_source": 4,
+        "codec": "brotli",
+        "encoded_bytes": 515,
+        "encoded_sha256": "7ebff3d6e45fce6499974a08994298f1a56ec241582f73f1a2d2387f397a020b",
+        "params": {
+          "quality": 0
+        },
+        "source": "exact_radix_511b_candidate_payload"
+      }
+    ],
+    "generic_compressor_best_overall": {
+      "byte_delta_vs_source": 4,
+      "codec": "brotli",
+      "encoded_bytes": 529,
+      "encoded_sha256": "eaa256fd5e11f280cdfedd7f89d12d121db43c5f3405d95b4406870554c951e0",
+      "params": {
+        "quality": 0
+      },
+      "source": "current_525b_sidecar_payload"
+    },
+    "generic_compressor_rate_positive_count": 0
+  },
+  "decision": {
+    "best_unimplemented_byte_savings": 14,
+    "best_unimplemented_rate_score_delta_if_components_equal": -9.3220253437104e-06,
+    "dispatch_blockers": [
+      "planning_probe_only_no_archive_emitted",
+      "format0c_runtime_not_implemented",
+      "requires_full_frame_parity_before_exact_eval",
+      "requires_lane_dispatch_claim_before_exact_cuda",
+      "generic_compressor_rows_do_not_have_runtime_decoder"
+    ],
+    "materiality": "below_cpu_sub_0_192_gap_and_not_cuda_frontier_material",
+    "realized_runtime_supported_byte_savings": 0,
+    "recommended_next": "Implement format0C only if we are doing a batch PacketIR runtime pass; otherwise prioritize decoder/latent stream transforms because the sidecar has only 14 byte-closed bytes of identified headroom.",
+    "verdict": "small_exact_radix_runtime_format_candidate_found"
+  },
+  "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-15T08:12:35.857521+00:00",
+  "planning_only": true,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_archive_preflight": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "pr106_format0b_sidecar_compression_probe_v1",
+  "score_claim": false,
+  "semantic_stats": {
+    "delta_code_length_assumption": {
+      "current_huffman_payload_bytes": 150,
+      "current_uniform_length_bits": [
+        2
+      ],
+      "delta_counts": {
+        "-1": 63,
+        "-2": 225,
+        "1": 74,
+        "2": 238
+      }
+    },
+    "delta_distribution": [
+      {
+        "count": 225,
+        "frequency": 0.375,
+        "value": -2
+      },
+      {
+        "count": 63,
+        "frequency": 0.105,
+        "value": -1
+      },
+      {
+        "count": 74,
+        "frequency": 0.12333333333333334,
+        "value": 1
+      },
+      {
+        "count": 238,
+        "frequency": 0.39666666666666667,
+        "value": 2
+      }
+    ],
+    "delta_entropy_bits_per_symbol": 1.7735927239489462,
+    "delta_vocab": [
+      -2,
+      -1,
+      1,
+      2
+    ],
+    "dim_count": 28,
+    "dim_distribution": [
+      {
+        "count": 19,
+        "frequency": 0.03166666666666667,
+        "value": 0
+      },
+      {
+        "count": 14,
+        "frequency": 0.023333333333333334,
+        "value": 1
+      },
+      {
+        "count": 20,
+        "frequency": 0.03333333333333333,
+        "value": 2
+      },
+      {
+        "count": 21,
+        "frequency": 0.035,
+        "value": 3
+      },
+      {
+        "count": 21,
+        "frequency": 0.035,
+        "value": 4
+      },
+      {
+        "count": 18,
+        "frequency": 0.03,
+        "value": 5
+      },
+      {
+        "count": 23,
+        "frequency": 0.03833333333333333,
+        "value": 6
+      },
+      {
+        "count": 19,
+        "frequency": 0.03166666666666667,
+        "value": 7
+      },
+      {
+        "count": 21,
+        "frequency": 0.035,
+        "value": 8
+      },
+      {
+        "count": 29,
+        "frequency": 0.04833333333333333,
+        "value": 9
+      },
+      {
+        "count": 21,
+        "frequency": 0.035,
+        "value": 10
+      },
+      {
+        "count": 28,
+        "frequency": 0.04666666666666667,
+        "value": 11
+      },
+      {
+        "count": 20,
+        "frequency": 0.03333333333333333,
+        "value": 12
+      },
+      {
+        "count": 17,
+        "frequency": 0.028333333333333332,
+        "value": 13
+      },
+      {
+        "count": 20,
+        "frequency": 0.03333333333333333,
+        "value": 14
+      },
+      {
+        "count": 28,
+        "frequency": 0.04666666666666667,
+        "value": 15
+      },
+      {
+        "count": 21,
+        "frequency": 0.035,
+        "value": 16
+      },
+      {
+        "count": 40,
+        "frequency": 0.06666666666666667,
+        "value": 17
+      },
+      {
+        "count": 15,
+        "frequency": 0.025,
+        "value": 18
+      },
+      {
+        "count": 19,
+        "frequency": 0.03166666666666667,
+        "value": 19
+      },
+      {
+        "count": 18,
+        "frequency": 0.03,
+        "value": 20
+      },
+      {
+        "count": 14,
+        "frequency": 0.023333333333333334,
+        "value": 21
+      },
+      {
+        "count": 17,
+        "frequency": 0.028333333333333332,
+        "value": 22
+      },
+      {
+        "count": 28,
+        "frequency": 0.04666666666666667,
+        "value": 23
+      },
+      {
+        "count": 18,
+        "frequency": 0.03,
+        "value": 24
+      },
+      {
+        "count": 22,
+        "frequency": 0.03666666666666667,
+        "value": 25
+      },
+      {
+        "count": 19,
+        "frequency": 0.03166666666666667,
+        "value": 26
+      },
+      {
+        "count": 30,
+        "frequency": 0.05,
+        "value": 27
+      }
+    ],
+    "dim_entropy_bits_per_symbol": 4.762747000306746,
+    "ideal_delta_entropy_bytes_no_model_cost": 134,
+    "ideal_dim_entropy_bytes_no_model_cost": 358,
+    "noop_count": 0,
+    "pair_count": 600
+  },
+  "sidecar": {
+    "charged_rank_bytes": 0,
+    "dim_container_sha256": "3661a652729758fe156f803c4e97e3bdc7fe88195173d28c76b0b4688f26f971",
+    "fixed_meta_dim_bytes": 375,
+    "fixed_meta_noop_count": 0,
+    "fixed_runtime_rank_bytes": 1,
+    "huffman_bytes": 150,
+    "huffman_sha256": "29d42a00743606044c83aff525bf85d22b8f15097fd32d9d6e5fa4112b9171eb",
+    "payload_bytes": 525,
+    "payload_entropy_bits_per_byte": 7.44011521040964,
+    "payload_sha256": "e0e992a3e88ed8ea75c733f4976b42ad52b582261a80214c862cf7baff2bbc2a",
+    "rank_byte_hex": "00"
+  },
+  "source": {
+    "archive_bytes": 186341,
+    "archive_path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip",
+    "archive_sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d",
+    "format_id": "0x0B",
+    "member_bytes": 186241,
+    "member_name": "x",
+    "member_sha256": "8e7c7fc6edf03de92edb4fc586c86cf748e82ee19d197196b9dc0d6342f6ab92"
+  },
+  "summary": {
+    "current_sidecar_payload_bytes": 525,
+    "exact_radix_candidate_payload_bytes": 511,
+    "identified_sidecar_savings_requires_runtime": 14,
+    "realized_score_claim": false
+  },
+  "tool": "tools/probe_pr106_format0b_sidecar_compression.py",
+  "tool_run_manifest": {
+    "argv": [],
+    "canonical_payload_without_tool_manifest_sha256": "7955434ad6db73a57d02acea032a3785f93152b73e19d1c797f2fafee139ea4b",
+    "dispatch_attempted": false,
+    "input_files": [
+      {
+        "bytes": 186341,
+        "path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip",
+        "sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d"
+      }
+    ],
+    "output_path": ".omx/research/pr106_format0b_sidecar_compression_probe_20260515_codex.json",
+    "ready_for_exact_eval_dispatch": false,
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "tools/probe_pr106_format0b_sidecar_compression.py"
+  }
+}
