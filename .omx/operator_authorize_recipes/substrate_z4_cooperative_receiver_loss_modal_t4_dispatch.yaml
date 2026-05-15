@@ -130,6 +130,10 @@ sentinel_files:
   - src/tac/substrates/_shared/trainer_skeleton.py
   - src/tac/substrates/_shared/inflate_runtime.py
   - src/tac/substrates/score_aware_common.py
+  # Z4-V2 Wunderkind E1: Tier-1 engineering primitives sister modules.
+  - src/tac/training_optimization/__init__.py
+  - src/tac/codec/cooperative_receiver/__init__.py
+  - src/tac/codec/cooperative_receiver/atick_redlich.py
 
 env_overrides:
   Z4_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
@@ -141,7 +145,16 @@ env_overrides:
   Z4_LAMBDA_PIXEL: "0.0"
   Z4_BETA_SEG: "100.0"
   Z4_GAMMA_POSE: "3.1622776601683795"
-  Z4_ENABLE_AUTOCAST_FP16: "false"
+  # Z4-V2 Wunderkind E1 Tier-1 engineering wave 2026-05-15 per evidence-review
+  # council Phase B.2 + Phase C verdict. Phase B.2 root-cause: hand-rolled loss
+  # + autocast=false + deterministic-CUDA bicubic-backward = ~36s/epoch on T4
+  # × 100ep = 60min timeout. Tier-1 primitives (Catalogs #172/#178/#179/#228)
+  # wired via canonical build_optimized_training_context + autocast_aware_forward.
+  Z4_ENABLE_AUTOCAST_FP16: "true"
+  Z4_ENABLE_TF32: "true"
+  Z4_ENABLE_TORCH_COMPILE: "true"
+  Z4_ENABLE_GT_SCORER_CACHE: "true"
+  Z4_RELAX_DETERMINISM: "true"
   LOCAL_CUDA_WORKER: "1"
   SMOKE_ONLY: "0"
 

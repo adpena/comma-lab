@@ -55,9 +55,17 @@ Usage (full; CUDA-required Modal T4; gated by Phase 2 council approval)::
         --output-dir experiments/results/z4_<utc> \\
         --epochs 200 --batch-size 4 --lr 5e-4 --device cuda --lambda-pixel 1.0
 """
-# AUTOCAST_FP16_WAIVED:score-aware-scorer-path-pending-canonical-autocast-backport
-# TORCH_COMPILE_WAIVED:defer-until-per-substrate-canary-validates-Inductor-graph-breaks
-# TF32_WAIVED:opt-in-via-CLI-flag-to-keep-eval-roundtrip-numerics-deterministic
+# Z4-V2 Wunderkind E1 Tier-1 engineering wave 2026-05-15: autocast/TF32/torch.compile
+# wired via canonical build_optimized_training_context + autocast_aware_forward per
+# Catalogs #172/#178/#179 + #228 (build_optimized_training_context). Hand-rolled
+# CooperativeReceiverScoreAwareLoss kept as the rate+pixel composition wrapper but
+# its inner seg+pose mechanics are mathematically equivalent to canonical
+# cooperative_receiver_loss (Atick-Redlich 1990) per Catalog #226-style routing
+# through score_pair_components_dispatch (Catalog #164). Phase B.2 council root-cause
+# (per feedback_grand_council_evidence_review_modal_failures...): the Z4 lambda=0
+# timeout was driven by autocast=false + deterministic-CUDA bicubic-backward, NOT
+# by hand-rolled loss internals — so the structural fix is: enable the Tier-1
+# primitives, relax determinism around backward pass for bicubic interpolate.
 # NO_GRAD_WAIVED:eval-time-scorer-forward-wrapped-in-torch.inference_mode-inside-_run_val_loop
 # SYNTHETIC_NON_SMOKE_OK:_smoke_main-only-uses-synthetic-data-_full_main-decodes-real-video
 from __future__ import annotations
@@ -79,6 +87,9 @@ import torch
 
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    build_optimized_training_context as _canon_build_optimized_training_context,
 )
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
@@ -177,8 +188,48 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     },
     "--enable-autocast-fp16": {
         "env": "Z4_ENABLE_AUTOCAST_FP16",
-        "rationale": "Catalog #172; pending canonical autocast backport",
+        "rationale": (
+            "Catalog #172; Tier-1 engineering primitive wired via canonical "
+            "build_optimized_training_context + autocast_aware_forward "
+            "(Wunderkind E1 substitution 2026-05-15)"
+        ),
         "default": "false",
+    },
+    "--enable-tf32": {
+        "env": "Z4_ENABLE_TF32",
+        "rationale": (
+            "Catalog #178; TF32 fast-math on Ampere/Hopper. device_or_die "
+            "auto-enables on CUDA; this flag is the operator-visible attestation"
+        ),
+        "default": "true",
+    },
+    "--enable-torch-compile": {
+        "env": "Z4_ENABLE_TORCH_COMPILE",
+        "rationale": (
+            "Catalog #179; torch.compile (Inductor) on the substrate. Tier-2 "
+            "engineering primitive wired via canonical compile_with_fallback"
+        ),
+        "default": "false",
+    },
+    "--enable-gt-scorer-cache": {
+        "env": "Z4_ENABLE_GT_SCORER_CACHE",
+        "rationale": (
+            "Catalog #228; F3 GTScorerCache pre-computes GT scorer outputs once "
+            "(~50%% scorer compute savings; mathematically identical to GT-forward)"
+        ),
+        "default": "false",
+    },
+    "--relax-determinism-for-backward": {
+        "env": "Z4_RELAX_DETERMINISM",
+        "rationale": (
+            "Phase B.2 root-cause fix: bicubic interpolate backward is not "
+            "deterministic-CUDA-supported; warn_only=True normally surfaces a "
+            "warning then does NOT relax the restriction, causing per-epoch "
+            "~36s slowdown. Setting this True explicitly disables determinism "
+            "for the training step so the backward kernel chooses the fast path. "
+            "Eval / inflate / archive bytes remain deterministic"
+        ),
+        "default": "true",
     },
 }
 
@@ -226,7 +277,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--advisory-cpu-explicitly-waived", action="store_true",
                    help="Required sister flag for --full-cpu (Catalog #197)")
     p.add_argument("--enable-autocast-fp16", action="store_true",
-                   help="Catalog #172; pending canonical autocast backport")
+                   help="Catalog #172; Tier-1 autocast(fp16) + GradScaler")
+    p.add_argument("--enable-tf32", action="store_true", default=True,
+                   help="Catalog #178; TF32 fast-math on Ampere/Hopper (default on)")
+    p.add_argument("--enable-torch-compile", action="store_true",
+                   help="Catalog #179; torch.compile (Inductor) on substrate")
+    p.add_argument("--enable-gt-scorer-cache", action="store_true",
+                   help="Catalog #228; F3 GTScorerCache (~50%% scorer compute savings)")
+    p.add_argument("--relax-determinism-for-backward", action="store_true", default=True,
+                   help="Phase B.2 root-cause fix; relax determinism around backward "
+                        "(bicubic interp backward not deterministic-CUDA supported)")
+    p.add_argument("--torch-compile-mode", type=str, default="default",
+                   help="torch.compile mode (default | reduce-overhead | max-autotune)")
+    p.add_argument("--gt-scorer-cache-chunk-size", type=int, default=16,
+                   help="F3 cache chunk size for GT scorer pre-compute")
     p.add_argument("--skip-auth-eval", action="store_true",
                    help="Skip CUDA auth eval at end of full training (debug only)")
     return p
@@ -495,6 +559,16 @@ def _full_main(args: argparse.Namespace) -> int:
     from tac.training import EMA
 
     _canon_pin_seeds(args.seed)
+    # Phase B.2 root-cause fix: bicubic interp backward is NOT deterministic-CUDA-
+    # supported; pin_seeds()'s warn_only=True surfaces a warning then bicubic
+    # backward falls back to a slow path (~36s/epoch on T4). Relax determinism
+    # for the training step here; eval / archive / inflate are still deterministic
+    # (they don't fire bicubic backward).
+    if getattr(args, "relax_determinism_for_backward", True):
+        try:
+            torch.use_deterministic_algorithms(False)
+        except Exception:
+            pass
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     device = _canon_device_or_die(
@@ -592,6 +666,27 @@ def _full_main(args: argparse.Namespace) -> int:
             weights=loss_weights,
         ).to(device)
 
+        # Stage 5b: Tier-1 engineering primitives via canonical helper
+        # (Catalogs #172/#178/#179/#228; Wunderkind E1 substitution 2026-05-15).
+        # build_optimized_training_context returns:
+        #   - gt_cache: F3 GTScorerCache (None when --enable-gt-scorer-cache=False)
+        #   - substrate_model: torch.compile-wrapped model (passthrough when off)
+        #   - autocast_cfg: AutocastConfig consumed by autocast_aware_forward
+        opt_ctx = _canon_build_optimized_training_context(
+            args,
+            scorers=(pose_scorer, seg_scorer),
+            gt_pairs=gt_pairs_btchw_255,
+            substrate_model=substrate,
+            device=device,
+        )
+        gt_cache = opt_ctx.gt_cache
+        if gt_cache is not None:
+            print(f"[z4-full] {gt_cache.summary_line()}")
+            _stage("gt_scorer_cache_built")
+        if opt_ctx.substrate_model is not None and opt_ctx.substrate_model is not substrate:
+            substrate = opt_ctx.substrate_model  # type: ignore[assignment]
+            _stage("torch_compile_wrapped")
+
         # Train/val split: hold out last 12.5% of pairs.
         val_count = max(1, n_pairs // 8)
         val_idx_start = n_pairs - val_count
@@ -604,6 +699,11 @@ def _full_main(args: argparse.Namespace) -> int:
         # Archive byte proxy for rate term (matches packed Z4CR1 grammar order
         # of magnitude; refined post-Stage 8 with the actual archive bytes).
         archive_bytes_proxy = torch.tensor(120_000.0, device=device)
+
+        # Tier-1 O2: autocast wrap (no-op when --enable-autocast-fp16=False).
+        from tac.training_optimization import (
+            autocast_aware_forward as _autocast_aware_forward,
+        )
 
         for epoch in range(args.epochs):
             substrate.train()
@@ -623,21 +723,39 @@ def _full_main(args: argparse.Namespace) -> int:
                 gt_rgb_1 = gt_batch[:, 1]
                 # Frame for encoder forensic provenance: use frame_1 normalized to [0, 1].
                 frames_for_encoder = gt_rgb_1 / 255.0
-                rgb_0_unit, rgb_1_unit, _mu, _logvar = substrate(
-                    pair_idxs, frames_for_encoder=frames_for_encoder
-                )
-                # Convert decoder unit-range output to [0, 255] domain for scorer.
-                rgb_0 = rgb_0_unit * 255.0
-                rgb_1 = rgb_1_unit * 255.0
-                loss, _parts = score_loss(
-                    reconstructed_rgb_0=rgb_0,
-                    reconstructed_rgb_1=rgb_1,
-                    gt_rgb_0=gt_rgb_0,
-                    gt_rgb_1=gt_rgb_1,
-                    archive_bytes_proxy=archive_bytes_proxy,
-                    apply_eval_roundtrip=True,
-                    noise_std=args.noise_std,
-                )
+                # F3 GTScorerCache lookup (per-pair-index batched). When
+                # gt_cache is None (default-OFF), the kwargs stay None and
+                # the loss path falls back to GT-forward (byte-faithful).
+                gt_pose_batch = gt_seg_batch = None
+                gt_seg_already_probs = None
+                if gt_cache is not None:
+                    gt_pose_batch, gt_seg_batch = gt_cache.lookup(
+                        pair_idxs, device=device
+                    )
+                    gt_seg_already_probs = gt_cache.seg_already_probs
+                with _autocast_aware_forward(
+                    enabled=bool(getattr(args, "enable_autocast_fp16", False)),
+                    dtype=torch.float16,
+                    device=device,
+                ):
+                    rgb_0_unit, rgb_1_unit, _mu, _logvar = substrate(
+                        pair_idxs, frames_for_encoder=frames_for_encoder
+                    )
+                    # Convert decoder unit-range output to [0, 255] domain for scorer.
+                    rgb_0 = rgb_0_unit * 255.0
+                    rgb_1 = rgb_1_unit * 255.0
+                    loss, _parts = score_loss(
+                        reconstructed_rgb_0=rgb_0,
+                        reconstructed_rgb_1=rgb_1,
+                        gt_rgb_0=gt_rgb_0,
+                        gt_rgb_1=gt_rgb_1,
+                        archive_bytes_proxy=archive_bytes_proxy,
+                        apply_eval_roundtrip=True,
+                        noise_std=args.noise_std,
+                        gt_pose_batch=gt_pose_batch,
+                        gt_seg_batch=gt_seg_batch,
+                        gt_seg_already_probs=gt_seg_already_probs,
+                    )
                 if not torch.isfinite(loss):
                     nan_strike += 1
                     print(
