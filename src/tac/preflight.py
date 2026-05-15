@@ -2140,6 +2140,39 @@ def preflight_all(
         check_no_misleading_device_named_output_directories(
             strict=False, verbose=verbose,
         )
+        # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
+        # bkrbqet3p 4 self-protection gates. Memory:
+        # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+        # F1 (Catalog #266) + F2 (Catalog #267) protect the Z3-G1 substrate
+        # trainer where (a) the archive emits empty G1 sidecar slots so
+        # auth-eval measures a direct-residual control NOT the advertised
+        # G1 scorer-class gating, AND (b) the silent except-Exception block
+        # falls back to a synthetic uniform class prior on any scorer error.
+        # Both fix sites land in the same commit batch driving live count
+        # to 0; STRICT-from-byte-one per "Strict-flip atomicity rule".
+        check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only(
+            strict=True, verbose=verbose,
+        )
+        check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in(
+            strict=True, verbose=verbose,
+        )
+        # F3 (Catalog #268) + F4 (Catalog #269) protect the symposium_impls
+        # blahut_arimoto_theoretical_floor + mackay_conditional_entropy
+        # modules where (a) the contest_score_floor uses bits-per-unit rate
+        # term added directly to the contest score (dimensionally invalid),
+        # AND (b) the scorer_prior_context bucketing partitions bytes by
+        # hash-of-position only without reading any scorer state. The
+        # symposium_impls package is sister-owned (subagent a338c146
+        # mid-flight). Initial wire-in is WARN-ONLY pending the sister's
+        # Phase 2 rebase that lands either the calibration converter
+        # (F3) or the explicit advisory tag, OR the actual scorer feature
+        # binding (F4) or the position-partition self-disclosure.
+        check_theoretical_floor_rate_term_unit_calibrated(
+            strict=False, verbose=verbose,
+        )
+        check_scorer_conditional_entropy_actually_uses_scorer_state(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #228 - F3 GTScorerCache trainer-side consumption
         # gate. Per F3-BACKPORT-WAVE-V2 op-routable #5. Refuses substrate
         # trainers that declare the RESERVED `--enable-gt-scorer-cache`
@@ -2257,6 +2290,20 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
         check_gosdt_dispatcher_whiteboard_discipline(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-15 Catalog #265 META gate - symposium implementation queue
+        # canonical contract per the Grand Reunion symposium 2026-05-15 +
+        # operator mandate "implement all of the grand council symposiums
+        # recommendations fully and completely and correctly with full math
+        # and engineering and scientific rigor and to their spec".
+        # Refuses any src/tac/symposium_impls/*.py module lacking one of the
+        # 5 canonical-contract tokens (SPDX header / __all__ / update_from_anchor
+        # / [verified-against: / Catalog #). STRICT-from-byte-one per
+        # CLAUDE.md "Strict-flip atomicity rule" - live count at landing: 0
+        # (all 9 implementations Catalog #256-#264 declare every required
+        # token).
+        check_symposium_impls_canonical_contract(
             strict=True, verbose=verbose,
         )
         # 2026-05-14 Catalog #226 sister gate - train_renderer auth-eval
@@ -57147,6 +57194,586 @@ def check_gosdt_dispatcher_whiteboard_discipline(
             f"found {len(violations)} violation(s). Catalog #255 enforces "
             "operator-gated promotion per CLAUDE.md 'Design decisions':\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #265 META gate — canonical contract for symposium implementation queue
+# (Catalog #256-#264). Per the Grand Reunion symposium 2026-05-15 + operator
+# mandate "implement all of the grand council symposiums recommendations fully
+# and completely and correctly with full math and engineering and scientific
+# rigor and to their spec". Per CLAUDE.md "consolidate everything into META
+# layer" standing directive: ONE meta gate covers the package contract instead
+# of 9 separate gates.
+_CHECK_265_REQUIRED_TOP_LEVEL_TOKENS: tuple[str, ...] = (
+    "# SPDX-License-Identifier: MIT",
+    "__all__",
+    "update_from_anchor",
+    "[verified-against:",
+    "Catalog #",
+)
+_CHECK_265_SELF_EXEMPT_FILES: tuple[str, ...] = (
+    "__init__.py",
+    "preflight.py",
+)
+
+
+def check_symposium_impls_canonical_contract(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #265 META gate — symposium_impls package canonical contract.
+
+    Per the Grand Reunion symposium 2026-05-15 (Catalog #256-#264) AND
+    CLAUDE.md "Beauty, simplicity, and developer experience" + "Subagent
+    coherence-by-default" + "consolidate everything into META layer or
+    canonical helpers" standing directive 2026-05-15.
+
+    Refuses any ``src/tac/symposium_impls/*.py`` module (excluding
+    ``__init__.py``, ``preflight.py``, and the ``tests/`` subdirectory)
+    that LACKS one of the canonical-contract tokens:
+
+    * ``# SPDX-License-Identifier: MIT`` — OSS-canonical license header
+      per CLAUDE.md "Public Disclosure Hygiene".
+    * ``__all__`` declaration — explicit public API surface per
+      CLAUDE.md "Beauty, simplicity, and developer experience" (narrow
+      typed contract).
+    * ``update_from_anchor`` — continual-learning hook 5 per CLAUDE.md
+      "Subagent coherence-by-default" (every implementation feeds
+      :func:`tac.continual_learning.posterior_update_locked` or the
+      sister cathedral autopilot ranker).
+    * ``[verified-against:`` — math-rigor citation per the symposium
+      mandate "every algorithm validated against canonical formulas".
+    * ``Catalog #`` — the implementation's CLAUDE.md catalog # citation
+      per CLAUDE.md "Meta-bug class catalog" + Catalog #176 (META-meta
+      gate that refuses STRICT callsites lacking CLAUDE.md row).
+
+    The gate has NO waiver mechanism: the canonical contract IS the
+    package's structural correctness. New symposium implementations MUST
+    declare all 5 tokens at landing.
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" —
+    live count at landing: 0 (all 9 implementations Catalog #256-#264
+    declare every required token).
+
+    Lane: ``lane_symposium_implementation_coordinator_full_math_engineering_scientific_rigor_20260515``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    package_dir = root / "src" / "tac" / "symposium_impls"
+    if not package_dir.is_dir():
+        if verbose:
+            print(f"  [symposium-impls-contract] package not present, skipping")
+        return []
+    violations: list[str] = []
+    for path in sorted(package_dir.glob("*.py")):
+        if path.name in _CHECK_265_SELF_EXEMPT_FILES:
+            continue
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            violations.append(f"{rel}: unreadable ({exc})")
+            continue
+        missing = [tok for tok in _CHECK_265_REQUIRED_TOP_LEVEL_TOKENS if tok not in text]
+        if missing:
+            violations.append(
+                f"{rel}: missing canonical-contract tokens {missing!r}; "
+                "Catalog #265 enforces the symposium implementation queue's "
+                "5-token contract per CLAUDE.md 'Beauty, simplicity, and "
+                "developer experience' + 'Subagent coherence-by-default'"
+            )
+    if verbose:
+        print(f"  [symposium-impls-contract] {len(violations)} violations")
+    if violations and strict:
+        raise PreflightError(
+            "check_symposium_impls_canonical_contract found "
+            f"{len(violations)} violation(s). Catalog #265 enforces the "
+            "5-token canonical contract for symposium implementations:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Codex review bkrbqet3p 2026-05-15 — 4 self-protection gates Catalog #266-#269.
+# Memory: feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+# ----------------------------------------------------------------------------
+
+# ---- Catalog #266 (F1) — G1 substrate archive consumes hyperprior + class
+# bytes OR research_only=true gating ----
+_CHECK_266_TARGET_BASENAME = "train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py"
+_CHECK_266_REQUIRED_FLAG = "--research-only-direct-residual"
+_CHECK_266_VALIDATOR_TOKENS = (
+    "_validate_g1_research_only_flags",
+    "_g1_archive_consumes_hyperprior_bytes",
+    "_g1_skip_auth_eval_reason",
+)
+_CHECK_266_WAIVER_MARKER = "# G1_ARCHIVE_DIRECT_RESIDUAL_OK:"
+
+
+def check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #266 — Codex bkrbqet3p F1 self-protection.
+
+    Refuses any state of the Z3-G1 substrate trainer
+    ``experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py``
+    that emits an archive with empty G1 sidecar slots
+    (``hyperprior_weights_int8=b""`` + ``w_hat_int8=b""`` per
+    ``_v2_encode_section`` direct-residual mode) WITHOUT also wiring all
+    three required validator surfaces:
+
+    1. The ``--research-only-direct-residual`` argparse flag (operator
+       opt-in attestation that the archive is a direct-residual control
+       NOT the advertised G1 scorer-class gating).
+    2. ``_validate_g1_research_only_flags(args)`` invoked from ``main()``
+       BEFORE ``_full_main(args)`` so the gate fires before any GPU spend.
+    3. The ``_g1_archive_consumes_hyperprior_bytes = False`` constant +
+       ``_g1_skip_auth_eval_reason`` branching in ``_full_main`` so
+       auth-eval is skipped (with a stamped blocker reason) until a real
+       inflate-time consumer + byte-mutation smoke (Catalog #139) lands.
+
+    Bug class anchor: codex review bkrbqet3p HIGH F1 (2026-05-15) caught
+    that the G1 trainer's full-main path built the Z3HV2 archive with
+    empty hyperprior + class-index slots (sigma table + class indices
+    written to ``g1_diagnostic.pt`` OUTSIDE the archive) AND then ran
+    ``_canon_gate_auth_eval_call`` against the archive, producing
+    authoritative-looking ``[contest-CUDA]`` artifacts attributed to a
+    substrate the runtime never consumed. Auth eval was actually
+    measuring a direct-residual Z3HV2 control packet.
+
+    There is no per-call waiver — the surfaces ARE the contract. A
+    file-level ``# G1_ARCHIVE_DIRECT_RESIDUAL_OK:<rationale>`` waiver in
+    the first 30 lines of the trainer accepts the rare future case
+    where the operator has landed both an archive consumer AND a
+    byte-mutation smoke proving the bytes change inflated frames
+    (then the gate becomes redundant and can be retired).
+
+    STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed
+    AND self-protected against" + "Strict-flip atomicity rule" — live
+    count at landing: 0 (all 3 validator surfaces present in the live
+    trainer file in the same commit batch).
+
+    Memory: feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root / "experiments" / _CHECK_266_TARGET_BASENAME
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only: "
+                f"target file not present ({target}); skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        violations = [f"{target}: unreadable ({exc})"]
+        if strict:
+            raise PreflightError("\n".join(violations)) from exc
+        return violations
+    # File-level waiver opt-out check
+    head = "\n".join(text.splitlines()[:30])
+    if _CHECK_266_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_266_WAIVER_MARKER)
+        after = head[idx + len(_CHECK_266_WAIVER_MARKER):].splitlines()[0].strip()
+        if after and after not in {"<rationale>", "<reason>"}:
+            if verbose:
+                print(
+                    f"check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only: "
+                    f"waived via {_CHECK_266_WAIVER_MARKER}{after!r}"
+                )
+            return []
+    violations: list[str] = []
+    if _CHECK_266_REQUIRED_FLAG not in text:
+        violations.append(
+            f"experiments/{_CHECK_266_TARGET_BASENAME}: missing required "
+            f"argparse flag {_CHECK_266_REQUIRED_FLAG!r} per Catalog #266 "
+            "(F1: G1 archive direct-residual research-only opt-in)"
+        )
+    for tok in _CHECK_266_VALIDATOR_TOKENS:
+        if tok not in text:
+            violations.append(
+                f"experiments/{_CHECK_266_TARGET_BASENAME}: missing required "
+                f"validator surface {tok!r} per Catalog #266 (F1: G1 archive "
+                "must skip auth-eval until inflate consumes hyperprior + class bytes)"
+            )
+    if verbose:
+        print(
+            f"check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only: "
+            f"{len(violations)} violation(s)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_g1_substrate_archive_consumes_hyperprior_class_bytes_or_research_only "
+            f"found {len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "+ Catalog #266 (codex bkrbqet3p F1):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ---- Catalog #267 (F2) — substrate scorer class derivation fail-closed
+# OR explicit opt-in ----
+_CHECK_267_TARGET_BASENAME = _CHECK_266_TARGET_BASENAME
+_CHECK_267_REQUIRED_FLAG = "--allow-uniform-class-fallback"
+# Required pattern: the silent fallback must be guarded by the opt-in flag.
+_CHECK_267_REQUIRED_GUARD_TOKEN = "args.allow_uniform_class_fallback"
+_CHECK_267_REQUIRED_PAIRING_TOKEN = (
+    "_g1_uniform_class_fallback_active"
+)
+_CHECK_267_WAIVER_MARKER = "# G1_UNIFORM_FALLBACK_OK:"
+
+
+def check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #267 — Codex bkrbqet3p F2 self-protection.
+
+    Refuses any state of the Z3-G1 substrate trainer that catches the
+    SegNet class-derivation exception WITHOUT one of:
+
+    1. The ``--allow-uniform-class-fallback`` argparse flag (operator
+       opt-in that the synthetic uniform class prior is acceptable as a
+       research-only artifact), AND
+    2. A guard branch ``if not args.allow_uniform_class_fallback: raise
+       SystemExit(...)`` in the ``except`` body so that bare full runs
+       (without the flag) fail-closed instead of silently emitting a
+       synthetic-class-prior training run, AND
+    3. The ``_g1_uniform_class_fallback_active = True`` marker so the
+       downstream auth-eval gate (Catalog #266) can skip auth-eval when
+       the fallback fired.
+
+    Bug class anchor: codex review bkrbqet3p HIGH F2 (2026-05-15) caught
+    that the G1 trainer's full-main ``except Exception`` block at
+    ``train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py:650-671``
+    silently fell back to deterministic uniform class assignment for
+    ANY scorer error (import error, video decode failure, weight
+    mismatch, CUDA OOM in scorer, etc.), converting dependency /
+    runtime / scorer failures into a plausible-looking training run
+    that flowed through archive build + auth-eval as if real.
+
+    There is no per-call waiver — the surfaces ARE the contract. A
+    file-level ``# G1_UNIFORM_FALLBACK_OK:<rationale>`` waiver in the
+    first 30 lines of the trainer accepts the rare future case where
+    the trainer no longer has any silent uniform-fallback path.
+
+    STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed
+    AND self-protected against" + "Strict-flip atomicity rule" — live
+    count at landing: 0 (all 3 surfaces present in the live trainer
+    file in the same commit batch).
+
+    Memory: feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root / "experiments" / _CHECK_267_TARGET_BASENAME
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in: "
+                f"target file not present ({target}); skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        violations = [f"{target}: unreadable ({exc})"]
+        if strict:
+            raise PreflightError("\n".join(violations)) from exc
+        return violations
+    head = "\n".join(text.splitlines()[:30])
+    if _CHECK_267_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_267_WAIVER_MARKER)
+        after = head[idx + len(_CHECK_267_WAIVER_MARKER):].splitlines()[0].strip()
+        if after and after not in {"<rationale>", "<reason>"}:
+            if verbose:
+                print(
+                    f"check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in: "
+                    f"waived via {_CHECK_267_WAIVER_MARKER}{after!r}"
+                )
+            return []
+    violations: list[str] = []
+    if _CHECK_267_REQUIRED_FLAG not in text:
+        violations.append(
+            f"experiments/{_CHECK_267_TARGET_BASENAME}: missing required "
+            f"argparse flag {_CHECK_267_REQUIRED_FLAG!r} per Catalog #267 "
+            "(F2: silent uniform-class fallback must be operator opt-in)"
+        )
+    if _CHECK_267_REQUIRED_GUARD_TOKEN not in text:
+        violations.append(
+            f"experiments/{_CHECK_267_TARGET_BASENAME}: missing required "
+            f"guard token {_CHECK_267_REQUIRED_GUARD_TOKEN!r} per Catalog "
+            "#267 (F2: except branch must check flag and raise SystemExit "
+            "when not set)"
+        )
+    if _CHECK_267_REQUIRED_PAIRING_TOKEN not in text:
+        violations.append(
+            f"experiments/{_CHECK_267_TARGET_BASENAME}: missing required "
+            f"pairing marker {_CHECK_267_REQUIRED_PAIRING_TOKEN!r} per "
+            "Catalog #267 (F2: downstream auth-eval gate must see the "
+            "fallback was active to skip auth-eval per Catalog #266)"
+        )
+    if verbose:
+        print(
+            f"check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in: "
+            f"{len(violations)} violation(s)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_scorer_class_derivation_fail_closed_or_explicit_opt_in "
+            f"found {len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "+ Catalog #267 (codex bkrbqet3p F2):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ---- Catalog #268 (F3) — theoretical floor rate term unit calibrated ----
+_CHECK_268_TARGET_BASENAME = "blahut_arimoto_theoretical_floor.py"
+_CHECK_268_TARGET_DIR = ("src", "tac", "symposium_impls")
+# Either the file uses the canonical converter, or it carries an explicit
+# advisory tag.
+_CHECK_268_CALIBRATION_TOKENS = (
+    "bits_per_unit_to_contest_rate_term",
+    "CONTEST_RATE_DENOM_BYTES",
+)
+_CHECK_268_ADVISORY_TOKEN = "theoretical_floor_units_calibrated=false"
+_CHECK_268_WAIVER_MARKER = "# THEORETICAL_FLOOR_UNITS_OK:"
+
+
+def check_theoretical_floor_rate_term_unit_calibrated(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #268 — Codex bkrbqet3p F3 self-protection.
+
+    Refuses any state of
+    ``src/tac/symposium_impls/blahut_arimoto_theoretical_floor.py`` that
+    produces a ``contest_score_floor`` from ``25.0 * r_combined`` (or
+    equivalent ``25.0 * <bits-per-unit>`` patterns) WITHOUT either:
+
+    1. The canonical bits-to-contest-rate converter
+       ``bits_per_unit_to_contest_rate_term(...)`` AND the
+       ``CONTEST_RATE_DENOM_BYTES`` constant (= 37,545,489), OR
+    2. The explicit advisory tag ``theoretical_floor_units_calibrated=false``
+       in the same module so downstream consumers know the
+       ``contest_score_floor`` field is dimensionally invalid until the
+       conversion lands.
+
+    Bug class anchor: codex review bkrbqet3p HIGH F3 (2026-05-15) caught
+    that ``compute_contest_theoretical_floor`` adds ``25.0 * r_combined``
+    directly to the contest score where ``r_combined`` is bits-per-unit
+    while the contest rate term is normalized archive bytes
+    (``25 * archive_bytes / 37,545,489``). The returned
+    ``contest_score_floor`` is dimensionally invalid; for realistic
+    distortions it can be orders of magnitude wrong while presenting as
+    a Pareto lower-bound anchor consumed by autopilot ranking.
+
+    File-level ``# THEORETICAL_FLOOR_UNITS_OK:<rationale>`` waiver in
+    the first 30 lines accepts the rare deliberate placeholder case
+    (e.g. a module-under-construction stub).
+
+    Initial wire-in is WARN-ONLY because the symposium_impls package is
+    sister-owned (subagent ``a338c146`` mid-flight) and the Phase 2
+    rebase will land the calibration. Strict-flip pending sister
+    subagent completion + this gate's live count = 0.
+
+    Memory: feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root / Path(*_CHECK_268_TARGET_DIR) / _CHECK_268_TARGET_BASENAME
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_theoretical_floor_rate_term_unit_calibrated: "
+                f"target file not present ({target}); skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        violations = [f"{target}: unreadable ({exc})"]
+        if strict:
+            raise PreflightError("\n".join(violations)) from exc
+        return violations
+    head = "\n".join(text.splitlines()[:30])
+    if _CHECK_268_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_268_WAIVER_MARKER)
+        after = head[idx + len(_CHECK_268_WAIVER_MARKER):].splitlines()[0].strip()
+        if after and after not in {"<rationale>", "<reason>"}:
+            if verbose:
+                print(
+                    f"check_theoretical_floor_rate_term_unit_calibrated: "
+                    f"waived via {_CHECK_268_WAIVER_MARKER}{after!r}"
+                )
+            return []
+    has_calibration = all(t in text for t in _CHECK_268_CALIBRATION_TOKENS)
+    has_advisory_tag = _CHECK_268_ADVISORY_TOKEN in text
+    violations: list[str] = []
+    if not has_calibration and not has_advisory_tag:
+        violations.append(
+            f"src/tac/symposium_impls/{_CHECK_268_TARGET_BASENAME}: "
+            "uses bits-per-unit rate term in contest_score_floor without "
+            f"either {_CHECK_268_CALIBRATION_TOKENS!r} (canonical "
+            f"conversion) OR {_CHECK_268_ADVISORY_TOKEN!r} advisory tag. "
+            "Per Catalog #268 (codex bkrbqet3p F3), the rate term must be "
+            "converted from bits-per-unit to contest-normalized archive "
+            "bytes (25 * archive_bytes / 37,545,489) before being added "
+            "to the contest score, OR the field must be self-disclosed "
+            "as dimensionally invalid via the advisory tag."
+        )
+    if verbose:
+        print(
+            f"check_theoretical_floor_rate_term_unit_calibrated: "
+            f"{len(violations)} violation(s)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_theoretical_floor_rate_term_unit_calibrated found "
+            f"{len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "+ Catalog #268 (codex bkrbqet3p F3):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ---- Catalog #269 (F4) — scorer-conditional entropy actually uses scorer state ----
+_CHECK_269_TARGET_BASENAME = "mackay_conditional_entropy_a1_archive.py"
+_CHECK_269_TARGET_DIR = ("src", "tac", "symposium_impls")
+# Acceptance: either the module binds to actual scorer features, OR it
+# self-discloses as a position-partition proxy.
+_CHECK_269_DISCLOSURE_TOKEN = "true_scorer_conditional_entropy_claim=false"
+_CHECK_269_FEATURE_BINDING_TOKENS = (
+    # Real call-site signatures only. Docstring mentions of
+    # `scorer_state_dict` are NOT acceptance — codex F4 caught the file
+    # claiming H(X | scorer_state_dict) in prose while never reading
+    # scorer state. Each token must be a function call or import.
+    "load_segnet_state(",
+    "load_posenet_state(",
+    "load_differentiable_scorers(",
+    "load_default_scorers(",
+    "load_scorers(",
+    "segnet_class_features(",
+    "posenet_pose_features(",
+    "from tac.differentiable_eval_roundtrip import",
+    "torch.load(",  # only matches if the module actually does a torch.load
+)
+_CHECK_269_WAIVER_MARKER = "# SCORER_CONDITIONAL_ENTROPY_OK:"
+
+
+def check_scorer_conditional_entropy_actually_uses_scorer_state(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #269 — Codex bkrbqet3p F4 self-protection.
+
+    Refuses any state of
+    ``src/tac/symposium_impls/mackay_conditional_entropy_a1_archive.py``
+    whose ``scorer_prior_context`` / ``scorer_conditional_entropy``
+    helpers partition bytes WITHOUT either:
+
+    1. Reading actual scorer state — at least one of
+       ``load_segnet_state`` / ``load_posenet_state`` /
+       ``scorer_state_dict`` / ``segnet_class_features`` /
+       ``posenet_pose_features`` must appear in the module body, OR
+    2. The explicit self-disclosure
+       ``true_scorer_conditional_entropy_claim=false`` in the module
+       so downstream Pareto / autopilot consumers know the value is a
+       position-partition proxy NOT a true ``H(A1_archive | scorer_state_dict)``
+       conditional entropy.
+
+    Bug class anchor: codex review bkrbqet3p MEDIUM F4 (2026-05-15)
+    caught that ``_scorer_prior_buckets`` partitions payload bytes by
+    hashing byte position only — it never reads scorer weights, tensor
+    shapes, classes, or any scorer-derived feature. The function
+    manufactures apparent conditional-entropy slack from an arbitrary
+    position partition while presenting it as
+    ``H(A1_archive | scorer_state_dict)`` and writing a reusable
+    lower-bound estimate consumed by autopilot ranking.
+
+    File-level ``# SCORER_CONDITIONAL_ENTROPY_OK:<rationale>`` waiver
+    in the first 30 lines accepts the rare deliberate stub case.
+
+    Initial wire-in is WARN-ONLY because the symposium_impls package
+    is sister-owned (subagent ``a338c146`` mid-flight) and the Phase 2
+    rebase will land the disclosure tag or feature binding. Strict-flip
+    pending sister subagent completion + this gate's live count = 0.
+
+    Memory: feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    target = root / Path(*_CHECK_269_TARGET_DIR) / _CHECK_269_TARGET_BASENAME
+    if not target.is_file():
+        if verbose:
+            print(
+                f"check_scorer_conditional_entropy_actually_uses_scorer_state: "
+                f"target file not present ({target}); skipping"
+            )
+        return []
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        violations = [f"{target}: unreadable ({exc})"]
+        if strict:
+            raise PreflightError("\n".join(violations)) from exc
+        return violations
+    head = "\n".join(text.splitlines()[:30])
+    if _CHECK_269_WAIVER_MARKER in head:
+        idx = head.find(_CHECK_269_WAIVER_MARKER)
+        after = head[idx + len(_CHECK_269_WAIVER_MARKER):].splitlines()[0].strip()
+        if after and after not in {"<rationale>", "<reason>"}:
+            if verbose:
+                print(
+                    f"check_scorer_conditional_entropy_actually_uses_scorer_state: "
+                    f"waived via {_CHECK_269_WAIVER_MARKER}{after!r}"
+                )
+            return []
+    has_feature_binding = any(
+        t in text for t in _CHECK_269_FEATURE_BINDING_TOKENS
+    )
+    has_disclosure = _CHECK_269_DISCLOSURE_TOKEN in text
+    violations: list[str] = []
+    if not has_feature_binding and not has_disclosure:
+        violations.append(
+            f"src/tac/symposium_impls/{_CHECK_269_TARGET_BASENAME}: "
+            "claims 'scorer-conditional entropy' without either binding "
+            f"to real scorer features (one of {_CHECK_269_FEATURE_BINDING_TOKENS!r}) "
+            f"OR self-disclosure {_CHECK_269_DISCLOSURE_TOKEN!r}. Per "
+            "Catalog #269 (codex bkrbqet3p F4), a position-partition proxy "
+            "must NOT present as H(X | scorer_state_dict); either bind to "
+            "actual scorer-derived features and test the dependency, OR "
+            "relabel as a position-partition proxy and exclude from "
+            "canonical lower-bound / autopilot state."
+        )
+    if verbose:
+        print(
+            f"check_scorer_conditional_entropy_actually_uses_scorer_state: "
+            f"{len(violations)} violation(s)"
+        )
+    if violations and strict:
+        raise PreflightError(
+            "check_scorer_conditional_entropy_actually_uses_scorer_state "
+            f"found {len(violations)} violation(s). Per CLAUDE.md "
+            "'Bugs must be permanently fixed AND self-protected against' "
+            "+ Catalog #269 (codex bkrbqet3p F4):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
 
