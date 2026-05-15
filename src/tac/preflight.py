@@ -2123,6 +2123,23 @@ def preflight_all(
         check_trainer_auth_eval_uses_canonical_helper(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #249 - phantom-score directory class permanent fix.
+        # Per the Z3 v2 FULL Modal A100 dispatch 2026-05-15T11:41:15Z empirical
+        # anchor: trainer hardcoded `result_json_path = out_dir /
+        # "contest_auth_eval_cuda.json"` regardless of auth_eval_device; Modal
+        # injected AUTH_EVAL_DEVICE=cpu; CPU eval result landed in a file named
+        # *_cuda.json inside *_cuda_work/ directory. Parent agent quoted
+        # "0.19869 [contest-CUDA T4]" from the FILENAME despite metadata saying
+        # CPU. Paired re-eval revealed true CUDA = 0.2317. Initial wire-in is
+        # WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" because 23
+        # substrate trainers + 4 deploy files currently hardcode the device
+        # token. The runtime auto-redirect at the canonical helper extincts the
+        # actual lie surface immediately; strict-flip planned once a sister
+        # wave drives caller-side hardcoded filenames to 0. Memory:
+        # feedback_misleading_directory_name_phantom_score_class_permanent_fix_landed_20260515.md.
+        check_no_misleading_device_named_output_directories(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-14 Catalog #228 - F3 GTScorerCache trainer-side consumption
         # gate. Per F3-BACKPORT-WAVE-V2 op-routable #5. Refuses substrate
         # trainers that declare the RESERVED `--enable-gt-scorer-cache`
@@ -30758,6 +30775,137 @@ _EVIDENCE_FILES = (
 )
 
 
+def _evidence_row_forensic_key(row: dict[str, object]) -> tuple[str, str, str, str] | None:
+    key = (
+        str(row.get("technique") or ""),
+        str(row.get("lane_id") or ""),
+        str(row.get("job_name") or row.get("instance_job_id") or ""),
+        str(row.get("archive_sha256") or ""),
+    )
+    if not all(key):
+        return None
+    return key
+
+
+def _evidence_row_marker_text(row: dict[str, object]) -> str:
+    blockers = row.get("dispatch_blockers", [])
+    blocker_text = (
+        " ".join(str(blocker) for blocker in blockers)
+        if isinstance(blockers, list)
+        else str(blockers or "")
+    )
+    return " ".join(
+        str(row.get(key) or "")
+        for key in (
+            "evidence_grade",
+            "evidence_marker",
+            "evidence_semantics",
+            "contest_dispatch_verdict",
+            "measured_config_status",
+        )
+    ).lower() + " " + blocker_text.lower()
+
+
+def _evidence_row_requires_engineering_forensic_review(
+    row: dict[str, object],
+) -> bool:
+    marker = _evidence_row_marker_text(row)
+    normalized = marker.replace("-", "_")
+    decision_text = " ".join(
+        str(row.get(key) or "")
+        for key in (
+            "evidence_grade",
+            "evidence_marker",
+            "evidence_semantics",
+            "contest_dispatch_verdict",
+            "measured_config_status",
+        )
+    ).lower()
+    return bool(
+        row.get("family_falsified") is True
+        or row.get("method_family_retired") is True
+        or row.get("rank_or_kill_eligible") is True
+        or "contest_cuda_a_negative" in normalized
+        or "exact_cuda_negative" in normalized
+        or "measured_config_exact_cuda_negative" in normalized
+        or "measured_config_retired_exact_cuda_negative" in normalized
+        or "falsified" in decision_text
+        or "kill" in decision_text
+        or "dead" in decision_text
+    )
+
+
+def _engineering_forensic_audit_is_valid(
+    audit: object,
+) -> tuple[bool, str]:
+    if not isinstance(audit, dict):
+        return False, "engineering_forensic_audit is not an object"
+    required_true_fields = (
+        "custody_reviewed",
+        "axis_reviewed",
+        "runtime_config_reviewed",
+        "archive_runtime_closure_reviewed",
+        "score_formula_reviewed",
+        "dispatch_claim_reviewed",
+    )
+    missing = [
+        field for field in required_true_fields
+        if audit.get(field) is not True
+    ]
+    if missing:
+        return False, "audit missing true field(s): " + ", ".join(missing)
+    if not isinstance(audit.get("engineering_or_config_bug_found"), bool):
+        return False, "audit must set boolean engineering_or_config_bug_found"
+    if not str(audit.get("classification_after_audit") or "").strip():
+        return False, "audit must set classification_after_audit"
+    return True, ""
+
+
+def _result_review_packet_is_valid_for_forensic_review(
+    root: Path,
+    review_packet: object,
+) -> tuple[bool, str]:
+    if not isinstance(review_packet, str) or not review_packet.strip():
+        return False, "exact_result_review_packet missing"
+    packet_path = root / review_packet
+    if not packet_path.is_file():
+        return False, f"exact_result_review_packet not found: {review_packet}"
+    try:
+        payload = json.loads(packet_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return False, f"exact_result_review_packet unreadable: {review_packet}: {exc}"
+    if not isinstance(payload, dict):
+        return False, f"exact_result_review_packet not an object: {review_packet}"
+    if payload.get("schema") != "tac_result_review_packet_v1":
+        return False, f"unexpected review packet schema: {review_packet}"
+    audit = payload.get("engineering_forensic_audit")
+    if isinstance(audit, dict):
+        return _engineering_forensic_audit_is_valid(audit)
+    review_requirements = payload.get("review_requirements")
+    if not isinstance(review_requirements, dict):
+        return False, f"review packet lacks review_requirements: {review_packet}"
+    required = (
+        "engineering_review_required",
+        "contest_compliance_review_required",
+    )
+    missing = [
+        field for field in required
+        if review_requirements.get(field) is not True
+    ]
+    if missing:
+        return False, (
+            f"review packet lacks required review flag(s) {missing}: "
+            f"{review_packet}"
+        )
+    if not isinstance(payload.get("runtime_custody"), dict):
+        return False, f"review packet lacks runtime_custody: {review_packet}"
+    if not isinstance(payload.get("score_recomputation"), dict):
+        return False, f"review packet lacks score_recomputation: {review_packet}"
+    if not isinstance(payload.get("dispatch_claim_state"), dict):
+        return False, f"review packet lacks dispatch_claim_state: {review_packet}"
+    return True, ""
+
+
 def check_evidence_row_has_falsification_scope_when_negative(
     *,
     repo_root: str | Path | None = None,
@@ -30782,6 +30930,7 @@ def check_evidence_row_has_falsification_scope_when_negative(
     violations: list[str] = []
     n_rows = 0
     n_files = 0
+    evidence_rows: list[tuple[str, int, dict[str, object]]] = []
     for rel in _EVIDENCE_FILES:
         path = root / rel
         if not path.is_file():
@@ -30801,19 +30950,39 @@ def check_evidence_row_has_falsification_scope_when_negative(
             n_rows += 1
             if not isinstance(row, dict):
                 continue
+            evidence_rows.append((rel, lineno, row))
+
+    reviewed_keys: set[tuple[str, str, str, str]] = set()
+    reviewed_key_reasons: dict[tuple[str, str, str, str], str] = {}
+    for rel, lineno, row in evidence_rows:
+        key = _evidence_row_forensic_key(row)
+        if key is None:
+            continue
+        audit_ok = False
+        audit_reason = ""
+        audit = row.get("engineering_forensic_audit")
+        if isinstance(audit, dict):
+            audit_ok, audit_reason = _engineering_forensic_audit_is_valid(audit)
+        if not audit_ok:
+            audit_ok, audit_reason = _result_review_packet_is_valid_for_forensic_review(
+                root,
+                row.get("exact_result_review_packet"),
+            )
+        if audit_ok:
+            reviewed_keys.add(key)
+            reviewed_key_reasons[key] = f"{rel}:{lineno}"
+        elif audit_reason:
+            reviewed_key_reasons.setdefault(key, audit_reason)
+
+    for rel, lineno, row in evidence_rows:
             if "family_falsified" not in row:
-                continue
-            ff = row["family_falsified"]
+                ff = None
+            else:
+                ff = row["family_falsified"]
             scope = row.get("falsification_scope", "")
-            grade = str(row.get("evidence_grade", "")).lower()
-            verdict = str(row.get("contest_dispatch_verdict", "")).lower()
-            status = str(row.get("measured_config_status", "")).lower()
-            blockers = row.get("dispatch_blockers", [])
-            blocker_text = " ".join(
-                str(blocker).lower() for blocker in blockers
-            ) if isinstance(blockers, list) else ""
+            marker = _evidence_row_marker_text(row)
             negative_or_retired = any(
-                token in " ".join([grade, verdict, status, blocker_text])
+                token in marker
                 for token in (
                     "a-negative",
                     "exact-negative",
@@ -30822,6 +30991,52 @@ def check_evidence_row_has_falsification_scope_when_negative(
                     "falsified",
                 )
             )
+            requires_review = _evidence_row_requires_engineering_forensic_review(row)
+            if requires_review:
+                audit_ok = False
+                audit_reason = ""
+                audit = row.get("engineering_forensic_audit")
+                if isinstance(audit, dict):
+                    audit_ok, audit_reason = _engineering_forensic_audit_is_valid(audit)
+                if not audit_ok:
+                    audit_ok, audit_reason = (
+                        _result_review_packet_is_valid_for_forensic_review(
+                            root,
+                            row.get("exact_result_review_packet"),
+                        )
+                    )
+                key = _evidence_row_forensic_key(row)
+                if not audit_ok and key is not None and key in reviewed_keys:
+                    audit_ok = True
+                    audit_reason = f"superseded_by_reviewed_duplicate:{reviewed_key_reasons[key]}"
+                if not audit_ok:
+                    technique = row.get("technique", "<unknown>")
+                    violations.append(
+                        f"{rel}:{lineno}: technique={technique!r} declares "
+                        "dead/falsified/exact-negative/rank-or-kill evidence "
+                        "without an engineering forensic audit or valid "
+                        f"exact_result_review_packet ({audit_reason}). Before "
+                        "declaring a lane dead/falsified, review custody, "
+                        "axis, runtime config, archive/runtime closure, score "
+                        "formula, and dispatch claim state."
+                    )
+                audit_obj = row.get("engineering_forensic_audit")
+                if (
+                    isinstance(audit_obj, dict)
+                    and audit_obj.get("engineering_or_config_bug_found") is True
+                    and (
+                        row.get("family_falsified") is True
+                        or row.get("method_family_retired") is True
+                        or row.get("rank_or_kill_eligible") is True
+                    )
+                ):
+                    technique = row.get("technique", "<unknown>")
+                    violations.append(
+                        f"{rel}:{lineno}: technique={technique!r} has "
+                        "engineering_or_config_bug_found=true but still sets "
+                        "family/method/rank-or-kill status. This must remain "
+                        "indeterminate until the engineering/config bug is fixed."
+                    )
             if (
                 ff is False
                 and negative_or_retired
@@ -54949,6 +55164,304 @@ def check_trainer_auth_eval_uses_canonical_helper(
             f"{len(violations)} trainer function(s) hand-roll auth_eval "
             f"subprocess (Catalog #226 — C6 auth_eval rc=2 self-protect); "
             f"first 3:\n  "
+            + "\n  ".join(violations[:3])
+        )
+        raise PreflightError(msg)
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #249 — check_no_misleading_device_named_output_directories
+#
+# Phantom-score directory class permanent fix (2026-05-15). Refuses any caller
+# under `src/tac/`, `tools/`, `experiments/`, `scripts/` that constructs an
+# auth-eval output JSON path or work directory whose filename device-token
+# (`_cuda` / `_cpu` / `_mps`) is HARDCODED instead of derived from the actual
+# auth-eval device.
+#
+# Empirical anchor: Z3 v2 FULL Modal A100 dispatch 2026-05-15T11:41:15Z. The
+# trainer hardcoded `result_json_path = out_dir / "contest_auth_eval_cuda.json"`
+# regardless of `auth_eval_device`. The Modal dispatcher injected
+# `AUTH_EVAL_DEVICE=cpu` + `MODAL_AUTH_EVAL_ADVISORY_ONLY=1`. Result:
+# `contest_auth_eval_cuda.json` containing `device=cpu` + `score_axis=
+# diagnostic_cpu`, plus `contest_auth_eval_cuda_work/` directory containing
+# CPU-evaluated artifacts. Parent agent quoted "0.19869 [contest-CUDA T4]"
+# from the FILENAME despite the metadata saying CPU. Paired re-eval revealed
+# true CUDA = 0.2317 — the originally-claimed CUDA score did not exist.
+#
+# This is the "phantom-score directory" anti-pattern: an artifact whose
+# FILENAME makes a claim its CONTENT cannot honor. Per CLAUDE.md
+# "Apples-to-apples evidence discipline" + "Forbidden component-aliasing for
+# baselines" non-negotiables, the filename MUST match the device that
+# produced the contents OR be device-agnostic.
+#
+# Bug-class spread (META-meta 6-7x per CLAUDE.md): 23 substrate trainers +
+# 4 deployment files + canonical helper all hardcoded `_cuda.json`. The
+# canonical helper `gate_auth_eval_call` derives `work_dir` from
+# `output_json.stem`, so a single misleading filename poisoned the work-dir
+# name too. The companion runtime fix in
+# `src/tac/substrates/_shared/smoke_auth_eval_gate.py` adds
+# `_redirect_output_json_to_match_device` which auto-rewrites mismatched
+# filenames at runtime + emits a loud `[phantom-score-fix]` warning so the
+# upstream caller can be migrated.
+#
+# This STRICT preflight gate is the structural sister: it refuses any source
+# code line that constructs a file path with a hardcoded device token under
+# a context that suggests the path is an auth-eval output. The detection is
+# AST-aware (string-literal targets only); same-line waiver
+# `# DEVICE_NAMED_DIR_OK:<rationale>` accepts the rare deliberate case
+# (e.g., a CUDA-only benchmark fixture). Placeholder `<rationale>` literal
+# rejected so the docstring example cannot self-waive.
+#
+# Sister of Catalog #127 (custody validator routing) + Catalog #221
+# (auth_eval result fail-closed) + Catalog #226 (canonical
+# `gate_auth_eval_call` helper enforcement). Together they extinct the
+# phantom-score class at FOUR surfaces: per-call-site custody routing
+# (#127) + result-artifact fail-closed (#221) + caller-must-route-through-
+# canonical-helper (#226) + filename-must-match-device (#249).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because 23 substrate trainers + 4 deploy files currently hardcode
+# `contest_auth_eval_cuda.json`. The runtime auto-redirect at the canonical
+# helper extincts the actual lie surface immediately; the strict-flip
+# planned once a sister wave drives caller-side hardcoded filenames to 0.
+#
+# Memory: feedback_misleading_directory_name_phantom_score_class_permanent_
+# fix_landed_20260515.md.
+# ----------------------------------------------------------------------------
+
+# Tokens scanned for misleading device-suffix in auth-eval output filenames.
+_CHECK_249_DEVICE_TOKENS: tuple[str, ...] = ("cuda", "cpu", "mps")
+
+# Path-context tokens that indicate the string literal is being used as an
+# auth-eval output path (high false-positive risk without context).
+_CHECK_249_AUTH_EVAL_CONTEXT_TOKENS: tuple[str, ...] = (
+    "contest_auth_eval",
+    "auth_eval_result",
+    "auth_eval_json",
+    "auth_eval_path",
+)
+
+# Same-line waiver pattern; rationale required (no placeholder).
+_CHECK_249_WAIVER_RE = re.compile(
+    r"#\s*DEVICE_NAMED_DIR_OK\s*:\s*(.+?)\s*$"
+)
+_CHECK_249_WAIVER_PLACEHOLDER_LITERALS: frozenset[str] = frozenset({
+    "<rationale>", "<reason>", "<...>", "TODO", "todo",
+})
+
+# Self-exempt files (canonical implementation + tests + this gate's own
+# definition).
+_CHECK_249_SELF_EXEMPT_PATH_SUFFIXES: tuple[str, ...] = (
+    "src/tac/preflight.py",  # this file (gate definition)
+    "src/tac/substrates/_shared/smoke_auth_eval_gate.py",  # canonical helper (auto-redirect logic)
+)
+
+# Path markers excluded from scope.
+_CHECK_249_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",  # DERIVED_OUTPUT (Catalog #113)
+    "_intake_",  # vendored PR clones (Catalog #109)
+    ".omx/oss_export/",  # OSS mirror
+    "vendored",
+    "/tests/",
+    "/test_",
+    "build/lib/",
+    "reports/raw/",
+)
+
+
+def _check_249_path_in_scope(path: Path, repo_root: Path) -> bool:
+    """Return True if ``path`` is in scope for Catalog #249."""
+
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return False
+    # Must be a .py file under tools/, experiments/, scripts/, or src/tac/.
+    if not rel.endswith(".py"):
+        return False
+    in_scope_root = (
+        rel.startswith("src/tac/")
+        or rel.startswith("tools/")
+        or rel.startswith("experiments/")
+        or rel.startswith("scripts/")
+    )
+    if not in_scope_root:
+        return False
+    # Self-exempt canonical helper + this gate's defining file.
+    for suffix in _CHECK_249_SELF_EXEMPT_PATH_SUFFIXES:
+        if rel == suffix or rel.endswith("/" + suffix):
+            return False
+    # Exempt path markers.
+    for marker in _CHECK_249_EXEMPT_PATH_MARKERS:
+        if marker in rel:
+            return False
+    # Exempt test files even outside /tests/ dir.
+    name = path.name
+    if name.startswith("test_") or name.endswith("_test.py"):
+        return False
+    return True
+
+
+def _check_249_line_has_waiver(line: str) -> bool:
+    """Return True if line carries a valid same-line Catalog #249 waiver."""
+
+    match = _CHECK_249_WAIVER_RE.search(line)
+    if not match:
+        return False
+    rationale = match.group(1).strip()
+    if not rationale:
+        return False
+    if rationale in _CHECK_249_WAIVER_PLACEHOLDER_LITERALS:
+        return False
+    return True
+
+
+def _check_249_string_literal_is_misleading(literal: str) -> str | None:
+    """Return the matched device token if ``literal`` looks like a misleading
+    device-named auth-eval output path, else None.
+
+    Detection criteria (all required):
+    1. Contains an auth-eval context token (`contest_auth_eval`,
+       `auth_eval_result`, etc.)
+    2. Contains a `_<device>` suffix immediately before `.json` / `_work` / end
+       (e.g. `contest_auth_eval_cuda.json`, `something_cpu_work`)
+
+    Returns the matched device token (cuda / cpu / mps) or None.
+    """
+
+    # Cheap context check first.
+    has_context = any(
+        ctx in literal for ctx in _CHECK_249_AUTH_EVAL_CONTEXT_TOKENS
+    )
+    if not has_context:
+        return None
+    # Look for `_<device>.json` or `_<device>_work` or `_<device>` at end.
+    for token in _CHECK_249_DEVICE_TOKENS:
+        for suffix in (f"_{token}.json", f"_{token}_work", f"_{token}"):
+            if literal.endswith(suffix):
+                # Confirm not an inner false positive (require token boundary).
+                # A literal like 'contest_auth_eval_cuda.json' should match
+                # but 'contest_auth_eval_cudacake.json' should not.
+                if suffix.endswith(".json") or suffix.endswith("_work"):
+                    return token
+                # Bare `_<device>` only matches if it's the final segment.
+                idx = literal.rfind(f"_{token}")
+                if idx >= 0 and idx + len(f"_{token}") == len(literal):
+                    return token
+    return None
+
+
+def _check_249_collect_violations_in_file(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Walk ``path``'s AST + return a list of violation messages."""
+
+    violations: list[str] = []
+    try:
+        source = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return violations
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return violations
+    source_lines = source.splitlines()
+    try:
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        rel = str(path)
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Constant):
+            continue
+        if not isinstance(node.value, str):
+            continue
+        token = _check_249_string_literal_is_misleading(node.value)
+        if token is None:
+            continue
+        # Check same-line waiver on the line containing this literal.
+        lineno = getattr(node, "lineno", 0)
+        if 1 <= lineno <= len(source_lines):
+            if _check_249_line_has_waiver(source_lines[lineno - 1]):
+                continue
+        violations.append(
+            f"{rel}:{lineno}: hardcoded device token "
+            f"'_{token}' in auth-eval path literal "
+            f"{node.value!r} — derive from auth_eval_device "
+            "or add same-line `# DEVICE_NAMED_DIR_OK:<rationale>` "
+            "waiver. See Catalog #249."
+        )
+    return violations
+
+
+def _check_249_iter_in_scope_files(repo_root: Path):
+    """Iterate over .py files in scope for Catalog #249."""
+
+    for sub in ("src/tac", "tools", "experiments", "scripts"):
+        sub_root = repo_root / sub
+        if not sub_root.exists():
+            continue
+        for path in sub_root.rglob("*.py"):
+            if _check_249_path_in_scope(path, repo_root):
+                yield path
+
+
+def check_no_misleading_device_named_output_directories(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #249 — refuse hardcoded device tokens in auth-eval output paths.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + "Forbidden
+    component-aliasing for baselines" non-negotiables: an artifact filename or
+    directory name MUST NOT make a device claim its contents cannot honor.
+
+    Bug class anchor: Z3 v2 FULL Modal A100 dispatch 2026-05-15. Trainer
+    hardcoded `result_json_path = out_dir / "contest_auth_eval_cuda.json"`;
+    Modal dispatcher injected AUTH_EVAL_DEVICE=cpu; CPU eval result landed in
+    `contest_auth_eval_cuda.json` + `contest_auth_eval_cuda_work/`. Parent
+    agent quoted "0.19869 [contest-CUDA T4]" from the FILENAME despite the
+    metadata saying CPU. Paired re-eval revealed true CUDA = 0.2317.
+
+    The runtime sister fix in `src/tac/substrates/_shared/smoke_auth_eval_gate.
+    py::_redirect_output_json_to_match_device` auto-rewrites mismatched
+    filenames at runtime + emits a loud `[phantom-score-fix]` warning. This
+    STRICT preflight gate is the structural complement: it refuses NEW
+    hardcoded device tokens in source code so future trainers don't regrow
+    the bug class at a different surface.
+
+    Sister of Catalog #127 (custody validator) + Catalog #221 (auth_eval
+    result fail-closed) + Catalog #226 (canonical helper enforcement).
+    """
+
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    files = list(_check_249_iter_in_scope_files(root))
+    violations: list[str] = []
+    for path in files:
+        violations.extend(_check_249_collect_violations_in_file(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [catalog-249] WARN: {len(violations)} hardcoded "
+                f"device-named auth-eval path(s) across "
+                f"{len(files)} scanned file(s) (strict={strict})"
+            )
+        else:
+            print(
+                f"  [catalog-249] OK ({len(files)} file(s) scanned)"
+            )
+
+    if violations and strict:
+        msg = (
+            f"check_no_misleading_device_named_output_directories: "
+            f"{len(violations)} hardcoded device-named auth-eval "
+            f"path(s) (Catalog #249 — phantom-score directory class "
+            f"permanent fix; Z3 v2 anchor 2026-05-15); first 3:\n  "
             + "\n  ".join(violations[:3])
         )
         raise PreflightError(msg)

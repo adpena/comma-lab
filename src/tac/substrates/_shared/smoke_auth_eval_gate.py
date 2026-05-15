@@ -194,6 +194,69 @@ def _explicit_auth_eval_device(auth_eval_device: str | None) -> str | None:
     return text or None
 
 
+# Canonical device-suffix tokens recognized in auth-eval output filenames.
+# A filename containing one of these tokens is interpreted as device-claimed; if
+# the actual ``auth_eval_device_type`` does not match, the filename is rewritten
+# so the on-disk artifact name matches the on-disk content's score axis.
+_AUTH_EVAL_DEVICE_FILENAME_TOKENS = ("cuda", "cpu", "mps")
+
+
+def _redirect_output_json_to_match_device(
+    output_json: Path, auth_eval_device_type: str, *, substrate_tag: str
+) -> Path:
+    """Rewrite ``output_json`` to a device-correct filename when needed.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + "Forbidden
+    component-aliasing for baselines" non-negotiables: an artifact's filename
+    MUST NOT make a claim its content cannot honor. When a caller passes
+    ``contest_auth_eval_cuda.json`` and the actual ``auth_eval_device_type`` is
+    ``cpu``, this helper rewrites the filename to ``contest_auth_eval_cpu.json``
+    and emits a loud stderr-equivalent warning so the caller can be migrated to
+    a device-aware pattern at the source.
+
+    The historical lie surface (Z3 v2 FULL 2026-05-15:
+    ``contest_auth_eval_cuda.json`` containing ``device=cpu``) is structurally
+    extincted: future dispatches with the same caller code path land at
+    ``contest_auth_eval_cpu.json`` and ``contest_auth_eval_cpu_work/`` so the
+    filename matches the content. Catalog #249 is the structural sister gate.
+    """
+
+    stem = output_json.stem
+    suffix = output_json.suffix
+    parent = output_json.parent
+
+    # Case A: filename has no device suffix — preserve as-is (device-agnostic
+    # callers are honest by construction).
+    matched_token: str | None = None
+    for token in _AUTH_EVAL_DEVICE_FILENAME_TOKENS:
+        # Match `_cuda.json` / `_cpu.json` / `_mps.json` style suffixes.
+        # Word-boundary check: token must be preceded by `_` or be at the start.
+        if stem.endswith(f"_{token}"):
+            matched_token = token
+            break
+    if matched_token is None:
+        return output_json
+
+    # Case B: filename's device token matches the actual device — no lie.
+    if matched_token == auth_eval_device_type:
+        return output_json
+
+    # Case C: filename's device token DOES NOT match the actual device. Rewrite.
+    new_stem = stem[: -(len(matched_token) + 1)] + f"_{auth_eval_device_type}"
+    new_path = parent / f"{new_stem}{suffix}"
+    print(
+        f"[{substrate_tag}] [WARNING] [phantom-score-fix] caller passed "
+        f"output_json={output_json.name!r} but auth_eval_device_type="
+        f"{auth_eval_device_type!r}; rewriting output to {new_path.name!r} "
+        "to prevent phantom-score directory-name lie. Update the caller to "
+        "construct the filename from auth_eval_device. See Catalog #249 + "
+        "CLAUDE.md FORBIDDEN PATTERNS 'Forbidden misleading-directory-name "
+        "(the phantom-score directory trap)'.",
+        flush=True,
+    )
+    return new_path
+
+
 def gate_auth_eval_call(
     *,
     args: argparse.Namespace,
@@ -332,6 +395,22 @@ def gate_auth_eval_call(
     # MODAL_AUTH_EVAL_ADVISORY_ONLY=1 because the training container does not
     # provide NVDEC. That path is diagnostic/advisory only, so the evaluator's
     # explicit temp bypass is appropriate and keeps the failure mode visible.
+    #
+    # PHANTOM-SCORE BUG CLASS PERMANENT FIX (Catalog #249, 2026-05-15):
+    # Trainers historically hardcoded ``output_json=output_dir / "contest_auth_eval_cuda.json"``
+    # regardless of the actual ``auth_eval_device``. When AUTH_EVAL_DEVICE=cpu
+    # was injected by the Modal dispatcher, the CPU eval result landed in a
+    # file named ``*_cuda.json`` and a directory named ``*_cuda_work/``. Parent
+    # agents then quoted the filename as evidence of a CUDA score that did not
+    # exist. Empirical anchor: Z3 v2 FULL 2026-05-15 dispatch produced
+    # ``contest_auth_eval_cuda.json`` containing ``device=cpu`` /
+    # ``score_axis=diagnostic_cpu`` — the file's CONTENT was honest, but the
+    # FILENAME lied. The fix re-derives the output filename + work_dir to match
+    # the actual ``auth_eval_device_type`` and emits a LOUD warning if the
+    # caller passed a misleading path so the upstream caller can be migrated.
+    output_json = _redirect_output_json_to_match_device(
+        output_json, auth_eval_device_type, substrate_tag=substrate_tag
+    )
     work_dir = output_json.parent / f"{output_json.stem}_work"
     modal_cpu_advisory = (
         auth_eval_device_type == "cpu"

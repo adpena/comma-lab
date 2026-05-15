@@ -29109,6 +29109,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_misleading_directory_name_phantom_score_class_permanent_fix_20260515",
+      "name": "Misleading directory-name phantom-score class permanent fix (Z3 v2 anchor 2026-05-15)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/_shared/smoke_auth_eval_gate.py + src/tac/preflight.py Catalog #249 + CLAUDE.md FORBIDDEN PATTERNS entry"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/preflight.py check_no_misleading_device_named_output_directories (warn-only at landing; 32 violations; strict-flip pending caller backfill)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_misleading_directory_name_phantom_score_class_permanent_fix_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -29118,5 +29159,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T15:52:23Z"
+  "updated_at": "2026-05-15T16:11:50Z"
 }
