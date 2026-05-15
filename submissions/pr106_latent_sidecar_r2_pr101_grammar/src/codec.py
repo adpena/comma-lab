@@ -688,11 +688,13 @@ def decode_fixed_latents(data):
 
 
 def decode_fixed_latents_raw(data):
-    """Decode legacy Brotli, HLM1, or HLM2 fixed-latent bytes to raw layout."""
+    """Decode legacy Brotli, HLM1, HLM2, or HLM3 fixed-latent bytes to raw layout."""
     if data[:4] == b"HLM1":
         return decode_hlm1_fixed_latents_raw(data)
     if data[:4] == b"HLM2":
         return decode_hlm2_fixed_latents_raw(data)
+    if data[:4] == b"HLM3":
+        return decode_hlm3_fixed_latents_raw(data)
     raw = brotli.decompress(data)
     if len(raw) != 600 * 28 * 2 + 28 * 4:
         raise ValueError("bad fixed latent raw payload")
@@ -760,6 +762,28 @@ def decode_hlm2_fixed_latents_raw(data):
     return lo + meta + hi
 
 
+def decode_hlm3_fixed_latents_raw(data):
+    """Decode HLM3 sparse high-byte fixed-latent bytes.
+
+    HLM3 is HLM2 with the low-byte Brotli length derived from the Brotli stream
+    boundary, saving two bytes while preserving the same raw latent layout.
+    """
+    if data[:4] != b"HLM3":
+        raise ValueError("invalid HLM3 fixed-latent magic")
+    n, d = 600, 28
+    total = n * d
+    meta_len = d * 4
+    raw_lo, lo_len = decompress_one_brotli_stream(data[4:], "HLM3 lo")
+    if len(raw_lo) != total:
+        raise ValueError("HLM3 lo stream length mismatch")
+    lo_start = 4
+    lo_end = lo_start + lo_len
+    meta = read_exact(data, lo_end, meta_len, "HLM3 meta")
+    hi_delta = data[lo_end + meta_len:]
+    hi = decode_hlm_hi_delta_positions_until_end(hi_delta, total)
+    return raw_lo + meta + hi
+
+
 def decode_hlm1_hi_delta_positions(payload, count, total):
     hi = bytearray(total)
     cursor = 0
@@ -808,6 +832,21 @@ def decode_hlm_hi_delta_positions_until_end(payload, total):
             raise ValueError("HLM hi position out of range")
         hi[pos] = 1
     return bytes(hi)
+
+
+def decompress_one_brotli_stream(payload, label):
+    decoder = brotli.Decompressor()
+    chunks = []
+    cursor = 0
+    try:
+        while cursor < len(payload) and not decoder.is_finished():
+            chunks.append(decoder.process(payload[cursor:cursor + 1]))
+            cursor += 1
+    except brotli.error as exc:
+        raise ValueError(f"{label} Brotli stream decode failed") from exc
+    if not decoder.is_finished():
+        raise ValueError(f"{label} Brotli stream truncated")
+    return b"".join(chunks), cursor
 
 
 def parse_fixed_archive(archive_bytes):

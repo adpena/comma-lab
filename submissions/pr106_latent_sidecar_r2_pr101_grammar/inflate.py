@@ -16,6 +16,8 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
                     PR106 0xff + decoder_len24 header elided and reconstructed
   format_id=0x09 — HDM9/HLM2-specific form of format_id=0x08 with the HDM8
                     raw scale tail recoded as low3 bytes + high-byte bitmask
+  format_id=0x0A — HDM9/HLM3-specific form of format_id=0x09 with HLM2's
+                    low-Brotli length and the fixed no-op rank byte elided
 
 All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
@@ -63,6 +65,7 @@ SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x06
 SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x07
 SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x08
 SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED = 0x09
+SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED = 0x0A
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
@@ -71,6 +74,7 @@ SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_PR101_HEADERLESS_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
+    SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -80,7 +84,9 @@ FIXED_META_DIM_BYTES = 375
 FIXED_META_RANK_BYTES = 1
 FIXED_META_NOOP_RANK_BYTES = 1
 FIXED_META_RANK_BYTE = b"\x00"
+FIXED_META_NOOP_RANK_BYTE = b"\x00"
 FIXED_META_PAYLOAD_BYTES = 526
+FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES = 525
 HEADERLESS_INNER_FIRST_BYTE = 0xFF
 HDM8_HLM2_DECODER_PAYLOAD_BYTES = 169_974
 HDM9_HLM2_DECODER_PAYLOAD_BYTES = 169_950
@@ -88,6 +94,8 @@ HDM8_HLM2_LATENT_PAYLOAD_BYTES = 15_776
 HDM8_HLM2_DECODER_MAGIC = b"HDM8"
 HDM9_HLM2_DECODER_MAGIC = b"HDM9"
 HDM8_HLM2_LATENT_MAGIC = b"HLM2"
+HDM9_HLM3_LATENT_MAGIC = b"HLM3"
+HDM9_HLM3_LATENT_PAYLOAD_BYTES = HDM8_HLM2_LATENT_PAYLOAD_BYTES - 2
 
 # PR101-grammar schema for this variant: n_pairs=600, n_dims=28,
 # deltas=(-2,-1,1,2), huff_min/max=(2,8), no-op sentinel=255.
@@ -145,6 +153,28 @@ def reconstruct_hdm9_hlm2_inner_headerless_pr106_bytes(
     )
 
 
+def reconstruct_hdm9_hlm3_inner_headerless_pr106_bytes(
+    inner_without_header: bytes,
+) -> bytes:
+    """Reconstruct the fixed HDM9/HLM3 PR106 header elided by format_id=0x0A."""
+    expected_len = HDM9_HLM2_DECODER_PAYLOAD_BYTES + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+    if len(inner_without_header) != expected_len:
+        raise ValueError(
+            "HDM9/HLM3 inner-headerless payload length mismatch: "
+            f"got {len(inner_without_header)} bytes; expected {expected_len}"
+        )
+    if inner_without_header[:4] != HDM9_HLM2_DECODER_MAGIC:
+        raise ValueError("HDM9/HLM3 inner-headerless payload missing HDM9 magic")
+    latent_offset = HDM9_HLM2_DECODER_PAYLOAD_BYTES
+    if inner_without_header[latent_offset : latent_offset + 4] != HDM9_HLM3_LATENT_MAGIC:
+        raise ValueError("HDM9/HLM3 inner-headerless payload missing HLM3 magic")
+    return (
+        bytes([HEADERLESS_INNER_FIRST_BYTE])
+        + HDM9_HLM2_DECODER_PAYLOAD_BYTES.to_bytes(3, "little")
+        + inner_without_header
+    )
+
+
 def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | None]:
     """Slice apart the wrapper and dispatch on format_id.
 
@@ -170,6 +200,24 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
                 bin_bytes[-FIXED_META_PAYLOAD_BYTES:],
                 None,
             )
+        if len(bin_bytes) >= FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES + 1:
+            inner_without_header = bin_bytes[:-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES]
+            if inner_without_header.startswith(HDM9_HLM2_DECODER_MAGIC):
+                latent_offset = HDM9_HLM2_DECODER_PAYLOAD_BYTES
+                if (
+                    len(inner_without_header)
+                    == HDM9_HLM2_DECODER_PAYLOAD_BYTES + HDM9_HLM3_LATENT_PAYLOAD_BYTES
+                    and inner_without_header[latent_offset : latent_offset + 4]
+                    == HDM9_HLM3_LATENT_MAGIC
+                ):
+                    return (
+                        SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED,
+                        reconstruct_hdm9_hlm3_inner_headerless_pr106_bytes(
+                            inner_without_header
+                        ),
+                        bin_bytes[-FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES:],
+                        None,
+                    )
         if len(bin_bytes) < FIXED_META_PAYLOAD_BYTES + 1:
             raise ValueError("HDM8/HLM2 inner-headerless sidecar truncated before payload")
         inner_without_header = bin_bytes[:-FIXED_META_PAYLOAD_BYTES]
@@ -309,6 +357,21 @@ def decode_pr101_fixed_meta_rank_elided_sidecar(
     return decode_pr101_grammar_sidecar(expanded_payload, fixed_meta_framing_bytes())
 
 
+def decode_pr101_fixed_meta_noop_rank_elided_sidecar(
+    payload: bytes,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode format_id=0x0A by restoring the elided fixed no-op rank byte."""
+    expected_payload_bytes = FIXED_META_NOOP_RANK_ELIDED_PAYLOAD_BYTES
+    if len(payload) != expected_payload_bytes:
+        raise ValueError(
+            "fixed-meta PR101 no-op-rank-elided sidecar payload length mismatch: "
+            f"got {len(payload)} bytes; expected {expected_payload_bytes}"
+        )
+    return decode_pr101_fixed_meta_rank_elided_sidecar(
+        payload + FIXED_META_NOOP_RANK_BYTE
+    )
+
+
 def apply_sidecar_corrections(
     latents: torch.Tensor,
     dim_arr: np.ndarray,
@@ -383,6 +446,13 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         if framing_meta is None:
             raise ValueError("framing_meta missing for format_id=0x02 payload")
         dim_arr, delta_q_arr = decode_pr101_grammar_sidecar(sidecar_blob, framing_meta)
+    elif (
+        format_id
+        == SIDECAR_FORMAT_PR101_HDM9_HLM3_INNER_HEADERLESS_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        dim_arr, delta_q_arr = decode_pr101_fixed_meta_noop_rank_elided_sidecar(
+            sidecar_blob
+        )
     else:  # fixed-meta rank-elided formats 0x05, 0x06, 0x07, 0x08, and 0x09
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
 

@@ -658,11 +658,11 @@ def _runtime_score_affecting_sections_match(
     """Return whether runtime proof consumption covers PacketIR sections.
 
     Most PacketIR recodes preserve the same section names through runtime
-    decode. Formats 0x08 and 0x09 deliberately elide the PR106 inner header
-    from fixed HDM8/HLM2 or HDM9/HLM2 payloads; the runtime reconstructs that
-    header and consumes the reconstructed generic ``pr106_payload``. Accept
-    that alias only when the proof binds the fixed format and records unchanged
-    inner PR106 semantics.
+    decode. Formats 0x08, 0x09, and 0x0A deliberately elide the PR106 inner
+    header from fixed HDM8/HLM2, HDM9/HLM2, or HDM9/HLM3 payloads; the runtime
+    reconstructs that header and consumes the reconstructed generic
+    ``pr106_payload``. Accept that alias only when the proof binds the fixed
+    format and records unchanged inner PR106 semantics.
     """
 
     if actual_sections == expected_sections:
@@ -680,6 +680,10 @@ def _runtime_score_affecting_sections_match(
         "0x09": (
             "pr106_hdm9_hlm2_payload_without_inner_header",
             "format_0x09_hdm9_hlm2_reconstructed_pr106_payload_alias",
+        ),
+        "0x0A": (
+            "pr106_hdm9_hlm3_payload_without_inner_header",
+            "format_0x0a_hdm9_hlm3_reconstructed_pr106_payload_alias",
         ),
     }
     alias = headerless_aliases.get(str(proof.get("format_id")))
