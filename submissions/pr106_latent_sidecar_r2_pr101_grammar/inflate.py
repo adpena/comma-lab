@@ -8,8 +8,10 @@ PR106 HNeRV decoder + per-pair latent-correction sidecar with format_id dispatch
   format_id=0x02 — PR101 ranked-Huffman/no-op grammar sidecar (this variant's
                     primary encoding; saves 42 bytes net vs format_id=0x01)
   format_id=0x05 — PR101 grammar with fixed metadata and one rank byte elided
+  format_id=0x06 — format_id=0x05 plus implicit PR106 byte length from the
+                    fixed 526-byte sidecar tail
 
-Both format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
+All format_ids reconstruct the (dims, delta_q) arrays bit-identical, which is
 parser/decoder-consumption evidence only. Score components require exact
 auth-eval evidence under the scored runtime.
 
@@ -51,10 +53,12 @@ SIDECAR_MAGIC = 0xFE
 SIDECAR_FORMAT_BROTLI = 0x01
 SIDECAR_FORMAT_PR101_GRAMMAR = 0x02
 SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED = 0x05
+SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED = 0x06
 SUPPORTED_FORMATS = (
     SIDECAR_FORMAT_BROTLI,
     SIDECAR_FORMAT_PR101_GRAMMAR,
     SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
 )
 DELTA_SCALE = 0.01
 NO_OP_DIM = 255
@@ -64,6 +68,7 @@ FIXED_META_DIM_BYTES = 375
 FIXED_META_RANK_BYTES = 1
 FIXED_META_NOOP_RANK_BYTES = 1
 FIXED_META_RANK_BYTE = b"\x00"
+FIXED_META_PAYLOAD_BYTES = 526
 
 # PR101-grammar schema for this variant: n_pairs=600, n_dims=28,
 # deltas=(-2,-1,1,2), huff_min/max=(2,8), no-op sentinel=255.
@@ -103,6 +108,16 @@ def parse_sidecar_archive(bin_bytes: bytes) -> tuple[int, bytes, bytes, bytes | 
             f"{', '.join(f'0x{f:02X}' for f in SUPPORTED_FORMATS)}"
         )
     pos = 2
+    if format_id == SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED:
+        if len(bin_bytes) < pos + FIXED_META_PAYLOAD_BYTES:
+            raise ValueError("implicit-len sidecar archive truncated before sidecar payload")
+        return (
+            format_id,
+            bin_bytes[pos:-FIXED_META_PAYLOAD_BYTES],
+            bin_bytes[-FIXED_META_PAYLOAD_BYTES:],
+            None,
+        )
+
     (pr106_len,) = struct.unpack_from("<I", bin_bytes, pos)
     pos += 4
     pr106_bytes = bin_bytes[pos : pos + pr106_len]
@@ -190,7 +205,7 @@ def decode_pr101_fixed_meta_rank_elided_sidecar(
     payload: bytes,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Decode format_id=0x05 by restoring fixed metadata and the elided rank byte."""
-    expected_payload_bytes = 526
+    expected_payload_bytes = FIXED_META_PAYLOAD_BYTES
     if len(payload) != expected_payload_bytes:
         raise ValueError(
             "fixed-meta PR101 sidecar payload length mismatch: "
@@ -278,7 +293,7 @@ def inflate(src_bin: str, dst_raw: str) -> int:
         if framing_meta is None:
             raise ValueError("framing_meta missing for format_id=0x02 payload")
         dim_arr, delta_q_arr = decode_pr101_grammar_sidecar(sidecar_blob, framing_meta)
-    else:  # SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED
+    else:  # fixed-meta rank-elided formats 0x05 and 0x06
         dim_arr, delta_q_arr = decode_pr101_fixed_meta_rank_elided_sidecar(sidecar_blob)
 
     n_corrections = int((dim_arr != NO_OP_DIM).sum())

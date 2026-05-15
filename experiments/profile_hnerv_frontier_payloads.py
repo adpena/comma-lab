@@ -25,14 +25,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_PR101_FIXED_META_PAYLOAD_BYTES,
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     PR106_SIDECAR_MAGIC,
 )
-
 
 PR101_DECODER_BLOB_LEN = 162_164
 PR101_LATENT_BLOB_LEN = 15_387
@@ -167,12 +168,22 @@ def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
         raise ValueError(f"PR106 sidecar wrapper magic mismatch: 0x{payload[0]:02x}")
     format_id = payload[1]
     pos = 2
-    (inner_len,) = struct.unpack_from("<I", payload, pos)
-    pos += 4
-    inner_start = pos
-    inner_end = inner_start + inner_len
+    if format_id == PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED:
+        if len(payload) < pos + PR106_PR101_FIXED_META_PAYLOAD_BYTES:
+            raise ValueError("PR106 implicit-len sidecar payload truncated")
+        inner_start = pos
+        inner_end = len(payload) - PR106_PR101_FIXED_META_PAYLOAD_BYTES
+        header_name = "pr106_sidecar_header_fe_fmt"
+        header_end = 2
+    else:
+        (inner_len,) = struct.unpack_from("<I", payload, pos)
+        pos += 4
+        inner_start = pos
+        inner_end = inner_start + inner_len
+        header_name = "pr106_sidecar_header_fe_fmt_len_u32"
+        header_end = 6
     if inner_end > len(payload):
-        raise ValueError(f"PR106 sidecar inner payload truncated: {inner_len} > {len(payload)}")
+        raise ValueError(f"PR106 sidecar inner payload truncated: {inner_end} > {len(payload)}")
     inner = payload[inner_start:inner_end]
     if len(inner) < 4 or inner[0] != 0xFF:
         raise ValueError("PR106 sidecar inner payload is not ff-packed HNeRV")
@@ -182,7 +193,7 @@ def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
     if inner_decoder_end > inner_end:
         raise ValueError("PR106 sidecar inner decoder section exceeds inner payload")
     rows = [
-        section("pr106_sidecar_header_fe_fmt_len_u32", payload, 0, 6),
+        section(header_name, payload, 0, header_end),
         section("inner_packed_header_ff_len24", payload, inner_start, inner_start + 4),
         section("inner_decoder_packed_brotli", payload, inner_decoder_start, inner_decoder_end),
         section("inner_latents_and_sidecar_brotli", payload, inner_decoder_end, inner_end),
@@ -205,7 +216,10 @@ def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
             raise ValueError("PR106 rank-elided sidecar truncated before framing meta")
         sidecar_start = pos
         sidecar_end = len(payload) - 5
-    elif format_id == PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED:
+    elif format_id in (
+        PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    ):
         sidecar_start = pos
         sidecar_end = len(payload)
     else:
@@ -231,14 +245,12 @@ def profile_pr106_sidecar_wrapper(payload: bytes) -> list[SectionProfile]:
         rows.append(section("sidecar_framing_meta_pr101_rank_elided", payload, sidecar_end, len(payload)))
         return rows
 
-    rows.append(
-        section(
-            "sidecar_payload_pr101_fixed_meta_rank_elided",
-            payload,
-            sidecar_start,
-            sidecar_end,
-        )
+    sidecar_name = (
+        "sidecar_payload_pr101_implicit_len_fixed_meta_rank_elided"
+        if format_id == PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+        else "sidecar_payload_pr101_fixed_meta_rank_elided"
     )
+    rows.append(section(sidecar_name, payload, sidecar_start, sidecar_end))
     return rows
 
 

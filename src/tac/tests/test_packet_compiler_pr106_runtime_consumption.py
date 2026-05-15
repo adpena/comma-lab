@@ -10,13 +10,14 @@ import pytest
 
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     build_pr106_sidecar_recode_candidate_packet,
     decode_pr106_sidecar_packet_dim_delta,
     dumps_runtime_consumption_manifest,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
-    lossless_pr106_sidecar_recode_candidates,
     load_pr106_sidecar_runtime,
+    lossless_pr106_sidecar_recode_candidates,
     mutate_pr106_sidecar_semantic_correction,
     parse_pr106_sidecar_packet,
     pr106_runtime_source_manifest,
@@ -37,7 +38,7 @@ PR106_R2_PR101_ARCHIVE = (
 )
 PR106_R2_PR101_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_TREE_SHA = "b779871e0bc528185e84f7972a4166a1689af550a88ee70fd26ca4c0553e1f71"
+PR106_R2_PR101_RUNTIME_TREE_SHA = "7cfbc807432b0e55d7e7462fe6f6020c852dd3b4bfd045db052bb07932758cf0"
 RUNTIME_CONSUMPTION_TOOL = REPO_ROOT / "tools" / "prove_pr106_sidecar_runtime_consumption.py"
 
 
@@ -322,6 +323,22 @@ def _fixed_meta_rank_elided_member_payload() -> bytes:
     return emit_pr106_sidecar_packet(fixed_packet)
 
 
+def _implicit_len_fixed_meta_rank_elided_member_payload() -> bytes:
+    grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
+    grammar_packet = parse_pr106_sidecar_packet(grammar_member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(grammar_packet)
+    implicit = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06"]
+    implicit_packet = build_pr106_sidecar_recode_candidate_packet(grammar_packet, implicit)
+    assert (
+        implicit_packet.format_id
+        == PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    return emit_pr106_sidecar_packet(implicit_packet)
+
+
 def test_pr106_pr101_runtime_accepts_fixed_meta_rank_elided_format() -> None:
     grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
     runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
@@ -334,6 +351,22 @@ def test_pr106_pr101_runtime_accepts_fixed_meta_rank_elided_format() -> None:
     assert grammar_digest["format_id"] == "0x02"
     assert fixed_digest["combined_sha256"] == grammar_digest["combined_sha256"]
     assert fixed_digest["corrected_latents_sha256"] == grammar_digest[
+        "corrected_latents_sha256"
+    ]
+
+
+def test_pr106_pr101_runtime_accepts_implicit_len_fixed_meta_rank_elided_format() -> None:
+    grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
+    runtime = load_pr106_sidecar_runtime(PR106_R2_PR101_RUNTIME)
+    implicit_payload = _implicit_len_fixed_meta_rank_elided_member_payload()
+
+    implicit_digest = runtime_sidecar_correction_digest(runtime, implicit_payload)
+    grammar_digest = runtime_sidecar_correction_digest(runtime, grammar_member.payload)
+
+    assert implicit_digest["format_id"] == "0x06"
+    assert grammar_digest["format_id"] == "0x02"
+    assert implicit_digest["combined_sha256"] == grammar_digest["combined_sha256"]
+    assert implicit_digest["corrected_latents_sha256"] == grammar_digest[
         "corrected_latents_sha256"
     ]
 
@@ -364,6 +397,42 @@ def test_pr106_pr101_runtime_consumption_proves_fixed_meta_rank_elided_sidecar(
     )
 
     assert manifest["format_id"] == "0x05"
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is True
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is True
+    consumed_sections = manifest["runtime_consumed_score_affecting_sections"]
+    assert consumed_sections["pr106_payload"] is True
+    assert consumed_sections["sidecar_payload"] is True
+    assert consumed_sections["framing_meta"] is None
+    assert manifest["score_claim"] is False
+
+
+def test_pr106_pr101_runtime_consumption_proves_implicit_len_fixed_meta_rank_elided_sidecar(
+    tmp_path: Path,
+) -> None:
+    grammar_member = read_single_stored_member_archive(PR106_R2_PR101_ARCHIVE.read_bytes())
+    implicit_payload = _implicit_len_fixed_meta_rank_elided_member_payload()
+    archive = tmp_path / "implicit_len_fixed_meta_rank_elided.zip"
+    archive.write_bytes(
+        emit_single_stored_member_archive(type(grammar_member)(
+            name=grammar_member.name,
+            payload=implicit_payload,
+            date_time=grammar_member.date_time,
+            external_attr=grammar_member.external_attr,
+            create_system=grammar_member.create_system,
+            flag_bits=grammar_member.flag_bits,
+            comment=grammar_member.comment,
+            extra=grammar_member.extra,
+            archive_comment=grammar_member.archive_comment,
+        ))
+    )
+
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=archive,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+    )
+
+    assert manifest["format_id"] == "0x06"
     assert manifest["runtime_sidecar_decode_consumption_claim"] is True
     assert manifest["runtime_sidecar_apply_consumption_claim"] is True
     assert manifest["runtime_all_score_affecting_sections_consumed"] is True

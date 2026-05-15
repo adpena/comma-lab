@@ -12,12 +12,13 @@ from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_BROTLI,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     build_pr106_sidecar_recode_candidate_packet,
     decode_pr101_fixed_meta_rank_elided_sidecar_payload_to_dim_delta,
+    decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_packet,
     emit_single_stored_member_archive,
-    decode_pr106_sidecar_packet_dim_delta,
     encode_pr101_ranked_sidecar_payload,
     lossless_pr106_sidecar_recode_candidates,
     mutate_pr106_sidecar_semantic_correction,
@@ -537,6 +538,46 @@ def test_pr106_sidecar_fixed_meta_rank_elided_candidate_roundtrips() -> None:
     assert (direct_deltas == deltas).all()
 
 
+def test_pr106_sidecar_implicit_len_fixed_meta_candidate_roundtrips() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    candidates = lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    implicit = {
+        candidate.name: candidate
+        for candidate in candidates
+    }["pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06"]
+
+    implicit_packet = build_pr106_sidecar_recode_candidate_packet(packet, implicit)
+    emitted = emit_pr106_sidecar_packet(implicit_packet)
+    reparsed = parse_pr106_sidecar_packet(emitted)
+    implicit_dims, implicit_deltas = decode_pr106_sidecar_packet_dim_delta(reparsed)
+    proof = pr106_sidecar_consumed_byte_proof(reparsed)
+    manifest = pr106_sidecar_manifest(reparsed)
+
+    assert implicit.sidecar_format_id == (
+        PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    assert implicit.runtime_decoder_implemented is True
+    assert implicit_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    assert implicit_packet.framing_meta is None
+    assert len(emitted) == len(member.payload) - 13
+    assert [row["name"] for row in proof["sections"]] == [
+        "magic",
+        "format_id",
+        "pr106_payload",
+        "sidecar_payload",
+    ]
+    assert proof["score_affecting_section_names"] == ["pr106_payload", "sidecar_payload"]
+    assert proof["all_payload_bytes_accounted"] is True
+    assert manifest["derived_fixed_meta"]["implicit_pr106_len"] is True
+    assert (implicit_dims == dims).all()
+    assert (implicit_deltas == deltas).all()
+
+
 def test_pr106_sidecar_fixed_meta_rank_elided_mutation_is_valid() -> None:
     archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
     member = read_single_stored_member_archive(archive_bytes)
@@ -560,6 +601,33 @@ def test_pr106_sidecar_fixed_meta_rank_elided_mutation_is_valid() -> None:
     assert mutation.old_delta_q != mutation.new_delta_q
     assert reparsed.pr106_bytes == fixed_packet.pr106_bytes
     assert reparsed.sidecar_payload != fixed_packet.sidecar_payload
+
+
+def test_pr106_sidecar_implicit_len_fixed_meta_mutation_is_valid() -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
+    implicit = {
+        candidate.name: candidate
+        for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+    }["pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06"]
+    implicit_packet = build_pr106_sidecar_recode_candidate_packet(packet, implicit)
+
+    mutated_packet, mutation = mutate_pr106_sidecar_semantic_correction(
+        implicit_packet,
+        pair_index=0,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(mutated_packet))
+
+    assert mutated_packet.format_id == (
+        PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    assert mutated_packet.framing_meta is None
+    assert mutation.section_name == "sidecar_payload"
+    assert mutation.old_delta_q != mutation.new_delta_q
+    assert reparsed.pr106_bytes == implicit_packet.pr106_bytes
+    assert reparsed.sidecar_payload != implicit_packet.sidecar_payload
 
 
 def test_pr106_sidecar_fixed_meta_rank_elided_rejects_bad_payload_length() -> None:

@@ -84,6 +84,28 @@ def test_pr106_fixed_meta_rank_elided_profile_has_no_length_or_framing_sections(
     assert sections[4].bytes == len(sidecar)
 
 
+def test_pr106_implicit_len_fixed_meta_rank_elided_profile_has_no_inner_length() -> None:
+    decoder = b"decoder-brotli-bytes"
+    latents = b"latent-brotli-bytes"
+    inner = b"\xff" + len(decoder).to_bytes(3, "little") + decoder + latents
+    sidecar = b"x" * 526
+    payload = bytes([0xFE, 0x06]) + inner + sidecar
+
+    sections = profile.profile_payload("pr106_sidecar_wrapper", payload)
+
+    assert [section.name for section in sections] == [
+        "pr106_sidecar_header_fe_fmt",
+        "inner_packed_header_ff_len24",
+        "inner_decoder_packed_brotli",
+        "inner_latents_and_sidecar_brotli",
+        "sidecar_payload_pr101_implicit_len_fixed_meta_rank_elided",
+    ]
+    assert sections[0].bytes == 2
+    assert sections[2].bytes == len(decoder)
+    assert sections[3].bytes == len(latents)
+    assert sections[4].bytes == len(sidecar)
+
+
 def test_pr106_rank_elided_profile_splits_terminal_framing_meta() -> None:
     decoder = b"decoder-brotli-bytes"
     latents = b"latent-brotli-bytes"

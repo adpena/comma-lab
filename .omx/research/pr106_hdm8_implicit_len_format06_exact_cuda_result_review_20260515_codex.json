@@ -1,0 +1,84 @@
+{
+  "baseline_score": 0.2063556722940441,
+  "canonical_score": 0.2063530088582316,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 186382,
+    "archive_sha256": "",
+    "command": [],
+    "device": "",
+    "gpu_model": "",
+    "inflate_script": "",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:gpt-5.5",
+      "instance_job_id": "modal_pr106_hdm8_fmt06_t4_20260515T000000Z",
+      "lane_id": "lane_pr106_hdm8_implicit_len_fmt06_20260515",
+      "notes": "Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr106_hdm8_fmt06_t4_20260515T000000Z/modal_cuda_auth_eval_result.json; archive_sha=44eb228ab2ae58f267d91c53db9119db3beb6a6c8488c7c903d9bb78e8798844; archive_bytes=186382; score_recomputed=0.2063530088582316; axis=cuda; hardware_substrate=linux_x86_64_t4; posterior_update=accepted; posterior_n=62; posterior_reason=accepted",
+      "platform": "modal",
+      "predicted_eta_utc": "2026-05-15T01:04:11Z",
+      "status": "completed_contest_cuda_modal_auth_eval_recovered",
+      "timestamp_utc": "2026-05-15T01:04:11Z"
+    },
+    "latest_status": "completed_contest_cuda_modal_auth_eval_recovered",
+    "matching_claim_count": 3,
+    "terminal_status_recorded": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": true,
+  "failure_class": "not_negative_against_supplied_baseline",
+  "family_falsified": false,
+  "job_id": "modal_pr106_hdm8_fmt06_t4_20260515T000000Z",
+  "lane_id": "lane_pr106_hdm8_implicit_len_fmt06_20260515",
+  "measured_config_status": "exact_cuda_result_reviewed",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex:gpt-5.5",
+  "runtime_custody": {
+    "inflate_script_sha256": "",
+    "inflated_output_aggregate_sha256": "",
+    "inflated_output_manifest_sha256": "",
+    "payload_closure_fields_present": false,
+    "runtime_content_tree_sha256": "",
+    "runtime_file_count": null,
+    "runtime_manifest_present": false,
+    "runtime_tree_sha256": ""
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": false,
+  "score_claim_valid": true,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 2.7755575615628914e-17,
+    "archive_bytes": 186382,
+    "available": true,
+    "avg_posenet_dist": 3.236e-05,
+    "avg_segnet_dist": 0.0006426,
+    "matches_reported": true,
+    "rate_term": 0.12410412340081654,
+    "recomputed_score": 0.20635300885823163,
+    "reported_score": 0.2063530088582316
+  },
+  "source_json_path": "experiments/results/modal_auth_eval/pr106_hdm8_fmt06_t4_20260515T000000Z/modal_cuda_auth_eval_result.json",
+  "source_json_sha256": "f38c6051ca2a8e45242df9f9dda6056f2d6ac909c3ea81b3c0cdd8193408399a",
+  "technique": "pr106_hdm8_implicit_len_format06_packetir",
+  "tool": "tools/build_result_review_packet.py"
+}
