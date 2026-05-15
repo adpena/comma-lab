@@ -227,3 +227,17 @@ Classification:
 - This confirms the selector/grain family is not a no-op, but CPU-positive
   selector modes transfer weakly to CUDA. Future work must be CUDA-in-loop or
   explicitly paired CPU/CUDA water-fill, not CPU/MPS proxy promotion.
+
+Paired drift artifact:
+
+- JSON:
+  `experiments/results/pr101_fec6_k16_cpu_cuda_drift_20260515_codex/drift.json`
+- Markdown:
+  `experiments/results/pr101_fec6_k16_cpu_cuda_drift_20260515_codex/drift.md`
+- mechanism class:
+  `different_raw_outputs_runtime_or_inflate_drift`
+- same archive sha256: `true`
+- same runtime content tree sha256: `true`
+- same inflated output aggregate sha256: `false`
+- CUDA-minus-CPU score gap split: pose term `0.02388870481239234`
+  (`69.93%`), seg term `0.010270000000000001` (`30.07%`), rate term `0`.
