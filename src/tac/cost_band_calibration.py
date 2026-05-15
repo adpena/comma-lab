@@ -1204,8 +1204,23 @@ def classify_dispatch(
     # cover 28/38 of the historical posterior; numeric inference covers
     # the rest (recipes that pre-date the smoke-before-full label
     # convention OR whose dispatch_label uses a custom format).
+    #
+    # BOYD-2 (Boyd LOW R2 finding 2026-05-14, Catalog #239 self-protection
+    # 2026-05-15): the long_burn upgrade boundaries use OPEN ``>`` (strict
+    # greater-than) because crossing them at the ceiling triggers a 5-10x
+    # cost class jump (full $2-15 -> long_burn $50+). At 12.0h exactly the
+    # safer routing is "full" (Vast.ai 4090 ~$2-15) — operators must
+    # explicitly request long_burn (Lightning A100 subscription, $50+
+    # equivalent) rather than fall into it from a borderline wallclock
+    # estimate. Per Boyd's convex-feasibility lens: regions whose boundary
+    # crossing changes the cost class non-trivially must use OPEN
+    # boundaries; CLOSED boundaries (``>=``) create discontinuous cost
+    # expectation at the ceiling. The smoke downgrade boundaries keep
+    # ``<=`` (CLOSED) because they route DOWNWARD to the cheaper class —
+    # at the smoke ceiling exactly the safer routing is "smoke" and there
+    # is no cost penalty for over-routing to the cheaper class.
     if estimated_wall_clock_sec is not None:
-        if estimated_wall_clock_sec >= PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["full"] * 3600.0:
+        if estimated_wall_clock_sec > PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["full"] * 3600.0:
             return "long_burn"
         if estimated_wall_clock_sec <= PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["smoke"] * 3600.0:
             # Sub-30-min dispatches are smokes by default. Epochs <= 200 is a
@@ -1217,7 +1232,7 @@ def classify_dispatch(
     if estimated_cost_usd is not None:
         if estimated_cost_usd <= PER_CLASS_SOFT_COST_CEILING_USD["smoke"]:
             return "smoke"
-        if estimated_cost_usd >= PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]:
+        if estimated_cost_usd > PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]:
             return "long_burn"
 
     return "full"

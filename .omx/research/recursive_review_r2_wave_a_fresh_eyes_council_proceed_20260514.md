@@ -285,9 +285,9 @@ Per CLAUDE.md "Recursive adversarial review protocol" + "Bugs must be permanentl
 
 7. **FIX-MED-R2-7** (MACKAY-1): add `noise_scaling_method` parameter to `_run_tier_c_*` with default `"gaussian_std"` for back-compat; document cross-substrate comparison caveat.
 
-8. **FIX-LOW-R2-8** (BOYD-2): change `classify_dispatch` boundary `>=` to `>` for long_burn (or document the closed-boundary canonical decision).
+8. **FIX-LOW-R2-8** (BOYD-2): change `classify_dispatch` boundary `>=` to `>` for long_burn (or document the closed-boundary canonical decision). **CLOSED 2026-05-15** by R2-LOW-FIX-WAVE subagent (`lane_r2_low_fix_wave_boyd2_mackay2_20260515`): changed `>=` to `>` on lines 1208 (wallclock) + 1220 (cost) for the long_burn upgrade boundary; smoke `<=` downgrade boundaries kept (route to cheaper class). Self-protection landed via Catalog #239 STRICT preflight gate `check_classify_dispatch_no_raw_ge_boundaries` (refuses raw `>=` against UPGRADE-class ceilings inside `classify_dispatch`; same-line `# CLASSIFY_DISPATCH_GE_BOUNDARY_OK:<rationale>` waiver; placeholder rejected). 27 dedicated tests + 37/37 D9 regression tests pass. Live count at landing: 0.
 
-9. **FIX-LOW-R2-9** (MACKAY-2): convert Catalog #233 token tuples to `frozenset[str]` for O(1) membership.
+9. **FIX-LOW-R2-9** (MACKAY-2): convert Catalog #233 token tuples to `frozenset[str]` for O(1) membership. **AUTO-CLOSED 2026-05-15** — premise verification by R2-LOW-FIX-WAVE subagent confirmed sister commit `3882468ef` ("preflight: harden l1 promotion evidence matching", landed earlier) had ALREADY converted all 4 cited token sets (`_CHECK_233_SMOKE_GREEN_TOKENS`, `_CHECK_233_TIER_C_TOKENS`, `_CHECK_233_AUTH_EVAL_100EP_TOKENS`, `_CHECK_233_CUSTODY_VALIDATOR_TOKENS`) from `tuple[str, ...]` to `frozenset[str]` as part of the L1->L2 promotion evidence hardening. No new self-protection gate needed because frozenset hygiene is mathematical/idiomatic discipline rather than a recurring bug class. The R2-LOW subagent skipped re-fix per CLAUDE.md "Premise verification before edit" pattern (`feedback_prompt_premise_verification_before_edit_pattern_20260514.md`).
 
 10. **R1 META-1 / META-3 carry-forward**: Catalog #185 still reports 3 violations (#130, #158, #162). Catalog #234 (commit-body-not-empty) is in working tree; sister subagent needs to land + strict-flip atomically.
 

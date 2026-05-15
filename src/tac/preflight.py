@@ -2004,6 +2004,23 @@ def preflight_all(
         check_d9_fallback_semantic_disambiguator_present(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #239 - BOYD-2 classify_dispatch open-boundary
+        # self-protection. Anchor: R2 ledger BOYD-2 finding (Boyd LOW
+        # 2026-05-14). Refuses raw ``>=`` boundary checks against UPGRADE-
+        # class ceilings (full / long_burn / eval) in classify_dispatch
+        # numeric inference. Per Boyd's convex-feasibility lens, OPEN
+        # boundary ``>`` is canonical because crossing the ceiling triggers
+        # a 5-10x cost-class jump (full $2-15 -> long_burn $50+) — at the
+        # boundary exactly the safer routing is the CHEAPER class. Smoke
+        # downgrade boundaries (``<=``) are explicitly out of scope.
+        # STRICT @ 0 per "Strict-flip atomicity rule" - the cost_band_
+        # calibration.py fix lands in the same commit batch driving live
+        # count to 0. Sister of Catalog #237 (D9 fallback semantics) and
+        # Catalog #136 (custody-validator concrete-tokens-only).
+        # Memory: feedback_r2_low_fix_wave_boyd2_mackay2_landed_20260515.md.
+        check_classify_dispatch_no_raw_ge_boundaries(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-14 Catalog #220 - substrate scaffold byte addition without
         # operational score-improvement mechanism. Anchor: D1 R3 dispatch
         # produced score ~0.222 vs predicted [0.181, 0.188] because the L1
@@ -52996,6 +53013,201 @@ def check_d9_fallback_semantic_disambiguator_present(
             f"check_d9_fallback_semantic_disambiguator_present found "
             f"{len(violations)} drift violation(s) in cost_band_"
             f"calibration.py per Catalog #237 BOYD-1 self-protection:\n  "
+            + "\n  ".join(v[:300] for v in violations[:5])
+        )
+    return violations
+
+
+# ----------------------------------------------------------------------------
+# Catalog #239 — BOYD-2 classify_dispatch open-boundary self-protection
+# ----------------------------------------------------------------------------
+#
+# Anchor: R2 ledger BOYD-2 finding (Boyd LOW, 2026-05-14, voice: convex
+# optimization-feasibility lens). ``classify_dispatch`` numeric inference
+# branches used CLOSED ``>=`` boundaries against
+# ``PER_CLASS_SOFT_WALLCLOCK_CEILING_HR["full"]`` and
+# ``PER_CLASS_SOFT_COST_CEILING_USD["long_burn"]`` so a borderline 12.0h
+# wallclock estimate routed to ``long_burn`` (Lightning A100 subscription,
+# $50+ class) instead of ``full`` (Vast.ai 4090, $2-15 class) — a 5-10x
+# cost-class jump for a 1-second wallclock difference at the boundary.
+#
+# Per Boyd's R2 verdict: convex feasibility regions whose boundary crossing
+# changes the cost class non-trivially MUST use OPEN boundaries (strict
+# ``>``). The smoke downgrade boundaries keep CLOSED ``<=`` because they
+# route DOWNWARD to the cheaper class — there is no cost penalty for
+# over-routing to the cheaper class at the boundary.
+#
+# This META gate scans ``classify_dispatch`` for raw ``>=`` boundary
+# checks against either ``PER_CLASS_SOFT_WALLCLOCK_CEILING_HR`` OR
+# ``PER_CLASS_SOFT_COST_CEILING_USD`` indexed by an UPGRADE class
+# (``"full"``, ``"long_burn"``, ``"eval"``). Smoke ``<=`` checks are
+# explicitly out of scope (they route downward, not upward).
+#
+# Acceptance: same-line waiver
+# ``# CLASSIFY_DISPATCH_GE_BOUNDARY_OK:<rationale>`` for the rare future
+# case where a CLOSED upgrade boundary is genuinely required (e.g. a
+# new dispatch class whose cost is identical to its successor); the
+# rationale must be a real string (placeholder ``<reason>`` literal is
+# rejected so this docstring cannot self-waive).
+#
+# Sister of:
+#   - Catalog #237 (`check_d9_fallback_semantic_disambiguator_present`)
+#     — same lane (D9 dispatch routing) different bug class.
+#   - Catalog #136 (`check_custody_gate_accept_tokens_concrete_only`)
+#     — same META pattern: refuse a class of subtle data-discipline
+#     regressions at the source level.
+#
+# Per CLAUDE.md "Bugs must be permanently fixed AND self-protected
+# against" + "Beauty, simplicity" non-negotiables.
+# Memory: feedback_r2_low_fix_wave_boyd2_mackay2_landed_20260515.md.
+
+# Known UPGRADE-class names (cost increases when these classes are
+# selected; OPEN boundary ``>`` required). Sister of
+# :data:`tac.cost_band_calibration.DISPATCH_CLASSES` ordering
+# ``smoke <= eval < full < long_burn``.
+_CHECK_239_UPGRADE_CLASSES: frozenset[str] = frozenset({
+    "full",
+    "long_burn",
+    "eval",
+})
+
+# Indexable canonical-ceiling dict names (any subscript expression
+# whose value resolves to a per-class ceiling). The check fires when
+# both the dict name AND an upgrade-class subscript appear in the
+# left-hand-side of a ``>=`` comparison.
+_CHECK_239_CEILING_DICT_NAMES: frozenset[str] = frozenset({
+    "PER_CLASS_SOFT_WALLCLOCK_CEILING_HR",
+    "PER_CLASS_SOFT_COST_CEILING_USD",
+})
+
+_CHECK_239_WAIVER_RE = re.compile(
+    r"#\s*CLASSIFY_DISPATCH_GE_BOUNDARY_OK:\s*([^\s<].*)"
+)
+_CHECK_239_WAIVER_PLACEHOLDER_REJECTS: frozenset[str] = frozenset({
+    "<reason>", "<rationale>",
+})
+
+# Pattern: ``X >= DICT_NAME["upgrade_class"] ...`` OR
+# ``X >= DICT_NAME['upgrade_class'] ...`` on a single source line.
+# Matches the right-hand-side of a comparison against an UPGRADE-class
+# ceiling. The smoke ``<=`` boundaries are NOT matched (this regex
+# explicitly anchors on ``>=``).
+_CHECK_239_GE_UPGRADE_BOUNDARY_RE = re.compile(
+    r">=\s*(?P<dict>[A-Z_][A-Z0-9_]+)\s*\[\s*[\"'](?P<cls>[a-z_]+)[\"']\s*\]"
+)
+
+
+def check_classify_dispatch_no_raw_ge_boundaries(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #239 — refuse raw ``>=`` boundary checks against UPGRADE-class
+    ceilings in ``classify_dispatch`` per BOYD-2 R2 self-protection.
+
+    Refuses any line in ``src/tac/cost_band_calibration.py::classify_dispatch``
+    that performs ``estimated_X >= PER_CLASS_SOFT_*_CEILING_*[upgrade_class]``
+    where ``upgrade_class`` is one of ``"full"``, ``"long_burn"``, or
+    ``"eval"`` (cost-increasing routing). The OPEN boundary ``>`` is the
+    canonical fix per Boyd's convex-feasibility verdict — at exactly the
+    ceiling the safer routing is the CHEAPER class.
+
+    Smoke downgrade boundaries (``<=`` against
+    ``PER_CLASS_SOFT_*_CEILING_*["smoke"]``) are explicitly OUT of scope.
+
+    Acceptance: same-line waiver
+    ``# CLASSIFY_DISPATCH_GE_BOUNDARY_OK:<rationale>`` with a real
+    rationale (placeholder ``<reason>`` literal rejected).
+
+    Memory: feedback_r2_low_fix_wave_boyd2_mackay2_landed_20260515.md.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    target = root / "src" / "tac" / "cost_band_calibration.py"
+    if not target.is_file():
+        if verbose:
+            print(
+                "  [catalog-239] OK (cost_band_calibration.py not present)"
+            )
+        return violations
+
+    text = target.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    in_classify_dispatch = False
+    classify_def_indent = -1
+
+    for lineno, line in enumerate(lines, start=1):
+        stripped = line.lstrip()
+        # Track entry into classify_dispatch function body.
+        if stripped.startswith("def classify_dispatch(") or (
+            stripped.startswith("def classify_dispatch")
+            and stripped.split("classify_dispatch")[1].startswith("(")
+        ):
+            in_classify_dispatch = True
+            classify_def_indent = len(line) - len(stripped)
+            continue
+        if in_classify_dispatch:
+            # Exit on next top-level def/class at SAME OR SHALLOWER indent.
+            if stripped.startswith(("def ", "class ", "async def ")):
+                cur_indent = len(line) - len(stripped)
+                if cur_indent <= classify_def_indent:
+                    in_classify_dispatch = False
+
+        if not in_classify_dispatch:
+            continue
+
+        # Skip docstring/comment-only lines.
+        if stripped.startswith("#") or stripped.startswith('"""'):
+            continue
+
+        match = _CHECK_239_GE_UPGRADE_BOUNDARY_RE.search(line)
+        if not match:
+            continue
+
+        dict_name = match.group("dict")
+        cls = match.group("cls")
+        if dict_name not in _CHECK_239_CEILING_DICT_NAMES:
+            continue
+        if cls not in _CHECK_239_UPGRADE_CLASSES:
+            continue
+
+        # Same-line waiver mechanism.
+        waiver_match = _CHECK_239_WAIVER_RE.search(line)
+        if waiver_match:
+            rationale = waiver_match.group(1).strip()
+            if rationale and rationale not in _CHECK_239_WAIVER_PLACEHOLDER_REJECTS:
+                # Honor the waiver.
+                continue
+            # Fall through to violation if rationale is the placeholder.
+
+        violations.append(
+            f"src/tac/cost_band_calibration.py:{lineno} — "
+            f"classify_dispatch uses CLOSED boundary ``>=`` against "
+            f"{dict_name}[{cls!r}] — UPGRADE-class boundary must be "
+            f"OPEN (``>``) per BOYD-2 R2 verdict (Boyd convex-"
+            f"feasibility lens). At the boundary exactly, the safer "
+            f"routing is the CHEAPER class. Use ``>`` instead of "
+            f"``>=`` OR add same-line waiver "
+            f"``# CLASSIFY_DISPATCH_GE_BOUNDARY_OK:<rationale>`` with "
+            f"a real reason. Per Catalog #239 self-protection."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-239] scanned classify_dispatch in "
+            f"cost_band_calibration.py violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            f"check_classify_dispatch_no_raw_ge_boundaries found "
+            f"{len(violations)} raw ``>=`` upgrade-boundary violation(s) "
+            f"per Catalog #239 BOYD-2 self-protection:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
     return violations
