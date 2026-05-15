@@ -177,3 +177,33 @@ Result: passed.
 
 Result: dry-run confirms `smoke_validation_contract=training_artifact_v1`,
 `smoke_only: true`, A100 smoke parity, and no Modal dispatch.
+
+## Materializer Artifact Run
+
+After commit `63bd0a20f`, the existing PR106 probe plan was materialized into
+ignored experiment artifacts for the next CUDA score-table actuator:
+
+```bash
+.venv/bin/python tools/pr106_cuda_latent_correction_materializer.py \
+  --plan experiments/results/pr106_cuda_latent_correction_probe_20260515_codex/pr106_cuda_latent_correction_probe_plan.json \
+  --output-dir experiments/results/pr106_cuda_latent_correction_materializer_20260515_codex \
+  --lane-id lane_pr106_cuda_latent_correction_scoretable
+```
+
+Output summary:
+
+- manifest:
+  `experiments/results/pr106_cuda_latent_correction_materializer_20260515_codex/pr106_cuda_latent_correction_materializer_manifest.json`
+- state_hash: `75a8f37e31d06fbf`
+- source_archive_sha256:
+  `56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7`
+- candidate_pair_count: `8`
+- probe_task_count: `896`
+- scoretable_command_count: `8`
+- scoretable tool: `experiments/build_pr106_latent_score_table.py`
+- command mode: `--dry-run-plan`
+- lane_id: `lane_pr106_cuda_latent_correction_scoretable`
+
+This is still false-authority output: `real_cuda_commands_emitted=false`,
+`byte_closed_archive_not_emitted`, and paired exact CPU/CUDA eval remains
+required before any frontier or promotion language.
