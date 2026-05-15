@@ -1382,6 +1382,52 @@ def decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_
     )
 
 
+def encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+    dim_arr: np.ndarray,
+    delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> bytes:
+    """Encode semantic corrections as the committed PR106 format-0x0C payload."""
+
+    _validate_fixed_meta_schema(schema)
+    dims, deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        dim_arr,
+        delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if int(dims.size) != int(schema.n_pairs):
+        raise ValueError(f"format_id=0x0C expects {schema.n_pairs} pairs; got {dims.size}")
+    if bool(np.any(dims == schema.no_op_sentinel)) or bool(np.any(deltas == 0)):
+        raise ValueError("format_id=0x0C fixed metadata requires no-op-free corrections")
+    ranked_payload, ranked_meta = encode_pr101_ranked_sidecar_payload(
+        dims,
+        deltas,
+        schema=schema,
+    )
+    if ranked_meta != _fixed_meta_framing_bytes():
+        raise ValueError("format_id=0x0C requires canonical PR106 fixed metadata")
+    if ranked_payload[-PR106_PR101_FIXED_META_NOOP_RANK_BYTES:] != (
+        PR106_PR101_FIXED_META_NOOP_RANK_BYTE
+    ):
+        raise ValueError("format_id=0x0C requires zero fixed no-op rank")
+    huff_start = PR106_PR101_FIXED_META_DIM_BYTES + PR106_PR101_FIXED_META_RANK_BYTES
+    huff_end = -PR106_PR101_FIXED_META_NOOP_RANK_BYTES
+    encoded = _encode_exact_radix_dim_payload(dims, schema=schema) + ranked_payload[
+        huff_start:huff_end
+    ]
+    decoded_dims, decoded_deltas = (
+        decode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload_to_dim_delta(
+            encoded,
+            schema=schema,
+        )
+    )
+    if not (np.array_equal(decoded_dims, dims) and np.array_equal(decoded_deltas, deltas)):
+        raise ValueError("format_id=0x0C encode/decode semantic mismatch")
+    return encoded
+
+
 def decode_pr106_sidecar_packet_dim_delta(
     packet: PR106SidecarPacket,
     *,
@@ -2360,6 +2406,106 @@ def parse_pr106_sidecar_packet(
         )
 
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{format_id:02X}")
+
+
+def compose_pr106_sidecar_dim_delta_corrections(
+    base_dim_arr: np.ndarray,
+    base_delta_q_arr: np.ndarray,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    """Compose score-table-selected deltas onto decoded base sidecar state.
+
+    The runtime sidecar grammar can express at most one corrected latent
+    dimension per pair. If a selected score-table correction would need a
+    second latent dimension for the same pair, this helper fails closed instead
+    of silently dropping one of the effects.
+    """
+
+    base_dims, base_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        base_dim_arr,
+        base_delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    selected_dims, selected_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        selected_dim_arr,
+        selected_delta_q_arr,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    if base_dims.shape != selected_dims.shape:
+        raise ValueError(
+            "base and selected correction shapes differ: "
+            f"{base_dims.shape} vs {selected_dims.shape}"
+        )
+
+    out_dims = base_dims.copy()
+    out_deltas = base_deltas.copy()
+    selected_nonzero = (selected_dims != schema.no_op_sentinel) & (selected_deltas != 0)
+    base_nonzero = (base_dims != schema.no_op_sentinel) & (base_deltas != 0)
+    same_dim_count = 0
+    base_noop_count = 0
+    changed_pairs = 0
+
+    for pair_idx in np.flatnonzero(selected_nonzero).tolist():
+        selected_dim = int(selected_dims[pair_idx])
+        selected_delta = int(selected_deltas[pair_idx])
+        if not bool(base_nonzero[pair_idx]):
+            out_dims[pair_idx] = np.uint8(selected_dim)
+            out_deltas[pair_idx] = np.int8(selected_delta)
+            base_noop_count += 1
+            changed_pairs += 1
+            continue
+        base_dim = int(base_dims[pair_idx])
+        base_delta = int(base_deltas[pair_idx])
+        if base_dim != selected_dim:
+            raise ValueError(
+                "cannot compose selected score-table correction for pair "
+                f"{pair_idx}: base dim {base_dim} and selected dim {selected_dim} "
+                "would require two latent dimensions in a one-dim sidecar grammar"
+            )
+        combined_delta = base_delta + selected_delta
+        if not (-128 <= combined_delta <= 127):
+            raise ValueError(
+                f"composed delta for pair {pair_idx} overflows int8: {combined_delta}"
+            )
+        out_deltas[pair_idx] = np.int8(combined_delta)
+        if combined_delta == 0:
+            out_dims[pair_idx] = np.uint8(schema.no_op_sentinel)
+        else:
+            out_dims[pair_idx] = np.uint8(base_dim)
+        same_dim_count += 1
+        if combined_delta != base_delta:
+            changed_pairs += 1
+
+    out_dims, out_deltas = canonicalize_brotli_dim_delta_sidecar_arrays(
+        out_dims,
+        out_deltas,
+        n_dims=schema.n_dims,
+        no_op_dim=schema.no_op_sentinel,
+    )
+    diagnostics: dict[str, object] = {
+        "schema": "pr106_sidecar_dim_delta_composition_v1",
+        "composition_policy": "add_selected_delta_to_decoded_base_sidecar_state",
+        "n_pairs": int(out_dims.size),
+        "selected_nonzero_pair_count": int(selected_nonzero.sum()),
+        "base_nonzero_pair_count": int(base_nonzero.sum()),
+        "composed_same_dim_pair_count": int(same_dim_count),
+        "selected_into_base_noop_pair_count": int(base_noop_count),
+        "changed_pair_count": int(changed_pairs),
+        "base_dim_sha256": sha256_hex(base_dims.astype(np.uint8).tobytes()),
+        "base_delta_q_sha256": sha256_hex(base_deltas.astype(np.int8).tobytes()),
+        "selected_dim_sha256": sha256_hex(selected_dims.astype(np.uint8).tobytes()),
+        "selected_delta_q_sha256": sha256_hex(
+            selected_deltas.astype(np.int8).tobytes()
+        ),
+        "composed_dim_sha256": sha256_hex(out_dims.astype(np.uint8).tobytes()),
+        "composed_delta_q_sha256": sha256_hex(out_deltas.astype(np.int8).tobytes()),
+    }
+    return out_dims, out_deltas, diagnostics
 
 
 def _decode_brotli_sidecar_payload(payload: bytes) -> tuple[np.ndarray, np.ndarray]:
@@ -3432,6 +3578,115 @@ def emit_pr106_sidecar_recode_candidate_archive(
         payload=emit_pr106_sidecar_packet(candidate_packet),
     )
     return candidate_member, emit_single_stored_member_archive(candidate_member)
+
+
+def build_pr106_format0c_semantic_sidecar_packet(
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[PR106SidecarPacket, dict[str, object]]:
+    """Build a format-0x0C packet from score-table-selected semantic deltas."""
+
+    if (
+        source_packet.format_id
+        != PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    ):
+        raise ValueError(
+            "format0C semantic materialization requires source packet "
+            "format_id=0x0C; got "
+            f"0x{source_packet.format_id:02X}"
+        )
+    base_dims, base_deltas = decode_pr106_sidecar_packet_dim_delta(
+        source_packet,
+        schema=schema,
+    )
+    composed_dims, composed_deltas, diagnostics = (
+        compose_pr106_sidecar_dim_delta_corrections(
+            base_dims,
+            base_deltas,
+            selected_dim_arr,
+            selected_delta_q_arr,
+            schema=schema,
+        )
+    )
+    if bool(np.any(composed_dims == schema.no_op_sentinel)) or bool(
+        np.any(composed_deltas == 0)
+    ):
+        raise ValueError(
+            "format0C semantic materialization cannot represent composed no-op "
+            "pairs because the committed fixed metadata has noop_count=0"
+        )
+    allowed_deltas = {int(value) for value in schema.deltas}
+    observed_deltas = {int(value) for value in composed_deltas.astype(np.int16).tolist()}
+    unsupported_deltas = sorted(observed_deltas - allowed_deltas)
+    if unsupported_deltas:
+        raise ValueError(
+            "format0C semantic materialization cannot represent composed delta "
+            f"values outside {sorted(allowed_deltas)}: {unsupported_deltas}"
+        )
+    sidecar_payload = encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+        composed_dims,
+        composed_deltas,
+        schema=schema,
+    )
+    packet = PR106SidecarPacket(
+        format_id=source_packet.format_id,
+        pr106_bytes=source_packet.pr106_bytes,
+        sidecar_payload=sidecar_payload,
+        framing_meta=None,
+    )
+    reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(packet))
+    reparsed_dims, reparsed_deltas = decode_pr106_sidecar_packet_dim_delta(
+        reparsed,
+        schema=schema,
+    )
+    if not (
+        np.array_equal(reparsed_dims, composed_dims)
+        and np.array_equal(reparsed_deltas, composed_deltas)
+    ):
+        raise ValueError("format0C semantic materialization parse/reemit mismatch")
+    diagnostics = {
+        **diagnostics,
+        "semantic_materializer": "format0c_packet_ir_native",
+        "source_format_id": f"0x{source_packet.format_id:02X}",
+        "output_format_id": f"0x{packet.format_id:02X}",
+        "output_sidecar_payload_bytes": len(sidecar_payload),
+        "output_sidecar_payload_sha256": sha256_hex(sidecar_payload),
+        "output_packet_payload_sha256": sha256_hex(emit_pr106_sidecar_packet(packet)),
+    }
+    return packet, diagnostics
+
+
+def emit_pr106_format0c_semantic_candidate_archive(
+    source_member: StoredZipMember,
+    source_packet: PR106SidecarPacket,
+    selected_dim_arr: np.ndarray,
+    selected_delta_q_arr: np.ndarray,
+    *,
+    schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
+) -> tuple[StoredZipMember, bytes, dict[str, object]]:
+    """Emit a single-member ``x`` ZIP for a format-0x0C semantic candidate."""
+
+    if source_member.name != "x":
+        raise ValueError(
+            "format0C semantic materialization requires source archive member "
+            f"'x'; got {source_member.name!r}"
+        )
+    candidate_packet, diagnostics = build_pr106_format0c_semantic_sidecar_packet(
+        source_packet,
+        selected_dim_arr,
+        selected_delta_q_arr,
+        schema=schema,
+    )
+    candidate_member = replace(
+        source_member,
+        name="x",
+        payload=emit_pr106_sidecar_packet(candidate_packet),
+    )
+    candidate_archive = emit_single_stored_member_archive(candidate_member)
+    return candidate_member, candidate_archive, diagnostics
 
 
 def pr106_sidecar_recode_candidate_manifest(

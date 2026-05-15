@@ -46,6 +46,7 @@ from tac.packet_compiler.pr106_sidecar_packet import (
 
 _RUNTIME_TRANSIENT_MODULES = ("codec", "model", "pr101_grammar")
 _RUNTIME_SOURCE_CANDIDATES = (
+    "inflate.sh",
     "inflate.py",
     "src/codec.py",
     "src/model.py",
@@ -123,7 +124,14 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
         if not path.is_file():
             raise ValueError(f"runtime source candidate is not a file: {path}")
         payload = path.read_bytes()
-        files.append({"path": rel, "bytes": len(payload), "sha256": sha256_hex(payload)})
+        files.append(
+            {
+                "path": rel,
+                "bytes": len(payload),
+                "sha256": sha256_hex(payload),
+                "mode": f"{path.stat().st_mode & 0o777:04o}",
+            }
+        )
     if not files:
         raise ValueError(f"runtime dir has no recognized source files: {runtime_dir}")
     tree_payload = json.dumps(files, sort_keys=True, separators=(",", ":")).encode()

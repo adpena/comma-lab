@@ -158,12 +158,36 @@ if [ ! -f "$SIDECAR_ARCHIVE" ]; then
 fi
 ARCHIVE_BYTES=$(stat -c '%s' "$SIDECAR_ARCHIVE" 2>/dev/null || stat -f '%z' "$SIDECAR_ARCHIVE")
 log "stage 1 OK: archive bytes=$ARCHIVE_BYTES"
+EXPECTED_ARCHIVE_SHA=$("$PYBIN" - "$SIDECAR_ARCHIVE" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+print(hashlib.sha256(Path(sys.argv[1]).read_bytes()).hexdigest())
+PY
+)
+EXPECTED_RUNTIME_TREE_SHA=$("$PYBIN" - "$WORKSPACE/src" "$PR106_RUNTIME_DIR" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, sys.argv[1])
+from tac.packet_compiler.pr106_runtime_consumption import pr106_runtime_source_manifest
+
+print(pr106_runtime_source_manifest(Path(sys.argv[2]))["runtime_source_tree_sha256"])
+PY
+)
+if [ -z "$EXPECTED_ARCHIVE_SHA" ] || [ -z "$EXPECTED_RUNTIME_TREE_SHA" ]; then
+    log "FATAL: failed to compute expected archive/runtime SHA custody"
+    exit 3
+fi
 
 # ── Stage 2: Local parser-roundtrip sanity ────────────────────────────────
 log "=== Stage 2: parser-roundtrip sanity (no GPU forward) ==="
 "$PYBIN" -u tools/prove_pr106_sidecar_runtime_consumption.py \
     --archive "$SIDECAR_ARCHIVE" \
     --runtime-dir "$PR106_RUNTIME_DIR" \
+    --expected-archive-sha256 "$EXPECTED_ARCHIVE_SHA" \
+    --expected-runtime-source-tree-sha256 "$EXPECTED_RUNTIME_TREE_SHA" \
     --output-json "$LOG_DIR/runtime_consumption.json" 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Stage 3: Contest auth eval (CUDA T4) ─────────────────────────────────

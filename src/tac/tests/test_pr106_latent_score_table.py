@@ -330,6 +330,13 @@ def test_remote_latent_lane_defaults_to_score_table_and_resume():
     assert 'PR106_RUNTIME_DIR="${PR106_RUNTIME_DIR:-submissions/pr106_latent_sidecar_r2_pr101_grammar}"' in text
     assert "--runtime-dir \"$PR106_RUNTIME_DIR\"" in text
     assert "tools/prove_pr106_sidecar_runtime_consumption.py" in text
+    assert "EXPECTED_ARCHIVE_SHA=" in text
+    assert "EXPECTED_RUNTIME_TREE_SHA=" in text
+    assert "--expected-archive-sha256 \"$EXPECTED_ARCHIVE_SHA\"" in text
+    assert (
+        "--expected-runtime-source-tree-sha256 \"$EXPECTED_RUNTIME_TREE_SHA\""
+        in text
+    )
     assert 'INFLATE_SH="$WORKSPACE/$PR106_RUNTIME_DIR/inflate.sh"' in text
     assert "Stage 1a RESUME: validating completed latent score table" in text
     assert "SCORE_TABLE_ARGS+=(--resume-checkpoint)" in text

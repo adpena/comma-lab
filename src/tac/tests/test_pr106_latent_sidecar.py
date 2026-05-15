@@ -705,3 +705,79 @@ def test_score_table_manifest_accepts_x_member_custody(tmp_path: Path):
             delta_radius=1,
             candidate_count=57,
         )
+
+
+def test_score_table_manifest_format0c_requires_member_sha256(tmp_path: Path):
+    """source_zero_bin_sha256 fallback is legacy-only, not valid for format0C."""
+    build = _import_build_module()
+    from tac.packet_compiler.pr106_sidecar_packet import (
+        PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
+        decode_pr106_sidecar_packet_dim_delta,
+        emit_pr106_sidecar_recode_candidate_archive,
+        lossless_pr106_sidecar_recode_candidates,
+        parse_pr106_sidecar_packet,
+        read_single_stored_member_archive,
+    )
+
+    fixture = REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+    fixture_member = read_single_stored_member_archive(fixture.read_bytes())
+    fixture_packet = parse_pr106_sidecar_packet(fixture_member.payload)
+    source_dims, source_deltas = decode_pr106_sidecar_packet_dim_delta(fixture_packet)
+    candidate = next(
+        item
+        for item in lossless_pr106_sidecar_recode_candidates(source_dims, source_deltas)
+        if item.sidecar_format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    _member, archive_bytes = emit_pr106_sidecar_recode_candidate_archive(
+        fixture_member,
+        fixture_packet,
+        candidate,
+    )
+    source_archive = tmp_path / "format0c_x.zip"
+    source_archive.write_bytes(archive_bytes)
+    with zipfile.ZipFile(source_archive) as zf:
+        source_payload = zf.read("x")
+
+    score_table = np.zeros((600, 57), dtype=np.float32)
+    table_path = tmp_path / "score_table.npy"
+    np.save(table_path, score_table, allow_pickle=False)
+    candidates = build.build_latent_candidate_grid(latent_dim=28, delta_radius=1)
+    manifest_path = tmp_path / "score_table_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "manifest_schema": "pr106_latent_score_table_manifest_v1",
+                "producer": "experiments/build_pr106_latent_score_table.py",
+                "score_claim": False,
+                "ready_for_builder": True,
+                "source_archive_sha256": hashlib.sha256(
+                    source_archive.read_bytes()
+                ).hexdigest(),
+                "source_archive_member_name": "x",
+                "source_zero_bin_sha256": hashlib.sha256(source_payload).hexdigest(),
+                "score_table_npy_sha256": hashlib.sha256(table_path.read_bytes()).hexdigest(),
+                "candidate_grid_sha256": build.latent_candidate_grid_npy_sha256(candidates),
+                "n_pairs": 600,
+                "latent_dim": 28,
+                "delta_radius": 1,
+                "candidate_count": 57,
+                "score_table_shape": [600, 57],
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+                "remote_jobs_dispatched": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="format0C source archive"):
+        build.validate_score_table_manifest(
+            manifest_path,
+            score_table_npy=table_path,
+            source_archive=source_archive,
+            n_pairs=600,
+            latent_dim=28,
+            delta_radius=1,
+            candidate_count=57,
+        )

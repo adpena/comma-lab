@@ -37,13 +37,13 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_R2_ARCHIVE = REPO_ROOT / "submissions/pr106_latent_sidecar_r2/archive.zip"
 PR106_R2_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2"
 PR106_R2_SHA = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
-PR106_R2_RUNTIME_TREE_SHA = "f12c3a81a5a52c39d48d7528f1fab926acccab0ce1b86450978c6ae6e4bab357"
+PR106_R2_RUNTIME_TREE_SHA = "966e3446c7ad646306ef854fe4e88dea165802caf97de3743e763799fe305511"
 PR106_R2_PR101_ARCHIVE = (
     REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
 )
 PR106_R2_PR101_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_TREE_SHA = "94078eb83f0629fdeb94d39be9292633ad0014a1236729ba66eb96901610b1b5"
+PR106_R2_PR101_RUNTIME_TREE_SHA = "5506c0f62b5d58a1a3f873ed4c2d104e2b714be957dcd55af05131e50f01fbe3"
 PR106_HDM8_FORMAT07_ARCHIVE = (
     REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 )
@@ -276,8 +276,11 @@ def test_pr106_runtime_source_manifest_is_deterministic_and_runtime_bound() -> N
     files = manifest_a["files"]
     assert isinstance(files, list)
     paths = [item["path"] for item in files]
+    assert "inflate.sh" in paths
     assert "inflate.py" in paths
     assert "src/pr101_grammar.py" in paths
+    inflate_sh = next(item for item in files if item["path"] == "inflate.sh")
+    assert inflate_sh["mode"] == "0755"
 
 
 def test_pr106_pr101_grammar_runtime_consumes_framing_meta_fail_closed() -> None:

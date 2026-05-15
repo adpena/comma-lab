@@ -21,9 +21,12 @@ from typing import Any
 import numpy as np
 
 from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_DEFAULT_MEMBER_NAME,
     PR106_LATENT_N_DIMS,
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     lossless_pr106_sidecar_recode_candidates,
+    parse_pr106_sidecar_packet,
     read_single_stored_member_archive,
     sha256_hex,
 )
@@ -255,10 +258,28 @@ def validate_score_table_manifest(
     member_name_matches = manifest.get("source_archive_member_name") in (None, member.name)
     member_sha256 = sha256_hex(member.payload)
     member_sha256_matches = manifest.get("source_archive_member_sha256") == member_sha256
+    member_format_id: int | None = None
+    try:
+        member_format_id = parse_pr106_sidecar_packet(member.payload).format_id
+    except ValueError:
+        member_format_id = None
+    format0c_requires_member_sha = (
+        member_format_id
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    if format0c_requires_member_sha and not member_sha256_matches:
+        raise ValueError(
+            "score table manifest source_archive_member_sha256 mismatch for "
+            "format0C source archive"
+        )
     zero_bin_sha256_matches = False
     if not archive_sha256_matches:
         source_zero_bin_sha256 = manifest.get("source_zero_bin_sha256")
-        if isinstance(source_zero_bin_sha256, str):
+        legacy_zero_bin_fallback_allowed = (
+            member.name == PR106_DEFAULT_MEMBER_NAME
+            and not format0c_requires_member_sha
+        )
+        if isinstance(source_zero_bin_sha256, str) and legacy_zero_bin_fallback_allowed:
             zero_bin_sha256_matches = member_sha256 == source_zero_bin_sha256
         if not member_sha256_matches and not zero_bin_sha256_matches:
             raise ValueError("score table manifest source archive payload mismatch")
@@ -292,6 +313,9 @@ def validate_score_table_manifest(
     manifest["validated_source_archive_member_name_match"] = member_name_matches
     manifest["validated_source_archive_member_sha256_match"] = member_sha256_matches
     manifest["validated_source_zero_bin_sha256_match"] = zero_bin_sha256_matches
+    manifest["validated_source_sidecar_format_id"] = (
+        None if member_format_id is None else f"0x{member_format_id:02X}"
+    )
     return manifest
 
 
