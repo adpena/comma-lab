@@ -205,6 +205,11 @@ def validate_polytope_margin_contract(
     boundary_violation_count = int(
         np.count_nonzero((noise_levels_flat != 0) & boundary_mask)
     )
+    safe_budget = margin_float / float(archive_jacobian_lipschitz)
+    max_safe_abs = np.floor(safe_budget + 1e-6).astype(np.int16)
+    unsafe_nonzero_count = int(
+        np.count_nonzero(np.abs(noise_levels_flat.astype(np.int16)) > max_safe_abs)
+    )
     if lattice_violation_count:
         raise ValueError(
             f"D1 lattice violation: {lattice_violation_count} levels outside [-2,2]"
@@ -214,12 +219,18 @@ def validate_polytope_margin_contract(
             "D1 boundary violation: "
             f"{boundary_violation_count} nonzero noise levels on zero-margin pixels"
         )
+    if unsafe_nonzero_count:
+        raise ValueError(
+            "D1 safe-budget violation: "
+            f"{unsafe_nonzero_count} noise levels exceed floor(margin/L)"
+        )
     return {
         "noise_pixels": int(noise_levels_flat.size),
         "nonzero_noise_pixels": int(np.count_nonzero(noise_levels_flat)),
         "boundary_pixels": int(np.count_nonzero(boundary_mask)),
         "boundary_violation_count": boundary_violation_count,
         "lattice_violation_count": lattice_violation_count,
+        "unsafe_nonzero_count": unsafe_nonzero_count,
         "archive_jacobian_lipschitz": float(archive_jacobian_lipschitz),
         "payload_jacobian_lipschitz": float(payload_jacobian_lipschitz),
     }

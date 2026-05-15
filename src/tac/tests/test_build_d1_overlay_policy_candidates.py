@@ -38,10 +38,10 @@ def _write_d1_inputs(tmp_path: Path) -> tuple[Path, Path]:
         jacobian_lipschitz=10.0,
     )
     margin_map = compute_logit_margin_map_dummy(
-        resolution=(8, 8), constant_value=2.0
+        resolution=(8, 8), constant_value=20.0
     )
     payload = encode_polytope_payload(
-        torch.ones(8, 8),
+        torch.full((8, 8), 20.0),
         jacobian_lipschitz=10.0,
         budget_bits=128,
     )
@@ -102,7 +102,24 @@ def test_d1_policy_builder_materializes_channel_amplitude_sign_product(tmp_path:
     assert parsed.meta["overlay_amplitude_scale"] == 0.5
     assert parsed.meta["overlay_sign_policy"] == "negate_payload"
     assert Path(row["archive_zip"]).is_file()
-    assert row["d1_overlay_diagnostics"]["decoded_noise_nonzero_pixels"] > 0
+    diag = row["d1_overlay_diagnostics"]
+    assert diag["decoded_noise_nonzero_pixels"] > 0
+    assert diag["unsafe_nonzero_pixels"] == 0
+    assert diag["decoded_noise_abs_sum"] >= diag["decoded_noise_nonzero_pixels"]
+    assert diag["attenuated_overlay_abs_sum"] >= diag["attenuated_overlay_nonzero_pixels"]
+    assert diag["estimated_changed_lsb_l1_upper_bound_per_pair"] >= (
+        diag["estimated_changed_bytes_upper_bound_per_pair"]
+    )
+    duplicate = next(
+        item
+        for item in summary["candidates"]
+        if item["duplicate_of_candidate_id"] is not None
+    )
+    assert duplicate["duplicate_of_candidate_id"] is not None
+    assert any(
+        blocker.startswith("d1_overlay_effect_duplicate_of_")
+        for blocker in duplicate["dispatch_blockers"]
+    )
 
 
 def test_d1_policy_builder_marks_decoded_zero_payload_blocker(tmp_path: Path) -> None:
@@ -150,6 +167,13 @@ def test_d1_policy_builder_marks_decoded_zero_payload_blocker(tmp_path: Path) ->
     summary = read_json(out_dir / "d1_overlay_policy_candidates_manifest.json")
     row = summary["candidates"][0]
     assert row["d1_overlay_diagnostics"]["decoded_noise_nonzero_pixels"] == 0
+    assert row["d1_overlay_diagnostics"]["attenuated_overlay_abs_sum"] == 0
+    assert (
+        row["d1_overlay_diagnostics"][
+            "estimated_changed_lsb_l1_upper_bound_per_pair"
+        ]
+        == 0
+    )
     assert "d1_decoded_polytope_payload_all_zero" in row["dispatch_blockers"]
 
 

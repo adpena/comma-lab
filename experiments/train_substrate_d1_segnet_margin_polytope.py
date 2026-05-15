@@ -983,10 +983,20 @@ def _decode_overlay(
     boundary_violations = int(
         np.count_nonzero((noise != 0) & (margin_flat <= 1e-6))
     )
+    safe_budget = margin_flat / float(expected_lipschitz)
+    max_safe_abs = np.floor(safe_budget + 1e-6).astype(np.int16)
+    unsafe_violations = int(
+        np.count_nonzero(np.abs(noise.astype(np.int16)) > max_safe_abs)
+    )
     if boundary_violations:
         raise ValueError(
             f'D1 boundary violation: {{boundary_violations}} nonzero noise levels '
             'on zero-margin pixels'
+        )
+    if unsafe_violations:
+        raise ValueError(
+            f'D1 safe-budget violation: {{unsafe_violations}} noise levels '
+            'exceed floor(margin/L)'
         )
     noise_2d = noise.reshape(int(height), int(width))
     y_idx = (np.arange(CAMERA_H, dtype=np.int64) * int(height)) // CAMERA_H
@@ -1336,6 +1346,7 @@ def _full_main(args: argparse.Namespace) -> int:
         _BaseArchiveDescriptor,
     )
     from tac.substrates.d1_segnet_margin_polytope.margin_map import (
+        MARGIN_MAP_DEFAULT_RESOLUTION,
         compute_logit_margin_map,
     )
 
@@ -1454,6 +1465,11 @@ def _full_main(args: argparse.Namespace) -> int:
                         rgb_pair_btchw=pair_btchw,
                         target_resolution=(margin_h, margin_w),
                         detach_grad=True,
+                        downsample_mode=(
+                            "area"
+                            if (margin_h, margin_w) != MARGIN_MAP_DEFAULT_RESOLUTION
+                            else "bilinear"
+                        ),
                     )  # (B, H, W)
                     batch_mean = batch_margin.mean(dim=0)  # (H, W)
                     if ema_margin is None:

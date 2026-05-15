@@ -29,11 +29,17 @@ class D1OverlayDiagnostics:
 
     decoded_noise_pixels: int
     decoded_noise_nonzero_pixels: int
+    decoded_noise_abs_sum: int
     camera_overlay_nonzero_pixels: int
+    camera_overlay_abs_sum: int
     attenuated_overlay_nonzero_pixels: int
+    attenuated_overlay_abs_sum: int
     active_channel_count: int
     estimated_changed_bytes_upper_bound_per_pair: int
+    estimated_changed_lsb_l1_upper_bound_per_pair: int
+    estimated_changed_lsb_l2_energy_upper_bound_per_pair: int
     integer_feasible_pixels: int
+    unsafe_nonzero_pixels: int
     max_safe_budget_lsb: float
     mean_safe_budget_lsb: float
     payload_jacobian_lipschitz: float
@@ -58,19 +64,31 @@ class D1OverlayDiagnostics:
             blockers.append("d1_estimated_changed_bytes_upper_bound_zero")
         if self.integer_feasible_pixels <= 0:
             blockers.append("d1_no_integer_feasible_pixels_under_lipschitz_bound")
+        if self.unsafe_nonzero_pixels > 0:
+            blockers.append("d1_overlay_exceeds_integer_safe_budget")
         return blockers
 
     def to_json_dict(self) -> dict[str, Any]:
         return {
             "decoded_noise_pixels": self.decoded_noise_pixels,
             "decoded_noise_nonzero_pixels": self.decoded_noise_nonzero_pixels,
+            "decoded_noise_abs_sum": self.decoded_noise_abs_sum,
             "camera_overlay_nonzero_pixels": self.camera_overlay_nonzero_pixels,
+            "camera_overlay_abs_sum": self.camera_overlay_abs_sum,
             "attenuated_overlay_nonzero_pixels": self.attenuated_overlay_nonzero_pixels,
+            "attenuated_overlay_abs_sum": self.attenuated_overlay_abs_sum,
             "active_channel_count": self.active_channel_count,
             "estimated_changed_bytes_upper_bound_per_pair": (
                 self.estimated_changed_bytes_upper_bound_per_pair
             ),
+            "estimated_changed_lsb_l1_upper_bound_per_pair": (
+                self.estimated_changed_lsb_l1_upper_bound_per_pair
+            ),
+            "estimated_changed_lsb_l2_energy_upper_bound_per_pair": (
+                self.estimated_changed_lsb_l2_energy_upper_bound_per_pair
+            ),
             "integer_feasible_pixels": self.integer_feasible_pixels,
+            "unsafe_nonzero_pixels": self.unsafe_nonzero_pixels,
             "max_safe_budget_lsb": self.max_safe_budget_lsb,
             "mean_safe_budget_lsb": self.mean_safe_budget_lsb,
             "payload_jacobian_lipschitz": self.payload_jacobian_lipschitz,
@@ -126,22 +144,39 @@ def analyze_d1_overlay_effect(
     )
     weights = channel_policy_weights(policy)
     active_channels = int(np.count_nonzero(weights))
+    channel_l1 = int(np.abs(weights).sum())
+    channel_l2_energy = int(np.square(weights.astype(np.int16)).sum())
+    attenuated_abs = np.abs(attenuated.astype(np.int16))
     safe_budget = archive.margin_map_float().reshape(-1).astype(np.float32) / max(
         float(archive.jacobian_lipschitz),
         1e-12,
     )
+    max_safe_abs = np.floor(safe_budget + 1e-6).astype(np.int16)
+    decoded_abs = np.abs(decoded.noise_levels.astype(np.int16))
     return D1OverlayDiagnostics(
         decoded_noise_pixels=int(decoded.noise_levels.size),
         decoded_noise_nonzero_pixels=int(np.count_nonzero(decoded.noise_levels)),
+        decoded_noise_abs_sum=int(decoded_abs.sum()),
         camera_overlay_nonzero_pixels=int(np.count_nonzero(camera_overlay)),
+        camera_overlay_abs_sum=int(
+            np.abs(camera_overlay.astype(np.int16)).sum()
+        ),
         attenuated_overlay_nonzero_pixels=int(np.count_nonzero(attenuated)),
+        attenuated_overlay_abs_sum=int(attenuated_abs.sum()),
         active_channel_count=active_channels,
         estimated_changed_bytes_upper_bound_per_pair=int(
             np.count_nonzero(attenuated) * active_channels
         ),
+        estimated_changed_lsb_l1_upper_bound_per_pair=int(
+            attenuated_abs.sum() * channel_l1
+        ),
+        estimated_changed_lsb_l2_energy_upper_bound_per_pair=int(
+            np.square(attenuated_abs, dtype=np.int64).sum() * channel_l2_energy
+        ),
         integer_feasible_pixels=int(
             np.count_nonzero(safe_budget >= float(min_integer_delta_lsb))
         ),
+        unsafe_nonzero_pixels=int(np.count_nonzero(decoded_abs > max_safe_abs)),
         max_safe_budget_lsb=float(safe_budget.max()) if safe_budget.size else 0.0,
         mean_safe_budget_lsb=float(safe_budget.mean()) if safe_budget.size else 0.0,
         payload_jacobian_lipschitz=float(decoded.jacobian_lipschitz),

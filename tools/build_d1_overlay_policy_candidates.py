@@ -38,7 +38,9 @@ from tac.substrates.d1_segnet_margin_polytope.overlay import (  # noqa: E402
     D1_OVERLAY_AMPLITUDE_SCALES,
     D1_OVERLAY_CHANNEL_POLICIES,
     D1_OVERLAY_SIGN_POLICIES,
+    channel_policy_weights,
     normalize_overlay_amplitude_scale,
+    overlay_sign_for_pair,
 )
 
 
@@ -183,6 +185,42 @@ def _candidate_id(
         f"{prefix}_channel_{channel_policy}"
         f"_amp_{_scale_slug(amplitude_scale)}"
         f"_sign_{sign_policy}"
+    )
+
+
+def _overlay_effect_equivalence_key(
+    *,
+    channel_policy: str,
+    amplitude_scale: float,
+    sign_policy: str,
+    payload_budget_bits: int | None,
+    jacobian_lipschitz: float | None,
+    margin_map_resolution: tuple[int, int] | None,
+) -> str:
+    """Return a key for variants that produce the same signed frame deltas.
+
+    ``green + negate_payload`` and ``neg_green + payload`` differ in metadata
+    and ZIP bytes, but they add the same pixel deltas to every pair. The key
+    lets the manifest mark those duplicates before another paired auth eval
+    spends time on an effect-equivalent packet.
+    """
+    weights = channel_policy_weights(channel_policy).astype(int)
+    pair0 = (weights * overlay_sign_for_pair(sign_policy, 0)).tolist()
+    pair1 = (weights * overlay_sign_for_pair(sign_policy, 1)).tolist()
+    resolution = (
+        f"{margin_map_resolution[0]}x{margin_map_resolution[1]}"
+        if margin_map_resolution is not None
+        else "source"
+    )
+    return "|".join(
+        [
+            f"budget={payload_budget_bits}",
+            f"L={jacobian_lipschitz}",
+            f"res={resolution}",
+            f"amp={normalize_overlay_amplitude_scale(amplitude_scale):.6g}",
+            f"pair0={pair0}",
+            f"pair1={pair1}",
+        ]
     )
 
 
@@ -427,6 +465,17 @@ def main(argv: list[str] | None = None) -> int:
                                 "overlay_sign_policy"
                             ),
                         },
+                        "overlay_effect_equivalence_key": (
+                            _overlay_effect_equivalence_key(
+                                channel_policy=policy,
+                                amplitude_scale=amplitude_scale,
+                                sign_policy=sign_policy,
+                                payload_budget_bits=payload_budget_bits,
+                                jacobian_lipschitz=jacobian_lipschitz,
+                                margin_map_resolution=margin_map_resolution,
+                            )
+                        ),
+                        "duplicate_of_candidate_id": None,
                         "d1_overlay_diagnostics": overlay_diag.to_json_dict(),
                         "source_d1_bin_sha256": _sha256_bytes(d1_bytes),
                         "a1_bin_sha256": a1_sha,
@@ -440,7 +489,24 @@ def main(argv: list[str] | None = None) -> int:
                         ],
                     }
                     rows.append(row)
-                    _write_json(candidate_root / "candidate_manifest.json", row)
+
+    best_by_effect: dict[str, dict[str, Any]] = {}
+    for row in sorted(
+        rows, key=lambda item: (int(item["archive_bytes"]), item["candidate_id"])
+    ):
+        key = str(row["overlay_effect_equivalence_key"])
+        if key not in best_by_effect:
+            best_by_effect[key] = row
+            continue
+        canonical = best_by_effect[key]
+        row["duplicate_of_candidate_id"] = canonical["candidate_id"]
+        row["dispatch_blockers"].append(
+            "d1_overlay_effect_duplicate_of_"
+            + str(canonical["candidate_id"])
+        )
+
+    for row in rows:
+        _write_json(Path(row["candidate_root"]) / "candidate_manifest.json", row)
 
     summary = {
         "tool": "tools/build_d1_overlay_policy_candidates.py",

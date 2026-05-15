@@ -432,7 +432,7 @@ def test_apply_l2_overlay_walks_video_list(tmp_path):
         rng.rand(96, 128).astype(np.float32) * 2.0 + 0.1
     )
     payload = encode_polytope_payload(
-        margin, jacobian_lipschitz=20.0, budget_bits=2000
+        margin, jacobian_lipschitz=1.0, budget_bits=2000
     )
     diag = apply_l2_overlay_for_video_list(
         output_dir=tmp_path,
@@ -447,7 +447,7 @@ def test_apply_l2_overlay_walks_video_list(tmp_path):
 def test_apply_l2_overlay_missing_raw_raises(tmp_path):
     rng = np.random.RandomState(13)
     margin = torch.from_numpy(rng.rand(96, 128).astype(np.float32) + 1.0)
-    payload = encode_polytope_payload(margin, jacobian_lipschitz=20.0, budget_bits=2000)
+    payload = encode_polytope_payload(margin, jacobian_lipschitz=1.0, budget_bits=2000)
     with pytest.raises(FileNotFoundError, match="cannot locate"):
         apply_l2_overlay_for_video_list(
             output_dir=tmp_path,
@@ -463,7 +463,7 @@ def test_apply_l2_overlay_falls_back_to_sole_raw(tmp_path):
     _write_synthetic_raw(tmp_path / "actual_name.raw", n_pairs=1)
     rng = np.random.RandomState(13)
     margin = torch.from_numpy(rng.rand(96, 128).astype(np.float32) + 1.0)
-    payload = encode_polytope_payload(margin, jacobian_lipschitz=20.0, budget_bits=2000)
+    payload = encode_polytope_payload(margin, jacobian_lipschitz=1.0, budget_bits=2000)
     diag = apply_l2_overlay_for_video_list(
         output_dir=tmp_path,
         video_names=["something_else.mkv"],
@@ -487,7 +487,7 @@ def test_overlay_produces_observable_bytes_changed(tmp_path):
     _write_synthetic_raw(tmp_path / "0.raw", n_pairs=1)
     rng = np.random.RandomState(31)
     margin = torch.from_numpy(rng.rand(96, 128).astype(np.float32) * 5 + 1.0)
-    payload = encode_polytope_payload(margin, jacobian_lipschitz=20.0, budget_bits=4000)
+    payload = encode_polytope_payload(margin, jacobian_lipschitz=1.0, budget_bits=4000)
     diag = apply_l2_overlay_for_video_list(
         output_dir=tmp_path,
         video_names=["0.mkv"],
@@ -524,4 +524,17 @@ def test_overlay_contract_rejects_boundary_noise():
             margin_map_scale=1.0,
             archive_jacobian_lipschitz=10.0,
             payload_jacobian_lipschitz=10.0,
+        )
+
+
+def test_overlay_contract_rejects_integer_safe_budget_violation():
+    margin_i8 = np.array([[1, 2], [3, 4]], dtype=np.int8)
+    noise = np.array([2, 1, 1, 1], dtype=np.int8)
+    with pytest.raises(ValueError, match="safe-budget violation"):
+        validate_polytope_margin_contract(
+            noise_levels_flat=noise,
+            margin_map_int8=margin_i8,
+            margin_map_scale=1.0,
+            archive_jacobian_lipschitz=2.0,
+            payload_jacobian_lipschitz=2.0,
         )

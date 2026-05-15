@@ -322,3 +322,173 @@ Best static-xray rows:
 
 No score claim. The shrunk candidates dominate the full-grid D1 packets on
 rate (`~185.3 KB` vs `~222.1 KB`) while preserving nonzero overlay diagnostics.
+
+## Full-Grid Nonzero Paired Recovery - 2026-05-15T17:54Z
+
+The first nonzero full-grid D1 packets scored cleanly on both axes, but both
+measured configurations are worse than the A1/PR-family frontier. This is a
+measured-config negative, not a D1 substrate death verdict.
+
+| candidate | axis | archive bytes | canonical score | seg dist | pose dist | call id |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `d1_b50k_L2_rgb_payload` | `[contest-CUDA]` | 222129 | 0.2568473324645485 | 0.00067398 | 0.00017258 | `fc-01KRPC42FCBHPYZ6M8WFDDKVQW` |
+| `d1_b50k_L2_rgb_payload` | `[contest-CPU]` | 222129 | 0.22352198595409703 | 0.00057337 | 0.00003341 | `fc-01KRPC4K5N0N1FK8D3PQGWQT51` |
+| `d1_b100k_L2_green_payload` | `[contest-CUDA]` | 223981 | 0.26193283305735077 | 0.00070202 | 0.00018140 | `fc-01KRPC42FWFAPZMXNDMNWVZFBX` |
+| `d1_b100k_L2_green_payload` | `[contest-CPU]` | 223981 | 0.2294549901682079 | 0.00060418 | 0.00003959 | `fc-01KRPC4K0RDQPR7JTFMFM7SC4B` |
+
+Interpretation:
+
+- Full-grid D1 pays too much rate and still increases both scorer components.
+- CUDA is materially worse than CPU for the same D1 archives. Axis separation
+  is mandatory for D1.
+- Green-only is cheaper in changed-channel surface but the full-grid green
+  payload was not enough to overcome its rate and distortion cost.
+
+## Shrunk 96x128 Paired Dispatch And Recovery - 2026-05-15T18:00Z
+
+Two shrunk candidates were dispatched paired because static xray showed a much
+better rate surface than the full-grid packets.
+
+| candidate | axis | archive bytes | canonical score | seg dist | pose dist | call id |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `d1_shrunk96_b100k_L2_rgb_payload` | `[contest-CUDA]` | 185307 | 0.24513262253913132 | 0.00073316 | 0.00023453 | `fc-01KRPCBT1PQKEH6Q5E490Z244T` |
+| `d1_shrunk96_b100k_L2_rgb_payload` | `[contest-CPU]` | 185307 | 0.22071572261110622 | 0.00064128 | 0.00011022 | `fc-01KRPCCGRBKMZAP9ASN1VTK2C0` |
+| `d1_shrunk96_b100k_L2_green_payload` | `[contest-CUDA]` | 185309 | 0.23714449393769646 | 0.00070756 | 0.00018489 | `fc-01KRPCC26M39FN0SWPCZJZMX35` |
+| `d1_shrunk96_b100k_L2_green_payload` | `[contest-CPU]` | 185309 | 0.20736549114794994 | 0.00061258 | 0.00005161 | `fc-01KRPCCM97MT1RAW6NN2HPX9XV` |
+
+Interpretation:
+
+- Shrinking the D1 sidecar fixed the rate-axis waste but not the scorer
+  objective mismatch.
+- Green-only is consistently less bad than RGB on both axes.
+- Dense `100000`-bit D1 is still too aggressive: it raises SegNet and PoseNet
+  error more than the rate reduction can recover.
+
+## Sparse 96x128 Refinement - 2026-05-15T18:03Z
+
+Allocator inspection showed a missed sparse region: `budget=5000` at `96x128`
+modifies `4470 / 12288` decoded lattice sites versus `12288 / 12288` for the
+dense `100000` packet. This is a real D1 frontier correction: optimize the
+distortion surface, not just archive bytes.
+
+Command:
+
+```bash
+PYTHONPATH=src .venv/bin/python tools/build_d1_overlay_policy_candidates.py \
+  --d1-bin experiments/results/lane_substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T134005Z__smoke__100ep_modal/harvested_artifacts/d1_polytope.bin \
+  --a1-bin experiments/results/lane_substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T134005Z__smoke__100ep_modal/harvested_artifacts/a1.bin \
+  --output-dir experiments/results/d1_sparse_shrunk96_refine_real_a1_20260515_codex \
+  --policies green,neg_green \
+  --amplitude-scales 0.5,1.0 \
+  --sign-policies payload,negate_payload \
+  --payload-budget-bits 5000,8000,12000,16000 \
+  --jacobian-lipschitz 2 \
+  --margin-map-resolution 96x128
+```
+
+Smallest sparse score-bearing candidates:
+
+| candidate | bytes | decoded nonzero | est changed bytes / pair | archive sha256 |
+| --- | ---: | ---: | ---: | --- |
+| `d1_overlay_budget_5000_L_2_res_96x128_channel_green_amp_1_sign_payload` | 185830 | 4470 | 369444 | `bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291` |
+| `d1_overlay_budget_5000_L_2_res_96x128_channel_green_amp_1_sign_negate_payload` | 185834 | 4470 | 369444 | `adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe` |
+
+Paired dispatch:
+
+| candidate | axis | call id | recovery status |
+| --- | --- | --- | --- |
+| `d1_sparse96_b5k_L2_green_payload` | `[contest-CUDA]` | `fc-01KRPCQ0HXBQFSEMFJ8ZEAEZBW` | recovered: 0.23354941003137458 |
+| `d1_sparse96_b5k_L2_green_payload` | `[contest-CPU]` | `fc-01KRPCQJ04MX9YFTTJD7M9X97H` | recovered: 0.2011587759556391 |
+| `d1_sparse96_b5k_L2_green_negate` | `[contest-CUDA]` | `fc-01KRPCQ0KMZ1F14TAND8WEC16D` | recovered: 0.2342490775283781 |
+| `d1_sparse96_b5k_L2_green_negate` | `[contest-CPU]` | `fc-01KRPCQHV73A4CT26TVG07XE0F` | recovered: 0.20143815804513954 |
+
+The sparse sign test improves CUDA over the dense shrunk green packet by about
+`0.0036` and CPU by about `0.0062`, but still remains above the sub-0.192
+submission gate. D1 must move to scorer-aware sign/mask selection instead of
+static margin-only lattice placement.
+
+## Sparse Alternating-Pair Sign Dispatch - 2026-05-15T18:05Z
+
+One final cheap static D1 hypothesis was dispatched: keep the sparse `5000`
+green lattice but alternate sign by pair to reduce systematic PoseNet drift.
+
+| candidate | axis | call id | status |
+| --- | --- | --- | --- |
+| `d1_sparse96_b5k_L2_green_alternating` | `[contest-CUDA]` | `fc-01KRPD0K6P1SGCF5AVSGFCY7YH` | recovered: 0.2339322883249223 |
+| `d1_sparse96_b5k_L2_green_alternating` | `[contest-CPU]` | `fc-01KRPD13T901AD636FJ58RZ39E` | recovered: 0.2011832266102615 |
+
+Alternating did not beat same-sign sparse on either axis. Best measured static
+D1 remains:
+
+- `[contest-CUDA]`: `d1_sparse96_b5k_L2_green_payload` at
+  `0.23354941003137458`.
+- `[contest-CPU]`: `d1_sparse96_b5k_L2_green_payload` at
+  `0.2011587759556391`.
+
+Both are valid exact measurements and valid negatives for the static D1 overlay
+family, but they are not promotion candidates and they remain above the
+sub-0.192 submission gate.
+
+## D1 Safety And Manifest Hardening - 2026-05-15T18:09Z
+
+Fresh-eyes adversarial review found that the prior D1 encoder allocated
+integer lattice values from entropy buckets without clamping the actual
+magnitude to `floor(margin/L)`. That means exact-eval numbers above remain
+legitimate measurements, but the older method claim "inside the SegNet
+polytope" was under-certified.
+
+Fixes landed:
+
+- `allocate_noise_within_polytope(...)` now clamps every lattice value to the
+  per-pixel integer safe budget `floor(margin/L)`.
+- `validate_polytope_margin_contract(...)` and the generated D1 runtime
+  `_decode_overlay(...)` now fail closed if decoded noise exceeds
+  `floor(margin/L)`.
+- `analyze_d1_overlay_effect(...)` now reports `unsafe_nonzero_pixels` and
+  blocks exact-eval dispatch when unsafe lattice entries are present.
+- Full trainer shrunk margin extraction now explicitly uses `downsample_mode="area"`
+  whenever target resolution differs from the canonical scorer plane, avoiding
+  silent bilinear/area drift between trainer-produced and materializer-produced
+  shrunk D1 sidecars.
+
+New diagnostics added after the sparse finding:
+
+- `decoded_noise_abs_sum`
+- `camera_overlay_abs_sum`
+- `attenuated_overlay_abs_sum`
+- `estimated_changed_lsb_l1_upper_bound_per_pair`
+- `estimated_changed_lsb_l2_energy_upper_bound_per_pair`
+- `unsafe_nonzero_pixels`
+
+The previous diagnostics counted changed pixels but not magnitude; that made
+`+1` and `+2` overlays look too similar. The builder now also emits
+`overlay_effect_equivalence_key` and `duplicate_of_candidate_id`, marking
+metadata-different packets that render identical signed deltas, for example
+`green + negate_payload` versus `neg_green + payload`.
+
+Verification:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -q \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py \
+  src/tac/tests/test_xray_d1_overlay_payload.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests
+
+ruff check \
+  src/tac/substrates/d1_segnet_margin_polytope/diagnostics.py \
+  src/tac/substrates/d1_segnet_margin_polytope/overlay.py \
+  src/tac/substrates/d1_segnet_margin_polytope/polytope_encoder.py \
+  experiments/train_substrate_d1_segnet_margin_polytope.py \
+  tools/build_d1_overlay_policy_candidates.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_overlay_and_shrink.py \
+  src/tac/substrates/d1_segnet_margin_polytope/tests/test_d1_substrate.py \
+  src/tac/tests/test_build_d1_overlay_policy_candidates.py
+```
+
+Results: `125 passed`; ruff clean; `git diff --check` clean.
+
+Next D1 action is a post-fix *certified* sparse96 kink sweep below 5k:
+`budget_bits=500,1000,1500,2000,3000,4000,5000`,
+`channel={green,blue,red}`, `sign={payload,negate_payload,alternating_pairs}`.
+Only rows with `unsafe_nonzero_pixels=0`, nonzero xray, and lower changed-LSB
+surface than the measured 5k packets should be paired-dispatched.

@@ -106,7 +106,7 @@ class PolytopeAllocationResult:
     per_pixel_entropy: np.ndarray
     polytope_interior_fraction: float
 
-    def __post_init__(self) -> None:  # noqa: D401
+    def __post_init__(self) -> None:
         if self.noise_levels.dtype != np.int8:
             raise ValueError(
                 f"PolytopeAllocationResult.noise_levels dtype must be int8; "
@@ -289,6 +289,7 @@ def allocate_noise_within_polytope(
     total = float(per_pixel.sum())
 
     noise_levels = _entropy_to_lattice(per_pixel)
+    noise_levels = _clamp_lattice_to_safe_budget(noise_levels, safe_budget)
     return PolytopeAllocationResult(
         noise_levels=noise_levels,
         lambda_star=lambda_star,
@@ -316,6 +317,23 @@ def _entropy_to_lattice(entropy_bits: np.ndarray) -> np.ndarray:
     return np.clip(
         levels, POLYTOPE_LATTICE_VALUES[0], POLYTOPE_LATTICE_VALUES[-1]
     ).astype(np.int8)
+
+
+def _clamp_lattice_to_safe_budget(
+    noise_levels: np.ndarray,
+    safe_budget: np.ndarray,
+) -> np.ndarray:
+    """Clamp lattice magnitude to the integer safe budget per pixel."""
+    if noise_levels.shape != safe_budget.shape:
+        raise ValueError(
+            "noise_levels/safe_budget shape mismatch: "
+            f"{noise_levels.shape} != {safe_budget.shape}"
+        )
+    max_abs = np.floor(safe_budget.astype(np.float32) + 1e-6)
+    max_abs = np.clip(max_abs, 0, max(abs(v) for v in POLYTOPE_LATTICE_VALUES))
+    signed = noise_levels.astype(np.int16, copy=False)
+    clipped_abs = np.minimum(np.abs(signed), max_abs.astype(np.int16))
+    return (np.sign(signed).astype(np.int16) * clipped_abs).astype(np.int8)
 
 
 def encode_polytope_payload(

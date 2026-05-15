@@ -216,6 +216,17 @@ def test_allocate_noise_boundary_pixels_get_zero_entropy():
     )
 
 
+def test_allocate_noise_clamps_lattice_to_integer_safe_budget():
+    safe = np.array([0.25, 0.99, 1.0, 1.75, 2.0, 4.0], dtype=np.float32)
+    result = allocate_noise_within_polytope(
+        safe, budget_bits=128, jacobian_lipschitz=1.0,
+    )
+    max_abs = np.floor(safe + 1e-6).astype(np.int16)
+    assert np.all(np.abs(result.noise_levels.astype(np.int16)) <= max_abs)
+    assert result.noise_levels[0] == 0
+    assert result.noise_levels[1] == 0
+
+
 def test_allocate_noise_polytope_interior_fraction_correct():
     # 60% interior, 40% boundary.
     safe = np.concatenate([
@@ -329,7 +340,7 @@ def _make_dummy_archive_inputs():
         jacobian_lipschitz=10.0,
     )
     mm = compute_logit_margin_map_dummy(
-        resolution=(48, 64), constant_value=2.0
+        resolution=(48, 64), constant_value=20.0
     )
     payload = encode_polytope_payload(
         mm, jacobian_lipschitz=10.0, budget_bits=2000
