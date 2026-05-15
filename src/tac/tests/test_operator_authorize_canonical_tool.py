@@ -6,6 +6,12 @@ import pytest
 import tools.operator_authorize as op
 
 
+@pytest.fixture(autouse=True)
+def _isolate_local_pre_deploy(monkeypatch) -> None:
+    """Operator routing tests mock dispatch gates; local harness has own coverage."""
+    monkeypatch.setattr(op, "_run_local_pre_deploy_check", lambda *_: None)
+
+
 def _band() -> op.CostBandPrediction:
     return op.CostBandPrediction(
         p10_cost_usd=0.0,
@@ -205,7 +211,7 @@ def test_z3_operator_recipe_explicitly_selects_v2_latent_replacement() -> None:
     )
 
 
-def test_z3_remote_driver_keeps_v2_latent_replacement_opt_in() -> None:
+def test_z3_remote_driver_defaults_to_v2_latent_replacement() -> None:
     text = (
         op.REPO_ROOT
         / "scripts"
@@ -214,7 +220,7 @@ def test_z3_remote_driver_keeps_v2_latent_replacement_opt_in() -> None:
 
     default_ladder = (
         'Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT="'
-        "${Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-0}\""
+        "${Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-1}\""
     )
     assert default_ladder in text
     assert "V2_LATENT_REPLACEMENT_ARGS+=(--enable-v2-latent-replacement)" in text
@@ -222,7 +228,7 @@ def test_z3_remote_driver_keeps_v2_latent_replacement_opt_in() -> None:
         '${V2_LATENT_REPLACEMENT_ARGS[@]+"${V2_LATENT_REPLACEMENT_ARGS[@]}"}'
         in text
     )
-    assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-1" not in text
+    assert "Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT:-0" not in text
 
 
 def test_z4_z5_recipes_depend_on_current_z3_recover_lane() -> None:

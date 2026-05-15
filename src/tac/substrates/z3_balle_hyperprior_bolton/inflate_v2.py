@@ -7,13 +7,13 @@ per-dim affine reload, returning latents in A1's quantized-range space so
 A1's HNeRV decoder can be applied as if they had been read out of A1's own
 ``decode_latents_compact``.
 
-For backward compatibility, this module's public ``reconstruct_a1_latents``
-ALSO accepts a v1 payload (Z3HP1 sidecar) and the legacy A1 byte-identical
-fallback. Detection is by magic at offset ``A1_DECODER_SECTION_TOTAL``:
+Production callers should use ``reconstruct_a1_latents_from_v2_payload`` or
+``require_reconstruct_a1_latents_from_v2_payload`` so malformed or legacy
+packets fail closed. The historical ``reconstruct_a1_latents`` adapter remains
+for deterministic forensic tests only.
 
-- If the next 4 bytes == ``Z3V2``: v2 latent-replacement path.
-- Else, fall back to v1's ``reconstruct_a1_latents`` (sidebar magic ``Z3H1``)
-  or A1 verbatim.
+The adapter named ``reconstruct_a1_latents`` below is intentionally
+forensic-only; production runtimes should call the ``require_*`` helper.
 
 LOC budget: ≤ 200 LOC per HNeRV parity discipline L4 (this module is the
 v2 runtime; v1's lives in sibling ``inflate.py``). NO scorer load. NO network.
@@ -39,15 +39,15 @@ from tac.substrates.z3_balle_hyperprior_bolton.architecture import (
     Z3HyperpriorConfig,
     Z3HyperpriorMLP,
 )
-from tac.substrates.z3_balle_hyperprior_bolton.archive import (
-    dequantize_int8_with_scale,
-)
 from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
     A1_DECODER_SECTION_TOTAL,
     A1_LATENT_BLOB_LEN,
     Z3HV2_MAGIC,
     decode_z3hv2_section,
     split_z3v2_payload_bytes,
+)
+from tac.substrates.z3_balle_hyperprior_bolton.quant import (
+    dequantize_int8_with_scale,
 )
 
 
@@ -131,25 +131,19 @@ def reconstruct_a1_latents_from_v2_payload(
         payload_bytes: A v2 inner payload (decoder_section + Z3HV2 + sidecar).
 
     Returns:
-        ``(a1_byte_faithful_bytes, latents_in_a1_range)`` — a synthetic A1
-        archive whose ``latent_blob`` slot is filled with the Z3-decoded
-        latents pre-affine'd into A1's quantized-range space, plus the
-        latents tensor (shape ``(N_PAIRS, A1_LATENT_DIM)``, fp32) ready for
-        A1's ``apply_latent_sidecar``.
-
-        The byte-faithful synthetic A1 archive is suitable for handing to
-        A1's ``parse_archive(...)`` directly, because:
+        ``(a1_decoder_sidecar_shell_bytes, latents_in_a1_range)`` — an A1
+        decoder/sidecar shell plus the direct Z3 latents tensor
+        (shape ``(N_PAIRS, A1_LATENT_DIM)``, fp32) ready for A1's
+        ``apply_latent_sidecar``.
 
         - bytes 0..162168 = decoder_section (verbatim A1)
-        - bytes 162168..177555 = synthetic latent_blob = LZMA-compressed
-          (mins, scales, latent codes) reconstructed from the Z3 decode
+        - bytes 162168..177555 = zero-padded placeholder latent_blob
         - bytes 177555.. = sidecar (verbatim A1)
 
-        However, materialising A1's exact LZMA bytes requires the original
-        per-dim mins/scales AND the byte-identical re-encode of the latent
-        codes. v2 instead returns the LATENTS DIRECTLY (the Z3 decode is
-        rate-saving, not bit-exact A1 latents), and the inflate runtime
-        composes A1's HNeRVDecoder + apply_latent_sidecar on top.
+        The placeholder latent bytes must never be fed through A1's
+        ``decode_latents_compact``. v2 returns LATENTS DIRECTLY, and the
+        inflate runtime composes A1's HNeRVDecoder + apply_latent_sidecar on
+        top.
 
         Per HNeRV parity discipline L4: callers should treat the returned
         ``latents_in_a1_range`` as the canonical input to A1's
@@ -163,39 +157,35 @@ def reconstruct_a1_latents_from_v2_payload(
         weights_int8,
         w_hat_int8,
         residual_int8,
-        latent_min,
+        latent_offset,
         latent_scale,
         _,
     ) = decode_z3hv2_section(z3hv2_section)
 
-    cfg = Z3HyperpriorConfig(hyper_latent_dim=meta.hyper_dim)
-    mlp = _load_hyperprior_from_bytes(weights_int8, meta.int8_w_scale, cfg)
+    if weights_int8 or w_hat_int8:
+        cfg = Z3HyperpriorConfig(hyper_latent_dim=meta.hyper_dim)
+        mlp = _load_hyperprior_from_bytes(weights_int8, meta.int8_w_scale, cfg)
+        w_hat_arr = np.frombuffer(w_hat_int8, dtype=np.int8).reshape(
+            meta.n_pairs, meta.hyper_dim
+        )
+        w_hat = torch.from_numpy(w_hat_arr.copy()).to(torch.float32) * meta.quant_step
+        with torch.inference_mode():
+            h2 = mlp.h_s_1(w_hat)
+            sigma_logits = mlp.h_s_2(h2)
+            sigma = torch.nn.functional.softplus(sigma_logits) + meta.min_sigma
+            sigma = sigma.clamp(min=meta.min_sigma, max=meta.max_sigma)
+        _ = sigma  # Diagnostic only unless a future entropy-coded residual is used.
 
-    # Decode w_hat (the side-info hyper-latents).
-    w_hat_arr = np.frombuffer(w_hat_int8, dtype=np.int8).reshape(
-        meta.n_pairs, meta.hyper_dim
-    )
-    w_hat = torch.from_numpy(w_hat_arr.copy()).to(torch.float32) * meta.quant_step
-
-    # Forward through hyper-synthesis (h_s) for sigma (diagnostic / round-trip).
-    with torch.inference_mode():
-        h2 = mlp.h_s_1(w_hat)
-        sigma_logits = mlp.h_s_2(h2)
-        sigma = torch.nn.functional.softplus(sigma_logits) + meta.min_sigma
-        sigma = sigma.clamp(min=meta.min_sigma, max=meta.max_sigma)
-    _ = sigma  # Diagnostic only; the residual already encodes the sigma-scaled state.
-
-    # Reconstruct latents: residual_int8 stores quantized-q latents in
-    # A1's q-grid space; we re-affine via per-dim (min, scale) to the
-    # A1 latent range.
+    # Reconstruct latents: residual_int8 stores signed centered quantized
+    # latents in A1's q-grid space; re-affine via per-dim (offset, scale).
     residual_arr = np.frombuffer(residual_int8, dtype=np.int8).reshape(
         meta.n_pairs, meta.latent_dim
     )
     residual_q = torch.from_numpy(residual_arr.copy()).to(torch.float32)
-    # Per-dim affine: latents = residual_q * scale + min. (residual_q is
-    # the centered int8-quantized representation; scale + min restore A1's
+    # Per-dim affine: latents = residual_q * scale + offset. (residual_q is
+    # the centered int8-quantized representation; scale + offset restores A1's
     # learned-quantized fp32 range.)
-    latents = residual_q * latent_scale.unsqueeze(0) + latent_min.unsqueeze(0)
+    latents = residual_q * latent_scale.unsqueeze(0) + latent_offset.unsqueeze(0)
     if latents.shape != (A1_N_PAIRS, A1_LATENT_DIM):
         raise ValueError(
             f"Z3HV2 reconstructed latents shape {tuple(latents.shape)} "
@@ -236,9 +226,19 @@ def reconstruct_a1_latents(
     return v1_reconstruct(payload_bytes)
 
 
+def require_reconstruct_a1_latents_from_v2_payload(
+    payload_bytes: bytes,
+) -> tuple[bytes, torch.Tensor]:
+    """Fail closed unless ``payload_bytes`` is a Z3HV2 production packet."""
+    if not is_v2_payload(payload_bytes):
+        raise ValueError("Z3 production runtime requires a Z3HV2 payload")
+    return reconstruct_a1_latents_from_v2_payload(payload_bytes)
+
+
 __all__ = [
     "is_v2_payload",
     "reconstruct_a1_latents",
     "reconstruct_a1_latents_from_v2_payload",
+    "require_reconstruct_a1_latents_from_v2_payload",
     "select_inflate_device",
 ]

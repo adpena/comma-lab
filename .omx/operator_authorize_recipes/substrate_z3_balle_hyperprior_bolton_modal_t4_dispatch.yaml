@@ -92,12 +92,12 @@ literature_anchor: |
 council_phase_5_prediction: 0.190
 
 risk: |
-  Z3 hyperprior v2 latent-replacement smoke. Predicted band [0.183, 0.190] is a literature-
+  Z3 direct-residual v2 latent-replacement smoke. Predicted band [0.183, 0.190] is a literature-
   prediction synthesis (Ballé 2018 + Z1 MDL ablation at 99.29% density), NOT
   measurement. The recipe is smoke_only with training_artifact_v1 validation
   and explicitly sets Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1 so the remote
-  driver passes --enable-v2-latent-replacement to the trainer. Append-only
-  Z3HP1 remains the legacy default only when that env override is absent.
+  driver passes --enable-v2-latent-replacement to the trainer. Z3 production
+  dispatch is v2-only; append-only Z3HP1 is forensic-only historical code.
 
   Architectural risk:
   - At A1's 99.29% scorer-conditional MDL density the realistic delta is at
@@ -109,13 +109,11 @@ risk: |
     autopilot ranker v2 rewards it -0.01 for literature-anchor + -0.02 for
     class_shift lane_class so the bet is asymmetric: tiny downside, modest
     upside via posterior calibration.
-  - The sidecar overhead estimate is ~14,055 bytes (residual 10080 + w_hat
-    2880 + weights 1058 + header 37). A1's latent_blob is 15,387 bytes so
-    amortization requires the conditional-Gaussian rate-y to come in below
-    ~1300 bytes for the full 600 pairs. The trainer adopts the Ballé
-    amortization principle through Z3HV2: replace A1's latent_blob only when
-    the replacement section is byte-saving; otherwise the artifact stays
-    non-promotional.
+  - The current Z3HV2 packet is direct-residual production-safe mode: it ships
+    no no-op hyperprior weights/w_hat bytes until a real entropy-coded residual
+    decoder consumes them at inflate time. Hyperprior training is a diagnostic
+    prior, not score authority. The section replaces A1's latent_blob and
+    remains non-promotional until paired CPU/CUDA auth-eval says otherwise.
 
   Modal T4 training is diagnostic unless the auth-eval contract itself records
   score_axis=contest_cuda and score_claim_valid=true. CPU axis remains
@@ -146,12 +144,10 @@ required_input_files_trainer: experiments/train_substrate_z3_balle_hyperprior_bo
 sentinel_files:
   - src/tac/substrates/z3_balle_hyperprior_bolton/__init__.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/architecture.py
-  - src/tac/substrates/z3_balle_hyperprior_bolton/archive.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/archive_v2.py
-  - src/tac/substrates/z3_balle_hyperprior_bolton/inflate.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/inflate_v2.py
-  - src/tac/substrates/z3_balle_hyperprior_bolton/score_aware_loss.py
   - src/tac/substrates/z3_balle_hyperprior_bolton/score_aware_loss_v2.py
+  - src/tac/substrates/z3_balle_hyperprior_bolton/quant.py
   - src/tac/substrates/_shared/trainer_skeleton.py
   - src/tac/substrates/_shared/inflate_runtime.py
   - src/tac/substrates/score_aware_common.py
@@ -181,16 +177,16 @@ notes: |
   recipe.
 
   This recipe explicitly selects v2 by setting
-  Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1. The trainer and remote driver keep
-  legacy v1 append-only as their default for forensic comparison when this env
-  override is absent; operator-authorized Z3 dispatches use the realistic
-  latent-replacement path.
+  Z3_BALLE_ENABLE_V2_LATENT_REPLACEMENT=1. The trainer and remote driver are
+  v2-first; legacy v1 append-only remains forensic-only and is not emitted by
+  production Z3 packets.
 
-  Architecture: 1,764-param Ballé-2018 scale-hyperprior MLP (h_a: 28→16→8;
-  h_s: 8→16→28) with int8 weight quantization and brotli-compressed Z3HV2
-  replacement section. The section is compared against A1 latent_blob 15,387B
-  under the Ballé 2018 amortization principle; byte-saving v2 artifacts replace
-  A1's latent_blob, while non-saving artifacts remain non-promotional.
+  Architecture: Z3HV2 direct-residual replacement section over A1's 15,387B
+  latent_blob. The Ballé-2018 hyperprior MLP is retained as a diagnostic prior
+  and training scaffold, but production packets do not ship hyperprior weights
+  or w_hat bytes until an entropy-coded residual decoder consumes them at
+  inflate time. Byte-saving v2 artifacts replace A1's latent_blob, while all
+  artifacts remain non-promotional until paired CPU/CUDA auth-eval review.
 
   Per the long-term campaign C5 ranking, Z3 is the cheapest across-class
   validation that a literature-anchored class-shift mechanism reduces A1

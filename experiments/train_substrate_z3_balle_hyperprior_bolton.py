@@ -31,15 +31,15 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   #222 (canonical loader returns (posenet, segnet)).
 - ``detect_hardware_substrate`` per Catalog #190.
 
-V1 SCOPE (this landing):
-- ``_smoke_main`` builds a tiny config, trains the rate-only Lagrangian for
-  3 epochs against synthetic A1 latents, runs the archive pack + parse +
-  inflate roundtrip, and emits a contest-compliant runtime tree. NO
-  scorer load required.
+Execution scope:
+- ``_smoke_main`` builds a tiny config, trains the Z3HV2 residual-domain
+  rate Lagrangian for 3 epochs against synthetic A1 latents, runs the v2
+  archive pack + parse roundtrip, and emits a contest-compliant runtime tree.
+  NO scorer load required.
 - ``_full_main`` decodes A1's frozen latent_blob from ``--a1-archive-path``,
   fine-tunes the hyperprior with the full Ballé R+λD Lagrangian (rate +
-  seg + pose), packs the Z3 composition archive (A1 bytes + Z3HP1 sidecar
-  ONLY when bytes_saved > overhead per Ballé amortization principle),
+  seg + pose), packs the Z3HV2 composition archive (A1 decoder bytes + Z3HV2
+  latent-replacement section + A1 sidecar),
   emits the contest-compliant runtime tree, runs CUDA auth eval on the
   best EMA checkpoint, and posts the result to the continual-learning
   posterior.
@@ -111,14 +111,10 @@ from tac.substrates.z3_balle_hyperprior_bolton import (
     A1_N_PAIRS,
     Z3HyperpriorConfig,
     Z3HyperpriorMLP,
-    build_composition_archive_contract,
-    encode_z3hp1_sidecar,
-    pack_composition_archive,
-    quantize_int8_with_scale,
 )
-from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss import (
-    estimate_sidecar_overhead_bytes,
-    z3_lagrangian,
+from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss_v2 import (
+    estimate_z3v2_section_overhead_bytes,
+    z3_v2_lagrangian,
 )
 
 # ---------------------------------------------------------------------------
@@ -132,6 +128,51 @@ CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 SUBSTRATE_TAG = "z3_balle_hyperprior_bolton"
 SUBSTRATE_LANE_ID = "lane_z3_balle_hyperprior_bolton_recover_20260514"
+
+
+def _z3v2_affine_residual_int8(
+    a1_latents: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return signed-int8 residuals plus the v2 affine reload parameters.
+
+    Z3V2 stores a centered affine offset because v2 needs a signed int8
+    residual. A minimum offset would map the source range to ``0..254`` and
+    silently clip the upper half when stored as int8. Centering maps endpoints
+    to approximately ``[-127, 127]``.
+    """
+    a1_cpu = a1_latents.detach().to(torch.float32).cpu()
+    a1_min = a1_cpu.min(dim=0).values
+    a1_max = a1_cpu.max(dim=0).values
+    a1_offset = (a1_min + a1_max) * 0.5
+    a1_scale = ((a1_max - a1_min) / 254.0).clamp(min=1e-6)
+    residual = (
+        (a1_cpu - a1_offset.unsqueeze(0)) / a1_scale.unsqueeze(0)
+    ).round().clamp(min=-127.0, max=127.0).to(torch.int8)
+    return residual, a1_offset, a1_scale
+
+
+def _use_v2_latent_replacement(args: argparse.Namespace) -> bool:
+    """Z3 frontier path is v2 latent replacement by default."""
+    return bool(getattr(args, "enable_v2_latent_replacement", True))
+
+
+def _validate_z3v2_quantization_step(args: argparse.Namespace) -> None:
+    """Fail closed while Z3V2 quant_step is metadata, not runtime math."""
+    if _use_v2_latent_replacement(args) and not math.isclose(
+        float(args.quantization_step), 1.0, rel_tol=0.0, abs_tol=1e-12
+    ):
+        raise SystemExit(
+            "ERROR: Z3V2 requires --quantization-step 1.0 because the v2 "
+            "inflate runtime reconstructs centered signed-int8 residuals as "
+            "residual * scale + offset. Non-1.0 quant steps need a matching "
+            "train/export/inflate contract before dispatch."
+        )
+    if int(getattr(args, "hyper_hidden_dim", 16)) != 16:
+        raise SystemExit(
+            "ERROR: Z3V2 currently requires --hyper-hidden-dim 16 because the "
+            "wire grammar does not serialize hidden width. Add a grammar field "
+            "and runtime decoder support before varying this value."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -272,9 +313,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--enable-torch-compile", action="store_true")
     p.add_argument("--enable-gt-scorer-cache", action="store_true")
     # v2 latent-replacement archive grammar (council omnibus Decision 3, 2026-05-14).
-    # When set, the trainer emits the Z3HV2-section payload that REPLACES A1's
-    # latent_blob in-place rather than the v1 append-only Z3HP1 sidecar. v1
-    # was retired as redundant per the binding 11/11 verdict (commit 7872c9f4b).
+    # The trainer emits the Z3HV2-section payload that REPLACES A1's latent_blob
+    # in-place. This flag is accepted as an explicit operator attestation, but
+    # v2 is the default frontier path.
+    p.set_defaults(enable_v2_latent_replacement=True)
     p.add_argument(
         "--enable-v2-latent-replacement",
         action="store_true",
@@ -309,14 +351,23 @@ def _smoke_main(args: argparse.Namespace) -> int:
     Per Catalog #114, synthetic data is permitted ONLY inside _smoke_main.
     The full path decodes real A1 latents from the archive.
     """
+    _validate_z3v2_quantization_step(args)
     _canon_pin_seeds(args.seed)
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Smoke synthetic A1 latents (deterministic random).
+    # Smoke synthetic A1 latents (deterministic random). Use the full A1 pair
+    # count so the trained rate objective and exported Z3V2 residual tensor have
+    # the same shape.
     torch.manual_seed(args.seed)
     n_smoke_pairs = 32
-    a1_latents = torch.randn(n_smoke_pairs, A1_LATENT_DIM, device=args.device)
+    a1_latents = torch.zeros(A1_N_PAIRS, A1_LATENT_DIM, device=args.device)
+    a1_latents[:n_smoke_pairs] = torch.randn(
+        n_smoke_pairs, A1_LATENT_DIM, device=args.device
+    )
+    _, smoke_offset_cpu, smoke_scale_cpu = _z3v2_affine_residual_int8(a1_latents)
+    smoke_offset = smoke_offset_cpu.to(args.device)
+    smoke_scale = smoke_scale_cpu.to(args.device)
 
     cfg = Z3HyperpriorConfig(
         hyper_latent_dim=args.hyper_latent_dim,
@@ -333,14 +384,18 @@ def _smoke_main(args: argparse.Namespace) -> int:
     n_epochs = max(args.epochs, 3)
     for _epoch in range(n_epochs):
         optimizer.zero_grad()
-        out = z3_lagrangian(
+        out = z3_v2_lagrangian(
             hyperprior=hyperprior,
             a1_latents=a1_latents,
-            seg_scorer=torch.nn.Identity(),  # rate-only mode
+            latent_offset=smoke_offset,
+            latent_scale=smoke_scale,
+            seg_scorer=torch.nn.Identity(),
             pose_scorer=torch.nn.Identity(),
-            a1_pair_pred_rt=None,
+            decoded_pair_rt=None,
             gt_pair=None,
             alpha_rate=args.alpha_rate,
+            beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose,
             quantization_step=args.quantization_step,
             factorized_half_range=args.factorized_half_range,
         )
@@ -352,58 +407,52 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     # Build the Z3 composition archive over the real A1 base when available so
     # emitted smoke runtimes still consume the contest-style extracted `x`.
-    try:
-        base_bytes, _, _ = _load_a1_archive_bytes(args.a1_archive_path)
-    except Exception:
-        base_bytes = b"Z3_SMOKE_BASE_v0" * 100  # fallback for isolated tests
+    base_bytes, _, _ = _load_a1_archive_bytes(args.a1_archive_path)
     base_sha = hashlib.sha256(base_bytes).hexdigest()
 
-    # Quantize the hyperprior weights for the sidecar.
-    weight_tensors = torch.cat(
-        [p.detach().flatten() for p in hyperprior.parameters()]
+    # Direct-residual Z3HV2 mode: do not ship no-op hyperprior bytes until a
+    # real entropy-coded residual decoder consumes them at inflate time.
+    a1_full = torch.zeros(A1_N_PAIRS, A1_LATENT_DIM, device=args.device)
+    a1_full[: a1_latents.shape[0]] = a1_latents
+
+    from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+        build_z3v2_composition_archive_contract as _v2_build_contract,
     )
-    weights_int8, w_scale = quantize_int8_with_scale(weight_tensors)
+    from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+        build_z3v2_payload_bytes as _v2_build_payload,
+    )
+    from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+        encode_z3hv2_section as _v2_encode_section,
+    )
 
-    # Run a final forward to get the quantized w_hat for archive.
-    with torch.no_grad():
-        sigma, w_hat = hyperprior(a1_latents, quantize=True)
-        # Pad/truncate w_hat to A1_N_PAIRS for the smoke sidecar (smoke uses
-        # 32 pairs but the sidecar schema requires 600).
-        if w_hat.shape[0] < A1_N_PAIRS:
-            pad = torch.zeros(A1_N_PAIRS - w_hat.shape[0], cfg.hyper_latent_dim,
-                              device=w_hat.device)
-            w_hat_full = torch.cat([w_hat, pad], dim=0)
-        else:
-            w_hat_full = w_hat[:A1_N_PAIRS]
-        # Residual = quantized a1 latents (smoke uses synthetic latents).
-        a1_full = torch.zeros(A1_N_PAIRS, A1_LATENT_DIM, device=args.device)
-        a1_full[: a1_latents.shape[0]] = a1_latents
-        residual = (a1_full / args.quantization_step).round().clamp(-128, 127).to(torch.int8)
-        w_hat_int8 = w_hat_full.cpu().clamp(-128, 127).to(torch.int8).numpy().tobytes()
-        residual_int8 = residual.cpu().numpy().tobytes()
-
-    sidecar = encode_z3hp1_sidecar(
-        hyperprior_weights_int8=weights_int8,
-        w_hat_int8=w_hat_int8,
-        residual_int8=residual_int8,
+    residual_v2, a1_offset, a1_scale = _z3v2_affine_residual_int8(a1_full)
+    z3hv2_section = _v2_encode_section(
+        hyperprior_weights_int8=b"",
+        w_hat_int8=b"",
+        residual_int8=residual_v2.numpy().tobytes(),
+        latent_offset=a1_offset,
+        latent_scale=a1_scale,
         hyper_dim=cfg.hyper_latent_dim,
-        int8_w_scale=w_scale,
+        int8_w_scale=1.0,
         quant_step=cfg.quantization_step,
         min_sigma=cfg.min_sigma,
         max_sigma=cfg.max_sigma,
+        factorized_half_range=args.factorized_half_range,
     )
-    archive_contract = build_composition_archive_contract(base_bytes, sidecar)
-    archive_bytes = pack_composition_archive(
-        base_bytes,
-        sidecar,
-        allow_append_only_diagnostic=True,
+    archive_bytes = _v2_build_payload(
+        a1_bytes=base_bytes,
+        z3hv2_section=z3hv2_section,
     )
+    archive_contract = _v2_build_contract(base_bytes, archive_bytes)
+    sidecar_bytes = len(z3hv2_section)
+    (out_dir / "z3v2_section_diagnostic.bin").write_bytes(z3hv2_section)
     archive_path = out_dir / "0.bin"
     archive_path.write_bytes(archive_bytes)
 
     # Emit runtime tree + archive.zip per the canonical pattern.
     submission_dir = out_dir / "submission_dir"
-    _write_runtime(submission_dir)
+    _write_runtime(submission_dir, a1_runtime_src=args.a1_archive_path.parent / "src")
+    runtime_manifest = _write_submission_runtime_manifest(submission_dir)
     (submission_dir / "0.bin").write_bytes(archive_bytes)
     archive_zip_path = out_dir / "archive.zip"
     _build_archive_zip(archive_zip_path, bin_bytes=archive_bytes)
@@ -432,11 +481,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "base_archive_sha256": base_sha,
         "hyper_dim": cfg.hyper_latent_dim,
         "param_count": sum(p.numel() for p in hyperprior.parameters()),
-        "sidecar_bytes": len(sidecar),
+        "sidecar_bytes": sidecar_bytes,
         "archive_contract": archive_contract.as_manifest(),
         "byte_saving": archive_contract.byte_saving,
-        "estimated_sidecar_overhead": estimate_sidecar_overhead_bytes(
-            hyperprior=hyperprior
+        "v2_latent_replacement_requested": True,
+        "v2_latent_replacement_active": True,
+        "estimated_sidecar_overhead": estimate_z3v2_section_overhead_bytes(
+            hyperprior=hyperprior,
         ),
         "cfg": asdict(cfg),
         "score_claim": False,
@@ -449,6 +500,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "smoke_no_scorer_load",
             "requires_separate_auth_eval_result_review_before_score_claim",
         ],
+        "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+        "submission_runtime_manifest_path": str(
+            submission_dir / "submission_runtime_manifest.json"
+        ),
         "hardware_substrate": hardware_substrate,
         "git_head": _canon_git_head_sha(REPO_ROOT),
         "trained_at_utc": _canon_utc_now_iso(),
@@ -466,7 +521,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
     print(
         f"[z3-smoke] OK final_loss={final_loss:.6f} "
         f"rate_bits={final_rate_bits:.1f} archive={len(archive_bytes)}B "
-        f"sha={archive_sha[:12]}... param_count={stats['param_count']}"
+        f"sha={archive_sha[:12]}... layout={stats['archive_contract']['layout']} "
+        f"param_count={stats['param_count']}"
     )
     return 0
 
@@ -594,6 +650,9 @@ def _run_val_loop_full(
     a1_latents: torch.Tensor,
     val_indices: list[int],
     args: argparse.Namespace,
+    *,
+    latent_offset: torch.Tensor,
+    latent_scale: torch.Tensor,
 ) -> dict[str, float]:
     """Validation forward pass — eval-time torch.inference_mode (Catalog #180).
 
@@ -608,14 +667,18 @@ def _run_val_loop_full(
             return {"val_loss": float("inf"), "val_rate_bits": float("inf")}
         idx = torch.tensor(val_indices, device=a1_latents.device, dtype=torch.long)
         val_latents = a1_latents[idx]
-        out = z3_lagrangian(
+        out = z3_v2_lagrangian(
             hyperprior=hyperprior,
             a1_latents=val_latents,
+            latent_offset=latent_offset,
+            latent_scale=latent_scale,
             seg_scorer=torch.nn.Identity(),
             pose_scorer=torch.nn.Identity(),
-            a1_pair_pred_rt=None,
+            decoded_pair_rt=None,
             gt_pair=None,
             alpha_rate=args.alpha_rate,
+            beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose,
             quantization_step=args.quantization_step,
             factorized_half_range=args.factorized_half_range,
         )
@@ -638,17 +701,14 @@ def _full_main(args: argparse.Namespace) -> int:
       1. Load FROZEN A1 archive bytes (sha pinned via --a1-archive-path).
       2. Decode A1 latents (600 × 28) via A1's codec.
       3. Init Z3 hyperprior MLP (~1.8k params; canonical EMA decay=0.997).
-      4. Train AdamW(lr=1e-3) with score-aware Ballé R+λD Lagrangian.
-         (Rate-only on the latents while A1 decoder + latents are FROZEN.)
+      4. Train AdamW(lr=1e-3) with the same residual-domain v2 Ballé
+         Lagrangian that is emitted in the Z3HV2 packet.
       5. Apply EMA shadow at eval; snapshot+restore live weights (Catalog #88).
-      6. Estimate Z3HP1 sidecar bytes; ship IFF bytes_saved > overhead
-         (Ballé 2018 amortization principle). In v1, inflate.py is
-         parse-only, so the canonical safe path is sidecar-omitted +
-         archive byte-identical-to-A1 (the diagnostic sidecar is saved
-         separately for council review).
+      6. Emit the Z3HV2 latent-replacement payload and record exact byte
+         savings against A1's latent_blob.
       7. Build composition archive + contest-compliant runtime tree
-         (vendor A1's codec.py + model.py so inflate.py can fall back to
-         A1 behavior).
+         (vendor A1's codec.py + model.py for the final HNeRV decode, while
+         refusing raw A1/v1 fallback payloads).
       8. Run CUDA auth eval via canonical gate_auth_eval_call (Catalog #223).
       9. Post stats with fail-closed result_review_blockers (Catalog #127).
     """
@@ -656,6 +716,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     from tac.training import EMA
 
+    _validate_z3v2_quantization_step(args)
     _canon_pin_seeds(args.seed)
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -680,10 +741,10 @@ def _full_main(args: argparse.Namespace) -> int:
     a1_bytes, a1_sha, a1_size = _load_a1_archive_bytes(args.a1_archive_path)
     _stage(f"a1_loaded_{a1_size}_B_sha{a1_sha[:8]}")
 
-    # v1 is byte/rate-only over frozen A1 latents. The scorer path is not
-    # loaded until the Z3 archive grammar can actually replace A1's latent_blob.
+    # Z3V2 is currently rate-only over frozen A1 latents. Exact score movement
+    # is learned from the compiled packet by separate paired CPU/CUDA auth eval.
     yuv6_token = None
-    _stage("scorer_path_skipped_rate_only_v1")
+    _stage("scorer_path_skipped_rate_only_z3v2")
 
     auth_eval_result_path: str | None = None
     auth_eval_score: float | None = None
@@ -711,17 +772,19 @@ def _full_main(args: argparse.Namespace) -> int:
             args.a1_archive_path, a1_bytes, device=device
         )
         _stage(f"a1_decoded_latents{tuple(a1_latents.shape)}")
-        # Decoder reference kept so future v2 composes the conditional
-        # Gaussian decode → A1 decoder pipeline; v1 uses identity rendering.
-        del decoder  # explicit: not used in v1 rate-only path
+        _, v2_offset_cpu, v2_scale_cpu = _z3v2_affine_residual_int8(a1_latents)
+        v2_latent_offset = v2_offset_cpu.to(device)
+        v2_latent_scale = v2_scale_cpu.to(device)
+        _stage("z3v2_affine_offset_scale_built")
+        del decoder  # rate-only Z3HV2 training; exact score is eval-gated.
 
         # ---- Step 3: scorer placeholders ----
-        # z3_lagrangian does not call scorers while a1_pair_pred_rt/gt_pair are
-        # None. Keeping Identity modules here preserves the call contract while
-        # avoiding heavyweight scorer loads on a non-promotional local build.
+        # z3_v2_lagrangian does not call scorers while decoded_pair_rt/gt_pair
+        # are None. Keeping Identity modules here preserves the call contract
+        # while avoiding heavyweight scorer loads on a non-promotional build.
         pose_scorer = torch.nn.Identity()
         seg_scorer = torch.nn.Identity()
-        _stage("scorers_identity_rate_only_v1")
+        _stage("scorers_identity_rate_only_z3v2")
 
         # ---- Step 4: init hyperprior + EMA + optimizer ----
         cfg = Z3HyperpriorConfig(
@@ -765,17 +828,14 @@ def _full_main(args: argparse.Namespace) -> int:
                     continue
                 pair_idxs = torch.tensor(batch_indices, device=device, dtype=torch.long)
                 batch_latents = a1_latents[pair_idxs]
-                out = z3_lagrangian(
+                out = z3_v2_lagrangian(
                     hyperprior=hyperprior,
                     a1_latents=batch_latents,
-                    # v1 rate-only: A1 decoder + latents FROZEN → distortion
-                    # change is zero by construction (within quantization
-                    # tolerance). The rate term is the ONLY optimization
-                    # target. Per council ledger §2: ΔS predicted purely
-                    # via rate amortization.
+                    latent_offset=v2_latent_offset,
+                    latent_scale=v2_latent_scale,
                     seg_scorer=seg_scorer,
                     pose_scorer=pose_scorer,
-                    a1_pair_pred_rt=None,
+                    decoded_pair_rt=None,
                     gt_pair=None,
                     alpha_rate=args.alpha_rate,
                     beta_seg=args.beta_seg,
@@ -815,7 +875,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 ema.apply(hyperprior)
                 try:
                     val_metrics = _run_val_loop_full(
-                        hyperprior, a1_latents, val_indices_pool, args
+                        hyperprior,
+                        a1_latents,
+                        val_indices_pool,
+                        args,
+                        latent_offset=v2_latent_offset,
+                        latent_scale=v2_latent_scale,
                     )
                 finally:
                     hyperprior.load_state_dict(live_state)
@@ -872,151 +937,64 @@ def _full_main(args: argparse.Namespace) -> int:
             hyperprior.load_state_dict(best_ckpt["state_dict"])
         hyperprior.eval()
 
-        with torch.inference_mode():
-            sigma_all, w_hat_all = hyperprior(a1_latents, quantize=True)
-            # NOTE: v1 path quantizes raw latents directly; v2 path needs the
-            # per-dim affine reload so the residual is in A1's range. The
-            # decision branch below dispatches on --enable-v2-latent-replacement.
-            w_hat_q = w_hat_all.clamp(-128, 127).to(torch.int8)
-            del sigma_all  # diagnostic only; rate is encoder-driven
-
-        weight_tensors = torch.cat(
-            [p.detach().flatten() for p in hyperprior.parameters()]
+        from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+            A1_LATENT_BLOB_LEN as _V2_A1_LATENT_BLOB_LEN,
         )
-        weights_int8, w_scale = quantize_int8_with_scale(weight_tensors)
-        w_hat_int8 = w_hat_q.cpu().numpy().tobytes()
+        from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+            build_z3v2_composition_archive_contract as _v2_build_contract,
+        )
+        from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+            build_z3v2_payload_bytes as _v2_build_payload,
+        )
+        from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+            encode_z3hv2_section as _v2_encode_section,
+        )
 
-        if bool(getattr(args, "enable_v2_latent_replacement", False)):
-            # v2 latent-replacement path (council omnibus Decision 3).
-            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
-                A1_LATENT_BLOB_LEN as _V2_A1_LATENT_BLOB_LEN,
-            )
-            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
-                build_z3v2_composition_archive_contract as _v2_build_contract,
-            )
-            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
-                build_z3v2_payload_bytes as _v2_build_payload,
-            )
-            from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
-                encode_z3hv2_section as _v2_encode_section,
-            )
+        # Per-dim affine for the v2 grammar. v2 stores the centered offset
+        # required by the signed-int8 residual contract.
+        residual_v2, a1_offset, a1_scale = _z3v2_affine_residual_int8(a1_latents)
+        residual_int8 = residual_v2.numpy().tobytes()
+        z3hv2_section = _v2_encode_section(
+            hyperprior_weights_int8=b"",
+            w_hat_int8=b"",
+            residual_int8=residual_int8,
+            latent_offset=a1_offset,
+            latent_scale=a1_scale,
+            hyper_dim=cfg.hyper_latent_dim,
+            int8_w_scale=1.0,
+            quant_step=cfg.quantization_step,
+            min_sigma=cfg.min_sigma,
+            max_sigma=cfg.max_sigma,
+            factorized_half_range=args.factorized_half_range,
+        )
+        sidecar_bytes_estimate = len(z3hv2_section)
+        bytes_saved_estimate = _V2_A1_LATENT_BLOB_LEN - sidecar_bytes_estimate
 
-            # Per-dim affine for the v2 grammar: derive from current A1 latents
-            # so the residual centers around 0 with low entropy. The min/scale
-            # match A1's own learned-quantized fp16 statistics shipped in the
-            # latent_blob LZMA header.
-            a1_min = a1_latents.min(dim=0).values.detach().to(torch.float32).cpu()
-            a1_max = a1_latents.max(dim=0).values.detach().to(torch.float32).cpu()
-            a1_scale = ((a1_max - a1_min) / 254.0).clamp(min=1e-6)
-            with torch.inference_mode():
-                residual_v2 = (
-                    (a1_latents.cpu() - a1_min.unsqueeze(0)) / a1_scale.unsqueeze(0)
-                ).round().clamp(min=-128.0, max=127.0).to(torch.int8)
-            residual_int8 = residual_v2.numpy().tobytes()
+        # Z3 production output is v2-only. The byte-saving flag is descriptive;
+        # promotion still requires paired exact CPU/CUDA auth-eval review.
+        composition_bytes = _v2_build_payload(
+            a1_bytes=a1_bytes,
+            z3hv2_section=z3hv2_section,
+        )
+        composition_contract = _v2_build_contract(a1_bytes, composition_bytes)
+        sidecar_shipped = True
+        composition_contract_manifest = composition_contract.as_manifest()
+        composition_byte_saving = composition_contract.byte_saving
+        (out_dir / "z3v2_section_diagnostic.bin").write_bytes(z3hv2_section)
 
-            z3hv2_section = _v2_encode_section(
-                hyperprior_weights_int8=weights_int8,
-                w_hat_int8=w_hat_int8,
-                residual_int8=residual_int8,
-                latent_min=a1_min,
-                latent_scale=a1_scale,
-                hyper_dim=cfg.hyper_latent_dim,
-                int8_w_scale=w_scale,
-                quant_step=cfg.quantization_step,
-                min_sigma=cfg.min_sigma,
-                max_sigma=cfg.max_sigma,
-                factorized_half_range=args.factorized_half_range,
-            )
-            sidecar_bytes_estimate = len(z3hv2_section)
-            bytes_saved_estimate = _V2_A1_LATENT_BLOB_LEN - sidecar_bytes_estimate
-
-            # v2 ALWAYS uses the latent-replacement grammar (no append-only
-            # fallback) per council Decision 3. The byte-saving flag is
-            # descriptive only — score_claim remains gated on auth eval.
-            composition_bytes = _v2_build_payload(
-                a1_bytes=a1_bytes,
-                z3hv2_section=z3hv2_section,
-            )
-            composition_contract = _v2_build_contract(a1_bytes, composition_bytes)
-            sidecar_shipped = True
-            composition_contract_manifest = composition_contract.as_manifest()
-            composition_byte_saving = composition_contract.byte_saving
-            (out_dir / "z3v2_section_diagnostic.bin").write_bytes(z3hv2_section)
-
-            composition_sha = hashlib.sha256(composition_bytes).hexdigest()
-            composition_size = len(composition_bytes)
-            _stage(
-                f"v2_composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
-                f"section_bytes={sidecar_bytes_estimate}_saved={bytes_saved_estimate}"
-            )
-        else:
-            # v1 legacy append-only path (kept for forensic comparison).
-            residual_q = (
-                (a1_latents / args.quantization_step)
-                .round().clamp(-128, 127).to(torch.int8)
-            )
-            residual_int8 = residual_q.cpu().numpy().tobytes()
-            sidecar = encode_z3hp1_sidecar(
-                hyperprior_weights_int8=weights_int8,
-                w_hat_int8=w_hat_int8,
-                residual_int8=residual_int8,
-                hyper_dim=cfg.hyper_latent_dim,
-                int8_w_scale=w_scale,
-                quant_step=cfg.quantization_step,
-                min_sigma=cfg.min_sigma,
-                max_sigma=cfg.max_sigma,
-            )
-            sidecar_bytes_estimate = len(sidecar)
-            # Ballé 2018 amortization principle: ship the sidecar ONLY when
-            # it would reduce archive bytes vs A1. v1 inflate.py is parse-only
-            # (does NOT yet replace A1's latent_blob with the conditional
-            # Gaussian decode of residual), so in v1 the sidecar ADDS bytes
-            # with zero rate offset. Canonical safe path: ship A1-byte-identical
-            # bytes AND save the diagnostic sidecar separately for council
-            # review (research_only=true).
-            bytes_saved_estimate = 0  # v1: no rate offset (parse-only inflate)
-            if bytes_saved_estimate > sidecar_bytes_estimate:
-                composition_contract = build_composition_archive_contract(
-                    a1_bytes,
-                    sidecar,
-                )
-                composition_bytes = pack_composition_archive(
-                    a1_bytes,
-                    sidecar,
-                    allow_append_only_diagnostic=True,
-                )
-                sidecar_shipped = True
-            else:
-                composition_contract = build_composition_archive_contract(
-                    a1_bytes,
-                    b"",
-                )
-                composition_bytes = composition_contract.payload_bytes
-                sidecar_shipped = False
-                (out_dir / "z3hp1_sidecar_diagnostic.bin").write_bytes(sidecar)
-            composition_contract_manifest = composition_contract.as_manifest()
-            composition_byte_saving = composition_contract.byte_saving
-
-            composition_sha = hashlib.sha256(composition_bytes).hexdigest()
-            composition_size = len(composition_bytes)
-            _stage(
-                f"composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
-                f"sidecar_shipped={sidecar_shipped}"
-            )
+        composition_sha = hashlib.sha256(composition_bytes).hexdigest()
+        composition_size = len(composition_bytes)
+        _stage(
+            f"v2_composition_built_{composition_size}_B_sha{composition_sha[:8]}_"
+            f"section_bytes={sidecar_bytes_estimate}_saved={bytes_saved_estimate}"
+        )
 
         # ---- Step 7: build archive.zip + runtime tree ----
         _build_archive_zip(archive_zip_path, bin_bytes=composition_bytes)
         submission_dir.mkdir(parents=True, exist_ok=True)
-        _write_runtime(submission_dir)
+        _write_runtime(submission_dir, a1_runtime_src=args.a1_archive_path.parent / "src")
+        runtime_manifest = _write_submission_runtime_manifest(submission_dir)
         (submission_dir / "0.bin").write_bytes(composition_bytes)
-        # Vendor A1's codec.py + model.py so inflate runtime can fall back
-        # to A1 behavior (Z3 inflate.py delegates when no Z3HP1 sidecar).
-        a1_src = args.a1_archive_path.parent / "src"
-        target_src = submission_dir / "src"
-        target_src.mkdir(parents=True, exist_ok=True)
-        for name in ("codec.py", "model.py"):
-            if (a1_src / name).is_file():
-                shutil.copy2(a1_src / name, target_src / name)
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_zip_and_runtime_emitted")
 
@@ -1105,26 +1083,23 @@ def _full_main(args: argparse.Namespace) -> int:
     else:
         _stage("cost_band_anchor_skipped_no_valid_auth_eval")
 
-    result_review_blockers: list[str] = [
-        "z3_full_archive_byte_identical_to_a1_until_v2_inflate_composes_latent_blob",
-        "trainer_stats_not_authoritative_score_claim_surface",
-        "promotion_requires_separate_result_review",
-    ]
-    dispatch_blocker = (
-        "src/tac/substrates/z3_balle_hyperprior_bolton/archive.py:"
-        "pack_composition_archive currently appends Z3HP1 to A1 bytes; "
-        "append-only grammar cannot realize predicted byte savings. Patchable "
-        "contract: replace A1 latent_blob inside the inner x payload with a "
-        "Z3-coded latent section and have inflate.py reconstruct latents before "
-        "HNeRV decode."
+    result_review_blockers = list(
+        composition_contract_manifest.get("result_review_blockers", [])
     )
-    result_review_blockers.append(dispatch_blocker)
+    result_review_blockers.append("trainer_stats_not_authoritative_score_claim_surface")
+    dispatch_blocker = (
+        "z3v2_latent_replacement uses direct residual bytes; it requires "
+        "claim_lane_dispatch.py plus paired exact CPU/CUDA auth eval and result "
+        "review before score or promotion. Hyperprior entropy coding remains "
+        "unpromoted until a real entropy-coded residual decoder consumes it."
+    )
     if not auth_eval_score_claim_valid:
         skipped_reason = str(getattr(args, "auth_eval_skipped_reason", "") or "")
         if skipped_reason:
             result_review_blockers.append(skipped_reason)
         else:
             result_review_blockers.append("contest_cuda_auth_eval_not_validated")
+    result_review_blockers = list(dict.fromkeys(result_review_blockers))
 
     hardware_substrate = _canon_detect_hardware_substrate(
         substrate_tag=SUBSTRATE_TAG,
@@ -1171,6 +1146,16 @@ def _full_main(args: argparse.Namespace) -> int:
         "auth_eval_lane_tag": auth_eval_lane_tag,
         "auth_eval_score_claim_valid": auth_eval_score_claim_valid,
         "auth_eval_exact_cuda_complete": auth_eval_exact_cuda_complete,
+        "contest_cuda_eval": {
+            "score": auth_eval_score if auth_eval_score_axis == "contest_cuda" else None,
+            "result_path": auth_eval_result_path
+            if auth_eval_score_axis == "contest_cuda" else None,
+            "score_claim_valid": bool(
+                auth_eval_score_claim_valid and auth_eval_score_axis == "contest_cuda"
+            ),
+        },
+        "contest_cpu_eval": None,
+        "paired_axis_status": "missing_contest_cpu_eval",
         "score_axis": auth_eval_score_axis,
         "score_claim": False,
         "score_claim_valid": False,
@@ -1179,6 +1164,10 @@ def _full_main(args: argparse.Namespace) -> int:
         "ready_for_exact_eval_dispatch": False,
         "result_review_blockers": result_review_blockers,
         "stage_log": stage_log,
+        "runtime_tree_sha256": runtime_manifest["runtime_tree_sha256"],
+        "submission_runtime_manifest_path": str(
+            submission_dir / "submission_runtime_manifest.json"
+        ),
         "hardware_substrate": hardware_substrate,
         "git_head": _canon_git_head_sha(REPO_ROOT),
         "trained_at_utc": _canon_utc_now_iso(),
@@ -1206,17 +1195,16 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _write_runtime(submission_dir: Path) -> None:
+def _write_runtime(submission_dir: Path, *, a1_runtime_src: Path | None = None) -> None:
     """Emit contest-compliant inflate.sh + inflate.py + vendored substrate.
 
     Per Catalog #146 the inflate.sh signature is 3-positional-arg
     ``inflate.sh <archive_dir> <output_dir> <file_list>``. Per Catalog #163
     the script uses ``set -euo pipefail`` for fail-closed semantics.
 
-    Z3 inflate is a thin wrapper: split the composition archive, restore
-    A1 latents via the hyperprior decode when a sidecar is present, then
-    delegate to A1's existing HNeRV decoder. When the sidecar is omitted,
-    the runtime is byte-identical to A1 behavior.
+    Z3 inflate is v2-only for production packets: it refuses raw A1/v1 bytes,
+    reconstructs direct Z3HV2 latents, applies A1's sidecar refinement, then
+    delegates to A1's existing HNeRV decoder.
     """
     submission_dir.mkdir(parents=True, exist_ok=True)
     runtime_pkg = (
@@ -1230,17 +1218,13 @@ def _write_runtime(submission_dir: Path) -> None:
     ):
         pkg_init.write_text("", encoding="utf-8")
     substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "z3_balle_hyperprior_bolton"
-    for name in (
-        "architecture.py",
-        "archive.py",
-        "archive_v2.py",
-        "inflate.py",
-        "inflate_v2.py",
-    ):
+    for name in ("architecture.py", "archive_v2.py", "inflate_v2.py", "quant.py"):
         shutil.copy2(substrate_src / name, runtime_pkg / name)
     a1_runtime_pkg = submission_dir / "src" / "a1_runtime"
     a1_runtime_pkg.mkdir(parents=True, exist_ok=True)
-    a1_src = REPO_ROOT / "submissions" / "a1" / "src"
+    a1_src = a1_runtime_src or (REPO_ROOT / "submissions" / "a1" / "src")
+    if not (a1_src / "codec.py").is_file() or not (a1_src / "model.py").is_file():
+        a1_src = REPO_ROOT / "submissions" / "a1" / "src"
     for name in ("codec.py", "model.py"):
         shutil.copy2(a1_src / name, a1_runtime_pkg / name)
     (a1_runtime_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -1252,16 +1236,6 @@ def _write_runtime(submission_dir: Path) -> None:
         "    Z3HyperpriorConfig,\n"
         "    Z3HyperpriorMLP,\n"
         ")\n"
-        "from tac.substrates.z3_balle_hyperprior_bolton.archive import (\n"
-        "    Z3HP1_MAGIC,\n"
-        "    Z3HP1_VERSION,\n"
-        "    decode_z3hp1_sidecar,\n"
-        "    pack_composition_archive,\n"
-        "    split_composition_archive,\n"
-        ")\n"
-        "from tac.substrates.z3_balle_hyperprior_bolton.inflate import (\n"
-        "    reconstruct_a1_latents as reconstruct_a1_latents_v1,\n"
-        ")\n"
         "from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (\n"
         "    Z3HV2_MAGIC,\n"
         "    Z3HV2_VERSION,\n"
@@ -1270,23 +1244,19 @@ def _write_runtime(submission_dir: Path) -> None:
         ")\n"
         "from tac.substrates.z3_balle_hyperprior_bolton.inflate_v2 import (\n"
         "    is_v2_payload,\n"
-        "    reconstruct_a1_latents,\n"
+        "    require_reconstruct_a1_latents_from_v2_payload,\n"
         "    reconstruct_a1_latents_from_v2_payload,\n"
         "    select_inflate_device,\n"
         ")\n"
         "__all__ = [\n"
         "    'A1_LATENT_DIM', 'A1_N_PAIRS',\n"
-        "    'Z3HP1_MAGIC', 'Z3HP1_VERSION',\n"
         "    'Z3HV2_MAGIC', 'Z3HV2_VERSION',\n"
         "    'Z3HyperpriorConfig', 'Z3HyperpriorMLP',\n"
-        "    'decode_z3hp1_sidecar', 'decode_z3hv2_section',\n"
+        "    'decode_z3hv2_section',\n"
         "    'is_v2_payload',\n"
-        "    'pack_composition_archive',\n"
-        "    'reconstruct_a1_latents',\n"
-        "    'reconstruct_a1_latents_v1',\n"
+        "    'require_reconstruct_a1_latents_from_v2_payload',\n"
         "    'reconstruct_a1_latents_from_v2_payload',\n"
         "    'select_inflate_device',\n"
-        "    'split_composition_archive',\n"
         "    'split_z3v2_payload_bytes',\n"
         "]\n",
         encoding="utf-8",
@@ -1321,11 +1291,8 @@ def _write_runtime(submission_dir: Path) -> None:
     inflate_py = (
         '"""Z3 contest-compliant inflate.py.\n'
         "\n"
-        "Consumes the evaluator-provided extracted archive member `x`. Three\n"
-        "possible payload layouts are supported:\n"
-        "  (1) Z3HV2 magic at A1 decoder boundary -> v2 latent-replacement;\n"
-        "  (2) Z3HP1 magic appended at end of A1 -> v1 append-only sidecar;\n"
-        "  (3) A1 byte-identical -> legacy fallback (no Z3 payload).\n"
+        "Consumes the evaluator-provided extracted archive member and fails\n"
+        "closed unless the payload is a Z3HV2 latent-replacement packet.\n"
         '"""\n'
         "from __future__ import annotations\n"
         "import struct\n"
@@ -1339,11 +1306,11 @@ def _write_runtime(submission_dir: Path) -> None:
         "sys.path.insert(0, str(HERE / 'src'))\n"
         "sys.path.insert(0, str(HERE / 'src' / 'a1_runtime'))\n"
         "\n"
-        "from codec import LATENT_BLOB_LEN, apply_latent_sidecar, decode_decoder_compact, decode_latents_compact\n"
+        "from codec import LATENT_BLOB_LEN, apply_latent_sidecar, decode_decoder_compact\n"
         "from model import HNeRVDecoder\n"
         "from tac.substrates.z3_balle_hyperprior_bolton.inflate_v2 import (\n"
         "    is_v2_payload,\n"
-        "    reconstruct_a1_latents,\n"
+        "    require_reconstruct_a1_latents_from_v2_payload,\n"
         "    select_inflate_device,\n"
         ")\n"
         "\n"
@@ -1353,7 +1320,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "BASE_CHANNELS = 36\n"
         "N_PAIRS = 600\n"
         "\n"
-        "def parse_a1_archive(a1_bytes: bytes, *, decode_latents: bool = True):\n"
+        "def parse_a1_decoder_and_sidecar(a1_bytes: bytes):\n"
         "    if len(a1_bytes) < 4:\n"
         "        raise ValueError('A1 archive too short')\n"
         "    section_total = struct.unpack_from('<I', a1_bytes, 0)[0]\n"
@@ -1365,24 +1332,15 @@ def _write_runtime(submission_dir: Path) -> None:
         "    if not decoder_blob or len(latent_blob) != LATENT_BLOB_LEN:\n"
         "        raise ValueError('bad A1 archive layout')\n"
         "    decoder_sd = decode_decoder_compact(decoder_blob)\n"
-        "    if decode_latents:\n"
-        "        latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)\n"
-        "    else:\n"
-        "        latents = None\n"
-        "    return decoder_sd, latents, sidecar_blob\n"
+        "    return decoder_sd, sidecar_blob\n"
         "\n"
         "def inflate(src_bin: str, dst_raw: str) -> int:\n"
         "    composition_bytes = Path(src_bin).read_bytes()\n"
-        "    is_v2 = is_v2_payload(composition_bytes)\n"
-        "    a1_bytes, z3_latents = reconstruct_a1_latents(composition_bytes)\n"
-        "    if is_v2 and z3_latents is not None:\n"
-        "        # v2 path: skip A1 latent decode (latent_blob slot is zero-padded);\n"
-        "        # use Z3-decoded latents directly + apply A1's sidecar refinement.\n"
-        "        decoder_sd, _, sidecar_blob = parse_a1_archive(a1_bytes, decode_latents=False)\n"
-        "        latents = apply_latent_sidecar(z3_latents, sidecar_blob)\n"
-        "    else:\n"
-        "        decoder_sd, a1_latents, _ = parse_a1_archive(a1_bytes, decode_latents=True)\n"
-        "        latents = z3_latents if z3_latents is not None else a1_latents\n"
+        "    if not is_v2_payload(composition_bytes):\n"
+        "        raise ValueError('Z3 runtime requires Z3HV2 payload; refusing A1/v1 fallback')\n"
+        "    a1_bytes, z3_latents = require_reconstruct_a1_latents_from_v2_payload(composition_bytes)\n"
+        "    decoder_sd, sidecar_blob = parse_a1_decoder_and_sidecar(a1_bytes)\n"
+        "    latents = apply_latent_sidecar(z3_latents, sidecar_blob)\n"
         "    device = select_inflate_device()\n"
         "    decoder = HNeRVDecoder(latent_dim=LATENT_DIM, base_channels=BASE_CHANNELS, eval_size=(EVAL_H, EVAL_W)).to(device)\n"
         "    decoder.load_state_dict(decoder_sd)\n"
@@ -1412,6 +1370,34 @@ def _write_runtime(submission_dir: Path) -> None:
         "    inflate(sys.argv[1], sys.argv[2])\n"
     )
     (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
+
+
+def _write_submission_runtime_manifest(submission_dir: Path) -> dict[str, Any]:
+    """Record deterministic custody for the emitted inflate runtime tree."""
+    ignored = {"0.bin", "archive.zip", "submission_runtime_manifest.json"}
+    files: list[dict[str, Any]] = []
+    tree_hasher = hashlib.sha256()
+    for path in sorted(p for p in submission_dir.rglob("*") if p.is_file()):
+        rel = path.relative_to(submission_dir).as_posix()
+        if rel in ignored:
+            continue
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        files.append({"path": rel, "bytes": len(data), "sha256": digest})
+        tree_hasher.update(rel.encode("utf-8"))
+        tree_hasher.update(b"\0")
+        tree_hasher.update(digest.encode("ascii"))
+        tree_hasher.update(b"\0")
+    manifest = {
+        "schema": "submission_runtime_manifest_v1",
+        "runtime_tree_sha256": tree_hasher.hexdigest(),
+        "files": files,
+    }
+    (submission_dir / "submission_runtime_manifest.json").write_text(
+        json.dumps(manifest, sort_keys=True, indent=2),
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _build_archive_zip(zip_path: Path, *, bin_bytes: bytes) -> None:
@@ -1493,7 +1479,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             "ERROR: --device mps refused per CLAUDE.md MPS-NOISE non-negotiable"
         )
-    # Smoke is the canonical path for v1; full requires explicit Phase 2 council.
+    # Smoke is the local timing path; full requires explicit Phase 2 council.
     if args.smoke:
         return _smoke_main(args)
     return _full_main(args)

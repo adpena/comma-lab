@@ -29,6 +29,7 @@ from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
     A1_DECODER_SECTION_TOTAL,
     A1_LATENT_BLOB_LEN,
     Z3HV2_MAGIC,
+    Z3HV2_VERSION,
     Z3V2CompositionArchiveContract,
     build_z3v2_composition_archive_contract,
     build_z3v2_payload_bytes,
@@ -74,13 +75,13 @@ def _build_synthetic_z3hv2_section(
     residual_int8 = bytes(
         ((i * 7) % 251 - 125) & 0xFF for i in range(n_pairs * latent_dim)
     )
-    latent_min = torch.linspace(-1.0, 1.0, latent_dim).to(torch.float32)
+    latent_offset = torch.linspace(-1.0, 1.0, latent_dim).to(torch.float32)
     latent_scale = torch.full((latent_dim,), 0.5, dtype=torch.float32)
     section = encode_z3hv2_section(
         hyperprior_weights_int8=weights_int8,
         w_hat_int8=w_hat_int8,
         residual_int8=residual_int8,
-        latent_min=latent_min,
+        latent_offset=latent_offset,
         latent_scale=latent_scale,
         hyper_dim=hyper_dim,
         int8_w_scale=w_scale,
@@ -95,7 +96,7 @@ def _build_synthetic_z3hv2_section(
         "weights_int8": weights_int8,
         "w_hat_int8": w_hat_int8,
         "residual_int8": residual_int8,
-        "latent_min": latent_min,
+        "latent_offset": latent_offset,
         "latent_scale": latent_scale,
         "int8_w_scale": w_scale,
         "hyper_dim": hyper_dim,
@@ -114,7 +115,7 @@ def test_z3hv2_section_starts_with_canonical_magic():
 
 def test_z3hv2_section_roundtrip_decodes_all_fields():
     section, meta_in = _build_synthetic_z3hv2_section()
-    meta, weights, w_hat, residual, latent_min, latent_scale, _ = decode_z3hv2_section(
+    meta, weights, w_hat, residual, latent_offset, latent_scale, _ = decode_z3hv2_section(
         section
     )
     assert meta.n_pairs == A1_N_PAIRS
@@ -123,7 +124,7 @@ def test_z3hv2_section_roundtrip_decodes_all_fields():
     assert weights == meta_in["weights_int8"]
     assert w_hat == meta_in["w_hat_int8"]
     assert residual == meta_in["residual_int8"]
-    assert torch.allclose(latent_min, meta_in["latent_min"])
+    assert torch.allclose(latent_offset, meta_in["latent_offset"])
     assert torch.allclose(latent_scale, meta_in["latent_scale"])
 
 
@@ -132,6 +133,15 @@ def test_z3hv2_decode_bad_magic_raises():
     bad = b"XXXX" + section[4:]
     with pytest.raises(ValueError, match="bad Z3HV2 magic"):
         decode_z3hv2_section(bad)
+
+
+def test_z3hv2_decode_refuses_legacy_v1_min_offset_semantics():
+    section, _ = _build_synthetic_z3hv2_section()
+    bad = bytearray(section)
+    assert bad[4] == Z3HV2_VERSION
+    bad[4] = 1
+    with pytest.raises(ValueError, match="unsupported Z3HV2 version: 1"):
+        decode_z3hv2_section(bytes(bad))
 
 
 def test_z3hv2_decode_truncated_header_raises():
@@ -153,7 +163,7 @@ def test_z3hv2_encode_refuses_wrong_n_pairs():
             hyperprior_weights_int8=section_meta["weights_int8"],
             w_hat_int8=section_meta["w_hat_int8"],
             residual_int8=section_meta["residual_int8"],
-            latent_min=section_meta["latent_min"],
+            latent_offset=section_meta["latent_offset"],
             latent_scale=section_meta["latent_scale"],
             hyper_dim=8,
             int8_w_scale=1.0,
@@ -168,14 +178,14 @@ def test_z3hv2_encode_refuses_wrong_n_pairs():
 
 def test_z3hv2_encode_refuses_wrong_latent_dim():
     section_meta = _build_synthetic_z3hv2_section()[1]
-    bad_latent_min = torch.zeros(7, dtype=torch.float32)
+    bad_latent_offset = torch.zeros(7, dtype=torch.float32)
     bad_latent_scale = torch.ones(7, dtype=torch.float32)
     with pytest.raises(ValueError, match="latent_dim must be"):
         encode_z3hv2_section(
             hyperprior_weights_int8=section_meta["weights_int8"],
             w_hat_int8=section_meta["w_hat_int8"],
             residual_int8=section_meta["residual_int8"],
-            latent_min=bad_latent_min,
+            latent_offset=bad_latent_offset,
             latent_scale=bad_latent_scale,
             hyper_dim=8,
             int8_w_scale=1.0,
@@ -194,7 +204,7 @@ def test_z3hv2_encode_refuses_w_hat_length_mismatch():
             hyperprior_weights_int8=section_meta["weights_int8"],
             w_hat_int8=b"\x00" * 5,
             residual_int8=section_meta["residual_int8"],
-            latent_min=section_meta["latent_min"],
+            latent_offset=section_meta["latent_offset"],
             latent_scale=section_meta["latent_scale"],
             hyper_dim=8,
             int8_w_scale=1.0,
@@ -212,11 +222,29 @@ def test_z3hv2_encode_refuses_residual_length_mismatch():
             hyperprior_weights_int8=section_meta["weights_int8"],
             w_hat_int8=section_meta["w_hat_int8"],
             residual_int8=b"\x00" * 5,
-            latent_min=section_meta["latent_min"],
+            latent_offset=section_meta["latent_offset"],
             latent_scale=section_meta["latent_scale"],
             hyper_dim=8,
             int8_w_scale=1.0,
             quant_step=1.0,
+            min_sigma=1e-3,
+            max_sigma=16.0,
+            factorized_half_range=16.0,
+        )
+
+
+def test_z3hv2_encode_refuses_non_unit_quant_step_until_runtime_supports_it():
+    section_meta = _build_synthetic_z3hv2_section()[1]
+    with pytest.raises(ValueError, match=r"quant_step must be 1\.0"):
+        encode_z3hv2_section(
+            hyperprior_weights_int8=section_meta["weights_int8"],
+            w_hat_int8=section_meta["w_hat_int8"],
+            residual_int8=section_meta["residual_int8"],
+            latent_offset=section_meta["latent_offset"],
+            latent_scale=section_meta["latent_scale"],
+            hyper_dim=8,
+            int8_w_scale=1.0,
+            quant_step=0.5,
             min_sigma=1e-3,
             max_sigma=16.0,
             factorized_half_range=16.0,
@@ -230,7 +258,7 @@ def test_z3hv2_encode_refuses_bad_hyper_dim():
             hyperprior_weights_int8=section_meta["weights_int8"],
             w_hat_int8=section_meta["w_hat_int8"],
             residual_int8=section_meta["residual_int8"],
-            latent_min=section_meta["latent_min"],
+            latent_offset=section_meta["latent_offset"],
             latent_scale=section_meta["latent_scale"],
             hyper_dim=0,
             int8_w_scale=1.0,
@@ -265,6 +293,14 @@ def test_build_z3v2_payload_refuses_short_a1():
         build_z3v2_payload_bytes(a1_bytes=a1_short, z3hv2_section=section)
 
 
+def test_build_z3v2_payload_refuses_bad_a1_decoder_section_header():
+    a1 = bytearray(_build_synthetic_a1_bytes())
+    a1[:4] = struct.pack("<I", A1_DECODER_SECTION_TOTAL + 1)
+    section, _ = _build_synthetic_z3hv2_section()
+    with pytest.raises(ValueError, match="A1 decoder section_total mismatch"):
+        build_z3v2_payload_bytes(a1_bytes=bytes(a1), z3hv2_section=section)
+
+
 def test_build_z3v2_payload_refuses_section_without_magic():
     a1 = _build_synthetic_a1_bytes()
     bad_section = b"NOT_Z3V2_MAGIC" + b"\x00" * 100
@@ -290,6 +326,15 @@ def test_split_z3v2_payload_refuses_v1_layout():
         split_z3v2_payload_bytes(v1_payload)
 
 
+def test_split_z3v2_payload_refuses_bad_a1_decoder_section_header():
+    a1 = bytearray(_build_synthetic_a1_bytes())
+    section, _ = _build_synthetic_z3hv2_section()
+    payload = bytearray(build_z3v2_payload_bytes(a1_bytes=bytes(a1), z3hv2_section=section))
+    payload[:4] = struct.pack("<I", A1_DECODER_SECTION_TOTAL - 1)
+    with pytest.raises(ValueError, match="A1 decoder section_total mismatch"):
+        split_z3v2_payload_bytes(bytes(payload))
+
+
 # ---------------------------------------------------------------------------
 # Composition contract tests
 # ---------------------------------------------------------------------------
@@ -305,7 +350,7 @@ def test_v2_contract_byte_saving_when_z3hv2_smaller_than_a1_latent_blob():
         hyperprior_weights_int8=section_meta["weights_int8"],
         w_hat_int8=small_w_hat,
         residual_int8=small_residual,
-        latent_min=section_meta["latent_min"],
+        latent_offset=section_meta["latent_offset"],
         latent_scale=section_meta["latent_scale"],
         hyper_dim=8,
         int8_w_scale=section_meta["int8_w_scale"],
@@ -344,7 +389,10 @@ def test_v2_contract_refuses_wrong_decoder_section():
     payload = build_z3v2_payload_bytes(a1_bytes=a1, z3hv2_section=section)
     # Tamper with decoder section.
     bad_payload = b"X" * A1_DECODER_SECTION_TOTAL + payload[A1_DECODER_SECTION_TOTAL:]
-    with pytest.raises(ValueError, match="decoder section diverges"):
+    with pytest.raises(
+        ValueError,
+        match=r"section_total mismatch|decoder section diverges",
+    ):
         build_z3v2_composition_archive_contract(a1, bad_payload)
 
 
@@ -463,7 +511,7 @@ def test_v2_payload_bytes_smaller_than_a1_when_compressible():
         hyperprior_weights_int8=section_meta["weights_int8"],
         w_hat_int8=b"\x00" * (A1_N_PAIRS * 8),
         residual_int8=b"\x00" * (A1_N_PAIRS * A1_LATENT_DIM),
-        latent_min=section_meta["latent_min"],
+        latent_offset=section_meta["latent_offset"],
         latent_scale=section_meta["latent_scale"],
         hyper_dim=8,
         int8_w_scale=section_meta["int8_w_scale"],
@@ -514,7 +562,7 @@ def test_v2_payload_byte_savings_floor_per_quantizr_finding_r1():
         hyperprior_weights_int8=section_meta["weights_int8"],
         w_hat_int8=b"\x00" * (A1_N_PAIRS * 8),
         residual_int8=b"\x00" * (A1_N_PAIRS * A1_LATENT_DIM),
-        latent_min=section_meta["latent_min"],
+        latent_offset=section_meta["latent_offset"],
         latent_scale=section_meta["latent_scale"],
         hyper_dim=8,
         int8_w_scale=section_meta["int8_w_scale"],

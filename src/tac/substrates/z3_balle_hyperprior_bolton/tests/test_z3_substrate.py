@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import py_compile
+import struct
 import zipfile
 from pathlib import Path
 
@@ -22,19 +23,26 @@ import torch
 from tac.substrates.z3_balle_hyperprior_bolton import (
     A1_LATENT_DIM,
     A1_N_PAIRS,
-    Z3HP1_MAGIC,
     Z3HyperpriorConfig,
     Z3HyperpriorMLP,
-    build_composition_archive_contract,
     conditional_gaussian_rate_bits,
-    decode_z3hp1_sidecar,
     dequantize_int8_with_scale,
-    encode_z3hp1_sidecar,
     factorized_uniform_rate_bits,
-    pack_composition_archive,
     quantize_int8_with_scale,
-    split_composition_archive,
     total_balle_rate_bits,
+)
+from tac.substrates.z3_balle_hyperprior_bolton.archive import (
+    Z3HP1_MAGIC,
+    build_composition_archive_contract,
+    decode_z3hp1_sidecar,
+    encode_z3hp1_sidecar,
+    pack_composition_archive,
+    split_composition_archive,
+)
+from tac.substrates.z3_balle_hyperprior_bolton.archive_v2 import (
+    A1_DECODER_SECTION_TOTAL,
+    A1_LATENT_BLOB_LEN,
+    Z3HV2_MAGIC,
 )
 from tac.substrates.z3_balle_hyperprior_bolton.score_aware_loss import (
     balle_rate_term_bits_per_sample,
@@ -546,6 +554,43 @@ def _load_trainer_module():
     return module
 
 
+def _write_synthetic_a1_archive_zip(path: Path) -> bytes:
+    """Write a minimal A1-shaped archive.zip fixture with inner member ``x``."""
+    prefix = struct.pack("<I", A1_DECODER_SECTION_TOTAL)
+    decoder = b"D" * (A1_DECODER_SECTION_TOTAL - len(prefix))
+    latent = b"L" * A1_LATENT_BLOB_LEN
+    sidecar = b"S" * 607
+    inner = prefix + decoder + latent + sidecar
+    info = zipfile.ZipInfo(filename="x", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(info, inner)
+    return inner
+
+
+def test_z3v2_affine_residual_int8_is_centered_signed_range():
+    """Regression: a min-offset affine clips half the range in signed int8."""
+    trainer = _load_trainer_module()
+    lo = torch.linspace(-10.0, 5.0, A1_LATENT_DIM)
+    hi = lo + torch.linspace(1.0, 20.0, A1_LATENT_DIM)
+    mid = (lo + hi) * 0.5
+    latents = torch.stack([lo, mid, hi], dim=0)
+
+    residual, offset, scale = trainer._z3v2_affine_residual_int8(latents)
+
+    assert residual.dtype == torch.int8
+    assert torch.equal(
+        residual[0], torch.full((A1_LATENT_DIM,), -127, dtype=torch.int8)
+    )
+    assert torch.equal(residual[1], torch.zeros(A1_LATENT_DIM, dtype=torch.int8))
+    assert torch.equal(
+        residual[2], torch.full((A1_LATENT_DIM,), 127, dtype=torch.int8)
+    )
+    assert torch.allclose(offset, mid)
+    reconstructed = residual.to(torch.float32) * scale.unsqueeze(0) + offset.unsqueeze(0)
+    assert torch.allclose(reconstructed, latents, atol=1e-5)
+
+
 def test_smoke_main_emits_training_artifact_manifest(tmp_path):
     """Smoke-only Modal artifacts must satisfy training_artifact_v1."""
 
@@ -585,12 +630,56 @@ def test_smoke_main_emits_training_artifact_manifest(tmp_path):
     assert manifest["result"]["training_mode"] == "smoke"
 
 
-def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
+def test_smoke_main_honors_v2_latent_replacement_flag(tmp_path):
+    """Operator-authorized v2 smoke must emit the latent-replacement layout."""
+
+    trainer = _load_trainer_module()
+    a1_zip = tmp_path / "a1_synthetic_archive.zip"
+    a1_inner = _write_synthetic_a1_archive_zip(a1_zip)
+    out_dir = tmp_path / "z3_smoke_v2"
+    args = trainer._build_parser().parse_args(
+        [
+            "--a1-archive-path",
+            str(a1_zip),
+            "--output-dir",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--device",
+            "cpu",
+            "--smoke",
+            "--enable-v2-latent-replacement",
+        ]
+    )
+
+    assert trainer._smoke_main(args) == 0
+
+    stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    contract = stats["archive_contract"]
+    assert stats["v2_latent_replacement_requested"] is True
+    assert stats["v2_latent_replacement_active"] is True
+    assert contract["layout"] == "z3v2_latent_replacement"
+    assert contract["byte_saving"] is True
+    assert contract["archive_bytes"] == stats["archive_bytes"]
+    assert manifest["result"]["archive_contract"]["layout"] == "z3v2_latent_replacement"
+
+    with zipfile.ZipFile(out_dir / "archive.zip") as zf:
+        assert zf.namelist() == ["0.bin"]
+        payload = zf.read("0.bin")
+    assert payload[:A1_DECODER_SECTION_TOTAL] == a1_inner[:A1_DECODER_SECTION_TOTAL]
+    assert (
+        payload[A1_DECODER_SECTION_TOTAL : A1_DECODER_SECTION_TOTAL + len(Z3HV2_MAGIC)]
+        == Z3HV2_MAGIC
+    )
+    assert len(payload) < len(a1_inner)
+
+
+def test_full_main_cpu_builds_z3v2_runtime_without_auth_eval(tmp_path):
     """The Phase-2 full path must be executable without remote dispatch.
 
-    It currently emits the A1-byte-identical fallback and records the patchable
-    dispatch blocker because Z3HP1 is append-only until latent_blob replacement
-    lands.
+    It emits a v2-only direct-residual packet and records fail-closed blockers
+    because exact score authority still requires paired CPU/CUDA auth eval.
     """
     trainer = _load_trainer_module()
     out_dir = tmp_path / "z3_full"
@@ -617,13 +706,12 @@ def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
     stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
     manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
     assert stats["smoke"] is False
-    assert stats["sidecar_shipped"] is False
-    assert stats["archive_bytes"] == stats["base_archive_bytes"]
-    assert stats["byte_saving"] is False
-    assert stats["archive_contract"]["layout"] == "a1_byte_identical_fallback"
+    assert stats["sidecar_shipped"] is True
+    assert stats["archive_bytes"] != stats["base_archive_bytes"]
+    assert stats["archive_contract"]["layout"] == "z3v2_latent_replacement"
     assert stats["archive_contract"]["ready_for_exact_eval_dispatch"] is False
     assert stats["ready_for_exact_eval_dispatch"] is False
-    assert "append-only grammar cannot realize predicted byte savings" in stats["dispatch_blocker"]
+    assert "paired exact CPU/CUDA auth eval" in stats["dispatch_blocker"]
     assert manifest["schema"] == "training_artifact_v1"
     assert manifest["training_mode"] == "full"
     assert manifest["research_only"] is True
@@ -632,8 +720,13 @@ def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
     with zipfile.ZipFile(_repo_root() / "submissions" / "a1" / "archive.zip") as zf:
         a1_inner = zf.read("x")
     with zipfile.ZipFile(out_dir / "archive.zip") as zf:
-        assert zf.namelist() == ["x"]
-        assert zf.read("x") == a1_inner
+        assert zf.namelist() == ["0.bin"]
+        payload = zf.read("0.bin")
+        assert payload != a1_inner
+        assert (
+            payload[A1_DECODER_SECTION_TOTAL : A1_DECODER_SECTION_TOTAL + len(Z3HV2_MAGIC)]
+            == Z3HV2_MAGIC
+        )
 
     inflate_text = (out_dir / "submission_dir" / "inflate.py").read_text(
         encoding="utf-8"
@@ -642,7 +735,9 @@ def test_full_main_cpu_builds_a1_fallback_runtime_without_auth_eval(tmp_path):
         encoding="utf-8"
     )
     assert "placeholder" not in inflate_text.lower()
-    assert "reconstruct_a1_latents" in inflate_text
+    assert "require_reconstruct_a1_latents_from_v2_payload" in inflate_text
+    assert "refusing A1/v1 fallback" in inflate_text
+    assert "reconstruct_a1_latents as reconstruct_a1_latents_v1" not in inflate_text
     assert "archive_dir / 'archive.zip'" not in inflate_text
     assert '${DATA_DIR}/x' in inflate_sh
     py_compile.compile(str(out_dir / "submission_dir" / "inflate.py"), doraise=True)

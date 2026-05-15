@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Score-aware Ballé R+λD loss for the Z3 v2 latent-replacement substrate.
+"""Diagnostic Ballé R+λD loss for the Z3 v2 latent-replacement substrate.
 
 Differs from sibling ``score_aware_loss.py`` in TWO ways:
 
 1. The "y" in the conditional Gaussian rate term is the QUANTIZED RESIDUAL
-   in A1's range (``(latents - latent_min) / latent_scale`` rounded), NOT
+   in A1's range (``(latents - latent_offset) / latent_scale`` rounded), NOT
    the raw latents. This matches the v2 wire format where the residual is
    what's actually shipped in bytes.
 
@@ -18,12 +18,13 @@ Differs from sibling ``score_aware_loss.py`` in TWO ways:
    move.
 
 NO score claim. NO promotion. NO exact-eval dispatch from this module.
+The current production packet is direct-residual Z3HV2; this loss is a
+diagnostic prior until a real entropy-coded residual decoder consumes the
+hyperprior side-info at inflate time.
 
-Per Catalog #220 this loss path realizes the OPERATIONAL latent-replacement
-mechanism: the trainer's optimization target is the score-aware Lagrangian
-``α·R/N + β·d_seg + γ·sqrt(d_pose)`` per the contest formula, computed
-against the actual reconstructed pair (frozen A1 decoder applied to the
-Z3-decoded latents) on real ``upstream/videos/0.mkv`` frames.
+Per Catalog #220 this module is not itself score authority. Operational
+promotion requires the emitted Z3HV2 archive plus paired exact CPU/CUDA auth
+eval; rate-only local training only shapes diagnostic residual statistics.
 
 LOC budget: ≤ 350 LOC per HNeRV parity discipline L7 (Z3 is a bolt-on).
 """
@@ -48,7 +49,7 @@ def balle_rate_term_residual_bits_per_sample(
     *,
     hyperprior: Z3HyperpriorMLP,
     a1_latents: torch.Tensor,
-    latent_min: torch.Tensor,
+    latent_offset: torch.Tensor,
     latent_scale: torch.Tensor,
     quantization_step: float = 1.0,
     factorized_half_range: float = 16.0,
@@ -59,7 +60,7 @@ def balle_rate_term_residual_bits_per_sample(
     Args:
         hyperprior: Z3 hyperprior MLP (encoder + decoder + quantizer).
         a1_latents: ``(N, A1_LATENT_DIM)`` frozen A1 latents (one per pair).
-        latent_min: ``(A1_LATENT_DIM,)`` per-dim min for affine reload.
+        latent_offset: ``(A1_LATENT_DIM,)`` centered affine offset.
         latent_scale: ``(A1_LATENT_DIM,)`` per-dim scale (must be > eps).
         quantization_step: Δ for the conditional-Gaussian AC coder.
         factorized_half_range: half-range for the w_hat factorized prior.
@@ -72,13 +73,13 @@ def balle_rate_term_residual_bits_per_sample(
         raise ValueError(
             f"a1_latents must be (N, {A1_LATENT_DIM}); got {tuple(a1_latents.shape)}"
         )
-    if latent_min.shape != (A1_LATENT_DIM,) or latent_scale.shape != (A1_LATENT_DIM,):
+    if latent_offset.shape != (A1_LATENT_DIM,) or latent_scale.shape != (A1_LATENT_DIM,):
         raise ValueError(
-            f"latent_min and latent_scale must be ({A1_LATENT_DIM},); got "
-            f"{tuple(latent_min.shape)} and {tuple(latent_scale.shape)}"
+            f"latent_offset and latent_scale must be ({A1_LATENT_DIM},); got "
+            f"{tuple(latent_offset.shape)} and {tuple(latent_scale.shape)}"
         )
     safe_scale = latent_scale.clamp(min=eps)
-    residual = (a1_latents - latent_min.unsqueeze(0)) / safe_scale.unsqueeze(0)
+    residual = (a1_latents - latent_offset.unsqueeze(0)) / safe_scale.unsqueeze(0)
     sigma, w_hat = hyperprior(residual, quantize=True)
     bits_per_sample = total_balle_rate_bits(
         residual,
@@ -93,15 +94,16 @@ def balle_rate_term_residual_bits_per_sample(
 def reconstruct_v2_latents_for_decoder(
     *,
     a1_latents: torch.Tensor,
-    latent_min: torch.Tensor,
+    latent_offset: torch.Tensor,
     latent_scale: torch.Tensor,
     quantization_step: float = 1.0,
     eps: float = 1e-6,
 ) -> torch.Tensor:
     """Reconstruct latents in A1's range after Z3 quantization (deterministic).
 
-    The v2 grammar quantizes residual = (latents - min) / scale, then ships
-    the int8 residual. At inflate time we reconstruct latents = residual * scale + min.
+    The v2 grammar quantizes residual = (latents - offset) / scale, then ships
+    the int8 residual. At inflate time we reconstruct
+    latents = residual * scale + offset.
     During training, we must simulate the same quantization in a
     DIFFERENTIABLE way (round + STE) so the distortion path's gradient
     flows back to the per-dim affine + the (frozen) latents.
@@ -110,12 +112,12 @@ def reconstruct_v2_latents_for_decoder(
     ``a1_latents``.
     """
     safe_scale = latent_scale.clamp(min=eps)
-    residual = (a1_latents - latent_min.unsqueeze(0)) / safe_scale.unsqueeze(0)
+    residual = (a1_latents - latent_offset.unsqueeze(0)) / safe_scale.unsqueeze(0)
     # Round + STE so gradient passes through.
     residual_q = (residual.round().detach() - residual).detach() + residual
     # Clamp to int8 range as in the runtime.
-    residual_q = residual_q.clamp(min=-128.0, max=127.0)
-    reconstructed = residual_q * safe_scale.unsqueeze(0) + latent_min.unsqueeze(0)
+    residual_q = residual_q.clamp(min=-127.0, max=127.0)
+    reconstructed = residual_q * safe_scale.unsqueeze(0) + latent_offset.unsqueeze(0)
     return reconstructed
 
 
@@ -123,7 +125,7 @@ def z3_v2_lagrangian(
     *,
     hyperprior: Z3HyperpriorMLP,
     a1_latents: torch.Tensor,
-    latent_min: torch.Tensor,
+    latent_offset: torch.Tensor,
     latent_scale: torch.Tensor,
     seg_scorer: torch.nn.Module,
     pose_scorer: torch.nn.Module,
@@ -152,7 +154,7 @@ def z3_v2_lagrangian(
     bits_per_sample, sigma, w_hat = balle_rate_term_residual_bits_per_sample(
         hyperprior=hyperprior,
         a1_latents=a1_latents,
-        latent_min=latent_min,
+        latent_offset=latent_offset,
         latent_scale=latent_scale,
         quantization_step=quantization_step,
         factorized_half_range=factorized_half_range,

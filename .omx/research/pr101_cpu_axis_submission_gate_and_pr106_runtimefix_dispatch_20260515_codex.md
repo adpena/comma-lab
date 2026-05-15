@@ -79,7 +79,48 @@ with fresh lane IDs:
 - CPU output:
   `experiments/results/modal_auth_eval_cpu/pr106_latent_score_table_topk8_20260515_cpu_runtimefix1`
 
-Current status at ledger creation: both calls are pending recovery. No score
-claim exists until `tools/recover_modal_auth_eval.py` harvests a canonical
-`contest_auth_eval.json` and terminal claim rows close cleanly.
+## Runtimefix Harvest Result
 
+Both runtimefix calls recovered cleanly through canonical Modal auth-eval
+recovery. The runtime mismatch was fixed, but the method result is negative.
+
+CUDA:
+
+- output:
+  `experiments/results/modal_auth_eval/pr106_latent_score_table_topk8_20260515_cuda_runtimefix1`
+- evidence grade: `[contest-CUDA]`
+- final score (full precision recompute):
+  `0.20941739550293906`
+- rounded report score: `0.21`
+- avg SegNet distortion: `0.00067069`
+- avg PoseNet distortion: `0.00003348`
+- archive bytes: `186302`
+- scorer device: `cuda`
+- GPU: `Tesla T4`
+- n samples: `600`
+- result: `passed=true`, `promotion_eligible=false`
+
+CPU:
+
+- output:
+  `experiments/results/modal_auth_eval_cpu/pr106_latent_score_table_topk8_20260515_cpu_runtimefix1`
+- evidence grade: `[contest-CPU]`
+- final score (full precision recompute):
+  `0.23016349151751497`
+- rounded report score: `0.23`
+- avg SegNet distortion: `0.00065575`
+- avg PoseNet distortion: `0.00016433`
+- archive bytes: `186302`
+- scorer device: `cpu`
+- platform: `Linux x86_64`
+- n samples: `600`
+- result: `passed=true`, `promotion_eligible=false`
+
+Classification:
+
+- `archive/runtime_mismatch` was fixed by using
+  `submissions/pr106_latent_sidecar_r2_pr101_grammar`.
+- The topk8 latent sidecar candidate is not a sub-0.192 path. It is worse
+  than PR106 format0C on both axes and much worse than PR101/FEC6 CPU.
+- Do not fan out topk16/32/64 under the same method without a new xray finding
+  showing component movement rather than sidecar byte churn.

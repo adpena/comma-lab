@@ -5,7 +5,7 @@ Per operator 2026-05-15: *"shouldn't you run python compile locally before deplo
 to find those bugs"*. Empirical anchor: Z3 v2 smoke `fc-01KRNHEGC9ZE48Y68GGJHP7FXN`
 ($2 wasted) + Z4 smoke `fc-01KRNHE942JSV7VRGXGR1FJGHQ` ($2 wasted) both crashed
 on bugs that local 30s pre-flight would have caught:
-- Z3 v2: archive ZIP member name `'x'` vs canonical `'0.bin'` (HNeRV parity L3)
+- Z3 v2: learned-packet archive member/runtime mismatch before auth eval
 - Z4: trainer didn't reach auth_eval stage (pre-auth-eval crash class)
 
 This harness gates EVERY operator-authorize dispatch. Bug-class extinction.
@@ -19,8 +19,10 @@ Usage:
 Checks:
 1. **PY-COMPILE**: `python -m py_compile <trainer>` — catches syntax errors
 2. **ARCHIVE-GRAMMAR**: greps `_build_archive_zip` for `filename="0.bin"` per
-   HNeRV parity discipline lesson 3 ("Archive grammar = monolithic single-file
-   `0.bin`"). Refuses any other member name without `# ARCHIVE_MEMBER_OK:<reason>`.
+   the repo's monolithic learned-packet convention. The contest itself does
+   not require a specific member name; `evaluate.sh` just unzips `archive.zip`.
+   For this repo's single-packet trainers, `0.bin` pairs with `inflate.sh`'s
+   `${base}.bin` fallback for the public file-list base `0`.
 3. **AUTH-EVAL-REACHABILITY**: greps trainer for `auth_eval_renderer` invocation
    OR `gate_auth_eval_call` (canonical helper per Catalog #226). Refuses if
    trainer has neither (per CLAUDE.md "Auth eval EVERYWHERE" non-negotiable).
@@ -41,7 +43,8 @@ smoke + 30-60min wall-clock waiting for Modal to crash.
 from __future__ import annotations
 
 import argparse
-import os
+import importlib.util
+import inspect
 import py_compile
 import re
 import sys
@@ -63,6 +66,16 @@ AUTH_EVAL_REACHABILITY_PATTERNS = [
 ]
 
 
+def _import_trainer_module(trainer: Path):
+    module_name = f"_local_pre_deploy_{trainer.stem}"
+    spec = importlib.util.spec_from_file_location(module_name, trainer)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot create import spec for {trainer}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def check_py_compile(trainer: Path) -> tuple[bool, str]:
     """Return (passed, message)."""
     try:
@@ -73,8 +86,17 @@ def check_py_compile(trainer: Path) -> tuple[bool, str]:
         return False, f"FAIL: {trainer.name} has syntax errors:\n{e.msg}"
 
 
+def check_trainer_importable(trainer: Path) -> tuple[bool, str]:
+    """Import the trainer module so missing exports fail before Modal spend."""
+    try:
+        _import_trainer_module(trainer)
+        return True, f"PASS: {trainer.name} imports cleanly"
+    except Exception as exc:
+        return False, f"FAIL: {trainer.name} import failed: {exc!r}"
+
+
 def check_archive_grammar(trainer: Path) -> tuple[bool, str]:
-    """Refuse `filename="x"` (or any non-canonical) without same-line waiver."""
+    """Refuse non-standard learned-packet member names without a waiver."""
     text = trainer.read_text()
     violations: list[str] = []
     for match in ARCHIVE_BUILD_PATTERN.finditer(text):
@@ -82,22 +104,58 @@ def check_archive_grammar(trainer: Path) -> tuple[bool, str]:
         if member == CANONICAL_ARCHIVE_MEMBER:
             continue
         line_no = text.count("\n", 0, match.start()) + 1
-        line_text = text.splitlines()[line_no - 1] if line_no <= len(text.splitlines()) else ""
+        line_text = (
+            text.splitlines()[line_no - 1] if line_no <= len(text.splitlines()) else ""
+        )
         if ARCHIVE_MEMBER_WAIVER.search(line_text):
             continue
         violations.append(
             f"  {trainer.name}:{line_no}: filename={member!r} "
-            f"(canonical: {CANONICAL_ARCHIVE_MEMBER!r}); "
-            f"per HNeRV parity discipline lesson 3 + Catalog #146"
+            f"(repo learned-packet standard: {CANONICAL_ARCHIVE_MEMBER!r}); "
+            f"contest rules only require archive.zip + inflate.sh, but this "
+            "trainer's inflate.sh expects x or ${base}.bin"
         )
     if violations:
-        msg = "FAIL: archive ZIP member must be '0.bin' (canonical); violations:\n" + "\n".join(violations)
+        msg = (
+            "FAIL: learned-packet archive ZIP member must be '0.bin'; "
+            "violations:\n" + "\n".join(violations)
+        )
         msg += (
-            "\n  Fix: change filename=\"x\" → filename=\"0.bin\" in _build_archive_zip"
-            "\n  OR add same-line waiver: # ARCHIVE_MEMBER_OK:<rationale>"
+            "\n  Fix: change _build_archive_zip to filename=\"0.bin\""
+            "\n  OR add same-line waiver only when inflate.sh consumes that member: "
+            "# ARCHIVE_MEMBER_OK:<rationale>"
         )
         return False, msg
-    return True, f"PASS: {trainer.name} archive ZIP member is canonical"
+    try:
+        module = _import_trainer_module(trainer)
+        build_archive_zip = getattr(module, "_build_archive_zip", None)
+        if build_archive_zip is not None:
+            import zipfile
+
+            signature = inspect.signature(build_archive_zip)
+            if "bin_bytes" not in signature.parameters:
+                return (
+                    True,
+                    f"PASS: {trainer.name} archive source-text grammar passed "
+                    "dynamic check skipped (_build_archive_zip has nonstandard "
+                    "signature)",
+                )
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                zip_path = Path(tmp_dir) / "archive.zip"
+                build_archive_zip(zip_path, bin_bytes=b"local-predeploy")
+                with zipfile.ZipFile(zip_path) as zf:
+                    names = zf.namelist()
+                if names != [CANONICAL_ARCHIVE_MEMBER]:
+                    return (
+                        False,
+                        f"FAIL: _build_archive_zip emitted members {names!r}; "
+                        f"expected [{CANONICAL_ARCHIVE_MEMBER!r}] for this "
+                        "repo learned-packet trainer",
+                    )
+    except Exception as exc:
+        return False, f"FAIL: archive grammar dynamic check failed: {exc!r}"
+    return True, f"PASS: {trainer.name} archive ZIP member follows repo standard"
 
 
 def check_auth_eval_reachability(trainer: Path) -> tuple[bool, str]:
@@ -182,13 +240,97 @@ def check_full_main_implemented(trainer: Path) -> tuple[bool, str]:
     return True, f"PASS: {trainer.name} _full_main appears implemented"
 
 
+def check_recipe_status_consistent_with_trainer_state(trainer: Path, recipe: str | None) -> tuple[bool, str]:
+    """7th check (operator-routed 2026-05-15 Phase 7).
+
+    Surfaces the Z3 v2 / Z4 / Z5 bug class at the 30s harness BEFORE Modal
+    dispatch fires. Refuses recipe-vs-trainer-state divergence:
+
+    - Trainer's _full_main raises NotImplementedError BUT recipe lacks
+      research_only: true / smoke_only: true / dispatch_enabled: false → Modal
+      will reach trainer and crash pre-auth-eval ($2-15 per smoke).
+
+    Mirrors the canonical Catalog #240 STRICT preflight gate per CLAUDE.md
+    "Bugs must be permanently fixed AND self-protected against": one
+    structural fix at the harness surface + one STRICT preflight gate at the
+    code surface.
+    """
+    if recipe is None:
+        return True, "PASS: no recipe specified; recipe-vs-trainer-state check skipped (use --recipe to enable)"
+    # Locate recipe YAML
+    candidate_recipe_paths = [
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}.yaml",
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}",
+    ]
+    recipe_path = next((p for p in candidate_recipe_paths if p.is_file()), None)
+    if recipe_path is None:
+        return (
+            False,
+            f"FAIL: recipe '{recipe}' not found at .omx/operator_authorize_recipes/{recipe}.yaml; "
+            "did you mistype the name? Use the substrate_<id>_modal_<gpu>_dispatch form (no .yaml).",
+        )
+    try:
+        recipe_text = recipe_path.read_text()
+    except OSError as exc:
+        return False, f"FAIL: cannot read recipe {recipe_path}: {exc}"
+
+    # Check trainer _full_main state.
+    try:
+        trainer_text = trainer.read_text()
+    except OSError as exc:
+        return False, f"FAIL: cannot read trainer {trainer}: {exc}"
+
+    full_main_def = re.search(r"^def\s+_full_main\s*\([^)]*\)[^:]*:", trainer_text, re.M)
+    if full_main_def is None:
+        return True, f"PASS: {trainer.name} has no _full_main (smoke-only trainer)"
+    body_start = full_main_def.end()
+    body = trainer_text[body_start : body_start + 3000]
+    raises_not_impl = bool(re.search(r"\braise\s+NotImplementedError\b", body))
+
+    # Check recipe research-only flags
+    research_only = bool(
+        re.search(r"^\s*smoke_only:\s*true\b", recipe_text, re.M)
+        or re.search(r"^\s*research_only:\s*true\b", recipe_text, re.M)
+        or re.search(r"^\s*dispatch_enabled:\s*false\b", recipe_text, re.M)
+    )
+
+    if raises_not_impl and not research_only:
+        return (
+            False,
+            f"FAIL: recipe-vs-trainer-state divergence — "
+            f"trainer {trainer.name} `_full_main` raises NotImplementedError "
+            f"(Phase 2 council-gated) but recipe {recipe_path.name} lacks "
+            f"research-only flag. Modal dispatch would crash pre-auth-eval, "
+            f"burning $2-15 per smoke (Z3 v2 / Z4 / Z5 bug class). "
+            f"Fix: add `research_only: true` AND `dispatch_blockers: ["
+            f"phase_2_council_approval_required_to_lift_full_main_NotImplementedError"
+            f"]` to {recipe_path.name} top level. Per Catalog #240 + CLAUDE.md "
+            f"'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY'.",
+        )
+
+    if raises_not_impl and research_only:
+        return True, (
+            "PASS: trainer `_full_main` is NotImplementedError-stubbed AND "
+            "recipe is research-only tagged (transparent non-dispatchable)"
+        )
+
+    return True, (
+        "PASS: recipe-vs-trainer-state consistent "
+        "(trainer `_full_main` implemented; recipe is contest-CUDA dispatchable)"
+    )
+
+
 CHECKS = [
     ("py_compile", check_py_compile),
+    ("trainer_importable", check_trainer_importable),
     ("full_main_implemented", check_full_main_implemented),
     ("archive_grammar", check_archive_grammar),
     ("auth_eval_reachability", check_auth_eval_reachability),
     ("canonical_inflate_device", check_canonical_inflate_device),
     ("deterministic_zip", check_deterministic_zip),
+    # 7th check (operator-routed 2026-05-15 Phase 7) — recipe-vs-trainer-state
+    # consistency surface; mirrors Catalog #240 STRICT preflight gate.
+    ("recipe_status_consistent_with_trainer_state", "USES_RECIPE"),
 ]
 
 
@@ -228,7 +370,11 @@ def main() -> int:
 
     failed: list[str] = []
     for name, fn in CHECKS:
-        ok, msg = fn(trainer)
+        if fn == "USES_RECIPE":
+            # 7th check needs both trainer + recipe.
+            ok, msg = check_recipe_status_consistent_with_trainer_state(trainer, args.recipe)
+        else:
+            ok, msg = fn(trainer)
         marker = "✓" if ok else "✗"
         print(f"  {marker} [{name}] {msg}")
         if not ok:
