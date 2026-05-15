@@ -325,6 +325,19 @@ def test_validate_payload_requires_cpu_linux_x86_64_contract():
         )
         is False
     )
+    assert (
+        _validate_payload_for_axis_and_sha(
+            {
+                **base,
+                "platform_system": "",
+                "platform_machine": "",
+                "hardware": "github-actions-ubuntu-latest_x86_64",
+            },
+            canonical_axis="contest_cpu",
+            archive_sha256="deadbeef" * 8,
+        )
+        is True
+    )
 
 
 # Filesystem scan + ledger fallback tests

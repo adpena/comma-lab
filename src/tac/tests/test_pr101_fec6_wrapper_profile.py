@@ -88,7 +88,7 @@ def test_real_pr101_fec6_selector_profile_matches_manifest_counts() -> None:
     assert selector["selector_avg_bits_per_pair"] == 3.24
     assert selector["zero_padding_bits"] == 0
     assert selector["entropy_floor_bytes"] == 241
-    assert selector["gap_to_entropy_floor_bytes"] == 2
+    assert selector["gap_to_entropy_floor_bytes"] == 8
     assert selector["selector_index_gap_to_entropy_floor_bytes"] == 2
     assert selector["selector_payload_gap_to_entropy_floor_bytes"] == 8
     assert selector["code_histogram"] == {

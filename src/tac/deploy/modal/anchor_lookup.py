@@ -224,11 +224,17 @@ def _payload_matches_axis_contract(payload: dict[str, Any], canonical_axis: str)
         platform_machine = str(
             _first_present((payload, "platform_machine"), (provenance, "platform_machine")) or ""
         ).strip().lower()
-        return (
-            device == "cpu"
-            and platform_system == "linux"
+        hardware = str(
+            _first_present((payload, "hardware"), (provenance, "hardware")) or ""
+        ).strip().lower()
+        linux_x86_64 = (
+            platform_system == "linux"
             and platform_machine in {"x86_64", "amd64"}
+        ) or (
+            "linux x86_64" in hardware
+            or "github-actions-ubuntu-latest_x86_64" in hardware
         )
+        return device == "cpu" and linux_x86_64
     return False
 
 

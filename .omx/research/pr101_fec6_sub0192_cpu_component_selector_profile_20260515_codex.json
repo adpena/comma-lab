@@ -1,0 +1,1653 @@
+{
+  "best_rate_feasible_component_moving_candidate": {
+    "archive": {
+      "bytes": 178434,
+      "delta_bytes_vs_fec6": -83,
+      "saved_bytes_vs_fec6": 83,
+      "sha256": "9a31f963b530ca00de5ba5b3ca3bd908d16d393a3f83fdb4133fb2b7899935ab"
+    },
+    "component_moving_evidence": {
+      "component_delta_within_rate_allowance": false,
+      "evidence_grade": "MPS-research-signal",
+      "proxy_allows_sub0192_gate": false,
+      "proxy_charged_score": 0.19214933798933803,
+      "proxy_component_delta_uncharged_vs_fec6": 0.00014263862536600946,
+      "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213868921336247,
+      "proxy_net_score_delta_vs_fec6": 8.737233225686314e-05,
+      "proxy_uncharged_score": 0.19203214681358854
+    },
+    "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k4_cpu_overlay_20260515_codex/packet_manifest.json",
+    "rate_only_gate": {
+      "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+      "passes_sub0192_if_components_unchanged": true,
+      "score_if_fec6_components_unchanged": 0.19199605058799646
+    },
+    "selector": {
+      "byte_closed_archive_charged": true,
+      "effective_selector_policy_sha256": "6fe6f1ad36789c59d912ea729aa7ceff38dc24cca26cdb4ee03be73be9ff81da",
+      "histogram": {
+        "frame0_luma_bias_-1": 49,
+        "frame0_rgb_bias_m2_p1_p1": 128,
+        "frame0_rgb_bias_p2_m1_m1": 133,
+        "none": 290
+      },
+      "payload_bytes": 166,
+      "payload_sha256": "4d1c556fdfe60f8183525224d5836eb51765a013e554db74f6ce54fd63626586",
+      "policy_kind": "component_moving_selector_policy",
+      "selected_non_none_pairs": 310,
+      "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+    },
+    "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+  },
+  "candidate_count": 33,
+  "candidates": [
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "9a31f963b530ca00de5ba5b3ca3bd908d16d393a3f83fdb4133fb2b7899935ab"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214933798933803,
+        "proxy_component_delta_uncharged_vs_fec6": 0.00014263862536600946,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213868921336247,
+        "proxy_net_score_delta_vs_fec6": 8.737233225686314e-05,
+        "proxy_uncharged_score": 0.19203214681358854
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k4_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "6fe6f1ad36789c59d912ea729aa7ceff38dc24cca26cdb4ee03be73be9ff81da",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "4d1c556fdfe60f8183525224d5836eb51765a013e554db74f6ce54fd63626586",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "573ea78439c6f4fcec7cf386286345671ea997cc75ee005fece399af899bf1da"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214933798933803,
+        "proxy_component_delta_uncharged_vs_fec6": 0.00014263862536600946,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213868921336247,
+        "proxy_net_score_delta_vs_fec6": 8.737233225686314e-05,
+        "proxy_uncharged_score": 0.19203214681358854
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_greedy_k4_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "47a9a1e6c1ba65fd5d608b6ef100e50231b67d6616b36790910223d32fda2d61",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "b14a4d9e80f59072524aa6a1c6e8bb729a16ee5980f025358f6bd220623787d1",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "573ea78439c6f4fcec7cf386286345671ea997cc75ee005fece399af899bf1da"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214934707475795,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0001426477107858981,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213869829878238,
+        "proxy_net_score_delta_vs_fec6": 8.738141767677954e-05,
+        "proxy_uncharged_score": 0.19203215589900843
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k4_base_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "47a9a1e6c1ba65fd5d608b6ef100e50231b67d6616b36790910223d32fda2d61",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "b14a4d9e80f59072524aa6a1c6e8bb729a16ee5980f025358f6bd220623787d1",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "573ea78439c6f4fcec7cf386286345671ea997cc75ee005fece399af899bf1da"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214933798933803,
+        "proxy_component_delta_uncharged_vs_fec6": 0.00014263862536600946,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213868921336247,
+        "proxy_net_score_delta_vs_fec6": 8.737233225686314e-05,
+        "proxy_uncharged_score": 0.19203214681358854
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k4_cpu_top16_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "47a9a1e6c1ba65fd5d608b6ef100e50231b67d6616b36790910223d32fda2d61",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "b14a4d9e80f59072524aa6a1c6e8bb729a16ee5980f025358f6bd220623787d1",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "573ea78439c6f4fcec7cf386286345671ea997cc75ee005fece399af899bf1da"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214938771964268,
+        "proxy_component_delta_uncharged_vs_fec6": 0.00014268835567066152,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213873894366712,
+        "proxy_net_score_delta_vs_fec6": 8.742206256151519e-05,
+        "proxy_uncharged_score": 0.1920321965438932
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k4_cpu_top64_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "47a9a1e6c1ba65fd5d608b6ef100e50231b67d6616b36790910223d32fda2d61",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "b14a4d9e80f59072524aa6a1c6e8bb729a16ee5980f025358f6bd220623787d1",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178434,
+        "delta_bytes_vs_fec6": -83,
+        "saved_bytes_vs_fec6": 83,
+        "sha256": "573ea78439c6f4fcec7cf386286345671ea997cc75ee005fece399af899bf1da"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214933798933803,
+        "proxy_component_delta_uncharged_vs_fec6": 0.00014263862536600946,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213868921336247,
+        "proxy_net_score_delta_vs_fec6": 8.737233225686314e-05,
+        "proxy_uncharged_score": 0.19203214681358854
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k4_lattice_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 3.949412003545483e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199605058799646
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "47a9a1e6c1ba65fd5d608b6ef100e50231b67d6616b36790910223d32fda2d61",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 166,
+        "payload_sha256": "b14a4d9e80f59072524aa6a1c6e8bb729a16ee5980f025358f6bd220623787d1",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178425,
+        "delta_bytes_vs_fec6": -92,
+        "saved_bytes_vs_fec6": 92,
+        "sha256": "fdfb35fcb7031c4adca666d0011c97b3743ac252512e4579f88a667828989192"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214335434417984,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0001426477107858981,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213270556820428,
+        "proxy_net_score_delta_vs_fec6": 8.138868709867131e-05,
+        "proxy_uncharged_score": 0.19203215589900843
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_compact_k4_20260514T1916Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 9.942142581625957e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199005785741838
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": "a35e05db8b16721bcd717633c9ed454a905536b113b3a78feb0590cec32b7361",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 157,
+        "payload_sha256": "6a74af214002e5b44a1a293d290fa27ad644e16e647ffaea7f776c5f535c7014",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FECI_runtime_implicit_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    },
+    {
+      "archive": {
+        "bytes": 178477,
+        "delta_bytes_vs_fec6": -40,
+        "saved_bytes_vs_fec6": 40,
+        "sha256": "13e6dd3bf26866bdb633e6ab9910f59c73d2ab6e7d21ccf6b22b2c0a9d49c523"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19208133049283285,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1920706817168573,
+        "proxy_net_score_delta_vs_fec6": 1.9364835751684017e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec5_fixed_huffman_k8_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -2.4682522980712385e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19202468252298072
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "6803901b286d483ed06b93f83375796b6dd38c0fd6958118d7c69a7c174da1b3",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 209,
+        "payload_sha256": "dadbcfc3cb2bfb16ceae0a8095d67649944a9be122335c9c6a81829d4f3472cb",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC5_fixed_huffman_k8_archive_charged_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921079648509577,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209731607498215,
+        "proxy_net_score_delta_vs_fec6": 4.599919387654472e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c0507a116dd9b88ea388cc71934c8c15631bffbf43495137aa1fbabcb1d3bb0a",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "1f6c365dbc34eb95baff6d3ffaca401d5af282e5ca4f71dfa8da922c8e6617e5",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "927169a6f7ad75b9a36999c130645eb65848c213978f471311253548ef4baa43"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19211534792326052,
+        "proxy_component_delta_uncharged_vs_fec6": 5.338226617934705e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19210469914728495,
+        "proxy_net_score_delta_vs_fec6": 5.338226617934705e-05,
+        "proxy_uncharged_score": 0.19194289045440188
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_top64_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "a59e2c904168c324f4b5103307f5ba33c0710719997e44aa81015b97c67b9d04",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 139,
+          "frame0_luma_bias_-1": 43,
+          "frame0_luma_bias_-4": 10,
+          "frame0_rgb_bias_m2_p1_p1": 76,
+          "frame0_rgb_bias_p0_p1_m1": 34,
+          "frame0_rgb_bias_p2_m1_m1": 106,
+          "frame0_rgb_bias_p4_m2_m2": 27,
+          "none": 165
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "f406e33d2613e864672e7d60554315711e06789ce447d013df35bc278a2c889c",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 435,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "40ddab6b553f93ed51631ff13bd6ca0b5ea38c2931b627b0600f48027b1ac0a3"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921051475342287,
+        "proxy_component_delta_uncharged_vs_fec6": 4.318187714752453e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209449875825313,
+        "proxy_net_score_delta_vs_fec6": 4.318187714752453e-05,
+        "proxy_uncharged_score": 0.19193269006537006
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k8_top64_guard1e7_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c07c83738bdd71d1cc91121fb5eb65d0fae9f00aff04ccadcc306ddb71fa1c0e",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 139,
+          "frame0_luma_bias_-1": 41,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 74,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 103,
+          "frame0_rgb_bias_p4_m2_m2": 32,
+          "none": 164
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "34f63c37071d91003eaa58dea90d9dca968eb6c4c2f698cede9cf02cecd8195e",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 436,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "39fc2cc2f7b4e66585c4f659b61142e78719a51444f1c4225a085356577d1aed"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921079648509577,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209731607498215,
+        "proxy_net_score_delta_vs_fec6": 4.599919387654472e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_greedy_k8_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "e91f16ac011a6e2c201c2c9f7561623e1a8a6a2977c6bd083f37dd1cd57878e5",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "078cc9ff32ae1e779df4f6d689d7584f1bced4c993b6cd3208368ba6f663a784",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921079648509577,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209731607498215,
+        "proxy_net_score_delta_vs_fec6": 4.599919387654472e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_exact_k8_dual_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c0507a116dd9b88ea388cc71934c8c15631bffbf43495137aa1fbabcb1d3bb0a",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "1f6c365dbc34eb95baff6d3ffaca401d5af282e5ca4f71dfa8da922c8e6617e5",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921079648509577,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209731607498215,
+        "proxy_net_score_delta_vs_fec6": 4.599919387654472e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_exact_k8_lattice_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c0507a116dd9b88ea388cc71934c8c15631bffbf43495137aa1fbabcb1d3bb0a",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "1f6c365dbc34eb95baff6d3ffaca401d5af282e5ca4f71dfa8da922c8e6617e5",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "39fc2cc2f7b4e66585c4f659b61142e78719a51444f1c4225a085356577d1aed"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921079648509577,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19209731607498215,
+        "proxy_net_score_delta_vs_fec6": 4.599919387654472e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k8_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "e91f16ac011a6e2c201c2c9f7561623e1a8a6a2977c6bd083f37dd1cd57878e5",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "078cc9ff32ae1e779df4f6d689d7584f1bced4c993b6cd3208368ba6f663a784",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19206196565708117,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1920513168811056,
+        "proxy_net_score_delta_vs_fec6": 0.0,
+        "proxy_uncharged_score": 0.19188950818822254
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c50a52f2e7d3323af4e5aabba47283b36fd3d6a1720e7c4784c186054f966e8b",
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 35,
+          "frame0_blue_chroma_amp_3": 129,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 71,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 92,
+          "frame0_rgb_bias_p4_m2_m2": 17,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 134
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+        "policy_kind": "reference_or_identical_archive",
+        "selected_non_none_pairs": 466,
+        "wire_format": "FEC6_fixed_huffman_k16_archive_charged_compact_palette"
+      },
+      "verdict": "reference"
+    },
+    {
+      "archive": {
+        "bytes": 178517,
+        "delta_bytes_vs_fec6": 0,
+        "saved_bytes_vs_fec6": 0,
+        "sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19206196565708117,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1920513168811056,
+        "proxy_net_score_delta_vs_fec6": 0.0,
+        "proxy_uncharged_score": 0.19188950818822254
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -5.131688110560084e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.1920513168811056
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c50a52f2e7d3323af4e5aabba47283b36fd3d6a1720e7c4784c186054f966e8b",
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 35,
+          "frame0_blue_chroma_amp_3": 129,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 71,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 92,
+          "frame0_rgb_bias_p4_m2_m2": 17,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 134
+        },
+        "payload_bytes": 249,
+        "payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca",
+        "policy_kind": "reference_or_identical_archive",
+        "selected_non_none_pairs": 466,
+        "wire_format": "FEC6_fixed_huffman_k16_archive_charged_compact_palette"
+      },
+      "verdict": "reference"
+    },
+    {
+      "archive": {
+        "bytes": 178541,
+        "delta_bytes_vs_fec6": 24,
+        "saved_bytes_vs_fec6": -24,
+        "sha256": "606bbcb794435a143094a5113a7332bb12430fc2c6eb811959e234e234b293f3"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212394546583267,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1921132966898571,
+        "proxy_net_score_delta_vs_fec6": 6.19798087515e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_cpu_lattice_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -6.729749598052837e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19206729749598053
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c0507a116dd9b88ea388cc71934c8c15631bffbf43495137aa1fbabcb1d3bb0a",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 273,
+        "payload_sha256": "39b39dcd616872e00ada0e124fc48519cf8b840cfd136bb67c988a8aad548605",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC2_archive_charged_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178541,
+        "delta_bytes_vs_fec6": 24,
+        "saved_bytes_vs_fec6": -24,
+        "sha256": "606bbcb794435a143094a5113a7332bb12430fc2c6eb811959e234e234b293f3"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212394546583267,
+        "proxy_component_delta_uncharged_vs_fec6": 4.599919387654472e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1921132966898571,
+        "proxy_net_score_delta_vs_fec6": 6.19798087515e-05,
+        "proxy_uncharged_score": 0.19193550738209908
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -6.729749598052837e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19206729749598053
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "c0507a116dd9b88ea388cc71934c8c15631bffbf43495137aa1fbabcb1d3bb0a",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 140,
+          "frame0_luma_bias_-1": 42,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 75,
+          "frame0_rgb_bias_p0_m1_p1": 35,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 98,
+          "none": 163
+        },
+        "payload_bytes": 273,
+        "payload_sha256": "39b39dcd616872e00ada0e124fc48519cf8b840cfd136bb67c988a8aad548605",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 437,
+        "wire_format": "FEC2_archive_charged_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178541,
+        "delta_bytes_vs_fec6": 24,
+        "saved_bytes_vs_fec6": -24,
+        "sha256": "742cab29dd63cedea4c1f9959b1d4f371e097e541402be9921903e921ea2d71c"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212815648289405,
+        "proxy_component_delta_uncharged_vs_fec6": 5.021021093792877e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1921175077069185,
+        "proxy_net_score_delta_vs_fec6": 6.619082581288405e-05,
+        "proxy_uncharged_score": 0.19193971839916046
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_mps_frame1_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -6.729749598052837e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19206729749598053
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "62edbba2d14928e46693aa08b0135b4ff8ce5f0b2ac2a505114a72f2ea6166bd",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 138,
+          "frame0_luma_bias_-1": 48,
+          "frame0_rgb_bias_m2_p1_p1": 102,
+          "frame0_rgb_bias_p2_m1_m1": 118,
+          "frame1_blue_chroma_amp_3": 16,
+          "frame1_luma_bias_-1": 11,
+          "frame1_rgb_bias_p2_m1_m1": 2,
+          "none": 165
+        },
+        "payload_bytes": 273,
+        "payload_sha256": "6679fe712f939909afff5d06171440a17d0e29d247e176f5cf51d3e916a8ff13",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 435,
+        "wire_format": "FEC2_archive_charged_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178541,
+        "delta_bytes_vs_fec6": 24,
+        "saved_bytes_vs_fec6": -24,
+        "sha256": "742cab29dd63cedea4c1f9959b1d4f371e097e541402be9921903e921ea2d71c"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212815969693575,
+        "proxy_component_delta_uncharged_vs_fec6": 5.0213424979655974e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1921175109209602,
+        "proxy_net_score_delta_vs_fec6": 6.61940398545835e-05,
+        "proxy_uncharged_score": 0.1919397216132022
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec2_compact_exact_k8_mps_topmodes_frame1_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -6.729749598052837e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19206729749598053
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "62edbba2d14928e46693aa08b0135b4ff8ce5f0b2ac2a505114a72f2ea6166bd",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 138,
+          "frame0_luma_bias_-1": 48,
+          "frame0_rgb_bias_m2_p1_p1": 102,
+          "frame0_rgb_bias_p2_m1_m1": 118,
+          "frame1_blue_chroma_amp_3": 16,
+          "frame1_luma_bias_-1": 11,
+          "frame1_rgb_bias_p2_m1_m1": 2,
+          "none": 165
+        },
+        "payload_bytes": 273,
+        "payload_sha256": "6679fe712f939909afff5d06171440a17d0e29d247e176f5cf51d3e916a8ff13",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 435,
+        "wire_format": "FEC2_archive_charged_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178608,
+        "delta_bytes_vs_fec6": 91,
+        "saved_bytes_vs_fec6": -91,
+        "sha256": "4652e0c19c89d9fa3c55af1a17517d88134f61f6c57a0a7cb23b8bb77ac68989"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921225588218153,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19211191004583975,
+        "proxy_net_score_delta_vs_fec6": 6.059316473414067e-05,
+        "proxy_uncharged_score": 0.19188950818822254
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_exact_k16_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00011191004583971376,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19211191004583972
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "bd38b7aac7ca3c536ff73b1333e5491f6ff06da18a91b5a7b889b01d9e1135f2",
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 35,
+          "frame0_blue_chroma_amp_3": 129,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 71,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 92,
+          "frame0_rgb_bias_p4_m2_m2": 17,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 134
+        },
+        "payload_bytes": 340,
+        "payload_sha256": "ae86c9ade8a2f96f2dee26073f004f4dea6b5212c5472a88f28d49e7ddd81d57",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 466,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178608,
+        "delta_bytes_vs_fec6": 91,
+        "saved_bytes_vs_fec6": -91,
+        "sha256": "e74fe5d694dd6002d75930be0419ec8114c3ceaadf52c70019bb871bd1eb83cb"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1921225588218153,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19211191004583975,
+        "proxy_net_score_delta_vs_fec6": 6.059316473414067e-05,
+        "proxy_uncharged_score": 0.19188950818822254
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_compact_greedy_k16_cpu_overlay_20260515_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00011191004583971376,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19211191004583972
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "6039dbd8a100dbed3f6fb4c2023e5e7faedc6a4c62aa8b57c76cba4bfd7386c2",
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 35,
+          "frame0_blue_chroma_amp_3": 129,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 71,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 92,
+          "frame0_rgb_bias_p4_m2_m2": 17,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 134
+        },
+        "payload_bytes": 340,
+        "payload_sha256": "32bd20a4b6b57d9d1cdcde2959991d42cb6d1bfe59abf224dcd193b54695111f",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 466,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178618,
+        "delta_bytes_vs_fec6": 101,
+        "saved_bytes_vs_fec6": -101,
+        "sha256": "54b49dbe198010854b3f5646a9bff1abb5f8fafb3dc65e9291294af09f8e95a2"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212862169388933,
+        "proxy_component_delta_uncharged_vs_fec6": -5.957174571968871e-07,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19211797291791377,
+        "proxy_net_score_delta_vs_fec6": 6.66560368081659e-05,
+        "proxy_uncharged_score": 0.19188891247076534
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k16_dual_cpu_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00011856863537093587,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19211856863537094
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "d50866b952a344e9f3d120be0601538bb535171399c45589958083da04596943",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 136,
+          "frame0_luma_bias_+1": 11,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 14,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m3_p2_p1": 1,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 18,
+          "frame0_rgb_bias_p1_m1_m1": 3,
+          "frame0_rgb_bias_p2_m1_m1": 89,
+          "frame0_rgb_bias_p4_m2_m2": 18,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 162
+        },
+        "payload_bytes": 350,
+        "payload_sha256": "d291c61ea5ad53396f5f059bf3dba049d8ab2ff0b7ec33d6d6b711f4e5d49c6a",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 438,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178618,
+        "delta_bytes_vs_fec6": 101,
+        "saved_bytes_vs_fec6": -101,
+        "sha256": "54b49dbe198010854b3f5646a9bff1abb5f8fafb3dc65e9291294af09f8e95a2"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19212862169388933,
+        "proxy_component_delta_uncharged_vs_fec6": -5.957174571968871e-07,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19211797291791377,
+        "proxy_net_score_delta_vs_fec6": 6.66560368081659e-05,
+        "proxy_uncharged_score": 0.19188891247076534
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_fec3_greedy_k16_rgb_lattice_overlay_20260514_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00011856863537093587,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19211856863537094
+      },
+      "selector": {
+        "byte_closed_archive_charged": true,
+        "effective_selector_policy_sha256": "d50866b952a344e9f3d120be0601538bb535171399c45589958083da04596943",
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 136,
+          "frame0_luma_bias_+1": 11,
+          "frame0_luma_bias_-1": 25,
+          "frame0_luma_bias_-2": 14,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m3_p2_p1": 1,
+          "frame0_rgb_bias_m4_p2_p2": 10,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 18,
+          "frame0_rgb_bias_p1_m1_m1": 3,
+          "frame0_rgb_bias_p2_m1_m1": 89,
+          "frame0_rgb_bias_p4_m2_m2": 18,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 162
+        },
+        "payload_bytes": 350,
+        "payload_sha256": "d291c61ea5ad53396f5f059bf3dba049d8ab2ff0b7ec33d6d6b711f4e5d49c6a",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 438,
+        "wire_format": "FEC3_archive_charged_static_or_dynamic_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178500,
+        "delta_bytes_vs_fec6": -17,
+        "saved_bytes_vs_fec6": 17,
+        "sha256": "8c20d66b842e4b24c96e24d964c120610869cef1229aef5a08b0406304f8f5cf"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.1920938335055319,
+        "proxy_component_delta_uncharged_vs_fec6": 4.31874506538199e-05,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19208318472955635,
+        "proxy_net_score_delta_vs_fec6": 3.1867848450745084e-05,
+        "proxy_uncharged_score": 0.19193269563887635
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_compact_k8_20260514T1909Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -3.999727890252602e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19203999727890253
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "frame0_blue_chroma_amp_3": 139,
+          "frame0_luma_bias_-1": 41,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 74,
+          "frame0_rgb_bias_p0_p1_m1": 36,
+          "frame0_rgb_bias_p2_m1_m1": 103,
+          "frame0_rgb_bias_p4_m2_m2": 32,
+          "none": 164
+        },
+        "payload_bytes": 232,
+        "payload_sha256": "eb77f0c5e4488a3c001939a11989cdeb1ed525d71b267da1483641ea798b413e",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 436,
+        "wire_format": "FECI_runtime_implicit_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178575,
+        "delta_bytes_vs_fec6": 58,
+        "saved_bytes_vs_fec6": -58,
+        "sha256": "756571d5cb9c8470a1c1207cd6aa95faee8704fb8684d90d25bfca04f970b464"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19209646779772044,
+        "proxy_component_delta_uncharged_vs_fec6": -4.1176786418350986e-06,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19208581902174487,
+        "proxy_net_score_delta_vs_fec6": 3.450214063926982e-05,
+        "proxy_uncharged_score": 0.1918853905095807
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_compact_k16_20260514T1909Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -8.9936700386678e-05,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19208993670038668
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 35,
+          "frame0_blue_chroma_amp_3": 129,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 24,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m4_p2_p2": 11,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 91,
+          "frame0_rgb_bias_p4_m2_m2": 19,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 134
+        },
+        "payload_bytes": 307,
+        "payload_sha256": "51c91ae8ecb7aebf847ae33f753f0a4eadb21ad7f5de60d845a3d9d6da4f84e3",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 466,
+        "wire_format": "FECI_runtime_implicit_compact_palette"
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19312414470748818,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0009716222327824098,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1931134959315126,
+        "proxy_net_score_delta_vs_fec6": 0.0010621790504070083,
+        "proxy_uncharged_score": 0.19286113042100494
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T185038Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "none": 600
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "411e7896981b3f6aad47717a680b787560a9a89fa4cea524a27119d3258d9ffb",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 0,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19312414470748818,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0009716222327824098,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1931134959315126,
+        "proxy_net_score_delta_vs_fec6": 0.0010621790504070083,
+        "proxy_uncharged_score": 0.19286113042100494
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T1852Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "none": 600
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "411e7896981b3f6aad47717a680b787560a9a89fa4cea524a27119d3258d9ffb",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 0,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "ebacec483e04402b1f1810cc5f3672bb291a613ab232790ee9137714889f28ba"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19312414470748818,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0009716222327824098,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.1931134959315126,
+        "proxy_net_score_delta_vs_fec6": 0.0010621790504070083,
+        "proxy_uncharged_score": 0.19286113042100494
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_all_none_control_20260514T1855Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "none": 600
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "411e7896981b3f6aad47717a680b787560a9a89fa4cea524a27119d3258d9ffb",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 0,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "0a3b28401d47661d509db39b3d80ffb19ad2610ed6a650f7c19f8a4715ff08fc"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214807536430173,
+        "proxy_component_delta_uncharged_vs_fec6": -4.447110404065535e-06,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213742658832617,
+        "proxy_net_score_delta_vs_fec6": 8.610970722056077e-05,
+        "proxy_uncharged_score": 0.19188506107781847
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_packet_20260514T184955Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 25,
+          "frame0_blue_chroma_amp_2": 22,
+          "frame0_blue_chroma_amp_3": 119,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 24,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m4_p2_p2": 11,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 91,
+          "frame0_rgb_bias_p4_m2_m2": 19,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 132
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "9d585daccddec90ab56d7b9d99b17de4beeb7a638697d52f989e4871ee610e7b",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 468,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "0a3b28401d47661d509db39b3d80ffb19ad2610ed6a650f7c19f8a4715ff08fc"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214807536430173,
+        "proxy_component_delta_uncharged_vs_fec6": -4.447110404065535e-06,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213742658832617,
+        "proxy_net_score_delta_vs_fec6": 8.610970722056077e-05,
+        "proxy_uncharged_score": 0.19188506107781847
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_packet_20260514T1852Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 25,
+          "frame0_blue_chroma_amp_2": 22,
+          "frame0_blue_chroma_amp_3": 119,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 24,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m4_p2_p2": 11,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 91,
+          "frame0_rgb_bias_p4_m2_m2": 19,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 132
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "9d585daccddec90ab56d7b9d99b17de4beeb7a638697d52f989e4871ee610e7b",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 468,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    },
+    {
+      "archive": {
+        "bytes": 178653,
+        "delta_bytes_vs_fec6": 136,
+        "saved_bytes_vs_fec6": -136,
+        "sha256": "0a3b28401d47661d509db39b3d80ffb19ad2610ed6a650f7c19f8a4715ff08fc"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214807536430173,
+        "proxy_component_delta_uncharged_vs_fec6": -4.447110404065535e-06,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213742658832617,
+        "proxy_net_score_delta_vs_fec6": 8.610970722056077e-05,
+        "proxy_uncharged_score": 0.19188506107781847
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_packet_20260514T1855Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": -0.00014187369873022715,
+        "passes_sub0192_if_components_unchanged": false,
+        "score_if_fec6_components_unchanged": 0.19214187369873023
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": null,
+        "histogram": {
+          "frame0_blue_chroma_amp_1": 25,
+          "frame0_blue_chroma_amp_2": 22,
+          "frame0_blue_chroma_amp_3": 119,
+          "frame0_luma_bias_+1": 9,
+          "frame0_luma_bias_-1": 24,
+          "frame0_luma_bias_-2": 13,
+          "frame0_luma_bias_-4": 11,
+          "frame0_rgb_bias_m2_p1_p1": 70,
+          "frame0_rgb_bias_m4_p2_p2": 11,
+          "frame0_rgb_bias_p0_m1_p1": 24,
+          "frame0_rgb_bias_p0_m2_p2": 7,
+          "frame0_rgb_bias_p0_p1_m1": 16,
+          "frame0_rgb_bias_p0_p2_m2": 6,
+          "frame0_rgb_bias_p2_m1_m1": 91,
+          "frame0_rgb_bias_p4_m2_m2": 19,
+          "frame0_roll_dx+0_dy+1": 1,
+          "none": 132
+        },
+        "payload_bytes": 385,
+        "payload_sha256": "9d585daccddec90ab56d7b9d99b17de4beeb7a638697d52f989e4871ee610e7b",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 468,
+        "wire_format": null
+      },
+      "verdict": "component_moving_no_gate_evidence"
+    }
+  ],
+  "conclusion": {
+    "found_feasible_sub0192_candidate_path": false,
+    "hard_blocker": true,
+    "reason": "Rate-only selector compression is blocked; the smallest rate-feasible byte-closed component-moving packet changes selector codes and its proxy component delta (0.00014263862536600946) exceeds the strict CPU gate allowance (3.949412003545483e-06).",
+    "verdict": "hard_blocker_under_current_component_rows"
+  },
+  "dispatch_attempted": false,
+  "exact_feasible_rate_only_candidates": [],
+  "proxy_allowed_component_moving_candidates": [],
+  "rate_feasible_component_moving_non_byte_closed_candidates": [
+    {
+      "archive": {
+        "bytes": 178425,
+        "delta_bytes_vs_fec6": -92,
+        "saved_bytes_vs_fec6": 92,
+        "sha256": "fdfb35fcb7031c4adca666d0011c97b3743ac252512e4579f88a667828989192"
+      },
+      "component_moving_evidence": {
+        "component_delta_within_rate_allowance": false,
+        "evidence_grade": "MPS-research-signal",
+        "proxy_allows_sub0192_gate": false,
+        "proxy_charged_score": 0.19214335434417984,
+        "proxy_component_delta_uncharged_vs_fec6": 0.0001426477107858981,
+        "proxy_estimated_exact_cpu_score_from_fec6_anchor": 0.19213270556820428,
+        "proxy_net_score_delta_vs_fec6": 8.138868709867131e-05,
+        "proxy_uncharged_score": 0.19203215589900843
+      },
+      "path": "experiments/results/pr101_frame_exploit_selector_compact_k4_20260514T1916Z_codex/packet_manifest.json",
+      "rate_only_gate": {
+        "allowable_component_score_delta_vs_fec6": 9.942142581625957e-06,
+        "passes_sub0192_if_components_unchanged": true,
+        "score_if_fec6_components_unchanged": 0.19199005785741838
+      },
+      "selector": {
+        "byte_closed_archive_charged": false,
+        "effective_selector_policy_sha256": "a35e05db8b16721bcd717633c9ed454a905536b113b3a78feb0590cec32b7361",
+        "histogram": {
+          "frame0_luma_bias_-1": 49,
+          "frame0_rgb_bias_m2_p1_p1": 128,
+          "frame0_rgb_bias_p2_m1_m1": 133,
+          "none": 290
+        },
+        "payload_bytes": 157,
+        "payload_sha256": "6a74af214002e5b44a1a293d290fa27ad644e16e647ffaea7f776c5f535c7014",
+        "policy_kind": "component_moving_selector_policy",
+        "selected_non_none_pairs": 310,
+        "wire_format": "FECI_runtime_implicit_compact_palette"
+      },
+      "verdict": "component_moving_rate_feasible_proxy_blocks_gate"
+    }
+  ],
+  "rate_only_selector_compression": {
+    "blocker": {
+      "blocked": true,
+      "reason": "Decoded-selector-preserving compression cannot save the required bytes: FEC6 is within a few bytes of its global entropy floor, and charged FEC7 range/adaptive candidates regress after model bytes are counted."
+    },
+    "can_rate_only_compression_meet_target": false,
+    "fec6_selector": {
+      "entropy_floor_bytes": 241,
+      "gap_to_entropy_floor_bytes": 8,
+      "global_entropy_floor_saving_bytes": 8,
+      "histogram": {
+        "0": 134,
+        "1": 35,
+        "10": 7,
+        "11": 16,
+        "12": 6,
+        "13": 92,
+        "14": 17,
+        "15": 1,
+        "2": 129,
+        "3": 9,
+        "4": 25,
+        "5": 13,
+        "6": 11,
+        "7": 71,
+        "8": 10,
+        "9": 24
+      },
+      "payload_bytes": 249,
+      "payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca"
+    },
+    "fec7_best_charged_candidate": {
+      "charged_model_bytes": 16,
+      "description": "one PR103 merged range stream over 16 selector symbols",
+      "meets_target_saving": false,
+      "metadata_bytes": 8,
+      "name": "fec7_global_pr103_range_u8_hist",
+      "notes": [],
+      "payload_bytes": 268,
+      "payload_sha256": "05d1a6102662e6dbdab93c9a08f6fca63a1d64cb295130d649a7054ddc501610",
+      "range_stream_bytes": 244,
+      "saving_vs_fec6_selector_bytes": -19,
+      "target_saving_bytes": 78,
+      "zero_model_entropy_bytes": 241
+    },
+    "target_saving_bytes": 78
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "reference": {
+    "archive_bytes": 178517,
+    "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+    "avg_posenet_dist": 2.943e-05,
+    "avg_segnet_dist": 0.00056029,
+    "cpu_score": 0.1920513168811056,
+    "cpu_score_axis": "contest_cpu",
+    "cuda_score": 0.22621002169349796,
+    "cuda_score_axis": "contest_cuda",
+    "effective_selector_policy_sha256": "c50a52f2e7d3323af4e5aabba47283b36fd3d6a1720e7c4784c186054f966e8b",
+    "score_rate_contribution": 0.11886714273451067,
+    "selector_payload_bytes": 249,
+    "selector_payload_sha256": "fc5c431b5d793c33e2f320076fe6f0dd76c2d91e3826ae4b05abfb4f86f453ca"
+  },
+  "schema": "pr101_fec6_sub0192_cpu_component_selector_profile.v1",
+  "score_claim": false,
+  "strict_rate_target": {
+    "archive_bytes_limit_at_unchanged_components": 178439,
+    "required_saving_bytes_at_unchanged_components": 78,
+    "score_after_one_byte_less_saving": 0.1920000457417152,
+    "score_after_required_saving": 0.19199937988276208
+  },
+  "threshold": 0.192
+}

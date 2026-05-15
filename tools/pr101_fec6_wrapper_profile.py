@@ -203,7 +203,7 @@ def parse_fec6_selector_payload(selector_payload: bytes) -> dict[str, Any]:
         "selector_avg_bits_per_pair": code_bits_total / n_pairs if n_pairs else 0.0,
         "zero_padding_bits": len(index_payload) * 8 - used_bits,
         "entropy_floor_bytes": _shannon_floor_bytes(counts),
-        "gap_to_entropy_floor_bytes": len(index_payload) - _shannon_floor_bytes(counts),
+        "gap_to_entropy_floor_bytes": len(selector_payload) - _shannon_floor_bytes(counts),
         "selector_index_gap_to_entropy_floor_bytes": len(index_payload) - _shannon_floor_bytes(counts),
         "selector_payload_gap_to_entropy_floor_bytes": len(selector_payload) - _shannon_floor_bytes(counts),
         "code_histogram": {str(code): int(count) for code, count in sorted(counts.items())},
