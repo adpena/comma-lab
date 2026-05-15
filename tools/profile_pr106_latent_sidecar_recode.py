@@ -28,11 +28,14 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
     PR106SidecarPacket,
     StoredZipMember,
     decode_brotli_dim_delta_sidecar_payload,
-    decode_pr101_ranked_sidecar_payload_to_dim_delta,
+    decode_pr106_sidecar_packet_dim_delta,
     emit_pr106_sidecar_recode_candidate_archive,
     lossless_pr106_sidecar_recode_candidates,
     parse_pr106_sidecar_packet,
@@ -265,21 +268,21 @@ def load_sidecar_source(args: argparse.Namespace) -> LoadedSidecarSource:
             member=member,
             archive_bytes=archive_bytes,
         )
-    if packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
-        if packet.framing_meta is None:
-            raise ValueError("format_id=0x02 archive has no framing_meta")
+    if packet.format_id in {
+        PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+        PR106_SIDECAR_FORMAT_PR101_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
+        PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
+    }:
         # Re-encode to the canonical 0x01 byte source for candidate comparison;
         # the decoded arrays remain the semantic source of truth.
-        dims, deltas = decode_pr101_ranked_sidecar_payload_to_dim_delta(
-            packet.sidecar_payload,
-            packet.framing_meta,
-        )
+        dims, deltas = decode_pr106_sidecar_packet_dim_delta(packet)
         current = next(
             candidate
             for candidate in lossless_pr106_sidecar_recode_candidates(dims, deltas)
             if candidate.name == "current_pr100_dim_delta_brotli_q11"
         )
-        source["semantic_source_format"] = "pr101_ranked_no_op_decoded_then_profiled"
+        source["semantic_source_format"] = f"{packet.sidecar_kind}_decoded_then_profiled"
         return LoadedSidecarSource(
             sidecar_payload=current.encoded_bytes,
             source=source,

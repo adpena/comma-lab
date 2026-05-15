@@ -13,6 +13,7 @@ import pytest
 from tac.hnerv_lowlevel_packer import write_stored_single_member_zip
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_NO_OP_DIM,
+    PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED,
     PR106SidecarPacket,
     canonicalize_brotli_dim_delta_sidecar_arrays,
     decode_brotli_dim_delta_sidecar_payload,
@@ -167,6 +168,56 @@ def test_recode_profile_tool_reads_sidecar_archive(tmp_path: Path) -> None:
 
     assert report["source"]["mode"] == "sidecar_archive"
     assert report["source"]["pr106_inner_payload_bytes"] == len(b"\xfffixture-pr106-payload")
+    assert report["score_claim"] is False
+
+
+def test_recode_profile_tool_reads_implicit_len_fixed_meta_archive(tmp_path: Path) -> None:
+    archive_bytes = PR106_R2_PR101_ARCHIVE.read_bytes()
+    member = read_single_stored_member_archive(archive_bytes)
+    source_packet = parse_pr106_sidecar_packet(member.payload)
+    dims, deltas = decode_pr101_ranked_sidecar_payload_to_dim_delta(
+        source_packet.sidecar_payload,
+        source_packet.framing_meta,
+    )
+    candidate = next(
+        item
+        for item in lossless_pr106_sidecar_recode_candidates(dims, deltas)
+        if item.sidecar_format_id
+        == PR106_SIDECAR_FORMAT_PR101_IMPLICIT_LEN_FIXED_META_RANK_ELIDED
+    )
+    _candidate_member, candidate_archive = emit_pr106_sidecar_recode_candidate_archive(
+        member,
+        source_packet,
+        candidate,
+    )
+    archive = tmp_path / "format06.zip"
+    archive.write_bytes(candidate_archive)
+    tool = _load_tool_module()
+
+    report = tool.build_report(
+        tool.parse_args(
+            [
+                "--sidecar-archive",
+                str(archive),
+                "--json-out",
+                str(tmp_path / "unused.json"),
+            ]
+        )
+    )
+
+    assert report["source"]["sidecar_format_id"] == "0x06"
+    assert (
+        report["source"]["semantic_source_format"]
+        == "pr101_ranked_no_op_implicit_len_fixed_meta_rank_elided_decoded_then_profiled"
+    )
+    assert report["current_charged_sidecar_bytes"] == 526
+    implicit_row = next(
+        row
+        for row in report["candidate_rows"]
+        if row["name"] == "pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06"
+    )
+    assert implicit_row["delta_bytes_vs_current_charged_sidecar"] == 0
+    assert implicit_row["runtime_decoder_implemented"] is True
     assert report["score_claim"] is False
 
 
