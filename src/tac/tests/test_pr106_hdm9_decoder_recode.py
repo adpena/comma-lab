@@ -318,7 +318,10 @@ def test_packetir_closure_accepts_hdm9_runtime_section_alias() -> None:
     result = _runtime_score_affecting_sections_match(
         expected_sections={"pr106_hdm9_hlm2_payload_without_inner_header", "sidecar_payload"},
         actual_sections={"pr106_payload", "sidecar_payload"},
-        proof={"format_id": "0x09", "inner_pr106_payload_sha256_unchanged": True},
+        proof=_alias_runtime_proof("0x09"),
+        candidate_consumed_byte_proof=_alias_consumed_proof(
+            "pr106_hdm9_hlm2_payload_without_inner_header"
+        ),
     )
 
     assert result["matched"] is True
@@ -329,7 +332,10 @@ def test_packetir_closure_accepts_hdm9_hlm3_runtime_section_alias() -> None:
     result = _runtime_score_affecting_sections_match(
         expected_sections={"pr106_hdm9_hlm3_payload_without_inner_header", "sidecar_payload"},
         actual_sections={"pr106_payload", "sidecar_payload"},
-        proof={"format_id": "0x0A", "inner_pr106_payload_sha256_unchanged": True},
+        proof=_alias_runtime_proof("0x0A"),
+        candidate_consumed_byte_proof=_alias_consumed_proof(
+            "pr106_hdm9_hlm3_payload_without_inner_header"
+        ),
     )
 
     assert result["matched"] is True
@@ -343,13 +349,42 @@ def test_packetir_closure_accepts_hdm9_hlm3_magicless_runtime_section_alias() ->
             "sidecar_payload",
         },
         actual_sections={"pr106_payload", "sidecar_payload"},
-        proof={"format_id": "0x0B", "inner_pr106_payload_sha256_unchanged": True},
+        proof=_alias_runtime_proof("0x0B"),
+        candidate_consumed_byte_proof=_alias_consumed_proof(
+            "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic"
+        ),
     )
 
     assert result["matched"] is True
     assert result["mode"] == (
         "format_0x0b_hdm9_hlm3_magicless_reconstructed_pr106_payload_alias"
     )
+
+
+def _alias_runtime_proof(format_id: str) -> dict[str, object]:
+    return {
+        "format_id": format_id,
+        "inner_pr106_payload_sha256_unchanged": True,
+        "source_inner_pr106_payload_sha256": "b" * 64,
+        "runtime_inner_pr106_payload_sha256": "b" * 64,
+        "candidate_headerless_section_sha256": "a" * 64,
+        "candidate_headerless_section_offset": 7,
+        "candidate_headerless_section_length": 11,
+    }
+
+
+def _alias_consumed_proof(section_name: str) -> dict[str, object]:
+    return {
+        "sections": [
+            {
+                "name": section_name,
+                "offset": 7,
+                "bytes": 11,
+                "sha256": "a" * 64,
+                "score_affecting": True,
+            }
+        ]
+    }
 
 
 def _decoder_section(pr106_bytes: bytes) -> bytes:

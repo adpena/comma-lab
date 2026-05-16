@@ -415,6 +415,10 @@ def test_packetir_exact_closure_accepts_format08_hdm8_runtime_section_alias(
         "pr106_hdm8_hlm2_payload_without_inner_header",
         "sidecar_payload",
     ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm8_hlm2_payload_without_inner_header",
+    )
     runtime_consumption = _runtime_consumption(archive)
     runtime_consumption["format_id"] = "0x08"
     runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
@@ -460,6 +464,10 @@ def test_packetir_exact_closure_accepts_format09_hdm9_runtime_section_alias(
         "pr106_hdm9_hlm2_payload_without_inner_header",
         "sidecar_payload",
     ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm2_payload_without_inner_header",
+    )
     runtime_consumption = _runtime_consumption(archive)
     runtime_consumption["format_id"] = "0x09"
     runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
@@ -505,6 +513,10 @@ def test_packetir_exact_closure_accepts_format0b_magicless_runtime_section_alias
         "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
         "sidecar_payload",
     ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+    )
     runtime_consumption = _runtime_consumption(archive)
     runtime_consumption["format_id"] = "0x0B"
     runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
@@ -550,6 +562,10 @@ def test_packetir_exact_closure_accepts_format0c_exact_radix_magicless_alias(
         "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
         "sidecar_payload",
     ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+    )
     runtime_consumption = _runtime_consumption(archive)
     runtime_consumption["format_id"] = "0x0C"
     runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
@@ -597,6 +613,10 @@ def test_packetir_exact_closure_rejects_format0b_alias_without_inner_identity(
         "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
         "sidecar_payload",
     ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+    )
     runtime_consumption = _runtime_consumption(archive)
     runtime_consumption["format_id"] = "0x0B"
     if inner_unchanged is None:
@@ -674,12 +694,89 @@ def test_packetir_exact_closure_rejects_headerless_alias_sha_mismatch(
     assert proof["score_affecting_section_set_matches_packetir"] is False
 
 
+def test_packetir_exact_closure_rejects_headerless_alias_candidate_section_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result(archive)
+    candidate_result["packet_ir_consumed_byte_proof"][
+        "score_affecting_section_names"
+    ] = [
+        "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+        "sidecar_payload",
+    ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+    )
+    runtime_consumption = _runtime_consumption(archive)
+    runtime_consumption["format_id"] = "0x0B"
+    runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
+    _add_headerless_alias_identity(runtime_consumption)
+    runtime_consumption["candidate_headerless_section_sha256"] = "0" * 64
+    runtime_consumption["runtime_consumed_score_affecting_sections"] = {
+        "pr106_payload": True,
+        "sidecar_payload": True,
+        "framing_meta": None,
+    }
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0b_candidate_section_sha_mismatch",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    proof = closure["packetir"]["runtime_consumption_proof"]
+    assert proof["valid"] is False
+    assert proof["score_affecting_section_set_matches_packetir"] is False
+    identity = proof["score_affecting_section_match_evidence"][
+        "headerless_alias_identity"
+    ]
+    assert identity["candidate_consumed_section_sha256"] == HEADERLESS_SECTION_SHA
+    assert identity["candidate_headerless_section_sha256"] == "0" * 64
+    assert identity["candidate_section_bound_to_consumed_byte_proof"] is False
+
+
 def _add_headerless_alias_identity(proof: dict) -> None:
     proof["source_inner_pr106_payload_sha256"] = INNER_PR106_PAYLOAD_SHA
     proof["runtime_inner_pr106_payload_sha256"] = INNER_PR106_PAYLOAD_SHA
     proof["candidate_headerless_section_sha256"] = HEADERLESS_SECTION_SHA
     proof["candidate_headerless_section_offset"] = 16
     proof["candidate_headerless_section_length"] = 128
+
+
+def _bind_headerless_consumed_section(
+    candidate_result: dict,
+    *,
+    section_name: str,
+    sha256: str = HEADERLESS_SECTION_SHA,
+    offset: int = 16,
+    length: int = 128,
+    score_affecting: bool = True,
+) -> None:
+    proof = candidate_result["packet_ir_consumed_byte_proof"]
+    proof["sections"] = [
+        {
+            "name": section_name,
+            "offset": offset,
+            "offset_start": offset,
+            "bytes": length,
+            "byte_count": length,
+            "sha256": sha256,
+            "score_affecting": score_affecting,
+        }
+    ]
 
 
 def _candidate_result(archive: Path) -> dict:

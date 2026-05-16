@@ -151,6 +151,7 @@ def build_packetir_exact_closure(
         candidate_sha=candidate_sha,
         candidate_bytes=candidate_bytes,
         expected_score_affecting_sections=expected_score_sections,
+        candidate_consumed_byte_proof=consumed,
     )
     _check(
         checks,
@@ -606,6 +607,7 @@ def _runtime_consumption_summary(
     candidate_sha: str | None,
     candidate_bytes: int | None,
     expected_score_affecting_sections: Sequence[str],
+    candidate_consumed_byte_proof: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     data = _as_mapping(payload)
     archive = _as_mapping(data.get("archive"))
@@ -632,6 +634,7 @@ def _runtime_consumption_summary(
         expected_sections=expected_sections,
         actual_sections=actual_sections,
         proof=data,
+        candidate_consumed_byte_proof=candidate_consumed_byte_proof,
     )
     runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
     runtime_content_tree_sha = _first_str(
@@ -709,6 +712,7 @@ def _runtime_score_affecting_sections_match(
     expected_sections: set[str],
     actual_sections: set[str],
     proof: Mapping[str, Any],
+    candidate_consumed_byte_proof: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return whether runtime proof consumption covers PacketIR sections.
 
@@ -753,7 +757,11 @@ def _runtime_score_affecting_sections_match(
     alias = headerless_aliases.get(str(proof.get("format_id")))
     if alias is not None:
         expected_headerless_section, mode = alias
-        identity = _headerless_alias_identity(proof)
+        identity = _headerless_alias_identity(
+            proof,
+            expected_section=expected_headerless_section,
+            candidate_consumed_byte_proof=candidate_consumed_byte_proof,
+        )
         if (
             expected_sections == {expected_headerless_section, "sidecar_payload"}
             and actual_sections == generic_actual
@@ -772,6 +780,18 @@ def _runtime_score_affecting_sections_match(
                     "headerless_alias_identity": identity,
                 },
             }
+        return {
+            "matched": False,
+            "mode": "mismatch",
+            "evidence": {
+                "expected_headerless_section": expected_headerless_section,
+                "runtime_consumed_reconstructed_section": "pr106_payload",
+                "inner_pr106_payload_sha256_unchanged": proof.get(
+                    "inner_pr106_payload_sha256_unchanged"
+                ),
+                "headerless_alias_identity": identity,
+            },
+        }
     return {
         "matched": False,
         "mode": "mismatch",
@@ -779,7 +799,12 @@ def _runtime_score_affecting_sections_match(
     }
 
 
-def _headerless_alias_identity(proof: Mapping[str, Any]) -> dict[str, Any]:
+def _headerless_alias_identity(
+    proof: Mapping[str, Any],
+    *,
+    expected_section: str,
+    candidate_consumed_byte_proof: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     """Validate SHA-bound identity for reconstructed PR106 payload aliases."""
     byte_exact_identity = _as_mapping(proof.get("byte_exact_identity"))
     source_sha = _first_str(
@@ -810,6 +835,20 @@ def _headerless_alias_identity(proof: Mapping[str, Any]) -> dict[str, Any]:
         proof.get("candidate_section_length"),
         proof.get("candidate_headerless_section_bytes"),
     )
+    consumed_section = _candidate_consumed_section_identity(
+        candidate_consumed_byte_proof,
+        expected_section=expected_section,
+    )
+    candidate_section_bound = (
+        consumed_section["found"] is True
+        and consumed_section["score_affecting"] is True
+        and isinstance(candidate_section_sha, str)
+        and consumed_section["sha256"] == candidate_section_sha
+        and candidate_section_offset is not None
+        and consumed_section["offset"] == candidate_section_offset
+        and candidate_section_length is not None
+        and consumed_section["length"] == candidate_section_length
+    )
     valid = (
         isinstance(source_sha, str)
         and isinstance(runtime_sha, str)
@@ -819,6 +858,7 @@ def _headerless_alias_identity(proof: Mapping[str, Any]) -> dict[str, Any]:
         and candidate_section_offset >= 0
         and candidate_section_length is not None
         and candidate_section_length > 0
+        and candidate_section_bound is True
     )
     return {
         "valid": valid,
@@ -827,6 +867,52 @@ def _headerless_alias_identity(proof: Mapping[str, Any]) -> dict[str, Any]:
         "candidate_headerless_section_sha256": candidate_section_sha,
         "candidate_headerless_section_offset": candidate_section_offset,
         "candidate_headerless_section_length": candidate_section_length,
+        "candidate_consumed_section_name": expected_section,
+        "candidate_consumed_section_found": consumed_section["found"],
+        "candidate_consumed_section_sha256": consumed_section["sha256"],
+        "candidate_consumed_section_offset": consumed_section["offset"],
+        "candidate_consumed_section_length": consumed_section["length"],
+        "candidate_consumed_section_score_affecting": consumed_section[
+            "score_affecting"
+        ],
+        "candidate_section_bound_to_consumed_byte_proof": candidate_section_bound,
+    }
+
+
+def _candidate_consumed_section_identity(
+    proof: Mapping[str, Any] | None,
+    *,
+    expected_section: str,
+) -> dict[str, Any]:
+    consumed = _as_mapping(proof)
+    for row in consumed.get("sections") or []:
+        if not isinstance(row, Mapping) or row.get("name") != expected_section:
+            continue
+        return {
+            "found": True,
+            "sha256": _first_str(
+                row.get("sha256"),
+                row.get("payload_sha256"),
+                row.get("section_sha256"),
+            ),
+            "offset": _first_int(
+                row.get("offset"),
+                row.get("offset_start"),
+                row.get("start"),
+            ),
+            "length": _first_int(
+                row.get("bytes"),
+                row.get("byte_count"),
+                row.get("length"),
+            ),
+            "score_affecting": row.get("score_affecting"),
+        }
+    return {
+        "found": False,
+        "sha256": None,
+        "offset": None,
+        "length": None,
+        "score_affecting": None,
     }
 
 
