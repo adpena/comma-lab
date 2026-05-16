@@ -52,6 +52,10 @@ Usage (full; CUDA-required compress-side scorer query)::
 # NO_GRAD_WAIVED:no-training-loop-no-eval-gradient-numpy-pillow-only-inflate
 # F3_CACHE_CONSUMPTION_WAIVED:no-scorer-hot-loop-segnet-runs-once-at-compress-time-class-label-derivation-only
 # SCORER_PREPROCESS_HANDLED_OK:no-score-aware-loss-no-hot-loop-segnet-runs-once-at-compress-time-for-class-cdf-construction-not-gradient-loss
+# CARGO_CULT_ACKNOWLEDGED:cargo-cult-3-spatial-independent-CDF-NOT-addressed-by-Path-A-future-Path-B-will-add-wavelet-decorrelation-symposium-commit-4292c8ce2
+# CARGO_CULT_ACKNOWLEDGED:cargo-cult-5-Path-A-is-bounded-improvement-NOT-medal-band-predicted-band-40-65-NOT-medal-band-symposium-Contrarian-dissent
+# CARGO_CULT_ACKNOWLEDGED:cargo-cult-6-original-symposium-4-predicted-band-0.10-0.20-empirically-falsified-Path-A-band-40-65-from-MacKay-MDL-Fridrich-UNIWARD-Tao-MSE-energy-symposium-commit-4292c8ce2
+# CARGO_CULT_ACKNOWLEDGED:cargo-cult-7-PR56-generalizes-to-frames-FALSE-preserve-for-masks-only-symposium-Quantizr-acknowledgment
 from __future__ import annotations
 
 import argparse
@@ -454,6 +458,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
         POSE_DIMS,
+        build_chroma_palette,
+        encode_class_label_stream,
         encode_grayscale_stream,
         quantize_pose_deltas,
     )
@@ -487,6 +493,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
     arith_bytes = encode_grayscale_stream(
         palette_indices=palette_indices, class_labels=cls, cdf=cdf
     )
+    cls_arith_bytes = encode_class_label_stream(cls)
+    # Path A: synthetic chroma palette built from a synthetic RGB stand-in.
+    # The smoke path validates roundtrip; full path uses real GT video pixels.
+    synth_rgb = rng.integers(0, 256, size=(n_pairs, 3, h_g, w_g), dtype=np.uint8)
+    chroma_rgb = build_chroma_palette(synth_rgb, cls)
     pose = rng.standard_normal((n_pairs, POSE_DIMS)).astype(np.float32) * 0.01
     pose_bytes, zero = quantize_pose_deltas(pose, scale=args.pose_quant_scale)
     meta = {
@@ -505,6 +516,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         grayscale_w=w_g,
         output_height=24,
         output_width=32,
+        chroma_rgb=chroma_rgb,
+        cls_arith_bytes=cls_arith_bytes,
     )
     (args.output_dir / "0.bin").write_bytes(bin_bytes)
     arc = parse_archive(bin_bytes)
@@ -541,6 +554,8 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
         POSE_DIMS,
+        build_chroma_palette,
+        encode_class_label_stream,
         encode_grayscale_stream,
         quantize_pose_deltas,
     )
@@ -664,6 +679,28 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         _stage(f"grayscale_arith_encoded_bytes_{len(arith_bytes)}")
 
+        # 7a. Path A: arith-encode per-cell SegNet class labels (uniform CDF)
+        # so the inflate runtime can consume the per-class CDF + per-class
+        # chroma anchors (cargo-cult #1 + #2 unwound; symposium 4292c8ce2).
+        cls_arith_bytes = encode_class_label_stream(cls_lowres)
+        _stage(f"cls_arith_encoded_bytes_{len(cls_arith_bytes)}")
+
+        # 7b. Path A: build per-class RGB chroma anchors from the GT video
+        # (median across pixels per class). Downsample odd_rgb + cls_full to
+        # the lowres grid so anchor derivation is consistent with what the
+        # inflate runtime will reconstruct at the same lowres scale.
+        odd_lowres = (
+            odd_rgb.reshape(
+                n_pairs, 3, h_g, args.grayscale_downsample, w_g,
+                args.grayscale_downsample,
+            )
+            .mean(axis=(3, 5))
+            .clip(0, 255)
+            .astype(np.uint8)
+        )
+        chroma_rgb = build_chroma_palette(odd_lowres, cls_lowres)
+        _stage(f"chroma_palette_built_{chroma_rgb.shape}")
+
         # 8. PoseNet at compress-side -> per-pair 6-dim deltas
         # OOM FIX (Catalog #218 sister): mirror the SegNet chunked pattern
         # above. PoseNet preprocess emits (B, T*6, H/2, W/2) and the FastViT
@@ -719,6 +756,8 @@ def _full_main(args: argparse.Namespace) -> int:
             grayscale_w=w_g,
             output_height=CONTEST_RAW_HW[0],
             output_width=CONTEST_RAW_HW[1],
+            chroma_rgb=chroma_rgb,
+            cls_arith_bytes=cls_arith_bytes,
         )
         (args.output_dir / "0.bin").write_bytes(bin_bytes)
         payload_0bin_sha = _sha256_bytes(bin_bytes)
@@ -918,29 +957,35 @@ CARMACK_HOTZ_SUBSTRATE_CONTRACT = SubstrateContract(
     ),
     # 2.2 Architecture & runtime (Catalog #124)
     archive_grammar=(
-        "CH06 monolithic single-file 0.bin: header (magic=CH06, version=1) + "
+        "CH06 v2 monolithic single-file 0.bin: header (magic=CH06, version=2) + "
         "grayscale palette (uint8) + class-conditional CDF table (uint16) + "
-        "arith-coded grayscale palette indices + per-pair pose deltas (uint8) "
-        "+ utf-8 json meta. NO neural weights. NO PyTorch at inflate."
+        "arith-coded grayscale palette indices + per-pair pose deltas (uint8) + "
+        "utf-8 json meta + per-class chroma anchors (5x3 uint8 RGB) + arith-coded "
+        "per-cell class labels (uniform CDF). Path A redesign 2026-05-16 "
+        "(symposium commit 4292c8ce2): chroma + class-labels stream enables "
+        "per-pixel RGB synthesis at inflate. NO neural weights. NO PyTorch at inflate."
     ),
     parser_section_manifest={
-        "header": "CH06_magic_and_version",
+        "header": "CH06_v2_magic_and_version",
         "palette": "uint8_grayscale_levels",
         "cdf": "uint16_class_conditional_cdf",
         "grayscale_stream": "arith_coded_palette_indices",
         "pose_stream": "uint8_quantized_pose_deltas",
         "meta": "utf8_json",
+        "chroma_blob": "uint8_per_class_rgb_anchors",
+        "cls_stream": "arith_coded_per_cell_class_labels",
     },
-    inflate_runtime_loc_budget=100,
+    inflate_runtime_loc_budget=200,  # Path A bumped; substrate_engineering exception
     runtime_dep_closure=("numpy>=1.24", "Pillow>=10"),
     export_format="custom",
     score_aware_loss="custom",
-    bolt_on_loc_budget=1400,  # substrate_engineering exception per L7
+    bolt_on_loc_budget=1700,  # substrate_engineering exception per L7 (Path A +300 LOC)
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (Catalog #220)
     archive_bytes_added=(
-        "~3-15 KB total (palette ~16 B; CDF ~170 B; arith-coded grayscale "
-        "~2-10 KB depending on entropy; pose ~3.6 KB)"
+        "Path A v2: ~30-60 KB total (palette ~16 B; CDF ~170 B; arith-coded "
+        "grayscale ~3-10 KB; pose ~3.6 KB; chroma ~15 B; cls_stream ~25-45 KB "
+        "uniform-CDF; future Path B wavelet+Wyner-Ziv will reduce by 5-10x)"
     ),
     score_improvement_mechanism_status="OPERATIONAL",
     runtime_overlay_consumed=True,

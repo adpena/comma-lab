@@ -21,12 +21,21 @@ target_modes:
   - contest_one_video_replay
   - research_substrate
 canary_status: independent_substrate
-dispatch_enabled: false
-research_only: true
+dispatch_enabled: true
+research_only: false
 
-dispatch_blockers:
-  - empirical_anchor_500x_outside_predicted_band
-  - redesign_pending_grand_council_symposium_20260516
+# Path A redesign v7 (2026-05-16; symposium commit 4292c8ce2): chroma +
+# optical-flow surgical additions UNWIND cargo-cults #1, #2, #4. Predicted
+# Path A band: [40, 65] (NOT medal-band per Contrarian dissent; first
+# empirical anchor needed before B/C/D/F decisions).
+path_a_redesign: true
+path_a_council_provenance: |
+  Grand council symposium 2026-05-16 commit 4292c8ce2 ratified Path A
+  (8/22 voices 1st-preference; sextet pact PROCEED with cargo-cult-unwinding
+  mandate). Contrarian dissent acknowledged: Path A produces 40-65 NOT
+  medal-band; if operator wants leaderboard pivot to C or D.
+
+dispatch_blockers: []
 
 cost_band:
   epochs: 1
@@ -35,13 +44,21 @@ cost_band:
   platform_key: modal
   gpu_key: T4
 
-predicted_score_target: 0.15
-predicted_delta: "[0.10, 0.20] FALSIFIED EMPIRICALLY at 105.15 [diagnostic_cpu] (v6 smoke 2026-05-16; ~700x outside predicted band); recipe held research_only until redesign"
+predicted_score_target: 50.0
+predicted_delta: "Path A v7 predicted band [40, 65] [prediction; symposium-grounded; HIGH VARIANCE]; v6 anchor at 105.15 [diagnostic_cpu] superseded by Path A redesign chroma + 6-DOF affine warp"
 predicted_delta_basis: |
-  ORIGINAL DESIGN BASIS (now empirically falsified):
+  PATH A REDESIGN BASIS (symposium commit 4292c8ce2; 2026-05-16):
+    8/22 council voices 1st-preference for Path A "Two Surgical Additions":
+      - MacKay MDL chroma bound: ΔS_seg ~ -60 from per-class chroma anchors
+      - Fridrich UNIWARD chroma allocation: ΔS ~ -40 from inverse-steg lens
+      - Tao MSE-energy analysis: chroma is ~15% MSE-energy → ~50-80 dist points
+      - Carmack iteration: replace np.roll (2-of-6) with 6-DOF affine warp
+    Aggregated predicted band: [40, 65] from 105.15 [diagnostic_cpu] baseline.
+
+  ORIGINAL DESIGN BASIS (empirically falsified 2026-05-16; preserved for review):
     feedback_grand_reunion_fields_grade_passion_full_council_debrief_vision_strategy_design_whiteboard_session_20260515.md#composite-4
 
-  EMPIRICAL CONTRADICTION 2026-05-16:
+  EMPIRICAL ANCHOR v6 (2026-05-16; pre-redesign):
     v6 smoke (commit 90bca47ff; call_id fc-01KRRBHZZR7RWBVH4PN65VX1M1;
     mounted HEAD 6a79fd7f9; cost-band 100ep T4) returned
     final_score=105.15 [diagnostic_cpu, evidence_grade=B,

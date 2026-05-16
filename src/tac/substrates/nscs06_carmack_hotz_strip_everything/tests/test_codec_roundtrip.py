@@ -28,8 +28,12 @@ from tac.substrates.nscs06_carmack_hotz_strip_everything import (
     parse_archive,
 )
 from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
+    CHROMA_BYTES_PER_CLASS,
     POSE_DIMS,
+    build_chroma_palette,
+    decode_class_label_stream,
     dequantize_pose_deltas,
+    encode_class_label_stream,
     encode_grayscale_stream,
     quantize_pose_deltas,
 )
@@ -44,7 +48,11 @@ def _build_synthetic_archive(
     *, seed: int = 0, n_pairs: int = 4, palette_size: int = 16, h_g: int = 6, w_g: int = 8,
     output_h: int = 24, output_w: int = 32,
 ) -> tuple[bytes, GrayscalePalette, ClassConditionalCDF, np.ndarray, np.ndarray]:
-    """Build a self-consistent synthetic CH06 archive + return ground truth."""
+    """Build a self-consistent synthetic CH06 v2 archive + return ground truth.
+
+    Path A redesign 2026-05-16: v2 archives include `chroma_rgb` + `cls_arith_bytes`
+    so the inflate runtime can synthesize per-pixel RGB instead of Y=R=G=B replication.
+    """
     rng = np.random.default_rng(seed)
     samples = rng.integers(0, 256, size=(n_pairs, h_g, w_g), dtype=np.uint8)
     palette = build_grayscale_palette(samples, palette_size=palette_size)
@@ -54,6 +62,9 @@ def _build_synthetic_archive(
     arith_bytes = encode_grayscale_stream(
         palette_indices=palette_indices, class_labels=cls, cdf=cdf
     )
+    cls_arith_bytes = encode_class_label_stream(cls)
+    synth_rgb = rng.integers(0, 256, size=(n_pairs, 3, h_g, w_g), dtype=np.uint8)
+    chroma_rgb = build_chroma_palette(synth_rgb, cls)
     pose = (rng.standard_normal((n_pairs, POSE_DIMS)) * 0.01).astype(np.float32)
     pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
     meta = {"grayscale_downsample": 4, "pose_quant_scale": 10.0, "pose_quant_zero": zero}
@@ -61,6 +72,7 @@ def _build_synthetic_archive(
         palette=palette, cdf=cdf, grayscale_arith_bytes=arith_bytes,
         pose_bytes=pose_bytes, meta=meta, num_pairs=n_pairs,
         grayscale_h=h_g, grayscale_w=w_g, output_height=output_h, output_width=output_w,
+        chroma_rgb=chroma_rgb, cls_arith_bytes=cls_arith_bytes,
     )
     return blob, palette, cdf, palette_indices, cls
 
@@ -218,8 +230,9 @@ class TestCh06ArchiveRoundtrip:
         assert blob[:4] == CH06_MAGIC
         assert blob[4] == CH06_SCHEMA_VERSION
 
-    def test_header_size_invariant_30_bytes(self) -> None:
-        assert CH06_HEADER_SIZE == 30
+    def test_header_size_invariant_36_bytes_v2(self) -> None:
+        """Path A v2: header is 36 bytes (was 30 in v1; added chroma_len + cls_len)."""
+        assert CH06_HEADER_SIZE == 36
 
     def test_wrong_magic_rejected(self) -> None:
         blob, _, _, _, _ = _build_synthetic_archive(seed=0)
@@ -286,8 +299,8 @@ class TestByteMutationNoOpDetector:
         palette_bytes = palette.size
         cdf_bytes = NUM_SEGNET_CLASSES * (cdf.palette_size + 1) * 2
         arith_start = CH06_HEADER_SIZE + palette_bytes + cdf_bytes
-        # Read arith length from header
-        unpacked = struct.unpack("<4sBHBHHHHHHIIH", blob[:CH06_HEADER_SIZE])
+        # Read arith length from header (v2: 15 fields)
+        unpacked = struct.unpack("<4sBHBHHHHHHIIHHI", blob[:CH06_HEADER_SIZE])
         arith_len = unpacked[10]
         assert arith_len > 0
         mutated = bytearray(blob)
@@ -357,7 +370,10 @@ class TestInflateBudgetAndStrictScorerRule:
             )
 
     def test_inflate_runtime_within_loc_budget(self) -> None:
-        """HNeRV parity L4: inflate.py <= 100 LOC declared (we waive +20% for docstrings)."""
+        """HNeRV parity L4 + substrate_engineering exception per L7: Path A v2
+        bumps inflate budget to 200 LOC (was 100 v1). The redesign adds
+        chroma reconstruction + 6-DOF affine warp (symposium commit 4292c8ce2).
+        """
         inflate_path = (
             Path(__file__).resolve().parent.parent / "inflate.py"
         )
@@ -366,8 +382,134 @@ class TestInflateBudgetAndStrictScorerRule:
             for ln in inflate_path.read_text(encoding="utf-8").splitlines()
             if ln.strip() and not ln.strip().startswith("#")
         ]
-        # We've declared 100 LOC budget; allow modest doc/blank slack to 130
-        # The declared budget in the SubstrateContract is 100 LOC.
-        assert len(body_lines) <= 130, (
-            f"inflate.py is {len(body_lines)} non-comment LOC; exceeds 100 + slack"
+        # SubstrateContract declares 200 LOC budget; allow 15% docstring slack to 230
+        assert len(body_lines) <= 230, (
+            f"inflate.py is {len(body_lines)} non-comment LOC; "
+            f"exceeds Path A v2 budget 200 + 15% slack"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Path A v2 redesign (chroma + 6-DOF optical-flow) — symposium commit 4292c8ce2
+# ---------------------------------------------------------------------------
+
+class TestPathAChromaReconstruction:
+    """Verify per-class chroma palette + class-label stream produce non-Y=R=G=B
+    output at inflate. Empirical fix for v6 anchor seg=64.6 distortion class."""
+
+    def test_chroma_palette_roundtrip_byte_stable(self) -> None:
+        """Chroma palette survives pack+parse byte-identical."""
+        blob, _, _, _, _ = _build_synthetic_archive(seed=20)
+        arc = parse_archive(blob)
+        assert arc.chroma_rgb.dtype == np.uint8
+        assert arc.chroma_rgb.shape == (NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
+
+    def test_class_label_stream_roundtrip_byte_stable(self) -> None:
+        """Encoded + decoded class labels exactly equal source."""
+        rng = np.random.default_rng(42)
+        cls = rng.integers(0, NUM_SEGNET_CLASSES, size=(3, 4, 6), dtype=np.uint8)
+        encoded = encode_class_label_stream(cls)
+        decoded = decode_class_label_stream(encoded, shape=cls.shape)
+        assert np.array_equal(cls, decoded)
+
+    def test_inflate_output_not_grayscale(self, tmp_path: Path) -> None:
+        """Path A cargo-cult #2 unwound: inflate must NOT produce R=G=B output
+        when chroma anchors differ across channels. v6 produced Y=R=G=B; v2
+        must produce per-pixel chroma derived from class labels."""
+        # Build archive with deliberately-asymmetric chroma palette.
+        rng = np.random.default_rng(33)
+        h_g, w_g, n_pairs = 8, 12, 2
+        samples = rng.integers(0, 256, size=(n_pairs, h_g, w_g), dtype=np.uint8)
+        palette = build_grayscale_palette(samples, palette_size=8)
+        palette_indices = palette.quantize(samples)
+        # Force class-0 in half + class-1 in the other half to ensure variation.
+        cls = np.zeros((n_pairs, h_g, w_g), dtype=np.uint8)
+        cls[:, :, w_g // 2 :] = 1
+        cdf = build_class_conditional_cdf(palette_indices, cls, palette_size=8)
+        arith_bytes = encode_grayscale_stream(
+            palette_indices=palette_indices, class_labels=cls, cdf=cdf
+        )
+        cls_arith_bytes = encode_class_label_stream(cls)
+        # Asymmetric per-class chroma: class 0 = pure red, class 1 = pure green.
+        chroma_rgb = np.zeros((NUM_SEGNET_CLASSES, 3), dtype=np.uint8)
+        chroma_rgb[0] = [255, 0, 0]
+        chroma_rgb[1] = [0, 255, 0]
+        pose = np.zeros((n_pairs, POSE_DIMS), dtype=np.float32)
+        pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
+        meta = {"grayscale_downsample": 4, "pose_quant_scale": 10.0,
+                "pose_quant_zero": zero}
+        blob = pack_archive(
+            palette=palette, cdf=cdf, grayscale_arith_bytes=arith_bytes,
+            pose_bytes=pose_bytes, meta=meta, num_pairs=n_pairs,
+            grayscale_h=h_g, grayscale_w=w_g, output_height=16, output_width=24,
+            chroma_rgb=chroma_rgb, cls_arith_bytes=cls_arith_bytes,
+        )
+        raw_path = inflate_one_video(blob, tmp_path / "chr" / "0")
+        raw = np.frombuffer(raw_path.read_bytes(), dtype=np.uint8)
+        # 2 frames per pair, 3 channels, 16x24 = 1152 bytes per frame
+        n_bytes_per_frame = 16 * 24 * 3
+        first_frame = raw[:n_bytes_per_frame].reshape(16, 24, 3)
+        # Left half should be reddish (R > G); right half greenish (G > R).
+        # Skip column boundary and rows that span class boundary in bilinear interp.
+        left_r = first_frame[:, :8, 0].mean()
+        left_g = first_frame[:, :8, 1].mean()
+        right_r = first_frame[:, 16:, 0].mean()
+        right_g = first_frame[:, 16:, 1].mean()
+        assert left_r > left_g, (
+            f"chroma unwinding failed: left half R={left_r} G={left_g}; "
+            f"v6 Y=R=G=B regression detected"
+        )
+        assert right_g > right_r, (
+            f"chroma unwinding failed: right half R={right_r} G={right_g}; "
+            f"v6 Y=R=G=B regression detected"
+        )
+
+
+class TestPathASixDOFAffineWarp:
+    """Verify 6-DOF affine warp consumes all 6 pose dims, not just 2."""
+
+    def test_six_dim_pose_produces_different_warp_than_two_dim(
+        self, tmp_path: Path
+    ) -> None:
+        """Path A cargo-cult #4 unwound: PoseNet dims [2..6] (tz, rx, ry, rz)
+        must measurably affect the warped frame_1. v6 used only pose[0..2]
+        (translation) — same pose with non-zero rz must produce a different
+        warp than the same pose with rz=0."""
+        rng = np.random.default_rng(55)
+        h_g, w_g, n_pairs = 6, 8, 1
+        samples = rng.integers(0, 256, size=(n_pairs, h_g, w_g), dtype=np.uint8)
+        palette = build_grayscale_palette(samples, palette_size=8)
+        palette_indices = palette.quantize(samples)
+        cls = rng.integers(0, NUM_SEGNET_CLASSES, size=palette_indices.shape, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(palette_indices, cls, palette_size=8)
+        arith_bytes = encode_grayscale_stream(
+            palette_indices=palette_indices, class_labels=cls, cdf=cdf
+        )
+        cls_arith_bytes = encode_class_label_stream(cls)
+        chroma_rgb = build_chroma_palette(
+            rng.integers(0, 256, size=(n_pairs, 3, h_g, w_g), dtype=np.uint8), cls
+        )
+
+        def _build(pose_vec: np.ndarray) -> Path:
+            pose_bytes, zero = quantize_pose_deltas(
+                pose_vec[None].astype(np.float32), scale=10.0
+            )
+            meta = {"grayscale_downsample": 4, "pose_quant_scale": 10.0,
+                    "pose_quant_zero": zero}
+            blob = pack_archive(
+                palette=palette, cdf=cdf, grayscale_arith_bytes=arith_bytes,
+                pose_bytes=pose_bytes, meta=meta, num_pairs=n_pairs,
+                grayscale_h=h_g, grayscale_w=w_g, output_height=32, output_width=48,
+                chroma_rgb=chroma_rgb, cls_arith_bytes=cls_arith_bytes,
+            )
+            return inflate_one_video(blob, tmp_path / f"p_{hash(pose_vec.tobytes())}" / "0")
+
+        # Two poses: same translation; different rotation (pose dim 5 = rz)
+        pose_no_rot = np.array([0.05, 0.05, 0.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        pose_with_rot = np.array([0.05, 0.05, 0.0, 0.0, 0.0, 0.5], dtype=np.float32)
+        raw_a = _build(pose_no_rot).read_bytes()
+        raw_b = _build(pose_with_rot).read_bytes()
+        assert raw_a != raw_b, (
+            "6-DOF warp regression: rotation dim 5 did not change inflate output "
+            "(v6 2-of-6 translation-only warp cargo-cult not yet unwound)"
         )

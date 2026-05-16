@@ -2,10 +2,14 @@
 """CH06 archive grammar — monolithic single-file ``0.bin``.
 
 Catalog #124 STRICT archive-grammar 8 fields declared in package ``__init__``.
-This file IS the export-first grammar (HNeRV parity discipline lesson L2)::
+This file IS the export-first grammar (HNeRV parity discipline lesson L2).
+
+**Schema v2** (Path A redesign 2026-05-16; symposium commit 4292c8ce2): adds
+per-class CHROMA palette + per-cell CLASS-LABEL stream so the inflate runtime
+can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::
 
     MAGIC(4)             b"CH06"   Carmack-Hotz strip-everything substrate v06
-    VERSION(1)           u8        schema version (currently 1)
+    VERSION(1)           u8        schema version (2 = Path A chroma+optical-flow)
     NUM_PAIRS(2)         u16       number of (frame_0, frame_1) pairs
     PALETTE_SIZE(1)      u8        grayscale palette size (default 16)
     GRAYSCALE_H(2)       u16       low-res grayscale field height (e.g. H/4)
@@ -17,13 +21,17 @@ This file IS the export-first grammar (HNeRV parity discipline lesson L2)::
     GRAYSCALE_LEN(4)     u32       arith-coded grayscale-indices stream length
     POSE_LEN(4)          u32       per-pair pose-delta stream length (uint8 * 6 * NUM_PAIRS)
     META_LEN(2)          u16       utf-8 json meta length
+    CHROMA_LEN(2)        u16       NUM_SEGNET_CLASSES * 3 bytes  (v2; per-class RGB anchors)
+    CLS_LEN(4)           u32       arith-coded per-cell class-label stream length (v2)
     PALETTE              ...       PALETTE_SIZE bytes (uint8 grayscale levels)
     CDF                  ...       class-conditional CDF table (uint16 row-major)
     GRAYSCALE_STREAM     ...       arith-coded palette indices for odd-frame grayscale
     POSE_STREAM          ...       per-pair pose deltas (uint8 quantized; 6 dims per pair)
     META_BLOB            ...       json: {grayscale_downsample, pose_quant_scale, ...}
+    CHROMA_BLOB          ...       NUM_SEGNET_CLASSES*3 uint8 RGB anchors (v2)
+    CLS_STREAM           ...       arith-coded uniform-CDF class labels per cell (v2)
 
-Total header: 4+1+2+1+2+2+2+2+2+2+4+4+2 = 30 bytes.
+Total header v2: 30 + 2 + 4 = 36 bytes.
 
 The grammar is FIXED at design-time. CH06 = "Carmack-Hotz substrate v06"
 (the "06" matches the package name suffix ``nscs06_*``).
@@ -31,11 +39,20 @@ The grammar is FIXED at design-time. CH06 = "Carmack-Hotz substrate v06"
 Compress side writes everything; inflate side reads + decodes purely with
 numpy + Pillow. NO torch, NO scorer, NO learned weights.
 
+Path A cargo-cult unwinding (per grand council symposium 2026-05-16 commit
+4292c8ce2; Assumption-Adversary VETO satisfied):
+- Cargo-cult #1 (closed-form-argmax-allocator) UNWOUND: per-class CDF is now
+  ACTUALLY consumed at inflate via the CLS_STREAM; previously the inflate
+  used class=0 uniformly making the CDF effectively dead.
+- Cargo-cult #2 (Y=R=G=B chroma destruction) UNWOUND: per-class RGB anchors
+  provide chroma at inflate; SegNet now sees coloured frames.
+- Cargo-cult #4 (2-of-6-pose-warp) UNWOUND in inflate.py via 6-dim affine warp.
+
 CLAUDE.md compliance:
 - Deterministic (sorted-keys JSON meta, fixed-precision arith state)
 - No /tmp paths
 - No scorer load
-- Reviewable in 30 seconds per L12 (~120 LOC including doc + assertions)
+- Reviewable in 30 seconds per L12 (~140 LOC including doc + assertions)
 """
 
 from __future__ import annotations
@@ -57,26 +74,38 @@ from .codec import (
 CH06_MAGIC: bytes = b"CH06"
 """Carmack-Hotz substrate magic. Matches the ``nscs06`` package suffix."""
 
-CH06_SCHEMA_VERSION: int = 1
-"""Schema version byte. Bump when grammar changes."""
+CH06_SCHEMA_VERSION: int = 2
+"""Schema version byte. v2 (Path A 2026-05-16): adds chroma palette + class
+labels stream so the inflate runtime can synthesize per-pixel RGB instead of
+Y=R=G=B replication. Symposium commit 4292c8ce2 ratifies the bump."""
 
-# Header layout per docstring above. Format string:
-#   < 4s B H B H H H H H H I I H  ->  4+1+2+1+2+2+2+2+2+2+4+4+2 = 30 bytes
-CH06_HEADER_FMT: str = "<4sBHBHHHHHHIIH"
+# Header layout per docstring above. v2 format string:
+#   < 4s B H B H H H H H H I I H H I  ->  4+1+2+1+2+2+2+2+2+2+4+4+2+2+4 = 36 bytes
+CH06_HEADER_FMT: str = "<4sBHBHHHHHHIIHHI"
 CH06_HEADER_SIZE: int = struct.calcsize(CH06_HEADER_FMT)
-assert CH06_HEADER_SIZE == 30, (
-    f"CH06 header size invariant violated: {CH06_HEADER_SIZE} != 30"
+assert CH06_HEADER_SIZE == 36, (
+    f"CH06 v2 header size invariant violated: {CH06_HEADER_SIZE} != 36"
 )
 
 # Pose deltas are quantized to uint8 over [-pose_quant_range, +pose_quant_range].
 # Stored as raw bytes (NO arithmetic coding); only ~3.6 KB total for 600 pairs.
 POSE_DIMS: int = 6
-"""Per-pair pose vector dimensionality (PoseNet's first 6 dims per CLAUDE.md)."""
+"""Per-pair pose vector dimensionality (PoseNet's first 6 dims per CLAUDE.md).
+ALL 6 dims are consumed by the inflate runtime's affine warp per Path A
+(symposium commit 4292c8ce2; cargo-cult #4 unwound)."""
+
+CHROMA_BYTES_PER_CLASS: int = 3
+"""Per-SegNet-class RGB anchor stored as uint8 R/G/B (3 bytes per class)."""
 
 
 @dataclass(frozen=True)
 class CarmackHotzArchive:
-    """Parsed CH06 archive — the inflate-time data contract."""
+    """Parsed CH06 archive — the inflate-time data contract.
+
+    Path A v2 fields (`chroma_rgb`, `cls_arith_bytes`) carry the per-class
+    chroma anchors + per-cell class labels so the inflate runtime can render
+    per-pixel RGB instead of Y=R=G=B replication.
+    """
 
     palette: GrayscalePalette
     cdf: ClassConditionalCDF
@@ -91,6 +120,8 @@ class CarmackHotzArchive:
     grayscale_w: int
     output_height: int
     output_width: int
+    chroma_rgb: np.ndarray  # (NUM_SEGNET_CLASSES, 3) uint8 per-class RGB anchors (v2)
+    cls_arith_bytes: bytes  # arith-coded per-cell class labels stream (v2)
 
     @property
     def palette_size(self) -> int:
@@ -121,9 +152,15 @@ def pack_archive(
     grayscale_w: int,
     output_height: int,
     output_width: int,
+    chroma_rgb: np.ndarray,
+    cls_arith_bytes: bytes,
     schema_version: int = CH06_SCHEMA_VERSION,
 ) -> bytes:
-    """Serialize CH06 archive into monolithic 0.bin bytes."""
+    """Serialize CH06 v2 archive into monolithic 0.bin bytes.
+
+    Path A redesign 2026-05-16: `chroma_rgb` (NUM_SEGNET_CLASSES, 3) uint8 +
+    `cls_arith_bytes` (arith-coded per-cell class labels) are now REQUIRED.
+    """
     if schema_version != CH06_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
     if palette.size != cdf.palette_size:
@@ -134,6 +171,13 @@ def pack_archive(
         raise ValueError(
             f"pose_bytes length {len(pose_bytes)} != num_pairs * POSE_DIMS = "
             f"{num_pairs * POSE_DIMS}"
+        )
+    if chroma_rgb.dtype != np.uint8:
+        raise ValueError(f"chroma_rgb must be uint8; got {chroma_rgb.dtype}")
+    if chroma_rgb.shape != (NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS):
+        raise ValueError(
+            f"chroma_rgb must be ({NUM_SEGNET_CLASSES}, {CHROMA_BYTES_PER_CLASS}); "
+            f"got {chroma_rgb.shape}"
         )
 
     for name, v, max_v in (
@@ -150,6 +194,7 @@ def pack_archive(
     palette_bytes = bytes(palette.levels.tobytes())
     cdf_bytes = bytes(cdf.cdf.tobytes())
     meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    chroma_bytes = bytes(chroma_rgb.tobytes())
 
     if len(palette_bytes) > 0xFFFF:
         raise ValueError(f"palette too large: {len(palette_bytes)} > {0xFFFF}")
@@ -161,6 +206,10 @@ def pack_archive(
         raise ValueError(f"pose stream too large: {len(pose_bytes)}")
     if len(meta_bytes) > 0xFFFF:
         raise ValueError(f"meta too large: {len(meta_bytes)} > {0xFFFF}")
+    if len(chroma_bytes) > 0xFFFF:
+        raise ValueError(f"chroma too large: {len(chroma_bytes)} > {0xFFFF}")
+    if len(cls_arith_bytes) > 0xFFFFFFFF:
+        raise ValueError(f"cls stream too large: {len(cls_arith_bytes)}")
 
     header = struct.pack(
         CH06_HEADER_FMT,
@@ -177,6 +226,8 @@ def pack_archive(
         len(grayscale_arith_bytes),
         len(pose_bytes),
         len(meta_bytes),
+        len(chroma_bytes),
+        len(cls_arith_bytes),
     )
     return (
         header
@@ -185,6 +236,8 @@ def pack_archive(
         + grayscale_arith_bytes
         + pose_bytes
         + meta_bytes
+        + chroma_bytes
+        + cls_arith_bytes
     )
 
 
@@ -208,6 +261,8 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
         grayscale_len,
         pose_len,
         meta_len,
+        chroma_len,
+        cls_len,
     ) = struct.unpack(CH06_HEADER_FMT, blob[:CH06_HEADER_SIZE])
     if magic != CH06_MAGIC:
         raise ValueError(f"bad magic: {magic!r} (expected {CH06_MAGIC!r})")
@@ -224,6 +279,9 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     expected_pose = num_pairs * POSE_DIMS
     if pose_len != expected_pose:
         raise ValueError(f"pose_len {pose_len} != expected {expected_pose}")
+    expected_chroma = NUM_SEGNET_CLASSES * CHROMA_BYTES_PER_CLASS
+    if chroma_len != expected_chroma:
+        raise ValueError(f"chroma_len {chroma_len} != expected {expected_chroma}")
 
     pos = CH06_HEADER_SIZE
     palette_bytes = blob[pos : pos + palette_len]
@@ -236,6 +294,10 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     pos += pose_len
     meta_blob = blob[pos : pos + meta_len]
     pos += meta_len
+    chroma_blob = blob[pos : pos + chroma_len]
+    pos += chroma_len
+    cls_arith_bytes = blob[pos : pos + cls_len]
+    pos += cls_len
     if pos != len(blob):
         raise ValueError(f"archive size {len(blob)} != expected {pos} from header")
 
@@ -256,6 +318,11 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
     cdf = ClassConditionalCDF(cdf=cdf_arr.astype(np.uint16))
 
     meta = json.loads(meta_blob.decode("utf-8"))
+    chroma_rgb = (
+        np.frombuffer(chroma_blob, dtype=np.uint8)
+        .copy()
+        .reshape(NUM_SEGNET_CLASSES, CHROMA_BYTES_PER_CLASS)
+    )
     return CarmackHotzArchive(
         palette=palette,
         cdf=cdf,
@@ -268,6 +335,8 @@ def parse_archive(blob: bytes) -> CarmackHotzArchive:
         grayscale_w=int(grayscale_w),
         output_height=int(output_height),
         output_width=int(output_width),
+        chroma_rgb=chroma_rgb,
+        cls_arith_bytes=bytes(cls_arith_bytes),
     )
 
 
@@ -329,6 +398,88 @@ def encode_grayscale_stream(
         row = cdf_arr[int(cls)]
         coder.encode_symbol(int(sym), row)
     return coder.finish_encoding()
+
+
+def _uniform_class_cdf() -> np.ndarray:
+    """Uniform CDF over NUM_SEGNET_CLASSES symbols (uint16, in [0, CDF_MAX])."""
+    edges = np.linspace(0, CDF_MAX, NUM_SEGNET_CLASSES + 1, dtype=np.int64)
+    edges[-1] = CDF_MAX
+    return edges.astype(np.uint16)
+
+
+def encode_class_label_stream(class_labels: np.ndarray) -> bytes:
+    """Arith-encode per-cell SegNet class labels with a uniform CDF (Path A).
+
+    The per-cell class labels are decoded BEFORE the grayscale stream at
+    inflate time so the per-class CDF can be consumed. Uniform CDF is the
+    minimum-assumption coder; future passes can swap in a temporal/spatial
+    predictor (Schmidhuber predictive coding) for tighter compression.
+    """
+    if class_labels.dtype != np.uint8:
+        raise ValueError("class_labels must be uint8")
+    if int(class_labels.max(initial=0)) >= NUM_SEGNET_CLASSES:
+        raise ValueError(
+            f"class label {int(class_labels.max())} >= NUM_SEGNET_CLASSES"
+        )
+    coder = ArithmeticCoder()
+    row = _uniform_class_cdf()
+    for sym in class_labels.ravel():
+        coder.encode_symbol(int(sym), row)
+    return coder.finish_encoding()
+
+
+def decode_class_label_stream(
+    arith_bytes: bytes, *, shape: tuple[int, ...]
+) -> np.ndarray:
+    """Inverse of :func:`encode_class_label_stream`; returns shape uint8 cells."""
+    coder = ArithmeticCoder.from_bytes(arith_bytes)
+    row = _uniform_class_cdf()
+    n = 1
+    for s in shape:
+        n *= int(s)
+    out = np.zeros(n, dtype=np.uint8)
+    for i in range(n):
+        out[i] = np.uint8(coder.decode_symbol(row))
+    return out.reshape(shape)
+
+
+def build_chroma_palette(
+    rgb_pairs: np.ndarray, class_labels: np.ndarray
+) -> np.ndarray:
+    """Derive per-class (R, G, B) anchor from compress-time GT video.
+
+    For each SegNet class c in [0, NUM_SEGNET_CLASSES), compute the median
+    (R, G, B) across every pixel labelled class c. Median is robust to
+    outliers in noisy class regions. Returns (NUM_SEGNET_CLASSES, 3) uint8.
+
+    Args:
+        rgb_pairs: (N, 3, H, W) uint8 RGB frames (compress-time GT).
+        class_labels: (N, H, W) uint8 SegNet argmax labels (same N, H, W).
+    """
+    if rgb_pairs.dtype != np.uint8:
+        raise ValueError("rgb_pairs must be uint8")
+    if class_labels.dtype != np.uint8:
+        raise ValueError("class_labels must be uint8")
+    if rgb_pairs.shape[1] != 3:
+        raise ValueError(f"rgb_pairs must be (N, 3, H, W); got {rgb_pairs.shape}")
+    n, _, h, w = rgb_pairs.shape
+    if class_labels.shape != (n, h, w):
+        raise ValueError(
+            f"class_labels shape {class_labels.shape} != ({n}, {h}, {w})"
+        )
+    # Reshape RGB to (3, N*H*W) for masked median per channel.
+    rgb_flat = rgb_pairs.transpose(1, 0, 2, 3).reshape(3, -1)
+    cls_flat = class_labels.reshape(-1)
+    out = np.zeros((NUM_SEGNET_CLASSES, 3), dtype=np.uint8)
+    for c in range(NUM_SEGNET_CLASSES):
+        mask = cls_flat == c
+        if mask.any():
+            for ch in range(3):
+                out[c, ch] = np.uint8(np.median(rgb_flat[ch][mask]))
+        else:
+            # Mid-grey fallback for absent classes — anchor still in range.
+            out[c, :] = 128
+    return out
 
 
 def quantize_pose_deltas(pose: np.ndarray, *, scale: float = 1.0) -> tuple[bytes, int]:

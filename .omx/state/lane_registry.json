@@ -31375,6 +31375,47 @@
         }
       },
       "notes": "Catalog #296 (predicted-band Dykstra-feasibility) + Catalog #297 (signal-axis destruction reversibility probe) \u2014 both WARN-ONLY at landing per Strict-flip atomicity rule; live counts 0 and 2 respectively (NSCS06 _grayscale_to_rgb helper at 2 lines, lane already research_only=true per commit a16eb06fd)"
+    },
+    {
+      "id": "lane_nscs06_redesign_path_a_chroma_optical_flow_20260516",
+      "name": "NSCS06 Path A redesign (chroma + 6-DOF affine warp)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Path A redesign v7 chroma+optical-flow landed; symposium commit 4292c8ce2; 4 cargo-cults unwound + 3 acknowledged; 44/44 substrate tests pass; local pre-deploy harness 9/9 PASS strict; design memo at .omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh inherited from parent lane; recipe substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch flipped research_only=false dispatch_enabled=true with path_a_redesign=true annotation"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31384,5 +31425,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T13:51:28Z"
+  "updated_at": "2026-05-16T14:16:36Z"
 }
