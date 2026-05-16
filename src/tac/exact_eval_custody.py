@@ -161,6 +161,19 @@ def is_contest_cuda_device_text(value: str) -> bool:
     return _contains_token(value, CUDA_DEVICE_TOKENS)
 
 
+def is_contest_cuda_inflate_device_text(value: str) -> bool:
+    """Return true for CUDA-axis inflate policy text.
+
+    Modal CUDA auth-eval uses ``--inflate-device auto`` as the canonical
+    contest-CUDA path when the runtime may select the compliant CUDA inflate
+    backend. Keep this narrower than generic device text: ``auto`` is accepted
+    for CUDA inflate policy only, never as CPU evidence or eval-device evidence.
+    """
+
+    text = _clean_text(value).lower()
+    return text == "auto" or is_contest_cuda_device_text(text)
+
+
 def _auth_eval_command_has_expected_shape(command: str, semantic_axis: str) -> bool:
     """Return true for recognizable contest auth-eval/evaluate invocations."""
 
@@ -368,7 +381,7 @@ def validate_exact_eval_evidence(
     if require_devices:
         if not inflate_device:
             blockers.append("inflate_device_missing")
-        elif semantic_axis == "contest_cuda" and not is_contest_cuda_device_text(
+        elif semantic_axis == "contest_cuda" and not is_contest_cuda_inflate_device_text(
             inflate_device
         ):
             blockers.append("inflate_device_not_cuda")

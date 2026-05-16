@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import shlex
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
@@ -113,6 +114,21 @@ def _command_text(value: object) -> str:
     if isinstance(value, list):
         return " ".join(str(item) for item in value)
     return str(value or "")
+
+
+def _command_flag_value(command: str, flag: str) -> str:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        parts = command.split()
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return str(parts[idx + 1]).strip()
+    prefix = f"{flag}="
+    for part in parts:
+        if part.startswith(prefix):
+            return part[len(prefix) :].strip()
+    return ""
 
 
 def _candidate_id_for_payload(path: Path, payload: Mapping[str, Any]) -> str | None:
@@ -242,11 +258,13 @@ def _axis_evidence_from_payload(
         "inflate_device": str(
             _nested(payload, "custody", "inflate_device")
             or payload.get("inflate_device")
+            or _command_flag_value(command, "--inflate-device")
             or ""
         ),
         "eval_device": str(
             _nested(payload, "custody", "device")
             or payload.get("eval_device")
+            or _command_flag_value(command, "--device")
             or ""
         ),
         "auth_eval_command": command,

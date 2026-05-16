@@ -53,7 +53,7 @@
             "axis": "contest_cuda",
             "eval_device": "cuda",
             "hardware": "Tesla T4",
-            "inflate_device": "",
+            "inflate_device": "auto",
             "log_path": "",
             "n_samples": 600,
             "pose_dist": 0.18563657,
@@ -177,7 +177,7 @@
               "axis": "contest_cuda",
               "eval_device": "cuda",
               "hardware": "Tesla T4",
-              "inflate_device": "",
+              "inflate_device": "auto",
               "log_path": "",
               "n_samples": 600,
               "pose_dist": 0.18563657,
@@ -194,7 +194,6 @@
             "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
             "l5_v2_probe_contest_evidence_grade_missing",
             "l5_v2_probe_axis_evidence_missing:contest_cpu",
-            "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
             "l5_v2_probe_axis_log_path_missing:contest_cuda",
             "l5_v2_probe_axis_score_delta_missing:contest_cuda"
           ],
@@ -240,7 +239,7 @@
       "selected_delta_source": "paired_axis_score_delta",
       "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
     },
-    "verdict_sha256": "3da4f0c098d6d353aebc5195cb1d9ade4ad382edca8b77afd1580e178044a6f4"
+    "verdict_sha256": "3347324d49fd0d2b19a2f44ed68c9bf6424dcc3b784ae45ac043afab94806663"
   },
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,

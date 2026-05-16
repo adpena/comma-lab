@@ -63,6 +63,54 @@ def test_l5_v2_probe_intake_classifies_single_tt5l_cuda_as_incomplete(
     assert intake["probe_gate_artifact"]["probe_disambiguator"]["verdict"] == verdict
 
 
+def test_l5_v2_probe_intake_recovers_cuda_auto_inflate_policy_from_command(
+    tmp_path: Path,
+) -> None:
+    artifact = _write_json(
+        tmp_path / "tt5l_cuda_review.json",
+        {
+            "lane_id": "lane_time_traveler_l5_autonomy_recovered_exact_eval_20260514",
+            "technique": "time_traveler_recovered_tt5l_25ep_cuda_review",
+            "score_axis": "contest_cuda",
+            "exact_cuda_evidence": True,
+            "archive_sha256": "a" * 64,
+            "runtime_tree_sha256": "b" * 64,
+            "canonical_score": 3.9,
+            "segnet_distortion": 0.025,
+            "posenet_distortion": 0.18,
+            "empirical_archive_bytes": 34603,
+            "custody": {
+                "command": [
+                    "experiments/contest_auth_eval.py",
+                    "--device",
+                    "cuda",
+                    "--inflate-device",
+                    "auto",
+                ],
+                "gpu_model": "Tesla T4",
+                "n_samples": 600,
+            },
+        },
+    )
+
+    intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
+
+    source = intake["source_records"][0]
+    evidence = source["axis_evidence"]
+    assert evidence["inflate_device"] == "auto"
+    assert evidence["eval_device"] == "cuda"
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+    assert "l5_v2_probe_axis_inflate_device_missing:contest_cuda" not in tt5l[
+        "blockers"
+    ]
+    assert "l5_v2_probe_axis_inflate_device_not_cuda:contest_cuda" not in tt5l[
+        "blockers"
+    ]
+
+
 def test_l5_v2_probe_intake_records_missing_candidate_sources(tmp_path: Path) -> None:
     intake = build_l5_v2_probe_observation_intake([], repo_root=tmp_path)
 

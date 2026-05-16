@@ -92,6 +92,27 @@ def test_validate_exact_eval_evidence_requires_formula_and_devices(tmp_path: Pat
     assert valid.archive_bytes == archive_bytes
 
 
+def test_validate_exact_eval_evidence_accepts_cuda_auto_inflate_policy(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cuda")
+    evidence["inflate_device"] = "auto"
+    evidence["eval_device"] = "cuda"
+    evidence["auth_eval_command"] = (
+        "python experiments/contest_auth_eval.py --device cuda --inflate-device auto"
+    )
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.blockers == ()
+
+
 def test_validate_exact_eval_evidence_fails_closed_on_partial_rows() -> None:
     verdict = validate_exact_eval_evidence(
         {
@@ -179,6 +200,23 @@ def test_validate_exact_eval_evidence_rejects_cuda_devices_for_cpu_axis(
 
     assert "inflate_device_not_cpu" in verdict.blockers
     assert "eval_device_not_cpu" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_auto_inflate_for_cpu_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cpu")
+    evidence["inflate_device"] = "auto"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cpu",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "inflate_device_not_cpu" in verdict.blockers
 
 
 def test_validate_exact_eval_evidence_rejects_mixed_cuda_cpu_axis(
