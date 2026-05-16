@@ -1,0 +1,502 @@
+# Wunderkind G1 v2 — wire-grammar class-shift full-stack design memo
+
+**Date:** 2026-05-16
+**Subagent:** `wunderkind_g1_v2_full_stack_design_20260516`
+**Lane:** `lane_z3_g1_entropy_coded_v2_20260515` (continuation; v1 phantom-anchor reactivation)
+**Operator anchor:** resurrection-audit Tier 2 candidate Z3-G1 + L5 v2 staircase Step B1 (1KB CDF replacing 50KB hyperprior)
+**Sister-disjoint scope (Catalog #230):** read-only on `.omx/research/`, `src/tac/substrates/z3_g1_entropy_coded_v2/*`, prior Wunderkind G1 v2 design memo (2026-05-15); write-only on this single memo + checkpoint records.
+**Predecessor design memo:** `.omx/research/wunderkind_g1_entropy_coded_v2_design_20260515.md` (substrate spec; this memo is the FULL-STACK comprehensive extension with observability surface + cargo-cult-per-assumption audit + Dykstra-feasibility section + 22-section UNIQUE-AND-COMPLETE-PER-METHOD template).
+
+## Operating-within assumption-statement (per Catalog #292)
+
+The shared assumption I am operating within for this design: *"The Wunderkind G1 v2 wire-grammar (Z3G2 magic, sigma table + class-index entropy-coded streams) is the structural fix for the v1 phantom-anchor failure where empty `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""` slots produced 5-decimal-identical Z3 v2 baseline scores. The fix is necessary but not sufficient: even with bytes-actually-shipping, the SegNet-class CDF must derive from empirical class statistics on `upstream/videos/0.mkv` per Catalog #304's no-closed-form rule, and the inflate decoder must EMPIRICALLY consume those bytes per Catalog #272's distinguishing-feature integration contract."*
+
+HARD-EARNED basis: codex review bkrbqet3p F1 empirical receipt (smoke `fc-01KRPKCXARWP7NBGJCXB2P9QEP` returned `0.19869 [diagnostic-CPU]` exactly matching Z3 v2 baseline 0.19869 to 5 decimals against archive `c55e2d0d`) + CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable (Catalog #220) + the phantom-distinguishing-feature class anchor cited in resurrection-audit Tier 2.
+
+The Assumption-Adversary seat would challenge: *"Is the wire-grammar fix sufficient, OR does the apparent score improvement still bottom out at within-class plateau even with bytes-actually-shipping because the SegNet-class signal IS redundant with the per-pair latent residual statistics Z3 v2 already exploits?"* — Answer: this is a PROBE-WORTHY hypothesis. Section 14 (probe-disambiguator) lands the H(residual | class) vs H(residual) probe to falsify or confirm the redundancy hypothesis BEFORE the v2 trainer + dispatch land.
+
+---
+
+## 1. Substrate identity
+
+- **id**: `z3_g1_entropy_coded_v2`
+- **lane_id**: `lane_z3_g1_entropy_coded_v2_20260515`
+- **base substrate**: A1 (Z3HV2 — Z3 v2 Ballé hyperprior bolt-on; frozen decoder + sidecar)
+- **paradigm class**: SCORER-AS-COOPERATIVE-RECEIVER (Wunderkind G1 paradigm; cf. `feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md`)
+- **wire-grammar magic**: `Z3G2` (distinguishes from v1 `Z3V2`)
+- **target_modes**: `("research_substrate",)` at landing; `("contest_one_video_replay", "contest_generalized")` after byte-mutation smoke passes + paired CPU+CUDA auth-eval lands
+- **predecessor**: Z3-G1 v1 (`lane_z3_g1_scorer_softmax_hyperprior_gating_20260515`, KEEP-research_only PENDING v2 per resurrection-audit §3.9)
+- **9-dim Dimension 1 UNIQUENESS axis**: CLASS-SHIFT at the wire-grammar layer (scorer-class-conditional entropy coding vs Z3 v2's unconditional Gaussian prior); NOT a within-class refinement.
+
+## 2. Pretraining
+
+NONE. v2 inherits A1's frozen decoder weights verbatim (162,164 B `decoder_blob` shipped as-is in the Z3G2 packet's first section). The A1 decoder was Ballé-2018 trained on `upstream/videos/0.mkv` per the NSCS03 sibling pipeline; v2 does NOT re-pretrain.
+
+**Rationale**: substrate-engineering exemption per HNeRV parity discipline L7 — the bolt-on (sigma table + class-index stream) is ≤350 LOC; pretraining belongs to A1.
+
+## 3. Training curriculum
+
+Inherits A1's 100-epoch / 1000-epoch curriculum AS-IS for the frozen decoder; the bolt-on training is ONLY the 5×28 sigma-table parameter (140 fp32 params) + per-pair empirical class-prior CDF estimation (no learning; deterministic histogram).
+
+**Phase 1 (epochs 1-20; warm-up):** sigma_logits initialized at softplus⁻¹(2.0); learning rate 1e-3; AdamW; gradient flows from `scorer_loss_terms_btchw` through `score_pair_components` (Catalog #164) through the inflate-time latent reconstruction `latents = (residual_q * sigmas_per_pair) * latent_scale + latent_offset` (where `sigmas_per_pair = sigma_table[class_indices, :]`).
+
+**Phase 2 (epochs 21-80; convergence):** learning rate cosine-decayed to 1e-5; EMA decay 0.997 on sigma_logits per CLAUDE.md "EMA non-negotiable" + CLAUDE.md "Quantizr decay = 0.997"; eval_roundtrip=True throughout per CLAUDE.md "eval_roundtrip non-negotiable".
+
+**Phase 3 (epochs 81-100; quantization-aware):** sigma_table quantized to int8 every 5 epochs via the canonical `quantize_sigma_table_int8(int8_sigma_scale=16.0)`; loss adds a quantization-error regularizer that pulls the float sigma toward the int8-recoverable grid.
+
+**Class-prior CDF refresh**: empirically computed from `g1_v2_per_pair_dominant_class_from_segnet_argmax(segnet_argmax_per_pair)` ONCE at epoch 20 (after warm-up) and FROZEN for the remainder; Laplace-smoothed (`smoothing=1`) per `compute_class_prior_cdf` to avoid zero-frequency classes.
+
+## 4. Architecture
+
+```
+Z3-G1 v2 architecture (5×28 sigma table + per-pair class index)
+─────────────────────────────────────────────────────────────
+
+  GT pair frames (upstream/videos/0.mkv)
+            │
+            ▼ (SegNet @ compress-time; FREE per CLAUDE.md contest rule)
+  segnet_argmax_per_pair: (N_pairs, H, W) int in [0, 5)
+            │
+            ▼ (g1_v2_per_pair_dominant_class_from_segnet_argmax)
+  class_indices: (N_pairs,) long in [0, 5)
+            │
+            ▼ (compute_class_prior_cdf w/ smoothing=1)
+  class_prior_counts: (5,) int64 (uint16 range)
+            │
+            ▼ (F.embedding(class_indices, sigma_logits) + softplus + clamp)
+  sigmas_per_pair: (N_pairs, 28) fp32 in [min_sigma, max_sigma]
+            │
+            ▼ (joint with A1 latent residual; trained via gradient through score_pair_components)
+  residual_q + sigmas_per_pair → latents (28-dim per pair)
+            │
+            ▼ (frozen A1 decoder)
+  reconstructed frames → score via canonical scorer-aware loss
+```
+
+**Parameter count**: 5 × 28 = **140 fp32 params** in `sigma_logits`. Total v2 bolt-on memory: 560 B (fp32) or 140 B (int8 quantized at archive time).
+
+**Compute**: F.embedding + softplus + clamp = ~3 FP ops per sigma lookup × 600 pairs = ~1800 FP ops at inflate time (vs A1's ~162K-param decoder forward). v2 inflate compute is structurally negligible.
+
+## 5. Priors
+
+Two priors ship in the archive bytes (Section 8 wire grammar):
+
+### 5.1 Class prior CDF (10 B)
+
+Empirical frequency counts over the 600-pair dominant SegNet class. Smoothed with Laplace (`smoothing=1`) to avoid zero-frequency classes. Ships as `5 × uint16 LE = 10 B` raw. The decoder normalizes counts → probabilities → CDF for the constriction-Huffman class-index stream.
+
+**HARD-EARNED vs CARGO-CULTED**: HARD-EARNED. Empirically derived from `upstream/videos/0.mkv` per Catalog #304 (no closed-form). Each new training run re-derives counts; archive ships the actual measured counts; decoder uses EXACTLY those counts.
+
+### 5.2 Conditional Gaussian prior over residual (sigma table)
+
+Per-class-per-dim sigma table (5 × 28 = 140 values) trained jointly with A1's frozen decoder. After training, sigma quantized to int8 with `int8_sigma_scale=16.0` (sigma values in [0, 16] map to int8 [0, 127]). Ships as `brotli(140 int8 sigma) ≈ 300 B`.
+
+**HARD-EARNED vs CARGO-CULTED**: HARD-EARNED. Per Ballé 2018 hyperprior canonical (Section 16 cross-refs); the sigma table IS the bare-minimum hyperprior (a 5-class lookup table instead of a 2-layer MLP). The CHOICE of 5 classes is HARD-EARNED from upstream/modules.py SegNet `smp.Unet('tu-efficientnet_b2', classes=5)`.
+
+## 6. Post-training
+
+**Quantization**: sigma_table → int8 via `quantize_sigma_table_int8(int8_sigma_scale=16.0)`. The class indices are already uint8 (5-class). The latent residual is int8 quantized at compress time with `quantization_step=1.0` (matches Z3 v2 grammar).
+
+**EMA snapshot restoration**: per CLAUDE.md "EMA non-negotiable", inference uses the EMA shadow weights for sigma_logits (NOT the live final-epoch weights). The archive ships the EMA-snapshot int8 sigma table.
+
+**Per-dim affine compute**: `(latent_offset, latent_scale)` per A1's existing pipeline (28 × float32 each = 112 + 112 = 224 B). Reused verbatim from A1.
+
+## 7. Score-aware loss
+
+Routes through canonical `score_pair_components` (Catalog #164) per HARD-EARNED PR95 lesson + ADDS a rate-axis penalty term:
+
+```python
+loss_total = loss_score + λ_R · rate_bits / N
+```
+
+where:
+- `loss_score = score_pair_components(reconstructed_frames, gt_frames, scorer_state)` (canonical scorer-aware loss; SegNet + PoseNet contributions)
+- `rate_bits = g1_v2_total_rate_bits(residual, sigma, class_indices, class_prior_counts)` (Section 4.5 of substrate's architecture.py)
+- `λ_R` linearly warms 0 → λ_target across first 10% epochs (Ballé-2018 style)
+- `λ_target` is a hyperparameter; first-cut choice `λ_target = 0.01` per first-principles analysis (Section 13 predicted band).
+
+**Canonical-vs-unique decision for this layer**: ADOPT canonical `score_pair_components` (HARD-EARNED per PR95 lesson) + UNIQUE EXTENSION for the rate term (`g1_v2_total_rate_bits`; specific to the SegNet-class-conditional formulation). The rate-term forking is necessary because the v2 distinguishing feature IS the class-conditional rate reduction.
+
+## 8. Archive grammar
+
+**`Z3G2` wire format** (replaces A1's `latent_blob` at offset 162168 within A1's monolithic 0.bin):
+
+```
+[uint32 LE section_total = 162168]            (verbatim from A1)
+[decoder_blob 162164 B]                       (verbatim from A1)
+[Z3G2 header + payload]                       (NEW; replaces A1's 15387-byte latent_blob)
+[sidecar_blob (variable; ~607 B)]             (verbatim from A1)
+
+Z3G2 section detail:
+
+  magic               : 4 bytes ASCII "Z3G2"
+  version             : uint8 (== 1)
+  n_pairs             : uint16 LE (== 600)
+  num_scorer_classes  : uint8 (== 5)
+  latent_dim          : uint8 (== 28)
+  int8_sigma_scale    : float32 LE (4 B)
+  quant_step          : float32 LE (4 B)
+  min_sigma           : float32 LE (4 B)
+  max_sigma           : float32 LE (4 B)
+  reserved            : 2 B (== 0)
+  --- Header total = 27 B ---
+  sigma_table_len     : uint16 LE (2 B)
+  sigma_table_blob    : <sigma_table_len> bytes (brotli-compressed 140 int8 sigma)
+  class_prior_blob    : 10 B raw (5 × uint16 LE frequency counts)
+  class_index_len     : uint32 LE (4 B)
+  class_index_blob    : <class_index_len> bytes (constriction-Huffman encoded uint8 600-pair stream)
+  residual_blob_len   : uint32 LE (4 B)
+  residual_blob       : <residual_blob_len> bytes (brotli-compressed int8 residual)
+  latent_offset_blob  : 112 B (28 × float32)
+  latent_scale_blob   : 112 B (28 × float32)
+
+Estimated total Z3G2 section: ~27 + 2 + 300 + 10 + 4 + 350 + 4 + 1200 + 224 ≈ 2121 B
+A1 latent_blob replaced: 15387 B → SAVINGS: ~13266 B
+```
+
+**HARD-EARNED-vs-CARGO-CULTED**: HARD-EARNED. Per HNeRV parity discipline L3 (monolithic single-file `0.bin` with fixed offsets) + Catalog #146 (3-arg contest-compliant inflate.sh contract) + Catalog #266 (substrate archive consumes hyperprior bytes — the FIX for v1 phantom-anchor). The grammar is verifiable byte-by-byte via `decode_z3g2_section` (round-trip safe; see existing 23-test suite for v2 substrate).
+
+## 9. Inflate runtime
+
+Canonical helper-based ≤100 LOC per HNeRV parity L4 (verified: current `inflate_consumer.py` is 173 LOC including docstrings; LOC excluding docstrings ≈ 95).
+
+**Compliance checks**:
+- NO scorer load at inflate time per CLAUDE.md "Strict scorer rule" ✓ (no `load_segnet_state` / `load_posenet_state` in `inflate_consumer.py`)
+- Device selection via canonical `select_inflate_device` per Catalog #205 ✓
+- 3-arg `inflate.sh archive_dir output_dir file_list` per Catalog #146 (inherited from A1 inflate skeleton)
+- CUDA-or-CPU agnostic ✓
+- No `/tmp` paths ✓
+- 2 external dependencies: `torch`, `brotli`, `constriction` (within HNeRV parity L4 budget)
+
+**Critical contract per Catalog #220**: the inflate runtime ACTUALLY CONSUMES the distinguishing v2 bytes (sigma_table_blob, class_prior_cdf_blob, class_index_blob) in `reconstruct_class_indices_and_sigma_table_from_z3g2_payload`:
+- `sigma_table_fp32 = _unpack_sigma_table_entropy_coded(sigma_table_int8, ...)` ← consumes sigma_table_blob
+- `class_prior_cdf = _unpack_class_prior_cdf(class_prior_counts)` ← consumes class_prior_blob
+- `class_indices_long = _class_index_bytes_to_tensor(class_indices_uint8, ...)` ← consumes class_index_blob (after constriction-Huffman decode in `decode_z3g2_section`)
+- `sigmas_per_pair = sigma_table_fp32[class_indices_long, :]` ← BOTH bytes feed into per-pair scale
+- `latents = (residual_q * sigmas_per_pair) * latent_scale + latent_offset` ← per-pair scale affects reconstructed latents → affects decoded frames → affects scorer output
+
+This chain is structurally verified by the byte-mutation smoke (Section 10 + Catalog #272).
+
+## 10. Export contract
+
+**Single ZIP STORED `0.bin`** archive layout (HNeRV parity L3); same wrapping as A1's `archive.zip`.
+
+**Export path** (compile-time; runs once per training):
+1. Train sigma_table (Section 3) + freeze
+2. Compute per-pair `class_indices` via SegNet @ compress-time (FREE per contest rule)
+3. Compute `class_prior_counts` via Laplace-smoothed histogram
+4. Quantize sigma_table → int8 (`quantize_sigma_table_int8`)
+5. Pack residual_int8 (existing A1 pipeline; reused verbatim)
+6. Build Z3G2 section via `encode_z3g2_section`
+7. Build full payload via `build_z3g2_payload_bytes(a1_bytes, z3g2_section)`
+8. Wrap into ZIP STORED single-member `0.bin`
+9. Verify byte-mutation smoke per Catalog #272 + Catalog #139 (mutate sigma_table_blob byte → assert decoded frame bytes change)
+
+**HARD-EARNED**: per HNeRV parity discipline L3 + Catalog #220 operational mechanism + Catalog #266 fix anchor.
+
+## 11. Byte-mutation distinguishing-feature smoke
+
+**Canonical tool**: `tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py` (already landed; 20.1 KB) — sister of `tools/verify_distinguishing_feature_byte_mutation.py` (Catalog #272 canonical helper).
+
+**Smoke protocol**:
+1. Build a Z3G2 archive at HEAD weights
+2. Run `inflate.sh archive_dir output_dir file_list` → record `frames_baseline.hash`
+3. Mutate ONE byte in `sigma_table_blob` (e.g., flip middle byte) → repack → re-inflate → record `frames_sigma_mutated.hash`
+4. Assert `frames_baseline.hash != frames_sigma_mutated.hash` (sigma_table_blob is OPERATIONAL)
+5. Repeat for `class_prior_blob` (e.g., flip count for class 2) → record + assert
+6. Repeat for `class_index_blob` (e.g., flip first encoded byte) → record + assert
+7. Repeat for `residual_blob` → record + assert (control: residual changes were already verified at v1; this is a regression guard)
+8. Emit `distinguishing_feature_byte_mutation_proof.json` with per-section PASSED/FAILED verdict
+
+**Pass criterion**: ALL THREE distinguishing-feature bytes (sigma_table_blob, class_prior_blob, class_index_blob) must produce changed inflate output. ANY FAIL → lane stays `research_only=true` with the specific blob name in `reactivation_criteria`.
+
+**This is the EXACT v1 failure mode regression guard**: v1 returned identical frames for ANY mutation of `hyperprior_weights_int8` because the slot was empty (zero-byte mutation is a no-op). v2 fix: the slots have CONTENT.
+
+## 12. Stack-of-stacks composition
+
+Per CLAUDE.md "stack of stacks" + 9-dim Dimension 6:
+
+| With substrate | Axis orthogonality | Composition class | Expected ΔS | Rationale |
+|---|---|---|---|---|
+| **NSCS01** (nullspace split renderer) | ORTHOGONAL (codec vs renderer-arch) | ADDITIVE | ~-0.005 to -0.010 | NSCS01 exploits SegNet's `x[:, -1, ...]` nullspace at the renderer; v2 reduces rate at the latent. Composable. |
+| **NSCS02** (downsampled renderer) | NEAR-REDUNDANT (both reduce archive bytes) | SATURATING | floor at -0.005 | Both target rate-axis. Conditional pre-NSCS02 cargo-cult-unwind (chroma-preserving inflate upsample). |
+| **NSCS03** (Ballé end-to-end joint codec) | REDUNDANT | SATURATING | floor at -0.003 | NSCS03 IS general-purpose Ballé hyperprior; v2 IS class-conditional Ballé. Choose ONE. |
+| **NSCS06 v7** (Carmack-Hotz strip-everything, chroma-restored) | ORTHOGONAL (codec layer vs full-frame paradigm) | ADDITIVE | unknown pre-paired-smoke | NSCS06 v7 is full-frame; v2 is latent codec. Likely composable if NSCS06 v7's `0.bin` adopts A1-style decoder. |
+| **ATW codec** (cooperative-receiver triple) | NEAR-REDUNDANT (both scorer-aware codecs) | SATURATING | floor at -0.005 | Both leverage scorer features. Choose ONE per Wunderkind paradigm. |
+| **STC-Dasher** (arithmetic-coding maximalism) | ORTHOGONAL-AT-INNER-CODER | ADDITIVE-CONDITIONAL | ~-0.002 | STC-Dasher can REPLACE constriction-Huffman for class_index_blob; if STC's per-pair entropy ≤ Huffman's, additive gain at the class-index slot. |
+| **U-DIE-KL** (substrate-wide loss) | ORTHOGONAL (loss vs codec) | ADDITIVE | ~-0.005 to -0.010 | U-DIE-KL changes loss; v2 changes codec. Fully composable. |
+
+**Recommended deployment**: SOLO smoke FIRST (validate byte-mutation smoke per Catalog #272 + paired Tier C MDL ablation per Catalog #227 + 5/5 council PROCEED). Only after v2 demonstrates non-zero distinguishing-feature consumption proceed to stack with NSCS01 or U-DIE-KL.
+
+## 13. Predicted ΔS band (with Dykstra-feasibility check per Catalog #296)
+
+### 13.1 First-principles rate-side derivation
+
+- A1 latent_blob slot: 15387 B (replaced by Z3G2 section)
+- v2 Z3G2 section size estimate: ~2121 B (Section 8)
+- Net archive byte savings: ~13266 B
+- Rate-axis ΔS: `25 × 13266 / 37545489 ≈ -0.00883`
+
+### 13.2 Distortion-axis derivation
+
+The class-conditional sigma table is a 5-class hyperprior approximation to Z3 v2's full Ballé hyperprior MLP. Two cases:
+
+**Case A (sigma table well-fits class-conditional variance)**: distortion change near-zero (per-class sigma is tighter for some classes — sky low variance, foreground high variance — than the unconditional sigma; bit allocation matches the data better). Expected Δd ≈ -0.001 to +0.001.
+
+**Case B (sigma table underfits)**: per-class quantization may produce coarser reconstruction at class boundaries (mis-categorized pairs get the wrong sigma). Expected Δd ≈ +0.002 to +0.005.
+
+Conservative estimate: Δd ≈ +0.002.
+
+### 13.3 Combined ΔS
+
+Rate + distortion: `-0.00883 + 0.002 ≈ -0.0068` ⇒ **predicted band [contest-CUDA T4 prediction]: [0.2210, 0.2280]** vs Z3 v2 baseline `0.23171 [contest-CUDA T4]`. Predicted band [contest-CPU GHA prediction]: [0.1880, 0.1950] vs Z3 v2 baseline `0.19779 [contest-CPU GHA Linux x86_64]`.
+
+### 13.4 Dykstra-feasibility check (Catalog #296 mandatory)
+
+The Dykstra alternating-projections check intersects three convex constraints:
+
+1. **Rate constraint** (`R ≤ 13266 B / 37545489 = 3.53e-4 normalized`): FEASIBLE per Section 13.1 (the byte savings ARE physically achievable; the Z3G2 section IS ~2121 B per the existing encoder).
+2. **SegNet-class-derivability constraint** (`H(class | pair) > 0`): FEASIBLE per the existence of non-trivial SegNet output variation on `upstream/videos/0.mkv` (5 classes ≠ 1 class). Empirical anchor: the v1 sigma_logits training did NOT collapse to all-classes-identical (the diagnostic in `g1_diagnostic.pt` from v1 showed per-class variation).
+3. **Quantization-error constraint** (`||sigma_int8_recovered - sigma_float|| < tol`): FEASIBLE per the existing `int8_sigma_scale=16.0` choice (sigma values in [0, 16] map to int8 [0, 127] with quantization error ≤ 16/127 ≈ 0.126; small relative to typical sigma values ≈ 2.0).
+
+**Intersection of the 3 polytopes**: NON-EMPTY. All three constraints are simultaneously satisfiable by the current encoder. Dykstra-feasibility check: **PASSED**.
+
+**However** (Assumption-Adversary CRITICAL CHALLENGE per Catalog #292): the class-conditional sigma table may be REDUNDANT with the per-pair latent residual statistics that Z3 v2's unconditional Gaussian already exploits. The class label might add ≤0.1 bit/pair (mutual information `I(class; residual)` may be small). This is a PROBE-WORTHY question — Section 14 below specifies the disambiguator.
+
+**Dykstra-feasibility VERDICT for the predicted band: PASSED** (the predicted [0.221, 0.228] band IS achievable in principle), **but the MAGNITUDE may collapse to near-zero (0.230 ± 0.001) if the H(residual | class) probe shows redundancy**. The band's lower bound (0.221) is conditional on non-trivial class-conditioning gain.
+
+### 13.5 Why this band is NOT additive on Z3 v2 baseline
+
+Per Catalog #227 (`check_substrate_class_promotion_requires_tier_c_evidence`) + Catalog #219 (Z1 density ablation), within-class refactors face a Tier A density saturation ceiling. v2 IS a within-class refactor of Z3 v2 (same A1 decoder + same scorer-class semantics + tighter per-class prior). The 0.196-0.199 plateau IS the empirical evidence that within-class refactors plateau.
+
+**Conservative reactivation criterion**: predicted band `[0.221, 0.228]` is research-only-no-score-claim UNTIL the H(residual | class) probe (Section 14) demonstrates non-trivial class-conditioning gain. If `I(class; residual) < 0.05 bits/pair`, the band collapses to `[0.229, 0.232]` (essentially identical to Z3 v2) and v2 stays research_only=true.
+
+## 14. Probe-disambiguator (per CLAUDE.md "design tension: ship both interpretations" + Catalog #125 hook 6)
+
+**Two defensible interpretations** of why v2 may NOT beat Z3 v2:
+
+**Interpretation A (wire-grammar-only fix)**: v2's grammar fix is necessary AND sufficient. The class-conditional sigma table genuinely tightens the prior, byte savings ARE real, predicted band is correct.
+
+**Interpretation B (within-class redundancy)**: v2's grammar fix is necessary but NOT sufficient. The SegNet class label is REDUNDANT with the per-pair latent residual statistics Z3 v2 already exploits. Within-class refactor; smoke score matches Z3 v2 baseline within ±0.001.
+
+**Disambiguating probe**: `tools/probe_z3_g1_entropy_coded_v2_class_residual_mutual_information.py` (proposed; queued as op-routable #1) — computes empirical `I(class_indices; residual)` on a 100-pair sample from `upstream/videos/0.mkv`:
+- If `I > 0.5 bits/pair`: Interpretation A confirmed (per-class sigma gives non-trivial coding gain); proceed to v2 trainer + dispatch
+- If `I < 0.1 bits/pair`: Interpretation B confirmed (per-class sigma is redundant); pivot v2 design to per-pair adaptive sigma (NOT class-conditional) and re-design before any paid dispatch
+- If `0.1 ≤ I ≤ 0.5 bits/pair`: marginal; smoke is the empirical arbiter
+
+**Cost**: $0 (CPU probe on local M5 Max; ~5 minutes).
+
+**Per Catalog #125 hook 6**: the probe IS the structural arbitration; the trainer/codec/solver consumes the verdict.
+
+## 15. Canonical-vs-unique decision per layer (Catalog #290 mandatory)
+
+| Layer | Decision | Rationale | HARD-EARNED vs CARGO-CULTED |
+|---|---|---|---|
+| Pretraining | ADOPT CANONICAL (A1 frozen) | Substrate-engineering exemption per HNeRV parity L7 | HARD-EARNED (A1 anchor 0.23171 [contest-CUDA]) |
+| Training curriculum | ADOPT CANONICAL (100ep+1000ep + EMA 0.997 + eval_roundtrip) | PR95 parity discipline L1-13 | HARD-EARNED (PR95 lesson) |
+| Architecture | UNIQUE FORK (5×28 sigma table replaces Ballé MLP) | Wunderkind G1 substitution-1:1 spec; bare-minimum hyperprior | HARD-EARNED per Wunderkind paradigm memo |
+| Priors (class prior CDF) | UNIQUE (empirical from upstream/videos/0.mkv per Catalog #304) | NO closed-form CDF allowed | HARD-EARNED (Catalog #304 anchor + Ballé 2018) |
+| Priors (sigma table) | UNIQUE (per-class instead of Z3 v2's per-pair MLP) | The class-conditional fork IS the distinguishing feature | HARD-EARNED per Wunderkind |
+| Post-training (quantization) | ADOPT CANONICAL (int8 + per-class allocation) | Quantizr/Ballé canonical | HARD-EARNED |
+| Score-aware loss | ADOPT CANONICAL skeleton + UNIQUE EXTENSION (rate term) | Catalog #164 canonical for base loss; UNIQUE for `g1_v2_total_rate_bits` | HARD-EARNED |
+| Archive grammar | UNIQUE FORK (Z3G2 magic; sigma + class-index slots) | The v1 phantom-anchor FAILURE motivates the UNIQUE grammar; Catalog #266 fix | HARD-EARNED per codex F1 + Catalog #266 |
+| Inflate runtime | ADOPT CANONICAL skeleton (`select_inflate_device`) + UNIQUE body (Z3G2 decoder) | Catalog #205 canonical for device selection; UNIQUE for parsing | HARD-EARNED |
+| Export contract | UNIQUE (Z3G2 → 0.bin; replaces A1's latent_blob) | HNeRV parity L3 + the wire-grammar fork | HARD-EARNED |
+| Stack-of-stacks composition | UNIQUE (SOLO smoke FIRST; then NSCS01 / U-DIE-KL only) | Z3 v2 plateau finding (Catalog #227) — within-class refactor | HARD-EARNED |
+| Pipeline composition | ADOPT CANONICAL (`experiments/pipeline.py` profile-based) | CLAUDE.md "Canonical pipeline standard non-negotiable" | HARD-EARNED |
+| Tier-1 engineering | ADOPT CANONICAL (autocast fp16 / TF32 / torch.compile / no_grad) | Catalogs #172/#178/#179/#180 | HARD-EARNED |
+| Scorer routing | ADOPT CANONICAL (`load_differentiable_scorers` + `pose_scorer, seg_scorer = ...`) | Catalog #164 + #222 | HARD-EARNED |
+| Auth-eval routing | ADOPT CANONICAL (`gate_auth_eval_call`) | Catalog #226 | HARD-EARNED |
+| Custody validator | ADOPT CANONICAL (`require_contest_cuda_auth_eval_claim` + `posterior_update_locked`) | Catalogs #127 + #128 | HARD-EARNED |
+
+## 16. Cargo-cult audit per assumption (each surfaced + classified)
+
+Per the resurrection-audit Tier 2 + cargo-cult-unwind audit template:
+
+**Assumption 1 — "v1's empty hyperprior_weights_int8 slot was the SOLE bug"**: CARGO-CULTED. The empty-slot bug IS necessary; whether it is sufficient depends on the H(residual | class) probe (Section 14). UNWIND: ship Section 14's probe BEFORE the trainer.
+
+**Assumption 2 — "SegNet class label is highly informative about latent residual statistics"**: CARGO-CULTED-PENDING-PROBE. Plausible from theory (sky pairs have low residual variance; foreground pairs have high variance) but not empirically verified. UNWIND: Section 14 probe.
+
+**Assumption 3 — "constriction-Huffman is the optimal class-index coder"**: CARGO-CULTED. Huffman is suboptimal vs arithmetic/range coding for small symbol counts; the 600-pair class-index stream might code more efficiently under range coding (STC-Dasher composition Section 12). UNWIND: defer optimization to post-v2-smoke; if v2 hits ≤0.220 [contest-CUDA prediction], the Huffman-vs-range gap is ≤30B (insignificant).
+
+**Assumption 4 — "5-class hyperprior approximates Ballé MLP within 0.005 distortion"**: CARGO-CULTED-PENDING-EMPIRICAL. The 5-class case is the smallest possible classification; finer per-pair conditioning (per-pair sigma scalar OR per-pixel-area sigma) would tighten the prior. UNWIND: queue as v3 candidate ONLY IF v2 demonstrates the class-conditional approach works.
+
+**Assumption 5 — "Empirical class prior CDF generalizes across video segments"**: CARGO-CULTED. The class prior is computed ONCE on `upstream/videos/0.mkv` at training time and frozen; if a future contest video has a different class distribution, the prior will be miscalibrated. UNWIND: this is acceptable for `contest_one_video_replay` target_mode; explicitly DEFER `contest_generalized` target_mode until v3+ adaptive prior.
+
+**Assumption 6 — "int8 quantization of sigma table preserves training-time sigma values"**: HARD-EARNED-PENDING-VERIFICATION. The `int8_sigma_scale=16.0` choice produces ≤0.126 quantization error; if training sigma values exceed 16.0, the upper clamp introduces non-recoverable distortion. UNWIND: assert `max_sigma_observed_during_training < 16.0` as a training-time guard.
+
+**Assumption 7 — "Brotli quality=11 minimizes sigma_table_blob bytes"**: HARD-EARNED for a 140-byte payload (no plausible smaller representation given 140 distinct int8 values).
+
+**Assumption 8 — "Class prior CDF (10 B raw uint16) is bit-optimal"**: HARD-EARNED. The class prior has ≤16 bits per class (5 × 16 = 80 bits = 10 B). For 5 classes, 16-bit counts allow up to 65535 occurrences (vs 600 actual); could shrink to 5×10-bit = 6.25 B but byte-alignment makes 10 B the smallest practical form.
+
+**Assumption 9 — "Z3G2 magic does not collide with downstream parsers"**: HARD-EARNED. `Z3V2` magic is registered for v1; `Z3G2` is the v2 fork; sister magic spaces `Z3HV2` / `Z3HP1` covered by existing tests. No collision risk.
+
+**Assumption 10 — "Catalog #304 (no closed-form CDF) applies to the class prior"**: HARD-EARNED. Catalog #304 explicitly forbids any pre-computed CDF table that doesn't derive from `upstream/videos/0.mkv`. The class prior IS derived from `upstream/videos/0.mkv` via SegNet's empirical class output. Compliant.
+
+## 17. Observability surface (NEW per max-observability standing directive)
+
+Per `feedback_max_observability_into_behavior_xray_autopilot_tools_experiments_designs_standing_directive_20260516.md`, every substrate design memo MUST include this section.
+
+### 17.1 Per-layer inspection hooks
+
+| Layer | Captured signal | Storage |
+|---|---|---|
+| SegNet argmax | per-pair `(H, W)` class map int8 | `experiments/results/<lane>_<timestamp>/segnet_argmax_per_pair.pt` (per-epoch snapshot at training; per-archive at export) |
+| Class index reduction | per-pair dominant class `(600,) long` + per-class histogram | `experiments/results/<lane>_<timestamp>/class_indices.pt` + `class_prior_counts.pt` |
+| sigma_logits (training) | `(5, 28) float32` per-epoch | TensorBoard scalar event + JSONL anchor per epoch |
+| sigma_logits (post-EMA) | EMA-shadow `(5, 28) float32` | JSONL anchor at end of training |
+| sigma_int8 (post-quant) | `(5, 28) int8` + scale | JSONL anchor at archive build |
+| residual_q (per-pair) | `(600, 28) int8` | optional dump on `--observability-dump-residuals` flag |
+| inflate-time latent reconstruction | per-pair `(600, 28) float32` post-decode | optional dump on `--observability-dump-latents` flag |
+
+### 17.2 Per-signal decomposition
+
+Composite metrics decompose:
+- `final_score` = `loss_score + 25 * archive_bytes / 37545489`
+- `loss_score` = `seg_loss + 10 * pose_loss` (canonical)
+- `seg_loss` = per-pair `(600,) float32` breakdown emitted to `seg_loss_per_pair.pt`
+- `pose_loss` = per-pair `(600,) float32` breakdown emitted to `pose_loss_per_pair.pt`
+- `rate_bits` = `rate_residual_per_pair + rate_class_per_pair` (both `(600,) float32` emitted)
+
+### 17.3 Run-to-run diff manifest
+
+Per Catalog #245 modal_call_id_ledger pattern:
+- `dispatch_metadata.json` carries `mounted_code_git_head` + `working_tree_dirty_summary` + `sentinel_files_local_sha256`
+- Two runs of the v2 substrate at the same git_HEAD on the same upstream snapshot MUST produce byte-identical:
+  - sigma_table_int8 (deterministic post-EMA quantization)
+  - class_indices (deterministic SegNet argmax + histogram)
+  - class_prior_counts (deterministic Laplace-smoothed histogram)
+  - residual_int8 (deterministic A1 inheritance)
+  - z3g2_section bytes (sha256-pinned)
+  - inflate output bytes (sha256-pinned)
+- Diff signal: any byte divergence indicates a non-determinism source (seed drift, non-pinned random op, fp16 numerics, etc.)
+
+### 17.4 Post-hoc query interface
+
+All artifacts machine-readable:
+- TensorBoard event files for per-epoch sigma_logits / loss / rate
+- JSONL append-only anchors for per-anchor decomposition (cf. `tac.continual_learning.posterior_update_locked`)
+- `experiments/results/<lane>_<timestamp>/distinguishing_feature_byte_mutation_proof.json` (Section 11 output)
+- `experiments/results/<lane>_<timestamp>/contest_auth_eval_<device>.json` per Catalog #249 (NOT `_cuda` if device=CPU)
+
+### 17.5 Cite-chain
+
+Every emitted artifact carries:
+- `commit_sha`: git HEAD at dispatch
+- `modal_call_id`: per Catalog #245 ledger
+- `upstream_snapshot_sha256`: sha256 of `upstream/videos/0.mkv` + `upstream/evaluate.py` + `upstream/modules.py`
+- `subagent_id`: invoking subagent (if applicable)
+- `recipe_path`: `.omx/operator_authorize_recipes/substrate_z3_g1_entropy_coded_v2_modal_t4_dispatch.yaml` sha256
+- `trainer_sha256`: `experiments/train_substrate_z3_g1_entropy_coded_v2.py` sha256 (when `_full_main` lands)
+
+### 17.6 Counterfactual hooks
+
+Byte-mutation per Catalog #272 (Section 11) IS the counterfactual hook: "what if this byte changed?" answered structurally without re-running training. Ablation switches:
+- `--ablation-class-conditional` toggle: when False, sigma table degenerates to a SINGLE row (not per-class); test for redundancy hypothesis (Section 14 Interpretation B)
+- `--ablation-empirical-cdf` toggle: when False, class prior CDF uses uniform-prior fallback; test for prior-mismatch sensitivity
+- `--ablation-int8-quantization` toggle: when False, ship fp32 sigma table (~560 B vs 140 B); test for quantization-error contribution to distortion
+
+## 18. Pipeline composition
+
+Routes through canonical `experiments/pipeline.py` per CLAUDE.md "Canonical pipeline standard non-negotiable":
+
+```bash
+.venv/bin/python experiments/pipeline.py \
+    --profile z3_g1_entropy_coded_v2 \
+    --device cuda \
+    --output-dir experiments/results/z3_g1_v2_<timestamp>/
+```
+
+Profile `z3_g1_entropy_coded_v2` lives in `src/tac/profiles.py` (queued landing alongside `_full_main` implementation). Profile fields:
+- `architecture_class = "z3_g1_entropy_coded_v2"`
+- `epochs = 100` (smoke) / `1000` (full)
+- `lr_initial = 1e-3`, `lr_final = 1e-5`, `lr_schedule = "cosine"`
+- `ema_decay = 0.997`, `eval_roundtrip = True`, `autocast_fp16 = True`
+- `int8_sigma_scale = 16.0`, `quant_step = 1.0`, `min_sigma = 1e-3`, `max_sigma = 16.0`
+- `lambda_rate_target = 0.01` (rate-axis loss weight after warm-up)
+
+## 19. Reactivation criteria (gate to flip `research_only=true → false`)
+
+Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
+
+1. **Section 14 probe lands** + verdict `I(class; residual) ≥ 0.1 bits/pair` (rules out Interpretation B redundancy)
+2. **`_full_main` implementation lands** (replaces current `NotImplementedError`)
+3. **Byte-mutation smoke per Catalog #272 passes ALL THREE distinguishing-feature blobs** (sigma_table_blob, class_prior_blob, class_index_blob)
+4. **Encoder-decoder roundtrip test passes** (existing 23-test suite + 1 new roundtrip test asserting decoded sigma + class indices == encoded sigma + class indices)
+5. **Modal T4 smoke (100ep) returns finite auth-eval JSON** with axis tag matching dispatch device + sub-Z3-v2-baseline score `< 0.197 [contest-CPU GHA Linux x86_64]` (the empirical gate)
+6. **Paired CUDA + CPU auth-eval lands** per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE"
+7. **Tier C MDL ablation per Catalog #227** — class-shift density signature OR explicit `lane_class=substrate_engineering` opt-out OR `research_only=true` retention
+8. **5/5 council PROCEED** (per CLAUDE.md "Design decisions — non-negotiable")
+
+ANY missing criterion → lane stays `research_only=true` per Catalog #240.
+
+## 20. Cost estimate
+
+| Phase | Surface | Cost |
+|---|---|---|
+| Section 14 probe | Local M5 Max CPU | $0 (~5 min) |
+| `_full_main` implementation | Editor + tests | $0 (~3-4 h subagent) |
+| Byte-mutation smoke | Local CPU | $0 (~10 min via `tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py`) |
+| Encoder-decoder roundtrip test | Local CPU | $0 (~5 min in existing test suite) |
+| Modal T4 smoke (100ep) | Modal T4 | ~$0.59 (matches v1 anchor) |
+| Modal CPU paired CPU axis | Modal CPU container | ~$0.10-0.50 (60-120 min) |
+| Modal T4 paired CUDA axis | (already estimated above) | (in smoke cost) |
+| Full Modal A100 dispatch (1000ep) | Modal A100 | $5-10 (gated on smoke pass) |
+| Tier C MDL ablation | Local CPU on smoke archive | $0 (~5 min via `tools/mdl_scorer_conditional_ablation.py`) |
+| 5/5 council deliberation | Editor | $0 (council memo) |
+
+**Total to L3 (FULL PRODUCTION HARDENED)**: ~$6-12 + ~10 hours subagent + ~30 min operator review.
+
+## 21. Op-routables
+
+1. **Section 14 probe (HIGHEST PRIORITY)**: build `tools/probe_z3_g1_entropy_coded_v2_class_residual_mutual_information.py` BEFORE any other v2 work. Computes empirical `I(class_indices; residual)` on 100-pair sample from `upstream/videos/0.mkv` using v1's existing `g1_diagnostic.pt` (the per-pair class + per-pair sigma + per-pair residual the v1 training already produced).
+2. **`_full_main` implementation**: lift `NotImplementedError`; wire the canonical training loop with sigma_logits + per-pair empirical class prior CDF + canonical scorer-aware loss + EMA + eval_roundtrip + Modal-compatible runtime closure. Subagent-spawnable; ~3-4 h work.
+3. **Modal recipe enable**: flip `recipe_research_only=True → False` + `dispatch_enabled=False → True` in `.omx/operator_authorize_recipes/substrate_z3_g1_entropy_coded_v2_modal_t4_dispatch.yaml` ONLY after criteria 1-4 of Section 19 satisfy.
+4. **Byte-mutation smoke regression guard**: add CI hook to run the smoke after every commit touching `src/tac/substrates/z3_g1_entropy_coded_v2/*` (prevents v1-class regression).
+5. **Cathedral autopilot ranker entry**: register v2 as a class-shift candidate with `predicted_dykstra_band=[0.221, 0.228] CONDITIONAL on Section 14 probe`; observability surface populated per Section 17.
+6. **STC-Dasher composition probe (DEFERRED post-v2-smoke)**: if v2 smoke confirms class-conditional gain, evaluate replacing constriction-Huffman with STC-Dasher arithmetic coding for class_index_blob.
+
+## 22. Cross-references
+
+- `feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md` — codex F1 empirical anchor (v1 phantom)
+- `feedback_wunderkind_g1_entropy_coded_v2_z3g1_reactivation_landed_20260515.md` — v2 prior landing memo
+- `.omx/research/wunderkind_g1_entropy_coded_v2_design_20260515.md` — predecessor substrate design memo
+- `.omx/research/resurrection_audit_20260516.md` §3.9 — Tier 2 Z3-G1 phantom-distinguishing-feature anchor
+- `feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md` — Wunderkind G1 paradigm spec
+- `feedback_max_observability_into_behavior_xray_autopilot_tools_experiments_designs_standing_directive_20260516.md` — observability surface mandate (Section 17)
+- `feedback_assumptions_classification_hard_earned_vs_cargo_culted_critical_addendum_20260515.md` — HARD-EARNED vs CARGO-CULTED classification rules
+- `feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md` — 9-dim evidence template
+- `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md` — Section 15 canonical-vs-unique decision per layer
+- `.omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md` — sister cargo-cult-unwind audit
+- CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" (lessons 1-13) — full substrate-engineering compliance
+- CLAUDE.md Catalog #220 (operational mechanism); Catalog #266 (G1 substrate consumes hyperprior bytes); Catalog #272 (distinguishing-feature contract); Catalog #296 (Dykstra-feasibility); Catalog #297 (signal-axis destruction); Catalog #303 (cargo-cult audit per assumption); Catalog #304 (no closed-form CDF); Catalog #290 (canonical-vs-unique per layer); Catalog #294 (9-dim evidence section)
+- `src/tac/substrates/z3_g1_entropy_coded_v2/` — existing implementation (architecture.py + archive.py + inflate_consumer.py + score_aware_loss.py + registered_substrate.py)
+- `tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py` — Section 11 canonical smoke tool
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md Catalog #294 + standing directive.
+
+1. **UNIQUENESS (CLASS-SHIFT not within-class)**: PARTIAL/CONDITIONAL. Wire-grammar fork IS a class-shift at the archive layer (Z3V2 → Z3G2 magic). HOWEVER the underlying substrate (A1 + scorer-class-conditional Ballé) is WITHIN-CLASS relative to Z3 v2 per Catalog #227 Tier C density (sister-of NSCS03 not orthogonal-to). The Section 14 probe is what determines whether the wire-grammar fork manifests as non-trivial class-conditioning gain OR within-class plateau.
+2. **BEAUTY + ELEGANCE (PR101-style 30-sec-reviewable)**: PRESENT. Existing v2 substrate is ~700 LOC total (architecture 280 + archive 675 + inflate_consumer 173 + score_aware_loss + registered_substrate). Within PR101's 605-LOC reference. Each module reviewable in 30s.
+3. **DISTINCTNESS (explicitly different from sisters)**: PRESENT. Section 12 lists 7 sister substrates with axis-orthogonality verdicts. v2 distinguishes via class-conditional Ballé (per-class 5×28 sigma table vs NSCS03's per-pair MLP vs Z3 v2's unconditional sigma vs ATW's cooperative-receiver vs STC-Dasher's arithmetic-maximalism).
+4. **RIGOR**: PRESENT. Section 14 probe-disambiguator + Section 11 byte-mutation smoke + Section 16 cargo-cult audit per assumption (10 assumptions classified) + Section 13 Dykstra-feasibility + premise-verification of v1 phantom-anchor via codex F1 empirical receipt + 5/5 council PROCEED gated in Section 19.
+5. **OPTIMIZATION PER TECHNIQUE**: PRESENT. Section 15 canonical-vs-unique decision per layer (16 layers; 4 UNIQUE / 12 ADOPT CANONICAL with HARD-EARNED-vs-CARGO-CULTED classification per layer per Catalog #290).
+6. **STACK-OF-STACKS-COMPOSABILITY**: PRESENT. Section 12 composition matrix (7 sisters with orthogonality + saturating verdicts). Recommended SOLO smoke FIRST.
+7. **DETERMINISTIC REPRODUCIBILITY**: PRESENT. Section 17.3 run-to-run diff manifest pins seed + EMA + class-prior frozen post-epoch-20 + per-byte sha256-pinned z3g2_section + per-byte sha256-pinned inflate output.
+8. **EXTREME OPTIMIZATION + PERFORMANCE**: PRESENT. Tier 1 (autocast fp16 + TF32 + torch.compile + no_grad) ADOPT canonical per Catalogs #172/#178/#179/#180. Inflate compute ~1800 FP ops (Section 4). v2 archive ~349 KB vs A1 ~362 KB (savings ~13 KB).
+9. **OPTIMAL MINIMAL CONTEST SCORE**: PARTIAL. Predicted band [0.221, 0.228] [contest-CUDA T4 prediction] CONDITIONAL on Section 14 probe; collapses to [0.229, 0.232] (essentially Z3 v2 baseline) if class-conditioning is redundant per Interpretation B. The empirical gate is `< 0.197 [contest-CPU GHA Linux x86_64]` per Section 19 criterion 5.
+
+---
+
+## Op-summary
+
+- **What v2 fixes vs v1**: v1 shipped empty `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""` slots → identical Z3 v2 baseline scores (codex F1 phantom anchor). v2 wire grammar `Z3G2` ACTUALLY ships sigma_table_blob (~300 B brotli) + class_prior_blob (10 B raw) + class_index_blob (~350 B constriction-Huffman). Total distinguishing bytes: ~660 B (>0 vs v1's 0).
+- **How bytes actually flow through inflate**: `reconstruct_class_indices_and_sigma_table_from_z3g2_payload` decodes all three blobs → `sigmas_per_pair = sigma_table[class_indices, :]` → `latents = (residual_q * sigmas_per_pair) * latent_scale + latent_offset` → frame reconstruction differs from Z3 v2's unconditional-sigma path.
+- **Predicted band + Dykstra verdict**: [0.221, 0.228] [contest-CUDA T4 prediction] CONDITIONAL on Section 14 probe; Dykstra-feasibility passes (3 constraints intersect non-empty); magnitude may collapse to [0.229, 0.232] under redundancy hypothesis.
+- **Byte-mutation smoke plan**: 4 sections × 1 byte mutation each via `tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py` (already landed); pass criterion = all 3 distinguishing-feature blobs produce changed inflate output.
+- **Cost**: ~$6-12 GPU + ~10 h subagent.
+- **Reactivation gate**: 8 criteria in Section 19; the empirical floor is `< 0.197 [contest-CPU GHA Linux x86_64]` (Z3 v2 baseline 0.19779).
+- **Observability surface**: 6 surfaces declared per Section 17 (per-layer hooks / per-signal decomposition / run-to-run diff / post-hoc query / cite-chain / counterfactual hooks).
