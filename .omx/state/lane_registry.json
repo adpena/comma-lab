@@ -31044,15 +31044,15 @@
       "id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
       "name": "NSCS06 Carmack-Hotz Strip-Everything",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "scaffold + _full_main landed; smoke green; 28 dedicated tests pass; ~1820 LOC across 6 files (package 1057 + trainer 510 + recipe + remote driver + submission + tests 350)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "v6 smoke (commit 90bca47ff): final_score=105.15 [diagnostic_cpu, evidence_grade=B, score_claim_valid=False] vs predicted band [0.10, 0.20] -> 500-1000x falsification of analytical-renderer + grayscale-LUT premise; archive_size=2939158 bytes (200x predicted ~15KB); avg_posenet_dist=149.03 (13500x baseline ~0.011); avg_segnet_dist=0.646; archive_sha256=86f7e188f674861fd1fafa1a5c8b0bca336d4f3449d05e1e1b2cf06b4ef1bd70; call_id=fc-01KRRBHZZR7RWBVH4PN65VX1M1; mounted_head=6a79fd7f9; eval JSON: experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json"
         },
         "contest_cuda": {
           "status": false,
@@ -31079,7 +31079,15 @@
           "evidence": "scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh + heartbeat + Catalog #244 NVML block + Catalog #163 bootstrap sentinel"
         }
       },
-      "notes": ""
+      "notes": "DEFERRED-pending-research per CLAUDE.md Forbidden-premature-KILL non-negotiable. v6 smoke (commit 90bca47ff; call_id fc-01KRRBHZZR7RWBVH4PN65VX1M1; mounted HEAD 6a79fd7f9) returned final_score=105.15 [diagnostic_cpu] vs predicted band [0.10, 0.20] = ~700x falsification. Components: pose=149.03 (13500x baseline), seg=0.646, rate=0.0783 (archive 2939158 bytes vs predicted ~15KB = 200x archive bloat). research_only=true; dispatch_enabled=false. archive_bytes_added>1KB and score_improvement_mechanism_status=NOT_OPERATIONAL \u2014 Catalog #220 satisfied via research_only=true opt-out per HNeRV parity L2 (research-substrate trap). Catalog #240 satisfied via research_only=true (recipe-vs-trainer-state consistent: trainer _full_main empirically failed at score axis; lane is honest about being research-substrate pending redesign). Catalog #272 satisfied via research_only=true (distinguishing-feature contract opt-out). Reactivation requires: (a) affine/learned pose-warp replacing global-translation; (b) chroma reconstruction beyond luminance grayscale-LUT; (c) archive-size root-cause investigation (200x predicted gap); (d) sister grand council symposium ratifies redesign; (e) new smoke score must beat baseline 105.15. Cross-ref: feedback_nscs06_v6_empirical_anchor_research_only_pending_redesign_20260516.md; feedback_carmack_hotz_strip_everything_scaffold_plus_full_main_landed_20260515.md (original L1 scaffold); experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json (anchor JSON); archive_sha256=86f7e188f674861fd1fafa1a5c8b0bca336d4f3449d05e1e1b2cf06b4ef1bd70.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "affine_or_learned_pose_warp_replaces_global_translation_only",
+        "chroma_reconstruction_not_just_luminance_grayscale_LUT",
+        "archive_size_root_cause_investigation_resolves_200x_predicted_vs_empirical_gap",
+        "sister_grand_council_symposium_ratifies_redesign_path",
+        "new_smoke_score_must_beat_baseline_105.15_diagnostic_cpu"
+      ]
     },
     {
       "id": "lane_or2_grand_council_assumption_statement_discipline_20260515",
@@ -31121,6 +31129,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_catalog_294_9_dim_checklist_evidence_section_20260515",
+      "name": "Catalog #294 9-dim checklist evidence section",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit fbb5df223 \u2014 src/tac/preflight.py:62212 check_substrate_landing_memo_has_9_dim_checklist_evidence_section + preflight_all wire-in at line ~2350 (warn-only)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_check_294_substrate_landing_memo_has_9_dim_checklist_evidence_section.py \u2014 25 tests pass; commit fbb5df223; STRICT-mode raises with Catalog #294 message; warn-only at landing per Strict-flip atomicity rule"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_catalog_294_9_dim_checklist_evidence_section_landed_20260515.md \u2014 full landing memo + 5 premise verifications + 6-hook wire-in declaration + 3 op-routables"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_check_submission_inflate_empty_pythonpath_strict_gate_20260516",
+      "name": "Catalog 295 submission self-contained inflate STRICT gate NSCS06 v5 bug class",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31130,5 +31220,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T01:56:13Z"
+  "updated_at": "2026-05-16T13:02:13Z"
 }
