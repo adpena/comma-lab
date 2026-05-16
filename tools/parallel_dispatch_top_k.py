@@ -63,6 +63,9 @@ from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_SCORE_FRONTIER_LABEL,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimizer.exact_dispatch_authority import (  # noqa: E402
+    exact_dispatch_authority,
+)
 from tac.optimizer.exact_ready_audit import audit_exact_ready_queue  # noqa: E402
 from tac.zipwire_archive import inspect_zip_headers  # noqa: E402
 
@@ -658,6 +661,20 @@ def _candidate_blockers(
     # gating predicate for the actuator.
     if candidate.get("ready_for_exact_eval_dispatch") is not True:
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
+    authority = exact_dispatch_authority(
+        candidate,
+        repo_root=REPO,
+        queue_dir=ranked_input_dir,
+        source="parallel_dispatch_top_k",
+        active_floor_archive_bytes=active_floor_archive_bytes,
+        active_floor_score=active_floor_score,
+        allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
+        operator_override_reason=operator_override_reason,
+    )
+    blockers.extend(
+        f"exact_dispatch_authority:{blocker}"
+        for blocker in authority.blockers
+    )
     gate_blockers, _gate_facts = validate_hdm8_selector_cuda_gate_context(
         candidate,
         None,

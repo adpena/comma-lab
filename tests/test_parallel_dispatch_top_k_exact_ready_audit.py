@@ -56,6 +56,54 @@ def test_parallel_dispatch_floor_preserves_active_nonpromotional_reference() -> 
     assert module.DEFAULT_ACTIVE_FLOOR_SCORE == module.DEFAULT_ACTIVE_SCORE_FRONTIER_SCORE
 
 
+def test_parallel_dispatch_ready_flag_still_requires_live_custody(tmp_path: Path) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "parallel_dispatch_top_k_authority_test",
+        TOOL,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    submission = tmp_path / "submission"
+    archive_bytes, archive_sha = _write_archive(submission / "archive.zip")
+    inflate = submission / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
+    runtime_tree_sha256 = runtime_dependency_manifest(
+        submission,
+        REPO_ROOT,
+    )["runtime_tree_sha256"]
+
+    candidate = {
+        "candidate_id": "ready_flag_without_live_custody",
+        "lane_id": "ready_flag_without_live_custody_lane",
+        "target_modes": ["contest_exact_eval"],
+        "deployment_target": "t4_contest_runtime",
+        "evidence_semantics": "byte_closed_archive_runtime_ready_for_exact_eval",
+        "ready_for_exact_eval_dispatch": True,
+        "score_claim": False,
+        "score_claim_verified": False,
+        "archive_path": str(submission / "archive.zip"),
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "candidate_archive_sha256": archive_sha,
+        "candidate_archive_bytes": archive_bytes,
+        "score_affecting_payload_changed": True,
+        "charged_bits_changed": True,
+    }
+
+    blockers = module._candidate_blockers(
+        candidate,
+        ranked_input_dir=tmp_path,
+        active_floor_archive_bytes=999_999,
+        active_floor_score=0.2,
+    )
+
+    assert "exact_dispatch_authority:archive_manifest_missing" in blockers
+    assert "exact_dispatch_authority:report_txt_missing" in blockers
+
+
 def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Path) -> None:
     submission = tmp_path / "submission"
     archive_bytes, archive_sha = _write_archive(submission / "archive.zip")
