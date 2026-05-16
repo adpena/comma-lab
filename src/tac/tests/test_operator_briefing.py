@@ -136,13 +136,16 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["canonical_sideinfo_evidence_present"] is True
     assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
     assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
-    assert l5["next_exact_eval_target_count"] == 13
-    assert len(l5["next_exact_eval_targets"]) == 13
+    assert l5["next_exact_eval_target_count"] == 11
+    assert len(l5["next_exact_eval_targets"]) == 11
     assert len(l5["next_exact_eval_targets_sample"]) == 5
     assert l5["packetir_status_counts"]["paired_exact_blocked"] == 3
-    assert l5["packetir_paired_candidate_count"] == 0
-    assert l5["pr106_stack_cell_candidate_count"] == 0
-    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in l5["blockers"]
+    assert l5["packetir_status_counts"]["paired_exact_measured"] == 2
+    assert l5["packetir_paired_candidate_count"] == 2
+    assert l5["pr106_stack_cell_candidate_count"] == 2
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" not in l5[
+        "blockers"
+    ]
     assert all(
         row["ready_for_exact_eval_dispatch"] is False
         for row in l5["next_exact_eval_targets_sample"]

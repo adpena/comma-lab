@@ -430,14 +430,15 @@ def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> 
         PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
     )
     assert payload["source_candidate_count"] == 16
-    assert payload["paired_candidate_count"] == 0
+    assert payload["paired_candidate_count"] == 2
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
-    assert payload["paired_candidates"] == []
-    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in payload[
-        "blockers"
+    assert [row["candidate_id"] for row in payload["paired_candidates"]] == [
+        "format_0x0c_exact_radix",
+        "prefix_top_16_pr101grammar",
     ]
+    assert payload["blockers"] == []
 
 
 def test_l5_v2_packetir_matrix_sha_pin_matches_committed_artifact() -> None:
@@ -463,23 +464,31 @@ def test_l5_v2_pr106_stack_cell_candidates_are_blocked_proposals() -> None:
     payload = l5_v2_pr106_stack_cell_candidates()
 
     assert payload["schema"] == L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA
-    assert payload["source_packetir_paired_candidate_count"] == 0
-    assert payload["candidate_count"] == 0
+    assert payload["source_packetir_paired_candidate_count"] == 2
+    assert payload["candidate_count"] == 2
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
-    assert payload["candidates"] == []
-    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in payload[
-        "blockers"
+    assert [row["packetir_candidate_id"] for row in payload["candidates"]] == [
+        "format_0x0c_exact_radix",
+        "prefix_top_16_pr101grammar",
     ]
-    assert "l5_v2_pr106_stack_cell_candidates_missing" in payload["blockers"]
+    assert payload["blockers"] == []
+    for row in payload["candidates"]:
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert "requires_l5_v2_composite_archive_materialization" in row["blockers"]
 
 
 def test_l5_v2_pr106_stack_cell_candidates_honor_top_k() -> None:
     payload = l5_v2_pr106_stack_cell_candidates(top_k=2)
 
-    assert payload["candidate_count"] == 0
-    assert payload["candidates"] == []
+    assert payload["candidate_count"] == 2
+    assert [row["packetir_candidate_id"] for row in payload["candidates"]] == [
+        "format_0x0c_exact_radix",
+        "prefix_top_16_pr101grammar",
+    ]
     assert payload["score_claim"] is False
 
 
@@ -595,9 +604,9 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     )
     assert all(gate["status"] == "required" for gate in boolean_only["gates"])
     assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
-    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 0
+    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 2
     assert blocked["packetir_stack_evidence"]["score_claim"] is False
-    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 0
+    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 2
     assert blocked["pr106_stack_cell_candidates"]["promotion_eligible"] is False
 
 

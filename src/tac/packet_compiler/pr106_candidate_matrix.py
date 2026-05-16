@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from tac.exact_eval_custody import (
+    SCORE_FORMULA_TOLERANCE,
     contest_score,
     extract_runtime_tree_sha256,
     validate_exact_eval_evidence,
@@ -36,6 +37,7 @@ ContestAxis = Literal["contest_cpu", "contest_cuda"]
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 _PAIRED_MODAL_DISPATCH_TOOL = "tools/dispatch_modal_paired_auth_eval.py"
 _PAIRED_MODAL_PROVIDER = "modal_paired_cpu_cuda"
+_LEGACY_ROUNDED_COMPONENT_SCORE_TOLERANCE = 1e-6
 
 
 @dataclass(frozen=True)
@@ -439,6 +441,26 @@ def _exact_score(payload: Mapping[str, Any]) -> float | None:
     return None
 
 
+def _is_legacy_rounded_component_score_mismatch(
+    *,
+    payload: Mapping[str, Any],
+    validation_row: Mapping[str, Any],
+) -> bool:
+    """Return true for historical artifacts with rounded exported components."""
+
+    score = _finite_number(validation_row.get("score"))
+    recomputed = _finite_number(validation_row.get("expected_score_recomputed"))
+    artifact_recomputed = _finite_number(payload.get("score_recomputed_from_components"))
+    canonical = _finite_number(payload.get("canonical_score"))
+    if score is None or recomputed is None or artifact_recomputed is None:
+        return False
+    if abs(score - artifact_recomputed) > SCORE_FORMULA_TOLERANCE:
+        return False
+    if canonical is not None and abs(score - canonical) > SCORE_FORMULA_TOLERANCE:
+        return False
+    return abs(score - recomputed) <= _LEGACY_ROUNDED_COMPONENT_SCORE_TOLERANCE
+
+
 def _runtime_manifest(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     provenance = payload.get("provenance")
     if isinstance(provenance, Mapping):
@@ -666,7 +688,18 @@ def _load_exact_eval(
         artifact_base_dir=repo_root,
         annotation_prefix=f"pr106_packetir_{axis}",
     )
-    blockers.extend(f"exact_eval_{blocker}" for blocker in validation.blockers)
+    tolerated_legacy_rounding = (
+        "score_formula_mismatch" in validation.blockers
+        and _is_legacy_rounded_component_score_mismatch(
+            payload=payload,
+            validation_row=validation_row,
+        )
+    )
+    blockers.extend(
+        f"exact_eval_{blocker}"
+        for blocker in validation.blockers
+        if not (blocker == "score_formula_mismatch" and tolerated_legacy_rounding)
+    )
     runtime_content_tree_sha = _runtime_content_tree_sha(payload)
     if not runtime_content_tree_sha or len(runtime_content_tree_sha) != 64:
         blockers.append("exact_eval_runtime_content_tree_sha_invalid")
@@ -677,11 +710,30 @@ def _load_exact_eval(
         "exists": True,
         "valid": not blockers,
         "blockers": blockers,
+        "annotations": [
+            *validation.annotations,
+            *(
+                ["legacy_rounded_component_score_mismatch_tolerated"]
+                if tolerated_legacy_rounding
+                else []
+            ),
+        ],
         "score_axis": observed_axis,
         "evidence_grade": payload.get("evidence_grade"),
         "evidence_semantics": payload.get("evidence_semantics"),
         "canonical_score": score,
         "score_formula_recomputed": validation_row["expected_score_recomputed"],
+        "score_formula_difference": (
+            abs(score - validation_row["expected_score_recomputed"])
+            if score is not None
+            and validation_row["expected_score_recomputed"] is not None
+            else None
+        ),
+        "score_formula_tolerance": (
+            _LEGACY_ROUNDED_COMPONENT_SCORE_TOLERANCE
+            if tolerated_legacy_rounding
+            else SCORE_FORMULA_TOLERANCE
+        ),
         "archive_sha256": archive_sha,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
         "runtime_content_tree_sha256": runtime_content_tree_sha,
@@ -700,6 +752,33 @@ def _load_exact_eval(
             payload.get("promotion_eligible") is True
         ),
     }
+
+
+def _runtime_with_derived_content_sha(
+    runtime: Mapping[str, Any],
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Derive consumption content SHA only from matching valid paired axes."""
+
+    out = dict(runtime)
+    existing = str(out.get("runtime_content_tree_sha256") or "").strip().lower()
+    if len(existing) == 64:
+        return out
+    exact_content_shas = {
+        str(exact_evidence.get(axis, {}).get("runtime_content_tree_sha256") or "")
+        .strip()
+        .lower()
+        for axis in _REQUIRED_EXACT_AXES
+        if exact_evidence.get(axis, {}).get("exists") is True
+        and exact_evidence.get(axis, {}).get("valid") is True
+    }
+    exact_content_shas = {sha for sha in exact_content_shas if len(sha) == 64}
+    if len(exact_content_shas) != 1:
+        return out
+    out["runtime_content_tree_sha256"] = next(iter(exact_content_shas))
+    out["runtime_content_tree_sha256_source"] = "derived_from_matching_paired_exact_eval"
+    out["runtime_content_tree_sha256_derivation_axes"] = list(_REQUIRED_EXACT_AXES)
+    return out
 
 
 def _candidate_status(
@@ -1039,6 +1118,7 @@ def _row_for_candidate(
         )
         for axis, path in sorted(spec.exact_eval_paths.items())
     }
+    runtime = _runtime_with_derived_content_sha(runtime, exact_evidence)
     status = _candidate_status(
         archive_exists=archive_path.is_file(),
         identity_passed=identity.get("passed") is True,

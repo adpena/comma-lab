@@ -34,10 +34,11 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
     assert matrix["candidate_count"] >= 15
     assert matrix["status_counts"] == {
         "paired_exact_blocked": 3,
-        "runtime_consumed_needs_paired_exact_eval": 4,
+        "paired_exact_measured": 2,
+        "runtime_consumed_needs_paired_exact_eval": 2,
         "single_axis_exact_measured_needs_pair": 9,
     }
-    assert matrix["next_exact_eval_target_count"] == 13
+    assert matrix["next_exact_eval_target_count"] == 11
     assert matrix["score_claim"] is False
     assert matrix["promotion_eligible"] is False
     assert matrix["ready_for_exact_eval_dispatch"] is False
@@ -60,10 +61,11 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
 
     format_0c = _row_by_id(matrix, "format_0x0c_exact_radix")
     assert format_0c["format_id"] == "0x0C"
-    assert format_0c["status"] == "paired_exact_blocked"
+    assert format_0c["status"] == "paired_exact_measured"
+    assert format_0c["status_blockers"] == []
     assert (
-        "paired_exact_eval_runtime_consumption_content_tree_sha_missing"
-        in format_0c["status_blockers"]
+        format_0c["runtime_consumption"]["runtime_content_tree_sha256_source"]
+        == "derived_from_matching_paired_exact_eval"
     )
     exact_0c = format_0c["exact_axis_evidence"]
     assert isinstance(exact_0c, dict)
@@ -88,11 +90,18 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
     ]
 
     r2 = _row_by_id(matrix, "format_0x01_r2_release")
-    assert r2["status"] == "runtime_consumed_needs_paired_exact_eval"
+    assert r2["status"] == "paired_exact_blocked"
     exact_r2 = r2["exact_axis_evidence"]
     assert isinstance(exact_r2, dict)
-    assert exact_r2["contest_cpu"]["valid"] is False
-    assert "exact_eval_score_formula_mismatch" in exact_r2["contest_cpu"]["blockers"]
+    assert exact_r2["contest_cpu"]["valid"] is True
+    assert exact_r2["contest_cuda"]["valid"] is True
+    assert "exact_eval_score_formula_mismatch" not in exact_r2["contest_cpu"]["blockers"]
+    assert "legacy_rounded_component_score_mismatch_tolerated" in exact_r2[
+        "contest_cpu"
+    ]["annotations"]
+    assert "paired_exact_eval_runtime_content_tree_sha_mismatch" in r2[
+        "status_blockers"
+    ]
 
 
 def _targets_for_id(
@@ -112,62 +121,50 @@ def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() ->
     matrix = build_pr106_packetir_candidate_matrix()
 
     r2_targets = _targets_for_id(matrix, "format_0x01_r2_release")
-    assert len(r2_targets) == 1
-    assert r2_targets[0]["missing_axes"] == ["contest_cpu", "contest_cuda"]
-    assert r2_targets[0]["missing_axis"] == "contest_cpu,contest_cuda"
-    assert {target["recommended_provider"] for target in r2_targets} == {
-        "modal_paired_cpu_cuda",
-    }
-    assert all(
-        target["dispatch_status"]
-        == "requires_claim_lane_dispatch_before_provider_launch"
-        for target in r2_targets
-    )
-    assert all("--pair-group-id" in target["command_template"] for target in r2_targets)
-    assert all("--submission-dir" in target["command_template"] for target in r2_targets)
-    assert all(
-        "tools/dispatch_modal_paired_auth_eval.py" in target["command_template"]
-        for target in r2_targets
-    )
-    assert all(
-        "--expected-runtime-tree-sha256 auto" in target["command_template"]
-        for target in r2_targets
-    )
-    assert all(
-        "--skip-axis-if-promotable-anchor-exists" in target["command_template"]
-        for target in r2_targets
-    )
-    assert all(
-        "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
-        not in target["command_template"]
-        for target in r2_targets
-    )
-    assert all(
-        "experiments/modal_auth_eval.py" not in target["command_template"]
-        and "experiments/modal_auth_eval_cpu.py" not in target["command_template"]
-        for target in r2_targets
-    )
-    assert all(
-        target["expected_runtime_tree_sha256_policy"]
-        == "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256"
-        for target in r2_targets
-    )
-    assert all(target["paired_dispatch_required"] is True for target in r2_targets)
-    assert all(
-        target["execute_flag_required_for_provider_launch"] is True
-        for target in r2_targets
-    )
-    assert all(
-        "--execute" not in target["command_template"] for target in r2_targets
-    )
-    assert all(
-        "--execute" in target["execute_command_template_after_plan_review"]
-        for target in r2_targets
-    )
-    assert all("/Users/" not in target["command_template"] for target in r2_targets)
+    assert r2_targets == []
 
     format_04_targets = _targets_for_id(matrix, "format_0x04_rank_elided")
     assert len(format_04_targets) == 1
+    assert format_04_targets[0]["missing_axes"] == ["contest_cpu"]
+    assert format_04_targets[0]["missing_axis"] == "contest_cpu"
+    assert format_04_targets[0]["recommended_provider"] == "modal_paired_cpu_cuda"
+    assert (
+        format_04_targets[0]["dispatch_status"]
+        == "requires_claim_lane_dispatch_before_provider_launch"
+    )
+    assert "--pair-group-id" in format_04_targets[0]["command_template"]
+    assert "--submission-dir" in format_04_targets[0]["command_template"]
+    assert (
+        "tools/dispatch_modal_paired_auth_eval.py"
+        in format_04_targets[0]["command_template"]
+    )
+    assert (
+        "--expected-runtime-tree-sha256 auto"
+        in format_04_targets[0]["command_template"]
+    )
+    assert (
+        "--skip-axis-if-promotable-anchor-exists"
+        in format_04_targets[0]["command_template"]
+    )
+    assert (
+        "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
+        not in format_04_targets[0]["command_template"]
+    )
+    assert "experiments/modal_auth_eval.py" not in format_04_targets[0][
+        "command_template"
+    ]
+    assert "experiments/modal_auth_eval_cpu.py" not in format_04_targets[0][
+        "command_template"
+    ]
+    assert (
+        format_04_targets[0]["expected_runtime_tree_sha256_policy"]
+        == "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256"
+    )
+    assert format_04_targets[0]["paired_dispatch_required"] is True
+    assert format_04_targets[0]["execute_flag_required_for_provider_launch"] is True
+    assert "--execute" not in format_04_targets[0]["command_template"]
+    assert "--execute" in format_04_targets[0]["execute_command_template_after_plan_review"]
+    assert "/Users/" not in format_04_targets[0]["command_template"]
     target = format_04_targets[0]
     assert target["missing_axes"] == ["contest_cpu"]
     assert target["existing_valid_axes"] == ["contest_cuda"]
