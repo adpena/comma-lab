@@ -151,6 +151,10 @@ def test_briefing_json_composite_has_all_three_keys():
         ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json"
     )
     assert l5["paired_measurement_dispatch_plan_exists"] is True
+    assert l5["paired_measurement_dispatch_plan_source_schedule_stale"] is False
+    assert l5["paired_measurement_dispatch_plan_source_schedule_sha256"] == l5[
+        "paired_measurement_dispatch_plan_current_source_schedule_sha256"
+    ]
     assert l5["paired_measurement_dispatch_plan_work_unit_count"] == 3
     assert l5["paired_measurement_dispatch_plan_ready_work_unit_count"] == 0
     assert l5["paired_measurement_dispatch_plan_score_claim"] is False
@@ -565,6 +569,56 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_matrix_sha_mismatch(
     assert l5["next_non_pr106_l5_action"]["action_id"] == "materialize_tt5l_proof"
     assert l5["next_exact_eval_target_count"] == 0
     assert l5["next_exact_eval_targets"] == []
+
+
+def test_l5_v2_briefing_blocks_stale_paired_measurement_plan(
+    tmp_path: Path,
+) -> None:
+    mod = _load_briefing_module()
+    schedule_path = tmp_path / ".omx" / "research" / "schedule.json"
+    plan_path = tmp_path / ".omx" / "research" / "plan.json"
+    schedule_path.parent.mkdir(parents=True)
+    schedule_path.write_text('{"schema":"changed"}\n', encoding="utf-8")
+    stale_sha = "0" * 64
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": mod.L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_SCHEMA,
+                "planning_only": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "dispatch_attempted": False,
+                "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                "source_schedule_path": ".omx/research/schedule.json",
+                "source_schedule_sha256": stale_sha,
+                "work_units": [],
+                "work_unit_count": 0,
+                "ready_work_unit_count": 0,
+                "blockers": [],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    mod.REPO_ROOT = tmp_path
+    mod.L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH = (
+        ".omx/research/plan.json"
+    )
+
+    plan = mod._load_l5_v2_paired_measurement_dispatch_plan()
+
+    assert plan["source_schedule_stale"] is True
+    assert plan["source_schedule_sha256"] == stale_sha
+    assert plan["current_source_schedule_sha256"] != stale_sha
+    assert (
+        "l5_v2_paired_measurement_dispatch_plan_source_schedule_stale"
+        in plan["load_blockers"]
+    )
 
 
 def test_l5_v2_briefing_suppresses_packetir_targets_on_active_claims(

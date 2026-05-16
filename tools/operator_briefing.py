@@ -64,6 +64,7 @@ from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.l5_staircase_v2 import (  # noqa: E402
     L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
     L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH,
+    L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
     l5_v2_architecture_lock_packet,
@@ -1273,6 +1274,38 @@ def _load_l5_v2_paired_measurement_dispatch_plan() -> dict[str, object]:
         load_blockers.append(
             "l5_v2_paired_measurement_dispatch_plan_paired_tool_not_canonical"
         )
+    source_schedule_path = str(
+        payload.get("source_schedule_path") or L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH
+    )
+    source_schedule_sha256 = str(payload.get("source_schedule_sha256") or "")
+    current_source_schedule_sha256 = ""
+    if not source_schedule_sha256:
+        load_blockers.append(
+            "l5_v2_paired_measurement_dispatch_plan_source_schedule_sha256_missing"
+        )
+    source_schedule = Path(source_schedule_path)
+    if source_schedule.is_absolute():
+        load_blockers.append(
+            "l5_v2_paired_measurement_dispatch_plan_source_schedule_path_absolute"
+        )
+        source_schedule_file = source_schedule
+    else:
+        source_schedule_file = REPO_ROOT / source_schedule
+    if not source_schedule_file.is_file():
+        load_blockers.append(
+            "l5_v2_paired_measurement_dispatch_plan_source_schedule_missing"
+        )
+    else:
+        current_source_schedule_sha256 = hashlib.sha256(
+            source_schedule_file.read_bytes()
+        ).hexdigest()
+        if (
+            source_schedule_sha256
+            and source_schedule_sha256 != current_source_schedule_sha256
+        ):
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_source_schedule_stale"
+            )
 
     work_units = payload.get("work_units")
     if not isinstance(work_units, list):
@@ -1330,6 +1363,14 @@ def _load_l5_v2_paired_measurement_dispatch_plan() -> dict[str, object]:
         "exists": True,
         "artifact_sha256": artifact_sha256,
         "load_blockers": load_blockers,
+        "source_schedule_path": source_schedule_path,
+        "source_schedule_sha256": source_schedule_sha256,
+        "current_source_schedule_sha256": current_source_schedule_sha256,
+        "source_schedule_stale": (
+            bool(source_schedule_sha256)
+            and bool(current_source_schedule_sha256)
+            and source_schedule_sha256 != current_source_schedule_sha256
+        ),
         "work_unit_count": int(payload.get("work_unit_count") or 0),
         "ready_work_unit_count": int(payload.get("ready_work_unit_count") or 0),
         "command_sample": command_sample,
@@ -1494,6 +1535,15 @@ def _l5_v2_frontier_readiness(
         ),
         "paired_measurement_dispatch_plan_artifact_sha256": (
             paired_measurement_plan.get("artifact_sha256", "")
+        ),
+        "paired_measurement_dispatch_plan_source_schedule_sha256": (
+            paired_measurement_plan.get("source_schedule_sha256", "")
+        ),
+        "paired_measurement_dispatch_plan_current_source_schedule_sha256": (
+            paired_measurement_plan.get("current_source_schedule_sha256", "")
+        ),
+        "paired_measurement_dispatch_plan_source_schedule_stale": bool(
+            paired_measurement_plan.get("source_schedule_stale")
         ),
         "paired_measurement_dispatch_plan_work_unit_count": int(
             paired_measurement_plan.get("work_unit_count") or 0
