@@ -232,7 +232,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
       substrates that pre-date the substrate-scaffold subpackage discipline
       (CANON-1.A explicit-taxonomy resolution, 2026-05-12)
     - 2 cooperative-receiver rows (SARC + Wyner-Ziv)
-    - 5 2026-05-14 campaign rows (Z3/Z4/Z5/C1/C6) registered so the
+    - 6 2026-05-14/16 campaign rows (Z3/Z4/Z5/TT5L/C1/C6) registered so the
       Cathedral/autopilot ranker sees the long-burn campaign stack.
 
     Order is stable (alphabetical by substrate_class then substrate_id) to
@@ -1075,6 +1075,32 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             ),
         ),
         SubstrateRow(
+            substrate_id="time_traveler_l5_autonomy",
+            name="Time-Traveler L5 Autonomy predictive receiver",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            format_id=0xB7,
+            magic_bytes="TT5L",
+            runtime_dep_closure=("torch", "brotli", "av"),
+            byte_budget_band=(95_000, 110_000),
+            predicted_delta_alone_band=(-0.0500, -0.0200),
+            requires_score_aware_training=True,
+            landed_at="2026-05-16",
+            landing_memo="time_traveler_architecture_reverse_engineered_20260513",
+            lane_id="lane_time_traveler_l5_autonomy_substrate_20260513",
+            campaign_id="campaign_time_traveler_l5_autonomy_20260516",
+            campaign_stage="L5 staircase predictive-receiver packet",
+            campaign_priority="long_term_campaign_l5",
+            lane_class="substrate_engineering substrate_class_shift predictive_receiver",
+            literature_anchor="Rao-Ballard1999; DreamerV3; TeNeRV; TeCoNeRV",
+            dispatch_blockers=(
+                "requires_byte_closed_temporal_sideinfo_consumption_proof",
+                "requires_paired_cpu_cuda_axis_plan_before_promotion",
+                "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
+            ),
+            sideinfo_consumed=True,
+        ),
+        SubstrateRow(
             substrate_id="c1_world_model_foveation",
             name="C1 world-model plus foveation substrate",
             substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
@@ -1603,6 +1629,7 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
     "z3_balle_hyperprior_bolton": 2.00,
     "z4_cooperative_receiver_loss": 5.00,
     "z5_predictive_coding_world_model": 10.00,
+    "time_traveler_l5_autonomy": 8.00,
     "c1_world_model_foveation": 1.00,
     "c6_e4_mdl_ibps": 0.50,
 }

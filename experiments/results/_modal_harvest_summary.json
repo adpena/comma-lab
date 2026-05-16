@@ -33,6 +33,12 @@
       "lane_id": "lane_test_dummy",
       "instance_job_id": "job-test",
       "status": "failed_modal_training_rc_2"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNF0DRYKF9WYZGDTDDY006B",
+      "latest_status": "failed"
     }
   },
   {
@@ -64,6 +70,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
+      "latest_status": "failed"
     }
   },
   {
@@ -95,6 +107,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4",
+      "latest_status": "failed"
     }
   },
   {
@@ -126,6 +144,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6",
+      "latest_status": "harvested"
     }
   },
   {
@@ -157,6 +181,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ",
+      "latest_status": "failed"
     }
   },
   {
@@ -188,6 +218,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S",
+      "latest_status": "harvested"
     }
   },
   {
@@ -219,6 +255,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
+      "latest_status": "harvested"
     }
   },
   {
@@ -250,6 +292,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P",
+      "latest_status": "failed"
     }
   },
   {
@@ -281,6 +329,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
+      "latest_status": "failed"
     }
   },
   {
@@ -312,6 +366,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5",
+      "latest_status": "harvested"
     }
   },
   {
@@ -343,6 +403,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
+      "latest_status": "failed"
     }
   },
   {
@@ -374,6 +440,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
+      "latest_status": "failed"
     }
   },
   {
@@ -405,6 +477,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC",
+      "latest_status": "failed"
     }
   },
   {
@@ -436,6 +514,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD090GDA30NFM325M0M20PB",
+      "latest_status": "failed"
     }
   },
   {
@@ -467,6 +551,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA",
+      "latest_status": "failed"
     }
   },
   {
@@ -495,6 +585,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD5WXJXAK8CV82BFSKPJA7V",
+      "latest_status": "failed"
     }
   },
   {
@@ -526,6 +622,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR",
+      "latest_status": "failed"
     }
   },
   {
@@ -557,6 +659,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B",
+      "latest_status": "failed"
     }
   },
   {
@@ -588,6 +696,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
+      "latest_status": "failed"
     }
   },
   {
@@ -619,6 +733,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W",
+      "latest_status": "failed"
     }
   },
   {
@@ -647,6 +767,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD5X0CYES4VGRH3KKB3QAKE",
+      "latest_status": "failed"
     }
   },
   {
@@ -678,6 +804,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
+      "latest_status": "failed"
     }
   },
   {
@@ -709,6 +841,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9",
+      "latest_status": "failed"
     }
   },
   {
@@ -737,6 +875,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQD2AN7CKKHW9H2JEYMZQRKF",
+      "latest_status": "failed"
     }
   },
   {
@@ -768,6 +912,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
+      "latest_status": "failed"
     }
   },
   {
@@ -799,6 +949,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW",
+      "latest_status": "failed"
     }
   },
   {
@@ -830,6 +986,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
+      "latest_status": "failed"
     }
   },
   {
@@ -861,6 +1023,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME",
+      "latest_status": "failed"
     }
   },
   {
@@ -889,6 +1057,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCP43HDQZ9SE53HE90N550A",
+      "latest_status": "failed"
     }
   },
   {
@@ -920,6 +1094,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY",
+      "latest_status": "failed"
     }
   },
   {
@@ -951,6 +1131,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
+      "latest_status": "failed"
     }
   },
   {
@@ -979,6 +1165,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQS0XBEXZDFWW574FN0W5G",
+      "latest_status": "failed"
     }
   },
   {
@@ -1010,6 +1202,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRE4YCY88E8H6XEY0F9BVG7N",
+      "latest_status": "failed"
     }
   },
   {
@@ -1038,6 +1236,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQDN5G9VKCR4Z2VPD3VD0PE2",
+      "latest_status": "failed"
     }
   },
   {
@@ -1090,6 +1294,12 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T142131Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKDTZNWX6R0CR0C54JTKYFH",
+      "latest_status": "failed"
     }
   },
   {
@@ -1142,6 +1352,12 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T142426Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKE0G2WPC57YE34S6J3JEJS",
+      "latest_status": "failed"
     }
   },
   {
@@ -1194,6 +1410,12 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKFEQARQX6BC4EDPNHN1E74",
+      "latest_status": "harvested"
     }
   },
   {
@@ -1246,6 +1468,12 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T150207Z__smoke__1ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKG566Z2F48CVCGF8JFA0S1",
+      "latest_status": "failed"
     }
   },
   {
@@ -1309,6 +1537,12 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T151415Z__smoke__1ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKGVFRWR0SXX1V067DSZJPT",
+      "latest_status": "harvested"
     }
   },
   {
@@ -1361,169 +1595,70 @@
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T152845Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKHNZSZF4JPHJ20WE35A68C",
+      "latest_status": "failed"
     }
   },
   {
     "label": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep",
     "call_id": "fc-01KRNHEAJAG4NHR9AECWY6XCXS",
+    "status": "already_harvested",
     "rc": 1,
     "elapsed_seconds": 2895.5009662929997,
     "timed_out": false,
     "n_artifacts": 22,
-    "artifact_files": [
-      {
-        "relative_path": "results/substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/results/substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep/modal_worker_head_ledger.json",
-        "bytes": 4334
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 4334
-      },
-      {
-        "relative_path": "heartbeat.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/heartbeat.log",
-        "bytes": 21
-      },
-      {
-        "relative_path": "modal_lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/modal_lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep.log",
-        "bytes": 3124
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 453
-      },
-      {
-        "relative_path": "provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/provenance.json",
-        "bytes": 722
-      },
-      {
-        "relative_path": "run.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/run.log",
-        "bytes": 393
-      },
-      {
-        "relative_path": "trainer.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/trainer.log",
-        "bytes": 2538
-      },
-      {
-        "relative_path": "archive.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/archive.zip",
-        "bytes": 224857
-      },
-      {
-        "relative_path": "contest_auth_eval_cuda.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/contest_auth_eval_cuda.json",
-        "bytes": 19853
-      },
-      {
-        "relative_path": "stats.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/stats.json",
-        "bytes": 2191
-      },
-      {
-        "relative_path": "contest_auth_eval.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/contest_auth_eval.json",
-        "bytes": 19852
-      },
-      {
-        "relative_path": "inflated_outputs_manifest.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/inflated_outputs_manifest.json",
-        "bytes": 686
-      },
-      {
-        "relative_path": "0.bin",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/0.bin",
-        "bytes": 225954
-      },
-      {
-        "relative_path": "my-test-package.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/my-test-package.zip",
-        "bytes": 1809
-      },
-      {
-        "relative_path": "pydantic-core.cyclonedx.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/pydantic-core.cyclonedx.json",
-        "bytes": 125376
-      },
-      {
-        "relative_path": "distutils.schema.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/distutils.schema.json",
-        "bytes": 972
-      },
-      {
-        "relative_path": "setuptools.schema.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/setuptools.schema.json",
-        "bytes": 16071
-      },
-      {
-        "relative_path": "direct_url.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/direct_url.json",
-        "bytes": 55
-      },
-      {
-        "relative_path": "uv_build.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/uv_build.json",
-        "bytes": 2
-      },
-      {
-        "relative_path": "uv_cache.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/uv_cache.json",
-        "bytes": 136
-      },
-      {
-        "relative_path": "graph_break_registry.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/graph_break_registry.json",
-        "bytes": 215929
-      }
-    ],
     "crash_kind": "RC_1",
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 4,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep",
-      "trainer": "experiments/train_substrate_c6_e4_mdl_ibps.py",
-      "platform": "modal",
-      "gpu": "A10G",
-      "epochs": 100,
-      "batch_size": 4,
-      "all_flags_on": true,
       "elapsed_seconds": 2895.5009662929997,
+      "epochs": 100,
       "estimated_cost_usd": 0.8847364063673056,
+      "gpu": "A10G",
       "hourly_rate_usd": 1.1,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "failed_dispatch",
-      "returncode": 1,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=1.1; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_c6_e4_mdl_ibps.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
+      "appended": true,
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep",
+      "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=2895.5009662929997; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal",
       "platform": "modal",
-      "status": "failed_modal_training_rc_1",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=2895.5009662929997; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNHEAJAG4NHR9AECWY6XCXS",
+      "latest_status": "failed"
     }
   },
   {
@@ -1576,6 +1711,12 @@
       "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
       "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T130809Z__smoke__100ep",
       "status": "failed_modal_training_rc_25"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK9MEHZ5DFRWXX57R21VVXA",
+      "latest_status": "failed"
     }
   },
   {
@@ -1628,6 +1769,12 @@
       "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
       "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T131403Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK9Z80YXAWMKPFEQM2YE889",
+      "latest_status": "failed"
     }
   },
   {
@@ -1680,6 +1827,12 @@
       "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
       "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T132100Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKABYAC9C6MA161NKSGH9PY",
+      "latest_status": "failed"
     }
   },
   {
@@ -1732,6 +1885,12 @@
       "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
       "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260514T134005Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKBF28G2M3N73FS7PDCB6AZ",
+      "latest_status": "failed"
     }
   },
   {
@@ -1782,6 +1941,69 @@
       "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
       "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T082638Z__smoke__50ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNBXVYS345TDFW33BA4E77P",
+      "latest_status": "failed"
+    }
+  },
+  {
+    "label": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T115438Z__smoke__100ep",
+    "call_id": "fc-01KRNQVJWJH5AFV5W3TCGGTEFG",
+    "status": "already_harvested",
+    "timed_out": false,
+    "n_artifacts": 0,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 32,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T115438Z__smoke__100ep",
+      "elapsed_seconds": 1811.283197496,
+      "epochs": 100,
+      "estimated_cost_usd": 0.2968491907007333,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_d1_segnet_margin_polytope.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T115438Z__smoke__100ep",
+      "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1811.283197496; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T115438Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_d1_segnet_margin_polytope_encoder_20260514",
+      "instance_job_id": "substrate_d1_segnet_margin_polytope_modal_t4_dispatch_20260515T115438Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNQVJWJH5AFV5W3TCGGTEFG",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.299075Z"
     }
   },
   {
@@ -1834,6 +2056,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260514T131025Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK9RKD3QV4C276Y5KXFMF65",
+      "latest_status": "failed"
     }
   },
   {
@@ -1886,6 +2114,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260514T131725Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKA5DA13RH1CP5BQNDVAM3C",
+      "latest_status": "failed"
     }
   },
   {
@@ -1938,6 +2172,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260514T133601Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKB7GFKQE8Y1JNKRYBWS3RJ",
+      "latest_status": "failed"
     }
   },
   {
@@ -1990,6 +2230,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260514T232700Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRME6GEP8FRKYN7NNAQZYQDA",
+      "latest_status": "failed"
     }
   },
   {
@@ -2040,6 +2286,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T051529Z__smoke__50ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRN0ZTJ14WHG94C4VDXXTMR7",
+      "latest_status": "failed"
     }
   },
   {
@@ -2090,6 +2342,12 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T054131Z__smoke__50ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRN2FFCZAYKJ85Q9W7GQV0QW",
+      "latest_status": "failed"
     }
   },
   {
@@ -2140,6 +2398,130 @@
       "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T061339Z__smoke__50ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRN4AAM138RHZT6WXKXK464B",
+      "latest_status": "failed"
+    }
+  },
+  {
+    "label": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T135915Z__smoke__100ep",
+    "call_id": "fc-01KRNYZ6HN53HGHGC44XGAGJZ3",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 2136.044600199,
+    "timed_out": false,
+    "n_artifacts": 15,
+    "crash_kind": "OK",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 1,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T135915Z__smoke__100ep",
+      "elapsed_seconds": 2136.044600199,
+      "epochs": 100,
+      "estimated_cost_usd": 0.35007397614372493,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_d4_wyner_ziv_frame_0.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T135915Z__smoke__100ep",
+      "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=2136.044600199; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T135915Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+      "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T135915Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNYZ6HN53HGHGC44XGAGJZ3",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.319520Z"
+    }
+  },
+  {
+    "label": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T194805Z__smoke__100ep",
+    "call_id": "fc-01KRPJZ9FY7N1HJH6HMEK6TX6C",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 6914.784993056,
+    "timed_out": false,
+    "n_artifacts": 15,
+    "crash_kind": "OK",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 1,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T194805Z__smoke__100ep",
+      "elapsed_seconds": 6914.784993056,
+      "epochs": 100,
+      "estimated_cost_usd": 1.133256429417511,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_d4_wyner_ziv_frame_0.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T194805Z__smoke__100ep",
+      "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=6914.784993056; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T194805Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
+      "instance_job_id": "substrate_d4_wyner_ziv_frame_0_modal_t4_dispatch_20260515T194805Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRPJZ9FY7N1HJH6HMEK6TX6C",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.322611Z"
     }
   },
   {
@@ -2176,6 +2558,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260513T215933Z__smoke__100ep",
       "status": "failed_modal_training_rc_13"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRHNMT4SEB794HFPH5GNTHFP",
+      "latest_status": "failed"
     }
   },
   {
@@ -2228,6 +2616,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010436Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ07NVC73YPXTNGQX8T747P",
+      "latest_status": "failed"
     }
   },
   {
@@ -2264,6 +2658,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T010731Z__smoke__100ep",
       "status": "failed_modal_training_rc_13"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ0K0Z3DZNTW3EEHRZTK6CZ",
+      "latest_status": "failed"
     }
   },
   {
@@ -2316,6 +2716,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T011305Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ0VN7W7DDFB276QD9AR0NH",
+      "latest_status": "failed"
     }
   },
   {
@@ -2366,6 +2772,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T012029Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ15E7NYVDF77VF1ED1XBKS",
+      "latest_status": "failed"
     }
   },
   {
@@ -2418,6 +2830,12 @@
       "lane_id": "lane_pr95_meta_stack_of_stacks_enhanced_curriculum_20260513",
       "instance_job_id": "substrate_pr101_lc_v2_clone_enhanced_curriculum_modal_a100_dispatch_20260514T022923Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ52PP723KBG6QE4JSERQGM",
+      "latest_status": "harvested"
     }
   },
   {
@@ -2470,6 +2888,12 @@
       "lane_id": "remote_lane_substrate_sane_hnerv",
       "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202035Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KREXK209TRX7ED5ZRVXHY1VT",
+      "latest_status": "failed"
     }
   },
   {
@@ -2522,6 +2946,12 @@
       "lane_id": "remote_lane_substrate_sane_hnerv",
       "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260512T202633Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KREXXSKGTDCF61QXQNBF6SX3",
+      "latest_status": "failed"
     }
   },
   {
@@ -2574,6 +3004,12 @@
       "lane_id": "lane_substrate_sane_hnerv_20260512",
       "instance_job_id": "substrate_sane_hnerv_modal_a100_dispatch_20260515T094310Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNGA39QD7X7ER2R5JZN5N7E",
+      "latest_status": "failed"
     }
   },
   {
@@ -2624,6 +3060,12 @@
       "lane_id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "instance_job_id": "substrate_sar_coherent_pose_pairs_modal_t4_dispatch_20260514T100849Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJZC3XA853B808JF211JDZN",
+      "latest_status": "failed"
     }
   },
   {
@@ -2657,6 +3099,12 @@
       "lane_id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "instance_job_id": "substrate_sar_coherent_pose_pairs_modal_t4_dispatch_20260514T101735Z__smoke__100ep",
       "status": "failed_modal_training_recovery_error_remoteerror"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJZW4XQMBQZX0S8PJVRQJBP",
+      "latest_status": "failed"
     }
   },
   {
@@ -2690,6 +3138,12 @@
       "lane_id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "instance_job_id": "substrate_sar_coherent_pose_pairs_modal_t4_dispatch_20260514T102222Z__smoke__100ep",
       "status": "failed_modal_training_recovery_error_remoteerror"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK04WC7DSN61KTRKX3FRMFX",
+      "latest_status": "failed"
     }
   },
   {
@@ -2723,6 +3177,12 @@
       "lane_id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "instance_job_id": "substrate_sar_coherent_pose_pairs_modal_t4_dispatch_20260514T102906Z__smoke__100ep",
       "status": "failed_modal_training_recovery_error_remoteerror"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK0HADQS2P1Q41B10X8QAJJ",
+      "latest_status": "failed"
     }
   },
   {
@@ -2773,6 +3233,12 @@
       "lane_id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "instance_job_id": "substrate_sar_coherent_pose_pairs_modal_t4_dispatch_20260514T103520Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK0WV9RQJBYQ2KKG4V319N7",
+      "latest_status": "failed"
     }
   },
   {
@@ -2825,6 +3291,12 @@
       "lane_id": "remote_lane_substrate_siren",
       "instance_job_id": "substrate_siren_modal_a100_dispatch_20260513T140410Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRGTEM56EXCV94Q7DC1HF0PB",
+      "latest_status": "failed"
     }
   },
   {
@@ -2877,6 +3349,12 @@
       "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
       "instance_job_id": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T030023Z__smoke__100ep",
       "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJ6VKVR7KMKQVC55QXQK05V",
+      "latest_status": "failed"
     }
   },
   {
@@ -2927,6 +3405,12 @@
       "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
       "instance_job_id": "substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJZAH6QNHZ5M4M690EVDXA7",
+      "latest_status": "failed"
     }
   },
   {
@@ -2977,6 +3461,12 @@
       "lane_id": "lane_substrate_vq_vae_20260512",
       "instance_job_id": "substrate_vq_vae_modal_a100_dispatch_20260514T101849Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRJZYEK9JWSCA0XEGD0Q90T3",
+      "latest_status": "failed"
     }
   },
   {
@@ -3027,6 +3517,12 @@
       "lane_id": "lane_substrate_vq_vae_20260512",
       "instance_job_id": "substrate_vq_vae_modal_a100_dispatch_20260514T102204Z__smoke__100ep",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRK04BWJH82G819TD1HF81GA",
+      "latest_status": "failed"
     }
   },
   {
@@ -3079,6 +3575,12 @@
       "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
       "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260514T154958Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRKJWW2X53QNAA9BRCSYQ6MJ",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3129,6 +3631,12 @@
       "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
       "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T040905Z__smoke__20ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRMX6A5DPHYXG77JYQZ6RBPQ",
+      "latest_status": "failed"
     }
   },
   {
@@ -3181,6 +3689,12 @@
       "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
       "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T100252Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNHEGC9ZE48Y68GGJHP7FXN",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3233,6 +3747,244 @@
       "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
       "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T101040Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNHWD6AEMWGDJXBEY8GM0P3",
+      "latest_status": "harvested"
+    }
+  },
+  {
+    "label": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep",
+    "call_id": "fc-01KRNPJM15X4NH28375SCE954M",
+    "status": "already_harvested",
+    "timed_out": false,
+    "n_artifacts": 0,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep",
+      "elapsed_seconds": 8.578769848999997,
+      "epochs": 100,
+      "estimated_cost_usd": 0.0014059650585861105,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z3_balle_hyperprior_bolton.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep",
+      "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=8.578769848999997; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
+      "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T113237Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNPJM15X4NH28375SCE954M",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.381336Z"
+    }
+  },
+  {
+    "label": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep",
+    "call_id": "fc-01KRNQ2B8ZH6ASSAHCXMH0AMZX",
+    "status": "already_harvested",
+    "timed_out": false,
+    "n_artifacts": 0,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep",
+      "elapsed_seconds": 1057.7672084350002,
+      "epochs": 1000,
+      "estimated_cost_usd": 0.1733562924935139,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z3_balle_hyperprior_bolton.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep",
+      "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1057.7672084350002; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
+      "instance_job_id": "substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNQ2B8ZH6ASSAHCXMH0AMZX",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.384273Z"
+    }
+  },
+  {
+    "label": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep",
+    "call_id": "fc-01KRPKCXARWP7NBGJCXB2P9QEP",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 868.24924665,
+    "timed_out": false,
+    "n_artifacts": 24,
+    "crash_kind": "OK",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep",
+      "elapsed_seconds": 868.24924665,
+      "epochs": 100,
+      "estimated_cost_usd": 0.14229640431208332,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep",
+      "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=868.24924665; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+      "instance_job_id": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRPKCXARWP7NBGJCXB2P9QEP",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.387008Z"
+    }
+  },
+  {
+    "label": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T201408Z__full__1000ep",
+    "call_id": "fc-01KRPMDRH2VNVKFFAYTWD4X0SD",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 4.685866258000004,
+    "timed_out": false,
+    "n_artifacts": 8,
+    "crash_kind": "RC_1",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 16,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T201408Z__full__1000ep",
+      "elapsed_seconds": 4.685866258000004,
+      "epochs": 1000,
+      "estimated_cost_usd": 0.0007679614145055562,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "failed_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z3_g1_scorer_softmax_hyperprior_gating.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T201408Z__full__1000ep",
+      "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=4.685866258000004; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T201408Z__full__1000ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z3_g1_scorer_softmax_hyperprior_gating_20260515",
+      "instance_job_id": "substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T201408Z__full__1000ep",
+      "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRPMDRH2VNVKFFAYTWD4X0SD",
+      "status": "failed",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.389836Z"
     }
   },
   {
@@ -3285,6 +4037,246 @@
       "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
       "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T100255Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRNHE942JSV7VRGXGR1FJGHQ",
+      "latest_status": "harvested"
+    }
+  },
+  {
+    "label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120245Z__smoke__100ep",
+    "call_id": "fc-01KRNRAAAMPXRSBYDTEFK0X765",
+    "status": "already_harvested",
+    "timed_out": false,
+    "n_artifacts": 0,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 4,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120245Z__smoke__100ep",
+      "elapsed_seconds": 9.590767064000005,
+      "epochs": 100,
+      "estimated_cost_usd": 0.001571820157711112,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z4_cooperative_receiver_loss.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120245Z__smoke__100ep",
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=9.590767064000005; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120245Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120245Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNRAAAMPXRSBYDTEFK0X765",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.395239Z"
+    }
+  },
+  {
+    "label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120837Z__smoke__100ep",
+    "call_id": "fc-01KRNRMD29XM4M1Q467D8S1HXV",
+    "status": "already_harvested",
+    "rc": 1,
+    "elapsed_seconds": 5.4390634180000035,
+    "timed_out": false,
+    "n_artifacts": 8,
+    "crash_kind": "RC_1",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 4,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120837Z__smoke__100ep",
+      "elapsed_seconds": 5.4390634180000035,
+      "epochs": 100,
+      "estimated_cost_usd": 0.0008914020601722228,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=1; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "failed_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 1,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z4_cooperative_receiver_loss.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120837Z__smoke__100ep",
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=1; timed_out=False; elapsed_seconds=5.4390634180000035; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120837Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_rc_1"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T120837Z__smoke__100ep",
+      "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNRMD29XM4M1Q467D8S1HXV",
+      "status": "failed",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.397869Z"
+    }
+  },
+  {
+    "label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T121155Z__smoke__100ep",
+    "call_id": "fc-01KRNRTDNVNJHWRKGYYJV3S2XF",
+    "status": "already_harvested",
+    "rc": 124,
+    "elapsed_seconds": 3600.933820002,
+    "timed_out": true,
+    "n_artifacts": 9,
+    "crash_kind": "TIMEOUT",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 4,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T121155Z__smoke__100ep",
+      "elapsed_seconds": 3600.933820002,
+      "epochs": 100,
+      "estimated_cost_usd": 0.5901530427225501,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=124; timed_out=True; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "timed_out",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 124,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z4_cooperative_receiver_loss.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T121155Z__smoke__100ep",
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=124; timed_out=True; elapsed_seconds=3600.933820002; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T121155Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "failed_modal_training_timeout"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T121155Z__smoke__100ep",
+      "status": "failed_modal_training_timeout"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRNRTDNVNJHWRKGYYJV3S2XF",
+      "status": "failed",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.400578Z"
+    }
+  },
+  {
+    "label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T194645Z__smoke__100ep",
+    "call_id": "fc-01KRPJVEMQ5S7Q8EKGKQWKCS93",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 2930.851619733,
+    "timed_out": false,
+    "n_artifacts": 22,
+    "crash_kind": "OK",
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 4,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T194645Z__smoke__100ep",
+      "elapsed_seconds": 2930.851619733,
+      "epochs": 100,
+      "estimated_cost_usd": 0.48033401545624166,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_z4_cooperative_receiver_loss.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T194645Z__smoke__100ep",
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=2930.851619733; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T194645Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_z4_cooperative_receiver_loss_step2_20260514",
+      "instance_job_id": "substrate_z4_cooperative_receiver_loss_modal_t4_dispatch_20260515T194645Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRPJVEMQ5S7Q8EKGKQWKCS93",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T01:53:28.403285Z"
     }
   },
   {
@@ -3313,6 +4305,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCPZM0D2NMZCTH23RT98SK5",
+      "latest_status": "stale"
     }
   },
   {
@@ -3363,6 +4361,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_cheap_config_20260512T171203Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KREJST89QHFRWJXHAKXD850C",
+      "latest_status": "failed"
     }
   },
   {
@@ -3394,6 +4398,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KRE4XPREYGDHQ80XR2H2T54J",
+      "latest_status": "failed"
     }
   },
   {
@@ -3429,6 +4439,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_full_ce1b4e2d_20260510T1333Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR91CR2V5AM6Y2DVBFTXCDVM",
+      "latest_status": "failed"
     }
   },
   {
@@ -3464,6 +4480,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_fullpath_smoke_b82164a7_20260510T1348Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR928YET5BZGFV803ANT8CTS",
+      "latest_status": "failed"
     }
   },
   {
@@ -3510,6 +4532,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_fullpath_smoke_e7845e4c_20260510T1410Z",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR93KESQB87VSD2WKE4GYZEC",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3545,6 +4573,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_1aac11aa_20260510T1301Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8ZNESYP42EP7928ZK94ZQB",
+      "latest_status": "failed"
     }
   },
   {
@@ -3580,6 +4614,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_740778ba_20260510T1000Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8HFZPJRQHWTXAX7TT72D04",
+      "latest_status": "failed"
     }
   },
   {
@@ -3615,6 +4655,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_80b139c9_20260510T1240Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8YCW8F12KACG5TKWSNZ7A7",
+      "latest_status": "failed"
     }
   },
   {
@@ -3650,6 +4696,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_a3311268_20260510T0831Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8GACB3NCW5TNG1E9YFPXHM",
+      "latest_status": "failed"
     }
   },
   {
@@ -3685,6 +4737,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_c0ea27df_20260510T0927Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8KCXEGTVFGSZ75HAK9S2QX",
+      "latest_status": "failed"
     }
   },
   {
@@ -3720,6 +4778,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_guard_c4100de4_20260510T0915Z",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8JMK531A9PECP0CV513KQM",
+      "latest_status": "failed"
     }
   },
   {
@@ -3756,6 +4820,12 @@
       "lane_id": "t1_balle_128k_endtoend",
       "instance_job_id": "t1_balle_modal_phase1_ab2d0f6_20260510T1437Z",
       "status": "failed_modal_training_rc_124"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR955JSYQAVTTYZA48VAV7WJ",
+      "latest_status": "failed"
     }
   },
   {
@@ -3792,6 +4862,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_20260508T215443Z_modal",
       "status": "failed_modal_training_rc_6"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R",
+      "latest_status": "failed"
     }
   },
   {
@@ -3826,6 +4902,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_20260508T222043Z_modal",
       "status": "failed_modal_training_unknown_returncode"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR4TVY14SWW0VN07XT1B4Y2Q",
+      "latest_status": "failed"
     }
   },
   {
@@ -3862,6 +4944,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_20260508T230020Z_modal",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3898,6 +4986,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_bestproxy_lr2e6_20260509_codex",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3934,6 +5028,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_latentalign_importpathfix_lr2e6_20260509T012628Z_modal",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR55GH98QW3J3QDGQB1EG4CR",
+      "latest_status": "harvested"
     }
   },
   {
@@ -3967,6 +5067,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_latentalign_lr2e6_20260509T011929Z_modal",
       "status": "failed_modal_training_recovery_error_modulenotfounderror"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR553TPH27G73HMHH56MDZH0",
+      "latest_status": "failed"
     }
   },
   {
@@ -4003,6 +5109,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_long_lr1e6_20260509T030424Z_modal",
       "status": "failed_modal_training_rc_1"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR5B4JKGXQWZ4452G7JJ23J1",
+      "latest_status": "failed"
     }
   },
   {
@@ -4039,6 +5151,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_modal_20260510T0738Z_codex",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR8D302GXGKGT49ETYMA0BZC",
+      "latest_status": "harvested"
     }
   },
   {
@@ -4075,6 +5193,12 @@
       "lane_id": "track1_phase_a1_score_gradient",
       "instance_job_id": "track1_phase_a1_score_gradient_segguard_kl0p5_l1p02_40e_20260509T052414Z_modal",
       "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR5K3V8VT735P73ZV881ZQA2",
+      "latest_status": "harvested"
     }
   },
   {
@@ -4111,6 +5235,12 @@
       "lane_id": "track1_phase_a4_charm_50k_toy",
       "instance_job_id": "track1_phase_a4_charm_50k_toy_20260508T220839Z_modal",
       "status": "failed_modal_training_unknown_returncode"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V",
+      "latest_status": "harvested"
     }
   },
   {
@@ -4142,6 +5272,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1",
+      "latest_status": "failed"
     }
   },
   {
@@ -4173,6 +5309,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4",
+      "latest_status": "failed"
     }
   },
   {
@@ -4204,6 +5346,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4",
+      "latest_status": "failed"
     }
   },
   {
@@ -4235,6 +5383,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9",
+      "latest_status": "failed"
     }
   },
   {
@@ -4266,6 +5420,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG",
+      "latest_status": "failed"
     }
   },
   {
@@ -4297,6 +5457,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
+      "latest_status": "harvested"
     }
   },
   {
@@ -4328,6 +5494,12 @@
     "terminal_evidence": {
       "appended": false,
       "reason": "incomplete_terminal_claim"
+    },
+    "call_id_ledger": {
+      "appended": false,
+      "already_terminal": true,
+      "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY",
+      "latest_status": "harvested"
     }
   }
 ]

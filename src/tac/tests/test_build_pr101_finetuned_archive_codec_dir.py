@@ -237,6 +237,107 @@ def test_harvest_modal_calls_no_execute_is_read_only(tmp_path: Path) -> None:
     assert not (tmp_path / "experiments" / "results" / "_modal_harvest_summary.json").exists()
 
 
+def test_harvest_modal_calls_from_ledger_execute_runs_harvest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_harvest_module()
+    calls: list[object] = []
+
+    def fake_print_from_ledger_view(repo_root: Path) -> None:
+        calls.append(("ledger_view", repo_root))
+
+    def fake_harvest_modal_calls(
+        *,
+        repo_root: Path,
+        summary_output: Path,
+        get_timeout_seconds: float,
+    ) -> list[dict[str, object]]:
+        calls.append(("harvest", repo_root, summary_output, get_timeout_seconds))
+        summary_output.parent.mkdir(parents=True, exist_ok=True)
+        summary_output.write_text("[]", encoding="utf-8")
+        return []
+
+    monkeypatch.setattr(mod, "_print_from_ledger_view", fake_print_from_ledger_view)
+    monkeypatch.setattr(mod, "harvest_modal_calls", fake_harvest_modal_calls)
+
+    rc = mod.main(
+        [
+            "--from-ledger",
+            "--execute",
+            "--repo-root",
+            str(tmp_path),
+            "--summary-output",
+            "reports/summary.json",
+            "--get-timeout-seconds",
+            "7",
+        ]
+    )
+
+    assert rc == 0
+    assert calls[0] == ("ledger_view", tmp_path.resolve())
+    assert calls[1][0] == "harvest"
+    assert calls[1][1] == tmp_path.resolve()
+    assert calls[1][2] == tmp_path.resolve() / "reports" / "summary.json"
+    assert calls[1][3] == 7
+
+
+def test_harvest_modal_calls_appends_call_id_ledger_terminal_event(
+    tmp_path: Path,
+) -> None:
+    mod = _load_harvest_module()
+    from tac.deploy.modal.call_id_ledger import (
+        register_dispatched_call_id,
+        query_by_call_id,
+        query_unharvested,
+    )
+
+    ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    lock = ledger.with_suffix(ledger.suffix + ".lock")
+    register_dispatched_call_id(
+        call_id="fc-demo",
+        lane_id="lane_demo",
+        label="demo",
+        path=ledger,
+        lock_path=lock,
+    )
+
+    result = mod._append_call_id_ledger_terminal_event(
+        repo_root=tmp_path,
+        metadata={
+            "call_id": "fc-demo",
+            "lane_id": "lane_demo",
+            "label": "demo",
+            "platform": "modal",
+            "gpu": "T4",
+            "dispatched_at": "2026-05-15T00:00:00Z",
+        },
+        harvested={"rc": 0, "elapsed_seconds": 12.5, "n_artifacts": 3},
+        terminal_claim={
+            "appended": True,
+            "status": "completed_modal_training_recovered_no_score_claim",
+        },
+        agent="pytest",
+    )
+
+    assert result["appended"] is True
+    assert query_unharvested(path=ledger) == []
+    rows = query_by_call_id("fc-demo", path=ledger)
+    assert [row["status"] for row in rows] == ["dispatched", "harvested"]
+    assert rows[-1]["rc"] == 0
+    assert rows[-1]["elapsed_seconds"] == 12.5
+
+    second = mod._append_call_id_ledger_terminal_event(
+        repo_root=tmp_path,
+        metadata={"call_id": "fc-demo"},
+        harvested={"rc": 0},
+        terminal_claim={"appended": True, "status": "completed_modal_training_recovered_no_score_claim"},
+        agent="pytest",
+    )
+    assert second["already_terminal"] is True
+    assert len(query_by_call_id("fc-demo", path=ledger)) == 2
+
+
 def test_harvest_modal_calls_rejects_unsafe_artifact_paths(tmp_path: Path) -> None:
     mod = _load_harvest_module()
     root = tmp_path / "harvested_artifacts"

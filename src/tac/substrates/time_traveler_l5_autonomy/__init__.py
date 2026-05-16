@@ -80,6 +80,9 @@ from tac.substrates.time_traveler_l5_autonomy.score_aware_loss import (
     TimeTravelerLossWeights,
     TimeTravelerScoreAwareLoss,
 )
+from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
+    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
+)
 
 __all__ = [
     "EVAL_HW",
@@ -92,6 +95,7 @@ __all__ = [
     "TT5L_MAGIC",
     "TT5L_SCHEMA_VERSION",
     "TT5L_SECTION_ROLES",
+    "TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT",
     "TimeTravelerArchive",
     "TimeTravelerConfig",
     "TimeTravelerLossWeights",

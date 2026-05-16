@@ -361,6 +361,168 @@ def _append_terminal_claim_evidence(
     }
 
 
+def _coerce_int(value: Any) -> int | None:
+    if type(value) is int:
+        return value
+    return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    if type(value) in {int, float}:
+        return float(value)
+    return None
+
+
+def _call_ledger_status_from_terminal(
+    *,
+    harvested: dict[str, Any] | None,
+    terminal_claim: dict[str, Any] | None,
+) -> str | None:
+    try:
+        from tac.deploy.modal.call_id_ledger import (
+            STATUS_FAILED,
+            STATUS_HARVESTED,
+            STATUS_STALE,
+        )
+    except Exception:  # pragma: no cover - import failure handled by caller
+        return None
+
+    claim_status = str((terminal_claim or {}).get("status") or "")
+    harvest_status = str((harvested or {}).get("status") or "")
+    crash_kind = str((harvested or {}).get("crash_kind") or "")
+    if claim_status == "failed_modal_training_result_cache_expired":
+        return STATUS_STALE
+    if harvest_status == "expired" or crash_kind == "RESULT_CACHE_EXPIRED":
+        return STATUS_STALE
+    if claim_status.startswith("failed"):
+        return STATUS_FAILED
+    if claim_status.startswith("completed"):
+        return STATUS_HARVESTED
+
+    rc = None
+    if harvested is not None:
+        rc = _coerce_int(harvested.get("rc"))
+        if rc is None:
+            rc = _coerce_int(harvested.get("returncode"))
+    if rc == 0:
+        return STATUS_HARVESTED
+    if rc is not None:
+        return STATUS_FAILED
+    if harvest_status.startswith("error_") or harvest_status == "function_timeout":
+        return STATUS_FAILED
+    return None
+
+
+def _append_call_id_ledger_terminal_event(
+    *,
+    repo_root: Path,
+    metadata: dict[str, Any],
+    harvested: dict[str, Any] | None,
+    terminal_claim: dict[str, Any] | None,
+    agent: str,
+) -> dict[str, Any]:
+    """Mirror a terminal harvest into the canonical Modal call_id ledger."""
+
+    call_id = str(metadata.get("call_id") or "").strip()
+    if not call_id or call_id == "?":
+        return {"appended": False, "reason": "metadata_missing_call_id"}
+    status = _call_ledger_status_from_terminal(
+        harvested=harvested,
+        terminal_claim=terminal_claim,
+    )
+    if status is None:
+        return {"appended": False, "reason": "nonterminal_or_unclassified", "call_id": call_id}
+
+    try:
+        from tac.deploy.modal.call_id_ledger import (
+            TERMINAL_STATUSES,
+            latest_status_by_call_id,
+            update_call_id_outcome,
+        )
+    except Exception as exc:  # pragma: no cover - defensive local import
+        return {
+            "appended": False,
+            "reason": f"call_id_ledger_import_failed:{type(exc).__name__}:{exc}",
+            "call_id": call_id,
+        }
+
+    ledger_path = repo_root / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    lock_path = ledger_path.with_suffix(ledger_path.suffix + ".lock")
+    try:
+        latest = latest_status_by_call_id(path=ledger_path).get(call_id)
+    except Exception as exc:
+        return {
+            "appended": False,
+            "reason": f"call_id_ledger_status_read_failed:{type(exc).__name__}:{exc}",
+            "call_id": call_id,
+        }
+    if latest in TERMINAL_STATUSES:
+        return {
+            "appended": False,
+            "already_terminal": True,
+            "call_id": call_id,
+            "latest_status": latest,
+        }
+
+    rc = None
+    elapsed_seconds = None
+    score = None
+    score_axis = None
+    archive_sha256 = None
+    archive_bytes = None
+    evidence_grade = None
+    if isinstance(harvested, dict):
+        rc = _coerce_int(harvested.get("rc"))
+        if rc is None:
+            rc = _coerce_int(harvested.get("returncode"))
+        elapsed_seconds = _coerce_float(harvested.get("elapsed_seconds"))
+        score = _coerce_float(harvested.get("score"))
+        score_axis = harvested.get("score_axis")
+        archive_sha256 = harvested.get("archive_sha256")
+        archive_bytes = _coerce_int(harvested.get("archive_bytes"))
+        evidence_grade = harvested.get("evidence_grade")
+    try:
+        record = update_call_id_outcome(
+            call_id=call_id,
+            status=status,
+            harvest_result=harvested,
+            rc=rc,
+            elapsed_seconds=elapsed_seconds,
+            score=score,
+            score_axis=score_axis if isinstance(score_axis, str) else None,
+            archive_sha256=archive_sha256 if isinstance(archive_sha256, str) else None,
+            archive_bytes=archive_bytes,
+            evidence_grade=evidence_grade if isinstance(evidence_grade, str) else None,
+            agent=agent,
+            path=ledger_path,
+            lock_path=lock_path,
+            lane_id=metadata.get("lane_id"),
+            label=metadata.get("label"),
+            platform=metadata.get("platform", "modal"),
+            gpu=metadata.get("gpu"),
+            expected_cost_usd=metadata.get("expected_cost_usd"),
+            expected_axis=metadata.get("expected_axis"),
+            recipe=metadata.get("recipe"),
+            dispatched_at_utc=metadata.get("dispatched_at"),
+            max_seconds=metadata.get("max_seconds"),
+            mounted_code_git_head=metadata.get("mounted_code_git_head"),
+        )
+    except Exception as exc:
+        return {
+            "appended": False,
+            "reason": f"call_id_ledger_append_failed:{type(exc).__name__}:{exc}",
+            "call_id": call_id,
+            "target_status": status,
+        }
+    return {
+        "appended": True,
+        "call_id": call_id,
+        "status": status,
+        "ledger_path": str(ledger_path),
+        "written_at_utc": record.get("written_at_utc"),
+    }
+
+
 def list_modal_lanes(*, repo_root: Path) -> list[dict[str, Any]]:
     """Return read-only Modal lane metadata for operator status probes."""
 
@@ -529,17 +691,24 @@ def harvest_modal_calls(
                 out_dir=out_dir,
                 terminal_claim=terminal_claim,
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status="already_harvested",
-                    call_id=call_id,
-                    harvested=harvested,
-                    cost_anchor=cost_anchor,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=harvested,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
             )
+            entry = modal_training_summary_entry(
+                label=label,
+                status="already_harvested",
+                call_id=call_id,
+                harvested=harvested,
+                cost_anchor=cost_anchor,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
+            )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
             continue
 
         print(f"\n=== {label} ({call_id[:30]}, dispatched {dispatched}) ===")
@@ -657,6 +826,14 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=harvest_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            harvest_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(harvest_summary, indent=2, default=str),
                 encoding="utf-8",
@@ -676,6 +853,7 @@ def harvest_modal_calls(
                     "cost_band_anchor": cost_anchor,
                     "terminal_claim": terminal_claim,
                     "terminal_evidence": terminal_evidence,
+                    "call_id_ledger": call_id_ledger,
                 }
             )
 
@@ -702,20 +880,28 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=expired_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            expired_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(expired_summary, indent=2, default=str),
                 encoding="utf-8",
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status="expired",
-                    call_id=call_id,
-                    harvested=expired_summary,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            entry = modal_training_summary_entry(
+                label=label,
+                status="expired",
+                call_id=call_id,
+                harvested=expired_summary,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
             )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
         except modal.exception.FunctionTimeoutError as exc:
             print(f"  FUNCTION TIMEOUT: {exc}")
             terminal_claim = append_modal_training_terminal_claim(
@@ -741,20 +927,28 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=timeout_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            timeout_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(timeout_summary, indent=2, default=str),
                 encoding="utf-8",
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status="function_timeout",
-                    call_id=call_id,
-                    harvested=timeout_summary,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            entry = modal_training_summary_entry(
+                label=label,
+                status="function_timeout",
+                call_id=call_id,
+                harvested=timeout_summary,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
             )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
         except UnsafeModalArtifactPath as exc:
             print(f"  UNSAFE ARTIFACT PATH: {exc}")
             terminal_claim = append_modal_training_terminal_claim(
@@ -780,20 +974,28 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=unsafe_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            unsafe_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(unsafe_summary, indent=2, default=str),
                 encoding="utf-8",
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status="unsafe_artifact_path",
-                    call_id=call_id,
-                    harvested=unsafe_summary,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            entry = modal_training_summary_entry(
+                label=label,
+                status="unsafe_artifact_path",
+                call_id=call_id,
+                harvested=unsafe_summary,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
             )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
         except ModalArtifactWriteError as exc:
             print(f"  ARTIFACT WRITE FAILURE: {exc}")
             terminal_claim = append_modal_training_terminal_claim(
@@ -820,20 +1022,28 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=write_error_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            write_error_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(write_error_summary, indent=2, default=str),
                 encoding="utf-8",
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status="invalid_artifacts",
-                    call_id=call_id,
-                    harvested=write_error_summary,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            entry = modal_training_summary_entry(
+                label=label,
+                status="invalid_artifacts",
+                call_id=call_id,
+                harvested=write_error_summary,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
             )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
         except TimeoutError:
             print("  NOT READY (still queued or running)")
             summary.append({"label": label, "status": "not_ready", "call_id": call_id})
@@ -863,20 +1073,28 @@ def harvest_modal_calls(
                 "terminal_claim": terminal_claim,
                 "terminal_evidence": terminal_evidence,
             }
+            call_id_ledger = _append_call_id_ledger_terminal_event(
+                repo_root=repo_root,
+                metadata=meta,
+                harvested=error_summary,
+                terminal_claim=terminal_claim,
+                agent="codex:harvest_modal_calls",
+            )
+            error_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
                 json.dumps(error_summary, indent=2, default=str),
                 encoding="utf-8",
             )
-            summary.append(
-                modal_training_summary_entry(
-                    label=label,
-                    status=f"error_{type(exc).__name__}",
-                    call_id=call_id,
-                    harvested=error_summary,
-                    terminal_claim=terminal_claim,
-                    terminal_evidence=terminal_evidence,
-                )
+            entry = modal_training_summary_entry(
+                label=label,
+                status=f"error_{type(exc).__name__}",
+                call_id=call_id,
+                harvested=error_summary,
+                terminal_claim=terminal_claim,
+                terminal_evidence=terminal_evidence,
             )
+            entry["call_id_ledger"] = call_id_ledger
+            summary.append(entry)
 
     print("\n\n=== SUMMARY ===")
     for row in summary:
@@ -924,9 +1142,13 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     repo_root = args.repo_root.resolve()
     if args.from_ledger:
-        # Catalog #245 canonical ledger consumer surface. Always read-only.
+        # Catalog #245 canonical ledger consumer surface. Without --execute it
+        # remains a read-only status view; with --execute we print the canonical
+        # index first, then run the normal harvest path and mirror terminal
+        # outcomes back into the ledger.
         _print_from_ledger_view(repo_root)
-        return 0
+        if not args.execute:
+            return 0
     if not args.execute:
         _print_plan(list_modal_lanes(repo_root=repo_root))
         return 0
