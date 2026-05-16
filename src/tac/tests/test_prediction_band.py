@@ -22,6 +22,25 @@ def _sha(seed: str) -> str:
     return (seed * 64)[:64]
 
 
+def _exact_anchor(axis: str = "contest-cuda") -> dict[str, object]:
+    archive_bytes = 1
+    score = 25.0 * archive_bytes / 37_545_489
+    return {
+        "axis": axis,
+        "archive_sha256": _sha("c"),
+        "runtime_tree_sha256": _sha("d"),
+        "score": score,
+        "seg_dist": 0.0,
+        "pose_dist": 0.0,
+        "archive_bytes": archive_bytes,
+        "n_samples": 1200,
+        "hardware": "modal-t4",
+        "auth_eval_command": f"contest_auth_eval --axis {axis}",
+        "log_path": f"experiments/results/z3/{axis}.log",
+        "artifact_path": "experiments/results/z3/anchor.json",
+    }
+
+
 def _valid_band() -> PredictionBand:
     return PredictionBand(
         band_id="pb_test_valid_v1",
@@ -52,13 +71,7 @@ def _valid_band() -> PredictionBand:
         supersession=SupersessionRef(status="active"),
         empirical_anchor=EmpiricalAnchorRef(
             status="landed",
-            anchors=({
-                "axis": "contest-cuda",
-                "archive_sha256": _sha("c"),
-                "runtime_tree_sha256": _sha("d"),
-                "score": 0.1987,
-                "artifact_path": "experiments/results/z3/anchor.json",
-            },),
+            anchors=(_exact_anchor(),),
         ),
         planning_only=True,
         score_claim=False,
@@ -101,8 +114,27 @@ def test_landed_anchor_axis_mismatch_blocks_rank_reward():
             band,
             empirical_anchor=EmpiricalAnchorRef(
                 status="landed",
+                anchors=(_exact_anchor("macOS-CPU advisory"),),
+            ),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_axis_mismatch" in verdict.blockers
+
+
+def test_landed_anchor_requires_exact_eval_metric_closure():
+    band = _valid_band()
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            empirical_anchor=EmpiricalAnchorRef(
+                status="landed",
                 anchors=({
-                    "axis": "macOS-CPU advisory",
+                    "axis": "contest-cuda",
                     "archive_sha256": _sha("c"),
                     "runtime_tree_sha256": _sha("d"),
                     "score": 0.1987,
@@ -116,7 +148,32 @@ def test_landed_anchor_axis_mismatch_blocks_rank_reward():
     )
 
     assert verdict.valid_for_rank_reward is False
-    assert "prediction_band_empirical_anchor_axis_mismatch" in verdict.blockers
+    assert "prediction_band_empirical_anchor_n_samples_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_hardware_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_command_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_log_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_archive_bytes_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_seg_dist_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_pose_dist_missing" in verdict.blockers
+
+
+def test_landed_anchor_rejects_score_formula_mismatch():
+    band = _valid_band()
+    bad_anchor = dict(_exact_anchor())
+    bad_anchor["score"] = 0.1987
+
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            empirical_anchor=EmpiricalAnchorRef(status="landed", anchors=(bad_anchor,)),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_score_formula_mismatch" in verdict.blockers
 
 
 def test_landed_anchor_missing_custody_blocks_rank_reward():

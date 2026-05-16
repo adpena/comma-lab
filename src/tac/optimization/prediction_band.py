@@ -24,6 +24,8 @@ from tac.optimization.research_basis import (
 )
 
 SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+SCORE_ARCHIVE_BYTES_DENOMINATOR = 37_545_489
+SCORE_FORMULA_TOLERANCE = 1e-9
 
 BandKind = Literal["delta_score", "absolute_score"]
 SupersessionStatus = Literal["active", "superseded", "deprecated"]
@@ -123,6 +125,23 @@ def _as_tuple_str(value: object) -> tuple[str, ...]:
 
 def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _finite_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        out = float(value)
+        return out if math.isfinite(out) else None
+    return None
+
+
+def _positive_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
 
 
 def prediction_band_from_mapping(payload: Mapping[str, Any]) -> PredictionBand:
@@ -318,10 +337,10 @@ def validate_prediction_band(
                     f"{anchor_axis!r}!={band.axis!r}"
                 )
             score = anchor.get("score")
+            score_value = _finite_float(score)
             if (
                 isinstance(score, bool)
-                or not isinstance(score, int | float)
-                or not math.isfinite(float(score))
+                or score_value is None
             ):
                 blockers.append("prediction_band_empirical_anchor_score_missing")
                 annotations.append(f"empirical_anchor_score_missing_index={anchor_idx}")
@@ -337,6 +356,48 @@ def validate_prediction_band(
                 annotations.append(
                     f"empirical_anchor_artifact_missing_index={anchor_idx}"
                 )
+            seg_dist = _finite_float(anchor.get("seg_dist"))
+            pose_dist = _finite_float(anchor.get("pose_dist"))
+            archive_bytes = _positive_int(anchor.get("archive_bytes"))
+            n_samples = _positive_int(anchor.get("n_samples"))
+            if n_samples is None:
+                blockers.append("prediction_band_empirical_anchor_n_samples_missing")
+                annotations.append(f"empirical_anchor_n_samples_missing_index={anchor_idx}")
+            if not str(anchor.get("hardware") or "").strip():
+                blockers.append("prediction_band_empirical_anchor_hardware_missing")
+                annotations.append(f"empirical_anchor_hardware_missing_index={anchor_idx}")
+            if not str(anchor.get("auth_eval_command") or "").strip():
+                blockers.append("prediction_band_empirical_anchor_command_missing")
+                annotations.append(f"empirical_anchor_command_missing_index={anchor_idx}")
+            if not str(anchor.get("log_path") or "").strip():
+                blockers.append("prediction_band_empirical_anchor_log_missing")
+                annotations.append(f"empirical_anchor_log_missing_index={anchor_idx}")
+            if archive_bytes is None:
+                blockers.append("prediction_band_empirical_anchor_archive_bytes_missing")
+                annotations.append(f"empirical_anchor_archive_bytes_missing_index={anchor_idx}")
+            if seg_dist is None or seg_dist < 0.0:
+                blockers.append("prediction_band_empirical_anchor_seg_dist_missing")
+                annotations.append(f"empirical_anchor_seg_dist_missing_index={anchor_idx}")
+            if pose_dist is None or pose_dist < 0.0:
+                blockers.append("prediction_band_empirical_anchor_pose_dist_missing")
+                annotations.append(f"empirical_anchor_pose_dist_missing_index={anchor_idx}")
+            if (
+                score_value is not None
+                and seg_dist is not None
+                and pose_dist is not None
+                and archive_bytes is not None
+            ):
+                recomputed = (
+                    100.0 * seg_dist
+                    + math.sqrt(10.0 * pose_dist)
+                    + 25.0 * archive_bytes / SCORE_ARCHIVE_BYTES_DENOMINATOR
+                )
+                if abs(score_value - recomputed) > SCORE_FORMULA_TOLERANCE:
+                    blockers.append("prediction_band_empirical_anchor_score_formula_mismatch")
+                    annotations.append(
+                        f"empirical_anchor_score_formula_mismatch_index={anchor_idx}:"
+                        f"{score_value:.12g}!={recomputed:.12g}"
+                    )
 
     valid_for_rank_reward = not blockers
     valid_for_dispatch_planning = "prediction_band_score_claim_forbidden" not in blockers
