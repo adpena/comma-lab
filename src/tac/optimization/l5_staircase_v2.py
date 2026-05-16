@@ -59,6 +59,9 @@ PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = (
     "4a13dbf3f79a311acd9b05911b777f6a9e3e199a05aa8bd0bf4da900141cd870"
 )
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
+L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
+    "l5_v2_pr106_packetir_stack_cell_candidates_v1"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -467,6 +470,102 @@ def l5_v2_packetir_stack_evidence_payload(
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
+def _json_float(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    as_float = float(value)
+    return as_float if math.isfinite(as_float) else None
+
+
+def l5_v2_pr106_stack_cell_candidates(
+    *,
+    repo_root: str | Path | None = None,
+    top_k: int | None = None,
+) -> dict[str, Any]:
+    """Propose TT5L x PR106 PacketIR stack cells without promotion authority."""
+
+    packetir_evidence = l5_v2_packetir_stack_evidence_payload(repo_root=repo_root)
+    candidates: list[dict[str, Any]] = []
+    for row in _mapping_items(packetir_evidence.get("paired_candidates")):
+        axis_evidence = row.get("axis_evidence")
+        if not isinstance(axis_evidence, Mapping):
+            continue
+        scores: dict[str, float] = {}
+        archive_sizes: list[int] = []
+        for axis in _REQUIRED_EXACT_AXES:
+            axis_row = axis_evidence.get(axis)
+            if not isinstance(axis_row, Mapping):
+                continue
+            score = _json_float(axis_row.get("canonical_score"))
+            if score is not None:
+                scores[axis] = score
+            archive_size = _non_bool_int(axis_row.get("archive_size_bytes"))
+            if archive_size is not None and archive_size >= 0:
+                archive_sizes.append(archive_size)
+        source_max_axis_score = max(scores.values()) if scores else None
+        candidates.append(
+            {
+                "cell_id": f"{SUBJECT_ID}+{row.get('candidate_id')}",
+                "l5_subject_id": SUBJECT_ID,
+                "packetir_candidate_id": row.get("candidate_id"),
+                "packetir_format_id": row.get("format_id"),
+                "source_archive_sha256": row.get("archive_sha256"),
+                "source_archive_path": row.get("archive_path"),
+                "source_axis_scores": scores,
+                "source_max_axis_score": source_max_axis_score,
+                "source_max_archive_size_bytes": max(archive_sizes)
+                if archive_sizes
+                else None,
+                "selection_basis": (
+                    "paired PR106 PacketIR source rows only; lower max paired "
+                    "axis score sorts first but is not a composite score claim"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "blockers": [
+                    "requires_l5_v2_composite_archive_materialization",
+                    "requires_l5_v2_composite_paired_exact_eval",
+                    "requires_composite_sideinfo_consumption_proof",
+                ],
+            }
+        )
+    candidates.sort(
+        key=lambda item: (
+            float("inf")
+            if item["source_max_axis_score"] is None
+            else float(item["source_max_axis_score"]),
+            float("inf")
+            if item["source_max_archive_size_bytes"] is None
+            else float(item["source_max_archive_size_bytes"]),
+            str(item["packetir_candidate_id"] or ""),
+        )
+    )
+    if top_k is not None:
+        candidates = candidates[: max(int(top_k), 0)]
+    blockers = list(packetir_evidence.get("blockers", []))
+    if not candidates:
+        blockers.append("l5_v2_pr106_stack_cell_candidates_missing")
+    return {
+        "schema": L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA,
+        "subject_id": SUBJECT_ID,
+        "source_packetir_evidence_schema": packetir_evidence.get("schema"),
+        "source_packetir_paired_candidate_count": packetir_evidence.get(
+            "paired_candidate_count",
+        ),
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "evidence_semantics": (
+            "stack-cell proposal surface only; every cell requires a real "
+            "composite archive, side-info consumption proof, and paired exact eval"
+        ),
         "blockers": blockers,
     }
 
@@ -1536,12 +1635,16 @@ def l5_v2_dispatch_readiness(
         "packetir_stack_evidence": l5_v2_packetir_stack_evidence_payload(
             repo_root=resolved_repo_root,
         ),
+        "pr106_stack_cell_candidates": l5_v2_pr106_stack_cell_candidates(
+            repo_root=resolved_repo_root,
+        ),
     }
 
 
 __all__ = [
     "CAMPAIGN_ID",
     "L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA",
+    "L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA",
     "LANE_ID",
     "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH",
     "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256",
@@ -1557,6 +1660,7 @@ __all__ = [
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
     "l5_v2_packetir_stack_evidence_payload",
+    "l5_v2_pr106_stack_cell_candidates",
     "l5_v2_prediction_band_payload",
     "l5_v2_prediction_band_verdict",
     "l5_v2_required_gates",
