@@ -29,6 +29,7 @@ import io
 from pathlib import Path
 
 import pytest
+import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TRAINER_PATH = REPO_ROOT / "experiments" / "train_substrate_time_traveler_l5_autonomy.py"
@@ -44,6 +45,92 @@ def trainer_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_val_loop_applies_same_quantized_side_info_path_as_inflate(trainer_module):
+    """Validation must score the same residual-corrected frames as training/inflate."""
+
+    class StubSubstrate:
+        def eval(self):
+            self.did_eval = True
+
+        def render_pair(self, pair_idx: int):
+            assert pair_idx == 0
+            frame = torch.full((1, 3, 8, 8), 0.5)
+            return frame.clone(), frame.clone()
+
+    class MeanLoss:
+        def __call__(
+            self,
+            pred_a,
+            pred_b,
+            gt_a,
+            gt_b,
+            archive_bytes_proxy,
+            *,
+            apply_eval_roundtrip: bool,
+            noise_std: float,
+            **_kwargs,
+        ):
+            assert apply_eval_roundtrip is True
+            assert noise_std == 0.0
+            assert archive_bytes_proxy.item() == 123.0
+            assert gt_a.shape == (1, 3, 8, 8)
+            assert gt_b.shape == (1, 3, 8, 8)
+            return pred_a.mean() + pred_b.mean(), {}
+
+    gt_tensor = torch.zeros((1, 2, 3, 8, 8))
+    zero_side = torch.zeros((1, 45))
+    active_side = torch.zeros((1, 45))
+    active_side[0, 36:45] = 64.0
+
+    zero_val = trainer_module._run_val_loop(
+        StubSubstrate(),
+        MeanLoss(),
+        gt_tensor,
+        [0],
+        torch.tensor(123.0),
+        torch.device("cpu"),
+        per_pair_side_info_float=zero_side,
+        int8_scale=64.0,
+    )
+    active_val = trainer_module._run_val_loop(
+        StubSubstrate(),
+        MeanLoss(),
+        gt_tensor,
+        [0],
+        torch.tensor(123.0),
+        torch.device("cpu"),
+        per_pair_side_info_float=active_side,
+        int8_scale=64.0,
+    )
+
+    assert active_val != zero_val
+
+
+def test_state_dict_cpu_snapshot_clones_current_weights(trainer_module):
+    """Checkpoint snapshots must preserve EMA-applied weights after live restore."""
+
+    model = torch.nn.Linear(1, 1, bias=False)
+    with torch.no_grad():
+        model.weight.fill_(2.0)
+
+    snapshot = trainer_module._state_dict_cpu_snapshot(model)
+    with torch.no_grad():
+        model.weight.fill_(9.0)
+
+    assert snapshot["weight"].device.type == "cpu"
+    assert snapshot["weight"].item() == 2.0
+    assert model.weight.item() == 9.0
+
+
+def test_best_checkpoint_uses_ema_snapshot_taken_before_live_restore() -> None:
+    """The full trainer must save the EMA-applied state, not restored live weights."""
+
+    text = TRAINER_PATH.read_text(encoding="utf-8")
+    assert "ema_eval_state = _state_dict_cpu_snapshot(substrate)" in text
+    assert "substrate.load_state_dict(live_state)" in text
+    assert '"state_dict": ema_eval_state' in text
 
 
 # ---------------------------------------------------------------------------

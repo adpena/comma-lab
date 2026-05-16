@@ -757,21 +757,48 @@ def _smoke_main(args: argparse.Namespace) -> int:
 # Full main (CUDA-required)
 # ---------------------------------------------------------------------------
 
+def _state_dict_cpu_snapshot(module) -> dict[str, Any]:
+    """Clone a module state dict to CPU for checkpoint custody."""
+    return {
+        key: value.detach().cpu().clone()
+        for key, value in module.state_dict().items()
+    }
+
+
 def _run_val_loop(
-    substrate, loss_fn, gt_tensor, val_pair_indices, archive_bytes_proxy, device
+    substrate,
+    loss_fn,
+    gt_tensor,
+    val_pair_indices,
+    archive_bytes_proxy,
+    device,
+    *,
+    per_pair_side_info_float,
+    int8_scale: float,
 ) -> float:
     """Validation pass with EMA shadow + ``torch.inference_mode`` (Catalog #180)."""
     import torch
+
+    from tac.substrates.time_traveler_l5_autonomy.inflate import (
+        apply_quantized_per_pair_residual_for_training,
+    )
 
     substrate.eval()
     losses: list[float] = []
     with torch.inference_mode():
         for pair_id in val_pair_indices:
-            rgb_0, rgb_1 = substrate.render_pair(int(pair_id))
+            pair_idx = int(pair_id)
+            rgb_0, rgb_1 = substrate.render_pair(pair_idx)
+            rgb_0, rgb_1, _side_info_int8_ste = apply_quantized_per_pair_residual_for_training(
+                rgb_0,
+                rgb_1,
+                per_pair_side_info_float[pair_idx],
+                int8_scale=int8_scale,
+            )
             rgb_0_b = (rgb_0 * 255.0).clamp(0.0, 255.0)
             rgb_1_b = (rgb_1 * 255.0).clamp(0.0, 255.0)
-            gt_a = gt_tensor[pair_id, 0:1]
-            gt_b = gt_tensor[pair_id, 1:2]
+            gt_a = gt_tensor[pair_idx, 0:1]
+            gt_b = gt_tensor[pair_idx, 1:2]
             # Disable eval-roundtrip noise; keep apply_eval_roundtrip=True.
             with torch.no_grad():
                 loss, _ = loss_fn(
@@ -1087,6 +1114,7 @@ def _full_main(args: argparse.Namespace) -> int:
             if epoch % max(1, args.val_every_epochs) == 0 or epoch == args.epochs - 1:
                 live_state = {k: v.detach().clone() for k, v in substrate.state_dict().items()}
                 ema.apply(substrate)
+                ema_eval_state = _state_dict_cpu_snapshot(substrate)
                 try:
                     val_lag = _run_val_loop(
                         substrate, loss_fn, gt_pair_tensor, val_indices_pool,
@@ -1095,6 +1123,8 @@ def _full_main(args: argparse.Namespace) -> int:
                             device=device,
                         ),
                         device,
+                        per_pair_side_info_float=per_pair_side_info_float,
+                        int8_scale=args.int8_scale,
                     )
                 finally:
                     substrate.load_state_dict(live_state)
@@ -1109,10 +1139,9 @@ def _full_main(args: argparse.Namespace) -> int:
                     best_val_lag = val_lag
                     best_epoch = epoch
                     # Save EMA shadow (NEVER live weights — Catalog #88).
-                    ema_state = {k: v.detach().cpu() for k, v in substrate.state_dict().items()}
                     torch.save(
                         {
-                            "state_dict": ema_state,
+                            "state_dict": ema_eval_state,
                             "per_pair_side_info_float": per_pair_side_info_float.detach().cpu(),
                             "config": asdict(cfg),
                             "epoch": epoch,
