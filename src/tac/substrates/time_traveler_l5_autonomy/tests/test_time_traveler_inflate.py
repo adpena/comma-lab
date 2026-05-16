@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import torch
 
@@ -26,6 +28,7 @@ def _build_toy_archive_bytes(
     num_pairs: int = 4,
     *,
     side_info: np.ndarray | None = None,
+    state_mutator: Callable[[dict[str, torch.Tensor]], None] | None = None,
 ) -> bytes:
     """Build a small TT5L archive from a freshly initialized substrate."""
     torch.manual_seed(0)
@@ -38,6 +41,9 @@ def _build_toy_archive_bytes(
     )
     substrate = TimeTravelerSubstrate(cfg)
     sd = substrate.state_dict()
+    if state_mutator is not None:
+        sd = {key: value.clone() for key, value in sd.items()}
+        state_mutator(sd)
     if side_info is None:
         side_info = np.zeros((num_pairs, cfg.per_pair_side_info_bytes), dtype=np.int8)
     meta = {
@@ -204,6 +210,38 @@ def test_inflate_one_video_side_info_bytes_affect_decoded_frames(tmp_path) -> No
     assert inflate_one_video(zero_archive, zero_out, device="cpu") == 2
     assert inflate_one_video(active_archive, active_out, device="cpu") == 2
     assert zero_out.read_bytes() != active_out.read_bytes()
+
+
+def test_inflate_one_video_world_model_pose_and_dynamics_bytes_affect_decoded_frames(
+    tmp_path,
+) -> None:
+    """Pose-code and dynamics bytes in WORLD_MODEL_BLOB affect raw output."""
+
+    def mutate_pose_codes(sd: dict[str, torch.Tensor]) -> None:
+        sd["pose_codes"][0, 0] += 8.0
+
+    def mutate_dynamics_bias(sd: dict[str, torch.Tensor]) -> None:
+        sd["dynamics.bias"][1] += 8.0
+
+    base_archive = _build_toy_archive_bytes(num_pairs=1)
+    pose_archive = _build_toy_archive_bytes(
+        num_pairs=1,
+        state_mutator=mutate_pose_codes,
+    )
+    dynamics_archive = _build_toy_archive_bytes(
+        num_pairs=1,
+        state_mutator=mutate_dynamics_bias,
+    )
+    base_out = tmp_path / "base.raw"
+    pose_out = tmp_path / "pose.raw"
+    dynamics_out = tmp_path / "dynamics.raw"
+
+    assert inflate_one_video(base_archive, base_out, device="cpu") == 2
+    assert inflate_one_video(pose_archive, pose_out, device="cpu") == 2
+    assert inflate_one_video(dynamics_archive, dynamics_out, device="cpu") == 2
+    base_bytes = base_out.read_bytes()
+    assert pose_out.read_bytes() != base_bytes
+    assert dynamics_out.read_bytes() != base_bytes
 
 
 def test_inflate_one_video_consumes_all_side_info_sections(tmp_path) -> None:
