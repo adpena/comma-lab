@@ -67,7 +67,7 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
     ".omx/research/l5_v2_packetir_section_entropy_matrix_20260516_codex.json"
 )
 L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256 = (
-    "bc5786c8d59d9ec97360e3fd7938dc5c0db103ad87d5f66510d2f9cd099468d1"
+    "f7419201dcc4c8307d3451cbf26797669a39356488556721be31f5cd76796bf2"
 )
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
@@ -641,6 +641,10 @@ def l5_v2_packetir_section_entropy_evidence_payload(
     profiled_candidate_count = matrix.get("profiled_candidate_count", 0)
     prototype_row_count = matrix.get("prototype_row_count", 0)
     rate_positive_count = matrix.get("rate_positive_prototype_row_count", 0)
+    adaptive_row_count = matrix.get("adaptive_prototype_row_count", 0)
+    adaptive_rate_positive_count = matrix.get(
+        "rate_positive_adaptive_prototype_row_count", 0
+    )
     if not isinstance(profiled_candidate_count, int) or isinstance(
         profiled_candidate_count, bool
     ):
@@ -658,6 +662,16 @@ def l5_v2_packetir_section_entropy_evidence_payload(
             "l5_v2_packetir_section_entropy_rate_positive_count_not_int"
         )
         rate_positive_count = 0
+    if not isinstance(adaptive_row_count, int) or isinstance(adaptive_row_count, bool):
+        blockers.append("l5_v2_packetir_section_entropy_adaptive_row_count_not_int")
+        adaptive_row_count = 0
+    if not isinstance(adaptive_rate_positive_count, int) or isinstance(
+        adaptive_rate_positive_count, bool
+    ):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_adaptive_rate_positive_count_not_int"
+        )
+        adaptive_rate_positive_count = 0
     if prototype_rows and prototype_row_count != len(prototype_rows):
         blockers.append("l5_v2_packetir_section_entropy_prototype_count_mismatch")
 
@@ -697,7 +711,13 @@ def l5_v2_packetir_section_entropy_evidence_payload(
         "profiled_candidate_count": profiled_candidate_count,
         "prototype_row_count": prototype_row_count,
         "rate_positive_prototype_row_count": rate_positive_count,
+        "adaptive_prototype_row_count": adaptive_row_count,
+        "rate_positive_adaptive_prototype_row_count": adaptive_rate_positive_count,
         "best_rate_positive_prototype": matrix.get("best_rate_positive_prototype"),
+        "best_adaptive_prototype": matrix.get("best_adaptive_prototype"),
+        "best_rate_positive_adaptive_prototype": matrix.get(
+            "best_rate_positive_adaptive_prototype"
+        ),
         "best_charged_prototype": best_charged_prototype,
         "evidence_semantics": (
             "Charged static-context PacketIR section recodes are planning "

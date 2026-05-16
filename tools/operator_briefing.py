@@ -1276,6 +1276,14 @@ def _l5_v2_frontier_readiness(
     section_entropy_best = section_entropy_matrix.get("best_rate_positive_prototype")
     if not isinstance(section_entropy_best, dict):
         section_entropy_best = None
+    section_entropy_best_adaptive = section_entropy_matrix.get("best_adaptive_prototype")
+    if not isinstance(section_entropy_best_adaptive, dict):
+        section_entropy_best_adaptive = None
+    section_entropy_best_rate_positive_adaptive = section_entropy_matrix.get(
+        "best_rate_positive_adaptive_prototype"
+    )
+    if not isinstance(section_entropy_best_rate_positive_adaptive, dict):
+        section_entropy_best_rate_positive_adaptive = None
     return {
         "schema": "pact.l5_v2_frontier_readiness.v1",
         "subject_id": "time_traveler_l5_autonomy",
@@ -1301,6 +1309,19 @@ def _l5_v2_frontier_readiness(
             section_entropy_matrix.get("rate_positive_prototype_row_count") or 0
         ),
         "packetir_section_entropy_best_rate_positive_prototype": section_entropy_best,
+        "packetir_section_entropy_adaptive_prototype_row_count": int(
+            section_entropy_matrix.get("adaptive_prototype_row_count") or 0
+        ),
+        "packetir_section_entropy_rate_positive_adaptive_prototype_row_count": int(
+            section_entropy_matrix.get("rate_positive_adaptive_prototype_row_count")
+            or 0
+        ),
+        "packetir_section_entropy_best_adaptive_prototype": (
+            section_entropy_best_adaptive
+        ),
+        "packetir_section_entropy_best_rate_positive_adaptive_prototype": (
+            section_entropy_best_rate_positive_adaptive
+        ),
         "active_dispatch_claim_count": active_dispatch_claim_count,
         "dispatch_claim_gate_blocked": active_dispatch_claim_count > 0,
         "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
@@ -1354,6 +1375,8 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  section entropy matrix:          {payload['packetir_section_entropy_matrix_path']}",
         f"  charged prototype rows:          {payload['packetir_section_entropy_prototype_row_count']}",
         f"  rate-positive prototypes:        {payload['packetir_section_entropy_rate_positive_prototype_row_count']}",
+        f"  adaptive prototype rows:         {payload['packetir_section_entropy_adaptive_prototype_row_count']}",
+        f"  adaptive rate-positive rows:     {payload['packetir_section_entropy_rate_positive_adaptive_prototype_row_count']}",
         f"  runtime-bound paired candidates: {payload['packetir_paired_candidate_count']}",
         f"  stack-cell candidates:           {payload['pr106_stack_cell_candidate_count']}",
         f"  next exact-eval targets:         {payload['next_exact_eval_target_count']}",

@@ -164,6 +164,73 @@ class ContextRecodeSection:
 
 
 @dataclass(frozen=True)
+class AdaptiveContextRecodeSection:
+    """Lossless adaptive-context prototype for one target section.
+
+    Unlike ``ContextRecodeSection``, this carries no static model table. A real
+    PacketIR runtime would derive the model online from already-decoded symbols;
+    this prototype therefore reports both the integrated bytes and the remaining
+    runtime/parity blockers instead of pretending to be dispatchable.
+    """
+
+    section_name: str
+    context_order: int
+    source_bytes: bytes
+    integrated_bytes: bytes
+    decoded_bytes: bytes
+    prefix_bytes: int
+    range_stream_bytes: int
+    initial_count: int
+    update_step: int
+
+    def manifest(self) -> dict[str, Any]:
+        source_sha = sha256_hex(self.source_bytes)
+        integrated_sha = sha256_hex(self.integrated_bytes)
+        decoded_sha = sha256_hex(self.decoded_bytes)
+        changed = integrated_sha != source_sha
+        roundtrip = decoded_sha == source_sha
+        blockers: list[str] = []
+        if self.context_order < HIGH_ORDER_MIN_CONTEXT_ORDER:
+            blockers.append("context_order_not_high_order")
+        if self.context_order == 0:
+            blockers.append("zero_order_arithmetic_control_not_candidate")
+        if not changed:
+            blockers.append("target_section_bytes_unchanged")
+            blockers.append("no_op_detector_failed")
+        if not roundtrip:
+            blockers.append("adaptive_context_recode_roundtrip_failed")
+        if len(self.integrated_bytes) >= len(self.source_bytes):
+            blockers.append(
+                "adaptive_prototype_not_rate_positive_after_integrated_overhead"
+            )
+        blockers.extend(ALWAYS_BLOCKERS)
+        return {
+            "section_name": self.section_name,
+            "context_order": self.context_order,
+            "codec": "adaptive_section_local_context_range_prototype_v1",
+            "source_section_bytes": len(self.source_bytes),
+            "integrated_section_bytes": len(self.integrated_bytes),
+            "delta_bytes_vs_source_section": len(self.integrated_bytes)
+            - len(self.source_bytes),
+            "source_section_sha256": source_sha,
+            "integrated_section_sha256": integrated_sha,
+            "decoded_section_sha256": decoded_sha,
+            "target_section_bytes_changed": changed,
+            "lossless_roundtrip_proven": roundtrip,
+            "no_op_detector_passed": changed and roundtrip,
+            "prefix_bytes": self.prefix_bytes,
+            "range_stream_bytes": self.range_stream_bytes,
+            "initial_count": self.initial_count,
+            "update_step": self.update_step,
+            "runtime_consumption_claim": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": blockers,
+        }
+
+
+@dataclass(frozen=True)
 class PR106ContextRecodeBuildResult:
     """Report plus optional prototype section bytes for CLI materialization."""
 
@@ -599,6 +666,52 @@ def encode_context_recode_section(
     )
 
 
+def encode_adaptive_context_recode_section(
+    section_name: str,
+    section_bytes: bytes,
+    *,
+    context_order: int,
+    initial_count: int = 1,
+    update_step: int = 1,
+) -> AdaptiveContextRecodeSection:
+    """Encode one section with an adaptive context model and no static table."""
+
+    if not (0 <= context_order <= 8):
+        raise PR106ContextRecodeError("context_order must be in range 0..8")
+    if initial_count <= 0:
+        raise PR106ContextRecodeError("initial_count must be positive")
+    if update_step <= 0:
+        raise PR106ContextRecodeError("update_step must be positive")
+    prefix_len = min(context_order, len(section_bytes))
+    prefix = section_bytes[:prefix_len]
+    stream = _encode_adaptive_range_stream(
+        section_bytes,
+        context_order,
+        initial_count=initial_count,
+        update_step=update_step,
+    )
+    integrated = prefix + stream
+    decoded = _decode_adaptive_range_stream(
+        prefix,
+        source_len=len(section_bytes),
+        context_order=context_order,
+        initial_count=initial_count,
+        update_step=update_step,
+        stream=stream,
+    )
+    return AdaptiveContextRecodeSection(
+        section_name=section_name,
+        context_order=context_order,
+        source_bytes=section_bytes,
+        integrated_bytes=integrated,
+        decoded_bytes=decoded,
+        prefix_bytes=len(prefix),
+        range_stream_bytes=len(stream),
+        initial_count=initial_count,
+        update_step=update_step,
+    )
+
+
 def decode_context_recode_section(encoded: bytes) -> bytes:
     """Decode a ``PCR1`` prototype section envelope."""
 
@@ -820,6 +933,67 @@ def _decode_range_stream(
             total=total,
         )
         out.append(symbols[symbol_index])
+    return bytes(out)
+
+
+def _encode_adaptive_range_stream(
+    data: bytes,
+    order: int,
+    *,
+    initial_count: int,
+    update_step: int,
+) -> bytes:
+    if len(data) <= order:
+        return b""
+    model: dict[bytes, list[int]] = {}
+    encoder = RangeEncoder()
+    for index in range(order, len(data)):
+        ctx = data[index - order : index] if order else b""
+        counts = model.setdefault(ctx, [initial_count] * 256)
+        cumulative, total = cumulative_frequencies(counts)
+        symbol = data[index]
+        encoder.encode(symbol=symbol, cumulative=cumulative, total=total)
+        counts[symbol] += update_step
+    return encoder.finish()
+
+
+def _decode_adaptive_range_stream(
+    prefix: bytes,
+    *,
+    source_len: int,
+    context_order: int,
+    initial_count: int,
+    update_step: int,
+    stream: bytes,
+) -> bytes:
+    if source_len < len(prefix):
+        raise PR106ContextRecodeError("source length shorter than adaptive prefix")
+    if source_len == len(prefix):
+        return prefix
+    if len(prefix) != context_order:
+        raise PR106ContextRecodeError(
+            "adaptive prefix length must equal context order for non-empty stream"
+        )
+    if not stream:
+        raise PR106ContextRecodeError("adaptive context range stream is empty")
+    model: dict[bytes, list[int]] = {}
+    decoder = RangeDecoder(stream)
+    out = bytearray(prefix)
+    while len(out) < source_len:
+        ctx = bytes(out[-context_order:]) if context_order else b""
+        counts = model.setdefault(ctx, [initial_count] * 256)
+        cumulative, total = cumulative_frequencies(counts)
+        scaled = decoder.target(total)
+        symbol = bisect_right(cumulative, scaled) - 1
+        if symbol < 0 or symbol >= 256:
+            raise PR106ContextRecodeError("adaptive range symbol outside byte alphabet")
+        decoder.update(
+            low_count=cumulative[symbol],
+            high_count=cumulative[symbol + 1],
+            total=total,
+        )
+        out.append(symbol)
+        counts[symbol] += update_step
     return bytes(out)
 
 

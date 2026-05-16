@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tac.packet_compiler.pr106_context_recode import (
+    encode_adaptive_context_recode_section,
     load_pr106_context_source_from_archive,
     prove_pr106_context_archive_identity,
 )
@@ -47,6 +48,30 @@ def test_context_recode_parses_magicless_format0c_packetir_archive() -> None:
     assert proof["ready_for_exact_eval_dispatch"] is False
 
 
+def test_adaptive_context_recode_roundtrips_without_static_model_table() -> None:
+    if not FORMAT0C_ARCHIVE.exists():
+        pytest.skip("Format0C PacketIR artifact is not present")
+
+    source = load_pr106_context_source_from_archive(FORMAT0C_ARCHIVE)
+    section = source.section("latents_and_sidecar_brotli")
+
+    prototype = encode_adaptive_context_recode_section(
+        section.name,
+        section.data,
+        context_order=2,
+    ).manifest()
+
+    assert prototype["codec"] == "adaptive_section_local_context_range_prototype_v1"
+    assert prototype["lossless_roundtrip_proven"] is True
+    assert prototype["no_op_detector_passed"] is True
+    assert prototype["range_stream_bytes"] + prototype["prefix_bytes"] == prototype[
+        "integrated_section_bytes"
+    ]
+    assert "context_model_bytes" not in prototype
+    assert prototype["score_claim"] is False
+    assert prototype["ready_for_exact_eval_dispatch"] is False
+
+
 def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
     tmp_path: Path,
 ) -> None:
@@ -66,6 +91,9 @@ def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
             "--build-prototypes",
             "--prototype-orders",
             "2",
+            "--build-adaptive-prototypes",
+            "--adaptive-orders",
+            "2",
             "--json-out",
             str(json_out),
             "--md-out",
@@ -83,10 +111,19 @@ def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
     assert matrix["profiled_candidate_count"] == 2
     assert matrix["prototype_row_count"] == 4
     assert matrix["rate_positive_prototype_row_count"] == 0
+    assert matrix["adaptive_prototype_row_count"] == 4
+    assert matrix["rate_positive_adaptive_prototype_row_count"] == 0
+    assert matrix["best_adaptive_prototype"]["delta_bytes_vs_source_section"] == 1
     assert all(
         "prototype_not_rate_positive_after_model_overhead"
         in prototype["blockers"]
         for row in matrix["rows"]
         for prototype in row["prototype_rows"]
+    )
+    assert all(
+        "adaptive_prototype_not_rate_positive_after_integrated_overhead"
+        in prototype["blockers"]
+        for row in matrix["rows"]
+        for prototype in row["adaptive_prototype_rows"]
     )
     assert md_out.exists()

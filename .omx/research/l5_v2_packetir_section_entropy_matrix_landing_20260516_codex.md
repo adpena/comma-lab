@@ -17,12 +17,16 @@ claims.
     proof helper.
 - `src/tac/packet_compiler/pr106_context_recode.py`
   - Added magicless PacketIR parsing for context-recode source views.
+  - Added adaptive no-static-table context-range prototype rows so the next
+    L5 v2 PacketIR path is measured as integrated bytes, not an unpriced floor.
 - `tools/build_l5_v2_packetir_section_entropy_matrix.py`
   - New read-only matrix builder over canonical PR106 candidate specs.
   - Emits planning-only JSON/Markdown with archive custody, section floors,
-    charged prototype rows, blockers, and no score/promotability authority.
+    charged static prototype rows, adaptive prototype rows, blockers, and no
+    score/promotability authority.
 - `tools/operator_briefing.py`
-  - Surfaces the latest section-entropy matrix in L5 v2 frontier readiness.
+  - Surfaces the latest static and adaptive section-entropy matrix in L5 v2
+    frontier readiness.
 
 ## Artifacts
 
@@ -39,8 +43,12 @@ For both Format0C and Format0D:
 
 - Oracle context floors on decoded section streams are large but unpriced.
 - Charged PCR1 prototype rows are not rate-positive after model overhead.
+- Adaptive no-static-table prototype rows are also not rate-positive yet, but
+  they are close enough to be a runtime-integration target: best observed
+  `latents_and_sidecar_brotli`, order 2, `delta_bytes_vs_source_section=1`.
 - Matrix result: `profiled_candidate_count=2`, `prototype_row_count=12`,
-  `rate_positive_prototype_row_count=0`.
+  `rate_positive_prototype_row_count=0`, `adaptive_prototype_row_count=4`,
+  `rate_positive_adaptive_prototype_row_count=0`.
 - Best charged prototype observed in this matrix was still byte-negative:
   `latents_and_sidecar_brotli`, order 2, `delta_bytes_vs_source_section=58284`.
 
@@ -52,6 +60,12 @@ that L5 v2 is dead; it is that L5 v2 should not chase unpriced context-floor
 mirages. The next useful L5 v2 work is a lower-overhead section transform or an
 adaptive/runtime-integrated coder whose model cost is amortized or derivable
 from already shipped structure.
+
+The adaptive rows narrow that next step: static model tables are overhead-bound,
+while adaptive no-table coding is only +1 byte on the latent/sidecar section and
++41 bytes on the decoder section. It is still not a score claim, not
+promotion-eligible, and still blocked on runtime decoder integration,
+full-frame same-runtime parity, and exact auth eval.
 
 ## Verification
 

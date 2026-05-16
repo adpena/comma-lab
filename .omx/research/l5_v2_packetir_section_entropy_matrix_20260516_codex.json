@@ -1,4 +1,39 @@
 {
+  "adaptive_orders": [
+    2
+  ],
+  "adaptive_prototype_row_count": 4,
+  "adaptive_prototype_rows_built": true,
+  "best_adaptive_prototype": {
+    "blockers": [
+      "adaptive_prototype_not_rate_positive_after_integrated_overhead",
+      "prototype_runtime_decoder_not_integrated",
+      "full_frame_same_runtime_parity_missing",
+      "exact_cuda_auth_eval_missing",
+      "contest_auth_eval_adjudication_missing"
+    ],
+    "codec": "adaptive_section_local_context_range_prototype_v1",
+    "context_order": 2,
+    "decoded_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+    "delta_bytes_vs_source_section": 1,
+    "initial_count": 1,
+    "integrated_section_bytes": 15775,
+    "integrated_section_sha256": "a5dd8bab1961b00b35c83130c9978ed40fba887f150416ef2e959eae19e2335a",
+    "lossless_roundtrip_proven": true,
+    "no_op_detector_passed": true,
+    "prefix_bytes": 2,
+    "promotion_eligible": false,
+    "range_stream_bytes": 15773,
+    "ready_for_exact_eval_dispatch": false,
+    "runtime_consumption_claim": false,
+    "score_claim": false,
+    "section_name": "latents_and_sidecar_brotli",
+    "source_section_bytes": 15774,
+    "source_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+    "target_section_bytes_changed": true,
+    "update_step": 1
+  },
+  "best_rate_positive_adaptive_prototype": null,
   "best_rate_positive_prototype": null,
   "candidate_count": 2,
   "context_orders": [
@@ -16,7 +51,7 @@
     "exact_cuda_auth_eval_missing",
     "contest_auth_eval_adjudication_missing"
   ],
-  "generated_at_utc": "2026-05-16T13:31:06Z",
+  "generated_at_utc": "2026-05-16T13:48:36Z",
   "matrix_blockers": [],
   "planning_only": true,
   "profiled_candidate_count": 2,
@@ -28,10 +63,71 @@
   ],
   "prototype_row_count": 12,
   "prototype_rows_built": true,
+  "rate_positive_adaptive_prototype_row_count": 0,
   "rate_positive_prototype_row_count": 0,
   "ready_for_exact_eval_dispatch": false,
   "rows": [
     {
+      "adaptive_prototype_rows": [
+        {
+          "blockers": [
+            "adaptive_prototype_not_rate_positive_after_integrated_overhead",
+            "prototype_runtime_decoder_not_integrated",
+            "full_frame_same_runtime_parity_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing"
+          ],
+          "codec": "adaptive_section_local_context_range_prototype_v1",
+          "context_order": 2,
+          "decoded_section_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+          "delta_bytes_vs_source_section": 41,
+          "initial_count": 1,
+          "integrated_section_bytes": 169991,
+          "integrated_section_sha256": "ddb46ffababa12ad9d28b46be663a879579c157782ccdeccb0358ca990528db7",
+          "lossless_roundtrip_proven": true,
+          "no_op_detector_passed": true,
+          "prefix_bytes": 2,
+          "promotion_eligible": false,
+          "range_stream_bytes": 169989,
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_consumption_claim": false,
+          "score_claim": false,
+          "section_name": "decoder_packed_brotli",
+          "source_section_bytes": 169950,
+          "source_section_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+          "target_section_bytes_changed": true,
+          "update_step": 1
+        },
+        {
+          "blockers": [
+            "adaptive_prototype_not_rate_positive_after_integrated_overhead",
+            "prototype_runtime_decoder_not_integrated",
+            "full_frame_same_runtime_parity_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing"
+          ],
+          "codec": "adaptive_section_local_context_range_prototype_v1",
+          "context_order": 2,
+          "decoded_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+          "delta_bytes_vs_source_section": 1,
+          "initial_count": 1,
+          "integrated_section_bytes": 15775,
+          "integrated_section_sha256": "a5dd8bab1961b00b35c83130c9978ed40fba887f150416ef2e959eae19e2335a",
+          "lossless_roundtrip_proven": true,
+          "no_op_detector_passed": true,
+          "prefix_bytes": 2,
+          "promotion_eligible": false,
+          "range_stream_bytes": 15773,
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_consumption_claim": false,
+          "score_claim": false,
+          "section_name": "latents_and_sidecar_brotli",
+          "source_section_bytes": 15774,
+          "source_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+          "target_section_bytes_changed": true,
+          "update_step": 1
+        }
+      ],
       "archive_path": "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip",
       "blockers": [
         "planning_only_packetir_section_entropy_matrix",
@@ -226,6 +322,7 @@
           "target_section_bytes_changed": true
         }
       ],
+      "rate_positive_adaptive_prototype_rows": [],
       "rate_positive_prototype_rows": [],
       "ready_for_exact_eval_dispatch": false,
       "runtime_consumption_path": "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/runtime_consumption_format0c.json",
@@ -652,6 +749,66 @@
       "status": "profiled"
     },
     {
+      "adaptive_prototype_rows": [
+        {
+          "blockers": [
+            "adaptive_prototype_not_rate_positive_after_integrated_overhead",
+            "prototype_runtime_decoder_not_integrated",
+            "full_frame_same_runtime_parity_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing"
+          ],
+          "codec": "adaptive_section_local_context_range_prototype_v1",
+          "context_order": 2,
+          "decoded_section_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+          "delta_bytes_vs_source_section": 41,
+          "initial_count": 1,
+          "integrated_section_bytes": 169991,
+          "integrated_section_sha256": "ddb46ffababa12ad9d28b46be663a879579c157782ccdeccb0358ca990528db7",
+          "lossless_roundtrip_proven": true,
+          "no_op_detector_passed": true,
+          "prefix_bytes": 2,
+          "promotion_eligible": false,
+          "range_stream_bytes": 169989,
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_consumption_claim": false,
+          "score_claim": false,
+          "section_name": "decoder_packed_brotli",
+          "source_section_bytes": 169950,
+          "source_section_sha256": "e1226429464ed49f00ebaba1bae13dea02f17c1034cecf97d995531d343001e0",
+          "target_section_bytes_changed": true,
+          "update_step": 1
+        },
+        {
+          "blockers": [
+            "adaptive_prototype_not_rate_positive_after_integrated_overhead",
+            "prototype_runtime_decoder_not_integrated",
+            "full_frame_same_runtime_parity_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_auth_eval_adjudication_missing"
+          ],
+          "codec": "adaptive_section_local_context_range_prototype_v1",
+          "context_order": 2,
+          "decoded_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+          "delta_bytes_vs_source_section": 1,
+          "initial_count": 1,
+          "integrated_section_bytes": 15775,
+          "integrated_section_sha256": "a5dd8bab1961b00b35c83130c9978ed40fba887f150416ef2e959eae19e2335a",
+          "lossless_roundtrip_proven": true,
+          "no_op_detector_passed": true,
+          "prefix_bytes": 2,
+          "promotion_eligible": false,
+          "range_stream_bytes": 15773,
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_consumption_claim": false,
+          "score_claim": false,
+          "section_name": "latents_and_sidecar_brotli",
+          "source_section_bytes": 15774,
+          "source_section_sha256": "5de62eb180c9991164b94fbc3cc6fc6cfcd5f7b4553b2a6b6e363ae5d9fcfd71",
+          "target_section_bytes_changed": true,
+          "update_step": 1
+        }
+      ],
       "archive_path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip",
       "blockers": [
         "planning_only_packetir_section_entropy_matrix",
@@ -846,6 +1003,7 @@
           "target_section_bytes_changed": true
         }
       ],
+      "rate_positive_adaptive_prototype_rows": [],
       "rate_positive_prototype_rows": [],
       "ready_for_exact_eval_dispatch": false,
       "runtime_consumption_path": "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/runtime_consumption_format0d.json",
