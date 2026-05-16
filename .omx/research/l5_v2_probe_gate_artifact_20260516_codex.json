@@ -54,7 +54,7 @@
             "eval_device": "cuda",
             "hardware": "Tesla T4",
             "inflate_device": "auto",
-            "log_path": "",
+            "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
             "n_samples": 600,
             "pose_dist": 0.18563657,
             "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
@@ -65,7 +65,7 @@
         ],
         "byte_closed_archive": true,
         "candidate_id": "time_traveler_l5_autonomy",
-        "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+        "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
         "exact_axes": [
           "contest_cuda"
         ],
@@ -178,7 +178,7 @@
               "eval_device": "cuda",
               "hardware": "Tesla T4",
               "inflate_device": "auto",
-              "log_path": "",
+              "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
               "n_samples": 600,
               "pose_dist": 0.18563657,
               "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
@@ -191,16 +191,13 @@
             "l5_v2_probe_predicate_failed",
             "l5_v2_probe_paired_exact_axes_missing",
             "l5_v2_probe_sideinfo_consumption_missing",
-            "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
-            "l5_v2_probe_contest_evidence_grade_missing",
             "l5_v2_probe_axis_evidence_missing:contest_cpu",
-            "l5_v2_probe_axis_log_path_missing:contest_cuda",
             "l5_v2_probe_axis_score_delta_missing:contest_cuda"
           ],
           "byte_closed_archive": true,
           "candidate_id": "time_traveler_l5_autonomy",
           "eligible_for_architecture_lock": false,
-          "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+          "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
           "exact_axes": [
             "contest_cuda"
           ],
@@ -239,7 +236,7 @@
       "selected_delta_source": "paired_axis_score_delta",
       "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
     },
-    "verdict_sha256": "3347324d49fd0d2b19a2f44ed68c9bf6424dcc3b784ae45ac043afab94806663"
+    "verdict_sha256": "80db63be2457d16a1496ecfb6fd43d0e7854a1284d1e7613fb48f3033bff923c"
   },
   "promotion_eligible": false,
   "ready_for_exact_eval_dispatch": false,

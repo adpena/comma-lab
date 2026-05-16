@@ -547,6 +547,30 @@ def test_l5_v2_probe_accepts_axis_specific_runtime_trees(tmp_path: Path) -> None
     assert row["eligible_for_architecture_lock"] is True
 
 
+def test_l5_v2_probe_does_not_report_invalid_runtime_for_absent_axis(
+    tmp_path: Path,
+) -> None:
+    cuda_only = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
+        exact_axes=("contest_cuda",),
+        runtime_tree_sha256="",
+        runtime_tree_sha256_by_axis={"contest_cuda": "b" * 64},
+        axis_evidence=tuple(
+            row for row in _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050).axis_evidence
+            if row["axis"] == "contest_cuda"
+        ),
+    )
+
+    verdict = evaluate_l5_v2_probe((cuda_only,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert "l5_v2_probe_paired_exact_axes_missing" in row["blockers"]
+    assert "l5_v2_probe_axis_evidence_missing:contest_cpu" in row["blockers"]
+    assert "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu" not in row[
+        "blockers"
+    ]
+
+
 def test_l5_v2_probe_verifies_artifact_files_and_hashes(tmp_path: Path) -> None:
     valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
 

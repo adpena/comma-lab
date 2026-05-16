@@ -131,6 +131,52 @@ def _command_flag_value(command: str, flag: str) -> str:
     return ""
 
 
+def _first_existing_relative_path(paths: Iterable[Path], repo_root: Path) -> str:
+    for path in paths:
+        if path.is_file():
+            return _relative_path(path, repo_root)
+    return ""
+
+
+def _local_auth_eval_log_path(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> str:
+    """Resolve the durable local auth-eval log next to recovered artifacts.
+
+    Modal recovery stores stdout/stderr logs beside the canonical
+    ``contest_auth_eval.json`` result, while higher-level review ledgers point
+    back to that JSON through ``source_json_path``. Prefer committed or
+    workspace-relative logs; never promote the remote ``/root/...`` report path
+    as local custody.
+    """
+
+    direct = str(payload.get("log_path") or "").strip()
+    if direct:
+        return direct
+
+    candidate_dirs: list[Path] = [path.parent]
+    source_json_path = str(payload.get("source_json_path") or "").strip()
+    if source_json_path:
+        source_path = Path(source_json_path)
+        resolved_source = (
+            source_path if source_path.is_absolute() else repo_root / source_path
+        )
+        candidate_dirs.append(resolved_source.parent)
+
+    candidates: list[Path] = []
+    for directory in candidate_dirs:
+        candidates.extend(
+            (
+                directory / "contest_auth_eval.stdout.log",
+                directory / "contest_auth_eval.stderr.log",
+            )
+        )
+    return _first_existing_relative_path(candidates, repo_root)
+
+
 def _candidate_id_for_payload(path: Path, payload: Mapping[str, Any]) -> str | None:
     haystack = " ".join(
         str(item or "").lower()
@@ -204,6 +250,8 @@ def _axis_evidence_from_payload(
 ) -> dict[str, Any]:
     command = _command_text(
         _nested(payload, "custody", "command")
+        or _nested(payload, "provenance", "sys_argv")
+        or payload.get("sys_argv")
         or _nested(payload, "provenance", "command")
         or _nested(payload, "provenance", "tool")
         or payload.get("auth_eval_command")
@@ -252,23 +300,27 @@ def _axis_evidence_from_payload(
         "hardware": str(
             _nested(payload, "custody", "gpu_model")
             or _nested(payload, "custody", "hardware")
+            or _nested(payload, "provenance", "gpu_model")
+            or _nested(payload, "provenance", "hardware")
             or payload.get("hardware")
             or ""
         ),
         "inflate_device": str(
             _nested(payload, "custody", "inflate_device")
             or payload.get("inflate_device")
+            or _nested(payload, "provenance", "inflate_device_policy")
             or _command_flag_value(command, "--inflate-device")
             or ""
         ),
         "eval_device": str(
             _nested(payload, "custody", "device")
             or payload.get("eval_device")
+            or _nested(payload, "provenance", "device")
             or _command_flag_value(command, "--device")
             or ""
         ),
         "auth_eval_command": command,
-        "log_path": str(payload.get("log_path") or ""),
+        "log_path": _local_auth_eval_log_path(path, payload, repo_root=repo_root),
         "artifact_path": artifact_path,
         "score_delta": _first_finite_float(
             payload,
@@ -409,12 +461,17 @@ def build_l5_v2_probe_observation_intake(
             for row in axis_rows
             if row.get("axis")
         }
+        evidence_grade = (
+            "contest_axis_artifact_intake_not_architecture_lock_evidence"
+            if axes
+            else "artifact_intake_not_architecture_lock_evidence"
+        )
         first_source = grouped_source_records[candidate_id][0]
         observations.append(
             L5V2ProbeObservation(
                 candidate_id=candidate_id,
                 predicted_or_measured_delta=0.0,
-                evidence_grade="artifact_intake_not_architecture_lock_evidence",
+                evidence_grade=evidence_grade,
                 exact_axes=axes,
                 artifact_path=str(first_source.get("path") or ""),
                 artifact_sha256=str(first_source.get("sha256") or ""),

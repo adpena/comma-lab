@@ -428,6 +428,8 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_archive_sha_invalid")
     if observation.runtime_tree_sha256_by_axis:
         for axis in REQUIRED_EXACT_AXES:
+            if axis not in set(observation.exact_axes):
+                continue
             if not is_sha256_hex(observation.runtime_tree_sha256_by_axis.get(axis)):
                 blockers.append(f"l5_v2_probe_runtime_tree_sha_by_axis_invalid:{axis}")
     elif not is_sha256_hex(observation.runtime_tree_sha256):

@@ -111,6 +111,64 @@ def test_l5_v2_probe_intake_recovers_cuda_auto_inflate_policy_from_command(
     ]
 
 
+def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
+    tmp_path: Path,
+) -> None:
+    artifact = _write_json(
+        tmp_path
+        / "experiments"
+        / "results"
+        / "modal_auth_eval"
+        / "tt5l_cuda"
+        / "contest_auth_eval.json",
+        {
+            "provenance": {
+                "sys_argv": [
+                    "experiments/contest_auth_eval.py",
+                    "--device",
+                    "cuda",
+                    "--inflate-device",
+                    "auto",
+                ],
+                "device": "cuda",
+                "gpu_model": "Tesla T4",
+                "inflate_device_policy": "auto",
+                "archive_sha256": "a" * 64,
+                "inflate_runtime_manifest": {
+                    "runtime_tree_sha256": "b" * 64,
+                },
+            },
+            "score_axis": "contest_cuda",
+            "exact_cuda_evidence": True,
+            "canonical_score": 3.9,
+            "avg_segnet_dist": 0.025,
+            "avg_posenet_dist": 0.18,
+            "archive_size_bytes": 34603,
+            "n_samples": 600,
+            "lane_id": "lane_time_traveler_l5_autonomy_exact_cuda",
+        },
+    )
+    log_path = artifact.parent / "contest_auth_eval.stdout.log"
+    log_path.write_text("contest auth eval completed\n", encoding="utf-8")
+
+    intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
+
+    evidence = intake["source_records"][0]["axis_evidence"]
+    assert evidence["auth_eval_command"] == (
+        "experiments/contest_auth_eval.py --device cuda --inflate-device auto"
+    )
+    assert evidence["hardware"] == "Tesla T4"
+    assert evidence["inflate_device"] == "auto"
+    assert evidence["eval_device"] == "cuda"
+    assert evidence["log_path"].endswith("contest_auth_eval.stdout.log")
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+    assert "l5_v2_probe_axis_log_path_missing:contest_cuda" not in tt5l["blockers"]
+    assert "l5_v2_probe_contest_evidence_grade_missing" not in tt5l["blockers"]
+
+
 def test_l5_v2_probe_intake_records_missing_candidate_sources(tmp_path: Path) -> None:
     intake = build_l5_v2_probe_observation_intake([], repo_root=tmp_path)
 
