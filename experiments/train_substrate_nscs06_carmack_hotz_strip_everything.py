@@ -51,6 +51,7 @@ Usage (full; CUDA-required compress-side scorer query)::
 # TF32_WAIVED:carmack-hotz-strip-everything-has-no-neural-codec-no-matmul-operations-numpy-pillow-only-inflate
 # NO_GRAD_WAIVED:no-training-loop-no-eval-gradient-numpy-pillow-only-inflate
 # F3_CACHE_CONSUMPTION_WAIVED:no-scorer-hot-loop-segnet-runs-once-at-compress-time-class-label-derivation-only
+# SCORER_PREPROCESS_HANDLED_OK:no-score-aware-loss-no-hot-loop-segnet-runs-once-at-compress-time-for-class-cdf-construction-not-gradient-loss
 from __future__ import annotations
 
 import argparse
