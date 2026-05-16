@@ -17033,8 +17033,8 @@
           "status": true
         },
         "memory_entry": {
-          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_grand_council_substrate_design_and_implementation_landed_20260512.md (this landing memo)",
-          "status": true
+          "status": true,
+          "evidence": ".omx/research/sane_hnerv_cargo_cult_unwind_design_20260516.md"
         },
         "real_archive_empirical": {
           "evidence": "",
@@ -23804,8 +23804,8 @@
           "status": true
         },
         "memory_entry": {
-          "evidence": ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md (design memo, committed 1d62a114)",
-          "status": true
+          "status": true,
+          "evidence": ".omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md"
         },
         "real_archive_empirical": {
           "evidence": "",
@@ -26293,8 +26293,8 @@
           "status": true
         },
         "memory_entry": {
-          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_c6_mdl_ibps_landed_20260514.md (pending write)",
-          "status": true
+          "status": true,
+          "evidence": ".omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md"
         },
         "real_archive_empirical": {
           "evidence": "",
@@ -30539,7 +30539,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": "feedback_atw_codec_atick_tishby_wyner_v1_design_landed_20260515.md (in same commit batch) + .omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md design memo"
+          "evidence": ".omx/research/atw_codec_v1_cargo_cult_unwind_design_20260516.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -30744,7 +30744,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": "feedback_nscs02_downsampled_renderer_inflate_upsample_build_landed_20260515.md committed in ~/.claude/projects/-Users-adpena-Projects-pact/memory/; documents canonical-vs-unique decision per layer (10 layers); 27 tests passing; 0 NSCS02-specific violations across 8 critical preflight gates; 6-hook wire-in declared per Catalog #125"
+          "evidence": ".omx/research/nscs02_downsampled_renderer_cargo_cult_unwind_design_20260516.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -31416,6 +31416,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_high_risk_5_substrate_unwind_implementations_20260516",
+      "name": "HIGH-RISK 5 substrate cargo-cult unwind implementations",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 cargo-cult-unwind design memos + 5 recipe annotations landed 2026-05-16 commit a2ec19462 per audit .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (3768a4f3d); zero kills per CLAUDE.md Forbidden premature KILL"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "DESIGN-only landing per audit blueprint Section 3 verdict 'UNWIND for all 5 (recommended YES); total cost \u2264 in shared analytical+probe work; prevention 1.6-4.1\u00d7 ROI'; sister-subagent ownership map per Catalog #230 keeps scope disjoint"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "5 design memos landed 2026-05-16: see commit a2ec19462 and audit blueprint cited in lane notes"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31425,5 +31466,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T14:16:36Z"
+  "updated_at": "2026-05-16T15:03:25Z"
 }
