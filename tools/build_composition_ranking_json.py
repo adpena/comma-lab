@@ -87,6 +87,10 @@ from tac.optimization.autopilot_dispatch_ranking import (  # noqa: E402
 from tac.optimization.autopilot_dispatch_ranking import (  # noqa: E402
     SCHEMA_VERSION as AUTOPILOT_SCHEMA_VERSION,
 )
+from tac.optimization.prediction_band import (  # noqa: E402
+    validate_optional_prediction_band,
+    verdict_to_dict,
+)
 from tac.optimization.substrate_composition_matrix import (  # noqa: E402
     DISPATCH_COST_USD_MIDPOINT,
     canonical_substrate_inventory,
@@ -131,6 +135,7 @@ class _CellPlan:
     axis_weight: float
     expected_information_gain: float
     eig_per_dollar: float
+    prediction_band_verdict: dict[str, Any]
     blockers: tuple[str, ...]
 
 
@@ -259,6 +264,14 @@ def _build_cell_plans(
                 "has midpoint cost <= $0 (planning artifact; promotion requires "
                 "real dispatch cost anchor)"
             )
+        band_verdict = validate_optional_prediction_band(
+            getattr(substrate, "prediction_band", None),
+            subject_id=cell.substrate_id,
+            low=substrate.predicted_delta_alone_band[0],
+            high=substrate.predicted_delta_alone_band[1],
+            axis=substrate.target_axis.value,
+        )
+        blockers.extend(band_verdict.blockers)
 
         out.append(
             _CellPlan(
@@ -271,6 +284,7 @@ def _build_cell_plans(
                 axis_weight=float(axis_weight),
                 expected_information_gain=float(weighted_eig),
                 eig_per_dollar=float(eig_per_dollar),
+                prediction_band_verdict=verdict_to_dict(band_verdict),
                 blockers=tuple(blockers),
             )
         )
@@ -359,6 +373,16 @@ def _enforce_envelope(
             composition_notes_lines.append(
                 f"source_fidelity_metadata: {source_fidelity_metadata!r}"
             )
+        if plan.prediction_band_verdict.get("blockers"):
+            composition_notes_lines.append(
+                "prediction_band_blockers: "
+                f"{plan.prediction_band_verdict['blockers']!r}"
+            )
+        if plan.prediction_band_verdict.get("annotations"):
+            composition_notes_lines.append(
+                "prediction_band_annotations: "
+                f"{plan.prediction_band_verdict['annotations']!r}"
+            )
         if cell.notes:
             composition_notes_lines.append(f"notes: {cell.notes}")
         if cell.semantic_compatibility_warning is not None:
@@ -389,6 +413,8 @@ def _enforce_envelope(
                 ),
                 "campaign_metadata": campaign_metadata,
                 "source_fidelity_metadata": source_fidelity_metadata,
+                "prediction_band": getattr(substrate, "prediction_band", None),
+                "prediction_band_verdict": plan.prediction_band_verdict,
                 "blockers": list(plan.blockers),
                 "semantic_compatibility_warning": cell.semantic_compatibility_warning,
                 "operator_review_required": bool(plan.blockers),

@@ -253,6 +253,9 @@ def test_campaign_metadata_emitted_for_z3_bare_cell(bridge):
     assert "not frozen-A1 contest latent replacement" in z3["paper_claim_scope"]
     assert "paired contest CPU/CUDA eval" in z3["pact_must_prove"]
     assert "T4 inflate-cost anchor" in z3["decode_complexity_evidence"]
+    assert z3["prediction_band_verdict"]["valid_for_rank_reward"] is False
+    assert "prediction_band_missing" in z3["blockers"]
+    assert "prediction_band_blockers" in z3["composition_notes"]
     assert "source_supports=" in z3["composition_notes"]
     assert "paper_claim_scope=" in z3["composition_notes"]
     assert "pact_must_prove=" in z3["composition_notes"]

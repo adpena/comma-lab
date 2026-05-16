@@ -102,6 +102,8 @@ class RankedDispatchCandidate:
     lane_class: str = ""
     literature_anchor: str = ""
     campaign_metadata: tuple[str, ...] = ()
+    prediction_band: dict[str, Any] | None = None
+    prediction_band_verdict: dict[str, Any] | None = None
     blockers: tuple[str, ...] = ()
     license_ok: bool = True
     inflate_dep_count: int = 0
@@ -207,6 +209,8 @@ def _build_singleton_dispatch_candidates(
                 lane_class=r.lane_class,
                 literature_anchor=r.literature_anchor,
                 campaign_metadata=campaign_metadata,
+                prediction_band=r.prediction_band,
+                prediction_band_verdict=r.prediction_band_verdict,
                 blockers=r.dispatch_blockers,
                 license_ok=r.license_ok,
                 inflate_dep_count=r.inflate_dep_count,
@@ -285,6 +289,11 @@ def _build_orthogonal_pair_candidates(
                 )
                 if part
             )
+            prediction_band_verdicts = tuple(
+                verdict
+                for verdict in (ri.prediction_band_verdict, rj.prediction_band_verdict)
+                if verdict is not None
+            )
             metadata_note = (
                 f"; metadata={list(campaign_metadata)!r}"
                 if campaign_metadata else ""
@@ -308,6 +317,9 @@ def _build_orthogonal_pair_candidates(
                     lane_class=lane_class,
                     literature_anchor=literature_anchor,
                     campaign_metadata=campaign_metadata,
+                    prediction_band_verdict={
+                        "components": list(prediction_band_verdicts),
+                    },
                     blockers=blockers,
                     license_ok=ri.license_ok and rj.license_ok,
                     inflate_dep_count=ri.inflate_dep_count + rj.inflate_dep_count,

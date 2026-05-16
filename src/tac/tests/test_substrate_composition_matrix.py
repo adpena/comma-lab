@@ -207,8 +207,35 @@ def test_frontier_risk_metadata_flows_into_pareto_rows():
     assert row.context_order == 3
     assert "license_clearance_required" in row.dispatch_blockers
     assert "exact_duplicate_requires_distinct_delta" in row.dispatch_blockers
+    assert "prediction_band_missing" in row.dispatch_blockers
+    assert row.prediction_band_verdict is not None
+    assert row.prediction_band_verdict["valid_for_rank_reward"] is False
     assert "license_ok=False" in row.notes
     assert "context_order=3" in row.notes
+
+
+def test_uncustodied_prediction_band_blocks_clean_rank_authority():
+    substrate = SubstrateRow(
+        substrate_id="uncustodied_predictor",
+        name="Uncustodied Predictor",
+        substrate_class=SubstrateClass.RESIDUAL,
+        target_axis=ScoreAxis.RATE,
+        format_id=0xED,
+        magic_bytes="UPRD",
+        runtime_dep_closure=("torch",),
+        byte_budget_band=(100, 500),
+        predicted_delta_alone_band=(-0.002, -0.001),
+        requires_score_aware_training=True,
+        landed_at="2026-05-16",
+        landing_memo="test",
+    )
+    row = per_substrate_pareto_rows(
+        matrix=build_composition_matrix([substrate])
+    )[0]
+    assert "prediction_band_missing" in row.dispatch_blockers
+    assert row.prediction_band_verdict is not None
+    assert row.prediction_band_verdict["valid_for_rank_reward"] is False
+    assert "prediction_band_blockers" in row.notes
 
 
 # ── Matrix construction ──────────────────────────────────────────────────

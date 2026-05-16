@@ -33,9 +33,9 @@ def test_rank_dispatches_smoke():
     result = rank_dispatches()
     assert isinstance(result, RankingResult)
     assert result.schema == SCHEMA_VERSION
-    # 55 = canonical substrate inventory including 2026-05-14 Z3/Z4/Z5/C1/C6
-    # campaign rows.
-    assert result.n_substrates_considered == 55
+    # 56 = canonical substrate inventory including 2026-05-14 Z3/Z4/Z5/C1/C6
+    # campaign rows plus TT5L.
+    assert result.n_substrates_considered == 56
     assert len(result.ranked_dispatches) > 0
     # Score-claim invariants.
     assert result.score_claim is False

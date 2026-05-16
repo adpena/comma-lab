@@ -62,10 +62,15 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
+
+from tac.optimization.prediction_band import (
+    validate_optional_prediction_band,
+    verdict_to_dict,
+)
 
 # Schema constants pinned to v1 so downstream consumers (autopilot ranker,
 # theoretical floor refresh) detect schema drift loudly.
@@ -178,6 +183,7 @@ class SubstrateRow:
     paper_claim_scope: str = ""
     pact_must_prove: str = ""
     decode_complexity_evidence: str = ""
+    prediction_band: Mapping[str, Any] | None = None
     dispatch_blockers: tuple[str, ...] = ()
     license_ok: bool = True
     sideinfo_consumed: bool | None = None
@@ -1572,6 +1578,8 @@ class ParetoRow:
     paper_claim_scope: str = ""
     pact_must_prove: str = ""
     decode_complexity_evidence: str = ""
+    prediction_band: dict[str, Any] | None = None
+    prediction_band_verdict: dict[str, Any] | None = None
     dispatch_blockers: tuple[str, ...] = ()
     license_ok: bool = True
     inflate_dep_count: int = 0
@@ -1697,6 +1705,14 @@ def per_substrate_pareto_rows(
         cost_estimation_pending = cost <= 0.0
         eig_per_dollar = 0.0 if cost_estimation_pending else eig / cost
         blockers = list(s.dispatch_blockers)
+        prediction_band_verdict = validate_optional_prediction_band(
+            s.prediction_band,
+            subject_id=s.substrate_id,
+            low=s.predicted_delta_alone_band[0],
+            high=s.predicted_delta_alone_band[1],
+            axis=s.target_axis.value,
+        )
+        blockers.extend(prediction_band_verdict.blockers)
         notes = (
             f"[predicted; substrate composition matrix v1] "
             f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
@@ -1721,6 +1737,16 @@ def per_substrate_pareto_rows(
             notes += f"; pact_must_prove={s.pact_must_prove}"
         if s.decode_complexity_evidence:
             notes += f"; decode_complexity_evidence={s.decode_complexity_evidence}"
+        if prediction_band_verdict.blockers:
+            notes += (
+                "; prediction_band_blockers="
+                f"{list(prediction_band_verdict.blockers)!r}"
+            )
+        if prediction_band_verdict.annotations:
+            notes += (
+                "; prediction_band_annotations="
+                f"{list(prediction_band_verdict.annotations)!r}"
+            )
         notes += (
             f"; license_ok={s.license_ok}"
             f"; inflate_dep_count={len(s.runtime_dep_closure)}"
@@ -1760,6 +1786,12 @@ def per_substrate_pareto_rows(
                 paper_claim_scope=s.paper_claim_scope,
                 pact_must_prove=s.pact_must_prove,
                 decode_complexity_evidence=s.decode_complexity_evidence,
+                prediction_band=(
+                    dict(s.prediction_band)
+                    if isinstance(s.prediction_band, Mapping)
+                    else None
+                ),
+                prediction_band_verdict=verdict_to_dict(prediction_band_verdict),
                 dispatch_blockers=tuple(blockers),
                 license_ok=s.license_ok,
                 inflate_dep_count=len(s.runtime_dep_closure),
