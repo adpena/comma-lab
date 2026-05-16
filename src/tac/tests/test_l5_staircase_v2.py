@@ -120,6 +120,27 @@ def _gate_artifact_payload(gate_id: str) -> dict[str, object]:
             "tool_path": L5V2_PROBE_TOOL_PATH,
             "candidate_ids": list(L5V2_CANDIDATES),
             "paired_exact_axes_required": True,
+            "verdict": {
+                "schema": L5V2_PROBE_SCHEMA,
+                "tool": L5V2_PROBE_TOOL_PATH,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "architecture_lock_allowed": True,
+                "selected_candidate_id": "time_traveler_l5_autonomy",
+                "required_candidates": list(L5V2_CANDIDATES),
+                "required_exact_axes": ["contest_cpu", "contest_cuda"],
+                "evaluated_observations": [
+                    {
+                        "candidate_id": candidate_id,
+                        "eligible_for_architecture_lock": True,
+                        "exact_axes": ["contest_cpu", "contest_cuda"],
+                        "blockers": [],
+                    }
+                    for candidate_id in L5V2_CANDIDATES
+                ],
+                "blockers": [],
+            },
         }
     elif gate_id == "paired_cpu_cuda_axis_plan":
         payload["paired_axis_plan"] = _axis_rows()
@@ -430,6 +451,72 @@ def test_l5_v2_dispatch_readiness_rejects_predicate_only_gate_artifacts(
             "exact_anchor_or_diagnostic_pair:anchor_pair:"
         )
         for blocker in readiness["blockers"]
+    )
+
+
+def test_l5_v2_probe_gate_rejects_metadata_stub_without_probe_verdict(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "c1_z5_tt5l_probe_disambiguator"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    probe = payload["probe_disambiguator"]
+    assert isinstance(probe, dict)
+    probe.pop("verdict")
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert readiness["ready_for_gate_probe_dispatch"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_probe_gate_rejects_blocked_or_incomplete_probe_verdict(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "c1_z5_tt5l_probe_disambiguator"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    probe = payload["probe_disambiguator"]
+    assert isinstance(probe, dict)
+    verdict = probe["verdict"]
+    assert isinstance(verdict, dict)
+    verdict["architecture_lock_allowed"] = False
+    verdict["blockers"] = ["l5_v2_probe_required_candidate_ineligible:c1"]
+    verdict["evaluated_observations"] = [
+        row
+        for row in verdict["evaluated_observations"]
+        if row["candidate_id"] != "time_traveler_l5_autonomy"
+    ]
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:architecture_lock_allowed"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_blockers_nonempty"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "c1_z5_tt5l_probe_disambiguator:eligible_observations:"
+        "time_traveler_l5_autonomy"
+        in readiness["blockers"]
     )
 
 

@@ -750,6 +750,95 @@ def _gate_semantic_blockers(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:paired_exact_axes_required"
             )
+        verdict = probe.get("verdict") or probe.get("probe_verdict")
+        if not isinstance(verdict, Mapping):
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_missing:{gate_id}:probe_verdict"
+            )
+            return blockers
+        if verdict.get("schema") != L5V2_PROBE_SCHEMA:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_verdict_schema"
+            )
+        if verdict.get("tool") != L5V2_PROBE_TOOL_PATH:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_verdict_tool"
+            )
+        if verdict.get("architecture_lock_allowed") is not True:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:architecture_lock_allowed"
+            )
+        if verdict.get("score_claim") is not False:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:score_claim"
+            )
+        if verdict.get("promotion_eligible") is not False:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:promotion_eligible"
+            )
+        if verdict.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:ready_for_exact_eval_dispatch"
+            )
+        verdict_blockers = verdict.get("blockers")
+        if not isinstance(verdict_blockers, list):
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_blockers"
+            )
+        elif verdict_blockers:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_blockers_nonempty"
+            )
+        verdict_candidates = set(_string_items(verdict.get("required_candidates")))
+        missing_verdict_candidates = [
+            candidate_id
+            for candidate_id in L5V2_CANDIDATES
+            if candidate_id not in verdict_candidates
+        ]
+        if missing_verdict_candidates:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                f"{gate_id}:probe_verdict_candidates:"
+                + ",".join(missing_verdict_candidates)
+            )
+        verdict_axes = set(_string_items(verdict.get("required_exact_axes")))
+        missing_verdict_axes = [
+            axis for axis in _REQUIRED_EXACT_AXES if axis not in verdict_axes
+        ]
+        if missing_verdict_axes:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                f"{gate_id}:probe_verdict_axes:"
+                + ",".join(missing_verdict_axes)
+            )
+        observation_rows = _mapping_items(verdict.get("evaluated_observations"))
+        eligible_by_candidate = {
+            str(row.get("candidate_id") or ""): row
+            for row in observation_rows
+            if row.get("eligible_for_architecture_lock") is True
+        }
+        missing_eligible = [
+            candidate_id
+            for candidate_id in L5V2_CANDIDATES
+            if candidate_id not in eligible_by_candidate
+        ]
+        if missing_eligible:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                f"{gate_id}:eligible_observations:"
+                + ",".join(missing_eligible)
+            )
+        for candidate_id, row in eligible_by_candidate.items():
+            row_axes = set(_string_items(row.get("exact_axes")))
+            missing_row_axes = [axis for axis in _REQUIRED_EXACT_AXES if axis not in row_axes]
+            if missing_row_axes:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_missing:"
+                    f"{gate_id}:eligible_observation_axes:{candidate_id}:"
+                    + ",".join(missing_row_axes)
+                )
         return blockers
 
     if gate_id == "paired_cpu_cuda_axis_plan":
