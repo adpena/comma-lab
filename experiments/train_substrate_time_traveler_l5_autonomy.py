@@ -110,9 +110,6 @@ from tac.substrate_registry import register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
-from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
-    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
-)
 from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
@@ -140,6 +137,9 @@ from tac.substrates._shared.trainer_skeleton import (
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
 )
+from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
+    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
+)
 
 # Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
 from tac.training_optimization import (
@@ -166,6 +166,7 @@ CONTEST_NORMALIZER = 37_545_489.0
 # Substrate constants (re-exported for trainer local helpers).
 SUBSTRATE_TAG = "tt5l"
 SUBSTRATE_LANE_ID = "lane_time_traveler_l5_autonomy_substrate_20260513"
+POSTERIOR_ARCHITECTURE_CLASS = "time_traveler_l5_autonomy"
 
 
 # ---------------------------------------------------------------------------
@@ -818,7 +819,7 @@ def _run_posterior_update_from_auth_eval_json(
     *,
     architecture_class: str,
     stage_callback,
-):
+) -> dict[str, Any]:
     """Update the continual-learning posterior with explicit custody status."""
     try:
         from tac.continual_learning import (
@@ -835,16 +836,35 @@ def _run_posterior_update_from_auth_eval_json(
             f"[{SUBSTRATE_TAG}-full] posterior_update accepted="
             f"{getattr(update, 'accepted', '?')}"
         )
-        stage_callback(
-            "posterior_update_accepted"
-            if accepted
-            else "posterior_update_refused"
-        )
-        return update
+        status = "accepted" if accepted else "refused"
+        stage_callback(f"posterior_update_status_{status}")
+        return {
+            "status": status,
+            "accepted": accepted,
+            "architecture_class": str(
+                getattr(update, "architecture_class", architecture_class)
+            ),
+            "axis": str(getattr(update, "axis", "")),
+            "evidence_tag": str(getattr(update, "evidence_tag", "")),
+            "archive_sha256": str(getattr(update, "archive_sha256", "")),
+            "score_value": float(getattr(update, "score_value", 0.0)),
+            "posterior_n_anchors_after": int(
+                getattr(update, "posterior_n_anchors_after", 0)
+            ),
+            "refusal_reason": str(getattr(update, "refusal_reason", "")),
+            "score_claim_promoted": False,
+        }
     except Exception as exc:
         print(f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}")
-        stage_callback(f"posterior_update_failed_{type(exc).__name__}")
-        return None
+        stage_callback(f"posterior_update_status_error_{type(exc).__name__}")
+        return {
+            "status": "error",
+            "accepted": False,
+            "architecture_class": architecture_class,
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "score_claim_promoted": False,
+        }
 
 
 def _full_main(args: argparse.Namespace) -> int:
@@ -1280,10 +1300,17 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage("upstream_yuv6_unpatched")
 
     # 13. Posterior update (Catalog #128 atomic fcntl).
+    posterior_update_status: dict[str, Any] = {
+        "status": "not_run",
+        "accepted": False,
+        "architecture_class": POSTERIOR_ARCHITECTURE_CLASS,
+        "reason": "auth_eval_json_missing_or_auth_eval_skipped",
+        "score_claim_promoted": False,
+    }
     if not args.skip_auth_eval and auth_eval_json_path.exists():
-        _run_posterior_update_from_auth_eval_json(
+        posterior_update_status = _run_posterior_update_from_auth_eval_json(
             auth_eval_json_path,
-            architecture_class=SUBSTRATE_LANE_ID,
+            architecture_class=POSTERIOR_ARCHITECTURE_CLASS,
             stage_callback=_stage,
         )
 
@@ -1309,6 +1336,7 @@ def _full_main(args: argparse.Namespace) -> int:
             ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
         ),
         "stage_log": stage_log,
+        "posterior_update_status": posterior_update_status,
         "hardware_substrate_cuda": _canon_detect_hardware_substrate(
             axis="cuda",
             substrate_tag=SUBSTRATE_TAG,

@@ -148,7 +148,16 @@ def test_posterior_update_passes_architecture_class_and_records_acceptance(
 
     def fake_update(path, **kwargs):
         calls.append({"path": path, **kwargs})
-        return SimpleNamespace(accepted=True)
+        return SimpleNamespace(
+            accepted=True,
+            architecture_class=trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
+            axis="cuda",
+            evidence_tag="[contest-CUDA]",
+            archive_sha256="a" * 64,
+            score_value=0.19,
+            posterior_n_anchors_after=7,
+            refusal_reason="",
+        )
 
     fake_continual.posterior_update_locked_from_auth_eval_json = fake_update
     monkeypatch.setitem(sys.modules, "tac.continual_learning", fake_continual)
@@ -157,19 +166,56 @@ def test_posterior_update_passes_architecture_class_and_records_acceptance(
     auth_eval_json = tmp_path / "auth_eval.json"
     result = trainer_module._run_posterior_update_from_auth_eval_json(
         auth_eval_json,
-        architecture_class=trainer_module.SUBSTRATE_LANE_ID,
+        architecture_class=trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
         stage_callback=stages.append,
     )
 
-    assert result.accepted is True
+    assert result["status"] == "accepted"
+    assert result["accepted"] is True
+    assert result["architecture_class"] == trainer_module.POSTERIOR_ARCHITECTURE_CLASS
+    assert result["score_claim_promoted"] is False
     assert calls == [
         {
             "path": auth_eval_json,
-            "architecture_class": trainer_module.SUBSTRATE_LANE_ID,
+            "architecture_class": trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
             "notes": f"{trainer_module.SUBSTRATE_TAG}_full_auth_eval",
         }
     ]
-    assert stages == ["posterior_update_accepted"]
+    assert stages == ["posterior_update_status_accepted"]
+
+
+def test_posterior_update_records_refusal_status(trainer_module, monkeypatch, tmp_path):
+    """Refused posterior updates leave explicit non-promoting artifact status."""
+
+    fake_continual = types.ModuleType("tac.continual_learning")
+
+    def fake_update(_path, **_kwargs):
+        return SimpleNamespace(
+            accepted=False,
+            architecture_class=trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
+            axis="cuda",
+            evidence_tag="[contest-CUDA]",
+            archive_sha256="b" * 64,
+            score_value=0.19,
+            posterior_n_anchors_after=7,
+            refusal_reason="duplicate archive anchor",
+        )
+
+    fake_continual.posterior_update_locked_from_auth_eval_json = fake_update
+    monkeypatch.setitem(sys.modules, "tac.continual_learning", fake_continual)
+
+    stages: list[str] = []
+    result = trainer_module._run_posterior_update_from_auth_eval_json(
+        tmp_path / "auth_eval.json",
+        architecture_class=trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
+        stage_callback=stages.append,
+    )
+
+    assert result["status"] == "refused"
+    assert result["accepted"] is False
+    assert result["refusal_reason"] == "duplicate archive anchor"
+    assert result["score_claim_promoted"] is False
+    assert stages == ["posterior_update_status_refused"]
 
 
 def test_posterior_update_records_failure_status(trainer_module, monkeypatch, tmp_path):
@@ -186,12 +232,16 @@ def test_posterior_update_records_failure_status(trainer_module, monkeypatch, tm
     stages: list[str] = []
     result = trainer_module._run_posterior_update_from_auth_eval_json(
         tmp_path / "auth_eval.json",
-        architecture_class=trainer_module.SUBSTRATE_LANE_ID,
+        architecture_class=trainer_module.POSTERIOR_ARCHITECTURE_CLASS,
         stage_callback=stages.append,
     )
 
-    assert result is None
-    assert stages == ["posterior_update_failed_TypeError"]
+    assert result["status"] == "error"
+    assert result["accepted"] is False
+    assert result["architecture_class"] == trainer_module.POSTERIOR_ARCHITECTURE_CLASS
+    assert result["error_type"] == "TypeError"
+    assert result["score_claim_promoted"] is False
+    assert stages == ["posterior_update_status_error_TypeError"]
 
 
 # ---------------------------------------------------------------------------
