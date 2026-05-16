@@ -332,6 +332,14 @@ def test_archive_predictive_coding_meta_tag_present() -> None:
     assert pc["identity_predictor"] is False
     assert pc["literature_anchor"] == "Rao-Ballard1999"
     assert pc["staircase_step"] == 3
+    assert "predicted_band_lo" not in pc
+    assert "predicted_band_hi" not in pc
+    verdict = pc["prediction_band_verdict"]
+    assert verdict["planning_band"] == [0.155, 0.180]
+    assert verdict["valid_for_rank_reward"] is False
+    assert verdict["score_claim"] is False
+    assert verdict["promotion_eligible"] is False
+    assert verdict["ready_for_exact_eval_dispatch"] is False
 
 
 # ===========================================================================

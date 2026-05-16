@@ -82,6 +82,7 @@ TT5L_FIVE_MOVE_CONSTRAINT_SET_IDS: tuple[str, ...] = (
 )
 POLYTOPE_PROJECTION_KIND: str = "score_axis_projection_with_declared_constraints"
 FEASIBILITY_SCOPE: str = "score_axis_sanity_only"
+VERDICT_AUTHORITY_SCOPE: str = "score_axis_consistent_only_no_move_level_or_score_authority"
 PROJECTION_LIMITATIONS: str = (
     "score-axis projection only; not a contest score, not a full-frame "
     "side-info proof, not a move-level feasibility proof, and not promotion evidence"
@@ -124,6 +125,7 @@ class DykstraFeasibilityVerdict:
     constraint_set_count: int
     polytope_projection_kind: str
     feasibility_scope: str
+    verdict_authority_scope: str
     projection_limitations: str
     move_level_constraint_proof: bool
     score_claim: bool
@@ -331,17 +333,18 @@ def check_substrate_dykstra_feasibility(
             feasible_hi=feasible_hi,
         )
         rationale = (
-            f"predicted band [{predicted_band_lo:.6f}, {predicted_band_hi:.6f}] does "
-            f"NOT intersect Dykstra-feasible polytope [{rate_contribution:.6f}, {feasible_hi:.6f}]; "
-            f"blocker_axis={blocker}; revise band per Catalog #296 / audit §1"
+            f"planning band [{predicted_band_lo:.6f}, {predicted_band_hi:.6f}] does "
+            f"NOT intersect the score-axis Dykstra projection [{rate_contribution:.6f}, {feasible_hi:.6f}]; "
+            f"blocker_axis={blocker}; no move-level proof or score authority"
         )
         verdict: VerdictStr = "INFEASIBLE"
     elif feas_lo == predicted_band_lo and feas_hi == predicted_band_hi:
         # Entire band is inside the polytope — strongest FEASIBLE verdict.
         rationale = (
-            f"predicted band [{predicted_band_lo:.6f}, {predicted_band_hi:.6f}] is "
-            f"fully contained in Dykstra-feasible polytope "
-            f"[{rate_contribution:.6f}, {feasible_hi:.6f}]"
+            f"planning band [{predicted_band_lo:.6f}, {predicted_band_hi:.6f}] is "
+            f"score-axis consistent with Dykstra projection "
+            f"[{rate_contribution:.6f}, {feasible_hi:.6f}]; no move-level "
+            f"proof or score authority"
         )
         verdict = "FEASIBLE"
         blocker = None
@@ -349,8 +352,9 @@ def check_substrate_dykstra_feasibility(
         # Single-point intersection — flag as INDETERMINATE; caller should
         # tighten budgets to resolve.
         rationale = (
-            f"predicted band intersects feasibility polytope at a single point "
-            f"({feas_lo:.6f}); tighten seg/pose budgets to disambiguate"
+            f"planning band intersects score-axis Dykstra projection at a "
+            f"single point ({feas_lo:.6f}); tighten seg/pose budgets to "
+            f"disambiguate; no move-level proof or score authority"
         )
         verdict = "INDETERMINATE"
         blocker = None
@@ -359,8 +363,9 @@ def check_substrate_dykstra_feasibility(
         # the clipping so the design memo can declare the polytope-projected
         # band rather than the original claimed band.
         rationale = (
-            f"predicted band partially intersects feasibility polytope; "
-            f"projected feasible interval = [{feas_lo:.6f}, {feas_hi:.6f}]"
+            f"planning band partially intersects score-axis Dykstra projection; "
+            f"projected interval = [{feas_lo:.6f}, {feas_hi:.6f}]; no "
+            f"move-level proof or score authority"
         )
         verdict = "FEASIBLE"
         blocker = None
@@ -384,6 +389,7 @@ def check_substrate_dykstra_feasibility(
         constraint_set_count=len(constraint_ids),
         polytope_projection_kind=POLYTOPE_PROJECTION_KIND,
         feasibility_scope=FEASIBILITY_SCOPE,
+        verdict_authority_scope=VERDICT_AUTHORITY_SCOPE,
         projection_limitations=PROJECTION_LIMITATIONS,
         move_level_constraint_proof=False,
         score_claim=False,

@@ -23822,8 +23822,8 @@
       },
       "id": "lane_time_traveler_l5_autonomy_substrate_20260513",
       "level": 1,
-      "name": "Time-traveler L5 autonomy substrate (95-110 KB, predicted 0.150-0.170)",
-      "notes": "",
+      "name": "Time-traveler L5 autonomy substrate (95-110 KB, active planning band null)",
+      "notes": "active_planning_band=null; retired_predicted_band=0.150-0.170; prediction_band_rank_reward_suppressed=true; requires L5 v2 C1/Z5/TT5L probe, paired CPU/CUDA axis plan, and empirical anchor before architecture lock or score/rank authority",
       "phase": 2.0
     },
     {

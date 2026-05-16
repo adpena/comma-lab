@@ -1,0 +1,623 @@
+{
+  "architecture_lock_allowed": false,
+  "blockers": [
+    "l5_v2_probe_required_candidate_ineligible:c1_world_model_foveation",
+    "l5_v2_probe_required_candidate_ineligible:z5_predictive_coding_world_model",
+    "l5_v2_probe_required_candidate_ineligible:time_traveler_l5_autonomy",
+    "l5_v2_probe_no_eligible_candidate"
+  ],
+  "observations": [
+    {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "artifact_sha256": "",
+      "axis_evidence": [],
+      "byte_closed_archive": false,
+      "candidate_id": "c1_world_model_foveation",
+      "evidence_grade": "contest_cpu_and_cuda_required",
+      "exact_axes": [],
+      "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+      "predicate_id": "l5_v2_probe_observation_intake_v1",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {},
+      "sideinfo_consumed": false
+    },
+    {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "artifact_sha256": "",
+      "axis_evidence": [],
+      "byte_closed_archive": false,
+      "candidate_id": "z5_predictive_coding_world_model",
+      "evidence_grade": "contest_cpu_and_cuda_required",
+      "exact_axes": [],
+      "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+      "predicate_id": "l5_v2_probe_observation_intake_v1",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {},
+      "sideinfo_consumed": false
+    },
+    {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+      "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+      "axis_evidence": [
+        {
+          "archive_bytes": 34603,
+          "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+          "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+          "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+          "axis": "contest_cuda",
+          "eval_device": "cuda",
+          "hardware": "Tesla T4",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": 600,
+          "pose_dist": 0.18563657,
+          "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+          "score": 3.9007398365396795,
+          "score_delta": null,
+          "seg_dist": 0.02515214
+        }
+      ],
+      "byte_closed_archive": true,
+      "candidate_id": "time_traveler_l5_autonomy",
+      "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+      "exact_axes": [
+        "contest_cuda"
+      ],
+      "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+      "predicate_id": "l5_v2_probe_observation_intake_v1",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {
+        "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+      },
+      "sideinfo_consumed": false
+    }
+  ],
+  "probe_gate_artifact": {
+    "probe_disambiguator": {
+      "candidate_ids": [
+        "c1_world_model_foveation",
+        "z5_predictive_coding_world_model",
+        "time_traveler_l5_autonomy"
+      ],
+      "observations": [
+        {
+          "archive_sha256": "",
+          "artifact_path": "",
+          "artifact_sha256": "",
+          "axis_evidence": [],
+          "byte_closed_archive": false,
+          "candidate_id": "c1_world_model_foveation",
+          "evidence_grade": "contest_cpu_and_cuda_required",
+          "exact_axes": [],
+          "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+          "predicate_id": "l5_v2_probe_observation_intake_v1",
+          "predicate_passed": false,
+          "predicted_or_measured_delta": 0.0,
+          "runtime_tree_sha256": "",
+          "runtime_tree_sha256_by_axis": {},
+          "sideinfo_consumed": false
+        },
+        {
+          "archive_sha256": "",
+          "artifact_path": "",
+          "artifact_sha256": "",
+          "axis_evidence": [],
+          "byte_closed_archive": false,
+          "candidate_id": "z5_predictive_coding_world_model",
+          "evidence_grade": "contest_cpu_and_cuda_required",
+          "exact_axes": [],
+          "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+          "predicate_id": "l5_v2_probe_observation_intake_v1",
+          "predicate_passed": false,
+          "predicted_or_measured_delta": 0.0,
+          "runtime_tree_sha256": "",
+          "runtime_tree_sha256_by_axis": {},
+          "sideinfo_consumed": false
+        },
+        {
+          "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+          "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+          "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+          "axis_evidence": [
+            {
+              "archive_bytes": 34603,
+              "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+              "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+              "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+              "axis": "contest_cuda",
+              "eval_device": "cuda",
+              "hardware": "Tesla T4",
+              "inflate_device": "",
+              "log_path": "",
+              "n_samples": 600,
+              "pose_dist": 0.18563657,
+              "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+              "score": 3.9007398365396795,
+              "score_delta": null,
+              "seg_dist": 0.02515214
+            }
+          ],
+          "byte_closed_archive": true,
+          "candidate_id": "time_traveler_l5_autonomy",
+          "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+          "exact_axes": [
+            "contest_cuda"
+          ],
+          "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+          "predicate_id": "l5_v2_probe_observation_intake_v1",
+          "predicate_passed": false,
+          "predicted_or_measured_delta": 0.0,
+          "runtime_tree_sha256": "",
+          "runtime_tree_sha256_by_axis": {
+            "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+          },
+          "sideinfo_consumed": false
+        }
+      ],
+      "paired_exact_axes_required": true,
+      "schema": "tac_l5_v2_probe_disambiguator_v1",
+      "tool_path": "tools/probe_l5_v2_staircase_disambiguator.py",
+      "verdict": {
+        "architecture_lock_allowed": false,
+        "blockers": [
+          "l5_v2_probe_required_candidate_ineligible:c1_world_model_foveation",
+          "l5_v2_probe_required_candidate_ineligible:z5_predictive_coding_world_model",
+          "l5_v2_probe_required_candidate_ineligible:time_traveler_l5_autonomy",
+          "l5_v2_probe_no_eligible_candidate"
+        ],
+        "evaluated_observations": [
+          {
+            "archive_sha256": "",
+            "artifact_path": "",
+            "artifact_sha256": "",
+            "axis_evidence": [],
+            "blockers": [
+              "l5_v2_probe_artifact_path_missing",
+              "l5_v2_probe_artifact_sha_invalid",
+              "l5_v2_probe_predicate_failed",
+              "l5_v2_probe_paired_exact_axes_missing",
+              "l5_v2_probe_byte_closed_archive_missing",
+              "l5_v2_probe_sideinfo_consumption_missing",
+              "l5_v2_probe_archive_sha_invalid",
+              "l5_v2_probe_runtime_tree_sha_invalid",
+              "l5_v2_probe_axis_evidence_missing:contest_cpu",
+              "l5_v2_probe_axis_evidence_missing:contest_cuda"
+            ],
+            "byte_closed_archive": false,
+            "candidate_id": "c1_world_model_foveation",
+            "eligible_for_architecture_lock": false,
+            "evidence_grade": "contest_cpu_and_cuda_required",
+            "exact_axes": [],
+            "missing_exact_axes": [
+              "contest_cpu",
+              "contest_cuda"
+            ],
+            "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+            "paired_score_delta": null,
+            "predicate_id": "l5_v2_probe_observation_intake_v1",
+            "predicate_passed": false,
+            "predicted_or_measured_delta": 0.0,
+            "runtime_tree_sha256": "",
+            "runtime_tree_sha256_by_axis": {},
+            "selection_delta": null,
+            "sideinfo_consumed": false
+          },
+          {
+            "archive_sha256": "",
+            "artifact_path": "",
+            "artifact_sha256": "",
+            "axis_evidence": [],
+            "blockers": [
+              "l5_v2_probe_artifact_path_missing",
+              "l5_v2_probe_artifact_sha_invalid",
+              "l5_v2_probe_predicate_failed",
+              "l5_v2_probe_paired_exact_axes_missing",
+              "l5_v2_probe_byte_closed_archive_missing",
+              "l5_v2_probe_sideinfo_consumption_missing",
+              "l5_v2_probe_archive_sha_invalid",
+              "l5_v2_probe_runtime_tree_sha_invalid",
+              "l5_v2_probe_axis_evidence_missing:contest_cpu",
+              "l5_v2_probe_axis_evidence_missing:contest_cuda"
+            ],
+            "byte_closed_archive": false,
+            "candidate_id": "z5_predictive_coding_world_model",
+            "eligible_for_architecture_lock": false,
+            "evidence_grade": "contest_cpu_and_cuda_required",
+            "exact_axes": [],
+            "missing_exact_axes": [
+              "contest_cpu",
+              "contest_cuda"
+            ],
+            "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+            "paired_score_delta": null,
+            "predicate_id": "l5_v2_probe_observation_intake_v1",
+            "predicate_passed": false,
+            "predicted_or_measured_delta": 0.0,
+            "runtime_tree_sha256": "",
+            "runtime_tree_sha256_by_axis": {},
+            "selection_delta": null,
+            "sideinfo_consumed": false
+          },
+          {
+            "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+            "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+            "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+            "axis_evidence": [
+              {
+                "archive_bytes": 34603,
+                "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+                "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+                "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+                "axis": "contest_cuda",
+                "eval_device": "cuda",
+                "hardware": "Tesla T4",
+                "inflate_device": "",
+                "log_path": "",
+                "n_samples": 600,
+                "pose_dist": 0.18563657,
+                "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+                "score": 3.9007398365396795,
+                "score_delta": null,
+                "seg_dist": 0.02515214
+              }
+            ],
+            "blockers": [
+              "l5_v2_probe_predicate_failed",
+              "l5_v2_probe_paired_exact_axes_missing",
+              "l5_v2_probe_sideinfo_consumption_missing",
+              "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
+              "l5_v2_probe_contest_evidence_grade_missing",
+              "l5_v2_probe_axis_evidence_missing:contest_cpu",
+              "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
+              "l5_v2_probe_axis_log_path_missing:contest_cuda",
+              "l5_v2_probe_axis_score_delta_missing:contest_cuda"
+            ],
+            "byte_closed_archive": true,
+            "candidate_id": "time_traveler_l5_autonomy",
+            "eligible_for_architecture_lock": false,
+            "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+            "exact_axes": [
+              "contest_cuda"
+            ],
+            "missing_exact_axes": [
+              "contest_cpu"
+            ],
+            "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+            "paired_score_delta": null,
+            "predicate_id": "l5_v2_probe_observation_intake_v1",
+            "predicate_passed": false,
+            "predicted_or_measured_delta": 0.0,
+            "runtime_tree_sha256": "",
+            "runtime_tree_sha256_by_axis": {
+              "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+            },
+            "selection_delta": null,
+            "sideinfo_consumed": false
+          }
+        ],
+        "evidence_semantics": "planning_only_l5_v2_probe_disambiguator",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "required_candidates": [
+          "c1_world_model_foveation",
+          "z5_predictive_coding_world_model",
+          "time_traveler_l5_autonomy"
+        ],
+        "required_exact_axes": [
+          "contest_cpu",
+          "contest_cuda"
+        ],
+        "schema": "tac_l5_v2_probe_disambiguator_v1",
+        "score_claim": false,
+        "selected_candidate_id": null,
+        "selected_delta": null,
+        "selected_delta_source": "paired_axis_score_delta",
+        "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
+      },
+      "verdict_sha256": "3da4f0c098d6d353aebc5195cb1d9ade4ad382edca8b77afd1580e178044a6f4"
+    },
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "l5_v2_probe_gate_artifact_v1",
+    "score_claim": false
+  },
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "l5_v2_probe_observation_intake_v1",
+  "score_claim": false,
+  "source_records": [
+    {
+      "accepted_for_observation": true,
+      "axis": "contest_cuda",
+      "axis_evidence": {
+        "archive_bytes": 34603,
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+        "auth_eval_command": "",
+        "axis": "contest_cuda",
+        "eval_device": "",
+        "hardware": "",
+        "inflate_device": "",
+        "log_path": "",
+        "n_samples": null,
+        "pose_dist": 0.18563657,
+        "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+        "score": 3.9007398365396795,
+        "score_delta": null,
+        "seg_dist": 0.02515214
+      },
+      "blockers": [],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "exists": true,
+      "path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+      "sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba"
+    },
+    {
+      "accepted_for_observation": true,
+      "axis": "contest_cuda",
+      "axis_evidence": {
+        "archive_bytes": 34603,
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+        "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+        "axis": "contest_cuda",
+        "eval_device": "cuda",
+        "hardware": "Tesla T4",
+        "inflate_device": "",
+        "log_path": "",
+        "n_samples": 600,
+        "pose_dist": 0.18563657,
+        "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+        "score": 3.9007398365396795,
+        "score_delta": null,
+        "seg_dist": 0.02515214
+      },
+      "blockers": [],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "exists": true,
+      "path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+      "sha256": "6355dd30b9239abd6b50a84123381e605c3cd00cb3d2ceee423d1248a23527b5"
+    },
+    {
+      "accepted_for_observation": true,
+      "axis": "contest_cuda",
+      "axis_evidence": {
+        "archive_bytes": 34603,
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.json",
+        "auth_eval_command": "experiments/contest_auth_eval.py",
+        "axis": "contest_cuda",
+        "eval_device": "",
+        "hardware": "",
+        "inflate_device": "",
+        "log_path": "",
+        "n_samples": 600,
+        "pose_dist": 0.18563657,
+        "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+        "score": 3.9007398365396795,
+        "score_delta": null,
+        "seg_dist": 0.02515214
+      },
+      "blockers": [],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "exists": true,
+      "path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.json",
+      "sha256": "21bf9f3487b26bc56f59a75a0928252a71c877f01b9bd1d51dd2d9973fdeb342"
+    },
+    {
+      "accepted_for_observation": false,
+      "axis": null,
+      "axis_evidence": null,
+      "blockers": [
+        "source_exact_axis_missing_or_unrecognized"
+      ],
+      "candidate_id": "c1_world_model_foveation",
+      "exists": true,
+      "path": "experiments/results/c1_probe_v2_realvideo_20260514T174815Z/probe_v2_realvideo.json",
+      "sha256": "6ca7efd6ff008c7237da581e0163a15c2bdb3c6d3754a72de5eb02ae0a4866f7"
+    },
+    {
+      "accepted_for_observation": false,
+      "axis": null,
+      "axis_evidence": null,
+      "blockers": [
+        "source_exact_axis_missing_or_unrecognized"
+      ],
+      "candidate_id": "c1_world_model_foveation",
+      "exists": true,
+      "path": "experiments/results/c1_probe_v2_realvideo_20260514T174815Z/probe_v2_realvideo_higher_capacity.json",
+      "sha256": "f47ac4b7731cc880c6d2fe9bb8991f21254f1ac0668fb0b243eee475f682630b"
+    },
+    {
+      "accepted_for_observation": false,
+      "axis": null,
+      "axis_evidence": null,
+      "blockers": [
+        "source_exact_axis_missing_or_unrecognized"
+      ],
+      "candidate_id": "c1_world_model_foveation",
+      "exists": true,
+      "path": "reports/raw/c1_wm_probe_20260514T161531Z.json",
+      "sha256": "3a47891425321ac52f02c3dd0a003caef7c3153d777f6b811fdf4a1513c9e6c2"
+    },
+    {
+      "accepted_for_observation": false,
+      "axis": null,
+      "axis_evidence": null,
+      "blockers": [
+        "source_exact_axis_missing_or_unrecognized"
+      ],
+      "candidate_id": "c1_world_model_foveation",
+      "exists": true,
+      "path": "reports/raw/c1_fov_probe_20260514T161537Z.json",
+      "sha256": "80e7ab0ab42e2bffba7ff0b6f22b81f31c17690ddc9894806ac511c2064354a3"
+    }
+  ],
+  "tool_path": "tools/audit_l5_v2_probe_observations.py",
+  "verdict": {
+    "architecture_lock_allowed": false,
+    "blockers": [
+      "l5_v2_probe_required_candidate_ineligible:c1_world_model_foveation",
+      "l5_v2_probe_required_candidate_ineligible:z5_predictive_coding_world_model",
+      "l5_v2_probe_required_candidate_ineligible:time_traveler_l5_autonomy",
+      "l5_v2_probe_no_eligible_candidate"
+    ],
+    "evaluated_observations": [
+      {
+        "archive_sha256": "",
+        "artifact_path": "",
+        "artifact_sha256": "",
+        "axis_evidence": [],
+        "blockers": [
+          "l5_v2_probe_artifact_path_missing",
+          "l5_v2_probe_artifact_sha_invalid",
+          "l5_v2_probe_predicate_failed",
+          "l5_v2_probe_paired_exact_axes_missing",
+          "l5_v2_probe_byte_closed_archive_missing",
+          "l5_v2_probe_sideinfo_consumption_missing",
+          "l5_v2_probe_archive_sha_invalid",
+          "l5_v2_probe_runtime_tree_sha_invalid",
+          "l5_v2_probe_axis_evidence_missing:contest_cpu",
+          "l5_v2_probe_axis_evidence_missing:contest_cuda"
+        ],
+        "byte_closed_archive": false,
+        "candidate_id": "c1_world_model_foveation",
+        "eligible_for_architecture_lock": false,
+        "evidence_grade": "contest_cpu_and_cuda_required",
+        "exact_axes": [],
+        "missing_exact_axes": [
+          "contest_cpu",
+          "contest_cuda"
+        ],
+        "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+        "paired_score_delta": null,
+        "predicate_id": "l5_v2_probe_observation_intake_v1",
+        "predicate_passed": false,
+        "predicted_or_measured_delta": 0.0,
+        "runtime_tree_sha256": "",
+        "runtime_tree_sha256_by_axis": {},
+        "selection_delta": null,
+        "sideinfo_consumed": false
+      },
+      {
+        "archive_sha256": "",
+        "artifact_path": "",
+        "artifact_sha256": "",
+        "axis_evidence": [],
+        "blockers": [
+          "l5_v2_probe_artifact_path_missing",
+          "l5_v2_probe_artifact_sha_invalid",
+          "l5_v2_probe_predicate_failed",
+          "l5_v2_probe_paired_exact_axes_missing",
+          "l5_v2_probe_byte_closed_archive_missing",
+          "l5_v2_probe_sideinfo_consumption_missing",
+          "l5_v2_probe_archive_sha_invalid",
+          "l5_v2_probe_runtime_tree_sha_invalid",
+          "l5_v2_probe_axis_evidence_missing:contest_cpu",
+          "l5_v2_probe_axis_evidence_missing:contest_cuda"
+        ],
+        "byte_closed_archive": false,
+        "candidate_id": "z5_predictive_coding_world_model",
+        "eligible_for_architecture_lock": false,
+        "evidence_grade": "contest_cpu_and_cuda_required",
+        "exact_axes": [],
+        "missing_exact_axes": [
+          "contest_cpu",
+          "contest_cuda"
+        ],
+        "notes": "no exact CPU/CUDA source artifact found by L5 v2 intake",
+        "paired_score_delta": null,
+        "predicate_id": "l5_v2_probe_observation_intake_v1",
+        "predicate_passed": false,
+        "predicted_or_measured_delta": 0.0,
+        "runtime_tree_sha256": "",
+        "runtime_tree_sha256_by_axis": {},
+        "selection_delta": null,
+        "sideinfo_consumed": false
+      },
+      {
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+        "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+        "axis_evidence": [
+          {
+            "archive_bytes": 34603,
+            "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+            "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+            "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+            "axis": "contest_cuda",
+            "eval_device": "cuda",
+            "hardware": "Tesla T4",
+            "inflate_device": "",
+            "log_path": "",
+            "n_samples": 600,
+            "pose_dist": 0.18563657,
+            "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+            "score": 3.9007398365396795,
+            "score_delta": null,
+            "seg_dist": 0.02515214
+          }
+        ],
+        "blockers": [
+          "l5_v2_probe_predicate_failed",
+          "l5_v2_probe_paired_exact_axes_missing",
+          "l5_v2_probe_sideinfo_consumption_missing",
+          "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
+          "l5_v2_probe_contest_evidence_grade_missing",
+          "l5_v2_probe_axis_evidence_missing:contest_cpu",
+          "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
+          "l5_v2_probe_axis_log_path_missing:contest_cuda",
+          "l5_v2_probe_axis_score_delta_missing:contest_cuda"
+        ],
+        "byte_closed_archive": true,
+        "candidate_id": "time_traveler_l5_autonomy",
+        "eligible_for_architecture_lock": false,
+        "evidence_grade": "artifact_intake_not_architecture_lock_evidence",
+        "exact_axes": [
+          "contest_cuda"
+        ],
+        "missing_exact_axes": [
+          "contest_cpu"
+        ],
+        "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+        "paired_score_delta": null,
+        "predicate_id": "l5_v2_probe_observation_intake_v1",
+        "predicate_passed": false,
+        "predicted_or_measured_delta": 0.0,
+        "runtime_tree_sha256": "",
+        "runtime_tree_sha256_by_axis": {
+          "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+        },
+        "selection_delta": null,
+        "sideinfo_consumed": false
+      }
+    ],
+    "evidence_semantics": "planning_only_l5_v2_probe_disambiguator",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "required_candidates": [
+      "c1_world_model_foveation",
+      "z5_predictive_coding_world_model",
+      "time_traveler_l5_autonomy"
+    ],
+    "required_exact_axes": [
+      "contest_cpu",
+      "contest_cuda"
+    ],
+    "schema": "tac_l5_v2_probe_disambiguator_v1",
+    "score_claim": false,
+    "selected_candidate_id": null,
+    "selected_delta": null,
+    "selected_delta_source": "paired_axis_score_delta",
+    "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
+  }
+}

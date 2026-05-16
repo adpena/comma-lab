@@ -69,6 +69,7 @@ def test_feasible_band_inside_polytope():
     assert verdict.contest_seg_multiplier == 100.0
     assert verdict.constraint_set_ids == mod.BASE_CONSTRAINT_SET_IDS
     assert verdict.feasibility_scope == mod.FEASIBILITY_SCOPE
+    assert verdict.verdict_authority_scope == mod.VERDICT_AUTHORITY_SCOPE
     assert verdict.move_level_constraint_proof is False
     assert verdict.score_claim is False
 

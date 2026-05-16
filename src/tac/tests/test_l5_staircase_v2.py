@@ -556,6 +556,9 @@ def _write_tt5l_dykstra_artifact(repo_root: Path) -> Path:
                 ),
                 "polytope_projection_kind": l5_v2.TT5L_DYKSTRA_PROJECTION_KIND,
                 "feasibility_scope": l5_v2.TT5L_DYKSTRA_FEASIBILITY_SCOPE,
+                "verdict_authority_scope": (
+                    l5_v2.TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE
+                ),
                 "move_level_constraint_proof": False,
                 "projection_limitations": (
                     "test fixture: score-axis projection only; not score authority"
@@ -875,6 +878,7 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
         "constraint_set_count",
         "polytope_projection_kind",
         "feasibility_scope",
+        "verdict_authority_scope",
     ):
         payload.pop(key, None)
     artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
@@ -890,6 +894,9 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
         "blockers"
     ]
     assert "tt5l_dykstra_feasibility_scope_missing_or_stale" in tt5l["blockers"]
+    assert "tt5l_dykstra_feasibility_verdict_authority_scope_missing_or_stale" in tt5l[
+        "blockers"
+    ]
 
 
 def test_l5_v2_tt5l_dykstra_artifact_rejects_move_level_proof_authority(
@@ -1025,10 +1032,16 @@ def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
     action = readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"]
 
     assert action["action_id"] == "populate_and_evaluate_c1_z5_tt5l_probe_observations"
-    assert action["probe_status"] == "observations_missing"
-    assert "tools/build_l5_v2_probe_gate_artifact.py" in action["command_template"]
+    assert action["probe_status"] == "observation_intake_required"
+    assert "tools/audit_l5_v2_probe_observations.py" in action["command_template"]
     assert "l5_v2_probe_gate_artifact_20260516_codex.json" in action[
         "command_template"
+    ]
+    assert l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH in action[
+        "expected_artifacts"
+    ]
+    assert l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH in action[
+        "expected_artifacts"
     ]
     assert action["score_claim"] is False
 

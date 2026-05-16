@@ -332,6 +332,14 @@ def test_archive_cooperative_receiver_meta_tag_present() -> None:
     assert crm["atick_redlich_form"] is True
     assert crm["literature_anchor"] == "Atick-Redlich1990"
     assert crm["staircase_step"] == 2
+    assert "predicted_band_lo" not in crm
+    assert "predicted_band_hi" not in crm
+    verdict = crm["prediction_band_verdict"]
+    assert verdict["planning_band"] == [0.180, 0.188]
+    assert verdict["valid_for_rank_reward"] is False
+    assert verdict["score_claim"] is False
+    assert verdict["promotion_eligible"] is False
+    assert verdict["ready_for_exact_eval_dispatch"] is False
 
 
 # ===========================================================================

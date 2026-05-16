@@ -183,8 +183,20 @@ def _make_predictive_coding_world_model_meta_block(
         "identity_predictor": bool(identity_predictor),
         "literature_anchor": "Rao-Ballard1999",
         "staircase_step": 3,
-        "predicted_band_lo": 0.155,
-        "predicted_band_hi": 0.180,
+        "prediction_band_verdict": {
+            "schema": "substrate_archive_prediction_band_verdict_v1",
+            "planning_band": [0.155, 0.180],
+            "axis": "mixed",
+            "evidence_semantics": "planning_prior_only",
+            "valid_for_rank_reward": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [
+                "requires_paired_cpu_cuda_axis_plan_before_promotion",
+                "requires_empirical_anchor_before_rank_reward",
+            ],
+        },
     }
     return meta
 

@@ -187,10 +187,19 @@ prov = {
     'per_pair_bytes': int(per_pair_bytes),
     'substrate_kind': 'time_traveler_l5_autonomy_tt5l',
     'design_memo': '.omx/research/time_traveler_architecture_reverse_engineered_20260513.md',
-    # Literature-prediction only, NOT score evidence.
-    'predicted_band': [0.150, 0.170],
-    'predicted_band_evidence_grade': 'time_traveler_prediction_not_score_evidence',
+    # Retired planning band only. Keep the null active field so generic
+    # calibration tooling sees that TT5L currently has no rank-authoritative
+    # prediction band.
+    'predicted_band': None,
+    'retired_predicted_band': [0.150, 0.170],
+    'prediction_band_rank_reward_suppressed': True,
+    'predicted_band_evidence_grade': 'retired_time_traveler_prediction_not_score_evidence',
     'predicted_basis': 'time_traveler_architecture_reverse_engineered_20260513',
+    'prediction_band_blockers': [
+        'requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock',
+        'requires_paired_cpu_cuda_axis_plan_before_promotion',
+        'requires_l5_v2_empirical_anchor',
+    ],
 }
 import pathlib
 pathlib.Path(provenance_path).write_text(json.dumps(prov, indent=2, sort_keys=True))

@@ -25,11 +25,13 @@ from tac.exact_eval_custody import (
 )
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
-    L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
     evaluate_l5_v2_probe,
     observation_from_mapping,
+)
+from tac.optimization.l5_v2_probe_intake import (
+    L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH,
 )
 from tac.optimization.prediction_band import (
     BandSource,
@@ -81,6 +83,12 @@ TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH = (
 TT5L_PROBE_GATE_ARTIFACT_PATH = (
     ".omx/research/l5_v2_probe_gate_artifact_20260516_codex.json"
 )
+TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json"
+)
+TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH = (
+    ".omx/research/l5_v2_probe_observation_intake_20260516_codex.md"
+)
 TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
@@ -91,6 +99,9 @@ TT5L_DYKSTRA_SCORE_FORMULA = (
 )
 TT5L_DYKSTRA_PROJECTION_KIND = "score_axis_projection_with_declared_constraints"
 TT5L_DYKSTRA_FEASIBILITY_SCOPE = "score_axis_sanity_only"
+TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE = (
+    "score_axis_consistent_only_no_move_level_or_score_authority"
+)
 TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS = frozenset({
     "contest_rate_budget",
     "contest_seg_dist_budget",
@@ -1251,6 +1262,14 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     feasibility_scope = str(payload.get("feasibility_scope") or "")
     if payload and feasibility_scope != TT5L_DYKSTRA_FEASIBILITY_SCOPE:
         blockers.append("tt5l_dykstra_feasibility_scope_missing_or_stale")
+    verdict_authority_scope = str(payload.get("verdict_authority_scope") or "")
+    if (
+        payload
+        and verdict_authority_scope != TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE
+    ):
+        blockers.append(
+            "tt5l_dykstra_feasibility_verdict_authority_scope_missing_or_stale"
+        )
     move_level_constraint_proof = payload.get("move_level_constraint_proof")
     if payload and move_level_constraint_proof is not False:
         blockers.append("tt5l_dykstra_feasibility_move_level_proof_not_false")
@@ -1287,6 +1306,7 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "contest_seg_multiplier": contest_seg_multiplier,
         "polytope_projection_kind": projection_kind or None,
         "feasibility_scope": feasibility_scope or None,
+        "verdict_authority_scope": verdict_authority_scope or None,
         "move_level_constraint_proof": move_level_constraint_proof,
         "constraint_set_ids": sorted(constraint_ids),
         "score_claim": False,
@@ -1411,14 +1431,19 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         next_action = {
             "action_id": "populate_and_evaluate_c1_z5_tt5l_probe_observations",
             "phase": "probe_disambiguator",
-            "probe_status": "observations_missing",
+            "probe_status": "observation_intake_required",
             "input_template": TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH,
             "command_template": (
-                f".venv/bin/python {L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH} "
-                f"--input-json {TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH} "
-                f"--output-json {TT5L_PROBE_GATE_ARTIFACT_PATH}"
+                f".venv/bin/python {L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH} "
+                f"--output-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
+                f"--output-md {TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH} "
+                f"--probe-gate-out {TT5L_PROBE_GATE_ARTIFACT_PATH}"
             ),
-            "expected_artifacts": [TT5L_PROBE_GATE_ARTIFACT_PATH],
+            "expected_artifacts": [
+                TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH,
+                TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH,
+                TT5L_PROBE_GATE_ARTIFACT_PATH,
+            ],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -2893,9 +2918,12 @@ __all__ = [
     "TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH",
     "TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS",
     "TT5L_DYKSTRA_SCORE_FORMULA",
+    "TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
     "TT5L_PROBE_GATE_ARTIFACT_PATH",
+    "TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH",
+    "TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
