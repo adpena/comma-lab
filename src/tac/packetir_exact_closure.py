@@ -21,6 +21,7 @@ from tac.auth_eval_result import (
     parse_finite_auth_eval_score,
     recompute_contest_score_from_payload,
 )
+from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
 from tac.repo_io import repo_relative, sha256_file
 
 SCHEMA = "packetir_exact_eval_closure_v1"
@@ -223,6 +224,23 @@ def build_packetir_exact_closure(
     )
     _check(
         checks,
+        "cuda_eval_axis_semantics_are_contest_cuda",
+        not cuda_summary["axis_semantics_blockers"],
+        requirement=(
+            "CUDA artifact must carry contest-CUDA device semantics and full "
+            "600-sample coverage, not just a CUDA-looking score label"
+        ),
+        evidence={
+            "score_axis": cuda_summary.get("score_axis"),
+            "evidence_grade": cuda_summary.get("evidence_grade"),
+            "n_samples": cuda_summary.get("n_samples"),
+            "eval_device": cuda_summary.get("eval_device"),
+            "hardware": cuda_summary.get("hardware"),
+            "axis_semantics_blockers": cuda_summary["axis_semantics_blockers"],
+        },
+    )
+    _check(
+        checks,
         "cuda_eval_archive_matches_candidate",
         cuda_summary.get("archive_sha256") == candidate_sha
         and cuda_summary.get("archive_bytes") == candidate_bytes,
@@ -262,9 +280,13 @@ def build_packetir_exact_closure(
             "cpu_eval_is_axis_labeled_diagnostic_not_cuda_claim",
             cpu_summary["finite_score"] is True
             and cpu_summary["score_axis"] == "contest_cpu"
-            and cpu_summary["claim_valid"] is False,
+            and cpu_summary["claim_valid"] is False
+            and not cpu_summary["axis_semantics_blockers"],
             requirement="CPU artifact must stay on contest-CPU axis and not become CUDA score authority",
-            evidence=cpu_summary,
+            evidence={
+                **cpu_summary,
+                "axis_semantics_blockers": cpu_summary["axis_semantics_blockers"],
+            },
         )
         _check(
             checks,
@@ -556,10 +578,36 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         provenance.get("archive_size_bytes"),
     )
     recomputed = recompute_contest_score_from_payload(payload)
+    score_axis = str(payload.get("score_axis") or "")
+    evidence_grade = str(payload.get("evidence_grade") or "")
+    n_samples = _first_int(payload.get("n_samples"))
+    eval_device = _first_str(
+        payload.get("scorer_device"),
+        payload.get("actual_device"),
+        payload.get("provenance_device"),
+        payload.get("device"),
+        provenance.get("actual_device"),
+        provenance.get("device"),
+    )
+    hardware = _first_str(
+        payload.get("gpu_model"),
+        payload.get("hardware"),
+        provenance.get("gpu_model"),
+        provenance.get("hardware"),
+        provenance.get("device"),
+    )
+    axis_semantics_blockers = _eval_axis_semantics_blockers(
+        required_axis=required_axis,
+        score_axis=score_axis,
+        evidence_grade=evidence_grade,
+        n_samples=n_samples,
+        eval_device=eval_device,
+        hardware=hardware,
+    )
     return {
-        "score_axis": str(payload.get("score_axis") or ""),
+        "score_axis": score_axis,
         "lane_tag": str(payload.get("lane_tag") or ""),
-        "evidence_grade": str(payload.get("evidence_grade") or ""),
+        "evidence_grade": evidence_grade,
         "finite_score": finite is not None,
         "claim_valid": claim is not None,
         "score": None if finite is None else finite.score,
@@ -569,7 +617,10 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         "archive_bytes": archive_bytes,
         "avg_segnet_dist": _first_float(payload.get("avg_segnet_dist")),
         "avg_posenet_dist": _first_float(payload.get("avg_posenet_dist")),
-        "n_samples": _first_int(payload.get("n_samples")),
+        "n_samples": n_samples,
+        "eval_device": eval_device,
+        "hardware": hardware,
+        "axis_semantics_blockers": axis_semantics_blockers,
         "score_claim": payload.get("score_claim"),
         "score_claim_valid": payload.get("score_claim_valid"),
         "exact_cuda_eval_complete": payload.get("exact_cuda_eval_complete"),
@@ -601,6 +652,39 @@ def _mark_non_cuda_axis_diagnostic(summary: dict[str, Any]) -> None:
     for key in ("promotion_blockers", "rank_or_kill_blockers"):
         existing = [str(item) for item in summary.get(key) or []]
         summary[key] = [*existing, *[item for item in blockers if item not in existing]]
+
+
+def _eval_axis_semantics_blockers(
+    *,
+    required_axis: str,
+    score_axis: str,
+    evidence_grade: str,
+    n_samples: int | None,
+    eval_device: str | None,
+    hardware: str | None,
+) -> list[str]:
+    """Return blockers for exact-eval axis/device/sample semantics."""
+
+    blockers: list[str] = []
+    if score_axis != required_axis:
+        blockers.append("score_axis_mismatch")
+    if n_samples != CONTEST_EXACT_SAMPLE_COUNT:
+        blockers.append("n_samples_not_contest_exact")
+    eval_device_text = str(eval_device or "").strip().lower()
+    hardware_text = str(hardware or "").strip().lower()
+    if required_axis == "contest_cuda":
+        if "cuda" not in eval_device_text:
+            blockers.append("eval_device_not_cuda")
+        if not any(token in hardware_text for token in ("cuda", "gpu", "t4", "a10", "a100", "h100", "l4")):
+            blockers.append("hardware_not_cuda")
+        if "cuda" not in str(evidence_grade or "").strip().lower():
+            blockers.append("evidence_grade_not_cuda")
+    elif required_axis == "contest_cpu":
+        if "cpu" not in eval_device_text:
+            blockers.append("eval_device_not_cpu")
+        if "cpu" not in str(evidence_grade or "").strip().lower():
+            blockers.append("evidence_grade_not_cpu")
+    return blockers
 
 
 def _axis_authority_blockers(summary: Mapping[str, Any]) -> list[str]:

@@ -99,6 +99,92 @@ def test_packetir_exact_closure_rejects_cuda_axis_mismatch(tmp_path: Path) -> No
     assert "cuda_eval_is_valid_contest_cuda_score_claim" in closure["blockers"]
 
 
+def test_packetir_exact_closure_rejects_cuda_claim_without_cuda_device_semantics(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    cuda_eval = _eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True)
+    cuda_eval["scorer_device"] = "cpu"
+    cuda_eval["provenance_device"] = "cpu"
+    cuda_eval["gpu_model"] = "linux-cpu"
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane",
+        candidate_result=_candidate_result(archive),
+        candidate_archive_path=archive,
+        cuda_eval=cuda_eval,
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "blocked_inconsistent_or_missing_evidence"
+    assert "cuda_eval_axis_semantics_are_contest_cuda" in closure["blockers"]
+    axis_check = next(
+        check
+        for check in closure["checks"]
+        if check["id"] == "cuda_eval_axis_semantics_are_contest_cuda"
+    )
+    assert "eval_device_not_cuda" in axis_check["evidence"]["axis_semantics_blockers"]
+    assert "hardware_not_cuda" in axis_check["evidence"]["axis_semantics_blockers"]
+
+
+def test_packetir_exact_closure_rejects_partial_sample_cuda_eval(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    cuda_eval = _eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True)
+    cuda_eval["n_samples"] = 1
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane",
+        candidate_result=_candidate_result(archive),
+        candidate_archive_path=archive,
+        cuda_eval=cuda_eval,
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "blocked_inconsistent_or_missing_evidence"
+    assert "cuda_eval_axis_semantics_are_contest_cuda" in closure["blockers"]
+    axis_check = next(
+        check
+        for check in closure["checks"]
+        if check["id"] == "cuda_eval_axis_semantics_are_contest_cuda"
+    )
+    assert (
+        "n_samples_not_contest_exact"
+        in axis_check["evidence"]["axis_semantics_blockers"]
+    )
+
+
+def test_packetir_exact_closure_rejects_cpu_eval_with_cuda_device_semantics(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    cpu_eval = _eval(_sha256_file(archive), archive.stat().st_size, "contest_cpu", claim=False)
+    cpu_eval["scorer_device"] = "cuda"
+    cpu_eval["provenance_device"] = "cuda"
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane",
+        candidate_result=_candidate_result(archive),
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        cpu_eval=cpu_eval,
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "blocked_inconsistent_or_missing_evidence"
+    assert "cpu_eval_is_axis_labeled_diagnostic_not_cuda_claim" in closure["blockers"]
+    cpu_check = next(
+        check
+        for check in closure["checks"]
+        if check["id"] == "cpu_eval_is_axis_labeled_diagnostic_not_cuda_claim"
+    )
+    assert "eval_device_not_cpu" in cpu_check["evidence"]["axis_semantics_blockers"]
+
+
 def test_packetir_exact_closure_rejects_score_recompute_mismatch(tmp_path: Path) -> None:
     archive = tmp_path / "candidate.zip"
     _write_zip(archive, b"x" * BYTES_CANDIDATE)
@@ -987,6 +1073,9 @@ def _eval(
         "canonical_score": score,
         "score_recomputed_from_components": score,
         "n_samples": 600,
+        "scorer_device": "cuda" if axis == "contest_cuda" else "cpu",
+        "provenance_device": "cuda" if axis == "contest_cuda" else "cpu",
+        "gpu_model": "Tesla T4" if axis == "contest_cuda" else "linux-cpu",
         "score_claim": claim,
         "score_claim_valid": claim,
         "exact_cuda_eval_complete": claim and axis == "contest_cuda",
