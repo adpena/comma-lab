@@ -557,17 +557,24 @@ def terminal_claim_result_conflicts(
         if archive_sha256 not in notes:
             continue
         claim_id = f"{row['lane_id']}:{row['instance_job_id']}:{row['status']}"
+        terminal_runtime_shas = _terminal_claim_runtime_tree_shas(row.get("notes", ""))
         claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
-        if candidate_runtime_sha is not None and claim_runtime_shas:
-            if candidate_runtime_sha not in claim_runtime_shas:
-                if (
-                    block_runtime_mismatch_for_same_archive
-                    or score_affecting_runtime_changed is not True
-                ):
+        runtime_shas_for_match = terminal_runtime_shas or claim_runtime_shas
+        if candidate_runtime_sha is not None and runtime_shas_for_match:
+            if candidate_runtime_sha not in runtime_shas_for_match:
+                if block_runtime_mismatch_for_same_archive:
                     blockers.append(
                         "same_lane_terminal_runtime_mismatch_for_same_archive:"
                         f"{candidate_runtime_sha}:terminal_runtime="
-                        f"{','.join(sorted(claim_runtime_shas))}:{claim_id}"
+                        f"{','.join(sorted(runtime_shas_for_match))}:{claim_id}"
+                    )
+                elif terminal_runtime_shas:
+                    continue
+                elif score_affecting_runtime_changed is not True:
+                    blockers.append(
+                        "same_lane_terminal_runtime_mismatch_for_same_archive:"
+                        f"{candidate_runtime_sha}:terminal_runtime="
+                        f"{','.join(sorted(runtime_shas_for_match))}:{claim_id}"
                     )
                 continue
         elif score_affecting_runtime_changed is True and candidate_runtime_sha is not None:

@@ -638,6 +638,51 @@ def _runtime_custody_blockers(candidate: dict) -> list[str]:
     return []
 
 
+def _path_is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _authority_repo_root_for_candidate(
+    candidate: dict,
+    ranked_input_dir: Path | None,
+) -> Path:
+    """Use a detached queue root when the ranked input carries its own runtime.
+
+    Production queues normally live inside this checkout and should be checked
+    against ``REPO``. For forensic or fixture bundles, the queue directory can
+    be the custody root containing ``upstream/evaluate.py`` and relative
+    submission paths. In that case recomputing the runtime hash against this
+    checkout would create a false mismatch.
+    """
+
+    if ranked_input_dir is None:
+        return REPO
+    queue_root = ranked_input_dir.resolve()
+    if not (queue_root / "upstream" / "evaluate.py").is_file():
+        return REPO
+    for key in (
+        "archive_path",
+        "candidate_archive_path",
+        "submission_dir",
+        "submission_path",
+        "archive_manifest_path",
+        "manifest_path",
+        "runtime_packet_manifest_path",
+    ):
+        value = candidate.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        path = Path(value)
+        queue_path = path if path.is_absolute() else queue_root / path
+        if queue_path.exists() and _path_is_relative_to(queue_path, queue_root):
+            return queue_root
+    return REPO
+
+
 def _candidate_blockers(
     candidate: dict,
     *,
@@ -663,7 +708,7 @@ def _candidate_blockers(
         blockers.append("candidate_not_ready_for_exact_eval_dispatch")
     authority = exact_dispatch_authority(
         candidate,
-        repo_root=REPO,
+        repo_root=_authority_repo_root_for_candidate(candidate, ranked_input_dir),
         queue_dir=ranked_input_dir,
         source="parallel_dispatch_top_k",
         active_floor_archive_bytes=active_floor_archive_bytes,
