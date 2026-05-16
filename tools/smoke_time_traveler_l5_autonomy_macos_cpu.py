@@ -5,11 +5,12 @@
 PAIR T directive 2026-05-13: this is the $0-GPU companion runner for sister
 lane ``lane_time_traveler_l5_autonomy_substrate_20260513``. It exercises the
 substrate's full pipeline (trainer → archive build → inflate → auth eval
-``--device cpu``) on the local macOS host, tags the result
-``[macOS-CPU advisory]`` per Catalog #192, and compares the observed score
-against the design memo's predicted_band ``[0.150, 0.170]`` as an advisory
-escalation signal only. macOS-CPU output can never falsify or promote the
-architecture.
+``--device cpu``) on the local macOS host and tags the result
+``[macOS-CPU advisory]`` per Catalog #192. The old additive TT5L band
+``[0.150, 0.170]`` is retired by the 2026-05-16 cargo-cult unwind; by default
+this harness emits no active predicted-band classification. Operators may pass
+``--predicted-band-*`` only for explicitly labelled historical re-analysis.
+macOS-CPU output can never falsify or promote the architecture.
 
 CLAUDE.md compliance:
   * No GPU dispatch — local macOS-CPU only.
@@ -74,10 +75,13 @@ from tac.optimization.macos_cpu_advisory_signal import (  # noqa: E402
     load_calibration_model,
 )
 
-# Per design memo: predicted_band [0.150, 0.170]. We expose constants so
-# tests can pin the contract without re-reading the memo.
-PREDICTED_BAND_LOW: float = 0.150
-PREDICTED_BAND_HIGH: float = 0.170
+# The additive [0.150, 0.170] band is retained only as retired historical
+# context. The active defaults are None so a smoke run cannot silently treat the
+# retired band as a dispatch or falsification target.
+RETIRED_PREDICTED_BAND_LOW: float = 0.150
+RETIRED_PREDICTED_BAND_HIGH: float = 0.170
+PREDICTED_BAND_LOW: float | None = None
+PREDICTED_BAND_HIGH: float | None = None
 
 # Advisory escalation threshold per design memo. Above this, the architecture
 # needs paired contest-axis recheck; macOS-CPU advisory output cannot falsify a
@@ -97,6 +101,7 @@ class SmokeVerdict:
 
     PASS_IN_BAND = "pass_in_predicted_band"
     PASS_BELOW_BAND = "pass_below_band_better_than_predicted"
+    PASS_NO_ACTIVE_BAND = "pass_no_active_predicted_band"
     WARN_ABOVE_BAND = "warn_above_predicted_band"
     ESCALATE_ABOVE_THRESHOLD = "escalate_above_threshold_requires_contest_axis_recheck"
     SUBSTRATE_NOT_READY = "substrate_not_ready_stub_only"
@@ -157,13 +162,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--predicted-band-low",
         type=float,
         default=PREDICTED_BAND_LOW,
-        help=f"Lower bound of predicted band (default {PREDICTED_BAND_LOW}).",
+        help=(
+            "Optional lower bound for explicitly labelled historical "
+            "predicted-band re-analysis. Default: no active predicted band."
+        ),
     )
     parser.add_argument(
         "--predicted-band-high",
         type=float,
         default=PREDICTED_BAND_HIGH,
-        help=f"Upper bound of predicted band (default {PREDICTED_BAND_HIGH}).",
+        help=(
+            "Optional upper bound for explicitly labelled historical "
+            "predicted-band re-analysis. Default: no active predicted band."
+        ),
     )
     parser.add_argument(
         "--escalation-threshold",
@@ -462,14 +473,16 @@ def _run_contest_auth_eval_cpu(
 def _classify_verdict(
     score: float | None,
     *,
-    band_low: float,
-    band_high: float,
+    band_low: float | None,
+    band_high: float | None,
     escalation: float,
 ) -> str:
     if score is None:
         return SmokeVerdict.EVAL_HARNESS_ERROR
     if score >= escalation:
         return SmokeVerdict.ESCALATE_ABOVE_THRESHOLD
+    if band_low is None or band_high is None:
+        return SmokeVerdict.PASS_NO_ACTIVE_BAND
     if score > band_high:
         return SmokeVerdict.WARN_ABOVE_BAND
     if score < band_low:
@@ -517,8 +530,8 @@ def _emit_summary(
     *,
     verdict: str,
     score: float | None,
-    band_low: float,
-    band_high: float,
+    band_low: float | None,
+    band_high: float | None,
     escalation: float,
     archive_bytes: int | None,
     manifest_path: Path | None,
@@ -540,9 +553,13 @@ def _emit_summary(
         "score_macos_cpu": score,
         "predicted_band_low": band_low,
         "predicted_band_high": band_high,
+        "active_predicted_band": band_low is not None and band_high is not None,
+        "retired_predicted_band_low": RETIRED_PREDICTED_BAND_LOW,
+        "retired_predicted_band_high": RETIRED_PREDICTED_BAND_HIGH,
+        "retired_predicted_band_active": False,
         "escalation_threshold": escalation,
         "in_predicted_band": (
-            None if score is None
+            None if score is None or band_low is None or band_high is None
             else (band_low <= score <= band_high)
         ),
         "above_escalation_threshold": (
@@ -601,7 +618,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     # Stage 1: obtain archive (either pre-built, sister-trained, or stub).
     if args.dry_run:
         return _emit_summary(
-            verdict=SmokeVerdict.PASS_IN_BAND,
+            verdict=SmokeVerdict.PASS_NO_ACTIVE_BAND,
             score=None,
             band_low=args.predicted_band_low,
             band_high=args.predicted_band_high,
@@ -744,12 +761,17 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False))
     verdict = summary.get("verdict")
     # Exit codes:
-    #   0 = PASS_IN_BAND / PASS_BELOW_BAND / dry-run / SUBSTRATE_NOT_READY
+    #   0 = PASS_IN_BAND / PASS_BELOW_BAND / PASS_NO_ACTIVE_BAND / dry-run /
+    #       SUBSTRATE_NOT_READY
     #   1 = WARN_ABOVE_BAND / ESCALATE_ABOVE_THRESHOLD
     #   3 = EVAL_HARNESS_ERROR
     #   4 = NON_DARWIN
-    if verdict in (SmokeVerdict.PASS_IN_BAND, SmokeVerdict.PASS_BELOW_BAND,
-                   SmokeVerdict.SUBSTRATE_NOT_READY):
+    if verdict in (
+        SmokeVerdict.PASS_IN_BAND,
+        SmokeVerdict.PASS_BELOW_BAND,
+        SmokeVerdict.PASS_NO_ACTIVE_BAND,
+        SmokeVerdict.SUBSTRATE_NOT_READY,
+    ):
         return 0
     if verdict in (
         SmokeVerdict.WARN_ABOVE_BAND,

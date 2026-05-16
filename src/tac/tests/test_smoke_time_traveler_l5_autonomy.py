@@ -7,7 +7,7 @@ serializer" + "Apples-to-apples evidence discipline" + Catalog #192
 harness is the $0-GPU companion runner for sister lane
 ``lane_time_traveler_l5_autonomy_substrate_20260513``. These tests pin:
 
-  1) verdict classification (predicted band / advisory escalation threshold)
+  1) verdict classification (optional historical band / advisory escalation)
   2) stub-interface fallback when sister substrate is not yet ready
   3) manifest schema compliance (Catalog #192 + #127 contracts)
   4) per-pair breakdown ranking math
@@ -73,6 +73,14 @@ def test_verdict_classifier_escalates_not_falsifies() -> None:
     assert v == smoke.SmokeVerdict.ESCALATE_ABOVE_THRESHOLD
 
 
+def test_verdict_classifier_without_active_band_is_not_in_band() -> None:
+    """Default post-unwind classification does not reuse the retired TT5L band."""
+    v = smoke._classify_verdict(
+        0.160, band_low=None, band_high=None, escalation=0.190
+    )
+    assert v == smoke.SmokeVerdict.PASS_NO_ACTIVE_BAND
+
+
 def test_verdict_classifier_eval_error_on_none() -> None:
     """None score returns EVAL_HARNESS_ERROR."""
     v = smoke._classify_verdict(
@@ -82,10 +90,12 @@ def test_verdict_classifier_eval_error_on_none() -> None:
 
 
 def test_escalation_threshold_default_matches_design_memo() -> None:
-    """Per design memo: contest-axis recheck above 0.190."""
+    """Per design memo: contest-axis recheck above 0.190; old band retired."""
     assert smoke.ESCALATION_THRESHOLD == 0.190
-    assert smoke.PREDICTED_BAND_LOW == 0.150
-    assert smoke.PREDICTED_BAND_HIGH == 0.170
+    assert smoke.PREDICTED_BAND_LOW is None
+    assert smoke.PREDICTED_BAND_HIGH is None
+    assert smoke.RETIRED_PREDICTED_BAND_LOW == 0.150
+    assert smoke.RETIRED_PREDICTED_BAND_HIGH == 0.170
 
 
 def test_resolve_output_dir_refuses_tmp(tmp_path: Path) -> None:
@@ -110,8 +120,8 @@ def test_dry_run_returns_pass_summary(tmp_path: Path) -> None:
     args.output_dir = tmp_path / "smoke_out"
     args.dry_run = True
     args.allow_non_darwin = True
-    args.predicted_band_low = 0.150
-    args.predicted_band_high = 0.170
+    args.predicted_band_low = None
+    args.predicted_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False
@@ -127,6 +137,9 @@ def test_dry_run_returns_pass_summary(tmp_path: Path) -> None:
     assert summary["promotion_eligible"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["ranking_only"] is True
+    assert summary["verdict"] == smoke.SmokeVerdict.PASS_NO_ACTIVE_BAND
+    assert summary["active_predicted_band"] is False
+    assert summary["in_predicted_band"] is None
     assert summary["eval_payload"]["dry_run"] is True
 
 
@@ -140,8 +153,8 @@ def test_stub_interface_falls_back_when_sister_not_ready(tmp_path: Path) -> None
     args.output_dir = tmp_path / "smoke_stub"
     args.dry_run = False
     args.allow_non_darwin = True
-    args.predicted_band_low = 0.150
-    args.predicted_band_high = 0.170
+    args.predicted_band_low = None
+    args.predicted_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = True
@@ -214,8 +227,8 @@ def test_non_darwin_guard_emits_skip(tmp_path: Path) -> None:
     args.allow_non_darwin = False
     args.output_dir = tmp_path / "ndr"
     args.dry_run = True
-    args.predicted_band_low = 0.150
-    args.predicted_band_high = 0.170
+    args.predicted_band_low = None
+    args.predicted_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False

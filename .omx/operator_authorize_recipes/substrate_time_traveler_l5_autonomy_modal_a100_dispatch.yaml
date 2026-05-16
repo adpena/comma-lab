@@ -78,9 +78,9 @@ council_phase_5_prediction: 0.160
 risk: |
   PAIR T directive 2026-05-13 dispatch recipe. The substrate is novel —
   the differentiable-physics renderer + foveation grid + Markov-1 ego-pose
-  prior have NOT been empirically anchored against the contest video. The
-  predicted band [0.150, 0.170] is a literature-prediction synthesis, not
-  measurement.
+  prior have NOT been empirically anchored against the contest video. The old
+  additive [0.150, 0.170] band is retired cargo-cult context, not an active
+  prediction or measurement.
 
   Architectural risk:
   - First-anchor risk: the predicted_band may be off by 0.05+ in either

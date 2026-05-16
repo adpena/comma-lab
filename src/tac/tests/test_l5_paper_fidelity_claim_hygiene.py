@@ -129,8 +129,10 @@ def test_l5_family_docstrings_keep_literature_and_score_claims_separate() -> Non
 
     assert "5-10x effective resolution gain" not in tt5l
     assert "Predicted contest-CPU score" not in tt5l
-    assert "Planning band: 0.150-0.170" in tt5l
-    assert "not paper-derived evidence of contest score movement" in tt5l
+    assert "Active planning band: null" in tt5l
+    assert "additive ``0.150-0.170`` band is retired" in tt5l
+    assert "Dykstra" in tt5l
+    assert "feasibility projection" in tt5l
 
     assert "predicted 20-40% reduction" not in z5
     assert "mathematical-derivation; Time-Traveler-asymptote" not in z5

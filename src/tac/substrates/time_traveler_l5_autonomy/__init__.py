@@ -20,12 +20,13 @@ grammar at 95-110 KB target size:
    dynamics prior encodes "physics" once (~25 KB) instead of pixels per frame.
 5. **Sub-100K params + Tikhonov regularization**: ~35 KB decoder weights target
    a smaller byte budget than PR101's ~114 KB payload while preserving enough
-   scorer-relevant structure to test the 0.150-0.170 planning band.
+   scorer-relevant structure for a paired contest-axis first anchor.
 
-**Planning band: 0.150-0.170** ``[time-traveler-hypothesis]``. This is not a
-score claim and is not paper-derived evidence of contest score movement. Score
-authority requires CUDA + CPU paired auth eval on 1:1 contest-CI hardware per
-CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
+**Active planning band: null** ``[cargo-cult-unwind-20260516]``. The old
+additive ``0.150-0.170`` band is retired historical context until a Dykstra
+feasibility projection and paired first anchor produce a grounded replacement.
+Score authority requires CUDA + CPU paired auth eval on 1:1 contest-CI hardware
+per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
 
 Catalog #124 STRICT archive-grammar 8 fields (declared inline so the AST
 walker sees them):

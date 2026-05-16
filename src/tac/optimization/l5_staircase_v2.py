@@ -1272,7 +1272,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "command_template": (
                 f".venv/bin/python {TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH} "
                 f"--substrate-id {TT5L_DYKSTRA_SUBSTRATE_ID} "
-                "--predicted-band-lo 0.150 --predicted-band-hi 0.170 "
+                "--predicted-band-lo <polytope_projected_lower_bound> "
+                "--predicted-band-hi <polytope_projected_upper_bound> "
                 "--archive-size-bytes <tt5l_target_or_candidate_archive_bytes> "
                 f"--output-json {TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH}"
             ),
