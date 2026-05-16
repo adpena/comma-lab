@@ -13,7 +13,6 @@ from tac.deploy.provider_contracts import (
 )
 from tac.preflight import PreflightError, check_provider_deploy_contracts
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -39,10 +38,21 @@ def test_only_implemented_cuda_surfaces_advertise_exact_eval_support() -> None:
 
     assert {
         name for name, contract in contracts.items() if contract.exact_cuda_eval_supported
-    } == {"modal", "lightning", "vastai", "azure"}
-    for name in ("aws", "gcp"):
+    } == {"modal", "lightning", "vastai"}
+    for name in ("aws", "azure", "gcp"):
         assert contracts[name].scaffold_only is True
         assert contracts[name].exact_cuda_eval_supported is False
+
+
+def test_azure_stays_scaffold_until_claim_and_custody_contracts_land() -> None:
+    azure = provider_contracts()["azure"]
+    assert azure.status == "scaffold"
+    assert azure.execution_flag is None
+    assert azure.exact_cuda_eval_supported is False
+    assert "lane claim lifecycle" in azure.setup_blockers
+    assert "runtime custody manifest" in azure.setup_blockers
+    assert "CUDA import probe" in azure.setup_blockers
+    assert "harvest custody" in azure.setup_blockers
 
 
 def test_validate_provider_contracts_passes_on_live_repo() -> None:

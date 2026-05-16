@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from importlib.util import find_spec
 from pathlib import Path
 
-
 PROVIDER_NAMES: tuple[str, ...] = (
     "modal",
     "kaggle",
@@ -179,15 +178,28 @@ PROVIDER_CONTRACTS: dict[str, ProviderDeployContract] = {
         provider="azure",
         module="tac.deploy.azure.azure_dispatch",
         canonical_entrypoints=("scripts/launch_lane_azure.py", "src/tac/deploy/azure/azure_dispatch.py"),
-        status="implemented",
+        status="scaffold",
         plan_only_default=True,
-        execution_flag="--no-dry-run",
+        execution_flag=None,
         requires_lane_claim_before_dispatch=True,
         terminal_claim_required=True,
         custody_manifest_required=True,
-        exact_cuda_eval_supported=True,
-        setup_blockers=("az login", "quota/spot availability", "SSH public key", "lane tarball wiring"),
-        notes="Azure can host claimed CUDA remote lanes; dry-run remains the default.",
+        exact_cuda_eval_supported=False,
+        setup_blockers=(
+            "az login",
+            "quota/spot availability",
+            "SSH public key",
+            "lane tarball wiring",
+            "lane claim lifecycle",
+            "runtime custody manifest",
+            "CUDA import probe",
+            "harvest custody",
+        ),
+        notes=(
+            "Azure VM lifecycle exists, but exact CUDA eval remains scaffold-only "
+            "until lane-claim, runtime-custody, import-probe, and harvest "
+            "contracts are implemented end to end."
+        ),
     ),
     "gcp": ProviderDeployContract(
         provider="gcp",
