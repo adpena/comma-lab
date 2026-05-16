@@ -56,7 +56,7 @@ import datetime as dt
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from tac.optimization.substrate_composition_matrix import (
     Composability,
@@ -192,6 +192,7 @@ def _build_singleton_dispatch_candidates(
                 lane_class=r.lane_class,
                 literature_anchor=r.literature_anchor,
                 campaign_metadata=campaign_metadata,
+                blockers=r.dispatch_blockers,
             )
         )
     return out
@@ -243,6 +244,9 @@ def _build_orthogonal_pair_candidates(
             literature_anchor = "; ".join(
                 part for part in (ri.literature_anchor, rj.literature_anchor) if part
             )
+            blockers = tuple(dict.fromkeys(
+                list(ri.dispatch_blockers) + list(rj.dispatch_blockers)
+            ))
             campaign_metadata = tuple(
                 part
                 for row in (ri, rj)
@@ -279,6 +283,7 @@ def _build_orthogonal_pair_candidates(
                     lane_class=lane_class,
                     literature_anchor=literature_anchor,
                     campaign_metadata=campaign_metadata,
+                    blockers=blockers,
                 )
             )
     return out
@@ -286,7 +291,7 @@ def _build_orthogonal_pair_candidates(
 
 def rank_dispatches(
     *,
-    matrix: Optional[CompositionMatrix] = None,
+    matrix: CompositionMatrix | None = None,
     per_dispatch_cap_usd: float = DEFAULT_PER_DISPATCH_CAP_USD,
     cumulative_cap_usd: float = DEFAULT_CUMULATIVE_CAP_USD,
     include_orthogonal_pairs: bool = True,
@@ -494,14 +499,14 @@ def write_ranking_json(result: RankingResult, path: str) -> None:
 
 
 __all__ = [
-    "SCHEMA_VERSION",
-    "DEFAULT_PER_DISPATCH_CAP_USD",
     "DEFAULT_CUMULATIVE_CAP_USD",
+    "DEFAULT_PER_DISPATCH_CAP_USD",
+    "SCHEMA_VERSION",
     "RankedDispatchCandidate",
     "RankingResult",
     "rank_dispatches",
-    "synthetic_l2_encoder_dispatch_candidates",
     "serialize_candidate",
     "serialize_ranking",
+    "synthetic_l2_encoder_dispatch_candidates",
     "write_ranking_json",
 ]

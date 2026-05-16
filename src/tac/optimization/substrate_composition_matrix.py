@@ -174,6 +174,7 @@ class SubstrateRow:
     campaign_priority: str = ""
     lane_class: str = ""
     literature_anchor: str = ""
+    dispatch_blockers: tuple[str, ...] = ()
 
     def predicted_delta_alone_midpoint(self) -> float:
         return 0.5 * (self.predicted_delta_alone_band[0] + self.predicted_delta_alone_band[1])
@@ -1012,6 +1013,11 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_1",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="balle_2018",
+            dispatch_blockers=(
+                "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
+                "phase2_council_required_before_full_dispatch",
+                "z3_full_main_not_implemented_use_smoke_recipe_only",
+            ),
         ),
         SubstrateRow(
             substrate_id="z4_cooperative_receiver_loss",
@@ -1032,6 +1038,11 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_2",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Atick-Redlich1990; Tishby-Zaslavsky",
+            dispatch_blockers=(
+                "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
+                "requires_z3_contest_anchor_before_dispatch",
+                "phase2_council_required_before_dispatch",
+            ),
         ),
         SubstrateRow(
             substrate_id="z5_predictive_coding_world_model",
@@ -1052,6 +1063,12 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_3",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Rao-Ballard1999; predictive-coding; Friston2010",
+            dispatch_blockers=(
+                "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
+                "requires_z4_anchor_before_dispatch",
+                "requires_ego_motion_handoff_to_c1",
+                "phase2_council_required_before_dispatch",
+            ),
         ),
         SubstrateRow(
             substrate_id="c1_world_model_foveation",
@@ -1072,6 +1089,11 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="long_term_campaign_c1",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Ha-Schmidhuber2018; DreamerV3; Atick-Redlich1990; Rao-Ballard1999",
+            dispatch_blockers=(
+                "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
+                "requires_c1_probe_v2_architecture_lock",
+                "phase3_council_required_before_dispatch",
+            ),
         ),
         SubstrateRow(
             substrate_id="c6_e4_mdl_ibps",
@@ -1092,6 +1114,11 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="long_term_campaign_c6",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Tishby-Zaslavsky; Rissanen1978; MacKay2003; MDL-IBPS",
+            dispatch_blockers=(
+                "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
+                "requires_c6_full_anchor_or_operator_authorized_smoke_predeploy",
+                "requires_paired_cpu_cuda_axis_plan_before_promotion",
+            ),
         ),
     ]
     # Stable sort: by class then id.
@@ -1483,6 +1510,7 @@ class ParetoRow:
     campaign_priority: str = ""
     lane_class: str = ""
     literature_anchor: str = ""
+    dispatch_blockers: tuple[str, ...] = ()
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
@@ -1600,6 +1628,7 @@ def per_substrate_pareto_rows(
         # rows to the top of the ranking, masking real signal.
         cost_estimation_pending = cost <= 0.0
         eig_per_dollar = 0.0 if cost_estimation_pending else eig / cost
+        blockers = list(s.dispatch_blockers)
         notes = (
             f"[predicted; substrate composition matrix v1] "
             f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
@@ -1617,7 +1646,10 @@ def per_substrate_pareto_rows(
         if s.literature_anchor:
             notes += f"; literature_anchor={s.literature_anchor}"
         if cost_estimation_pending:
+            blockers.append("cost_estimation_required")
             notes += "; cost_estimation_required (cost=0.0 treated as unknown, not free)"
+        if blockers:
+            notes += f"; dispatch_blockers={blockers!r}"
         rows.append(
             ParetoRow(
                 substrate_id=s.substrate_id,
@@ -1635,6 +1667,7 @@ def per_substrate_pareto_rows(
                 campaign_priority=s.campaign_priority,
                 lane_class=s.lane_class,
                 literature_anchor=s.literature_anchor,
+                dispatch_blockers=tuple(blockers),
             )
         )
     return rows

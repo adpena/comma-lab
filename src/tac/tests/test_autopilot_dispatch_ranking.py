@@ -265,6 +265,63 @@ def test_z3_singleton_registered_with_balle_2018_anchor_and_campaign_metadata():
     assert "literature_anchor=balle_2018" in z3.composition_notes
 
 
+def test_campaign_rows_carry_dispatch_blockers_to_autopilot():
+    result = rank_dispatches(drop_redundant_dominated=False)
+    by_id = {c.candidate_id: c for c in result.ranked_dispatches}
+
+    z3 = by_id["singleton__z3_balle_hyperprior_bolton"]
+    assert "phase2_council_required_before_full_dispatch" in z3.blockers
+    assert (
+        "campaign_row_planning_only_requires_current_operator_recipe_predeploy"
+        in z3.blockers
+    )
+
+    c6 = by_id["singleton__c6_e4_mdl_ibps"]
+    assert "requires_paired_cpu_cuda_axis_plan_before_promotion" in c6.blockers
+
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+
+    row = CandidateRow(**z3.as_candidate_row_kwargs())
+    assert "z3_full_main_not_implemented_use_smoke_recipe_only" in row.blockers
+
+
+def test_campaign_blockers_prevent_autopilot_self_authorization(tmp_path):
+    result = rank_dispatches(drop_redundant_dominated=False)
+    z3 = {
+        c.candidate_id: c for c in result.ranked_dispatches
+    }["singleton__z3_balle_hyperprior_bolton"]
+
+    from tools.cathedral_autopilot_autonomous_loop import (
+        CandidateRow,
+        OperatorAuthorizedModeConfig,
+    )
+
+    helper = tmp_path / "claim_lane_dispatch.py"
+    helper.write_text("# helper\n", encoding="utf-8")
+    auth = OperatorAuthorizedModeConfig(
+        enabled=True,
+        canonical_helper_script=helper,
+    )
+    ok, reason = auth.can_authorize(CandidateRow(**z3.as_candidate_row_kwargs()))
+    assert ok is False
+    assert "unresolved blockers" in reason
+
+
+def test_orthogonal_pair_unions_campaign_dispatch_blockers():
+    result = rank_dispatches(
+        drop_redundant_dominated=False,
+        include_orthogonal_pairs=True,
+        per_dispatch_cap_usd=10.0,
+    )
+    pairs = [
+        c for c in result.ranked_dispatches
+        if "z3_balle_hyperprior_bolton" in c.substrate_ids
+        and "hessian_block_fp" in c.substrate_ids
+    ]
+    assert pairs
+    assert "phase2_council_required_before_full_dispatch" in pairs[0].blockers
+
+
 # ── Serialization ────────────────────────────────────────────────────────
 
 
