@@ -494,10 +494,11 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
 
     assert [step.step_id for step in steps] == [
         "l5v2_00_source_and_alias_custody",
-        "l5v2_01_sideinfo_consumption_proof",
-        "l5v2_02_probe_disambiguator",
-        "l5v2_03_paired_axis_anchor",
-        "l5v2_04_stack_of_stacks_candidate",
+        "l5v2_01_dykstra_feasibility_polytope",
+        "l5v2_02_sideinfo_consumption_proof",
+        "l5v2_03_probe_disambiguator",
+        "l5v2_04_paired_axis_anchor",
+        "l5v2_05_stack_of_stacks_candidate",
     ]
     for step in steps:
         assert step.research_basis_ids
@@ -505,7 +506,13 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
         assert step.promotion_eligible is False
         assert set(step.required_gate_ids) <= gate_ids
 
-    probe_step = next(step for step in steps if step.step_id == "l5v2_02_probe_disambiguator")
+    dykstra_step = next(
+        step for step in steps if step.step_id == "l5v2_01_dykstra_feasibility_polytope"
+    )
+    assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH in dykstra_step.deliverable_surface
+    assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH in dykstra_step.deliverable_surface
+
+    probe_step = next(step for step in steps if step.step_id == "l5v2_03_probe_disambiguator")
     assert probe_step.deliverable_surface == L5V2_PROBE_TOOL_PATH
     assert Path(L5V2_PROBE_TOOL_PATH).is_file()
 

@@ -225,7 +225,22 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             research_basis_ids=basis,
         ),
         L5V2Step(
-            step_id="l5v2_01_sideinfo_consumption_proof",
+            step_id="l5v2_01_dykstra_feasibility_polytope",
+            title="Dykstra feasibility polytope",
+            objective=(
+                "Project the retired additive TT5L five-move score band through "
+                "the contest formula and declared design-move constraint axes "
+                "before side-info proof or timing work."
+            ),
+            deliverable_surface=(
+                f"{TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH} + "
+                f"{TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH}"
+            ),
+            required_gate_ids=(),
+            research_basis_ids=basis,
+        ),
+        L5V2Step(
+            step_id="l5v2_02_sideinfo_consumption_proof",
             title="Temporal side-info consumption proof",
             objective=(
                 "Add byte-mutation and section-consumption proofs for the TT5L "
@@ -238,7 +253,7 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             research_basis_ids=basis,
         ),
         L5V2Step(
-            step_id="l5v2_02_probe_disambiguator",
+            step_id="l5v2_03_probe_disambiguator",
             title="C1/Z5/TT5L probe disambiguator",
             objective=(
                 "Ship both defensible interpretations and let paired probes "
@@ -249,7 +264,7 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             research_basis_ids=basis,
         ),
         L5V2Step(
-            step_id="l5v2_03_paired_axis_anchor",
+            step_id="l5v2_04_paired_axis_anchor",
             title="Paired CPU/CUDA anchor",
             objective=(
                 "Measure the exact same byte-closed packet on contest-compliant "
@@ -263,7 +278,7 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             research_basis_ids=basis,
         ),
         L5V2Step(
-            step_id="l5v2_04_stack_of_stacks_candidate",
+            step_id="l5v2_05_stack_of_stacks_candidate",
             title="Stack-of-stacks composition candidate",
             objective=(
                 "Compose the first proved L5 v2 packet with the best byte-closed "
@@ -2626,6 +2641,10 @@ __all__ = [
     "SUBJECT_ID",
     "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
+    "TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH",
+    "TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH",
+    "TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS",
+    "TT5L_DYKSTRA_SCORE_FORMULA",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
