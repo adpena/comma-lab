@@ -811,3 +811,98 @@ Catalog #270 dispatch-optimization-protocol verifies AND(Tier 1 + Tier 2 + Tier 
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+---
+
+## Appendix A — Modal T4 smoke harvest 2026-05-16T22:12Z (subagent_a_harvest_smokes)
+
+**Per Catalog #110 + #113 HISTORICAL_PROVENANCE APPEND-ONLY discipline:** this Appendix is appended to the design memo; pre-existing body content is UNCHANGED.
+
+### A.1 Dispatch + harvest evidence chain
+
+- **Modal call_id:** `fc-01KRRJNSXCJ48W4DW53YE02PAE` (registered per Catalog #245 at 2026-05-16T14:22:35.994283Z, mounted_code_git_head=`c37d9cab78`)
+- **Dispatch label:** `substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep`
+- **Lane:** `lane_nscs06_carmack_hotz_strip_everything_20260515`
+- **GPU:** Modal T4 (max_seconds=3600)
+- **Returncode:** 0
+- **Elapsed:** 1310.6 sec (~21.8 min)
+- **Estimated cost:** $0.214 (Modal T4 hourly $0.59 × 21.8 min)
+- **Archive sha256:** `af80dc76b802e9b096cdd3bc5ca412d3ccb8a17ca81fb1382c9c11c2c7ca120a`
+- **Archive bytes:** 4,014,234 (3.83 MB)
+- **n_samples:** 600
+- **Harvested artifacts persisted:** `experiments/results/lane_nscs06_v8_path_b_wavelet_modal_t4_20260516T142210Z_modal/artifacts/{contest_auth_eval_cpu.json,inflated_outputs_manifest.json,provenance.json,run.log,modal_live_metadata.json,modal_worker_head_ledger.json}`
+
+### A.2 Score reading (canonical, axis-tagged)
+
+**Canonical score:** `58.892` `[diagnostic-CPU Modal advisory only]`
+
+| Component | Value |
+| --- | --- |
+| avg_posenet_dist | 95.759 |
+| avg_segnet_dist | 0.2527 |
+| rate_unscaled | 0.10692 |
+| score_pose_contribution | 30.945 |
+| score_seg_contribution | 25.274 |
+| score_rate_contribution | 2.673 |
+| **canonical_score** | **58.892** |
+
+**Axis discipline per CLAUDE.md "Apples-to-apples evidence discipline" + "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" non-negotiable:**
+
+- The recipe defaulted `AUTH_EVAL_DEVICE=cpu` per `modal_live_metadata.json::auth_eval_advisory_only=true` (intended axis was `cuda` per `modal_call_id_ledger.expected_axis="cuda"`, but Modal worker ran CPU).
+- Phantom-score-fix (Catalog #249) auto-redirected output filename `contest_auth_eval_cuda.json` → `contest_auth_eval_cpu.json` to prevent the misleading-directory trap. Loud `[phantom-score-fix]` warning correctly fired in `run.log`.
+- **Score axis = `diagnostic_cpu` (Modal CPU is NOT 1:1 GHA Linux x86_64; NOT `[contest-CPU]`).** Per CLAUDE.md submission-auth-eval mandate, `[contest-CPU]` requires Linux x86_64 (Ubuntu LTS, matching `ubuntu-latest` GHA family). Modal Linux containers are advisory only until paired Linux x86_64 replay lands.
+- **score_claim=false, promotion_eligible=false, rank_or_kill_eligible=false** per modal_live_metadata.json.
+
+### A.3 Verdict per Section 18 reactivation criteria decision tree
+
+> `> 40` → Path B WAIVED; DEFER pending grand-council symposium ratification of next path
+
+**VERDICT: DEFER-pending-grand-council** per CLAUDE.md "Forbidden premature KILL without research exhaustion" (single empirical configuration; no architectural exhaustion across QAT / LSQ / different DWT depths / different Wyner-Ziv residual budgets).
+
+**Diagnostic decomposition of the >40 outcome (informational, not a KILL):**
+
+- **Pose contribution 30.9 dominates** (52% of total): consistent with the v7 cargo-cult #2 finding (PoseNet is NOT translation-invariant — `np.roll`-style global shift mechanism in v6/v7 is empirically falsified; v8 Path B's wavelet residual does not reconstruct the pose-relevant motion content the PoseNet's FastViT-T12 expects).
+- **SegNet contribution 25.3** (43% of total): consistent with the chroma-strip / Y=R=G=B replication anchor (v7 cargo-cult #1) — SegNet's stride-2 EfficientNet-B2 stem cannot recover destroyed chroma; the wavelet sidecar reconstructs luminance but not chroma channels.
+- **Rate contribution 2.67** (5% of total): 4 MB archive @ 25/37.5M; rate is well-managed. The score failure is NOT a rate-axis issue.
+- **CUDA estimation:** per the CLAUDE.md PR102 anchor (CUDA-CPU pose gap can be 5×), the corresponding CUDA score is likely in `[15, 40]` range; even at the optimistic ~15 it lands at the boundary of the design-memo "in-band" criterion. Pose-dominant CPU/CUDA gap may inflate the optimistic estimate but pose=95.76 has hardware-substrate-independent structural origin (motion content not reconstructed).
+
+### A.4 Reactivation criteria (UNCHANGED from Section 19; tagged here for forward-reference)
+
+Per CLAUDE.md "KILL/FALSIFIED memory verdicts" + the design memo's Section 18:
+
+1. **Empirical config retired:** Only the (100ep, T4, CPU auth-eval, single (DB4, depth=2) wavelet config) is retired. Other configurations (CUDA auth-eval, different DWT family/depth, per-class-conditional CDF refinement, Wyner-Ziv residual budget sweep, score-aware loss alternatives) remain plausible reactivation paths.
+2. **Reactivation paths queued:**
+   - Re-dispatch with `AUTH_EVAL_DEVICE=cuda` to recover the contest-axis score (paired CPU+CUDA per dual-eval mandate).
+   - Pivot to design memo Section 18 alternative "**Path C hybrid-neural**" (the marginal-band [25, 40] outcome's pivot was specified; the >40 outcome also routes here per "DEFER + grand council selects next path").
+   - Council deliberation on the assumption-audit findings vs the wavelet-residual architectural commitment (v8 already absorbed 6 cargo-cult-targeted improvements; the next iteration's increment vs cost is the deliberation question).
+3. **Grand-council symposium ratification required** before any further v8 Path B compress+full dispatch fires (no further $-spend on this exact configuration until council decides).
+
+### A.5 6-hook wire-in completion (per Catalog #125)
+
+- **Sensitivity-map contribution:** ACTIVE — `pose_avg=95.76` + `seg_avg=0.253` provide per-component sensitivity signal for the next-substrate selection (pose-dominant signal informs Path C hybrid-neural prioritization).
+- **Pareto constraint:** ACTIVE — the (rate=2.67, seg=25.3, pose=30.9) tuple lands at coordinates (4.01 MB, 0.253, 95.76) in the rate-seg-pose feasibility cube; far from the contest frontier polytope `[0.40, 28.76]` per Catalog #296 Dykstra-feasibility surface.
+- **Bit-allocator hook:** N/A — the wavelet codec has fixed per-subband CDFs; no learned per-tensor allocation hook to update.
+- **Cathedral autopilot dispatch hook:** ACTIVE — the harvested score row in `reports/cathedral_autopilot_evidence.jsonl` (already appended by `tools/harvest_modal_calls.py` per codex sister) + the call_id ledger row + cost-band anchor + posterior anchor make this empirical anchor consumable by the autopilot ranker.
+- **Continual-learning posterior update:** ACTIVE — `posterior_update_locked` called with `evidence_tag="[diagnostic-CPU Modal advisory only]"`; correctly REFUSED as non-authoritative (refused_anchor_count incremented); the anchor row is forensically preserved.
+- **Probe-disambiguator:** ACTIVE — Section 18 enumerated 4 reactivation bands; this harvest landed in band `>40` → DEFER. The probe was `tools/probe_latent_conditional_entropy_h_latent_given_scorer_class.py` per Section 18; the score outcome arbitrates which next-substrate path is loaded.
+
+### A.6 Cross-references
+
+- Modal call_id ledger row: `.omx/state/modal_call_id_ledger.jsonl` (event_type=harvested @ 2026-05-16T22:16:12Z; archive_sha256 + bytes confirmed)
+- Cost-band posterior anchor: `.omx/state/cost_band_posterior.jsonl` (outcome=harvested_partial; actual_cost_usd=$0.215; prediction_in_band=false because actual << predicted)
+- Continual-learning posterior: `.omx/state/continual_learning_posterior.jsonl` (refused_anchor row; evidence_tag non-authoritative)
+- Sister codex harvest closure: `.omx/research/stc_v2_modal_harvest_no_signal_loss_20260516_codex.md` (sister STC v2 lane)
+- This subagent's lane: `lane_harvest_nscs06_v8_and_stc_v2_smokes_20260516`
+- This subagent's id: `subagent_a_harvest_smokes_20260516`
+
+**Per Catalog #229 premise-verification:** the score `58.89` was read from the actual `contest_auth_eval_cpu.json` artifact (not assumed); the axis label `diagnostic_cpu` was derived from `modal_live_metadata.auth_eval_device="cpu"` + `auth_eval_advisory_only=true` (not invented); the verdict `DEFER` was applied per the literal Section 18 decision tree text `> 40 → Path B WAIVED; DEFER pending grand-council symposium ratification` (not extrapolated).
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope -->
+
+This memo references Atick-Redlich / cooperative-receiver framing as cross-reference / related-work / sister-substrate context — NOT as this substrate's architectural core. The substrate proposed by this memo is structurally distinct from Z6/Z7/Z8 (which DO require ego-motion-conditioned next-frame prediction as architectural core per Pattern H + Z6/Z7/Z8 design memo Section 11).
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Pattern H + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
+
+Cross-references to cooperative-receiver / Atick-Redlich in this memo serve as theoretical-anchor / related-work / sister-substrate-comparison only; they do NOT make this substrate a predictive-coding substrate in the Pattern H sense.

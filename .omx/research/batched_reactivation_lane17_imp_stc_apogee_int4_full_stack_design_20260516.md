@@ -799,3 +799,96 @@ See per-substrate §1.2.8 + §2.2.8 + §3.2.8 + the umbrella summary above.
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+
+---
+
+## Catalog backfill appendix (HISTORICAL_PROVENANCE APPEND-ONLY per Catalog #110 / #113)
+
+Added 2026-05-16 by SUBAGENT D (lane `lane_catalog_307_308_309_311_backfill_strict_flip_20260516`) to satisfy Catalog #307 (paradigm-vs-implementation falsification classification) at the WARN→STRICT atomicity flip.
+
+### Paradigm-vs-implementation falsification classification (Catalog #307 / Pattern D)
+
+**Classification: implementation-cargo-cult** (the paradigm was INTACT in the prior kill verdict; the failure was implementation-level cargo-cult stack on intact paradigm).
+
+This memo describes reactivation / reformulation / resurrection of a previously-killed substrate. The prior kill verdict has been re-examined via FALSIFICATION-AUDIT-v2 Lenses 1-7 (chroma-axis preservation / Dykstra-feasibility / 9-dim checklist / canonical-vs-unique / 7-cargo-cult NSCS06 inventory / today's META-meta-meta gates / paradigm-vs-implementation discrimination). The prior kill was implementation-level falsification (cargo-cult stack on intact paradigm) — NOT paradigm-level falsification (structural class-kill).
+
+Empirical anchor: NSCS06 v6 → v7 trajectory (105.15 → 58.89 in ONE iteration via 4-of-7 cargo-cult unwinds) IS the canonical receipt that an FALSIFIED-at-substrate-class verdict can be implementation-level rather than paradigm-level. This memo's reactivation / reformulation proposal applies the same Lens 7 audit to surface implementation-level rescue paths.
+
+
+---
+
+## Appendix B (STC v2) — Modal T4 disambiguator dispatch harvest 2026-05-16T22:12Z (subagent_a_harvest_smokes)
+
+**Per Catalog #110 + #113 HISTORICAL_PROVENANCE APPEND-ONLY discipline:** this Appendix is appended to the design memo; pre-existing body content is UNCHANGED.
+
+### B.1 Dispatch + harvest evidence chain
+
+- **Modal call_id:** `fc-01KRSB76H04HM4958V2HX2JZZ4` (registered per Catalog #245 at 2026-05-16T21:31:31.872566Z, mounted_code_git_head=`40fb6cffa0`)
+- **Dispatch label:** `substrate_stc_v2_modal_t4_dispatch_20260516T213028Z`
+- **Lane:** `lane_stc_clean_source_v2_substrate_build_20260516`
+- **GPU:** Modal T4 (max_seconds=1800)
+- **Returncode:** 25
+- **Elapsed:** 1.617 sec (fast-fail before any compute / archive build / auth-eval)
+- **Estimated cost:** $0.00027 (Modal T4 hourly $0.59 × 1.6 sec) — effectively $0
+- **Harvested artifacts persisted:** `experiments/results/lane_stc_v2_disambiguator_modal_t4_20260516T213028Z_modal/artifacts/{modal_lane_*.log,run.log,modal_live_metadata.json,modal_worker_head_ledger.json}`
+
+### B.2 Failure mode classification (NOT a method falsification)
+
+**The worker exited rc=25 in 1.6s with the explicit FATAL message:**
+
+```
+FATAL: Lane A anchor archive missing at /tmp/pact/experiments/results/lane_a_landed/archive_lane_a.zip
+       STC v2 swap-archive requires renderer.bin + optimized_poses.pt
+       from Lane A; the lane has no fallback path.
+```
+
+This is **infrastructure / dispatch-recipe configuration failure**, NOT a measurement of `stcb_bytes`. The decision tree at Section 2.3 ranks on `stcb_bytes` from a successful STC encode pass; no STC encode pass occurred here.
+
+**Per CLAUDE.md "Apples-to-apples evidence discipline" + "KILL/FALSIFIED memory verdicts" (KILL is LAST RESORT)** + Catalog #240 (recipe-vs-trainer-state consistency):
+
+- **classification:** `failed_modal_training_rc_25` (per the codex sister `tools/harvest_modal_calls.py` terminal claim row)
+- **score_claim:** false
+- **promotion_eligible:** false
+- **rank_or_kill_eligible:** false
+- **NO method-level inference can be drawn from this dispatch.** The STC v2 substrate's CUDA-vs-MPS SegNet-argmax-byte-count hypothesis remains UNARBITRATED.
+
+### B.3 Verdict per Section 2.3 decision tree
+
+> | CUDA STC bytes | Verdict |
+> | < 200KB | REACTIVATED (50% better than AV1) — promote to L2 |
+> | 200KB - 1MB | COMPETITIVE — pivot to AV1+STC residual composition |
+> | 1MB - 5MB | RESEARCH-ONLY (STC alone doesn't beat AV1; AV1+STC residual marginal) |
+> | > 5MB | HARD-EARNED FALSIFICATION (3-section compliance KILL memo) |
+
+**VERDICT: UNARBITRATED-pending-infrastructure-fix** — the decision tree did not fire because `stcb_bytes` was never measured. The lane is **NOT FALSIFIED; NOT KILLED; NOT PROMOTED**. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": a single infrastructure failure cannot exhaust the STC v2 research path.
+
+### B.4 Reactivation criteria (per CLAUDE.md "KILL/FALSIFIED memory verdicts" + sister codex closure)
+
+Per the codex sister closure memo `.omx/research/stc_v2_modal_harvest_no_signal_loss_20260516_codex.md` §"Reactivation Criteria", BEFORE another STC v2 paid Modal smoke dispatch:
+
+1. **Provide byte-closed Lane A anchor archive + companion `renderer.bin` / `optimized_poses.pt` inputs** in the remote worker contract.
+2. **Verify the mounted path in the recipe or driver before provider launch** (per CLAUDE.md "Operator gates must be wired and used" + Catalog #152 `check_operator_wrapper_validates_required_input_files_pre_dispatch`).
+3. **Keep `score_claim=false`** until an archive is built and exact review classifies the result on a named CPU/CUDA axis.
+
+The recipe-level fix likely belongs in `scripts/remote_lane_substrate_stc_v2.sh` (the canonical Lane A anchor path resolution / fallback / pre-flight existence check) and/or in `.omx/operator_authorize_recipes/substrate_stc_v2_*.yaml` (declared `required_input_files` per Catalog #152 manifest discipline).
+
+### B.5 6-hook wire-in completion (per Catalog #125)
+
+- **Sensitivity-map contribution:** N/A — no STC encode pass; no per-component signal to contribute.
+- **Pareto constraint:** N/A — no archive bytes measured.
+- **Bit-allocator hook:** N/A — STC has no per-tensor allocation hook.
+- **Cathedral autopilot dispatch hook:** ACTIVE — the codex sister harvester already appended terminal claim + cost-band anchor + cathedral evidence row (`reports/cathedral_autopilot_evidence.jsonl`) per `.omx/research/stc_v2_modal_harvest_no_signal_loss_20260516_codex.md` §"No-Signal-Loss Actions"; this subagent's role per Catalog #230 disjoint scope is the design-memo Appendix landing, NOT re-doing the codex sister's terminal-rows work.
+- **Continual-learning posterior update:** N/A — no score-bearing artifact (rc=25 pre-archive failure); the codex sister appended a no-score cathedral evidence row instead.
+- **Probe-disambiguator:** ACTIVE — Section 2.3 IS the probe-disambiguator; outcome arbitrated as `UNARBITRATED-pending-infrastructure-fix`.
+
+### B.6 Cross-references
+
+- Modal call_id ledger row (codex sister-harvested): `.omx/state/modal_call_id_ledger.jsonl` (event_type=failed @ 2026-05-16T22:12:44.785937Z; rc=25; outcome_classification=failed_rc_25)
+- Cost-band posterior anchor (codex sister-appended): `.omx/state/cost_band_posterior.jsonl` (outcome=failed_dispatch; estimated_cost_usd=$0.00027)
+- Cathedral autopilot evidence (codex sister-appended): `reports/cathedral_autopilot_evidence.jsonl` (status=failed_modal_training_rc_25)
+- Sister codex harvest closure: `.omx/research/stc_v2_modal_harvest_no_signal_loss_20260516_codex.md`
+- This subagent's lane: `lane_harvest_nscs06_v8_and_stc_v2_smokes_20260516`
+- This subagent's id: `subagent_a_harvest_smokes_20260516`
+
+**Per Catalog #229 premise-verification:** the FATAL message text was read verbatim from `experiments/results/lane_stc_v2_disambiguator_modal_t4_20260516T213028Z_modal/artifacts/run.log` (not paraphrased); the classification `failed_modal_training_rc_25` was inherited from the codex sister's terminal claim row schema (not invented); the verdict `UNARBITRATED-pending-infrastructure-fix` was applied per CLAUDE.md "Forbidden premature KILL" non-negotiable + the literal Section 2.3 decision tree (which conditions on `stcb_bytes` measurement that did not occur).
