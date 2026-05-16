@@ -885,6 +885,35 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
 
 
 @pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("score_claim", "missing"),
+        ("promotion_eligible", "false"),
+        ("ready_for_exact_eval_dispatch", 0),
+    ],
+)
+def test_l5_v2_tt5l_dykstra_artifact_requires_literal_false_authority_flags(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    if value == "missing":
+        payload.pop(field)
+    else:
+        payload[field] = value
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert f"tt5l_dykstra_feasibility_{field}_not_false" in tt5l["blockers"]
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+
+
+@pytest.mark.parametrize(
     ("verdict", "blocker"),
     [
         ("INDETERMINATE", "tt5l_dykstra_feasibility_verdict_indeterminate"),

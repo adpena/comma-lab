@@ -1213,12 +1213,13 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         constraint_ids = set()
     if payload and not TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS.issubset(constraint_ids):
         blockers.append("tt5l_dykstra_feasibility_five_move_constraints_missing")
-    if payload.get("score_claim") is True:
-        blockers.append("tt5l_dykstra_feasibility_score_claim_true")
-    if payload.get("promotion_eligible") is True:
-        blockers.append("tt5l_dykstra_feasibility_promotion_eligible_true")
-    if payload.get("ready_for_exact_eval_dispatch") is True:
-        blockers.append("tt5l_dykstra_feasibility_dispatch_ready_true")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"tt5l_dykstra_feasibility_{field}_not_false")
 
     valid = not blockers
     return {

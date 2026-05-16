@@ -21,6 +21,10 @@ No score claim, promotion claim, or exact-eval readiness claim is made here.
   model, AC state, and metadata payloads must remain byte-identical.
 - L5 v2 dispatch readiness now rejects malformed gate-evidence mappings instead
   of crashing or coercing arbitrary values into authority.
+- TT5L Dykstra feasibility artifacts must now carry literal JSON `false` for
+  `score_claim`, `promotion_eligible`, and `ready_for_exact_eval_dispatch`.
+  Missing fields, string `"false"`, numeric `0`, or any non-literal value block
+  readiness.
 - The C1/Z5/TT5L probe CLI exits nonzero when observations are missing and the
   verdict is blocked.
 - If a probe template already exists, the next action advances to populating and
@@ -78,3 +82,11 @@ Result: `109 passed in 2.01s`.
 ```
 
 Result: `All checks passed!`.
+
+Follow-up Dykstra flag regression:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_l5_staircase_v2.py -q
+```
+
+Result: `77 passed in 0.51s`.
