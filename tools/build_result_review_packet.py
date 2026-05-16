@@ -320,6 +320,57 @@ def _engineering_forensic_audit(
     }
 
 
+def _normalize_reactivation_criteria(criteria: list[str]) -> list[str]:
+    out: list[str] = []
+    for item in criteria:
+        text = str(item).strip()
+        if text and text not in out:
+            out.append(text)
+    return out
+
+
+def _default_reactivation_criteria(
+    *,
+    exact_cuda: bool,
+    exact_cpu: bool,
+    regression: bool,
+    baseline_score: float | None,
+    engineering_forensic_audit: dict[str, Any],
+) -> list[str]:
+    """Return conservative reopen criteria for reviewed-but-not-retired packets."""
+
+    blockers = [
+        str(item)
+        for item in engineering_forensic_audit.get("audit_blockers", [])
+        if str(item)
+    ]
+    if regression and blockers:
+        return [
+            "resolve engineering_forensic_audit blockers before retiring or redispatching this measured config",
+            *[f"clear audit blocker: {blocker}" for blocker in blockers],
+            "rerun same archive/runtime on the same contest axis after custody is complete",
+        ]
+    if exact_cpu:
+        return [
+            "run the same archive and runtime through claimed contest-CUDA exact eval before promotion",
+            "record paired CPU/CUDA component deltas and runtime custody before rank-or-kill decisions",
+        ]
+    if exact_cuda and baseline_score is None:
+        return [
+            "supply a matching contest-CUDA baseline archive/runtime score for apples-to-apples comparison",
+            "record component deltas and current-frontier comparison before promotion or retirement",
+        ]
+    if exact_cuda:
+        return [
+            "provide a byte-closed implementation change or new exact-CUDA artifact before redispatch",
+            "beat the matching contest-CUDA baseline or current frontier on the same archive/runtime custody axis",
+        ]
+    return [
+        "obtain contest-CUDA exact eval with archive/runtime custody before promotion or retirement",
+        "record score recomputation, component deltas, and dispatch-claim status for the exact run",
+    ]
+
+
 def build_packet(
     *,
     auth_eval_json: Path,
@@ -387,6 +438,17 @@ def build_packet(
     elif not exact_cuda:
         status = "proxy_or_non_cuda_review_only"
         failure_class = "non_exact_cuda_evidence"
+    normalized_reactivation_criteria = _normalize_reactivation_criteria(
+        reactivation_criteria
+    )
+    if not normalized_reactivation_criteria:
+        normalized_reactivation_criteria = _default_reactivation_criteria(
+            exact_cuda=exact_cuda,
+            exact_cpu=exact_cpu,
+            regression=regression,
+            baseline_score=baseline_score,
+            engineering_forensic_audit=engineering_forensic_audit,
+        )
     return {
         "schema": SCHEMA,
         "tool": "tools/build_result_review_packet.py",
@@ -431,7 +493,7 @@ def build_packet(
             "optimization_review_required": True,
             "contest_compliance_review_required": True,
         },
-        "reactivation_criteria": reactivation_criteria,
+        "reactivation_criteria": normalized_reactivation_criteria,
         "notes": [
             "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
             "Exact CUDA evidence may update solver trust regions after adversarial review.",

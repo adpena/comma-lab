@@ -179,6 +179,10 @@ def test_exact_cuda_without_baseline_does_not_claim_not_negative(tmp_path: Path)
         packet["engineering_forensic_audit"]["classification_after_audit"]
         == "exact_cuda_result_reviewed_no_negative_status_change"
     )
+    assert packet["reactivation_criteria"] == [
+        "supply a matching contest-CUDA baseline archive/runtime score for apples-to-apples comparison",
+        "record component deltas and current-frontier comparison before promotion or retirement",
+    ]
 
 
 def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
@@ -204,6 +208,10 @@ def test_proxy_or_cpu_packet_stays_non_rankable(tmp_path: Path) -> None:
     assert packet["exact_cuda_evidence"] is False
     assert packet["promotion_eligible"] is False
     assert packet["method_family_retired"] is False
+    assert packet["reactivation_criteria"] == [
+        "obtain contest-CUDA exact eval with archive/runtime custody before promotion or retirement",
+        "record score recomputation, component deltas, and dispatch-claim status for the exact run",
+    ]
     assert (
         packet["engineering_forensic_audit"]["classification_after_audit"]
         == "non_cuda_review_only"
@@ -238,6 +246,10 @@ def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_pa
     assert packet["exact_cpu_evidence"] is True
     assert packet["cpu_leaderboard_reproduction_eligible"] is True
     assert packet["promotion_eligible"] is False
+    assert packet["reactivation_criteria"] == [
+        "run the same archive and runtime through claimed contest-CUDA exact eval before promotion",
+        "record paired CPU/CUDA component deltas and runtime custody before rank-or-kill decisions",
+    ]
     assert (
         packet["engineering_forensic_audit"]["classification_after_audit"]
         == "contest_cpu_axis_reviewed_cuda_pending"
@@ -252,6 +264,7 @@ def test_contest_cpu_packet_is_reviewed_as_public_axis_not_cuda_promotion(tmp_pa
     assert row["evidence_grade"] == "[contest-CPU reviewed]"
     assert row["score_contest_cpu"] == packet["canonical_score"]
     assert row["score_contest_cuda"] is None
+    assert row["reactivation_criteria"] == packet["reactivation_criteria"]
     assert "contest_cuda_pending_for_internal_promotion" in row["dispatch_blockers"]
 
 
