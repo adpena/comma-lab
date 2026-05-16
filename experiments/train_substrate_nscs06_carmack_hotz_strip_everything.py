@@ -295,20 +295,23 @@ def _write_runtime(submission_dir: Path) -> None:
 def _build_archive_zip(
     archive_zip_path: Path, *, bin_bytes: bytes, submission_dir: Path
 ) -> None:
-    """Deterministic archive.zip per Catalog #19."""
+    """Deterministic archive.zip per Catalog #19 + HNeRV parity L3.
+
+    Archive MUST contain ONLY ``0.bin`` payload — NOT ``inflate.sh``/``inflate.py``
+    runtime scripts (those live alongside the archive in ``submission_dir/`` and
+    are routed by the contest evaluator separately). v4 dispatch fc-01KRQESD49...
+    failed at archive validation with "UNKNOWN file types in archive:
+    ['inflate.sh', 'inflate.py']" because the previous loop packed them inside.
+    The ``submission_dir`` parameter is preserved for signature stability but
+    intentionally unused in this body.
+    """
+    del submission_dir  # see docstring; preserved for caller-signature stability
     archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
     fixed_ts = (2026, 1, 1, 0, 0, 0)
     with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
         zi.compress_type = zipfile.ZIP_DEFLATED
         zf.writestr(zi, bin_bytes)
-        for name in ("inflate.sh", "inflate.py"):
-            src = submission_dir / name
-            if not src.is_file():
-                continue
-            zi = zipfile.ZipInfo(name, date_time=fixed_ts)
-            zi.compress_type = zipfile.ZIP_DEFLATED
-            zf.writestr(zi, src.read_bytes())
 
 
 # ---------------------------------------------------------------------------
