@@ -161,6 +161,39 @@ def test_substrate_row_predicted_delta_alone_midpoint():
     assert abs(mid - (-0.00055)) < 1e-12
 
 
+def test_frontier_risk_metadata_flows_into_pareto_rows():
+    substrate = SubstrateRow(
+        substrate_id="cleanroom_cool_chic_residual",
+        name="Clean-room Cool-Chic residual",
+        substrate_class=SubstrateClass.RESIDUAL,
+        target_axis=ScoreAxis.RATE,
+        format_id=0xEE,
+        magic_bytes="CCRX",
+        runtime_dep_closure=("tiny_ans", "brotli"),
+        byte_budget_band=(100, 500),
+        predicted_delta_alone_band=(-0.002, -0.001),
+        requires_score_aware_training=True,
+        landed_at="2026-05-16",
+        landing_memo="test",
+        license_ok=False,
+        sideinfo_consumed=True,
+        exact_duplicate=True,
+        context_order=3,
+    )
+    matrix = build_composition_matrix([substrate])
+    row = per_substrate_pareto_rows(matrix=matrix)[0]
+
+    assert row.license_ok is False
+    assert row.inflate_dep_count == 2
+    assert row.sideinfo_consumed is True
+    assert row.exact_duplicate is True
+    assert row.context_order == 3
+    assert "license_clearance_required" in row.dispatch_blockers
+    assert "exact_duplicate_requires_distinct_delta" in row.dispatch_blockers
+    assert "license_ok=False" in row.notes
+    assert "context_order=3" in row.notes
+
+
 # ── Matrix construction ──────────────────────────────────────────────────
 
 

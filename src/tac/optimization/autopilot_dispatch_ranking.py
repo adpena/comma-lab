@@ -103,6 +103,11 @@ class RankedDispatchCandidate:
     literature_anchor: str = ""
     campaign_metadata: tuple[str, ...] = ()
     blockers: tuple[str, ...] = ()
+    license_ok: bool = True
+    inflate_dep_count: int = 0
+    sideinfo_consumed: bool | None = None
+    exact_duplicate: bool = False
+    context_order: int = 0
     fits_per_dispatch_cap: bool = True
     fits_cumulative_envelope: bool = True
     score_claim: bool = False
@@ -121,6 +126,11 @@ class RankedDispatchCandidate:
             "notes": self.composition_notes,
             "lane_class": self.lane_class or None,
             "literature_anchor": self.literature_anchor,
+            "license_ok": self.license_ok,
+            "inflate_dep_count": self.inflate_dep_count,
+            "sideinfo_consumed": self.sideinfo_consumed,
+            "exact_duplicate": self.exact_duplicate,
+            "context_order": self.context_order,
         }
 
 
@@ -167,6 +177,11 @@ def _build_singleton_dispatch_candidates(
                 f"campaign_priority={r.campaign_priority}" if r.campaign_priority else "",
                 f"lane_class={r.lane_class}" if r.lane_class else "",
                 f"literature_anchor={r.literature_anchor}" if r.literature_anchor else "",
+                f"license_ok={r.license_ok}",
+                f"inflate_dep_count={r.inflate_dep_count}",
+                f"sideinfo_consumed={r.sideinfo_consumed}",
+                f"exact_duplicate={r.exact_duplicate}",
+                f"context_order={r.context_order}",
             )
             if part
         )
@@ -193,6 +208,11 @@ def _build_singleton_dispatch_candidates(
                 literature_anchor=r.literature_anchor,
                 campaign_metadata=campaign_metadata,
                 blockers=r.dispatch_blockers,
+                license_ok=r.license_ok,
+                inflate_dep_count=r.inflate_dep_count,
+                sideinfo_consumed=r.sideinfo_consumed,
+                exact_duplicate=r.exact_duplicate,
+                context_order=r.context_order,
             )
         )
     return out
@@ -257,6 +277,11 @@ def _build_orthogonal_pair_candidates(
                     f"{row.substrate_id}:campaign_priority={row.campaign_priority}" if row.campaign_priority else "",
                     f"{row.substrate_id}:lane_class={row.lane_class}" if row.lane_class else "",
                     f"{row.substrate_id}:literature_anchor={row.literature_anchor}" if row.literature_anchor else "",
+                    f"{row.substrate_id}:license_ok={row.license_ok}",
+                    f"{row.substrate_id}:inflate_dep_count={row.inflate_dep_count}",
+                    f"{row.substrate_id}:sideinfo_consumed={row.sideinfo_consumed}",
+                    f"{row.substrate_id}:exact_duplicate={row.exact_duplicate}",
+                    f"{row.substrate_id}:context_order={row.context_order}",
                 )
                 if part
             )
@@ -284,6 +309,14 @@ def _build_orthogonal_pair_candidates(
                     literature_anchor=literature_anchor,
                     campaign_metadata=campaign_metadata,
                     blockers=blockers,
+                    license_ok=ri.license_ok and rj.license_ok,
+                    inflate_dep_count=ri.inflate_dep_count + rj.inflate_dep_count,
+                    sideinfo_consumed=(
+                        (ri.sideinfo_consumed or False)
+                        or (rj.sideinfo_consumed or False)
+                    ),
+                    exact_duplicate=ri.exact_duplicate or rj.exact_duplicate,
+                    context_order=max(ri.context_order, rj.context_order),
                 )
             )
     return out

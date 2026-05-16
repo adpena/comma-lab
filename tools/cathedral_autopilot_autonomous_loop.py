@@ -224,6 +224,11 @@ class CandidateRow:
     # None = no composition evidence (single-substrate candidate or untested
     # pair); the candidate is ranked without composition adjustment.
     composition_alpha: float | None = None
+    license_ok: bool = True
+    inflate_dep_count: int = 0
+    sideinfo_consumed: bool | None = None
+    exact_duplicate: bool = False
+    context_order: int = 0
     # OP-3 predicted_dispatch_risk wire-in (2026-05-15, codex chunk 6 finding):
     # SLIM (Sparse Linear Integer Model) preflight risk score per
     # `tac.preflight_rudin_daubechies.slim_risk_scorer.PreflightSLIMRiskScorer`.
@@ -1758,6 +1763,15 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 literature_anchor=str(raw.get("literature_anchor", "")),
                 mdl_tier_c_density=mdl_tier_c_density,
                 composition_alpha=composition_alpha,
+                license_ok=bool(raw.get("license_ok", True)),
+                inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+                sideinfo_consumed=(
+                    None
+                    if raw.get("sideinfo_consumed") is None
+                    else bool(raw.get("sideinfo_consumed"))
+                ),
+                exact_duplicate=bool(raw.get("exact_duplicate", False)),
+                context_order=int(raw.get("context_order", 0) or 0),
                 predicted_dispatch_risk=predicted_dispatch_risk,
                 lane_id=str(raw.get("lane_id", "")),
                 claim_keys=_coerce_str_list(raw.get("claim_keys")),
@@ -1886,6 +1900,15 @@ def load_candidates_from_substrate_composition_ranking(
             lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
             literature_anchor=str(raw.get("literature_anchor", "")),
             composition_alpha=composition_alpha,
+            license_ok=bool(raw.get("license_ok", True)),
+            inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+            sideinfo_consumed=(
+                None
+                if raw.get("sideinfo_consumed") is None
+                else bool(raw.get("sideinfo_consumed"))
+            ),
+            exact_duplicate=bool(raw.get("exact_duplicate", False)),
+            context_order=int(raw.get("context_order", 0) or 0),
             score_claim=bool(raw.get("score_claim", False)),
             promotion_eligible=bool(raw.get("promotion_eligible", False)),
             ready_for_exact_eval_dispatch=bool(
@@ -2087,6 +2110,15 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 composition_alpha=_coerce_optional_float(
                     raw.get("composition_alpha")
                 ),
+                license_ok=bool(raw.get("license_ok", True)),
+                inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+                sideinfo_consumed=(
+                    None
+                    if raw.get("sideinfo_consumed") is None
+                    else bool(raw.get("sideinfo_consumed"))
+                ),
+                exact_duplicate=bool(raw.get("exact_duplicate", False)),
+                context_order=int(raw.get("context_order", 0) or 0),
             )
         )
     return rows

@@ -175,6 +175,10 @@ class SubstrateRow:
     lane_class: str = ""
     literature_anchor: str = ""
     dispatch_blockers: tuple[str, ...] = ()
+    license_ok: bool = True
+    sideinfo_consumed: bool | None = None
+    exact_duplicate: bool = False
+    context_order: int = 0
 
     def predicted_delta_alone_midpoint(self) -> float:
         return 0.5 * (self.predicted_delta_alone_band[0] + self.predicted_delta_alone_band[1])
@@ -1511,6 +1515,11 @@ class ParetoRow:
     lane_class: str = ""
     literature_anchor: str = ""
     dispatch_blockers: tuple[str, ...] = ()
+    license_ok: bool = True
+    inflate_dep_count: int = 0
+    sideinfo_consumed: bool | None = None
+    exact_duplicate: bool = False
+    context_order: int = 0
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
@@ -1645,9 +1654,22 @@ def per_substrate_pareto_rows(
             notes += f"; lane_class={s.lane_class}"
         if s.literature_anchor:
             notes += f"; literature_anchor={s.literature_anchor}"
+        notes += (
+            f"; license_ok={s.license_ok}"
+            f"; inflate_dep_count={len(s.runtime_dep_closure)}"
+            f"; sideinfo_consumed={s.sideinfo_consumed}"
+            f"; exact_duplicate={s.exact_duplicate}"
+            f"; context_order={s.context_order}"
+        )
         if cost_estimation_pending:
             blockers.append("cost_estimation_required")
             notes += "; cost_estimation_required (cost=0.0 treated as unknown, not free)"
+        if not s.license_ok:
+            blockers.append("license_clearance_required")
+            notes += "; license_clearance_required"
+        if s.exact_duplicate:
+            blockers.append("exact_duplicate_requires_distinct_delta")
+            notes += "; exact_duplicate_requires_distinct_delta"
         if blockers:
             notes += f"; dispatch_blockers={blockers!r}"
         rows.append(
@@ -1668,6 +1690,11 @@ def per_substrate_pareto_rows(
                 lane_class=s.lane_class,
                 literature_anchor=s.literature_anchor,
                 dispatch_blockers=tuple(blockers),
+                license_ok=s.license_ok,
+                inflate_dep_count=len(s.runtime_dep_closure),
+                sideinfo_consumed=s.sideinfo_consumed,
+                exact_duplicate=s.exact_duplicate,
+                context_order=s.context_order,
             )
         )
     return rows

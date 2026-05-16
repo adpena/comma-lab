@@ -252,6 +252,32 @@ def test_as_candidate_row_kwargs_carries_z1_metadata_to_autopilot_loop():
     assert row.literature_anchor == "balle_2018"
 
 
+def test_as_candidate_row_kwargs_carries_frontier_risk_metadata_to_autopilot_loop():
+    cand = RankedDispatchCandidate(
+        candidate_id="singleton__pr106_context_recode",
+        family="entropy_recode",
+        substrate_ids=("pr106_context_recode",),
+        predicted_score_delta=-0.001,
+        expected_information_gain=0.001,
+        estimated_dispatch_cost_usd=0.5,
+        eig_per_dollar=0.002,
+        composition_notes="test",
+        license_ok=False,
+        inflate_dep_count=2,
+        sideinfo_consumed=True,
+        exact_duplicate=False,
+        context_order=2,
+    )
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+
+    row = CandidateRow(**cand.as_candidate_row_kwargs())
+    assert row.license_ok is False
+    assert row.inflate_dep_count == 2
+    assert row.sideinfo_consumed is True
+    assert row.exact_duplicate is False
+    assert row.context_order == 2
+
+
 def test_z3_singleton_registered_with_balle_2018_anchor_and_campaign_metadata():
     result = rank_dispatches(drop_redundant_dominated=False)
     by_id = {c.candidate_id: c for c in result.ranked_dispatches}
