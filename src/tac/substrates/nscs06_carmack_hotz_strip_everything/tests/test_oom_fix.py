@@ -244,3 +244,32 @@ def test_no_grad_context_preserved_around_chunked_forwards() -> None:
         f"at eval) the chunked forwards MUST stay under no_grad to keep "
         f"activation memory bounded."
     )
+
+
+# ---------------------------------------------------------------------------
+# Custody vocabulary: archive.zip vs 0.bin payload
+# ---------------------------------------------------------------------------
+def test_provenance_archive_fields_bind_scored_archive_zip_not_0bin_payload() -> None:
+    """`archive_*` provenance must describe the submitted ZIP, not raw 0.bin.
+
+    Empirical anchor: the 2026-05-16 NSCS06 Modal T4 smoke produced
+    `archive.zip` sha256=86f7... / 2,939,158 bytes, while lane-local
+    `provenance.json` mislabeled the CH06 `0.bin` payload sha256=f948... /
+    2,954,741 bytes as `archive_sha256` / `archive_bytes`. The auth-eval
+    JSON used the correct scored ZIP, but the lane provenance and posterior
+    update path were misleading. This guard pins the vocabulary split.
+    """
+    src = _read_trainer_source()
+    assert "payload_0bin_sha = _sha256_bytes(bin_bytes)" in src
+    assert "payload_0bin_bytes = len(bin_bytes)" in src
+    assert "archive_zip_sha = _sha256_file(archive_zip_path)" in src
+    assert "archive_zip_bytes = archive_zip_path.stat().st_size" in src
+    assert '"archive_sha256": archive_zip_sha' in src
+    assert '"archive_bytes": archive_zip_bytes' in src
+    assert '"payload_0bin_sha256": payload_0bin_sha' in src
+    assert '"payload_0bin_bytes": payload_0bin_bytes' in src
+    assert "archive_sha256=archive_zip_sha" in src
+    assert "archive_bytes=archive_zip_bytes" in src
+    assert "archive_sha = _sha256_bytes(bin_bytes)" not in src
+    assert '"archive_sha256": archive_sha' not in src
+    assert '"archive_bytes": archive_bytes_len' not in src

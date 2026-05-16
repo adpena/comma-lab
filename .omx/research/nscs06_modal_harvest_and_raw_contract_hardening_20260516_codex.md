@@ -111,3 +111,69 @@ for the two calls that emitted `archive.zip`. The latest call-id ledger events
 now carry `rc=1` / elapsed seconds for all three calls, and archive bytes/SHA
 for `fc-01KRQESD492907EF4X7HSSMX0W` plus
 `fc-01KRQMAQ7V41AFYMJH5HRK9P10`.
+
+## Follow-up Harvest: Raw-Contract-Fixed 100ep Smoke
+
+Call:
+`fc-01KRRBHZZR7RWBVH4PN65VX1M1`
+
+Dispatch label:
+`substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep`
+
+Classification:
+`completed_modal_training_recovered_no_score_claim`. The trainer finished and
+wrote a byte-closed archive plus CPU advisory auth-eval artifact, but the
+returned score is a severe measured-configuration regression, not promotion
+evidence and not a family-level kill.
+
+Evidence:
+
+- Modal T4 elapsed: `1041.336232605` sec; estimated cost: `$0.170663438121375`.
+- `archive.zip`: `2939158` bytes,
+  sha256 `86f7e188f674861fd1fafa1a5c8b0bca336d4f3449d05e1e1b2cf06b4ef1bd70`.
+- CH06 `0.bin` payload: `2954741` bytes,
+  sha256 `f9483dd325d981b3d860a05d70e8bcc9a3dc281db29fbec0da745a7fdb4034bf`.
+- CPU advisory auth eval:
+  `canonical_score=105.15360446546785`,
+  `score_seg_contribution=64.592308`,
+  `score_pose_contribution=38.60423179652718`,
+  `score_rate_contribution=1.957064668940655`.
+- Auth-eval timing: `inflate_elapsed_seconds=69.96343780800001`,
+  `evaluate_elapsed_seconds=801.134246394`,
+  `contest_auth_eval_elapsed_seconds=881.47409311`.
+- Wrapper status preserved `score_claim=false` and
+  `promotion_eligible=false`.
+
+Adversarial interpretation:
+
+The raw byte-count contract is now passing far enough to run auth eval, so this
+is no longer the prior "missing 0.raw" infrastructure failure. The current
+configuration collapses scorer geometry: the rate term is tiny, but SegNet and
+PoseNet dominate. That falsifies the current strip-everything reconstruction
+settings, not the broader "no neural decode / closed-form pack" hypothesis. The
+next engineering question is whether the inflated raw stream is semantically
+wrong because of grayscale/palette/upscale choices, frame/pair ordering, or
+pose-delta reconstruction, and that requires xray frame/pair/component
+visualization before any further full dispatch.
+
+Custody bug found during review:
+
+Lane-local `output/provenance.json` mislabeled CH06 `0.bin` payload facts as
+`archive_sha256` / `archive_bytes`, while `contest_auth_eval_cpu.json` correctly
+recorded the scored `archive.zip` facts. The trainer now reserves
+`archive_sha256` / `archive_bytes` for the actual submitted `archive.zip` and
+records `payload_0bin_sha256` / `payload_0bin_bytes` separately. Posterior
+updates also bind to the scored ZIP facts.
+
+Verification for the custody fix:
+
+```bash
+.venv/bin/python -m ruff check \
+  experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py \
+  src/tac/substrates/nscs06_carmack_hotz_strip_everything/tests/test_oom_fix.py
+
+PYTHONPATH=src:. .venv/bin/pytest \
+  src/tac/substrates/nscs06_carmack_hotz_strip_everything/tests/test_oom_fix.py -q
+```
+
+Results: `ruff` clean; `11 passed`.

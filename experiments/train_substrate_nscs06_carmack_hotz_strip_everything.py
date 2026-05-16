@@ -439,6 +439,10 @@ def _build_archive_zip(
         zf.writestr(zi, bin_bytes)
 
 
+def _sha256_file(path: Path) -> str:
+    return _sha256_bytes(path.read_bytes())
+
+
 # ---------------------------------------------------------------------------
 # Smoke main (CPU; synthetic pairs; no scorer load)
 # ---------------------------------------------------------------------------
@@ -717,15 +721,18 @@ def _full_main(args: argparse.Namespace) -> int:
             output_width=CONTEST_RAW_HW[1],
         )
         (args.output_dir / "0.bin").write_bytes(bin_bytes)
-        archive_sha = _sha256_bytes(bin_bytes)
-        archive_bytes_len = len(bin_bytes)
+        payload_0bin_sha = _sha256_bytes(bin_bytes)
+        payload_0bin_bytes = len(bin_bytes)
         print(
-            f"[full] wrote 0.bin ({archive_bytes_len} bytes, sha256={archive_sha})"
+            f"[full] wrote 0.bin "
+            f"({payload_0bin_bytes} bytes, sha256={payload_0bin_sha})"
         )
-        _stage(f"archive_built_bytes_{archive_bytes_len}")
+        _stage(f"payload_0bin_built_bytes_{payload_0bin_bytes}")
 
         # 10. Write inflate runtime + deterministic archive.zip
         archive_zip_path = args.output_dir / "archive.zip"
+        archive_zip_sha: str | None = None
+        archive_zip_bytes: int | None = None
         if not args.skip_archive_build:
             submission_dir = args.output_dir / "submission"
             _write_runtime(submission_dir)
@@ -733,7 +740,12 @@ def _full_main(args: argparse.Namespace) -> int:
             _build_archive_zip(
                 archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir
             )
-            print(f"[full] wrote {archive_zip_path}")
+            archive_zip_sha = _sha256_file(archive_zip_path)
+            archive_zip_bytes = archive_zip_path.stat().st_size
+            print(
+                f"[full] wrote {archive_zip_path} "
+                f"({archive_zip_bytes} bytes, sha256={archive_zip_sha})"
+            )
 
         # 11. CUDA auth eval (Catalog #226)
         auth_eval_result_path: Path | None = None
@@ -754,14 +766,18 @@ def _full_main(args: argparse.Namespace) -> int:
                 contest_cuda_score = auth_result["auth_eval_cuda_score"]
                 print(
                     f"[full] [contest-CUDA] score = {contest_cuda_score} "
-                    f"(archive_sha256={archive_sha})"
+                    f"(archive_sha256={archive_zip_sha})"
                 )
             _stage("auth_eval_cuda_done")
 
         train_elapsed_sec = time.time() - train_started_at
 
         # 12. Continual-learning posterior update (Catalog #128)
-        if contest_cuda_score is not None and archive_sha:
+        if (
+            contest_cuda_score is not None
+            and archive_zip_sha is not None
+            and archive_zip_bytes is not None
+        ):
             try:
                 from tac.continual_learning import (
                     ContestResult,
@@ -780,8 +796,8 @@ def _full_main(args: argparse.Namespace) -> int:
                     architecture_class="lane_nscs06_carmack_hotz_strip_everything_20260515",
                     score_value=contest_cuda_score,
                     evidence_tag="[contest-CUDA]",
-                    archive_sha256=archive_sha,
-                    archive_bytes=archive_bytes_len,
+                    archive_sha256=archive_zip_sha,
+                    archive_bytes=archive_zip_bytes,
                     notes="nscs06 Carmack-Hotz strip-everything first anchor",
                     observed_at_utc=_utc_now_iso(),
                 )
@@ -858,8 +874,11 @@ def _full_main(args: argparse.Namespace) -> int:
             "pytorch_version": _torch_version_string(),
             "device": str(device),
             "num_pairs_decoded": n_pairs,
-            "archive_sha256": archive_sha,
-            "archive_bytes": archive_bytes_len,
+            "archive_sha256": archive_zip_sha,
+            "archive_bytes": archive_zip_bytes,
+            "archive_zip_path": str(archive_zip_path) if archive_zip_path.is_file() else None,
+            "payload_0bin_sha256": payload_0bin_sha,
+            "payload_0bin_bytes": payload_0bin_bytes,
             "auth_eval_cuda_score": contest_cuda_score,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
