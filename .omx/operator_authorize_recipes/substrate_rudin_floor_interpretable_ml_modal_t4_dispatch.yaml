@@ -1,0 +1,238 @@
+schema_version: 1
+name: substrate_rudin_floor_interpretable_ml_modal_t4_dispatch
+lane_id: lane_rudin_floor_l1_scaffold_substrate_build_20260516
+
+# DESIGN-TIME RESEARCH-ONLY recipe per CLAUDE.md "Substrate scaffolds MUST be
+# COMPLETE or RESEARCH-ONLY" + Catalog #220 + Catalog #240 cascade. The trainer's
+# _full_main raises NotImplementedError until Phase 2 council approval lifts the
+# pre-build substrate-engineering gate. dispatch_enabled:false ensures no Modal
+# spend can fire from this recipe at landing.
+research_only: true
+dispatch_enabled: false
+smoke_only: false  # research-only opt-out covers smoke too at landing
+smoke_validation_contract: contest_cuda_auth_eval_v1
+
+# Phase 2 council approval reactivation criteria documented in design memo
+# §18 (Predicted ΔS band + reactivation criteria) and §21 (Op-routables).
+# Until T3 batched council ratification happens (per the path 2 lattice directive),
+# the recipe is research-only by construction.
+
+summary: |
+  Rudin floor interpretable-ML compositional decoder substrate per the
+  2026-05-16 design memo
+  (`.omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md`).
+
+  The substrate is a TRIPLE CLASS-SHIFT (architecture class + decode-time
+  contract + scorer-relationship) per the abandon-within-class taxonomy.
+  The META-layer Rudin-Daubechies autopilot (Catalogs #273-#278;
+  src/tac/autopilot_rudin_daubechies/) is RE-ARCHITECTED here as the
+  decode-time architecture itself: GOSDT depth-4 encoder + Wang-Rudin 2015
+  K=4-6 falling-rule-list decoder + Semenova-Rudin-Parr 2020 K=8 Rashomon
+  ensemble loss + RDIF v1 monolithic archive + ≤200 LOC pure Python inflate.
+
+  Score movement is unranked at landing. Predicted bands per T4 SYMPOSIUM
+  4x4 floor matrix Rudin floor row: Mid 30-90d [0.150, 0.180]; Long 6m-1y
+  [0.10, 0.13]; Asymptotic [0.05, 0.10] — empirically validated only after
+  K=8 LEVEL-1 dispatch per design memo §18.
+
+  Mission contribution: frontier_breaking x asymptotic_pursuit = HIGHEST
+  per HORIZON-CLASS directive Consequence 3.
+
+  STACKS WITH (per design memo §13): NSCS06 v8 (both asymptotic-pursuit;
+  HIGH priority), A-STACK (novel meta-decoder pattern), Z6/Z7/Z8 + Tishby
+  IB-pure (sister asymptotic-pursuit), ATW v2 (cooperative-receiver as
+  scorer side-info for Rudin's per-rule predicates).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+canary_status: independent_substrate
+
+active_dispatch_contract: rudin_floor_substrate_research_only
+dispatch_contracts:
+  - id: rudin_floor_substrate_research_only
+    archive_role: monolithic_rdif_v1_self_contained
+    builder_surface: experiments/train_substrate_rudin_floor_interpretable_ml.py
+    status: research_only_design_time
+    exact_eval_path: not_dispatchable_until_phase_2_council_approval
+
+cost_band:
+  epochs: 8  # K=8 Rashomon bootstrap (NOT neural epochs; substrate has no training loop)
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 3.00
+  estimated_usd_max: 15.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: null
+smoke_score_band: null  # research-only at landing; no smoke score band claimed
+predicted_delta: "[0.150, 0.180] (Mid 30-90d) / [0.10, 0.13] (Long 6m-1y) / [0.05, 0.10] (Asymptotic) [prediction; T4 SYMPOSIUM 4x4 Rudin floor row anchor; Dykstra-feasibility check PENDING per design memo §18; HYPOTHESIS pending K=8 LEVEL-1 dispatch empirical validation]"
+predicted_delta_basis: ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md §18 (per-horizon band table) + .omx/research/grand_council_symposium_time_traveler_optimal_staircase_20260516.md (T4 SYMPOSIUM 4x4 floor matrix Rudin floor row)"
+
+literature_anchor: |
+  Wang, F. & Rudin, C. (2015) "Falling Rule Lists" AISTATS proceedings;
+  Ustun, B. & Rudin, C. (2016) "Supersparse linear integer models for
+    optimized medical scoring systems" Machine Learning 102(3):349-391;
+  Lin, J., Zhong, C., Hu, D., Hu, M., Rudin, C., & Seltzer, M. (2020)
+    "Generalized and Scalable Optimal Sparse Decision Trees" ICML;
+  Semenova, L., Rudin, C., & Parr, R. (2020) "On the Existence of Simpler
+    Machine Learning Models" arXiv:1908.01755 (Rashomon set canonical);
+  Candes, E., Romberg, J., & Tao, T. (2006) "Robust uncertainty principles:
+    exact signal reconstruction from highly incomplete frequency
+    information" IEEE Trans Info Theory 52(2):489-509;
+  Daubechies, I., DeVore, R., Fornasier, M., & Gunturk, C. S. (2010)
+    "Iteratively reweighted least squares minimization for sparse recovery"
+    Comm. Pure Appl. Math. 63(1):1-38;
+  T4 SYMPOSIUM 4x4 floor matrix Rudin floor row anchor:
+    .omx/research/grand_council_symposium_time_traveler_optimal_staircase_20260516.md;
+  Rudin-Daubechies AUTOPILOT (the META-layer this substrate consumes):
+    src/tac/autopilot_rudin_daubechies/ (Catalogs #273-#278; commit 42665ce95).
+
+risk: |
+  Rudin floor interpretable-ML substrate is an L1 SCAFFOLD per CLAUDE.md
+  "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog #220
+  cascade. The trainer's _full_main raises NotImplementedError pending
+  Phase 2 council approval.
+
+  When Phase 2 lifts the gate, the predicted Mid band [0.150, 0.180] is
+  verifiable in $3-15 of Modal T4 spend per the design memo §18 cost band:
+
+  - $0 pre-smoke: design-memo K=6 canonical rule_list + RDIF v1 archive
+    roundtrip + 1-frame inflate sanity (this trainer's --smoke mode; CPU only)
+  - $3-15 Modal T4 smoke: K=8 LEVEL-1 dispatch with 100 frames + paired
+    SegNet/PoseNet feature extraction + Rashomon bootstrap + RDIF v1
+    archive + paired CPU+CUDA eval
+  - $30-50 Modal A100 full anchor: L2 INTEGRATION 1200-frame compress +
+    paired CPU+CUDA eval + sister Dykstra-feasibility check
+    (tools/check_substrate_dykstra_feasibility.py per Catalog #296)
+
+  Architectural risk per design memo §19 cargo-cult ledger:
+  - Interpretability tax of 3-5% is canonical (Rudin literature) but
+    SPECIFIC magnitude for video compression UNVALIDATED.
+  - K=6 falling rules canonical (Wang-Rudin) for binary classification;
+    video compression is structurally different; K=4/K=8/K=12 sweep at
+    reactivation per design memo §18.
+  - GOSDT depth-4 canonical (Lin-Rudin) for tabular data; per-pair video
+    region characterization different; depth-3/depth-6 sweep at reactivation.
+  - Rashomon K=8 canonical (Semenova-Rudin-Parr) for general prediction;
+    per-pixel probe priority at substrate level structurally different;
+    K=16/K=32 sweep at reactivation.
+  - SLIM bound [-10, 10] canonical (Ustun-Rudin) for medical scoring;
+    substrate-specific bound may differ; [-20, 20]/[-5, 5] sweep at reactivation.
+
+  Modal T4 cost band: $3 smoke; $5-15 full + paired auth eval. Per
+  CLAUDE.md "Auth eval EVERYWHERE" the dispatch MUST end with paired
+  CPU+CUDA auth eval per "Submission auth eval — BOTH CPU AND CUDA"
+  non-negotiable.
+
+envelope_status: "research_only_design_time_at_landing; $3-15 envelope upon Phase 2 council approval"
+
+remote_driver: scripts/remote_lane_substrate_rudin_floor_interpretable_ml.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_rudin_floor_interpretable_ml.sh
+  cost_band_trainer: experiments/train_substrate_rudin_floor_interpretable_ml.py
+  cost_band_epochs: 8
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_rudin_floor_interpretable_ml.py
+
+# Per Catalog #191 (sentinel-files-per-Catalog-#166) — substrate-specific
+# source files whose SHAs must remain stable across the Modal upload window.
+sentinel_files:
+  - src/tac/substrates/rudin_floor_interpretable_ml/__init__.py
+  - src/tac/substrates/rudin_floor_interpretable_ml/archive.py
+  - src/tac/substrates/rudin_floor_interpretable_ml/inflate.py
+  - src/tac/substrates/rudin_floor_interpretable_ml/rule_list.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+
+env_overrides:
+  RUDIN_FLOOR_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  RUDIN_FLOOR_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  RUDIN_FLOOR_OUTPUT_DIR: /workspace/pact/lane_substrate_rudin_floor_interpretable_ml_results/output
+  RUDIN_FLOOR_EPOCHS: "8"
+  RUDIN_FLOOR_SEED: "0"
+  RUDIN_FLOOR_DEVICE: "cpu"
+  LOCAL_CUDA_WORKER: "1"
+  SMOKE_ONLY: "0"
+  # Dispatch CANNOT fire because dispatch_enabled:false at top-level
+  # AND _full_main raises NotImplementedError. These env overrides are
+  # design-time placeholders for Phase 2 lift activation.
+
+dependencies:
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_rudin_floor_interpretable_ml.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Rudin floor interpretable-ML substrate L1 SCAFFOLD design-time research-only
+  recipe — Phase 2 council approval REQUIRED to lift research_only:true +
+  dispatch_enabled:false flags.
+
+  research_only=true per CLAUDE.md HNeRV parity discipline lesson 2 (export-
+  first design opt-out) + Catalog #240 (recipe-vs-trainer-state consistency).
+
+  lane_class=substrate_engineering per HNeRV parity discipline lesson 7
+  (substrate engineering happens ONCE per architecture class; Rudin floor is
+  the new class — pure-Python rule application with no neural at inflate).
+
+  horizon_class=asymptotic_pursuit per HORIZON-CLASS standing directive
+  (`feedback_horizon_class_evaluation_axis_plateau_warning_standing_directive_20260516.md`);
+  Rudin floor named under ASYMPTOTIC-PURSUIT GAP; ≥20% K-schedule allocation
+  to asymptotic-pursuit per directive Consequence 2.
+
+  Reactivation criteria per design memo §18:
+  1. K=8 LEVEL-1 dispatch lands in predicted Mid band [0.150, 0.180] →
+     HYPOTHESIS VALIDATED; proceed to L2 INTEGRATION + paired CPU eval +
+     sister Dykstra-feasibility check + composition-with-asymptotic-sisters
+     per design memo §13.
+  2. Lands above 0.180 but below 0.30 → PARTIAL VALIDATION; review Rashomon
+     ensemble disagreement queue for next-iteration probes; refine rule-list
+     per Wang-Rudin canonical falling-rule-list prune_ineffective_rule discipline.
+  3. Lands above 0.30 → FALSIFICATION at this specific config; per CLAUDE.md
+     "Forbidden premature KILL": DO NOT KILL; classify DEFERRED-pending-research;
+     reactivation: (a) K=12 Rashomon; (b) K=4 rules; (c) predicate vocabulary
+     expansion; (d) T4 SYMPOSIUM Rudin floor estimate revised downward only
+     if 3+ Rudin-class dispatches all land >0.25.
+  4. Lands at <0.15 (better than predicted Mid) → HYPOTHESIS STRENGTHENED;
+     revise T4 SYMPOSIUM Rudin floor row downward; queue stack-of-stacks
+     composition smokes per design memo §13.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" non-negotiable: when
+  dispatched, modal_train_lane.py uses .spawn(); harvest within 24h via
+  tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU
+  AND CUDA": when dispatched, ends with paired CPU+CUDA auth eval. Use
+  tools/dispatch_modal_paired_auth_eval.py with
+  --skip-axis-if-promotable-anchor-exists per Catalog #246.
+
+  Per CLAUDE.md "Production-hardened dispatch optimization protocol": Tier 1
+  engineering primitives waived per substrate type (no neural codec; no
+  autocast/TF32/torch.compile/no_grad needed); Tier 2 hardware correctness
+  declared (min_vram_gb=16; min_smoke_gpu=T4; video_input_strategy +
+  pyav_decode_strategy + target_modes + canary_status all set); Tier 3
+  substrate correctness (gate_auth_eval_call routing planned; inflate
+  device-fork canonical per Catalog #205; scorer-loader N/A; recipe-vs-
+  trainer-state consistent via dispatch_enabled:false + _full_main
+  NotImplementedError); Catalog #270 protocol expected PASS post Phase 2 lift.
+
+  Cross-ref:
+    .omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md (design memo)
+    src/tac/autopilot_rudin_daubechies/ (Catalogs #273-#278 META-layer)
+    src/tac/substrates/rudin_floor_interpretable_ml/__init__.py (Catalog #124 8 fields declared inline)
+    tools/probe_rudin_floor_substrate_disambiguator.py (Catalog #125 hook #6 probe-disambiguator)
+    .omx/research/grand_council_symposium_time_traveler_optimal_staircase_20260516.md (T4 SYMPOSIUM 4x4 floor matrix anchor)
+    .omx/research/falsification_audit_v2_post_horizon_class_post_pivot_lessons_20260516.md (FALSIFICATION-AUDIT-v2 A3 STRUCTURAL GAP)
