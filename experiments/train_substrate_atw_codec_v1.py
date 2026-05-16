@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# AUTOCAST_FP16_WAIVED:v1-scaffold-_full_main-raises-NotImplementedError-Phase-2-council-pre-build-substrate-engineering-gate
 """Train the ATW codec V1 substrate (Atick-Tishby-Wyner cooperative-receiver codec).
 
 Per the 2026-05-15 grand reunion symposium Composite #1 (lines 727-770) and

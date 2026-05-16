@@ -30833,7 +30833,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true
     },
     {
       "id": "lane_knowledge_preservation_pr95_meta_level_lesson_20260515",
@@ -31630,5 +31631,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T18:29:16Z"
+  "updated_at": "2026-05-16T18:52:51Z"
 }
