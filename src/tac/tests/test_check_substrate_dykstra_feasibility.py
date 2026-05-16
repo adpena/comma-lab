@@ -61,6 +61,8 @@ def test_feasible_band_inside_polytope():
         archive_size_bytes=200_000,
     )
     assert verdict.verdict == "FEASIBLE"
+    assert verdict.tested_score_axis_band == (0.15, 0.20)
+    assert verdict.input_band_role == "planning_band_not_score_or_rank_authority"
     assert verdict.archive_size_bytes == 200_000
     assert verdict.blocker_axis is None
     assert verdict.feasibility_band_lo <= verdict.feasibility_band_hi
@@ -208,6 +210,9 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
     data = json.loads(out_path.read_text())
     assert data["verdict"] == "FEASIBLE"
     assert data["substrate_id"] == "test_cli_feasible"
+    assert "predicted_band" not in data
+    assert data["tested_score_axis_band"] == [0.15, 0.2]
+    assert data["input_band_role"] == "planning_band_not_score_or_rank_authority"
     assert data["archive_size_bytes"] == 200_000
     assert data["score_formula"].startswith("100*seg_dist")
     assert "tt5l_predictive_coding_hierarchy" in data["constraint_set_ids"]

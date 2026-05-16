@@ -1248,6 +1248,18 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         blockers.append("tt5l_dykstra_feasibility_verdict_indeterminate")
     elif payload and verdict == "INFEASIBLE":
         blockers.append("tt5l_dykstra_feasibility_verdict_infeasible")
+    if payload and "predicted_band" in payload:
+        blockers.append("tt5l_dykstra_feasibility_active_predicted_band_field_present")
+    tested_score_axis_band = payload.get("tested_score_axis_band")
+    if payload and not (
+        isinstance(tested_score_axis_band, list | tuple)
+        and len(tested_score_axis_band) == 2
+        and all(_json_float(item) is not None for item in tested_score_axis_band)
+    ):
+        blockers.append("tt5l_dykstra_feasibility_tested_score_axis_band_missing")
+    input_band_role = str(payload.get("input_band_role") or "")
+    if payload and input_band_role != "planning_band_not_score_or_rank_authority":
+        blockers.append("tt5l_dykstra_feasibility_input_band_role_missing_or_stale")
     archive_size_bytes = _non_bool_int(payload.get("archive_size_bytes"))
     if payload and (archive_size_bytes is None or archive_size_bytes <= 0):
         blockers.append("tt5l_dykstra_feasibility_archive_size_bytes_missing")
@@ -1303,6 +1315,10 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "artifact_valid": valid,
         "substrate_id": substrate_id or None,
         "verdict": verdict or None,
+        "tested_score_axis_band": list(tested_score_axis_band)
+        if isinstance(tested_score_axis_band, list | tuple)
+        else None,
+        "input_band_role": input_band_role or None,
         "archive_size_bytes": archive_size_bytes,
         "feasibility_band_lo": payload.get("feasibility_band_lo"),
         "feasibility_band_hi": payload.get("feasibility_band_hi"),

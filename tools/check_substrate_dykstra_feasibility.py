@@ -109,7 +109,8 @@ class DykstraFeasibilityVerdict:
 
     substrate_id: str
     verdict: VerdictStr
-    predicted_band: tuple[float, float]
+    tested_score_axis_band: tuple[float, float]
+    input_band_role: str
     archive_size_bytes: int
     rate_contribution: float
     seg_budget: float
@@ -373,7 +374,8 @@ def check_substrate_dykstra_feasibility(
     return DykstraFeasibilityVerdict(
         substrate_id=substrate_id,
         verdict=verdict,
-        predicted_band=(float(predicted_band_lo), float(predicted_band_hi)),
+        tested_score_axis_band=(float(predicted_band_lo), float(predicted_band_hi)),
+        input_band_role="planning_band_not_score_or_rank_authority",
         archive_size_bytes=int(archive_size_bytes),
         rate_contribution=float(rate_contribution),
         seg_budget=float(seg_budget),
@@ -493,7 +495,7 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = asdict(verdict)
     # asdict turns the tuple into a list — keep it as a list in JSON.
-    payload["predicted_band"] = list(payload["predicted_band"])
+    payload["tested_score_axis_band"] = list(payload["tested_score_axis_band"])
     if args.output_json is not None:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
