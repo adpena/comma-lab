@@ -8,7 +8,8 @@ the frontier path without treating source-backed theory as score evidence.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -33,6 +34,7 @@ PREDICTED_DELTA_BAND = (-0.0500, -0.0200)
 PREDICTED_DELTA_AXIS = "mixed"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
+_SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,18 @@ class L5V2Gate:
     description: str
     blocker: str
     evidence_path: str = ""
+
+
+@dataclass(frozen=True)
+class L5V2GateEvidence:
+    """Artifact-backed proof that one L5 v2 gate actually passed."""
+
+    gate_id: str
+    artifact_path: str
+    artifact_sha256: str
+    predicate_id: str
+    predicate_passed: bool
+    evidence_grade: str = ""
 
 
 @dataclass(frozen=True)
@@ -261,20 +275,111 @@ def l5_v2_prediction_band_verdict() -> dict[str, Any]:
     )
 
 
+def _coerce_gate_evidence(
+    gate_evidence: (
+        Mapping[str, L5V2GateEvidence | Mapping[str, Any]]
+        | Iterable[L5V2GateEvidence | Mapping[str, Any]]
+        | None
+    ),
+) -> dict[str, L5V2GateEvidence]:
+    if gate_evidence is None:
+        return {}
+
+    values: Iterable[L5V2GateEvidence | Mapping[str, Any]]
+    if isinstance(gate_evidence, Mapping):
+        values = (
+            value if isinstance(value, L5V2GateEvidence) else {"gate_id": key, **value}
+            for key, value in gate_evidence.items()
+        )
+    else:
+        values = gate_evidence
+
+    coerced: dict[str, L5V2GateEvidence] = {}
+    for value in values:
+        if isinstance(value, L5V2GateEvidence):
+            evidence = value
+        else:
+            evidence = L5V2GateEvidence(
+                gate_id=str(value.get("gate_id", "")),
+                artifact_path=str(value.get("artifact_path", "")),
+                artifact_sha256=str(value.get("artifact_sha256", "")),
+                predicate_id=str(value.get("predicate_id", "")),
+                predicate_passed=bool(value.get("predicate_passed", False)),
+                evidence_grade=str(value.get("evidence_grade", "")),
+            )
+        if evidence.gate_id:
+            coerced[evidence.gate_id] = evidence
+    return coerced
+
+
+def _is_transient_artifact_path(path: str) -> bool:
+    normalized = path.removeprefix("file:").strip()
+    return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
+
+
+def _gate_evidence_blockers(
+    gate: L5V2Gate,
+    evidence: L5V2GateEvidence | None,
+) -> list[str]:
+    if evidence is None:
+        return [f"l5_v2_gate_evidence_missing:{gate.gate_id}"]
+
+    blockers: list[str] = []
+    if not evidence.artifact_path.strip():
+        blockers.append(f"l5_v2_gate_artifact_path_missing:{gate.gate_id}")
+    elif _is_transient_artifact_path(evidence.artifact_path):
+        blockers.append(f"l5_v2_gate_artifact_path_transient:{gate.gate_id}")
+    if not _SHA256_HEX_RE.fullmatch(evidence.artifact_sha256.strip()):
+        blockers.append(f"l5_v2_gate_artifact_sha256_invalid:{gate.gate_id}")
+    if not evidence.predicate_id.strip():
+        blockers.append(f"l5_v2_gate_predicate_id_missing:{gate.gate_id}")
+    if not evidence.predicate_passed:
+        blockers.append(f"l5_v2_gate_predicate_failed:{gate.gate_id}")
+    return blockers
+
+
 def l5_v2_dispatch_readiness(
     satisfied_gate_ids: Mapping[str, bool] | None = None,
+    gate_evidence: (
+        Mapping[str, L5V2GateEvidence | Mapping[str, Any]]
+        | Iterable[L5V2GateEvidence | Mapping[str, Any]]
+        | None
+    ) = None,
 ) -> dict[str, Any]:
-    """Return a fail-closed dispatch readiness summary for L5 v2."""
+    """Return a fail-closed dispatch readiness summary for L5 v2.
+
+    Boolean gate claims are preserved as planning notes only. Dispatch
+    readiness requires artifact-backed evidence for every gate so prose or
+    stale booleans cannot unlock L5 v2 actuation.
+    """
 
     satisfied_gate_ids = satisfied_gate_ids or {}
+    evidence_by_gate = _coerce_gate_evidence(gate_evidence)
     gates = []
     blockers = []
+    evidence_blockers = []
     for gate in l5_v2_required_gates():
-        satisfied = bool(satisfied_gate_ids.get(gate.gate_id))
+        evidence = evidence_by_gate.get(gate.gate_id)
+        gate_evidence_blockers = _gate_evidence_blockers(gate, evidence)
+        evidence_valid = not gate_evidence_blockers
+        satisfied = bool(satisfied_gate_ids.get(gate.gate_id)) or evidence_valid
         status = "satisfied" if satisfied else gate.status
-        gates.append({**gate.__dict__, "status": status})
+        gate_payload = {
+            **gate.__dict__,
+            "status": status,
+            "claimed_satisfied": bool(satisfied_gate_ids.get(gate.gate_id)),
+            "evidence_valid": evidence_valid,
+            "evidence": evidence.__dict__ if evidence is not None else None,
+            "evidence_blockers": gate_evidence_blockers,
+        }
+        gates.append(gate_payload)
         if not satisfied:
             blockers.append(gate.blocker)
+        evidence_blockers.extend(gate_evidence_blockers)
+    all_gate_claims_satisfied = all(
+        gate["claimed_satisfied"] or gate["evidence_valid"] for gate in gates
+    )
+    all_gate_evidence_valid = all(gate["evidence_valid"] for gate in gates)
     return {
         "subject_id": SUBJECT_ID,
         "lane_id": LANE_ID,
@@ -282,8 +387,10 @@ def l5_v2_dispatch_readiness(
         "planning_only": True,
         "score_claim": False,
         "promotion_eligible": False,
-        "ready_for_dispatch": not blockers,
-        "blockers": blockers,
+        "all_gate_claims_satisfied": all_gate_claims_satisfied,
+        "all_gate_evidence_valid": all_gate_evidence_valid,
+        "ready_for_dispatch": all_gate_evidence_valid,
+        "blockers": blockers + evidence_blockers,
         "gates": gates,
         "steps": [step.__dict__ for step in l5_v2_staircase_steps()],
         "prediction_band_verdict": l5_v2_prediction_band_verdict(),
@@ -297,6 +404,7 @@ __all__ = [
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
     "L5V2Gate",
+    "L5V2GateEvidence",
     "L5V2Step",
     "l5_v2_dispatch_readiness",
     "l5_v2_prediction_band_payload",

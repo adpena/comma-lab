@@ -3,9 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tac.optimization.l5_staircase_v2 import (
     PREDICTED_DELTA_BAND,
     SUBJECT_ID,
+    L5V2GateEvidence,
     l5_v2_dispatch_readiness,
     l5_v2_prediction_band_payload,
     l5_v2_prediction_band_verdict,
@@ -18,6 +21,26 @@ from tac.optimization.substrate_composition_matrix import (
     build_composition_matrix,
     per_substrate_pareto_rows,
 )
+
+
+def _sha(seed: int) -> str:
+    return f"{seed:064x}"[-64:]
+
+
+def _valid_gate_evidence() -> dict[str, L5V2GateEvidence]:
+    return {
+        gate.gate_id: L5V2GateEvidence(
+            gate_id=gate.gate_id,
+            artifact_path=(
+                f"experiments/results/time_traveler_l5_v2/{gate.gate_id}.json"
+            ),
+            artifact_sha256=_sha(index + 1),
+            predicate_id=f"l5_v2_{gate.gate_id}_predicate",
+            predicate_passed=True,
+            evidence_grade="contest_artifact",
+        )
+        for index, gate in enumerate(l5_v2_required_gates())
+    }
 
 
 def test_l5_v2_research_basis_is_explicit_and_canonical() -> None:
@@ -75,12 +98,14 @@ def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
     assert "prediction_band_research_basis_missing" not in verdict["blockers"]
 
 
-def test_l5_v2_dispatch_readiness_requires_all_gates() -> None:
+def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> None:
     blocked = l5_v2_dispatch_readiness()
     all_gate_ids = {gate.gate_id for gate in l5_v2_required_gates()}
-    satisfied = l5_v2_dispatch_readiness(dict.fromkeys(all_gate_ids, True))
+    boolean_only = l5_v2_dispatch_readiness(dict.fromkeys(all_gate_ids, True))
 
     assert blocked["ready_for_dispatch"] is False
+    assert blocked["all_gate_claims_satisfied"] is False
+    assert blocked["all_gate_evidence_valid"] is False
     assert blocked["promotion_eligible"] is False
     assert {
         "requires_byte_closed_temporal_sideinfo_consumption_proof",
@@ -88,9 +113,59 @@ def test_l5_v2_dispatch_readiness_requires_all_gates() -> None:
         "requires_paired_cpu_cuda_axis_plan_before_promotion",
         "requires_l5_v2_empirical_anchor",
     } <= set(blocked["blockers"])
-    assert satisfied["ready_for_dispatch"] is True
-    assert satisfied["promotion_eligible"] is False
-    assert satisfied["score_claim"] is False
+    assert any(
+        blocker.startswith("l5_v2_gate_evidence_missing:")
+        for blocker in blocked["blockers"]
+    )
+    assert boolean_only["all_gate_claims_satisfied"] is True
+    assert boolean_only["all_gate_evidence_valid"] is False
+    assert boolean_only["ready_for_dispatch"] is False
+    assert boolean_only["promotion_eligible"] is False
+    assert boolean_only["score_claim"] is False
+    assert all(gate["claimed_satisfied"] is True for gate in boolean_only["gates"])
+    assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
+
+
+def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence() -> None:
+    ready = l5_v2_dispatch_readiness(gate_evidence=_valid_gate_evidence())
+
+    assert ready["all_gate_claims_satisfied"] is True
+    assert ready["all_gate_evidence_valid"] is True
+    assert ready["ready_for_dispatch"] is True
+    assert ready["blockers"] == []
+    assert ready["promotion_eligible"] is False
+    assert ready["score_claim"] is False
+    assert all(gate["evidence_valid"] is True for gate in ready["gates"])
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_blocker"),
+    [
+        ("artifact_path", "", "l5_v2_gate_artifact_path_missing:"),
+        ("artifact_path", "/tmp/l5v2.json", "l5_v2_gate_artifact_path_transient:"),
+        ("artifact_sha256", "not-a-sha", "l5_v2_gate_artifact_sha256_invalid:"),
+        ("predicate_id", "", "l5_v2_gate_predicate_id_missing:"),
+        ("predicate_passed", False, "l5_v2_gate_predicate_failed:"),
+    ],
+)
+def test_l5_v2_dispatch_readiness_rejects_bad_gate_evidence(
+    field: str,
+    value: object,
+    expected_blocker: str,
+) -> None:
+    evidence = {
+        gate_id: gate_evidence.__dict__.copy()
+        for gate_id, gate_evidence in _valid_gate_evidence().items()
+    }
+    first_gate_id = next(iter(evidence))
+    evidence[first_gate_id][field] = value
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence)
+
+    assert readiness["all_gate_claims_satisfied"] is False
+    assert readiness["all_gate_evidence_valid"] is False
+    assert readiness["ready_for_dispatch"] is False
+    assert f"{expected_blocker}{first_gate_id}" in readiness["blockers"]
 
 
 def test_l5_v2_prediction_band_flows_into_composition_row() -> None:
