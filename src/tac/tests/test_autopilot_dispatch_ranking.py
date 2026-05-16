@@ -355,6 +355,32 @@ def test_uncustodied_prediction_bands_do_not_receive_autopilot_rank_reward():
     assert "prediction_band_rank_reward_suppressed" in tt5l.composition_notes
 
 
+def test_time_traveler_l5_source_scope_flows_to_autopilot_candidate_row():
+    result = rank_dispatches(drop_redundant_dominated=False)
+    by_id = {c.candidate_id: c for c in result.ranked_dispatches}
+    tt5l = by_id["singleton__time_traveler_l5_autonomy"]
+
+    assert "Rao-Ballard1999" in tt5l.literature_anchor
+    assert "temporal residual" in tt5l.source_supports
+    assert "does not validate TT5L byte budget" in tt5l.paper_claim_scope
+    assert "paired CPU/CUDA exact eval" in tt5l.pact_must_prove
+    assert "No measured full-runtime T4 decode cost" in tt5l.decode_complexity_evidence
+    assert any(
+        item.startswith("source_supports=Predictive coding")
+        for item in tt5l.source_fidelity_metadata
+    )
+    assert "literature_anchor=Rao-Ballard1999" in tt5l.composition_notes
+
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+
+    row = CandidateRow(**tt5l.as_candidate_row_kwargs())
+    assert row.literature_anchor == tt5l.literature_anchor
+    assert row.source_supports == tt5l.source_supports
+    assert row.paper_claim_scope == tt5l.paper_claim_scope
+    assert row.pact_must_prove == tt5l.pact_must_prove
+    assert row.decode_complexity_evidence == tt5l.decode_complexity_evidence
+
+
 def test_prediction_band_rank_reward_requires_literal_true_verdict():
     row = ParetoRow(
         substrate_id="malformed_prediction_band_verdict",
