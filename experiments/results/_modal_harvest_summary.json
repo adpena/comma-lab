@@ -2969,137 +2969,55 @@
   {
     "label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
     "call_id": "fc-01KRRBHZZR7RWBVH4PN65VX1M1",
+    "status": "already_harvested",
     "rc": 0,
     "elapsed_seconds": 1041.336232605,
     "timed_out": false,
     "n_artifacts": 17,
-    "artifact_files": [
-      {
-        "relative_path": "results/substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep/modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/results/substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep/modal_worker_head_ledger.json",
-        "bytes": 1740
-      },
-      {
-        "relative_path": "modal_worker_head_ledger.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_worker_head_ledger.json",
-        "bytes": 1740
-      },
-      {
-        "relative_path": "modal_lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep.log",
-        "bytes": 2958
-      },
-      {
-        "relative_path": "modal_live_metadata.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_live_metadata.json",
-        "bytes": 519
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/run.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/run.log",
-        "bytes": 2137
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/provenance.json",
-        "bytes": 728
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/heartbeat.log",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/heartbeat.log",
-        "bytes": 380
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/0.bin",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/0.bin",
-        "bytes": 2954741
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/archive.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/archive.zip",
-        "bytes": 2939158
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json",
-        "bytes": 10396
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/provenance.json",
-        "bytes": 2753
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/submission/0.bin",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/submission/0.bin",
-        "bytes": 2954741
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/archive.zip",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/archive.zip",
-        "bytes": 2939158
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/provenance.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/provenance.json",
-        "bytes": 8422
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/inflated_outputs_manifest.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/inflated_outputs_manifest.json",
-        "bytes": 608
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/contest_auth_eval.json",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/contest_auth_eval.json",
-        "bytes": 10395
-      },
-      {
-        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/extracted/0.bin",
-        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/extracted/0.bin",
-        "bytes": 2954741
-      }
-    ],
     "crash_kind": "OK",
-    "outcome_classification": "successful_dispatch",
+    "archive_sha256": "86f7e188f674861fd1fafa1a5c8b0bca336d4f3449d05e1e1b2cf06b4ef1bd70",
+    "archive_bytes": 2939158,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
     "cost_band_anchor": {
-      "schema": "modal_training_cost_anchor_append_v1",
-      "appended": true,
+      "all_flags_on": true,
       "already_appended": false,
-      "score_claim": false,
-      "promotion_eligible": false,
+      "appended": true,
+      "batch_size": 1,
       "cost_estimate": true,
       "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
       "dispatch_label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
-      "trainer": "experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py",
-      "platform": "modal",
-      "gpu": "T4",
-      "epochs": 100,
-      "batch_size": 1,
-      "all_flags_on": true,
       "elapsed_seconds": 1041.336232605,
+      "epochs": 100,
       "estimated_cost_usd": 0.170663438121375,
+      "gpu": "T4",
       "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
       "outcome": "successful_dispatch",
-      "returncode": 0,
+      "platform": "modal",
       "posterior_path": null,
-      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py"
     },
     "terminal_claim": {
-      "schema": "modal_training_terminal_claim_v1",
-      "appended": true,
       "already_appended": false,
-      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "appended": true,
       "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
+      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1041.336232605; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal",
       "platform": "modal",
-      "status": "completed_modal_training_recovered_no_score_claim",
-      "score_claim": false,
       "promotion_eligible": false,
-      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1041.336232605; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal"
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
     },
     "terminal_evidence": {
-      "appended": true,
-      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "appended": false,
+      "already_covered": true,
       "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
       "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
       "status": "completed_modal_training_recovered_no_score_claim"
@@ -3109,7 +3027,135 @@
       "call_id": "fc-01KRRBHZZR7RWBVH4PN65VX1M1",
       "status": "harvested",
       "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T12:52:39.130771Z"
+      "written_at_utc": "2026-05-16T22:12:44.482040Z"
+    }
+  },
+  {
+    "label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep",
+    "call_id": "fc-01KRRJNSXCJ48W4DW53YE02PAE",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 1310.6311744129998,
+    "timed_out": false,
+    "n_artifacts": 11,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "archive_sha256": "af80dc76b802e9b096cdd3bc5ca412d3ccb8a17ca81fb1382c9c11c2c7ca120a",
+    "archive_bytes": 4014234,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 1,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep",
+      "elapsed_seconds": 1310.6311744129998,
+      "epochs": 100,
+      "estimated_cost_usd": 0.21479788691768606,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep",
+      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1310.6311744129998; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T142210Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRRJNSXCJ48W4DW53YE02PAE",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T22:12:44.488007Z"
+    }
+  },
+  {
+    "label": "substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260516T184838Zsmoke_retry",
+    "call_id": "fc-01KRS1XP83TE8BV6QBJ52MC1MG",
+    "status": "already_harvested",
+    "rc": 0,
+    "elapsed_seconds": 1207.326888717,
+    "timed_out": false,
+    "n_artifacts": 11,
+    "crash_kind": "HARVESTED_PARTIAL",
+    "archive_sha256": "03ef568bc918f22c10fed33dbc3e43b29d6bdc4d0243e15c1bb8b616f1da9530",
+    "archive_bytes": 15530,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "cost_band_anchor": {
+      "all_flags_on": true,
+      "already_appended": false,
+      "appended": true,
+      "batch_size": 1,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260516T184838Zsmoke_retry",
+      "elapsed_seconds": 1207.326888717,
+      "epochs": 1,
+      "estimated_cost_usd": 0.1978674623175083,
+      "gpu": "T4",
+      "hourly_rate_usd": 0.59,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor",
+      "outcome": "successful_dispatch",
+      "platform": "modal",
+      "posterior_path": null,
+      "promotion_eligible": false,
+      "returncode": 0,
+      "schema": "platform_training_cost_anchor_append_v1",
+      "score_claim": false,
+      "trainer": "experiments/train_substrate_nscs06_v8_path_b_wavelet.py"
+    },
+    "terminal_claim": {
+      "already_appended": false,
+      "appended": true,
+      "instance_job_id": "substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260516T184838Zsmoke_retry",
+      "lane_id": "lane_nscs06_v8_path_b_wavelet_residual_substrate_build_20260516",
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1207.326888717; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260516T184838Zsmoke_retry_modal",
+      "platform": "modal",
+      "promotion_eligible": false,
+      "schema": "modal_training_terminal_claim_v1",
+      "score_claim": false,
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "terminal_evidence": {
+      "appended": false,
+      "already_covered": true,
+      "lane_id": "lane_nscs06_v8_path_b_wavelet_residual_substrate_build_20260516",
+      "instance_job_id": "substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260516T184838Zsmoke_retry",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRS1XP83TE8BV6QBJ52MC1MG",
+      "status": "harvested",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T22:12:44.492189Z"
     }
   },
   {
@@ -3950,6 +3996,92 @@
       "already_terminal": true,
       "call_id": "fc-01KRGTEM56EXCV94Q7DC1HF0PB",
       "latest_status": "failed"
+    }
+  },
+  {
+    "label": "substrate_stc_v2_modal_t4_dispatch_20260516T213028Z",
+    "call_id": "fc-01KRSB76H04HM4958V2HX2JZZ4",
+    "rc": 25,
+    "elapsed_seconds": 1.6170410570000087,
+    "timed_out": false,
+    "n_artifacts": 5,
+    "artifact_files": [
+      {
+        "relative_path": "results/substrate_stc_v2_modal_t4_dispatch_20260516T213028Z/modal_worker_head_ledger.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal/harvested_artifacts/results/substrate_stc_v2_modal_t4_dispatch_20260516T213028Z/modal_worker_head_ledger.json",
+        "bytes": 1620
+      },
+      {
+        "relative_path": "modal_worker_head_ledger.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal/harvested_artifacts/modal_worker_head_ledger.json",
+        "bytes": 1620
+      },
+      {
+        "relative_path": "modal_lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z.log",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal/harvested_artifacts/modal_lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z.log",
+        "bytes": 732
+      },
+      {
+        "relative_path": "modal_live_metadata.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal/harvested_artifacts/modal_live_metadata.json",
+        "bytes": 401
+      },
+      {
+        "relative_path": "lane_stc_clean_source_v2_results/run.log",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal/harvested_artifacts/lane_stc_clean_source_v2_results/run.log",
+        "bytes": 653
+      }
+    ],
+    "crash_kind": "ERROR",
+    "outcome_classification": "failed_rc_25",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": true,
+      "already_appended": false,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_stc_v2_modal_t4_dispatch_20260516T213028Z",
+      "trainer": "experiments/train_substrate_stc_v2.py",
+      "platform": "modal",
+      "gpu": "T4",
+      "epochs": 1,
+      "batch_size": 1,
+      "all_flags_on": true,
+      "elapsed_seconds": 1.6170410570000087,
+      "estimated_cost_usd": 0.00026501506211944583,
+      "hourly_rate_usd": 0.59,
+      "outcome": "failed_dispatch",
+      "returncode": 25,
+      "posterior_path": null,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=25; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "lane_stc_clean_source_v2_substrate_build_20260516",
+      "instance_job_id": "substrate_stc_v2_modal_t4_dispatch_20260516T213028Z",
+      "platform": "modal",
+      "status": "failed_modal_training_rc_25",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=25; timed_out=False; elapsed_seconds=1.6170410570000087; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_stc_v2_modal_t4_dispatch_20260516T213028Z_modal"
+    },
+    "terminal_evidence": {
+      "appended": true,
+      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "lane_id": "lane_stc_clean_source_v2_substrate_build_20260516",
+      "instance_job_id": "substrate_stc_v2_modal_t4_dispatch_20260516T213028Z",
+      "status": "failed_modal_training_rc_25"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRSB76H04HM4958V2HX2JZZ4",
+      "status": "failed",
+      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
+      "written_at_utc": "2026-05-16T22:12:44.785941Z"
     }
   },
   {

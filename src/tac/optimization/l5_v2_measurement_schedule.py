@@ -199,10 +199,16 @@ def _sideinfo_effect_curve_blockers(
     required_variants = set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
     variants = _as_text_set(curve.get("required_variants"))
     missing_variants = sorted(required_variants - variants)
+    extra_variants = sorted(variants - required_variants)
     if missing_variants:
         blockers.append(
             "tt5l_sideinfo_effect_curve_variants_missing:"
             + ",".join(missing_variants)
+        )
+    if extra_variants:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_variants_extra:"
+            + ",".join(extra_variants)
         )
 
     rows = _sideinfo_effect_curve_rows(curve)
@@ -213,6 +219,20 @@ def _sideinfo_effect_curve_blockers(
         )
         for row in rows
     }
+    observed_axes = {axis for axis, _variant in observed if axis}
+    observed_variants = {variant for _axis, variant in observed if variant}
+    extra_observed_axes = sorted(observed_axes - required_axes)
+    extra_observed_variants = sorted(observed_variants - required_variants)
+    if extra_observed_axes:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_observed_axes_extra:"
+            + ",".join(extra_observed_axes)
+        )
+    if extra_observed_variants:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_observed_variants_extra:"
+            + ",".join(extra_observed_variants)
+        )
     missing_cells = sorted(
         f"{axis}/{variant}"
         for axis in required_axes

@@ -192,6 +192,47 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
     )
 
 
+def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    curve["required_variants"] = [
+        *L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+        "oracle",
+    ]
+    curve["observed_cells"].append(
+        {
+            "axis": "macos_cpu",
+            "variant": "oracle",
+            "archive_sha256": _sha("archive:oracle"),
+            "runtime_tree_sha256": _sha("runtime-tree:oracle"),
+            "runtime_content_tree_sha256": _sha("runtime-content:oracle"),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "blockers": [],
+        }
+    )
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert schedule["active_rule_id"] == "measure_tt5l_sideinfo_effect_curve"
+    assert (
+        "tt5l_sideinfo_effect_curve_variants_extra:oracle"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_observed_axes_extra:macos_cpu"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_observed_variants_extra:oracle"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
 def test_l5_v2_schedule_json_and_markdown_are_durable() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule()
     decoded = json.loads(schedule_json(schedule))

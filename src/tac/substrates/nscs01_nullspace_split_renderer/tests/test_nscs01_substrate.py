@@ -588,6 +588,57 @@ class TestCatalog164PreprocessContract:
                 "Catalog #163: inflate.sh must use set -euo pipefail"
             )
 
+    def test_runtime_vendors_self_contained_inflate_package(self, tmp_path):
+        """Catalog #295: generated runtime must not depend on repo PYTHONPATH."""
+        from experiments.train_substrate_nscs01_nullspace_split_renderer import (
+            _write_runtime,
+        )
+
+        out = tmp_path / "submission_dir"
+        _write_runtime(out)
+        runtime_pkg = (
+            out
+            / "src"
+            / "tac"
+            / "substrates"
+            / "nscs01_nullspace_split_renderer"
+        )
+        for rel in (
+            "architecture.py",
+            "archive.py",
+            "inflate.py",
+            "__init__.py",
+        ):
+            assert (runtime_pkg / rel).exists(), f"missing vendored {rel}"
+        shared_runtime = (
+            out
+            / "src"
+            / "tac"
+            / "substrates"
+            / "_shared"
+            / "inflate_runtime.py"
+        )
+        assert shared_runtime.exists(), "missing vendored shared inflate runtime"
+        init_src = (runtime_pkg / "__init__.py").read_text(encoding="utf-8")
+        assert "score_aware_loss" not in init_src
+        assert "upstream.modules" not in init_src
+
+        code = (
+            "import sys\n"
+            f"sys.path.insert(0, {str(out / 'src')!r})\n"
+            "from tac.substrates.nscs01_nullspace_split_renderer.inflate "
+            "import main_cli\n"
+            "print(main_cli.__name__)\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-I", "-c", code],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "main_cli"
+
 
 def test_remote_driver_verifies_existing_active_claim_not_force_creates_one():
     """Remote NSCS01 driver must verify, not create, its dispatch claim."""

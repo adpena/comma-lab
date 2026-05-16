@@ -46,9 +46,6 @@ from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
 from tac.substrates._shared.trainer_skeleton import (
-    build_optimized_training_context as _build_optimized_training_context,
-)
-from tac.substrates._shared.trainer_skeleton import (
     decode_real_pairs as _canon_decode_real_pairs,
 )
 from tac.substrates._shared.trainer_skeleton import (

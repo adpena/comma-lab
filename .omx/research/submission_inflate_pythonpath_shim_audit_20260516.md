@@ -119,6 +119,34 @@ Option (a) is simpler and more reviewable per HNeRV parity L4 (≤100 LOC inflat
 
 The 6-violation live count is fixed once the priorities above are addressed; strict-flip per CLAUDE.md "Strict-flip atomicity rule" follows the sister-backfill commit batch.
 
+## Codex follow-up 2026-05-16: NSCS01 runtime closure proof
+
+Priority 1 is now backfilled in code and protected by regression evidence.
+`experiments/train_substrate_nscs01_nullspace_split_renderer.py::_write_runtime`
+vendors the NSCS01 runtime package under
+`submission_dir/src/tac/substrates/nscs01_nullspace_split_renderer/` with:
+
+- `architecture.py`
+- `archive.py`
+- `inflate.py`
+- a minimal inflate-time `__init__.py` that deliberately excludes
+  `score_aware_loss` and scorer imports
+- `src/tac/substrates/_shared/inflate_runtime.py`
+
+Regression:
+`src/tac/substrates/nscs01_nullspace_split_renderer/tests/test_nscs01_substrate.py::TestCatalog164PreprocessContract::test_runtime_vendors_self_contained_inflate_package`
+now generates a submission runtime, verifies all vendored files exist, verifies
+the vendored `__init__.py` stays scorer-free, and imports
+`tac.substrates.nscs01_nullspace_split_renderer.inflate.main_cli` under
+`python -I` with only `submission_dir/src` on `sys.path`. This specifically
+guards the NSCS06 v5 failure class where local PYTHONPATH masked a
+non-self-contained contest packet.
+
+Remaining live follow-ups from this audit are Priority 2 APOGEE_V2, Priority 3
+MAGIC_CODEC_PR106_R2, and the Priority 4 PR106 sibling-dependent triplet. They
+remain non-L5/local-basin cleanup unless a current dispatch packet depends on
+them.
+
 ## Cross-references
 
 - CLAUDE.md "Meta-bug class catalog" Catalog #295 row.
