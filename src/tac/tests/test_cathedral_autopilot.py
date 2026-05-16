@@ -617,6 +617,95 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
     assert captured["repo_root"] == autopilot.REPO_ROOT
 
 
+def test_l5_v2_validation_queue_uses_effective_completed_actions(monkeypatch) -> None:
+    """Completed L5 scaffold actions must not reappear as active Cathedral work."""
+    autopilot = _load_autopilot()
+
+    def fake_readiness(*, gate_evidence=None, repo_root=None):
+        return {
+            "blockers": [],
+            "packetir_stack_evidence": {"blockers": []},
+            "pr106_stack_cell_candidates": {"blockers": [], "candidates": []},
+            "asymptotic_pursuit_candidates": {
+                "candidates": [
+                    {
+                        "candidate_id": "z6_z7_z8_predictive_coding_world_models",
+                        "lane_id": "lane_z6_z7_z8",
+                        "horizon_class": "asymptotic_pursuit",
+                        "primary_axis": "predictive_coding",
+                        "local_ledger_path": ".omx/research/z6.md",
+                        "local_ledger_sha256": "a" * 64,
+                        "recommended_next_action_id": "build_z6_l1_scaffold_first",
+                        "recommended_next_action": "Build Z6 first",
+                        "recommended_next_action_status": "completed_or_superseded",
+                        "effective_recommended_next_action_id": (
+                            "completed_or_superseded:build_z6_l1_scaffold_first"
+                        ),
+                        "effective_recommended_next_action": (
+                            "The originally recommended L1 action is complete."
+                        ),
+                        "recommended_next_action_completed_or_superseded": True,
+                        "expected_first_artifacts": [
+                            "src/tac/substrates/z6_predictive_coding_world_model/",
+                        ],
+                        "cost_band_usd": [1.0, 12.5],
+                        "blockers": [],
+                        "ready_for_recommended_next_action": True,
+                        "ready_for_l1_build": True,
+                        "l1_build_blockers": [
+                            "l1_scaffold_present_next_action_completed_or_superseded"
+                        ],
+                    }
+                ],
+            },
+            "tt5l_campaign_readiness": {
+                "next_non_pr106_l5_action": {
+                    "action_id": "materialize_tt5l_first_anchor_timing_smoke_artifact"
+                },
+                "first_anchor_timing_smoke_allowed": False,
+                "blockers": [],
+            },
+        }
+
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_canonical_sideinfo_gate_evidence",
+        lambda repo_root: {"gate_id": "byte_closed_temporal_sideinfo_consumption"},
+    )
+    monkeypatch.setattr(autopilot.l5v2, "l5_v2_dispatch_readiness", fake_readiness)
+    monkeypatch.setattr(
+        autopilot,
+        "_load_l5_v2_packetir_matrix_for_cathedral",
+        lambda: {"load_blockers": [], "next_exact_eval_targets": []},
+    )
+
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        target_score=0.190,
+    )
+    row = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"] == "l5_v2_asymptotic_pursuit_candidate"
+    )
+
+    assert row["validation_status"] == (
+        "completed_or_superseded:build_z6_l1_scaffold_first"
+    )
+    assert row["recommended_next_action_status"] == "completed_or_superseded"
+    assert row["recommended_next_action_completed_or_superseded"] is True
+    assert row["ready_for_recommended_next_action"] is False
+    assert row["ready_for_l1_build"] is False
+    assert "recommended_next_action_completed_or_superseded" in row[
+        "dispatch_blockers"
+    ]
+    assert "l1_scaffold_present_next_action_completed_or_superseded" in row[
+        "dispatch_blockers"
+    ]
+
+
 def test_l5_v2_validation_queue_suppresses_targets_when_matrix_blocked(
     monkeypatch,
 ) -> None:

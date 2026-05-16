@@ -2520,12 +2520,39 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
     for candidate in asymptotic_candidates.get("candidates", []):
         if not isinstance(candidate, dict):
             continue
+        action_status = str(
+            candidate.get("recommended_next_action_status") or "pending"
+        )
+        effective_action_id = (
+            candidate.get("effective_recommended_next_action_id")
+            or candidate.get("recommended_next_action_id")
+        )
+        effective_action = (
+            candidate.get("effective_recommended_next_action")
+            or candidate.get("recommended_next_action")
+        )
+        action_completed = (
+            candidate.get("recommended_next_action_completed_or_superseded") is True
+            or action_status == "completed_or_superseded"
+            or str(effective_action_id or "").startswith("completed_or_superseded:")
+        )
+        dispatch_blockers = [
+            str(blocker)
+            for source in (
+                candidate.get("blockers", []),
+                candidate.get("l1_build_blockers", []),
+            )
+            for blocker in (source if isinstance(source, list) else [])
+            if str(blocker)
+        ]
+        if action_completed:
+            dispatch_blockers.append("recommended_next_action_completed_or_superseded")
         rows.append(
             {
                 "technique": candidate.get("candidate_id"),
                 "queue_source": "l5_v2_asymptotic_pursuit_candidate",
                 "validation_status": (
-                    candidate.get("recommended_next_action_id")
+                    effective_action_id
                     or "blocked_until_asymptotic_candidate_action_materialized"
                 ),
                 "archive_bytes_if_validated": None,
@@ -2535,11 +2562,7 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
                 "rank_or_kill_eligible": False,
                 "score_claim": False,
                 "promotion_eligible": False,
-                "dispatch_blockers": [
-                    str(blocker)
-                    for blocker in candidate.get("blockers", [])
-                    if str(blocker)
-                ]
+                "dispatch_blockers": list(dict.fromkeys(dispatch_blockers))
                 or ["l5_v2_asymptotic_candidate_action_pending"],
                 "lane_id": candidate.get("lane_id"),
                 "campaign_id": L5_V2_CAMPAIGN_ID,
@@ -2548,14 +2571,20 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
                 "primary_axis": candidate.get("primary_axis"),
                 "local_ledger_path": candidate.get("local_ledger_path"),
                 "local_ledger_sha256": candidate.get("local_ledger_sha256"),
-                "recommended_next_action": candidate.get("recommended_next_action"),
+                "recommended_next_action": effective_action,
                 "recommended_next_action_id": candidate.get(
                     "recommended_next_action_id"
                 ),
+                "recommended_next_action_status": action_status,
+                "effective_recommended_next_action_id": effective_action_id,
+                "effective_recommended_next_action": effective_action,
+                "recommended_next_action_completed_or_superseded": action_completed,
                 "ready_for_recommended_next_action": bool(
                     candidate.get("ready_for_recommended_next_action")
-                ),
-                "ready_for_l1_build": bool(candidate.get("ready_for_l1_build")),
+                )
+                and not action_completed,
+                "ready_for_l1_build": bool(candidate.get("ready_for_l1_build"))
+                and not action_completed,
                 "l1_build_blockers": candidate.get("l1_build_blockers", []),
                 "expected_first_artifacts": candidate.get(
                     "expected_first_artifacts",
