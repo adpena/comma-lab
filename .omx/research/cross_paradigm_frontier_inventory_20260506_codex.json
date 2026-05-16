@@ -8,11 +8,11 @@
     "close_runtime_decoder_fixture": 1,
     "emit_pose_disagreement_readiness_artifact": 1,
     "exact_eval_or_promote_measured_rate_candidate": 1,
+    "maintain_exact_eval_anchor_and_pivot": 1,
     "prove_deterministic_export_and_inflate_closure": 1,
+    "prove_jcsp_runtime_parity_and_charged_stack": 1,
     "reduce_entropy_model_overhead": 1,
-    "replace_stub_sensitivity_with_certified_cuda_artifact": 1,
-    "wire_jcsp_submission_runtime_consumer": 1,
-    "wire_pr103_pr106_runtime_adapter": 1
+    "replace_stub_sensitivity_with_certified_cuda_artifact": 1
   },
   "dispatch_attempted": false,
   "dispatch_blockers": [
@@ -23,63 +23,6 @@
     "requires_exact_cuda_auth_eval"
   ],
   "frontier_action_queue": [
-    {
-      "action_class": "wire_pr103_pr106_runtime_adapter",
-      "blockers": [
-        "no lane dispatch claim",
-        "no exact CUDA auth eval for this candidate archive SHA",
-        "contest-final compliance still requires auth-eval JSON and terminal dispatch claim"
-      ],
-      "key": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-      "next_patch": "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the byte-bound static release surface, then rerun contest-final compliance with auth-eval JSON and terminal dispatch-claim linkage.",
-      "paradigms": [
-        "alpha_mask_payload",
-        "entropy_coding",
-        "public_frontier_replay"
-      ],
-      "priority_tier": 5,
-      "ready_for_exact_eval_dispatch": false,
-      "role": "stacker_rate_only",
-      "score_claim": false,
-      "status": "static_release_surface_compliance_passed_exact_cuda_pending"
-    },
-    {
-      "action_class": "claim_exact_eval_packet_after_static_gate",
-      "blockers": [
-        "changes decoded output",
-        "tiny byte win means component drift dominates EV"
-      ],
-      "key": "hnerv_wavelet_wr01_apply",
-      "next_patch": "Use the compress-time harness to emit a byte-custody-backed WR01 atom plan, then exact CUDA only after lane claim and operator approval.",
-      "paradigms": [
-        "alpha_mask_payload",
-        "wavelet",
-        "latent_repair"
-      ],
-      "priority_tier": 10,
-      "ready_for_exact_eval_dispatch": false,
-      "role": "stacker_scorer_changing",
-      "score_claim": false,
-      "status": "archive_candidate_preflighted"
-    },
-    {
-      "action_class": "exact_eval_or_promote_measured_rate_candidate",
-      "blockers": [
-        "requires exact eval for each rebuilt archive SHA"
-      ],
-      "key": "hnerv_lowlevel_brotli_repack",
-      "next_patch": "Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and PR106 q10 as local archive candidates until candidate-specific preflight, lane claim, and exact CUDA auth eval land.",
-      "paradigms": [
-        "alpha_mask_payload",
-        "entropy_coding",
-        "archive_packing"
-      ],
-      "priority_tier": 20,
-      "ready_for_exact_eval_dispatch": false,
-      "role": "stacker_rate_only",
-      "score_claim": false,
-      "status": "exact_evaluated_pr106x_rate_frontier"
-    },
     {
       "action_class": "build_byte_closed_categorical_candidate",
       "blockers": [
@@ -101,16 +44,16 @@
         "categorical_masks",
         "openpilot_priors"
       ],
-      "priority_tier": 30,
+      "priority_tier": 10,
       "ready_for_exact_eval_dispatch": false,
       "role": "replacement_or_mask_stacker",
       "score_claim": false,
       "status": "byte_closed_local_candidate_artifact_landed_blocked_on_parity"
     },
     {
-      "action_class": "wire_jcsp_submission_runtime_consumer",
+      "action_class": "prove_jcsp_runtime_parity_and_charged_stack",
       "blockers": [
-        "submission runtime detects but refuses jcsp.bin consumption",
+        "candidate-specific raw-output parity proof missing for stacked JCSP archive",
         "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
         "no lane dispatch claim",
@@ -118,17 +61,17 @@
         "individual components do not imply score composability"
       ],
       "key": "joint_admm_balle_arithmetic_stack",
-      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate raw outputs, prove candidate-specific raw-output parity and charged side-information closure, then claim a lane before exact CUDA auth eval.",
       "paradigms": [
         "gamma_joint_codec",
         "entropy_coding",
         "hyperprior"
       ],
-      "priority_tier": 40,
+      "priority_tier": 20,
       "ready_for_exact_eval_dispatch": false,
       "role": "stack_or_replacement_orchestrator",
       "score_claim": false,
-      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked"
+      "status": "real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked"
     },
     {
       "action_class": "reduce_entropy_model_overhead",
@@ -142,30 +85,11 @@
         "alpha_mask_payload",
         "entropy_coding"
       ],
-      "priority_tier": 50,
+      "priority_tier": 30,
       "ready_for_exact_eval_dispatch": false,
       "role": "stacker_rate_only",
       "score_claim": false,
       "status": "shared_context_fixture_landed_still_byte_negative"
-    },
-    {
-      "action_class": "replace_stub_sensitivity_with_certified_cuda_artifact",
-      "blockers": [
-        "stub sensitivity must fail closed",
-        "component collapse risk"
-      ],
-      "key": "sensitivity_omega_w_v3",
-      "next_patch": "Attach the deterministic NWCS stream manifest to a byte-closed archive/container candidate, then replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
-      "paradigms": [
-        "beta_sensitivity",
-        "quantization",
-        "waterfill"
-      ],
-      "priority_tier": 60,
-      "ready_for_exact_eval_dispatch": false,
-      "role": "stacker_quantization",
-      "score_claim": false,
-      "status": "guarded_needs_real_sensitivity"
     },
     {
       "action_class": "charge_runtime_geometry_consumer_contract",
@@ -223,7 +147,7 @@
         "categorical_masks",
         "pose"
       ],
-      "priority_tier": 70,
+      "priority_tier": 40,
       "ready_for_exact_eval_dispatch": false,
       "role": "scorer_weighted_proposal_or_replacement",
       "score_claim": false,
@@ -286,11 +210,69 @@
         "meta_lagrangian",
         "pose"
       ],
-      "priority_tier": 80,
+      "priority_tier": 50,
       "ready_for_exact_eval_dispatch": false,
       "role": "proposal_allocator",
       "score_claim": false,
       "status": "planning_chain_hardened_non_rankable_global_allocations"
+    },
+    {
+      "action_class": "claim_exact_eval_packet_after_static_gate",
+      "blockers": [
+        "changes decoded output",
+        "tiny byte win means component drift dominates EV"
+      ],
+      "key": "hnerv_wavelet_wr01_apply",
+      "next_patch": "Use the compress-time harness to emit a byte-custody-backed WR01 atom plan, then exact CUDA only after lane claim and operator approval.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "wavelet",
+        "latent_repair"
+      ],
+      "priority_tier": 60,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "stacker_scorer_changing",
+      "score_claim": false,
+      "status": "archive_candidate_preflighted"
+    },
+    {
+      "action_class": "replace_stub_sensitivity_with_certified_cuda_artifact",
+      "blockers": [
+        "stub sensitivity must fail closed",
+        "component collapse risk"
+      ],
+      "key": "sensitivity_omega_w_v3",
+      "next_patch": "Attach the deterministic NWCS stream manifest to a byte-closed archive/container candidate, then replace all-ones/stub sensitivity producers with certified CUDA/component artifacts.",
+      "paradigms": [
+        "beta_sensitivity",
+        "quantization",
+        "waterfill"
+      ],
+      "priority_tier": 70,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "stacker_quantization",
+      "score_claim": false,
+      "status": "guarded_needs_real_sensitivity"
+    },
+    {
+      "action_class": "prove_deterministic_export_and_inflate_closure",
+      "blockers": [
+        "runtime/export closure risk",
+        "TTO must not rely on sidecars outside archive"
+      ],
+      "key": "selfcompress_mdl_fp4_tto",
+      "next_patch": "Require deterministic export manifest, inflate budget proof, and no scorer load at inflate.",
+      "paradigms": [
+        "delta_epsilon_zeta",
+        "self_compress",
+        "mdl",
+        "tto"
+      ],
+      "priority_tier": 80,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "replacement_renderer_or_decoder",
+      "score_claim": false,
+      "status": "pending_integration"
     },
     {
       "action_class": "emit_pose_disagreement_readiness_artifact",
@@ -354,6 +336,24 @@
       "status": "prototype_readiness_needed"
     },
     {
+      "action_class": "exact_eval_or_promote_measured_rate_candidate",
+      "blockers": [
+        "requires exact eval for each rebuilt archive SHA"
+      ],
+      "key": "hnerv_lowlevel_brotli_repack",
+      "next_patch": "Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and PR106 q10 as local archive candidates until candidate-specific preflight, lane claim, and exact CUDA auth eval land.",
+      "paradigms": [
+        "alpha_mask_payload",
+        "entropy_coding",
+        "archive_packing"
+      ],
+      "priority_tier": 90,
+      "ready_for_exact_eval_dispatch": false,
+      "role": "stacker_rate_only",
+      "score_claim": false,
+      "status": "exact_evaluated_pr106x_rate_frontier"
+    },
+    {
       "action_class": "close_runtime_decoder_fixture",
       "blockers": [
         "existing CMG2 repairs are A-negative",
@@ -392,24 +392,22 @@
       "status": "field_acquisition_ranker_landed_planning_only"
     },
     {
-      "action_class": "prove_deterministic_export_and_inflate_closure",
+      "action_class": "maintain_exact_eval_anchor_and_pivot",
       "blockers": [
-        "runtime/export closure risk",
-        "TTO must not rely on sidecars outside archive"
+        "completed anchor; next score movement requires a new lower-byte or scorer-changing candidate"
       ],
-      "key": "selfcompress_mdl_fp4_tto",
-      "next_patch": "Require deterministic export manifest, inflate budget proof, and no scorer load at inflate.",
+      "key": "hnerv_pr103_pr106_ac_repack_runtime_closure",
+      "next_patch": "Use strict formula score 0.2089810755823297 at 185578 bytes as the current A++ HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock.",
       "paradigms": [
-        "delta_epsilon_zeta",
-        "self_compress",
-        "mdl",
-        "tto"
+        "alpha_mask_payload",
+        "entropy_coding",
+        "public_frontier_replay"
       ],
-      "priority_tier": 120,
+      "priority_tier": 900,
       "ready_for_exact_eval_dispatch": false,
-      "role": "replacement_renderer_or_decoder",
+      "role": "current_exact_rate_anchor",
       "score_claim": false,
-      "status": "pending_integration"
+      "status": "exact_cuda_a++_anchor_promoted"
     }
   ],
   "frontier_action_queue_count": 13,
@@ -437,6 +435,10 @@
     "pareto_eligible",
     "pareto_frontier",
     "score_evidence_rankable",
+    "score_evidence_path",
+    "exact_score",
+    "archive_bytes",
+    "archive_sha256",
     "planning_priority_rankable",
     "expected_total_score_delta",
     "byte_delta",
@@ -449,14 +451,14 @@
     "code_paths",
     "evidence_paths"
   ],
-  "frontier_row_schema": "cross_paradigm_frontier_row_v1",
+  "frontier_row_schema": "cross_paradigm_frontier_row_v2",
   "frontier_rows": [
     {
-      "action_class": "wire_pr103_pr106_runtime_adapter",
+      "action_class": "maintain_exact_eval_anchor_and_pivot",
+      "archive_bytes": 185578,
+      "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
       "blockers": [
-        "no lane dispatch claim",
-        "no exact CUDA auth eval for this candidate archive SHA",
-        "contest-final compliance still requires auth-eval JSON and terminal dispatch claim"
+        "completed anchor; next score movement requires a new lower-byte or scorer-changing candidate"
       ],
       "byte_delta": null,
       "candidate_id": "hnerv_pr103_pr106_ac_repack_runtime_closure",
@@ -471,16 +473,19 @@
         "tools/prove_pr103_pr106_final_runtime_packet.py"
       ],
       "dispatch_attempted": false,
-      "evidence_grade": "empirical runtime-packet closure plus static compliance; no score claim until exact CUDA",
+      "evidence_grade": "A++ contest T4 exact CUDA plus contest-final compliance",
       "evidence_paths": [
         "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+        "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
         ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
-        ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md"
+        ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+        ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md"
       ],
+      "exact_score": 0.2089810755823297,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -488,7 +493,7 @@
       "family": "hnerv_pr103_pr106_ac_repack_runtime_closure",
       "family_group": "hnerv_pr103_pr106_ac_repack_runtime_closure",
       "key": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-      "next_patch": "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the byte-bound static release surface, then rerun contest-final compliance with auth-eval JSON and terminal dispatch-claim linkage.",
+      "next_patch": "Use strict formula score 0.2089810755823297 at 185578 bytes as the current A++ HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock.",
       "next_required_proof": [
         "candidate_specific_archive_manifest",
         "lane_dispatch_claim",
@@ -499,23 +504,26 @@
         "entropy_coding",
         "public_frontier_replay"
       ],
-      "pareto_eligible": false,
-      "pareto_frontier": false,
+      "pareto_eligible": true,
+      "pareto_frontier": true,
       "pareto_scope": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-      "planning_priority_rankable": false,
-      "priority_tier": 5,
+      "planning_priority_rankable": true,
+      "priority_tier": 900,
       "ready_for_exact_eval_dispatch": false,
-      "role": "stacker_rate_only",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "role": "current_exact_rate_anchor",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
-      "score_evidence_rankable": false,
+      "score_evidence_path": "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
+      "score_evidence_rankable": true,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
-      "status": "static_release_surface_compliance_passed_exact_cuda_pending",
+      "status": "exact_cuda_a++_anchor_promoted",
       "title": "PR103 AC decoder repack inside PR106 envelope"
     },
     {
       "action_class": "exact_eval_or_promote_measured_rate_candidate",
+      "archive_bytes": 186080,
+      "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
       "blockers": [
         "requires exact eval for each rebuilt archive SHA"
       ],
@@ -536,6 +544,7 @@
         "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json",
         ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md"
       ],
+      "exact_score": 0.20935073680571203,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -558,12 +567,13 @@
       "pareto_frontier": false,
       "pareto_scope": "hnerv_lowlevel_brotli_repack",
       "planning_priority_rankable": false,
-      "priority_tier": 20,
+      "priority_tier": 90,
       "ready_for_exact_eval_dispatch": false,
       "role": "stacker_rate_only",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
-      "score_evidence_rankable": false,
+      "score_evidence_path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+      "score_evidence_rankable": true,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
       "status": "exact_evaluated_pr106x_rate_frontier",
@@ -571,6 +581,8 @@
     },
     {
       "action_class": "reduce_entropy_model_overhead",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
         "requires deterministic decoder runtime before any exact eval"
@@ -591,6 +603,7 @@
       "evidence_paths": [
         "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -612,11 +625,12 @@
       "pareto_frontier": false,
       "pareto_scope": "hnerv_per_tensor_context_entropy",
       "planning_priority_rankable": false,
-      "priority_tier": 50,
+      "priority_tier": 30,
       "ready_for_exact_eval_dispatch": false,
       "role": "stacker_rate_only",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -625,6 +639,8 @@
     },
     {
       "action_class": "claim_exact_eval_packet_after_static_gate",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "changes decoded output",
         "tiny byte win means component drift dominates EV"
@@ -647,6 +663,7 @@
         "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
         "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -669,11 +686,12 @@
       "pareto_frontier": false,
       "pareto_scope": "hnerv_wavelet_wr01_apply",
       "planning_priority_rankable": false,
-      "priority_tier": 10,
+      "priority_tier": 60,
       "ready_for_exact_eval_dispatch": false,
       "role": "stacker_scorer_changing",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -682,6 +700,8 @@
     },
     {
       "action_class": "build_byte_closed_categorical_candidate",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "raw lossless class wrapping was byte-regressive",
         "CMG2 exact evals showed PoseNet collapse",
@@ -735,6 +755,7 @@
         ".omx/research/pr91_hpm1_submitted_prefix_token_recovery_tile_major_20260507_codex.json",
         ".omx/research/pr91_hpm1_next_row_suffix_scan_tile_major_20260507_codex.json"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -757,11 +778,12 @@
       "pareto_frontier": false,
       "pareto_scope": "categorical_qma9_clade_spade_openpilot",
       "planning_priority_rankable": false,
-      "priority_tier": 30,
+      "priority_tier": 10,
       "ready_for_exact_eval_dispatch": false,
       "role": "replacement_or_mask_stacker",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -770,6 +792,8 @@
     },
     {
       "action_class": "close_runtime_decoder_fixture",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "existing CMG2 repairs are A-negative",
         "probe excludes decoder/archive overhead"
@@ -789,6 +813,7 @@
         ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
         ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -814,8 +839,9 @@
       "priority_tier": 100,
       "ready_for_exact_eval_dispatch": false,
       "role": "replacement_mask_stream",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -824,6 +850,8 @@
     },
     {
       "action_class": "calibrate_planning_signal_and_attach_archive_consumer",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "current outputs are planning only",
         "confidence thresholds need calibration evidence",
@@ -850,6 +878,7 @@
         "docs/runbooks/analysis_optimization_package_map.md",
         ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -873,11 +902,12 @@
       "pareto_frontier": false,
       "pareto_scope": "lapose_motion_atom_allocator",
       "planning_priority_rankable": false,
-      "priority_tier": 80,
+      "priority_tier": 50,
       "ready_for_exact_eval_dispatch": false,
       "role": "proposal_allocator",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -886,6 +916,8 @@
     },
     {
       "action_class": "attach_byte_closed_manifest_gate",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "planner assumes additive expected deltas until exact stacked archives land",
         "live v3 atom ledger currently has zero design-ready rows",
@@ -907,6 +939,7 @@
         ".omx/research/field_acquisition_ranking_20260507_codex.md",
         "reports/cross_paradigm_atom_ledger_v3_20260506.json"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -931,8 +964,9 @@
       "priority_tier": 110,
       "ready_for_exact_eval_dispatch": false,
       "role": "canonical_ranker",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -941,6 +975,8 @@
     },
     {
       "action_class": "replace_stub_sensitivity_with_certified_cuda_artifact",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "stub sensitivity must fail closed",
         "component collapse risk"
@@ -949,7 +985,7 @@
       "candidate_id": "sensitivity_omega_w_v3",
       "candidate_static_preflight_ready": false,
       "code_paths": [
-        "src/tac/sensitivity_map.py",
+        "src/tac/sensitivity_map/__init__.py",
         "src/tac/component_sensitivity_artifact.py",
         "src/tac/neural_weight_codec_sensitivity.py",
         "src/tac/owv3_sensitivity_weighted.py",
@@ -962,6 +998,7 @@
         ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
         ".omx/research/nwcs_beta_encoding_loop_greenup_20260507_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -984,11 +1021,12 @@
       "pareto_frontier": false,
       "pareto_scope": "sensitivity_omega_w_v3",
       "planning_priority_rankable": false,
-      "priority_tier": 60,
+      "priority_tier": 70,
       "ready_for_exact_eval_dispatch": false,
       "role": "stacker_quantization",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -996,9 +1034,11 @@
       "title": "Sensitivity-aware Omega-W-V3"
     },
     {
-      "action_class": "wire_jcsp_submission_runtime_consumer",
+      "action_class": "prove_jcsp_runtime_parity_and_charged_stack",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
-        "submission runtime detects but refuses jcsp.bin consumption",
+        "candidate-specific raw-output parity proof missing for stacked JCSP archive",
         "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
         "no lane dispatch claim",
@@ -1017,18 +1057,22 @@
         "src/tac/stack_compositions.py",
         "experiments/pipeline.py",
         "submissions/robust_current/jcsp_runtime_bridge.py",
+        "submissions/robust_current/inflate.sh",
         "tools/audit_arithmetic_qint_optimality.py",
         "tools/build_joint_stack_noop_manifest.py",
         "src/tac/entropy_archive.py"
       ],
       "dispatch_attempted": false,
-      "evidence_grade": "empirical byte-closed JCSP archive member plus runtime-loader parity",
+      "evidence_grade": "empirical byte-closed JCSP archive member plus real AQ rawvideo runtime consumer",
       "evidence_paths": [
         "docs/score_aware_sidechannel_paradigm_20260504.md",
         "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
         ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
-        ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
+        ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
+        ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md",
+        ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -1036,7 +1080,7 @@
       "family": "joint_admm_balle_arithmetic_stack",
       "family_group": "joint_admm_balle_arithmetic_stack",
       "key": "joint_admm_balle_arithmetic_stack",
-      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate raw outputs, prove candidate-specific raw-output parity and charged side-information closure, then claim a lane before exact CUDA auth eval.",
       "next_required_proof": [
         "candidate_specific_archive_manifest",
         "lane_dispatch_claim",
@@ -1051,19 +1095,22 @@
       "pareto_frontier": false,
       "pareto_scope": "joint_admm_balle_arithmetic_stack",
       "planning_priority_rankable": false,
-      "priority_tier": 40,
+      "priority_tier": 20,
       "ready_for_exact_eval_dispatch": false,
       "role": "stack_or_replacement_orchestrator",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
-      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked",
+      "status": "real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked",
       "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
     },
     {
       "action_class": "charge_runtime_geometry_consumer_contract",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "configured-but-unconsumed foveation is a known fail-closed preflight class",
         "geometry_feedback_no_charged_artifact_proof",
@@ -1091,6 +1138,7 @@
         ".omx/research/all_scores_forensic_audit_20260430.md",
         ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -1114,11 +1162,12 @@
       "pareto_frontier": false,
       "pareto_scope": "telescopic_foveation_field",
       "planning_priority_rankable": false,
-      "priority_tier": 70,
+      "priority_tier": 40,
       "ready_for_exact_eval_dispatch": false,
       "role": "scorer_weighted_proposal_or_replacement",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1127,6 +1176,8 @@
     },
     {
       "action_class": "emit_pose_disagreement_readiness_artifact",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "RAFT full-frame jobs historically OOM at naive settings",
         "small pose errors can dominate score",
@@ -1152,6 +1203,7 @@
         ".omx/research/council_lane_raft_radial_pose_design_20260430.md",
         ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -1177,8 +1229,9 @@
       "priority_tier": 90,
       "ready_for_exact_eval_dispatch": false,
       "role": "proposal_or_pose_sidecar_replacement",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1187,6 +1240,8 @@
     },
     {
       "action_class": "prove_deterministic_export_and_inflate_closure",
+      "archive_bytes": null,
+      "archive_sha256": "",
       "blockers": [
         "runtime/export closure risk",
         "TTO must not rely on sidecars outside archive"
@@ -1206,6 +1261,7 @@
       "evidence_paths": [
         ".omx/research/council_lane_mdl_bayesian_design_20260430.md"
       ],
+      "exact_score": null,
       "expected_information_gain_nats": null,
       "expected_pose_dist_delta": null,
       "expected_seg_dist_delta": null,
@@ -1229,11 +1285,12 @@
       "pareto_frontier": false,
       "pareto_scope": "selfcompress_mdl_fp4_tto",
       "planning_priority_rankable": false,
-      "priority_tier": 120,
+      "priority_tier": 80,
       "ready_for_exact_eval_dispatch": false,
       "role": "replacement_renderer_or_decoder",
-      "schema": "cross_paradigm_frontier_row_v1",
+      "schema": "cross_paradigm_frontier_row_v2",
       "score_claim": false,
+      "score_evidence_path": "",
       "score_evidence_rankable": false,
       "source_path": "",
       "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1274,6 +1331,7 @@
   },
   "role_counts": {
     "canonical_ranker": 1,
+    "current_exact_rate_anchor": 1,
     "proposal_allocator": 1,
     "proposal_or_pose_sidecar_replacement": 1,
     "replacement_mask_stream": 1,
@@ -1282,17 +1340,15 @@
     "scorer_weighted_proposal_or_replacement": 1,
     "stack_or_replacement_orchestrator": 1,
     "stacker_quantization": 1,
-    "stacker_rate_only": 3,
+    "stacker_rate_only": 2,
     "stacker_scorer_changing": 1
   },
   "row_count": 13,
   "rows": [
     {
-      "action_class": "wire_pr103_pr106_runtime_adapter",
+      "action_class": "maintain_exact_eval_anchor_and_pivot",
       "blockers": [
-        "no lane dispatch claim",
-        "no exact CUDA auth eval for this candidate archive SHA",
-        "contest-final compliance still requires auth-eval JSON and terminal dispatch claim"
+        "completed anchor; next score movement requires a new lower-byte or scorer-changing candidate"
       ],
       "code_paths": [
         "src/tac/pr103_arithmetic_codec.py",
@@ -1303,22 +1359,24 @@
         "tools/prove_pr103_pr106_runtime_closure.py",
         "tools/prove_pr103_pr106_final_runtime_packet.py"
       ],
-      "evidence_grade": "empirical runtime-packet closure plus static compliance; no score claim until exact CUDA",
+      "evidence_grade": "A++ contest T4 exact CUDA plus contest-final compliance",
       "evidence_paths": [
         "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+        "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
         "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
         ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
-        ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md"
+        ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+        ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md"
       ],
       "frontier_row": {
-        "action_class": "wire_pr103_pr106_runtime_adapter",
+        "action_class": "maintain_exact_eval_anchor_and_pivot",
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
         "blockers": [
-          "no lane dispatch claim",
-          "no exact CUDA auth eval for this candidate archive SHA",
-          "contest-final compliance still requires auth-eval JSON and terminal dispatch claim"
+          "completed anchor; next score movement requires a new lower-byte or scorer-changing candidate"
         ],
         "byte_delta": null,
         "candidate_id": "hnerv_pr103_pr106_ac_repack_runtime_closure",
@@ -1333,16 +1391,19 @@
           "tools/prove_pr103_pr106_final_runtime_packet.py"
         ],
         "dispatch_attempted": false,
-        "evidence_grade": "empirical runtime-packet closure plus static compliance; no score claim until exact CUDA",
+        "evidence_grade": "A++ contest T4 exact CUDA plus contest-final compliance",
         "evidence_paths": [
           "experiments/results/pr103_repack_pr106_standalone_20260507/manifest.json",
           "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
           "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
           "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+          "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
           "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
           ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
-          ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md"
+          ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+          ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md"
         ],
+        "exact_score": 0.2089810755823297,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -1350,7 +1411,7 @@
         "family": "hnerv_pr103_pr106_ac_repack_runtime_closure",
         "family_group": "hnerv_pr103_pr106_ac_repack_runtime_closure",
         "key": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-        "next_patch": "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the byte-bound static release surface, then rerun contest-final compliance with auth-eval JSON and terminal dispatch-claim linkage.",
+        "next_patch": "Use strict formula score 0.2089810755823297 at 185578 bytes as the current A++ HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock.",
         "next_required_proof": [
           "candidate_specific_archive_manifest",
           "lane_dispatch_claim",
@@ -1361,23 +1422,24 @@
           "entropy_coding",
           "public_frontier_replay"
         ],
-        "pareto_eligible": false,
-        "pareto_frontier": false,
+        "pareto_eligible": true,
+        "pareto_frontier": true,
         "pareto_scope": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-        "planning_priority_rankable": false,
-        "priority_tier": 5,
+        "planning_priority_rankable": true,
+        "priority_tier": 900,
         "ready_for_exact_eval_dispatch": false,
-        "role": "stacker_rate_only",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "role": "current_exact_rate_anchor",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
-        "score_evidence_rankable": false,
+        "score_evidence_path": "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
+        "score_evidence_rankable": true,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
-        "status": "static_release_surface_compliance_passed_exact_cuda_pending",
+        "status": "exact_cuda_a++_anchor_promoted",
         "title": "PR103 AC decoder repack inside PR106 envelope"
       },
       "key": "hnerv_pr103_pr106_ac_repack_runtime_closure",
-      "next_patch": "Claim the PR103-on-PR106 exact-eval lane, run exact CUDA auth eval on the byte-bound static release surface, then rerun contest-final compliance with auth-eval JSON and terminal dispatch-claim linkage.",
+      "next_patch": "Use strict formula score 0.2089810755823297 at 185578 bytes as the current A++ HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock.",
       "paradigms": [
         "alpha_mask_payload",
         "entropy_coding",
@@ -1404,23 +1466,56 @@
             "experiments/results/pr103_repack_pr106_standalone_20260507/runtime_closure.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/final_runtime_packet_proof.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.static.json",
+            "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
             "experiments/results/pr103_repack_pr106_standalone_20260507/exact_eval_static_release_surface/archive_manifest.json",
             ".omx/research/pr103_pr106_runtime_closure_20260507_codex.md",
-            ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md"
+            ".omx/research/hnerv_pr103_lc_ac_schema_frontier_20260507_codex.md",
+            ".omx/research/pr103_pr106_ac_repack_exact_eval_20260507_codex.md"
           ],
-          "existing_count": 7,
+          "existing_count": 9,
           "missing": [],
           "missing_count": 0
         }
       },
-      "priority_tier": 5,
+      "priority_tier": 900,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low: rate-only public-frontier repack, not a representation replacement",
-      "role": "stacker_rate_only",
+      "role": "current_exact_rate_anchor",
       "score_claim": false,
-      "score_snapshot": null,
+      "score_snapshot": {
+        "anchor_proof_schema": "pre_submission_compliance_anchor_proof_v1",
+        "archive_bytes": 185578,
+        "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+        "compliance_check_count": 35,
+        "compliance_failed_checks": [],
+        "compliance_passed": true,
+        "device": "cuda",
+        "eval_command_sanitized": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "archive.zip",
+          "--inflate-sh",
+          "submissions/pr103_pr106_final_runtime/inflate.sh",
+          "--upstream-dir",
+          "upstream",
+          "--device",
+          "cuda"
+        ],
+        "gpu_model": "Tesla T4",
+        "path": "experiments/results/pr103_repack_pr106_standalone_20260507/pre_submission_compliance.contest_final.json",
+        "pose_dist": 3.36e-05,
+        "report_reconstructed_score": 0.20898105277982337,
+        "runtime_file_count": 3,
+        "runtime_tree_sha256": "54db9e5ddee85ae7f486fae900ff3907932efb1c8d3062bc264b0e5c7456d8f6",
+        "samples": 600,
+        "score": 0.2089810755823297,
+        "score_basis": "auth_eval_report_components_plus_exact_archive_bytes",
+        "score_delta_vs_report_reconstruction": 2.2802506327579408e-08,
+        "seg_dist": 0.00067082,
+        "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      },
       "stackability": "high: replaces the PR106 decoder section with PR103 arithmetic-coded bytes while preserving fixed PR106 latents; should compose before scorer-changing atoms",
-      "status": "static_release_surface_compliance_passed_exact_cuda_pending",
+      "status": "exact_cuda_a++_anchor_promoted",
       "title": "PR103 AC decoder repack inside PR106 envelope"
     },
     {
@@ -1443,6 +1538,8 @@
       ],
       "frontier_row": {
         "action_class": "exact_eval_or_promote_measured_rate_candidate",
+        "archive_bytes": 186080,
+        "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
         "blockers": [
           "requires exact eval for each rebuilt archive SHA"
         ],
@@ -1463,6 +1560,7 @@
           "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json",
           ".omx/research/hnerv_decoder_recode_pr106_20260506_codex.md"
         ],
+        "exact_score": 0.20935073680571203,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -1485,12 +1583,13 @@
         "pareto_frontier": false,
         "pareto_scope": "hnerv_lowlevel_brotli_repack",
         "planning_priority_rankable": false,
-        "priority_tier": 20,
+        "priority_tier": 90,
         "ready_for_exact_eval_dispatch": false,
         "role": "stacker_rate_only",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
-        "score_evidence_rankable": false,
+        "score_evidence_path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
+        "score_evidence_rankable": true,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
         "status": "exact_evaluated_pr106x_rate_frontier",
@@ -1527,14 +1626,14 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 20,
+      "priority_tier": 90,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low: rate-only improvement, not a representation replacement",
       "role": "stacker_rate_only",
       "score_claim": false,
       "score_snapshot": {
         "archive_bytes": 186080,
-        "archive_sha256": null,
+        "archive_sha256": "b0a12549a39e34a0d7f83ea99e05e55fcd01d795a15db2ffb3d92ccc6267e53f",
         "path": "experiments/results/lightning_batch/exact_eval_pr106x_lowlevel_brotli_repack_custody_v2_t4_20260506/contest_auth_eval.adjudicated.json",
         "pose_dist": 3.351e-05,
         "score": 0.20935073680571203,
@@ -1564,6 +1663,8 @@
       ],
       "frontier_row": {
         "action_class": "reduce_entropy_model_overhead",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "HDC1/HDC2 parity fixtures are raw-equal but still byte-negative versus source brotli",
           "requires deterministic decoder runtime before any exact eval"
@@ -1584,6 +1685,7 @@
         "evidence_paths": [
           "experiments/results/hnerv_decoder_recode_pr106_20260506_codex/profile.json"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -1605,11 +1707,12 @@
         "pareto_frontier": false,
         "pareto_scope": "hnerv_per_tensor_context_entropy",
         "planning_priority_rankable": false,
-        "priority_tier": 50,
+        "priority_tier": 30,
         "ready_for_exact_eval_dispatch": false,
         "role": "stacker_rate_only",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1645,7 +1748,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 50,
+      "priority_tier": 30,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low: recodes current decoder representation",
       "role": "stacker_rate_only",
@@ -1677,6 +1780,8 @@
       ],
       "frontier_row": {
         "action_class": "claim_exact_eval_packet_after_static_gate",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "changes decoded output",
           "tiny byte win means component drift dominates EV"
@@ -1699,6 +1804,7 @@
           "experiments/results/hnerv_wavelet_apply_transform_pr106x_1_2_20260506_codex/manifest.json",
           "experiments/results/hnerv_wavelet_sidechannel_pr106x_20260506_codex/manifest.json"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -1721,11 +1827,12 @@
         "pareto_frontier": false,
         "pareto_scope": "hnerv_wavelet_wr01_apply",
         "planning_priority_rankable": false,
-        "priority_tier": 10,
+        "priority_tier": 60,
         "ready_for_exact_eval_dispatch": false,
         "role": "stacker_scorer_changing",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1764,7 +1871,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 10,
+      "priority_tier": 60,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low-medium: local residual transform, not full representation replacement",
       "role": "stacker_scorer_changing",
@@ -1827,6 +1934,8 @@
       ],
       "frontier_row": {
         "action_class": "build_byte_closed_categorical_candidate",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "raw lossless class wrapping was byte-regressive",
           "CMG2 exact evals showed PoseNet collapse",
@@ -1880,6 +1989,7 @@
           ".omx/research/pr91_hpm1_submitted_prefix_token_recovery_tile_major_20260507_codex.json",
           ".omx/research/pr91_hpm1_next_row_suffix_scan_tile_major_20260507_codex.json"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -1902,11 +2012,12 @@
         "pareto_frontier": false,
         "pareto_scope": "categorical_qma9_clade_spade_openpilot",
         "planning_priority_rankable": false,
-        "priority_tier": 30,
+        "priority_tier": 10,
         "ready_for_exact_eval_dispatch": false,
         "role": "replacement_or_mask_stacker",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -1968,7 +2079,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 30,
+      "priority_tier": 10,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "high for mask stream if learned/predictive grammar avoids CMG2 collapse",
       "role": "replacement_or_mask_stacker",
@@ -1997,6 +2108,8 @@
       ],
       "frontier_row": {
         "action_class": "close_runtime_decoder_fixture",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "existing CMG2 repairs are A-negative",
           "probe excludes decoder/archive overhead"
@@ -2016,6 +2129,7 @@
           ".omx/research/shannon_floor_claim_matrix_20260430_codex.md",
           ".omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2041,8 +2155,9 @@
         "priority_tier": 100,
         "ready_for_exact_eval_dispatch": false,
         "role": "replacement_mask_stream",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2114,6 +2229,8 @@
       ],
       "frontier_row": {
         "action_class": "calibrate_planning_signal_and_attach_archive_consumer",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "current outputs are planning only",
           "confidence thresholds need calibration evidence",
@@ -2140,6 +2257,7 @@
           "docs/runbooks/analysis_optimization_package_map.md",
           ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2163,11 +2281,12 @@
         "pareto_frontier": false,
         "pareto_scope": "lapose_motion_atom_allocator",
         "planning_priority_rankable": false,
-        "priority_tier": 80,
+        "priority_tier": 50,
         "ready_for_exact_eval_dispatch": false,
         "role": "proposal_allocator",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2242,7 +2361,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 80,
+      "priority_tier": 50,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium if it produces a charged motion decoder or pose-sidecar replacement",
       "role": "proposal_allocator",
@@ -2273,6 +2392,8 @@
       ],
       "frontier_row": {
         "action_class": "attach_byte_closed_manifest_gate",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "planner assumes additive expected deltas until exact stacked archives land",
           "live v3 atom ledger currently has zero design-ready rows",
@@ -2294,6 +2415,7 @@
           ".omx/research/field_acquisition_ranking_20260507_codex.md",
           "reports/cross_paradigm_atom_ledger_v3_20260506.json"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2318,8 +2440,9 @@
         "priority_tier": 110,
         "ready_for_exact_eval_dispatch": false,
         "role": "canonical_ranker",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2372,7 +2495,7 @@
         "component collapse risk"
       ],
       "code_paths": [
-        "src/tac/sensitivity_map.py",
+        "src/tac/sensitivity_map/__init__.py",
         "src/tac/component_sensitivity_artifact.py",
         "src/tac/neural_weight_codec_sensitivity.py",
         "src/tac/owv3_sensitivity_weighted.py",
@@ -2386,6 +2509,8 @@
       ],
       "frontier_row": {
         "action_class": "replace_stub_sensitivity_with_certified_cuda_artifact",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "stub sensitivity must fail closed",
           "component collapse risk"
@@ -2394,7 +2519,7 @@
         "candidate_id": "sensitivity_omega_w_v3",
         "candidate_static_preflight_ready": false,
         "code_paths": [
-          "src/tac/sensitivity_map.py",
+          "src/tac/sensitivity_map/__init__.py",
           "src/tac/component_sensitivity_artifact.py",
           "src/tac/neural_weight_codec_sensitivity.py",
           "src/tac/owv3_sensitivity_weighted.py",
@@ -2407,6 +2532,7 @@
           ".omx/research/component_sensitivity_map_certification_20260501_codex.md",
           ".omx/research/nwcs_beta_encoding_loop_greenup_20260507_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2429,11 +2555,12 @@
         "pareto_frontier": false,
         "pareto_scope": "sensitivity_omega_w_v3",
         "planning_priority_rankable": false,
-        "priority_tier": 60,
+        "priority_tier": 70,
         "ready_for_exact_eval_dispatch": false,
         "role": "stacker_quantization",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2450,7 +2577,7 @@
       "path_audit": {
         "code": {
           "existing": [
-            "src/tac/sensitivity_map.py",
+            "src/tac/sensitivity_map/__init__.py",
             "src/tac/component_sensitivity_artifact.py",
             "src/tac/neural_weight_codec_sensitivity.py",
             "src/tac/owv3_sensitivity_weighted.py",
@@ -2471,7 +2598,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 60,
+      "priority_tier": 70,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "low-medium: quantization policy, not representation replacement",
       "role": "stacker_quantization",
@@ -2482,9 +2609,9 @@
       "title": "Sensitivity-aware Omega-W-V3"
     },
     {
-      "action_class": "wire_jcsp_submission_runtime_consumer",
+      "action_class": "prove_jcsp_runtime_parity_and_charged_stack",
       "blockers": [
-        "submission runtime detects but refuses jcsp.bin consumption",
+        "candidate-specific raw-output parity proof missing for stacked JCSP archive",
         "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
         "side information must be charged",
         "no lane dispatch claim",
@@ -2500,21 +2627,26 @@
         "src/tac/stack_compositions.py",
         "experiments/pipeline.py",
         "submissions/robust_current/jcsp_runtime_bridge.py",
+        "submissions/robust_current/inflate.sh",
         "tools/audit_arithmetic_qint_optimality.py",
         "tools/build_joint_stack_noop_manifest.py",
         "src/tac/entropy_archive.py"
       ],
-      "evidence_grade": "empirical byte-closed JCSP archive member plus runtime-loader parity",
+      "evidence_grade": "empirical byte-closed JCSP archive member plus real AQ rawvideo runtime consumer",
       "evidence_paths": [
         "docs/score_aware_sidechannel_paradigm_20260504.md",
         "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
         ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
-        ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
+        ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
+        ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md",
+        ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md"
       ],
       "frontier_row": {
-        "action_class": "wire_jcsp_submission_runtime_consumer",
+        "action_class": "prove_jcsp_runtime_parity_and_charged_stack",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
-          "submission runtime detects but refuses jcsp.bin consumption",
+          "candidate-specific raw-output parity proof missing for stacked JCSP archive",
           "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
           "side information must be charged",
           "no lane dispatch claim",
@@ -2533,18 +2665,22 @@
           "src/tac/stack_compositions.py",
           "experiments/pipeline.py",
           "submissions/robust_current/jcsp_runtime_bridge.py",
+          "submissions/robust_current/inflate.sh",
           "tools/audit_arithmetic_qint_optimality.py",
           "tools/build_joint_stack_noop_manifest.py",
           "src/tac/entropy_archive.py"
         ],
         "dispatch_attempted": false,
-        "evidence_grade": "empirical byte-closed JCSP archive member plus runtime-loader parity",
+        "evidence_grade": "empirical byte-closed JCSP archive member plus real AQ rawvideo runtime consumer",
         "evidence_paths": [
           "docs/score_aware_sidechannel_paradigm_20260504.md",
           "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
           ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
-          ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
+          ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
+          ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md",
+          ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2552,7 +2688,7 @@
         "family": "joint_admm_balle_arithmetic_stack",
         "family_group": "joint_admm_balle_arithmetic_stack",
         "key": "joint_admm_balle_arithmetic_stack",
-        "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
+        "next_patch": "Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate raw outputs, prove candidate-specific raw-output parity and charged side-information closure, then claim a lane before exact CUDA auth eval.",
         "next_required_proof": [
           "candidate_specific_archive_manifest",
           "lane_dispatch_claim",
@@ -2567,19 +2703,20 @@
         "pareto_frontier": false,
         "pareto_scope": "joint_admm_balle_arithmetic_stack",
         "planning_priority_rankable": false,
-        "priority_tier": 40,
+        "priority_tier": 20,
         "ready_for_exact_eval_dispatch": false,
         "role": "stack_or_replacement_orchestrator",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
-        "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked",
+        "status": "real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked",
         "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
       },
       "key": "joint_admm_balle_arithmetic_stack",
-      "next_patch": "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval.",
+      "next_patch": "Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate raw outputs, prove candidate-specific raw-output parity and charged side-information closure, then claim a lane before exact CUDA auth eval.",
       "paradigms": [
         "gamma_joint_codec",
         "entropy_coding",
@@ -2596,11 +2733,12 @@
             "src/tac/stack_compositions.py",
             "experiments/pipeline.py",
             "submissions/robust_current/jcsp_runtime_bridge.py",
+            "submissions/robust_current/inflate.sh",
             "tools/audit_arithmetic_qint_optimality.py",
             "tools/build_joint_stack_noop_manifest.py",
             "src/tac/entropy_archive.py"
           ],
-          "existing_count": 11,
+          "existing_count": 12,
           "missing": [],
           "missing_count": 0
         },
@@ -2609,21 +2747,23 @@
             "docs/score_aware_sidechannel_paradigm_20260504.md",
             "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
             ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
-            ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md"
+            ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
+            ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md",
+            ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md"
           ],
-          "existing_count": 4,
+          "existing_count": 6,
           "missing": [],
           "missing_count": 0
         }
       },
-      "priority_tier": 40,
+      "priority_tier": 20,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
       "role": "stack_or_replacement_orchestrator",
       "score_claim": false,
       "score_snapshot": null,
       "stackability": "high in architecture, unproven in exact archive",
-      "status": "byte_closed_jcsp_member_landed_runtime_consumption_blocked",
+      "status": "real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked",
       "title": "Joint ADMM plus Balle hyperprior plus arithmetic stack"
     },
     {
@@ -2653,6 +2793,8 @@
       ],
       "frontier_row": {
         "action_class": "charge_runtime_geometry_consumer_contract",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "configured-but-unconsumed foveation is a known fail-closed preflight class",
           "geometry_feedback_no_charged_artifact_proof",
@@ -2680,6 +2822,7 @@
           ".omx/research/all_scores_forensic_audit_20260430.md",
           ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2703,11 +2846,12 @@
         "pareto_frontier": false,
         "pareto_scope": "telescopic_foveation_field",
         "planning_priority_rankable": false,
-        "priority_tier": 70,
+        "priority_tier": 40,
         "ready_for_exact_eval_dispatch": false,
         "role": "scorer_weighted_proposal_or_replacement",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2784,7 +2928,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 70,
+      "priority_tier": 40,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "medium if runtime consumes charged geometry without PoseNet collapse",
       "role": "scorer_weighted_proposal_or_replacement",
@@ -2819,6 +2963,8 @@
       ],
       "frontier_row": {
         "action_class": "emit_pose_disagreement_readiness_artifact",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "RAFT full-frame jobs historically OOM at naive settings",
           "small pose errors can dominate score",
@@ -2844,6 +2990,7 @@
           ".omx/research/council_lane_raft_radial_pose_design_20260430.md",
           ".omx/research/geometry_feedback_runtime_consumer_contract_20260506_codex.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -2869,8 +3016,9 @@
         "priority_tier": 90,
         "ready_for_exact_eval_dispatch": false,
         "role": "proposal_or_pose_sidecar_replacement",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -2971,6 +3119,8 @@
       ],
       "frontier_row": {
         "action_class": "prove_deterministic_export_and_inflate_closure",
+        "archive_bytes": null,
+        "archive_sha256": "",
         "blockers": [
           "runtime/export closure risk",
           "TTO must not rely on sidecars outside archive"
@@ -2990,6 +3140,7 @@
         "evidence_paths": [
           ".omx/research/council_lane_mdl_bayesian_design_20260430.md"
         ],
+        "exact_score": null,
         "expected_information_gain_nats": null,
         "expected_pose_dist_delta": null,
         "expected_seg_dist_delta": null,
@@ -3013,11 +3164,12 @@
         "pareto_frontier": false,
         "pareto_scope": "selfcompress_mdl_fp4_tto",
         "planning_priority_rankable": false,
-        "priority_tier": 120,
+        "priority_tier": 80,
         "ready_for_exact_eval_dispatch": false,
         "role": "replacement_renderer_or_decoder",
-        "schema": "cross_paradigm_frontier_row_v1",
+        "schema": "cross_paradigm_frontier_row_v2",
         "score_claim": false,
+        "score_evidence_path": "",
         "score_evidence_rankable": false,
         "source_path": "",
         "source_tool": "tools/build_cross_paradigm_frontier_inventory.py",
@@ -3054,7 +3206,7 @@
           "missing_count": 0
         }
       },
-      "priority_tier": 120,
+      "priority_tier": 80,
       "ready_for_exact_eval_dispatch": false,
       "replacement_potential": "high if it can replace HNeRV renderer with smaller scorer-stable decoder",
       "role": "replacement_renderer_or_decoder",

@@ -110,6 +110,17 @@ def test_frontier_roadmap_status_is_non_dispatching_and_dirty_aware() -> None:
     assert categorical["safe_to_touch_now"] is True
     assert categorical["readiness_stage"] == "needs_byte_closed_candidate_or_fixture"
 
+    jcsp = rows["joint_admm_balle_arithmetic_stack"]
+    assert jcsp["action_class"] == "prove_jcsp_runtime_parity_and_charged_stack"
+    assert jcsp["readiness_stage"] == "needs_byte_closed_candidate_or_fixture"
+    assert jcsp["safe_to_touch_now"] is True
+    assert "real AQ rawvideo JCSP runtime bridge" in jcsp["next_patch"]
+    assert (
+        "submission runtime detects but refuses jcsp.bin consumption"
+        not in jcsp["blockers"]
+    )
+    assert any("raw-output parity proof missing" in blocker for blocker in jcsp["blockers"])
+
     tranche = payload["next_comprehensive_tranche"]
     pools = tranche["candidate_pools"]
     assert "hnerv_wavelet_wr01_apply" not in pools["exact_eval_or_review"]

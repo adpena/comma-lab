@@ -196,6 +196,30 @@ def test_cross_paradigm_inventory_pins_required_score_path_rows() -> None:
     )
     assert "deterministic NWCS stream manifest" in sensitivity["next_patch"]
 
+    jcsp = rows["joint_admm_balle_arithmetic_stack"]
+    assert jcsp["action_class"] == "prove_jcsp_runtime_parity_and_charged_stack"
+    assert jcsp["priority_tier"] == 20
+    assert jcsp["status"] == "real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked"
+    assert "submissions/robust_current/inflate.sh" in jcsp["code_paths"]
+    assert "submissions/robust_current/jcsp_runtime_bridge.py" in jcsp["code_paths"]
+    assert (
+        ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md"
+        in jcsp["evidence_paths"]
+    )
+    assert (
+        ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md"
+        in jcsp["evidence_paths"]
+    )
+    assert "real AQ rawvideo JCSP runtime bridge" in jcsp["next_patch"]
+    assert (
+        "submission runtime detects but refuses jcsp.bin consumption"
+        not in jcsp["blockers"]
+    )
+    assert any("raw-output parity proof missing" in blocker for blocker in jcsp["blockers"])
+    assert any("side information must be charged" in blocker for blocker in jcsp["blockers"])
+    assert jcsp["score_claim"] is False
+    assert jcsp["ready_for_exact_eval_dispatch"] is False
+
     lowlevel = rows["hnerv_lowlevel_brotli_repack"]
     assert (
         "experiments/results/hnerv_lowlevel_repack_pr106x_lgblock16_20260507_codex/result.json"
@@ -248,10 +272,12 @@ def test_cross_paradigm_inventory_action_queue_routes_next_tranche() -> None:
         "lapose_motion_atom_allocator",
     ]
     assert queue[0]["action_class"] == "build_byte_closed_categorical_candidate"
-    assert queue[1]["action_class"] == "wire_jcsp_submission_runtime_consumer"
+    assert queue[1]["action_class"] == "prove_jcsp_runtime_parity_and_charged_stack"
     assert queue[-1]["action_class"] == "maintain_exact_eval_anchor_and_pivot"
     assert payload["action_class_counts"]["maintain_exact_eval_anchor_and_pivot"] == 1
-    assert payload["action_class_counts"]["wire_jcsp_submission_runtime_consumer"] == 1
+    assert (
+        payload["action_class_counts"]["prove_jcsp_runtime_parity_and_charged_stack"] == 1
+    )
 
 
 def test_cross_paradigm_inventory_emits_comparable_frontier_rows() -> None:

@@ -27,10 +27,10 @@ ensure_repo_imports(REPO_ROOT)
 from tac.hnerv_entropy_frontier_selector import (  # noqa: E402
     ACTIVE_RATE_ONLY_FLOOR_ARCHIVE_BYTES,
 )
-from tac.repo_io import json_text  # noqa: E402
 from tac.optimization.scorer_surface_shaking import (  # noqa: E402
     build_scorer_surface_shaking_plan,
 )
+from tac.repo_io import json_text  # noqa: E402
 from tools.build_cross_paradigm_frontier_inventory import build_inventory  # noqa: E402
 from tools.build_field_meta_dispatch_selection import build_selection_report  # noqa: E402
 

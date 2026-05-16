@@ -2,21 +2,8 @@
 
 Live-safe operator roadmap. It does not claim scores or dispatch work.
 
-## Supersession note (2026-05-11T16:40Z)
-
-This roadmap was generated before the PR106 latent sidecar R2 exact-T4 result
-landed. Any row or selected-candidate wording that assumes PR103-on-PR106 or
-PR106 R1 is the active CUDA frontier is stale for routing. The current measured
-PR106-sidecar `[contest-CUDA]` frontier / constructive upper bound is
-`0.20664588545741508` at `186822` bytes, archive SHA-256
-`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`.
-
-This note does not recompute the table below. Regenerate the roadmap before
-using selected-candidate fields for dispatch. Reserve "floor" for certified
-lower bounds; use "frontier" for measured packets.
-
 - row_count: `13`
-- dirty_path_count: `4`
+- dirty_path_count: `0`
 - dirty_blocked_row_count: `0`
 - next_unblocked_keys: `categorical_qma9_clade_spade_openpilot, joint_admm_balle_arithmetic_stack, hnerv_per_tensor_context_entropy, telescopic_foveation_field, lapose_motion_atom_allocator`
 
@@ -49,6 +36,7 @@ lower bounds; use "frontier" for measured packets.
 
 | workstream | keys | dirty-blocked keys | acceptance gates |
 |---|---|---|---|
+| `scorer_surface_shaking` | `renderer_training_score_surface_loop`<br>`segnet_boundary_run_repair`<br>`frame_channel_affine_shake`<br>`pose_sensitive_luma_microfield`<br>`pixel_lsb_threshold_probe` | `none` | proxy/local rows never update score or continual-learning posteriors<br>each atom declares the charged PacketIR stream it would occupy<br>identity/no-op control proves inflate consumes the same runtime path<br>paired CPU/CUDA exact eval is required before any status promotion |
 | `rate_frontier_closure` | `hnerv_lowlevel_brotli_repack`<br>`hnerv_per_tensor_context_entropy` | `none` | candidate archive manifest records exact bytes and SHA-256<br>decoder/runtime parity proves output equivalence or declares scorer-changing scope<br>rate-only exact-eval spend requires archive bytes below 185578 or an explicit scorer-changing stack path<br>entropy-gap target ranking names concrete next artifact, not only a family<br>ready_for_exact_eval_dispatch remains false until static preflight and matching active claim pass |
 | `scorer_changing_mask_payload` | `hnerv_wavelet_wr01_apply`<br>`categorical_qma9_clade_spade_openpilot`<br>`cmg3_predictive_mask_grammar` | `none` | charged archive member is consumed by inflate runtime<br>full decode/re-encode or runtime-loader parity is proven<br>component-collapse risks are recorded before any lane claim<br>no uncharged openpilot/comma labels, weights, or sidecars are read at inflate |
 | `joint_stack_runtime_closure` | `joint_admm_balle_arithmetic_stack`<br>`sensitivity_omega_w_v3` | `none` | per-stream bytes reconcile against charged archive members<br>fixture-only streams stay blocked from dispatch<br>stub sensitivity artifacts fail closed<br>individual component wins are not treated as composable without stacked eval |
@@ -73,12 +61,31 @@ lower bounds; use "frontier" for measured packets.
 | `field_meta_selection_report@experiments/results/hnerv_hdm3_archive_candidate_20260507_codex/field_meta_selection_hdm3_runtime_closure.json` | `needs_byte_closed_archive_proof` | `none` | requires_lane_dispatch_claim_before_remote_gpu_submit, requires_exact_cuda_auth_eval_for_score_claim, requires_adversarial_review_before_score_claim | none | none | none |
 | `hidden_gem_readiness_registry` | `needs_byte_closed_archive_proof` | `none` | none | none | none | none |
 
+## Scorer Surface Shaking
+
+Planning-only local CPU search surface. It is wired by default but cannot dispatch or claim score.
+
+- operating_point: `pr106_latent_sidecar_r2_pr101_grammar`
+- device_axis: `contest_cuda`
+- d_score_d_byte: `6.658589531221714e-07`
+- d_score_d_pose: `277.94940447180295`
+- recommended_worker_count: `12`
+
+| atom | predicted score delta | stream | solver |
+|---|---:|---|---|
+| `renderer_training_score_surface_loop` | `-0.014381195` | trained_renderer_weights_and_latents | IB-Lagrangian training with T8/T20 losses and entropy pressure |
+| `segnet_boundary_run_repair` | `-0.000721736` | boundary residual run stream | water-fill by boundary margin score benefit per charged byte |
+| `frame_channel_affine_shake` | `-0.000048061` | small frame-channel control table | coordinate descent -> CMA-ES/Optuna only after byte-closed controls exist |
+| `pose_sensitive_luma_microfield` | `-0.000004002` | low_rank_luma_or_motion_residual_stream | active-subspace search with pose-first Lagrangian guard |
+| `pixel_lsb_threshold_probe` | `0.000002992` | residual_program_or_score_table_sidecar | beam search over scorer-response table, then branch-and-bound by byte cost |
+| `wavelet_foveated_residual_stack` | `0.000580754` | wavelet_coeff_residual_stream | group lasso / ADMM water-fill under exact byte slope |
+
 ## Frontier Rows
 
 | key | tier | role | stage | safe | action | evidence | blockers | next patch |
 |---|---:|---|---|---|---|---|---:|---|
 | `categorical_qma9_clade_spade_openpilot` | 10 | `replacement_or_mask_stacker` | `needs_byte_closed_candidate_or_fixture` | `yes` | `build_byte_closed_categorical_candidate` | local byte-closed PR91 HPM1 payload candidate plus deterministic archive-readiness audit; decode/reencode and runtime parity blocked | 10 | Use the PR91/HPM1 phase-major and tile-major failure classifications to recover encoder-side probability/range-state contract drift or earlier context/order drift; then prove full decode/reencode parity before replacing the runtime skeleton with a charged consumer. |
-| `joint_admm_balle_arithmetic_stack` | 20 | `stack_or_replacement_orchestrator` | `needs_research_or_contract_hardening` | `yes` | `wire_jcsp_submission_runtime_consumer` | empirical byte-closed JCSP archive member plus runtime-loader parity | 6 | Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, then claim a lane before exact CUDA auth eval. |
+| `joint_admm_balle_arithmetic_stack` | 20 | `stack_or_replacement_orchestrator` | `needs_byte_closed_candidate_or_fixture` | `yes` | `prove_jcsp_runtime_parity_and_charged_stack` | empirical byte-closed JCSP archive member plus real AQ rawvideo runtime consumer | 6 | Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate raw outputs, prove candidate-specific raw-output parity and charged side-information closure, then claim a lane before exact CUDA auth eval. |
 | `hnerv_per_tensor_context_entropy` | 30 | `stacker_rate_only` | `needs_research_or_contract_hardening` | `yes` | `reduce_entropy_model_overhead` | empirical entropy-floor plus parity fixture profile | 2 | Cluster or codebook-share HDC2 context tables; HDC2 cut PR106x penalty from +96,671B to +51,103B but remains byte-negative. |
 | `telescopic_foveation_field` | 40 | `scorer_weighted_proposal_or_replacement` | `needs_research_or_contract_hardening` | `yes` | `charge_runtime_geometry_consumer_contract` | planning plus historical negatives | 7 | Run charged foveation-params readiness audit, then keep foveation as ranking feedback until a runtime consumer passes geometry preflight and exact component gates. |
 | `lapose_motion_atom_allocator` | 50 | `proposal_allocator` | `needs_research_or_contract_hardening` | `yes` | `calibrate_planning_signal_and_attach_archive_consumer` | diagnostic CUDA response allocated to pairs; planning only | 8 | Keep labeled as LA-Pose-inspired until a paper-faithful inverse-dynamics encoder and pose head exist; add class/openpilot manifests, calibrate confidence, and require a charged archive consumer before dispatch. |
@@ -89,23 +96,4 @@ lower bounds; use "frontier" for measured packets.
 | `hnerv_lowlevel_brotli_repack` | 90 | `stacker_rate_only` | `exact_evidence_present_review_before_promotion` | `yes` | `exact_eval_or_promote_measured_rate_candidate` | A++ exact CUDA for PR106x; empirical for PR106 q10 rebuild until exact eval | 1 | Promote only exact-evaluated archive SHAs; surface PR106x lgblock16 -1B and PR106 q10 as local archive candidates until candidate-specific preflight, lane claim, and exact CUDA auth eval land. |
 | `cmg3_predictive_mask_grammar` | 100 | `replacement_mask_stream` | `needs_research_or_contract_hardening` | `yes` | `close_runtime_decoder_fixture` | empirical byte probe only | 2 | Close a deterministic runtime decoder and exact archive fixture before ranking. |
 | `meta_lagrangian_cross_paradigm_allocator` | 110 | `canonical_ranker` | `needs_research_or_contract_hardening` | `yes` | `attach_byte_closed_manifest_gate` | derivation/planning with deterministic acquisition artifact | 3 | Feed every paradigm into field_acquisition_ranking, then promote only rows with Pareto/KKT readiness, byte-closed archive manifests, and explicit Volterra/interaction assumptions. |
-| `pr106_latent_sidecar` | 850 | `current_exact_cuda_floor` | `exact_evidence_present_review_before_promotion` | `yes` | `materialize_radius2_score_table_then_exact_cuda` | A++ contest T4 exact CUDA score 0.20739428085403283 at 186808 bytes; paired Linux CPU result is worse and diagnostic only | 1 | Treat PR106 latent sidecar as the current CUDA floor, keep score tables `score_claim=false`, materialize radius-2 tables into charged sidecar bytes, then claim and run exact contest-CUDA before any promotion. |
-| `hnerv_pr103_pr106_ac_repack_runtime_closure` | 900 | `previous_exact_rate_anchor` | `exact_evidence_present_review_before_promotion` | `yes` | `maintain_as_rate_anchor_not_current_floor` | A++ contest T4 exact CUDA plus contest-final compliance | 1 | Use strict formula score 0.2089810755823297 at 185578 bytes as the previous HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock. |
-
-## Supersession note - 2026-05-11 PR106 R2 exact T4
-
-The roadmap table above was generated before the PR106 latent radius-2 exact T4
-adjudication returned. Its `selected_candidate_*`, `pr106_latent_sidecar`, and
-rate-only comparison fields are stale anywhere they treat radius-2 as pending
-or compare against `0.20739428085403283`.
-
-Authoritative current internal floor for this roadmap is PR106 latent radius-2
-sidecar exact Modal T4 `[contest-CUDA]`: score `0.20664588545741508`, archive
-bytes `186822`, archive SHA-256
-`7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f`, job
-`pr106_latent_sidecar_r2_20260511T160358Z`, result JSON
-`experiments/results/modal_auth_eval/pr106_latent_sidecar_r2_20260511T160358Z/contest_auth_eval.json`.
-
-Treat the older PR106 latent sidecar `0.20739428085403283` row as the previous
-anchor, not the live floor. Future roadmap refreshes should recompute frontier,
-Pareto, KKT, and dispatch-readiness decisions against the R2 exact T4 packet.
+| `hnerv_pr103_pr106_ac_repack_runtime_closure` | 900 | `current_exact_rate_anchor` | `exact_evidence_present_review_before_promotion` | `yes` | `maintain_exact_eval_anchor_and_pivot` | A++ contest T4 exact CUDA plus contest-final compliance | 1 | Use strict formula score 0.2089810755823297 at 185578 bytes as the current A++ HNeRV rate anchor (report-reconstructed score 0.20898105277982337), feed it into Pareto/meta-Lagrangian calibration, and require future rate-only HNeRV candidates to beat this byte floor or stack cleanly before spending exact-eval wall clock. |

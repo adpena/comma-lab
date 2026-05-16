@@ -48,7 +48,7 @@ ACTION_CLASS_BY_KEY = {
     "lapose_motion_atom_allocator": "calibrate_planning_signal_and_attach_archive_consumer",
     "meta_lagrangian_cross_paradigm_allocator": "attach_byte_closed_manifest_gate",
     "sensitivity_omega_w_v3": "replace_stub_sensitivity_with_certified_cuda_artifact",
-    "joint_admm_balle_arithmetic_stack": "wire_jcsp_submission_runtime_consumer",
+    "joint_admm_balle_arithmetic_stack": "prove_jcsp_runtime_parity_and_charged_stack",
     "telescopic_foveation_field": "charge_runtime_geometry_consumer_contract",
     "raft_radial_openpilot_pose": "emit_pose_disagreement_readiness_artifact",
     "selfcompress_mdl_fp4_tto": "prove_deterministic_export_and_inflate_closure",
@@ -398,8 +398,8 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
         title="Joint ADMM plus Balle hyperprior plus arithmetic stack",
         paradigms=("gamma_joint_codec", "entropy_coding", "hyperprior"),
         role="stack_or_replacement_orchestrator",
-        status="byte_closed_jcsp_member_landed_runtime_consumption_blocked",
-        evidence_grade="empirical byte-closed JCSP archive member plus runtime-loader parity",
+        status="real_aq_rawvideo_runtime_consumer_landed_output_parity_blocked",
+        evidence_grade="empirical byte-closed JCSP archive member plus real AQ rawvideo runtime consumer",
         stackability="high in architecture, unproven in exact archive",
         replacement_potential="medium-high if it can replace HNeRV sections with a smaller scorer-stable stack",
         code_paths=(
@@ -411,6 +411,7 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "src/tac/stack_compositions.py",
             "experiments/pipeline.py",
             "submissions/robust_current/jcsp_runtime_bridge.py",
+            "submissions/robust_current/inflate.sh",
             "tools/audit_arithmetic_qint_optimality.py",
             "tools/build_joint_stack_noop_manifest.py",
             "src/tac/entropy_archive.py",
@@ -420,13 +421,16 @@ STATIC_ROWS: tuple[InventoryRow, ...] = (
             "experiments/results/joint_stack_noop_manifest_20260506_codex/manifest.json",
             ".omx/research/joint_stack_noop_manifest_20260506_codex.md",
             ".omx/research/jcsp_runtime_parity_hardening_20260506_codex.md",
+            ".omx/research/jcsp_rawvideo_runtime_consumption_20260511_codex.md",
+            ".omx/research/jcsp_cross_paradigm_runtime_consumer_inventory_refresh_20260516_codex.md",
         ),
         next_patch=(
-            "Wire submissions/robust_current to decode/consume jcsp.bin and emit contest outputs, "
-            "then claim a lane before exact CUDA auth eval."
+            "Use the robust_current real AQ rawvideo JCSP runtime bridge to emit candidate "
+            "raw outputs, prove candidate-specific raw-output parity and charged side-information "
+            "closure, then claim a lane before exact CUDA auth eval."
         ),
         blockers=(
-            "submission runtime detects but refuses jcsp.bin consumption",
+            "candidate-specific raw-output parity proof missing for stacked JCSP archive",
             "Balle hyperprior stream codecs must be instantiated and charged for non-fixture model streams",
             "side information must be charged",
             "no lane dispatch claim",
