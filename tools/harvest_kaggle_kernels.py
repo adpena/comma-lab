@@ -25,12 +25,13 @@ Concretely:
    "P100 trap", the harvester records a ``failed_kaggle_p100_assignment``
    status; the operator wrapper can re-push.
 
-Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
-CONTEST-COMPLIANT HARDWARE":
-- Kaggle T4 = 1:1 contest-compliant CUDA. Anchors landed here are
-  ``[contest-CUDA]`` per Catalog #127 (T4 is the contest's reference CUDA
-  substrate). NOT a substitute for the GHA Linux x86_64 ``[contest-CPU]``
-  axis; the CPU axis requires a separate GHA workflow.
+Provider-axis contract:
+- Kaggle T4 free-tier results harvested here are
+  ``[provider-CUDA:kaggle advisory]``. They stay ``score_claim=false`` and
+  ``promotion_eligible=false`` until a future exact target contract wires the
+  full lifecycle, runtime closure, claim, harvest, and adjudication path.
+- They are NOT ``[contest-CUDA]`` evidence and are NOT a substitute for the GHA
+  Linux x86_64 ``[contest-CPU]`` axis.
 
 Usage:
 
@@ -57,6 +58,8 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tools.claim_lane_dispatch import TERMINAL_PREFIXES  # noqa: E402
+
+KAGGLE_PROVIDER_AXIS_LABEL = "[provider-CUDA:kaggle advisory]"
 
 
 def _kaggle_cmd() -> list[str]:
@@ -185,7 +188,12 @@ def append_cost_band_anchor_from_summary(
         "--all-flags-on",
         "--actual-wall-clock-sec", f"{summary.get('wall_clock_sec', 0.0):.0f}",
         "--actual-cost-usd", "0.00",
-        "--notes", f"kaggle_harvest;rc={summary.get('trainer_returncode')}",
+        "--notes",
+        (
+            f"kaggle_harvest;axis={KAGGLE_PROVIDER_AXIS_LABEL};"
+            "score_claim=false;promotion_eligible=false;"
+            f"rc={summary.get('trainer_returncode')}"
+        ),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     return {
@@ -313,7 +321,11 @@ def harvest_one_slug(
         if not dispatch_label:
             dispatch_label = slug
         rc_label = summary.get("trainer_returncode") if summary is not None else "summary_missing"
-        notes = f"kaggle harvest; terminal_status={terminal_status}; rc={rc_label}"
+        notes = (
+            f"kaggle harvest; axis={KAGGLE_PROVIDER_AXIS_LABEL}; "
+            "score_claim=false; promotion_eligible=false; "
+            f"terminal_status={terminal_status}; rc={rc_label}"
+        )
         lane_close_result = close_lane_claim(
             claim_tool=claim_tool,
             lane_id=lane_id,

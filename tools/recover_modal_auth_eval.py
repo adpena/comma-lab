@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 try:
@@ -19,6 +20,8 @@ except ModuleNotFoundError:  # pragma: no cover
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
+
+CLAIM_CLOSURE_ERROR_RC = 6
 
 from tac.deploy.modal.auth_eval import (  # noqa: E402
     ClaimSpec,
@@ -69,6 +72,15 @@ def _claim_spec_from_metadata(metadata: dict) -> ClaimSpec | None:
         platform=platform,
         force=True,
     )
+
+
+def _missing_claim_metadata_fields(metadata: dict) -> list[str]:
+    missing: list[str] = []
+    if not isinstance(metadata.get("lane_id"), str) or not metadata.get("lane_id"):
+        missing.append("lane_id")
+    if not isinstance(metadata.get("instance_job_id"), str) or not metadata.get("instance_job_id"):
+        missing.append("instance_job_id")
+    return missing
 
 
 def _auth_eval_artifact_path(summary: dict) -> Path | None:
@@ -143,7 +155,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-close-claim",
         action="store_true",
-        help="Harvest artifacts but do not write a terminal dispatch-claim row.",
+        help=(
+            "Harvest artifacts but do not write a terminal dispatch-claim row. "
+            "Requires --skip-close-claim-reason."
+        ),
+    )
+    parser.add_argument(
+        "--skip-close-claim-reason",
+        default="",
+        help="Auditable reason for --no-close-claim.",
     )
     parser.add_argument(
         "--no-posterior-update",
@@ -151,6 +171,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Recover artifacts but do not update the continual-learning posterior.",
     )
     args = parser.parse_args(argv)
+    skip_close_reason = str(args.skip_close_claim_reason or "").strip()
+    if args.no_close_claim and not skip_close_reason:
+        parser.error("--no-close-claim requires --skip-close-claim-reason")
+    if skip_close_reason and not args.no_close_claim:
+        parser.error("--skip-close-claim-reason is only valid with --no-close-claim")
 
     out_dir = args.output_dir.resolve()
     metadata = read_spawn_metadata(out_dir)
@@ -169,16 +194,38 @@ def main(argv: list[str] | None = None) -> int:
         else _maybe_update_posterior(summary, metadata)
     )
 
-    if not args.no_close_claim:
+    if args.no_close_claim:
+        print(
+            "[recover-modal] terminal dispatch-claim closure suppressed: "
+            f"{skip_close_reason}",
+            file=sys.stderr,
+        )
+    else:
         claim_spec = _claim_spec_from_metadata(metadata)
         status = _terminal_status(summary, metadata)
-        if claim_spec is not None and status:
-            terminal_modal_auth_eval_claim(
-                repo_root=REPO_ROOT,
-                spec=claim_spec,
-                status=status,
-                notes=_terminal_notes(summary, metadata, posterior_note),
+        if claim_spec is None:
+            missing = ", ".join(_missing_claim_metadata_fields(metadata)) or "unknown"
+            print(
+                "FATAL: terminal Modal auth-eval recovery cannot close the "
+                f"dispatch claim because spawn metadata is missing {missing}. "
+                "Re-run with --no-close-claim --skip-close-claim-reason only "
+                "for an operator-audited suppression.",
+                file=sys.stderr,
             )
+            return CLAIM_CLOSURE_ERROR_RC
+        if not status:
+            print(
+                "FATAL: terminal Modal auth-eval recovery could not derive a "
+                "terminal dispatch-claim status.",
+                file=sys.stderr,
+            )
+            return CLAIM_CLOSURE_ERROR_RC
+        terminal_modal_auth_eval_claim(
+            repo_root=REPO_ROOT,
+            spec=claim_spec,
+            status=status,
+            notes=_terminal_notes(summary, metadata, posterior_note),
+        )
 
     if summary.get("passed"):
         return 0

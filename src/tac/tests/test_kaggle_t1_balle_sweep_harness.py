@@ -103,6 +103,15 @@ class TestFalseAuthorityContract(unittest.TestCase):
         self.assertIn("ready_for_exact_eval_dispatch=false", text)
         self.assertNotIn("Anchors produced here are tagged [contest-CUDA]", text)
 
+    def test_legacy_harvester_marks_kaggle_as_provider_cuda_advisory(self):
+        text = (REPO_ROOT / "tools/harvest_kaggle_kernels.py").read_text()
+
+        self.assertIn("[provider-CUDA:kaggle advisory]", text)
+        self.assertIn("score_claim=false", text)
+        self.assertIn("promotion_eligible=false", text)
+        self.assertNotIn("Kaggle T4 = 1:1 contest-compliant CUDA", text)
+        self.assertNotIn("Anchors landed here are\n  ``[contest-CUDA]``", text)
+
 
 class TestTier1ManifestExtraction(unittest.TestCase):
     """AST-extract the Tier-1 flag manifest from the trainer source.
@@ -361,6 +370,11 @@ class TestHarvesterCostBandAnchor(unittest.TestCase):
                 emitted_argv[emitted_argv.index("--actual-cost-usd") + 1],
                 "0.00",
             )
+            notes = emitted_argv[emitted_argv.index("--notes") + 1]
+            self.assertIn("[provider-CUDA:kaggle advisory]", notes)
+            self.assertIn("score_claim=false", notes)
+            self.assertIn("promotion_eligible=false", notes)
+            self.assertNotIn("[contest-CUDA]", notes)
 
     def test_missing_anchor_tool_returns_skip(self):
         result = self.harv.append_cost_band_anchor_from_summary(

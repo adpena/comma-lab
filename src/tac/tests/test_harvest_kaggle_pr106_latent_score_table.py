@@ -60,7 +60,7 @@ def test_harvester_writes_manifest_and_uses_latent_prefix(monkeypatch, tmp_path:
     assert manifest["kernel_ref"] == module.DEFAULT_KERNEL_REF
     assert manifest["lane_id"] == module.DEFAULT_LANE_ID
     assert manifest["instance_job_id"] == "run-test"
-    assert manifest["terminal_claim_on_harvest"] is False
+    assert manifest["terminal_claim_on_harvest"] is True
     assert calls["download"]["include_patterns"] == [
         r"^pr106_latent_score_table/",
         r"^pact_pr106_latent_workspace/inputs/pr106_archive\.zip$",
@@ -146,3 +146,115 @@ def test_close_claim_records_terminal_status_without_score_claim(monkeypatch, tm
     assert calls[0]["spec"].lane_id == "lane-test"
     assert calls[0]["spec"].instance_job_id == "job-test"
     assert calls[0]["spec"].platform == "kaggle"
+
+
+def test_main_closes_terminal_claim_by_default(monkeypatch, tmp_path: Path) -> None:
+    module = _load_tool()
+    close_calls: list[dict[str, object]] = []
+
+    def fake_ingest(**kwargs):
+        return {
+            "evidence_dir": str(Path(kwargs["output_root"]) / "run-terminal"),
+            "latest_score_table": {
+                "manifest_path": str(tmp_path / "score_table_manifest.json"),
+                "ready_for_builder": True,
+            },
+        }
+
+    def fake_close(**kwargs):
+        close_calls.append(kwargs)
+        return {"status": "completed_kaggle_score_table_harvested_no_score_claim", "notes": "closed"}
+
+    monkeypatch.setattr(module, "ingest_downloaded_outputs", fake_ingest)
+    monkeypatch.setattr(module, "close_terminal_claim_from_summary", fake_close)
+
+    rc = module.main(
+        [
+            "--run-id",
+            "run-terminal",
+            "--download-dir",
+            str(tmp_path / "download"),
+            "--output-root",
+            str(tmp_path / "ingested"),
+            "--no-download",
+        ]
+    )
+
+    assert rc == 0
+    assert close_calls[0]["lane_id"] == module.DEFAULT_LANE_ID
+    assert close_calls[0]["instance_job_id"] == "run-terminal"
+
+
+def test_main_no_close_claim_requires_reason(monkeypatch, tmp_path: Path) -> None:
+    module = _load_tool()
+    ingest_calls: list[dict[str, object]] = []
+
+    def fake_ingest(**kwargs):
+        ingest_calls.append(kwargs)
+        return {"latest_score_table": {"manifest_path": "score_table_manifest.json"}}
+
+    monkeypatch.setattr(module, "ingest_downloaded_outputs", fake_ingest)
+
+    try:
+        module.main(
+            [
+                "--run-id",
+                "run-no-reason",
+                "--download-dir",
+                str(tmp_path / "download"),
+                "--output-root",
+                str(tmp_path / "ingested"),
+                "--no-download",
+                "--no-close-claim",
+            ]
+        )
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:  # pragma: no cover
+        raise AssertionError("expected argparse failure")
+
+    assert ingest_calls == []
+
+
+def test_main_no_close_claim_reason_is_manifested_and_auditable(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    module = _load_tool()
+
+    def fake_ingest(**kwargs):
+        return {
+            "evidence_dir": str(Path(kwargs["output_root"]) / "run-suppressed"),
+            "latest_score_table": {
+                "manifest_path": str(tmp_path / "score_table_manifest.json"),
+                "ready_for_builder": True,
+            },
+        }
+
+    def forbidden_close(**_kwargs):
+        raise AssertionError("terminal claim closure should be explicitly suppressed")
+
+    monkeypatch.setattr(module, "ingest_downloaded_outputs", fake_ingest)
+    monkeypatch.setattr(module, "close_terminal_claim_from_summary", forbidden_close)
+
+    rc = module.main(
+        [
+            "--run-id",
+            "run-suppressed",
+            "--download-dir",
+            str(tmp_path / "download"),
+            "--output-root",
+            str(tmp_path / "ingested"),
+            "--no-download",
+            "--no-close-claim",
+            "--skip-close-claim-reason",
+            "operator confirmed duplicate terminal row exists",
+        ]
+    )
+
+    manifest = read_json(tmp_path / "download/kaggle_pr106_latent_score_table_manifest.json")
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert manifest["terminal_claim_on_harvest"] is False
+    assert manifest["terminal_claim_suppression_reason"] == "operator confirmed duplicate terminal row exists"
+    assert "skipped_no_close_claim" in out
+    assert "operator confirmed duplicate terminal row exists" in out

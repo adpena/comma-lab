@@ -121,3 +121,77 @@ def test_maybe_update_posterior_routes_auth_eval_artifact(monkeypatch, tmp_path:
     assert calls[0]["path"] == tmp_path / "contest_auth_eval.json"
     assert calls[0]["architecture_class"] == "lane_pr106_r2"  # FAKE_LANE_OK:test-fixture lane_id
     assert "posterior_update=accepted" in note
+
+
+def test_main_requires_auditable_no_close_reason(monkeypatch, tmp_path: Path) -> None:
+    tool = _load_tool()
+    recover_calls: list[dict[str, object]] = []
+
+    def fake_recover(**kwargs):
+        recover_calls.append(kwargs)
+        return {"status": "recovered", "passed": True}
+
+    monkeypatch.setattr(tool, "recover_modal_auth_eval", fake_recover)
+
+    try:
+        tool.main(["--output-dir", str(tmp_path), "--no-close-claim"])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:  # pragma: no cover
+        raise AssertionError("expected argparse failure")
+
+    assert recover_calls == []
+
+
+def test_main_fails_loud_when_terminal_metadata_lacks_claim_fields(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    tool = _load_tool()
+    close_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(tool, "read_spawn_metadata", lambda _out_dir: {"axis": "contest_cuda"})
+    monkeypatch.setattr(
+        tool,
+        "recover_modal_auth_eval",
+        lambda **_kwargs: {"status": "recovered", "passed": True, "score_claim": True},
+    )
+    monkeypatch.setattr(tool, "terminal_modal_auth_eval_claim", lambda **kwargs: close_calls.append(kwargs))
+
+    rc = tool.main(["--output-dir", str(tmp_path), "--no-posterior-update"])
+
+    assert rc == tool.CLAIM_CLOSURE_ERROR_RC
+    assert close_calls == []
+    err = capsys.readouterr().err
+    assert "cannot close the dispatch claim" in err
+    assert "lane_id" in err
+    assert "instance_job_id" in err
+
+
+def test_main_allows_no_close_only_with_auditable_reason(monkeypatch, tmp_path: Path, capsys) -> None:
+    tool = _load_tool()
+
+    monkeypatch.setattr(tool, "read_spawn_metadata", lambda _out_dir: {"axis": "contest_cuda"})
+    monkeypatch.setattr(
+        tool,
+        "recover_modal_auth_eval",
+        lambda **_kwargs: {"status": "recovered", "passed": True, "score_claim": True},
+    )
+
+    def forbidden_close(**_kwargs):
+        raise AssertionError("terminal claim should be suppressed by explicit operator reason")
+
+    monkeypatch.setattr(tool, "terminal_modal_auth_eval_claim", forbidden_close)
+
+    rc = tool.main(
+        [
+            "--output-dir",
+            str(tmp_path),
+            "--no-posterior-update",
+            "--no-close-claim",
+            "--skip-close-claim-reason",
+            "duplicate terminal row already recorded by paired harvester",
+        ]
+    )
+
+    assert rc == 0
+    assert "duplicate terminal row already recorded" in capsys.readouterr().err

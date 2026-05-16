@@ -46,6 +46,7 @@ def write_ingest_manifest(
     lane_id: str,
     instance_job_id: str,
     terminal_claim_on_harvest: bool,
+    terminal_claim_suppression_reason: str = "",
 ) -> dict[str, object]:
     payload = {
         "schema": "kaggle_pr106_latent_score_table_harvest_manifest_v1",
@@ -60,6 +61,8 @@ def write_ingest_manifest(
         "rank_or_kill_eligible": False,
         "promotion_requires": "byte_closed_packet_and_contest_cuda_adjudication",
     }
+    if terminal_claim_suppression_reason:
+        payload["terminal_claim_suppression_reason"] = terminal_claim_suppression_reason
     write_json(manifest_path, payload)
     return payload
 
@@ -117,6 +120,12 @@ def close_terminal_claim_from_summary(
     return {"status": status, "notes": notes}
 
 
+def has_terminal_ingest_summary(summary: dict[str, object]) -> bool:
+    return isinstance(summary.get("latest_failure"), dict) or isinstance(
+        summary.get("latest_score_table"), dict
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kernel-ref", default=DEFAULT_KERNEL_REF)
@@ -124,7 +133,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lane-id", default=DEFAULT_LANE_ID)
     parser.add_argument("--instance-job-id", default="")
     parser.add_argument("--claim-agent", default=DEFAULT_AGENT)
-    parser.add_argument("--close-claim", action="store_true")
+    parser.add_argument(
+        "--close-claim",
+        dest="close_claim",
+        action="store_true",
+        default=True,
+        help="Close a terminal dispatch claim after a terminal ingest summary is found (default).",
+    )
+    parser.add_argument(
+        "--no-close-claim",
+        dest="close_claim",
+        action="store_false",
+        help="Suppress terminal dispatch-claim closure. Requires --skip-close-claim-reason.",
+    )
+    parser.add_argument(
+        "--skip-close-claim-reason",
+        default="",
+        help="Auditable reason for --no-close-claim.",
+    )
     parser.add_argument("--download-dir", type=Path, default=DEFAULT_DOWNLOAD_DIR)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--manifest-output", type=Path)
@@ -145,7 +171,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    skip_close_reason = str(args.skip_close_claim_reason or "").strip()
+    if not args.close_claim and not skip_close_reason:
+        parser.error("--no-close-claim requires --skip-close-claim-reason")
+    if args.close_claim and skip_close_reason:
+        parser.error("--skip-close-claim-reason is only valid with --no-close-claim")
     run_id = args.run_id or default_run_id()
     instance_job_id = args.instance_job_id or run_id
     manifest_path = args.manifest_output or args.download_dir / "kaggle_pr106_latent_score_table_manifest.json"
@@ -156,6 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         lane_id=args.lane_id,
         instance_job_id=instance_job_id,
         terminal_claim_on_harvest=args.close_claim,
+        terminal_claim_suppression_reason=skip_close_reason,
     )
     if not args.no_download:
         download_kernel_outputs(
@@ -170,13 +203,19 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
     )
     terminal_claim: dict[str, str] | None = None
-    if args.close_claim:
+    terminal_summary_exists = has_terminal_ingest_summary(summary)
+    if args.close_claim and terminal_summary_exists:
         terminal_claim = close_terminal_claim_from_summary(
             summary=summary,
             lane_id=args.lane_id,
             instance_job_id=instance_job_id,
             agent=args.claim_agent,
         )
+    elif not args.close_claim and terminal_summary_exists:
+        terminal_claim = {
+            "status": "skipped_no_close_claim",
+            "notes": f"terminal dispatch-claim closure suppressed: {skip_close_reason}",
+        }
     print(
         json_text(
             {
