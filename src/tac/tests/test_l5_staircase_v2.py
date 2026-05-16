@@ -501,23 +501,50 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
             {
                 "candidate_id": "format_0x0c_exact_radix",
                 "format_id": "0x0C",
+                "notes": "exact-radix grammar test",
                 "status": "paired_exact_measured",
                 "archive_sha256": _sha(12),
                 "archive_path": "submissions/pr106/archive.zip",
+                "source_artifact_warnings": [
+                    "contest_cuda:source_artifact_score_claim_true"
+                ],
+                "runtime_consumption": {
+                    "path": "experiments/results/runtime_consumption.json",
+                    "sha256": _sha(21),
+                    "sidecar_kind": "exact_radix_dim_fixed_meta",
+                    "runtime_dir": "submissions/pr106_runtime",
+                    "runtime_content_tree_sha256": _sha(22),
+                    "runtime_content_tree_sha256_source": (
+                        "direct_runtime_consumption_manifest"
+                    ),
+                    "runtime_content_tree_sha256_matches_current_runtime_dir": True,
+                    "current_modal_uploaded_runtime": {
+                        "runtime_content_tree_sha256": _sha(22),
+                        "runtime_tree_sha256": _sha(23),
+                    },
+                },
                 "exact_axis_evidence": {
                     "contest_cpu": {
                         "valid": True,
                         "canonical_score": 0.190,
                         "archive_sha256": _sha(12),
                         "archive_size_bytes": 186327,
+                        "avg_segnet_dist": 0.00063,
+                        "avg_posenet_dist": 0.00016,
                         "artifact_path": "experiments/results/cpu/result.json",
+                        "sha256": _sha(31),
+                        "score_claim_in_source_artifact": False,
                     },
                     "contest_cuda": {
                         "valid": True,
                         "canonical_score": 0.226,
                         "archive_sha256": _sha(12),
                         "archive_size_bytes": 186327,
+                        "avg_segnet_dist": 0.00064,
+                        "avg_posenet_dist": 0.00003,
                         "artifact_path": "experiments/results/cuda/result.json",
+                        "sha256": _sha(32),
+                        "score_claim_in_source_artifact": True,
                     },
                 },
             }
@@ -548,6 +575,23 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
     }
     assert candidate["source_worst_axis_score"] == 0.226
     assert "source_max_axis_score" not in candidate
+    assert candidate["packetir_sidecar_kind"] == "exact_radix_dim_fixed_meta"
+    assert candidate["packetir_notes"] == "exact-radix grammar test"
+    assert candidate["packetir_source_artifact_warnings"] == [
+        "contest_cuda:source_artifact_score_claim_true"
+    ]
+    assert candidate["source_cpu_cuda_score_gap"] == pytest.approx(-0.036)
+    component_delta = candidate["source_cpu_minus_cuda_component_delta"]
+    assert component_delta["canonical_score"] == pytest.approx(-0.036)
+    assert component_delta["avg_segnet_dist"] == pytest.approx(-0.00001)
+    assert component_delta["avg_posenet_dist"] == pytest.approx(0.00013)
+    assert candidate["source_runtime_dir"] == "submissions/pr106_runtime"
+    assert candidate["source_runtime_content_tree_sha256"] == _sha(22)
+    assert candidate["current_runtime_content_tree_sha256"] == _sha(22)
+    assert (
+        candidate["source_runtime_content_tree_sha256_matches_current_runtime_dir"]
+        is True
+    )
     assert candidate["score_claim"] is False
 
 

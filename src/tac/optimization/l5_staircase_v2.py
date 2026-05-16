@@ -374,6 +374,12 @@ def l5_v2_packetir_stack_evidence_payload(
     for row in _mapping_items(matrix.get("rows")):
         if row.get("status") != "paired_exact_measured":
             continue
+        runtime_consumption = row.get("runtime_consumption")
+        if not isinstance(runtime_consumption, Mapping):
+            runtime_consumption = {}
+        current_runtime = runtime_consumption.get("current_modal_uploaded_runtime")
+        if not isinstance(current_runtime, Mapping):
+            current_runtime = {}
         exact_axis_evidence = row.get("exact_axis_evidence")
         if not isinstance(exact_axis_evidence, Mapping):
             blockers.append(
@@ -408,7 +414,14 @@ def l5_v2_packetir_stack_evidence_payload(
                 "eval_device": evidence.get("eval_device"),
                 "log_path": evidence.get("log_path"),
                 "artifact_path": evidence.get("artifact_path"),
+                "artifact_sha256": evidence.get("sha256"),
                 "path": evidence.get("path"),
+                "score_claim_in_source_artifact": evidence.get(
+                    "score_claim_in_source_artifact"
+                ),
+                "promotion_eligible_in_source_artifact": evidence.get(
+                    "promotion_eligible_in_source_artifact"
+                ),
             }
         if axis_blockers:
             blockers.append(
@@ -421,6 +434,47 @@ def l5_v2_packetir_stack_evidence_payload(
                 "format_id": row.get("format_id"),
                 "archive_sha256": row.get("archive_sha256"),
                 "archive_path": row.get("archive_path"),
+                "notes": row.get("notes"),
+                "sidecar_kind": (
+                    row.get("sidecar_kind")
+                    or runtime_consumption.get("sidecar_kind")
+                ),
+                "source_artifact_warnings": row.get("source_artifact_warnings", []),
+                "runtime_consumption": {
+                    "path": runtime_consumption.get("path"),
+                    "sha256": runtime_consumption.get("sha256"),
+                    "runtime_dir": runtime_consumption.get("runtime_dir"),
+                    "runtime_source_tree_sha256": runtime_consumption.get(
+                        "runtime_source_tree_sha256"
+                    ),
+                    "runtime_content_tree_sha256": runtime_consumption.get(
+                        "runtime_content_tree_sha256"
+                    ),
+                    "runtime_content_tree_sha256_source": runtime_consumption.get(
+                        "runtime_content_tree_sha256_source"
+                    ),
+                    "runtime_content_tree_sha256_derived_not_direct_manifested": (
+                        runtime_consumption.get(
+                            "runtime_content_tree_sha256_derived_not_direct_manifested"
+                        )
+                    ),
+                    "runtime_content_tree_sha256_backfill_required": (
+                        runtime_consumption.get(
+                            "runtime_content_tree_sha256_backfill_required"
+                        )
+                    ),
+                    "current_runtime_content_tree_sha256": current_runtime.get(
+                        "runtime_content_tree_sha256"
+                    ),
+                    "current_runtime_tree_sha256": current_runtime.get(
+                        "runtime_tree_sha256"
+                    ),
+                    "runtime_content_tree_sha256_matches_current_runtime_dir": (
+                        runtime_consumption.get(
+                            "runtime_content_tree_sha256_matches_current_runtime_dir"
+                        )
+                    ),
+                },
                 "axis_evidence": axis_payload,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -464,6 +518,12 @@ def _json_float(value: object) -> float | None:
     return as_float if math.isfinite(as_float) else None
 
 
+def _delta_if_both_present(lhs: float | None, rhs: float | None) -> float | None:
+    if lhs is None or rhs is None:
+        return None
+    return lhs - rhs
+
+
 def l5_v2_pr106_stack_cell_candidates(
     *,
     repo_root: str | Path | None = None,
@@ -478,6 +538,7 @@ def l5_v2_pr106_stack_cell_candidates(
         if not isinstance(axis_evidence, Mapping):
             continue
         scores: dict[str, float] = {}
+        component_distances: dict[str, dict[str, float]] = {}
         archive_sizes: list[int] = []
         for axis in _REQUIRED_EXACT_AXES:
             axis_row = axis_evidence.get(axis)
@@ -486,23 +547,84 @@ def l5_v2_pr106_stack_cell_candidates(
             score = _json_float(axis_row.get("canonical_score"))
             if score is not None:
                 scores[axis] = score
+            seg = _json_float(axis_row.get("avg_segnet_dist"))
+            pose = _json_float(axis_row.get("avg_posenet_dist"))
+            component_distances[axis] = {}
+            if seg is not None:
+                component_distances[axis]["avg_segnet_dist"] = seg
+            if pose is not None:
+                component_distances[axis]["avg_posenet_dist"] = pose
             archive_size = _non_bool_int(axis_row.get("archive_size_bytes"))
             if archive_size is not None and archive_size >= 0:
                 archive_sizes.append(archive_size)
         source_worst_axis_score = max(scores.values()) if scores else None
+        cpu_score = scores.get("contest_cpu")
+        cuda_score = scores.get("contest_cuda")
+        cpu_components = component_distances.get("contest_cpu", {})
+        cuda_components = component_distances.get("contest_cuda", {})
+        cpu_cuda_component_delta = {
+            "canonical_score": _delta_if_both_present(cpu_score, cuda_score),
+            "avg_segnet_dist": _delta_if_both_present(
+                cpu_components.get("avg_segnet_dist"),
+                cuda_components.get("avg_segnet_dist"),
+            ),
+            "avg_posenet_dist": _delta_if_both_present(
+                cpu_components.get("avg_posenet_dist"),
+                cuda_components.get("avg_posenet_dist"),
+            ),
+        }
+        runtime_consumption = row.get("runtime_consumption")
+        if not isinstance(runtime_consumption, Mapping):
+            runtime_consumption = {}
         candidates.append(
             {
                 "cell_id": f"{SUBJECT_ID}+{row.get('candidate_id')}",
                 "l5_subject_id": SUBJECT_ID,
                 "packetir_candidate_id": row.get("candidate_id"),
                 "packetir_format_id": row.get("format_id"),
+                "packetir_sidecar_kind": row.get("sidecar_kind"),
+                "packetir_notes": row.get("notes"),
+                "packetir_source_artifact_warnings": row.get(
+                    "source_artifact_warnings",
+                    [],
+                ),
                 "source_archive_sha256": row.get("archive_sha256"),
                 "source_archive_path": row.get("archive_path"),
                 "source_axis_scores": scores,
+                "source_axis_component_distances": component_distances,
+                "source_cpu_cuda_score_gap": cpu_cuda_component_delta[
+                    "canonical_score"
+                ],
+                "source_cpu_minus_cuda_component_delta": cpu_cuda_component_delta,
                 "source_worst_axis_score": source_worst_axis_score,
                 "source_max_archive_size_bytes": max(archive_sizes)
                 if archive_sizes
                 else None,
+                "source_runtime_dir": runtime_consumption.get("runtime_dir"),
+                "source_runtime_content_tree_sha256": runtime_consumption.get(
+                    "runtime_content_tree_sha256"
+                ),
+                "current_runtime_content_tree_sha256": runtime_consumption.get(
+                    "current_runtime_content_tree_sha256"
+                ),
+                "source_runtime_content_tree_sha256_matches_current_runtime_dir": (
+                    runtime_consumption.get(
+                        "runtime_content_tree_sha256_matches_current_runtime_dir"
+                    )
+                ),
+                "source_runtime_content_tree_sha256_source": runtime_consumption.get(
+                    "runtime_content_tree_sha256_source"
+                ),
+                "source_runtime_content_tree_sha256_derived_not_direct_manifested": (
+                    runtime_consumption.get(
+                        "runtime_content_tree_sha256_derived_not_direct_manifested"
+                    )
+                ),
+                "source_runtime_content_tree_sha256_backfill_required": (
+                    runtime_consumption.get(
+                        "runtime_content_tree_sha256_backfill_required"
+                    )
+                ),
                 "selection_basis": (
                     "paired PR106 PacketIR source rows only; lower max paired "
                     "axis score is labelled as worst-axis score and sorts first; "
