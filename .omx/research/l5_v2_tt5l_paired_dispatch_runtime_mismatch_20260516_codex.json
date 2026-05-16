@@ -1,0 +1,127 @@
+{
+  "schema": "l5_v2_tt5l_paired_dispatch_runtime_mismatch_v1",
+  "created_at_utc": "2026-05-16T20:55:05Z",
+  "reviewer": "codex",
+  "technique": "time_traveler_l5_autonomy_tt5l_25ep",
+  "purpose": "Resolve whether the recovered TT5L contest-CUDA anchor can seed the L5 v2 paired CPU/CUDA measurement.",
+  "archive": {
+    "path": "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+    "bytes": 34603,
+    "sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a"
+  },
+  "current_runtime": {
+    "submission_dir": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+    "inflate_sh": "inflate.sh",
+    "local_runtime_tree_sha256": "e4785be53d06d1692caaa181542bd3a3e90de07459a33c888bc7c196729ed38a",
+    "runtime_content_tree_sha256": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+    "modal_projected_runtime_tree_sha256_by_axis": {
+      "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+      "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
+    },
+    "modal_projected_runtime_content_tree_sha256_by_axis": {
+      "contest_cpu": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+      "contest_cuda": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718"
+    }
+  },
+  "recovered_cuda_anchor": {
+    "score_axis": "contest_cuda",
+    "score": 3.9007398365396795,
+    "seg_dist": 0.02515214,
+    "pose_dist": 0.18563657,
+    "rate_term": 0.023040717354886494,
+    "archive_bytes": 34603,
+    "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+    "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+    "runtime_content_tree_sha256": "105fc0834cfb8a54b8f46edb81a030d076369c3062f3066c1800602f9d6035f5",
+    "source_repo_commit": "f6df2418171c359d493a434f7c2b5d6492470209",
+    "result_review_packet": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+    "source_json_sha256": "21bf9f3487b26bc56f59a75a0928252a71c877f01b9bd1d51dd2d9973fdeb342",
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "paired_dispatch_plan_probe": {
+    "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+    "dispatch_attempted": false,
+    "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+    "lane_id_base": "lane_l5_v2_measure_tt5l_autonomy_paired_exact",
+    "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement",
+    "skip_axis_if_promotable_anchor_exists": true,
+    "axes_skipped_due_to_existing_anchor": {
+      "contest_cpu": false,
+      "contest_cuda": false
+    },
+    "existing_anchors_reused": {
+      "contest_cpu": null,
+      "contest_cuda": null
+    },
+    "plan_command": [
+      ".venv/bin/python",
+      "tools/dispatch_modal_paired_auth_eval.py",
+      "--archive",
+      "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+      "--submission-dir",
+      "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "--inflate-sh",
+      "inflate.sh",
+      "--label",
+      "l5_v2_time_traveler_l5_autonomy",
+      "--expected-archive-sha256",
+      "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "--run-id",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement",
+      "--pair-group-id",
+      "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+      "--lane-id-base",
+      "lane_l5_v2_measure_tt5l_autonomy_paired_exact",
+      "--output-root",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact",
+      "--modal-bin",
+      ".venv/bin/modal",
+      "--gpu",
+      "T4",
+      "--claim-agent",
+      "codex:l5_v2_paired_measurement_dispatch",
+      "--claim-notes",
+      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+      "--expected-runtime-tree-sha256",
+      "auto",
+      "--skip-axis-if-promotable-anchor-exists"
+    ]
+  },
+  "classification": {
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotion_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "rank_or_kill_eligible": false,
+    "adjudication_required": true,
+    "failure_class": "existing_cuda_anchor_runtime_mismatch_for_paired_measurement",
+    "conclusion": "The recovered contest-CUDA TT5L score is real as a reviewed single-axis result, but it cannot be reused as the CUDA half of the current L5 v2 paired CPU/CUDA measurement because the current runtime content/tree hashes differ from the recovered CUDA anchor runtime hashes."
+  },
+  "blockers": [
+    "existing_cuda_anchor_runtime_mismatch",
+    "contest_cpu_axis_missing",
+    "contest_cuda_rerun_required_for_current_runtime_or_reconstruct_old_runtime",
+    "sideinfo_effect_curve_controls_missing",
+    "operator_execute_flag_required"
+  ],
+  "next_choices": [
+    {
+      "id": "reconstruct_old_runtime_then_cpu_only",
+      "description": "Reconstruct the exact recovered CUDA runtime from source commit f6df2418171c359d493a434f7c2b5d6492470209 and dispatch only the missing contest-CPU half if the reconstructed runtime tree/content matches the recovered CUDA anchor."
+    },
+    {
+      "id": "rerun_both_axes_current_runtime",
+      "description": "Rerun both contest-CPU and contest-CUDA with the current committed runtime via the paired dispatcher. This is the cleanest apples-to-apples L5 v2 measurement if runtime drift is accepted."
+    },
+    {
+      "id": "generate_sideinfo_controls_after_runtime_choice",
+      "description": "Generate the zero/random_lsb/shuffled/trained/ablated TT5L sideinfo variants only after selecting the runtime axis policy, so all sideinfo cells share one runtime contract."
+    }
+  ],
+  "no_signal_loss_notes": [
+    "Absolute operator paths were intentionally omitted from this tracked packet.",
+    "The raw /tmp paired-dispatch probe is not committed; this packet preserves the custody-relevant fields and dispatch decision."
+  ]
+}
