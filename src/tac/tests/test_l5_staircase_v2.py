@@ -350,6 +350,24 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
                 },
             },
         }
+        if repo_root is not None:
+            proof = payload["byte_mutation_proof"]
+            assert isinstance(proof, dict)
+            provenance = proof["inflate_provenance"]
+            assert isinstance(provenance, dict)
+            log_root = repo_root / "experiments" / "results" / "time_traveler_l5_v2"
+            log_root.mkdir(parents=True, exist_ok=True)
+            for label in ("baseline", "mutated"):
+                log_path = log_root / f"{label}_inflate.log"
+                log_path.write_text(
+                    f"{label} TT5L inflate completed with exit_code=0\n",
+                    encoding="utf-8",
+                )
+                entry = provenance[label]
+                assert isinstance(entry, dict)
+                entry["log_path"] = str(log_path.relative_to(repo_root))
+                entry["log_sha256"] = _file_sha256(log_path)
+                entry["log_bytes"] = log_path.stat().st_size
     elif gate_id == "c1_z5_tt5l_probe_disambiguator":
         assert repo_root is not None
         payload["probe_disambiguator"] = _probe_disambiguator_payload(repo_root)
@@ -1857,7 +1875,7 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -1893,7 +1911,7 @@ def test_l5_v2_dispatch_readiness_allows_axis_specific_runtime_trees(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     for row in rows:
@@ -1921,7 +1939,7 @@ def test_l5_v2_dispatch_readiness_rejects_runtime_content_tree_mismatch(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -1945,7 +1963,7 @@ def test_l5_v2_dispatch_readiness_rejects_duplicate_axis_rows(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     rows.append(dict(next(row for row in rows if row["axis"] == "contest_cpu")))
@@ -1968,7 +1986,7 @@ def test_l5_v2_dispatch_readiness_rejects_negated_cuda_axis_semantics(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -1998,7 +2016,7 @@ def test_l5_v2_dispatch_readiness_rejects_macos_cpu_axis_semantics(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     cpu_row = next(row for row in rows if row["axis"] == "contest_cpu")
@@ -2028,7 +2046,7 @@ def test_l5_v2_dispatch_readiness_rejects_cpu_axis_cuda_device_leak(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "paired_cpu_cuda_axis_plan"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["paired_axis_plan"]
     assert isinstance(rows, list)
     cpu_row = next(row for row in rows if row["axis"] == "contest_cpu")
@@ -2058,7 +2076,7 @@ def test_l5_v2_sideinfo_consumption_requires_full_frame_inflate_custody(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     proof.pop("inflated_outputs_manifest_path", None)
@@ -2089,13 +2107,41 @@ def test_l5_v2_sideinfo_consumption_requires_full_frame_inflate_custody(
     )
 
 
+def test_l5_v2_sideinfo_consumption_requires_log_bound_inflate_provenance(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    provenance = proof["inflate_provenance"]
+    assert isinstance(provenance, dict)
+    baseline = provenance["baseline"]
+    assert isinstance(baseline, dict)
+    baseline.pop("log_sha256")
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "inflate_provenance:baseline:log_sha256"
+        in readiness["blockers"]
+    )
+
+
 def test_l5_v2_sideinfo_consumption_rejects_toy_manifest_scope(
     tmp_path: Path,
 ) -> None:
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     payload["proof_scope"] = "local_no_gpu_toy_tt5l_archive_parser_and_inflate_consumption_only"
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
@@ -2152,7 +2198,7 @@ def test_l5_v2_sideinfo_consumption_binds_mutation_to_parsed_section_range(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     proof["mutated_byte_offsets"] = [0, 1024]
@@ -2176,7 +2222,7 @@ def test_l5_v2_sideinfo_consumption_requires_non_target_section_identity(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     proof["non_target_sections_identical"] = False
@@ -2213,7 +2259,7 @@ def test_l5_v2_sideinfo_consumption_requires_archive_runtime_section_identity(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     proof.pop("section_sha256", None)
@@ -2249,7 +2295,7 @@ def test_l5_v2_sideinfo_consumption_binds_raw_aggregate_to_manifest(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "byte_closed_temporal_sideinfo_consumption"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     manifest_path = tmp_path / str(proof["inflated_outputs_manifest_path"])
@@ -2278,7 +2324,7 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "exact_anchor_or_diagnostic_pair"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["anchor_pair"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -2322,7 +2368,7 @@ def test_l5_v2_dispatch_readiness_requires_exact_anchor_eval_custody(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "exact_anchor_or_diagnostic_pair"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["anchor_pair"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -2354,7 +2400,7 @@ def test_l5_v2_exact_anchor_requires_inflated_output_manifest_custody(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "exact_anchor_or_diagnostic_pair"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["anchor_pair"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
@@ -2386,7 +2432,7 @@ def test_l5_v2_exact_anchor_binds_raw_aggregate_to_manifest(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "exact_anchor_or_diagnostic_pair"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     rows = payload["anchor_pair"]
     assert isinstance(rows, list)
     cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")

@@ -1936,6 +1936,10 @@ def _contest_full_frame_sideinfo_blockers(
             "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
             "inflate_provenance"
         )
+    else:
+        blockers.extend(
+            _inflate_provenance_log_blockers(provenance, repo_root=repo_root)
+        )
     frame_nbytes = _non_bool_int(
         _first_present(
             proof,
@@ -2058,6 +2062,57 @@ def _contest_full_frame_sideinfo_blockers(
                     "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
                     "inflated_outputs_manifest_path:source_candidate_raw_aggregate_sha_pair"
                 )
+    return blockers
+
+
+def _inflate_provenance_log_blockers(
+    provenance: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    prefix = (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "inflate_provenance"
+    )
+    missing_prefix = (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "inflate_provenance"
+    )
+    for label in ("baseline", "mutated"):
+        entry = provenance.get(label)
+        if not isinstance(entry, Mapping):
+            blockers.append(f"{missing_prefix}:{label}")
+            continue
+        if entry.get("schema") != "tt5l_inflate_provenance_v1":
+            blockers.append(f"{prefix}:{label}:schema")
+        log_path_value = str(entry.get("log_path") or "")
+        resolved_log, path_error = _resolve_artifact_path(log_path_value, repo_root)
+        if not log_path_value:
+            blockers.append(f"{missing_prefix}:{label}:log_path")
+            resolved_log = None
+        elif path_error is not None:
+            blockers.append(f"{prefix}:{label}:log_path_{path_error}")
+            resolved_log = None
+        elif resolved_log is None or not resolved_log.is_file():
+            blockers.append(f"{prefix}:{label}:log_path_missing")
+            resolved_log = None
+        elif resolved_log.stat().st_size <= 0:
+            blockers.append(f"{prefix}:{label}:log_empty")
+
+        log_sha = str(entry.get("log_sha256") or "").strip().lower()
+        if not _SHA256_HEX_RE.fullmatch(log_sha):
+            blockers.append(f"{missing_prefix}:{label}:log_sha256")
+        elif resolved_log is not None and _sha256_file(resolved_log) != log_sha:
+            blockers.append(f"{prefix}:{label}:log_sha256")
+
+        log_bytes = _non_bool_int(entry.get("log_bytes"))
+        if log_bytes is None or log_bytes <= 0:
+            blockers.append(f"{missing_prefix}:{label}:log_bytes")
+        elif resolved_log is not None and resolved_log.stat().st_size != log_bytes:
+            blockers.append(f"{prefix}:{label}:log_bytes")
     return blockers
 
 
