@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 from tac.exact_eval_custody import (
@@ -44,8 +46,22 @@ def test_extract_archive_sha256_accepts_common_exact_eval_fields() -> None:
 def _valid_contest_evidence(tmp_path: Path, *, axis: str = "contest_cuda") -> dict[str, object]:
     log_path = tmp_path / f"{axis}.log"
     artifact_path = tmp_path / f"{axis}.json"
+    manifest_path = tmp_path / f"{axis}_inflated_outputs_manifest.json"
     log_path.write_text("ok\n", encoding="utf-8")
     artifact_path.write_text("{}\n", encoding="utf-8")
+    raw_output_aggregate_sha = "c" * 64
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "contest_auth_eval_inflated_output_manifest_v1",
+                "aggregate_sha256": raw_output_aggregate_sha,
+                "raw_file_count": 1,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     archive_bytes = 123
     score = contest_score(seg_dist=0.001, pose_dist=0.0004, archive_bytes=archive_bytes)
     if axis == "contest_cuda":
@@ -71,6 +87,11 @@ def _valid_contest_evidence(tmp_path: Path, *, axis: str = "contest_cuda") -> di
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": log_path.name,
         "artifact_path": artifact_path.name,
+        "inflated_outputs_manifest_path": manifest_path.name,
+        "inflated_outputs_manifest_sha256": hashlib.sha256(
+            manifest_path.read_bytes()
+        ).hexdigest(),
+        "raw_output_aggregate_sha256": raw_output_aggregate_sha,
     }
 
 
@@ -90,6 +111,59 @@ def test_validate_exact_eval_evidence_requires_formula_and_devices(tmp_path: Pat
     assert valid.blockers == ()
     assert valid.score == score
     assert valid.archive_bytes == archive_bytes
+
+
+def test_validate_exact_eval_evidence_requires_full_frame_output_custody(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path)
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.blockers == ()
+
+    missing = dict(evidence)
+    missing.pop("inflated_outputs_manifest_path")
+    missing.pop("raw_output_aggregate_sha256")
+    missing_verdict = validate_exact_eval_evidence(
+        missing,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "inflated_outputs_manifest_path_missing" in missing_verdict.blockers
+    assert "raw_output_aggregate_sha_invalid" in missing_verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_manifest_aggregate_mismatch(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path)
+    evidence["raw_output_aggregate_sha256"] = "d" * 64
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "inflated_outputs_manifest_aggregate_mismatch" in verdict.blockers
 
 
 def test_validate_exact_eval_evidence_accepts_cuda_auto_inflate_policy(

@@ -286,6 +286,8 @@ def _axis_evidence_blockers(
             require_auth_eval_command=True,
             require_log_path=True,
             require_devices=True,
+            require_inflated_outputs_manifest=True,
+            require_raw_output_aggregate_sha256=True,
             artifact_base_dir=repo_root,
         )
         blocker_map = {
@@ -330,6 +332,33 @@ def _axis_evidence_blockers(
             ),
             "artifact_path_file_missing": "l5_v2_probe_axis_artifact_path_file_missing",
             "score_formula_mismatch": "l5_v2_probe_axis_score_formula_mismatch",
+            "raw_output_aggregate_sha_invalid": (
+                "l5_v2_probe_axis_raw_output_aggregate_sha_invalid"
+            ),
+            "inflated_outputs_manifest_path_missing": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_path_missing"
+            ),
+            "inflated_outputs_manifest_sha_invalid": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_sha_invalid"
+            ),
+            "inflated_outputs_manifest_path_transient": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_path_transient"
+            ),
+            "inflated_outputs_manifest_path_outside_base_dir": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_path_outside_repo"
+            ),
+            "inflated_outputs_manifest_file_missing": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_file_missing"
+            ),
+            "inflated_outputs_manifest_sha_mismatch": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_sha_mismatch"
+            ),
+            "inflated_outputs_manifest_aggregate_missing": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_aggregate_missing"
+            ),
+            "inflated_outputs_manifest_aggregate_mismatch": (
+                "l5_v2_probe_axis_inflated_outputs_manifest_aggregate_mismatch"
+            ),
         }
         for blocker in validation.blockers:
             public_blocker = blocker_map.get(blocker)
@@ -481,6 +510,9 @@ def build_probe_template() -> dict[str, Any]:
                         "auth_eval_command": "",
                         "log_path": "",
                         "artifact_path": "",
+                        "inflated_outputs_manifest_path": "",
+                        "inflated_outputs_manifest_sha256": "",
+                        "raw_output_aggregate_sha256": "",
                         "score_delta": None,
                     }
                     for axis in REQUIRED_EXACT_AXES

@@ -153,22 +153,72 @@ Lane: ``lane_atw_codec_v2_substrate_build_20260516``
 
 from __future__ import annotations
 
+from tac.substrates.atw_codec_v2.architecture import (
+    CDF_TABLE_NUM_SYMBOLS,
+    DEFAULT_SCORER_CLASS_PRIOR_DIM,
+    EVAL_HW,
+    NUM_PAIRS,
+    NUM_SEGNET_CLASSES,
+    TOTAL_ARCHIVE_TARGET_BYTES_MAX,
+    TOTAL_ARCHIVE_TARGET_BYTES_MIN,
+    ATWv2Codec,
+    ATWv2CodecConfig,
+    ATWv2Variant,
+)
+from tac.substrates.atw_codec_v2.archive import (
+    ATW2_HEADER_FMT,
+    ATW2_HEADER_SIZE,
+    ATW2_MAGIC,
+    ATW2_SCHEMA_VERSION,
+    ATW2_SECTION_ROLES,
+    ATWv2CodecArchive,
+    pack_archive,
+    parse_archive,
+    parse_atw2_archive_bytes,
+)
+from tac.substrates.atw_codec_v2.inflate import inflate_one_video, main_cli
+from tac.substrates.atw_codec_v2.score_aware_loss import (
+    ATWv2LossOutput,
+    ATWv2LossWeights,
+    ATWv2ScoreAwareLoss,
+)
+
 LANE_ID = "lane_atw_codec_v2_substrate_build_20260516"
 DESIGN_MEMO_PATH = (
     ".omx/research/atw_codec_v2_cooperative_receiver_full_stack_design_20260516.md"
 )
 RESEARCH_ONLY = True
-IMPLEMENTATION_STATUS = "l0_registered_research_only_package_marker"
-MISSING_IMPLEMENTATION_MODULES = (
-    "tac.substrates.atw_codec_v2.architecture",
-    "tac.substrates.atw_codec_v2.archive",
-    "tac.substrates.atw_codec_v2.score_aware_loss",
-)
+IMPLEMENTATION_STATUS = "l1_architecture_archive_inflate_and_loss_modules_available_research_only"
+MISSING_IMPLEMENTATION_MODULES: tuple[str, ...] = ()
 
 __all__ = [
+    "ATW2_HEADER_FMT",
+    "ATW2_HEADER_SIZE",
+    "ATW2_MAGIC",
+    "ATW2_SCHEMA_VERSION",
+    "ATW2_SECTION_ROLES",
+    "CDF_TABLE_NUM_SYMBOLS",
+    "DEFAULT_SCORER_CLASS_PRIOR_DIM",
     "DESIGN_MEMO_PATH",
+    "EVAL_HW",
     "IMPLEMENTATION_STATUS",
     "LANE_ID",
     "MISSING_IMPLEMENTATION_MODULES",
+    "NUM_PAIRS",
+    "NUM_SEGNET_CLASSES",
     "RESEARCH_ONLY",
+    "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
+    "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "ATWv2Codec",
+    "ATWv2CodecArchive",
+    "ATWv2CodecConfig",
+    "ATWv2LossOutput",
+    "ATWv2LossWeights",
+    "ATWv2ScoreAwareLoss",
+    "ATWv2Variant",
+    "inflate_one_video",
+    "main_cli",
+    "pack_archive",
+    "parse_archive",
+    "parse_atw2_archive_bytes",
 ]

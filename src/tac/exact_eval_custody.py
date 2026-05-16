@@ -9,6 +9,8 @@ keep their substrate-specific blocker labels and policy gates.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections.abc import Mapping
@@ -222,6 +224,35 @@ def _resolve_evidence_path(value: object, base_dir: Path) -> tuple[Path | None, 
     return resolved_path, None
 
 
+def _json_mapping(path: Path) -> Mapping[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, Mapping) else None
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _manifest_aggregate_sha256(path: Path) -> str:
+    payload = _json_mapping(path)
+    if payload is None:
+        return ""
+    direct = normalize_sha256(payload.get("aggregate_sha256"))
+    if direct:
+        return direct
+    nested = payload.get("payload")
+    if isinstance(nested, Mapping):
+        return normalize_sha256(nested.get("aggregate_sha256"))
+    return ""
+
+
 def contest_score(seg_dist: float, pose_dist: float, archive_bytes: int) -> float:
     """Compute the official contest score formula."""
 
@@ -311,6 +342,8 @@ def validate_exact_eval_evidence(
     require_auth_eval_command: bool = True,
     require_log_path: bool = True,
     require_devices: bool = False,
+    require_inflated_outputs_manifest: bool = False,
+    require_raw_output_aggregate_sha256: bool = False,
     annotation_prefix: str = "",
     artifact_base_dir: Path | str | None = None,
 ) -> ExactEvalEvidenceValidation:
@@ -417,6 +450,26 @@ def validate_exact_eval_evidence(
     if require_artifact_path and not _clean_text(evidence.get("artifact_path")):
         blockers.append("artifact_path_missing")
 
+    raw_output_aggregate_sha = normalize_sha256(
+        evidence.get("raw_output_aggregate_sha256")
+        or evidence.get("inflated_output_aggregate_sha256")
+    )
+    inflated_manifest_sha = normalize_sha256(
+        evidence.get("inflated_outputs_manifest_sha256")
+        or evidence.get("inflated_output_manifest_sha256")
+    )
+    inflated_manifest_path_text = _clean_text(
+        evidence.get("inflated_outputs_manifest_path")
+        or evidence.get("inflated_output_manifest_path")
+    )
+    if require_raw_output_aggregate_sha256 and not raw_output_aggregate_sha:
+        blockers.append("raw_output_aggregate_sha_invalid")
+    if require_inflated_outputs_manifest:
+        if not inflated_manifest_path_text:
+            blockers.append("inflated_outputs_manifest_path_missing")
+        if not inflated_manifest_sha:
+            blockers.append("inflated_outputs_manifest_sha_invalid")
+
     base_dir = Path(artifact_base_dir) if artifact_base_dir is not None else None
     if base_dir is not None:
         if require_log_path and "log_path_missing" not in blockers:
@@ -441,6 +494,31 @@ def validate_exact_eval_evidence(
                 blockers.append("artifact_path_outside_base_dir")
             elif artifact_path is None or not artifact_path.is_file():
                 blockers.append("artifact_path_file_missing")
+        if (
+            require_inflated_outputs_manifest
+            and "inflated_outputs_manifest_path_missing" not in blockers
+        ):
+            manifest_path, manifest_path_error = _resolve_evidence_path(
+                inflated_manifest_path_text,
+                base_dir,
+            )
+            if manifest_path_error == "transient":
+                blockers.append("inflated_outputs_manifest_path_transient")
+            elif manifest_path_error == "outside_base_dir":
+                blockers.append("inflated_outputs_manifest_path_outside_base_dir")
+            elif manifest_path is None or not manifest_path.is_file():
+                blockers.append("inflated_outputs_manifest_file_missing")
+            else:
+                if inflated_manifest_sha and _sha256_file(manifest_path) != inflated_manifest_sha:
+                    blockers.append("inflated_outputs_manifest_sha_mismatch")
+                manifest_aggregate_sha = _manifest_aggregate_sha256(manifest_path)
+                if not manifest_aggregate_sha:
+                    blockers.append("inflated_outputs_manifest_aggregate_missing")
+                elif (
+                    raw_output_aggregate_sha
+                    and manifest_aggregate_sha != raw_output_aggregate_sha
+                ):
+                    blockers.append("inflated_outputs_manifest_aggregate_mismatch")
 
     if (
         score is not None

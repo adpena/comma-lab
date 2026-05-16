@@ -38,6 +38,9 @@ def _axis_evidence(
     score = 25.0 * archive_bytes / 37_545_489
     log_path = f"experiments/results/l5_v2_probe/{axis}.log"
     artifact_path = f"experiments/results/l5_v2_probe/{axis}.json"
+    manifest_path = f"experiments/results/l5_v2_probe/{axis}_inflated_outputs_manifest.json"
+    raw_output_aggregate_sha256 = "c" * 64
+    manifest_sha256 = "d" * 64
     if repo_root is not None:
         log_file = repo_root / log_path
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -47,6 +50,16 @@ def _axis_evidence(
             f'{{"axis":"{axis}","score_delta":{score_delta}}}\n',
             encoding="utf-8",
         )
+        manifest_file = repo_root / manifest_path
+        manifest_file.write_text(
+            json.dumps(
+                {"aggregate_sha256": raw_output_aggregate_sha256},
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        manifest_sha256 = _file_sha256(manifest_file)
     return {
         "axis": axis,
         "archive_sha256": "a" * 64,
@@ -62,6 +75,9 @@ def _axis_evidence(
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": log_path,
         "artifact_path": artifact_path,
+        "inflated_outputs_manifest_path": manifest_path,
+        "inflated_outputs_manifest_sha256": manifest_sha256,
+        "raw_output_aggregate_sha256": raw_output_aggregate_sha256,
         "score_delta": score_delta,
     }
 

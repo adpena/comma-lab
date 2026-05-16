@@ -177,6 +177,82 @@ def _local_auth_eval_log_path(
     return _first_existing_relative_path(candidates, repo_root)
 
 
+def _local_inflated_outputs_manifest_path(
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> str:
+    direct = str(
+        payload.get("inflated_outputs_manifest_path")
+        or payload.get("inflated_output_manifest_path")
+        or ""
+    ).strip()
+    if direct:
+        return direct
+
+    candidate_dirs: list[Path] = [path.parent]
+    source_json_path = str(payload.get("source_json_path") or "").strip()
+    if source_json_path:
+        source_path = Path(source_json_path)
+        resolved_source = (
+            source_path if source_path.is_absolute() else repo_root / source_path
+        )
+        candidate_dirs.append(resolved_source.parent)
+
+    return _first_existing_relative_path(
+        (directory / "inflated_outputs_manifest.json" for directory in candidate_dirs),
+        repo_root,
+    )
+
+
+def _sha256_for_relative_path(path_text: str, repo_root: Path) -> str:
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    resolved = path if path.is_absolute() else repo_root / path
+    if not resolved.is_file():
+        return ""
+    return _sha256_file(resolved)
+
+
+def _manifest_sha_for_payload(
+    payload: Mapping[str, Any],
+    *,
+    manifest_path: str,
+    repo_root: Path,
+) -> str:
+    for value in (
+        payload.get("inflated_outputs_manifest_sha256"),
+        payload.get("inflated_output_manifest_sha256"),
+        _nested(payload, "runtime_custody", "inflated_output_manifest_sha256"),
+        _nested(payload, "provenance", "inflated_output_manifest", "sha256"),
+    ):
+        normalized = normalize_sha256(value)
+        if normalized:
+            return normalized
+    return _sha256_for_relative_path(manifest_path, repo_root)
+
+
+def _raw_output_aggregate_sha_for_payload(payload: Mapping[str, Any]) -> str:
+    for value in (
+        payload.get("raw_output_aggregate_sha256"),
+        payload.get("inflated_output_aggregate_sha256"),
+        _nested(payload, "runtime_custody", "inflated_output_aggregate_sha256"),
+        _nested(
+            payload,
+            "provenance",
+            "inflated_output_manifest",
+            "payload",
+            "aggregate_sha256",
+        ),
+    ):
+        normalized = normalize_sha256(value)
+        if normalized:
+            return normalized
+    return ""
+
+
 def _candidate_id_for_payload(path: Path, payload: Mapping[str, Any]) -> str | None:
     haystack = " ".join(
         str(item or "").lower()
@@ -257,6 +333,11 @@ def _axis_evidence_from_payload(
         or payload.get("auth_eval_command")
     )
     artifact_path = _relative_path(path, repo_root)
+    inflated_manifest_path = _local_inflated_outputs_manifest_path(
+        path,
+        payload,
+        repo_root=repo_root,
+    )
     return {
         "axis": axis,
         "archive_sha256": _archive_sha_for_payload(payload),
@@ -322,6 +403,13 @@ def _axis_evidence_from_payload(
         "auth_eval_command": command,
         "log_path": _local_auth_eval_log_path(path, payload, repo_root=repo_root),
         "artifact_path": artifact_path,
+        "inflated_outputs_manifest_path": inflated_manifest_path,
+        "inflated_outputs_manifest_sha256": _manifest_sha_for_payload(
+            payload,
+            manifest_path=inflated_manifest_path,
+            repo_root=repo_root,
+        ),
+        "raw_output_aggregate_sha256": _raw_output_aggregate_sha_for_payload(payload),
         "score_delta": _first_finite_float(
             payload,
             ("score_delta", "component_deltas.score_delta"),
@@ -346,6 +434,9 @@ def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
         "auth_eval_command",
         "log_path",
         "artifact_path",
+        "inflated_outputs_manifest_path",
+        "inflated_outputs_manifest_sha256",
+        "raw_output_aggregate_sha256",
         "score_delta",
     )
     return sum(1 for field in fields if evidence.get(field) not in (None, ""))
