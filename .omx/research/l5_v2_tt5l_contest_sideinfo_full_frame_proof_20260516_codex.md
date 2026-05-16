@@ -50,14 +50,30 @@ PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_auto
   experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs \
   experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt
 
+.venv/bin/python tools/build_tt5l_inflate_provenance.py \
+  --archive experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin \
+  --output-dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs \
+  --file-list experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt \
+  --artifact-out experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_inflate_provenance.json \
+  --command 'PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt'
+
+.venv/bin/python tools/build_tt5l_inflate_provenance.py \
+  --archive experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin \
+  --output-dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs \
+  --file-list experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt \
+  --artifact-out experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_inflate_provenance.json \
+  --command 'PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt'
+
 .venv/bin/python tools/build_tt5l_contest_sideinfo_consumption_proof.py \
   --baseline-archive experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin \
   --mutated-archive experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin \
   --baseline-output-dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs \
   --mutated-output-dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs \
   --file-list experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt \
-  --artifact-out experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_consumption_proof.json \
-  --manifest-out experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_outputs_manifest.json
+  --baseline-inflate-provenance experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_inflate_provenance.json \
+  --mutated-inflate-provenance experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_inflate_provenance.json \
+  --artifact-out .omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json \
+  --manifest-out .omx/research/tt5l_contest_sideinfo_outputs_manifest_20260516_codex.json
 ```
 
 ## Durable Committed Custody
@@ -65,11 +81,11 @@ PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_auto
 - Proof artifact:
   `.omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json`
 - Proof artifact SHA-256:
-  `7efdac0ed0ac026d7adb7eb706b1a8f844ec6e15422b7defbb34114db5ef775a`
+  `8e71c522f31bd957e7c00b2a9505db774469293e330d1ca5d0c90795f66b2d2d`
 - Output manifest:
   `.omx/research/tt5l_contest_sideinfo_outputs_manifest_20260516_codex.json`
 - Output manifest SHA-256:
-  `00e121969d8f03876dfc84c31f742b720d95be93b60e3dd93170a672ad3ffcb2`
+  `756d5c6de5b46d7cdddcd77c9355ca1be03ff3c5f81eadb14806580ef45c9742`
 - Runtime tree SHA-256:
   `4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4`
 - Inflated raw-output aggregate SHA-256:
@@ -86,6 +102,9 @@ proof and manifest are committed under `.omx/research/`.
 - `output_changed=true`
 - `raw_output_shape_compatible=true`
 - `non_target_sections_identical=true`
+- `non_target_payload_sections_identical=true`
+- `inflate_provenance_valid=true`
+- `allowed_header_delta.changed_fields=["side_len"]`
 - `n_pairs_hashed=600`
 - `total_frames=1200`
 - `raw_output_frame_nbytes=3052008`
@@ -102,7 +121,7 @@ After this artifact is present, `l5_v2_dispatch_readiness()` reports:
 - `sideinfo_valid=true`
 - `timing_allowed=true`
 - next non-PR106 action:
-  `emit_c1_z5_tt5l_probe_template`
+  `populate_and_evaluate_c1_z5_tt5l_probe_observations`
 
 Remaining blockers are intentionally still active: probe disambiguator, paired
 CPU/CUDA axis plan, empirical anchor, prediction-band baseline/custody/artifact,

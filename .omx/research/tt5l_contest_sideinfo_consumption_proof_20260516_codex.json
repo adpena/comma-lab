@@ -1,5 +1,48 @@
 {
   "byte_mutation_proof": {
+    "allowed_header_delta": {
+      "allowed": true,
+      "allowed_changed_fields": [
+        "side_len"
+      ],
+      "baseline": {
+        "ac_len": 0,
+        "foveation_grid_h": 16,
+        "foveation_grid_w": 24,
+        "hidden_dim": 64,
+        "magic": "5454354c",
+        "meta_len": 252,
+        "num_hidden_layers": 4,
+        "num_pairs": 600,
+        "output_height": 384,
+        "output_width": 512,
+        "per_pair_bytes": 45,
+        "pose_dim": 6,
+        "side_len": 13,
+        "version": 1,
+        "world_len": 34181
+      },
+      "changed_fields": [
+        "side_len"
+      ],
+      "mutated": {
+        "ac_len": 0,
+        "foveation_grid_h": 16,
+        "foveation_grid_w": 24,
+        "hidden_dim": 64,
+        "magic": "5454354c",
+        "meta_len": 252,
+        "num_hidden_layers": 4,
+        "num_pairs": 600,
+        "output_height": 384,
+        "output_width": 512,
+        "per_pair_bytes": 45,
+        "pose_dim": 6,
+        "side_len": 19,
+        "version": 1,
+        "world_len": 34181
+      }
+    },
     "archive_section_name": "per_pair_side_info_blob",
     "baseline_archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin",
     "baseline_archive_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
@@ -10,6 +53,79 @@
     "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
     "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
     "inflate_command": "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh <archive_dir> <output_dir> <file_list>",
+    "inflate_provenance": {
+      "baseline": {
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin",
+        "archive_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+        "command": "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+        "exit_code": 0,
+        "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+        "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+        "frame_nbytes": 3052008,
+        "output_aggregate_sha256": "a89451159b8fb67343de8f6c1adbee1f778805a84cb5a16b260b88cbce843388",
+        "output_dir": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs",
+        "promotion_eligible": false,
+        "raw_outputs": {
+          "aggregate_sha256": "a89451159b8fb67343de8f6c1adbee1f778805a84cb5a16b260b88cbce843388",
+          "files": [
+            {
+              "bytes": 3662409600,
+              "file_list_entry": "0.mkv",
+              "frame_count": 1200,
+              "frame_nbytes": 3052008,
+              "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs/0.raw",
+              "sha256": "2e7a1e7b77339ed4a8975598602df8105c01cf4d1e9539ef0048bfc5654d4b13"
+            }
+          ],
+          "frame_nbytes": 3052008,
+          "total_frames": 1200,
+          "video_count": 1
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
+        "schema": "tt5l_inflate_provenance_v1",
+        "score_claim": false,
+        "total_frames": 1200,
+        "video_count": 1
+      },
+      "mutated": {
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin",
+        "archive_sha256": "e72d15c2b2567c7407d037b1059bbb1a4b0e988466f84674ad9a1a69f7313541",
+        "command": "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+        "exit_code": 0,
+        "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+        "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+        "frame_nbytes": 3052008,
+        "output_aggregate_sha256": "b9b44f00bc7cead467313b59be800b5ada61d63acf66f540f02652643b643994",
+        "output_dir": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs",
+        "promotion_eligible": false,
+        "raw_outputs": {
+          "aggregate_sha256": "b9b44f00bc7cead467313b59be800b5ada61d63acf66f540f02652643b643994",
+          "files": [
+            {
+              "bytes": 3662409600,
+              "file_list_entry": "0.mkv",
+              "frame_count": 1200,
+              "frame_nbytes": 3052008,
+              "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs/0.raw",
+              "sha256": "0ffa474826ad314337ba218a691cfbbcdf5faf3e7f2ca06fff976042667f13ff"
+            }
+          ],
+          "frame_nbytes": 3052008,
+          "total_frames": 1200,
+          "video_count": 1
+        },
+        "ready_for_exact_eval_dispatch": false,
+        "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
+        "schema": "tt5l_inflate_provenance_v1",
+        "score_claim": false,
+        "total_frames": 1200,
+        "video_count": 1
+      }
+    },
+    "inflate_provenance_blockers": [],
+    "inflate_provenance_required": true,
+    "inflate_provenance_valid": true,
     "inflated_outputs_manifest_path": ".omx/research/tt5l_contest_sideinfo_outputs_manifest_20260516_codex.json",
     "inflated_raw_output_aggregate_sha256": "15a9b2b197bec1393417368be98e891d79b656124bc452c3983a47096ed26206",
     "mutated_archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin",
@@ -29,7 +145,8 @@
     "mutated_section_offset": 34215,
     "mutated_section_sha256": "d39c3f42c54a8c934a319211d7a6eea3305b640a8e3c998d09909eb004dca2e0",
     "n_pairs_hashed": 600,
-    "non_target_sections_identical": true,
+    "non_target_payload_sections_identical": true,
+    "non_target_sections_identical": false,
     "output_changed": true,
     "parser_consumed_bytes": true,
     "raw_output_frame_nbytes": 3052008,
@@ -68,6 +185,49 @@
         "target_section": true
       },
       "tt5l_header": {
+        "allowed_delta": {
+          "allowed": true,
+          "allowed_changed_fields": [
+            "side_len"
+          ],
+          "baseline": {
+            "ac_len": 0,
+            "foveation_grid_h": 16,
+            "foveation_grid_w": 24,
+            "hidden_dim": 64,
+            "magic": "5454354c",
+            "meta_len": 252,
+            "num_hidden_layers": 4,
+            "num_pairs": 600,
+            "output_height": 384,
+            "output_width": 512,
+            "per_pair_bytes": 45,
+            "pose_dim": 6,
+            "side_len": 13,
+            "version": 1,
+            "world_len": 34181
+          },
+          "changed_fields": [
+            "side_len"
+          ],
+          "mutated": {
+            "ac_len": 0,
+            "foveation_grid_h": 16,
+            "foveation_grid_w": 24,
+            "hidden_dim": 64,
+            "magic": "5454354c",
+            "meta_len": 252,
+            "num_hidden_layers": 4,
+            "num_pairs": 600,
+            "output_height": 384,
+            "output_width": 512,
+            "per_pair_bytes": 45,
+            "pose_dim": 6,
+            "side_len": 19,
+            "version": 1,
+            "world_len": 34181
+          }
+        },
         "baseline_nbytes": 34,
         "baseline_offset": 0,
         "baseline_sha256": "6e73abd977dac69a5439d1575ae94d29025134c2875c870f3a166932f574b8ab",
@@ -97,6 +257,49 @@
   },
   "component_proofs": {
     "per_pair_side_info": {
+      "allowed_header_delta": {
+        "allowed": true,
+        "allowed_changed_fields": [
+          "side_len"
+        ],
+        "baseline": {
+          "ac_len": 0,
+          "foveation_grid_h": 16,
+          "foveation_grid_w": 24,
+          "hidden_dim": 64,
+          "magic": "5454354c",
+          "meta_len": 252,
+          "num_hidden_layers": 4,
+          "num_pairs": 600,
+          "output_height": 384,
+          "output_width": 512,
+          "per_pair_bytes": 45,
+          "pose_dim": 6,
+          "side_len": 13,
+          "version": 1,
+          "world_len": 34181
+        },
+        "changed_fields": [
+          "side_len"
+        ],
+        "mutated": {
+          "ac_len": 0,
+          "foveation_grid_h": 16,
+          "foveation_grid_w": 24,
+          "hidden_dim": 64,
+          "magic": "5454354c",
+          "meta_len": 252,
+          "num_hidden_layers": 4,
+          "num_pairs": 600,
+          "output_height": 384,
+          "output_width": 512,
+          "per_pair_bytes": 45,
+          "pose_dim": 6,
+          "side_len": 19,
+          "version": 1,
+          "world_len": 34181
+        }
+      },
       "archive_section_name": "per_pair_side_info_blob",
       "baseline_archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin",
       "baseline_archive_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
@@ -107,7 +310,80 @@
       "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
       "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
       "inflate_command": "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh <archive_dir> <output_dir> <file_list>",
-      "inflated_outputs_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_outputs_manifest.json",
+      "inflate_provenance": {
+        "baseline": {
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir/0.bin",
+          "archive_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+          "command": "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+          "exit_code": 0,
+          "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+          "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+          "frame_nbytes": 3052008,
+          "output_aggregate_sha256": "a89451159b8fb67343de8f6c1adbee1f778805a84cb5a16b260b88cbce843388",
+          "output_dir": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs",
+          "promotion_eligible": false,
+          "raw_outputs": {
+            "aggregate_sha256": "a89451159b8fb67343de8f6c1adbee1f778805a84cb5a16b260b88cbce843388",
+            "files": [
+              {
+                "bytes": 3662409600,
+                "file_list_entry": "0.mkv",
+                "frame_count": 1200,
+                "frame_nbytes": 3052008,
+                "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/baseline_outputs/0.raw",
+                "sha256": "2e7a1e7b77339ed4a8975598602df8105c01cf4d1e9539ef0048bfc5654d4b13"
+              }
+            ],
+            "frame_nbytes": 3052008,
+            "total_frames": 1200,
+            "video_count": 1
+          },
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
+          "schema": "tt5l_inflate_provenance_v1",
+          "score_claim": false,
+          "total_frames": 1200,
+          "video_count": 1
+        },
+        "mutated": {
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin",
+          "archive_sha256": "e72d15c2b2567c7407d037b1059bbb1a4b0e988466f84674ad9a1a69f7313541",
+          "command": "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_autonomy.inflate experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+          "exit_code": 0,
+          "file_list_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/file_list.txt",
+          "file_list_sha256": "7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8",
+          "frame_nbytes": 3052008,
+          "output_aggregate_sha256": "b9b44f00bc7cead467313b59be800b5ada61d63acf66f540f02652643b643994",
+          "output_dir": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs",
+          "promotion_eligible": false,
+          "raw_outputs": {
+            "aggregate_sha256": "b9b44f00bc7cead467313b59be800b5ada61d63acf66f540f02652643b643994",
+            "files": [
+              {
+                "bytes": 3662409600,
+                "file_list_entry": "0.mkv",
+                "frame_count": 1200,
+                "frame_nbytes": 3052008,
+                "path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_outputs/0.raw",
+                "sha256": "0ffa474826ad314337ba218a691cfbbcdf5faf3e7f2ca06fff976042667f13ff"
+              }
+            ],
+            "frame_nbytes": 3052008,
+            "total_frames": 1200,
+            "video_count": 1
+          },
+          "ready_for_exact_eval_dispatch": false,
+          "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
+          "schema": "tt5l_inflate_provenance_v1",
+          "score_claim": false,
+          "total_frames": 1200,
+          "video_count": 1
+        }
+      },
+      "inflate_provenance_blockers": [],
+      "inflate_provenance_required": true,
+      "inflate_provenance_valid": true,
+      "inflated_outputs_manifest_path": ".omx/research/tt5l_contest_sideinfo_outputs_manifest_20260516_codex.json",
       "inflated_raw_output_aggregate_sha256": "15a9b2b197bec1393417368be98e891d79b656124bc452c3983a47096ed26206",
       "mutated_archive_path": "experiments/results/time_traveler_l5_v2/tt5l_contest_sideinfo_proof_20260516_codex/mutated_archive_dir/0.bin",
       "mutated_archive_sha256": "e72d15c2b2567c7407d037b1059bbb1a4b0e988466f84674ad9a1a69f7313541",
@@ -126,7 +402,8 @@
       "mutated_section_offset": 34215,
       "mutated_section_sha256": "d39c3f42c54a8c934a319211d7a6eea3305b640a8e3c998d09909eb004dca2e0",
       "n_pairs_hashed": 600,
-      "non_target_sections_identical": true,
+      "non_target_payload_sections_identical": true,
+      "non_target_sections_identical": false,
       "output_changed": true,
       "parser_consumed_bytes": true,
       "raw_output_frame_nbytes": 3052008,
@@ -165,6 +442,49 @@
           "target_section": true
         },
         "tt5l_header": {
+          "allowed_delta": {
+            "allowed": true,
+            "allowed_changed_fields": [
+              "side_len"
+            ],
+            "baseline": {
+              "ac_len": 0,
+              "foveation_grid_h": 16,
+              "foveation_grid_w": 24,
+              "hidden_dim": 64,
+              "magic": "5454354c",
+              "meta_len": 252,
+              "num_hidden_layers": 4,
+              "num_pairs": 600,
+              "output_height": 384,
+              "output_width": 512,
+              "per_pair_bytes": 45,
+              "pose_dim": 6,
+              "side_len": 13,
+              "version": 1,
+              "world_len": 34181
+            },
+            "changed_fields": [
+              "side_len"
+            ],
+            "mutated": {
+              "ac_len": 0,
+              "foveation_grid_h": 16,
+              "foveation_grid_w": 24,
+              "hidden_dim": 64,
+              "magic": "5454354c",
+              "meta_len": 252,
+              "num_hidden_layers": 4,
+              "num_pairs": 600,
+              "output_height": 384,
+              "output_width": 512,
+              "per_pair_bytes": 45,
+              "pose_dim": 6,
+              "side_len": 19,
+              "version": 1,
+              "world_len": 34181
+            }
+          },
           "baseline_nbytes": 34,
           "baseline_offset": 0,
           "baseline_sha256": "6e73abd977dac69a5439d1575ae94d29025134c2875c870f3a166932f574b8ab",

@@ -27,9 +27,8 @@ from tac.substrates.time_traveler_l5_autonomy.architecture import (
 from tac.substrates.time_traveler_l5_autonomy.consumption_proof import (
     TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
     _build_toy_archive,
-    _raw_outputs_aggregate,
-    _runtime_tree_sha256,
     build_tt5l_contest_full_frame_sideinfo_consumption_proof,
+    build_tt5l_inflate_provenance_manifest,
     build_tt5l_sideinfo_consumption_proof,
 )
 
@@ -190,34 +189,66 @@ def _write_inflate_provenance(
     file_list: Path,
     frame_nbytes: int = 1,
 ) -> Path:
-    aggregate = _raw_outputs_aggregate(
+    result = build_tt5l_inflate_provenance_manifest(
+        archive_path=archive_path,
         output_dir=output_dir,
-        file_list_entries=("0.mkv",),
-        repo_root=root,
-        frame_nbytes=frame_nbytes,
-    )
-    payload = {
-        "schema": "tt5l_inflate_provenance_v1",
-        "archive_path": str(archive_path.relative_to(root)),
-        "archive_sha256": _sha256_file(archive_path),
-        "output_dir": str(output_dir.relative_to(root)),
-        "output_aggregate_sha256": aggregate["aggregate_sha256"],
-        "runtime_tree_sha256": _runtime_tree_sha256(root),
-        "file_list_path": str(file_list.relative_to(root)),
-        "file_list_sha256": _sha256_file(file_list),
-        "command": (
-            ".venv/bin/python "
-            "src/tac/substrates/time_traveler_l5_autonomy/inflate.py "
+        file_list_path=file_list,
+        artifact_path=output_dir.parent / f"{label}_inflate_provenance.json",
+        command=(
+            ".venv/bin/python -m "
+            "tac.substrates.time_traveler_l5_autonomy.inflate "
             "<archive_dir> <output_dir> <file_list>"
         ),
-        "exit_code": 0,
-        "score_claim": False,
-        "promotion_eligible": False,
-        "ready_for_exact_eval_dispatch": False,
-    }
-    path = output_dir.parent / f"{label}_inflate_provenance.json"
-    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+        frame_nbytes=frame_nbytes,
+        repo_root=root,
+    )
+    return result.provenance_path
+
+
+def test_tt5l_inflate_provenance_builder_binds_archive_runtime_outputs(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_inflate_provenance_{tmp_path.name}"
+    )
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        archive = artifact_root / "0.bin"
+        archive.write_bytes(_contest_shape_tt5l_archive(np.zeros((600, 45), dtype=np.int8)))
+        file_list, output_dir, _ = _write_contest_file_list_and_outputs(artifact_root)
+
+        result = build_tt5l_inflate_provenance_manifest(
+            archive_path=archive,
+            output_dir=output_dir,
+            file_list_path=file_list,
+            artifact_path=artifact_root / "inflate_provenance.json",
+            command=(
+                "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m "
+                "tac.substrates.time_traveler_l5_autonomy.inflate "
+                "archive_dir output_dir file_list.txt"
+            ),
+            repo_root=root,
+            frame_nbytes=1,
+        )
+
+        payload = result.provenance
+        assert result.provenance_path.is_file()
+        assert payload["schema"] == "tt5l_inflate_provenance_v1"
+        assert payload["archive_sha256"] == _sha256_file(archive)
+        assert payload["file_list_sha256"] == _sha256_file(file_list)
+        assert payload["runtime_tree_sha256"]
+        assert payload["output_aggregate_sha256"]
+        assert payload["total_frames"] == 1200
+        assert payload["score_claim"] is False
+        assert payload["promotion_eligible"] is False
+        assert payload["ready_for_exact_eval_dispatch"] is False
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
 
 
 def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
@@ -520,4 +551,18 @@ def test_tt5l_contest_full_frame_sideinfo_proof_cli_help_uses_repo_venv() -> Non
     assert "--baseline-archive" in result.stdout
     assert "--manifest-out" in result.stdout
     assert "--baseline-inflate-provenance" in result.stdout
+    assert "--frame-nbytes" in result.stdout
+
+
+def test_tt5l_inflate_provenance_cli_help_uses_repo_venv() -> None:
+    result = subprocess.run(
+        ["tools/build_tt5l_inflate_provenance.py", "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "--archive" in result.stdout
+    assert "--output-dir" in result.stdout
+    assert "--command" in result.stdout
     assert "--frame-nbytes" in result.stdout

@@ -97,6 +97,14 @@ class TT5LConsumptionProofResult:
     manifest_path: Path
 
 
+@dataclass(frozen=True)
+class TT5LInflateProvenanceResult:
+    """Path and payload emitted by the inflate provenance builder."""
+
+    provenance: dict[str, Any]
+    provenance_path: Path
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[4]
 
@@ -519,6 +527,7 @@ def _validate_inflate_provenance(
     if (
         "time_traveler_l5_autonomy/inflate.py" not in command
         and "time_traveler_l5_autonomy/inflate.sh" not in command
+        and "tac.substrates.time_traveler_l5_autonomy.inflate" not in command
     ):
         blockers.append(f"{label}_output_provenance_command_not_tt5l_inflate")
     if provenance.get("score_claim") is not False:
@@ -539,6 +548,92 @@ def _validate_inflate_provenance(
         if actual != _display_path(expected_path, repo_root):
             blockers.append(f"{label}_output_provenance_{key}_mismatch")
     return provenance, blockers
+
+
+def build_tt5l_inflate_provenance_manifest(
+    *,
+    archive_path: str | Path,
+    output_dir: str | Path,
+    file_list_path: str | Path,
+    artifact_path: str | Path,
+    command: str,
+    exit_code: int = 0,
+    repo_root: str | Path | None = None,
+    frame_nbytes: int = TT5L_CONTEST_FRAME_NBYTES,
+) -> TT5LInflateProvenanceResult:
+    """Build a provenance manifest for an already-run TT5L inflate command.
+
+    The manifest is non-authoritative for score claims. It exists to bind a
+    proof input directory to a specific archive, runtime tree, file list, and
+    observed TT5L inflate command before the L5 v2 side-info gate consumes the
+    outputs.
+    """
+
+    root = Path(repo_root).resolve() if repo_root is not None else _repo_root()
+    archive = _resolve_existing_repo_path(
+        archive_path,
+        repo_root=root,
+        label="archive_path",
+    )
+    outputs = _resolve_existing_repo_path(
+        output_dir,
+        repo_root=root,
+        label="output_dir",
+        expect_dir=True,
+    )
+    file_list = _resolve_existing_repo_path(
+        file_list_path,
+        repo_root=root,
+        label="file_list_path",
+    )
+    provenance_path = _resolve_repo_custody_path(
+        artifact_path,
+        str(artifact_path),
+        repo_root=root,
+        label="artifact_path",
+    )
+    command_text = command.strip()
+    if not command_text:
+        raise ValueError("command must be non-empty")
+    if (
+        "time_traveler_l5_autonomy/inflate.py" not in command_text
+        and "time_traveler_l5_autonomy/inflate.sh" not in command_text
+        and "tac.substrates.time_traveler_l5_autonomy.inflate" not in command_text
+    ):
+        raise ValueError("command must reference the TT5L inflate entrypoint")
+
+    file_entries = _file_list_entries(file_list)
+    aggregate = _raw_outputs_aggregate(
+        output_dir=outputs,
+        file_list_entries=file_entries,
+        repo_root=root,
+        frame_nbytes=frame_nbytes,
+    )
+    provenance = {
+        "schema": "tt5l_inflate_provenance_v1",
+        "archive_path": _display_path(archive, root),
+        "archive_sha256": _sha256_file(archive),
+        "output_dir": _display_path(outputs, root),
+        "output_aggregate_sha256": aggregate["aggregate_sha256"],
+        "runtime_tree_sha256": _runtime_tree_sha256(root),
+        "file_list_path": _display_path(file_list, root),
+        "file_list_sha256": _sha256_file(file_list),
+        "command": command_text,
+        "exit_code": int(exit_code),
+        "frame_nbytes": frame_nbytes,
+        "total_frames": aggregate["total_frames"],
+        "video_count": aggregate["video_count"],
+        "raw_outputs": aggregate,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    provenance_path.parent.mkdir(parents=True, exist_ok=True)
+    provenance_path.write_bytes(_canonical_json_bytes(provenance))
+    return TT5LInflateProvenanceResult(
+        provenance=provenance,
+        provenance_path=provenance_path,
+    )
 
 
 def _component_proof(
