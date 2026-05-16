@@ -1021,3 +1021,155 @@ This memo's substrate uses the cooperative-receiver framework in its **spatial c
 Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:spatial-cooperative-receiver-substrate-not-temporal-prediction-substrate-the-canonical-atick-redlich-cooperative-receiver-theorem-applies-to-spatial-mutual-information-i-x-y-not-just-temporal-next-frame-prediction-per-tishby-zaslavsky-framework` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
 
 The spatial-vs-temporal distinction within the Atick-Redlich framework: the canonical 1990 paper IS about spatial receptive-field development (retinal ganglion cells maximize `I(stimulus; receptor_response)` across the spatial field), not temporal prediction. The Z6/Z7/Z8 Pattern H gate enforces the temporal/predictive variant; this substrate applies the spatial/coverage variant.
+
+---
+
+## Appendix B — Four alternative-reducer probes (T2 council Q1.4 reactivation criteria, 2026-05-16)
+
+**Status**: T2 council Q1 SPLIT-VERDICT reactivation criteria executed on A1 latents (the Tishby IB-pure substrate's distinguishing-feature hypothesis surface). Result appended per Catalog #110/#113 HISTORICAL_PROVENANCE (APPEND-ONLY); body of design memo + Sections 1-23 + 9-dim checklist + Op-summary + Observability surface + Appendix A UNCHANGED. **Subagent**: SUBAGENT B (`alt_reducer_probes_subagent_b_20260516`) at lane `lane_four_alternative_reducer_probes_meta_pattern_e_remediation_20260516`.
+
+**Cite chain**: T2 council memo `.omx/research/grand_council_t2_wunderkind_g1_v2_pivot_validation_v3_cpu_competitiveness_20260516.md` Q1.4 enumerated 4 alternative reducers as the EXPANDED REACTIVATION CRITERIA after the canonical per-pair-dominant SegNet argmax reducer returned INDEPENDENT on this substrate (Appendix A.1: I~0.006 bits/symbol). Per CLAUDE.md "Forbidden premature KILL without research exhaustion" + sextet-pact Contrarian veto on kill-too-fast: the Tishby IB-pure substrate's class-conditional-encoder hypothesis cannot be deferred class-wide until ALL alternative reducers on the A1-latent operating point have been probed independently. This Appendix B operationalizes Appendix A.1 Reactivation Criterion #1 ("re-run probe with per-pair multi-class signature beyond composite-majority").
+
+### B.1 Probe methodology
+
+**Tool**: `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py --substrate tishby_ib_pure --max-pairs 600` driving the canonical library `tools/probe_alternative_reducers_latent_class_conditioning.py` (4 reducers + canonical MI estimator + reducer-specific thresholds per T2 Q1.4).
+
+**Source signal**: A1's HNeRV-rendered pairs over A1 latents (mirrors the d4_driver.py pattern at `experiments/results/tishby_ib_pure_d4_probe_20260516T212557Z/`). A1 archive `submissions/a1/archive.zip` parsed via `from codec import decode_decoder_compact, decode_latents_compact, apply_latent_sidecar`; A1 HNeRV decoder constructed via `model.HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=(384, 512))`; 600 pairs rendered in chunks of 16.
+
+**Scorer**: canonical `tac.scorer.load_default_scorers(upstream)` loading `upstream/models/segnet.safetensors` (sha256 `68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6`). For each pair we computed:
+1. **Canonical preprocess argmax** (slice frame_1 + interpolate to (384, 512) per upstream/modules.py:108) — used by reducers 1, 2, 3.
+2. **Per-frame argmax of frame_0 + frame_1 separately** (each frame independently bilinear-interpolated to (384, 512) then SegNet forward) — used by reducer 4.
+
+**Latent stream**: A1's HNeRV latents (600 pairs × 28 latent_dim = 16800 symbols) requantized to uint8 via affine map to [0, 255]. Stream sha256 `a374e01a1d4cd0639d97cd02c70846906e38e10a8bad99215e9b3e8793f30959`. Per-pair reducer outputs byte-expanded ×28 to align symbol-for-symbol with the latent stream (mirrors d4_driver.py byte-expansion protocol).
+
+**Device**: CPU (hermetic; SegNet output is source-data derivation NOT auth-eval per Catalog #127 source-data carve-out). Wall clock: 1187s for 600-pair render+SegNet inference at 0.50 pair/s (chunked-by-16 batch decode is ~2× faster than per-pair-sequential rendering in Wunderkind G1 v2 Appendix C). Cost: $0.
+
+**Output directory**: `experiments/results/alternative_reducer_probes_20260516T225900Z/` (Catalog #249 device-agnostic naming).
+
+### B.2 Per-reducer empirical verdict table
+
+| Reducer | Threshold | MI (bits/sym) | Unique fingerprints | WZ ceiling | **Verdict** |
+|---|---|---|---|---|---|
+| `per_pixel_histogram` (5-bin × 16-quant) | > 0.5 bits | 0.0227 | 4 | 0.32% | **WEAK_CONDITIONING** |
+| `per_region_histogram` (5-bin × 4-region × 8-quant) | > 1.0 bits | 0.0474 | 7 | 0.67% | **WEAK_CONDITIONING** |
+| `per_pair_class_2_fraction` (32-bucket) | > 0.2 bits | 0.0097 | 2 | 0.14% | **INDEPENDENT** |
+| `per_frame_argmax` (5²=25-class fingerprint) | > 0.2 bits | 0.0000 | 1 | 0.00% | **INDEPENDENT** |
+
+Note: `per_pair_class_2_fraction` MI=0.0097 falls just below the canonical `INDEPENDENCE_TOLERANCE_BITS=0.01` floor; the verdict computed is INDEPENDENT per the canonical decision rule. The Wunderkind G1 v2 Appendix C sister run produced MI=0.0124 for the same reducer on the residual_int8 stream — same per-pair conditioning signal, different latent stream produces marginally different MI estimate (within sampling noise; both verdicts are structurally "near-degenerate at the 2-bucket level").
+
+### B.3 Per-pair distribution receipts (forensic provenance)
+
+**Per-pair-dominant class (frame_1 canonical preprocess, 384×512)**: 600/600 → class 2. Matches Wunderkind G1 v2 Appendix C exactly — confirming A1's HNeRV decoder is so faithful to GT that the SegNet response distribution is structurally identical on A1-rendered frames vs GT contest video frames.
+
+**Per-frame (frame_0_dominant, frame_1_dominant) pairs**: 600/600 → (2, 2). NO temporal motion observable at the per-pair-dominant resolution. The temporal-motion hypothesis (Yousfi T2 Q1.2 *"a car appearing/disappearing between frames"*) is empirically falsified on A1-rendered pairs at the per-frame-dominant-class level — same falsification as on GT contest video (Wunderkind G1 v2 Appendix C).
+
+**Per-pair class-2 fraction (continuous in [0, 1])**:
+- n = 600
+- min / max = 0.4809 / 0.5103
+- mean / median = 0.4953 / 0.4950
+- stdev = 0.0065
+- range (max - min) = 0.0294 (~3 percentage points)
+
+**Critical finding**: the per-pair class-2 fraction on A1-rendered pairs is **NEARLY IDENTICAL to the GT contest video** (Wunderkind G1 v2 Appendix C: mean 0.4952, stdev 0.0065, range 0.0293). This is itself an empirically meaningful finding for the Tishby IB-pure substrate: **A1's HNeRV decoder produces frame_1 outputs that elicit a SegNet response distribution structurally identical to GT — the renderer's fidelity is high enough that the SegNet argmax structure is preserved**. The per-pair class-2 fraction is NOT in the [0.55, 0.95] range Yousfi predicted from dashcam physics (T2 Q1.2 footnote); the empirical distribution is centered at 0.495 with stdev 0.0065 on BOTH GT and A1-rendered frames.
+
+**Per-pixel histogram fingerprints**: 4 distinct fingerprints; top fingerprint at 263939 (436/600 = 73% of pairs); next at 264195 (151/600 = 25%). Structurally identical to Wunderkind G1 v2 Appendix C (same 4 fingerprints, near-identical counts).
+
+**Per-region histogram fingerprints**: 7 distinct fingerprints; top fingerprint at 576583900841640384 (383/600 = 64%); next at 576579502795129280 (151/600 = 25%). Structurally identical to Wunderkind G1 v2 Appendix C (same 7 fingerprints, near-identical counts).
+
+**Per-frame argmax fingerprint**: 600/600 → 12 (= 2*5+2; frame_0 dominant = class 2, frame_1 dominant = class 2). Same single fingerprint as GT.
+
+### B.4 Verdict interpretation per T2 Q1.4 acceptance rules
+
+**Aggregated verdict**: `PARTIAL` — 2 of 4 reducers returned WEAK_CONDITIONING; 2 of 4 returned INDEPENDENT. **NO reducer reaches the MEANINGFUL threshold required for substrate-class reactivation per Q1.4**.
+
+**Operator-facing recommendation** (per the canonical helper's `_recommend_action_for_verdicts`):
+
+> *"PARTIAL: alternative reducer(s) (per_pixel_histogram, per_region_histogram) returned WEAK_CONDITIONING; MI > tolerance but < meaningful threshold. Paradigm class is DEFERRED-pending-tighter-reducer-design (Phase 2 council Q1.4 #5)."*
+
+### B.5 Per-reducer empirical interpretation (T2 Q1.2 sextet-pact + Appendix A.1 reactivation criteria)
+
+**Shannon (LEAD) on the empirical result**: the per-pixel + per-region reducers show non-zero MI (0.0227 + 0.0474 bits/symbol) on A1's latents AT THE A1-STARTING-POINT. Per Appendix A.1 Reactivation Criterion #2: this MI is a LOWER BOUND on the substrate's achievable mutual information at the start of training, not the asymptotic post-training distribution. The Tishby IB-pure substrate's own learned latents under IB Lagrangian optimization MAY produce a fundamentally different class-conditional distribution. The current INDEPENDENT/WEAK verdicts on A1 latents constrain the substrate's design space WITHOUT precluding the Phase 2 training-time class-conditional learning hypothesis.
+
+**Dykstra (CO-LEAD) on convex-feasibility for Tishby IB-pure SPECIFICALLY**: the polytope intersection for the per-pixel + per-region reducers is non-empty BUT extremely narrow on A1 latents. At 0.0474 bits/symbol × 16800 symbols ≈ 796 bits ≈ 100 bytes of distortion savings ceiling for per_region_histogram, the per-region-histogram conditioning sidecar would need to ship 7 fingerprints × log2(7) bits ≈ 20 bits = ~3 bytes per pair × 600 pairs = ~1800 bytes overhead — sidecar EXCEEDS savings by ~18×. Dykstra-feasibility for the SegNet-derived spatial-region conditioning on the A1 latent operating point is structurally negative. **HOWEVER** — the Tishby IB-pure substrate trained from scratch with the IB Lagrangian could STRUCTURALLY produce latents with DIFFERENT class-conditional dependencies than A1's HNeRV (which was NOT trained with any class-conditional objective). The Dykstra-feasibility verdict applies to the A1-latent operating point ONLY, NOT to the substrate's own trained-from-scratch latents.
+
+**Yousfi on the empirical class-2 fraction range [0.48, 0.51] on A1 latents**: identical to Wunderkind G1 v2 Appendix C (same finding, same Cargo-Culted assumption: "dashcam physics → road = 70%+ pixels" is empirically incompatible with the SegNet stride-2-stem-at-384×512 argmax distribution at ~50% road). HARD-EARNED revised understanding: at the contest scorer's argmax resolution, road class is ~50% NOT 70%, on both GT and A1-rendered frames.
+
+**Fridrich on the cooperative-receiver paradigm for Tishby IB-pure**: the per-region-histogram is the BEST of the 4 alternative reducers at MI=0.0474 bits/symbol on A1 latents — same structural finding as Wunderkind G1 v2 Appendix C. The cooperative-receiver paradigm with SegNet-derived spatial features is empirically VIABLE but the MI is too small to overcome sidecar overhead at the A1-latent starting point. **HOWEVER** — for the Tishby IB-pure substrate specifically, the SUBSTRATE-LEARNED latents (under IB Lagrangian optimization with `β > 0`) may carry STRONGER class-conditional structure than A1's HNeRV latents which were trained with a pure-pixel-reconstruction objective and no class-conditional bottleneck term. The current Appendix B verdict is a STARTING-POINT bound, not an asymptotic bound.
+
+**Contrarian on the verdict**: per the Q1.4 SPLIT-VERDICT, the PARTIAL outcome (2 weak + 2 independent, all below MEANINGFUL threshold) is consistent with Wunderkind G1 v2 Appendix C (3 weak + 1 independent). The Q1.4 #5 "DEFERRED-pending-tighter-reducer-design" recommendation is the correct verdict. VETO any council consensus that interprets this PARTIAL as "Tishby IB-pure permanently falsified" — Appendix A.1 Reactivation Criterion #2 explicitly identified that the SUBSTRATE'S OWN encoder may produce a non-degenerate latent-class distribution; the A1-latent probe IS the LOWER BOUND.
+
+**Assumption-Adversary**: classification of the operating-within assumptions for this Tishby IB-pure-specific probe:
+
+| Assumption | Classification | Rationale |
+|---|---|---|
+| The A1 latents are representative of the Tishby IB-pure substrate's trained latents | CARGO-CULTED | A1 was trained with pure-pixel-reconstruction loss + no class-conditional bottleneck term. Tishby IB-pure substrate adds the IB Lagrangian `I(X;T) - β·I(T;Y)` which structurally encourages T to retain class-relevant information. The A1-latent probe is a LOWER BOUND; the asymptotic-trained Tishby IB-pure latents may carry strictly more MI with SegNet classes. |
+| The 4 T2 Q1.4 reducers ENUMERATE the relevant reducer space for Tishby IB-pure | CARGO-CULTED | Same observation as Wunderkind G1 v2 Appendix C — the 4 reducers are a SAMPLE not an EXHAUSTIVE enumeration. For Tishby IB-pure specifically, the SUBSTRATE-NATIVE reducer is the IB posterior `q(t|x)` evaluated at each pair (a continuous-class distribution per Catalog #271), which carries strictly more information than any argmax-derived reducer. |
+| The SegNet argmax IS the canonical scorer-class side-info for Tishby IB-pure | CARGO-CULTED | Tishby IB-pure could equally condition on PoseNet outputs (a different scorer, orthogonal to SegNet). The "side-info = SegNet class" choice in Appendix A is inherited from Wunderkind G1 v2 design; for Tishby IB-pure-specific design, side-info options include (a) SegNet argmax, (b) SegNet logits (continuous), (c) PoseNet pose vector, (d) PoseNet feature vector, (e) joint (SegNet + PoseNet). |
+| The empirical MI values 0.0097-0.0474 are stable estimates on the A1-latent stream | HARD-EARNED | Same Miller-Madow bias bound argument as Wunderkind G1 v2 Appendix C — bias floor is ~1e-4 bits/symbol, well below the WEAK estimates 0.0227 + 0.0474. The estimates are stable; the verdict is structurally WEAK/INDEPENDENT at the A1-latent operating point. |
+
+The Assumption-Adversary VETOES any Phase 2 council consensus that defers the Tishby IB-pure substrate class WITHOUT explicitly evaluating (a) the SUBSTRATE-NATIVE IB posterior `q(t|x)` reducer (NOT in the T2 Q1.4 enumeration), (b) PoseNet-derived side-info as an alternative to SegNet, (c) trained-from-scratch latents (NOT A1's pixel-reconstruction-trained latents).
+
+### B.6 Implications for Tishby IB-pure substrate reactivation (Appendix A.1 update)
+
+**Appendix A.1 Reactivation Criterion #1 verdict** (NEW per Appendix B): the per-pair multi-class spatial-bin signature was operationalized as the 4 T2 Q1.4 reducers (per_pixel_histogram + per_region_histogram + per_pair_class_2_fraction + per_frame_argmax). Result: 2 WEAK_CONDITIONING + 2 INDEPENDENT, NO MEANINGFUL. Reactivation Criterion #1 partial-progress (signal is non-zero on 2 reducers) but NOT satisfied (MEANINGFUL threshold not reached on any reducer at the A1-latent operating point).
+
+**Appendix A.1 Reactivation Criterion #2 STATUS UPDATE** (CRITICAL): the per-A1-latent INDEPENDENT/WEAK verdicts are a LOWER BOUND on the substrate's achievable mutual information at the starting point — they do NOT constrain the asymptotic post-IB-Lagrangian-training distribution. The Tishby IB-pure substrate's design hypothesis (the IB Lagrangian's `β · I(T;Y)` term encourages T to retain class-relevant information) REMAINS untested on substrate-native trained latents. Reactivation Criterion #2 (training-time-class-conditional learning) is the BLOCKING gate for the substrate-class reactivation.
+
+**Reactivation criteria update for Tishby IB-pure substrate** (NEW; supersedes Appendix A.4 lane registry):
+
+The Tishby IB-pure lane `lane_tishby_ib_pure_l1_scaffold_substrate_build_plus_probes_20260516` stays `research_only=true` with EXTENDED reactivation criteria:
+
+1. **(SAME as Appendix A.1)** Per-pair-dominant + composite-majority reducers are FAILED on A1 latents.
+2. **(NEW per Appendix B)** All 4 T2 Q1.4 alternative reducers (per_pixel_histogram + per_region_histogram + per_pair_class_2_fraction + per_frame_argmax) are FAILED-AT-A1-LATENT-OPERATING-POINT; best signal per_region_histogram MI=0.0474, WZ ceiling 0.67%; convex-feasibility Dykstra-negative for the A1 operating point.
+3. **(NEW per Appendix B + Assumption-Adversary)** Reactivation Criterion #2 (trained-from-scratch Tishby IB-pure latents) remains the BLOCKING reactivation gate. The 4-reducer probe at Phase 2 STAGE 1 Modal A100 100ep proxy ($5-10) on Tishby IB-pure SUBSTRATE-NATIVE latents IS the next probe wave per Appendix A.3 Criterion 2 (real-scorer Modal A100 100ep proxy pending).
+4. **(NEW per Appendix B + Catalog #220 distinguishing-feature integration contract)** When Phase 2 STAGE 1 proxy lands, the 4-reducer + SUBSTRATE-NATIVE-reducer probe wave must be re-run on the substrate's trained latents (NOT A1's). The probe library `tools/probe_alternative_reducers_latent_class_conditioning.py` + driver `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py` are the canonical infrastructure; the driver needs a new `--substrate tishby_ib_pure_trained` arm that loads the trained substrate's latents instead of A1's.
+
+**Phase 2 council deliberation gate** (op-routable B-2): the Q1.4 #5 "DEFERRED-pending-tighter-reducer-design" verdict, combined with Reactivation Criterion #2's blocking gate, requires a Phase 2 council deliberation per Catalog #292 sextet-pact discipline to:
+
+(a) Adjudicate whether the Tishby IB-pure substrate is PHASE-2-LIFT-ELIGIBLE per the V1 4-criterion gate (Appendix A.3 Criterion 1 status: INDEPENDENT on A1 latents at all 4 alternative reducers + per-pair-dominant; pending substrate-native re-probe).
+
+(b) Decide whether to proceed with Phase 2 STAGE 1 Modal A100 100ep proxy ($5-10) to enable the substrate-native re-probe, or to DEFER Phase 2 STAGE 1 until a NEW alternative reducer (per the Assumption-Adversary's NEW-reducer-class enumeration: SUBSTRATE-NATIVE IB posterior / PoseNet-derived / SegNet logits) is enumerated as a 5th probe.
+
+(c) Adjudicate the Path-VIB vs Path-MINE choice (Appendix A.3 Criterion 4 pending) — the WEAK_CONDITIONING signal on per_pixel/per_region reducers slightly favors Path-VIB (which can directly bound the IB Lagrangian's `I(T;Y)` term).
+
+### B.7 Op-routables (Appendix B closure)
+
+- **B-1**: Lane registry update: append to `lane_tishby_ib_pure_l1_scaffold_substrate_build_plus_probes_20260516` notes: *"Appendix B alternative-reducer probe wave on A1 latents (2026-05-16): 2 of 4 T2 Q1.4 reducers WEAK_CONDITIONING (best per_region MI=0.0474 bits/symbol, WZ ceiling 0.67%); 2 of 4 INDEPENDENT; NO reducer reaches MEANINGFUL threshold. PARTIAL recommendation — DEFERRED-pending-tighter-reducer-design per Q1.4 #5; A1-latent probe is LOWER BOUND per Appendix A.1 Reactivation Criterion #2 (substrate-native trained latents may produce DIFFERENT distribution); Reactivation Criterion #1 partial-progress (signal non-zero on 2 reducers but not MEANINGFUL); Reactivation Criterion #2 (trained-from-scratch) remains BLOCKING gate for substrate-class reactivation."* Operator decision: confirm lane notes update.
+- **B-2**: Phase 2 council deliberation per Catalog #292 sextet-pact discipline: adjudicate (a) Phase 2 lift eligibility (current verdict: DEFER-pending-research per Appendix A.3 + Appendix B both NOT-YET on Criterion 1); (b) Phase 2 STAGE 1 Modal A100 100ep proxy ($5-10) to enable substrate-native re-probe; (c) Path-VIB vs Path-MINE choice (the per_region WEAK signal slightly favors VIB).
+- **B-3**: Cathedral autopilot continual-learning posterior: append `[diagnostic-CPU]` anchor rows for each of the 4 reducer verdicts per Catalog #128 fcntl-locked `posterior_update_locked` — empirical anchors that the Tishby IB-pure substrate's class-conditional design hypothesis is starting-point-WEAK/INDEPENDENT but asymptotically-UNTESTED. Use `evidence_grade="diagnostic_cpu"`, `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`, `rank_or_kill_eligible=false` per Catalog #127 strict custody.
+- **B-4**: Catalog #308 META-pattern E remediation status update: this Appendix B operationalizes the T2 Q1.4 reactivation criteria on the Tishby IB-pure A1-latent operating point with a typed verdict table + per-reducer recommendation; the META-pattern E remediation is COMPLETE for the 4-reducer enumeration on A1 latents. The Assumption-Adversary surfaced the next layer (SUBSTRATE-NATIVE-reducer probe + substrate-native trained latents + PoseNet-derived side-info enumeration) which is Phase 2 council deliberation scope.
+- **B-5**: Probe library extension (FUTURE): add `--substrate tishby_ib_pure_trained` arm to `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py` once Phase 2 STAGE 1 Modal A100 100ep proxy lands. This will load the trained Tishby IB-pure substrate's own latents (NOT A1's) and re-run the 4-reducer probe wave on the substrate-native operating point.
+
+### B.8 Cross-substrate comparison (Wunderkind G1 v2 vs Tishby IB-pure)
+
+The 4-reducer probe wave was executed on both substrates SIMULTANEOUSLY by SUBAGENT B (same probe library, same driver, different substrate flag). Cross-substrate comparison:
+
+| Reducer | Wunderkind G1 v2 (GT video) | Tishby IB-pure (A1 latents) | Notes |
+|---|---|---|---|
+| per_pixel_histogram | WEAK MI=0.0283 (4 fp) | WEAK MI=0.0227 (4 fp) | Structurally identical: same 4 fingerprints, near-identical counts |
+| per_region_histogram | WEAK MI=0.0599 (7 fp) | WEAK MI=0.0474 (7 fp) | Structurally identical: same 7 fingerprints, near-identical counts |
+| per_pair_class_2_fraction | WEAK MI=0.0124 (2 bk) | INDEPENDENT MI=0.0097 (2 bk) | Just below tolerance on Tishby — within sampling noise |
+| per_frame_argmax | INDEPENDENT MI=0.0000 (1 fp) | INDEPENDENT MI=0.0000 (1 fp) | Identical: 600/600 → (2, 2) on both substrates |
+
+**Cross-substrate finding**: A1's HNeRV decoder produces frame_1 outputs that elicit a SegNet response distribution structurally identical to GT contest video. The slightly-lower MI on Tishby IB-pure across all reducers (0.0227 < 0.0283; 0.0474 < 0.0599; 0.0097 < 0.0124) likely reflects (a) the A1 latents are uint8-requantized (8-bit) vs the GT residual stream's int8 already-quantized format, (b) information loss in the A1 → HNeRV → frame_1 rendering pipeline that slightly attenuates the SegNet-class signal vs raw GT decode.
+
+**Universal cross-substrate verdict**: the SegNet argmax distribution on `upstream/videos/0.mkv` (whether directly decoded OR rendered through A1's HNeRV) is structurally too-uniform to support per-pair class-conditional Wyner-Ziv conditioning at the canonical (384, 512) scorer resolution. The convex-feasibility envelope for any SegNet-argmax-derived reducer on this contest video is structurally negative regardless of substrate.
+
+**Phase 2 implication for both substrates**: per the Assumption-Adversary's CARGO-CULTED classification of the SegNet-only side-info choice, the next probe wave should test (a) PoseNet-derived side-info (orthogonal scorer; canonical contest video may show different distribution), (b) SegNet pre-argmax logits (continuous-class distribution; carries more information than argmax), (c) substrate-native trained latents (for Tishby IB-pure specifically) under the IB Lagrangian's class-conditional objective.
+
+### B.9 Probe artifacts (committed custody per CLAUDE.md "Forbidden /tmp paths")
+
+- `tools/probe_alternative_reducers_latent_class_conditioning.py` (canonical 4-reducer probe library; commit pending)
+- `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py` (canonical orchestrator driver; commit pending)
+- `src/tac/tests/test_probe_alternative_reducers.py` (21 unit tests; commit pending)
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/tishby_ib_pure_per_pair_reducer_outputs.json` (per-pair reducer outputs + per-pair class-2 fractions + per-frame dominant + provenance)
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/alternative_reducer_run_manifest_tishby_ib_pure.json` (per-substrate run manifest with 4 reducer verdicts + recommendation)
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/alternative_reducer_verdict_tishby_ib_pure_per_pixel_histogram.json` (per-reducer typed verdict JSON)
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/alternative_reducer_verdict_tishby_ib_pure_per_region_histogram.json`
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/alternative_reducer_verdict_tishby_ib_pure_per_pair_class_2_fraction.json`
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/alternative_reducer_verdict_tishby_ib_pure_per_frame_argmax.json`
+- `experiments/results/alternative_reducer_probes_20260516T225900Z/combined_run_summary.json`
+
+**Sister memo** (cross-substrate companion): `.omx/research/wunderkind_g1_v2_wire_grammar_class_shift_full_stack_design_20260516.md` Appendix C documents the parallel Wunderkind G1 v2 run (same probe wave, GT-video source signal, same probe library).
+
+**Source memo edit scope**: Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-23 + 9-dim checklist + Op-summary + Observability surface + Appendix A) UNCHANGED. This Appendix B lands as the empirical disambiguator result T2 council Q1 SPLIT-VERDICT op-routable specified to produce on the Tishby IB-pure substrate's A1-latent operating point.
