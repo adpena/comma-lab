@@ -381,6 +381,15 @@ def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
     assert payload["score_claim"] is False
     assert payload["planning_only"] is True
     assert payload["band_source"]["research_basis_ids"] == l5_v2_research_basis_ids()
+    ledger_paths = set(payload["band_source"]["local_ledger_paths"])
+    assert (
+        "file:.omx/research/l5_v2_latest_source_basis_wirein_20260516_codex.md"
+        in ledger_paths
+    )
+    assert (
+        "file:.omx/research/tt5l_sideinfo_consumption_proof_20260516_codex.md"
+        in ledger_paths
+    )
     assert verdict["valid_for_dispatch_planning"] is True
     assert verdict["valid_for_rank_reward"] is False
     assert "prediction_band_baseline_missing" in verdict["blockers"]

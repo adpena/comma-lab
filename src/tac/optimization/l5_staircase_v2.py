@@ -274,6 +274,11 @@ def l5_v2_prediction_band_payload() -> dict[str, Any]:
             local_ledger_paths=(
                 "file:.omx/research/time_traveler_architecture_reverse_engineered_20260513.md",
                 "file:.omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md",
+                "file:.omx/research/l5_v2_paper_fidelity_research_basis_wire_in_20260516_codex.md",
+                "file:.omx/research/l5_v2_latest_source_basis_wirein_20260516_codex.md",
+                "file:.omx/research/l5_v2_latest_neural_video_codec_source_basis_20260516_codex.md",
+                "file:.omx/research/l5_v2_source_basis_sidecar_20260516_codex.md",
+                "file:.omx/research/tt5l_sideinfo_consumption_proof_20260516_codex.md",
             ),
             research_basis_ids=l5_v2_research_basis_ids(),
             claim_scope=(
