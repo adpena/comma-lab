@@ -31175,6 +31175,47 @@
       "id": "lane_check_submission_inflate_empty_pythonpath_strict_gate_20260516",
       "name": "Catalog 295 submission self-contained inflate STRICT gate NSCS06 v5 bug class",
       "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commit 0b50ceceb landed check_submission_inflate_works_with_empty_pythonpath in src/tac/preflight.py (Catalog #295; ~360 LOC; AST-aware PYTHONPATH-shim detector with one-level variable indirection tracing)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog 295 wired into preflight_all() strict=False (WARN-ONLY per Strict-flip atomicity rule; live count at landing 6); 23 dedicated tests all pass; strict-flip planned after sister-backfill drives count to 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_catalog_295_submission_inflate_empty_pythonpath_strict_gate_landed_20260516.md + .omx/research/submission_inflate_pythonpath_shim_audit_20260516.md (Part A 3-column audit inventory)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_296_predicted_band_dykstra_20260516",
+      "name": "Catalog #296 predicted-band Dykstra-feasibility gate",
+      "phase": 5.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -31211,6 +31252,129 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_catalog_297_signal_axis_reversibility_20260516",
+      "name": "Catalog #297 signal-axis destruction reversibility gate",
+      "phase": 5.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_295_sister_backfill_wave_6_substrates_20260516",
+      "name": "Catalog #295 sister-backfill wave 6 substrates (strict-flip)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "submissions/nscs01_nullspace_split_renderer/inflate.py + submissions/apogee_v2/src/tac/{__init__,water_filling_codec_v2,arithmetic_qint_codec}.py + submissions/magic_codec_pr106_r2/inflate.py + submissions/pr106_{lrl1,stacked,yshift}_sidechannel/inflate.py + src/tac/preflight.py + src/tac/tests/test_check_295_submission_inflate_empty_pythonpath.py [Catalog #295 strict-flipped 6 to 0]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #295 check_submission_inflate_works_with_empty_pythonpath strict-flipped from warn-only to strict=True in preflight_all(); 24 tests pass in src/tac/tests/test_check_295_submission_inflate_empty_pythonpath.py; live count 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_catalog_295_sister_backfill_wave_6_substrates_strict_flip_landed_20260516.md (to be written by parent agent)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_296_297_metacargocult_strict_gates_20260516",
+      "name": "Catalogs 296+297 META-CARGO-CULT META-CC-1 + META-CC-2 STRICT preflight gates",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "commits f2ae2f5b9 + 0ba1b441f claimed #296 + #297; gate functions landed in src/tac/preflight.py via this respawn (~450 LOC: 2 gates + iter/scan/waiver helpers + wire-ins in preflight_all)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalogs #296 + #297 wired into preflight_all() strict=False (WARN-ONLY per Strict-flip atomicity rule; live counts 0 and 2 respectively; 52 dedicated tests pass at src/tac/tests/test_check_296_predicted_band_dykstra.py + test_check_297_signal_axis_reversibility.py); strict-flip planned alongside NSCS06 redesign or operator-routed sister-backfill wave"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md + feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md (both include per-Catalog-#292 operating-within assumption + per-Catalog-#229 6-premise verification + 6-hook wire-in declaration)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #296 (predicted-band Dykstra-feasibility) + Catalog #297 (signal-axis destruction reversibility probe) \u2014 both WARN-ONLY at landing per Strict-flip atomicity rule; live counts 0 and 2 respectively (NSCS06 _grayscale_to_rgb helper at 2 lines, lane already research_only=true per commit a16eb06fd)"
     }
   ],
   "level_rules": {
@@ -31220,5 +31384,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T13:02:13Z"
+  "updated_at": "2026-05-16T13:51:28Z"
 }

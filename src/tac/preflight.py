@@ -63093,8 +63093,11 @@ _CHECK_296_WAIVER_TOKEN = "PREDICTED_BAND_VIBES_OK:"
 _CHECK_296_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
 
 # Section headers that trigger the gate (case-insensitive substring).
+# NOTE: Δ.lower() == δ in Python, so both the lowercased form AND the
+# original uppercase form are listed so that header detection survives
+# the case-fold step regardless of which Greek letter the author used.
 _CHECK_296_TRIGGER_HEADERS = (
-    "## predicted Δs band",
+    "## predicted δs band",
     "## predicted delta s band",
     "## predicted score band",
     "## predicted band",
@@ -63150,18 +63153,31 @@ def _check_296_iter_design_memos(repo_root: Path) -> list[Path]:
 def _check_296_line_has_waiver(line: str) -> bool:
     """Return True if ``line`` carries the canonical same-line waiver.
 
-    Placeholder literals are rejected so the gate's own documentation
-    example cannot self-waive a real violation.
+    Placeholder literals (``<rationale>``, ``<reason>``) are rejected so
+    the gate's own documentation example cannot self-waive a real
+    violation. Bare-no-rationale and pure-HTML-marker rationales are
+    also rejected (we strip ``-->`` and trailing whitespace and require
+    the remaining text to be a substantive (>=4 char) rationale token).
     """
     if _CHECK_296_WAIVER_TOKEN not in line:
         return False
     idx = line.find(_CHECK_296_WAIVER_TOKEN)
-    tail = line[idx + len(_CHECK_296_WAIVER_TOKEN):].strip()
+    tail = line[idx + len(_CHECK_296_WAIVER_TOKEN):]
+    # Strip trailing HTML comment close and whitespace so a `-->`
+    # immediately after the colon is treated as "no rationale provided".
+    tail = tail.rstrip()
+    if tail.endswith("-->"):
+        tail = tail[:-3].rstrip()
+    tail = tail.strip()
     if not tail:
         return False
+    # Reject placeholder literals.
     for placeholder in _CHECK_296_WAIVER_PLACEHOLDERS:
         if tail.startswith(placeholder):
             return False
+    # Require a substantive rationale token (>=4 chars).
+    if len(tail) < 4:
+        return False
     return True
 
 
