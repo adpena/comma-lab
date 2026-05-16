@@ -181,6 +181,11 @@ def pack_archive(
     """
     if schema_version != TT5L_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
+    if ac_state:
+        raise ValueError(
+            "non-empty TT5L ac_state is unsupported: inflate_one_video does "
+            "not consume AC state bytes yet"
+        )
 
     for name, v, max_v in (
         ("num_pairs", num_pairs, 0xFFFF),

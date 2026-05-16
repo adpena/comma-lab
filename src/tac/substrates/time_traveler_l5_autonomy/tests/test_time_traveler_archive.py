@@ -279,33 +279,32 @@ def test_pack_archive_with_empty_ac_state_produces_no_ac_blob() -> None:
         foveation_grid_w=4,
         pose_dim=6,
         per_pair_bytes=45,
+        ac_state=b"",
     )
     arc = parse_archive(blob)
     assert arc.ac_state == b""
 
 
-def test_pack_archive_with_nonempty_ac_state_roundtrips() -> None:
-    """Non-empty AC state survives pack/parse."""
+def test_pack_archive_rejects_nonempty_ac_state_until_inflate_consumes_it() -> None:
+    """Non-empty AC state is phantom until inflate has a decode path."""
     sd = _toy_state_dict()
     side_info = _toy_side_info()
-    ac = b"\x01\x02\x03\x04\x05"
-    blob = pack_archive(
-        world_model_state_dict=sd,
-        per_pair_side_info=side_info,
-        meta={},
-        num_pairs=10,
-        hidden_dim=8,
-        num_hidden_layers=2,
-        output_height=384,
-        output_width=512,
-        foveation_grid_h=4,
-        foveation_grid_w=4,
-        pose_dim=6,
-        per_pair_bytes=45,
-        ac_state=ac,
-    )
-    arc = parse_archive(blob)
-    assert arc.ac_state == ac
+    with pytest.raises(ValueError, match="does not consume AC state bytes"):
+        pack_archive(
+            world_model_state_dict=sd,
+            per_pair_side_info=side_info,
+            meta={},
+            num_pairs=10,
+            hidden_dim=8,
+            num_hidden_layers=2,
+            output_height=384,
+            output_width=512,
+            foveation_grid_h=4,
+            foveation_grid_w=4,
+            pose_dim=6,
+            per_pair_bytes=45,
+            ac_state=b"x",
+        )
 
 
 def test_archive_size_in_target_band_for_default_config() -> None:
