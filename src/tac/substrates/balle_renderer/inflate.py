@@ -44,9 +44,7 @@ def _is_brv1_smoke_or_research_packet(
     *,
     num_pairs: int,
 ) -> bool:
-    """Return True for explicitly tagged BRV1 smoke/research packets."""
-    if meta.get("research_only") is True:
-        return True
+    """Return True for explicitly tagged tiny BRV1 smoke fixtures."""
     if meta.get("smoke") is not True:
         return False
     if num_pairs > 16:

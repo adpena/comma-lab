@@ -433,6 +433,25 @@ def test_inflate_refuses_large_smoke_tagged_brv1(tmp_path):
         inflate_one_video(blob, tmp_path / "oversized_smoke.raw", device="cpu")
 
 
+def test_inflate_refuses_research_only_brv1_render_silent_sideinfo(tmp_path):
+    """research_only must not bypass the score-shaped BRV1 fail-closed guard."""
+    cfg = _smoke_cfg()
+    torch.manual_seed(25)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    meta = _make_meta(cfg, smoke=False)
+    meta["research_only"] = True
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, meta)
+
+    with pytest.raises(
+        RuntimeError,
+        match="BRV1 raw-int16 side-info is render-silent",
+    ):
+        inflate_one_video(blob, tmp_path / "research_only_brv1.raw", device="cpu")
+
+
 def test_inflate_rejects_mutated_scales_stream(tmp_path):
     """The hyper-latent scales section must not be dead payload.
 
