@@ -58,6 +58,9 @@ TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
     "experiments/results/time_traveler_l5_v2/"
     "tt5l_contest_sideinfo_consumption_proof.json"
 )
+TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH = (
+    ".omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json"
+)
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
 )
@@ -1055,6 +1058,11 @@ def l5_v2_canonical_sideinfo_gate_evidence(
         Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
     )
     candidates = (
+        (
+            TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH,
+            None,
+            "contest_full_frame_inflate_consumption_proof_committed_custody",
+        ),
         (
             TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
             None,
@@ -2639,6 +2647,7 @@ __all__ = [
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
+    "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
     "TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH",

@@ -392,6 +392,48 @@ def _write_contest_sideinfo_proof_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _write_committed_contest_sideinfo_proof_artifact(repo_root: Path) -> Path:
+    payload = _gate_artifact_payload(
+        "byte_closed_temporal_sideinfo_consumption",
+        repo_root=repo_root,
+    )
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    manifest_path = repo_root / ".omx/research/test_tt5l_contest_sideinfo_manifest.json"
+    proof["inflated_outputs_manifest_path"] = str(
+        manifest_path.relative_to(repo_root)
+    )
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "raw_output_aggregate_sha256": proof[
+                    "inflated_raw_output_aggregate_sha256"
+                ],
+                "n_pairs_hashed": proof["n_pairs_hashed"],
+                "total_frames": proof["total_frames"],
+                "raw_output_frame_nbytes": proof["raw_output_frame_nbytes"],
+                "file_list_sha256": proof["file_list_sha256"],
+                "baseline_raw_output_aggregate_sha256": proof[
+                    "baseline_raw_output_aggregate_sha256"
+                ],
+                "mutated_raw_output_aggregate_sha256": proof[
+                    "mutated_raw_output_aggregate_sha256"
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    artifact_path = (
+        repo_root / l5_v2.TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    return artifact_path
+
+
 def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object]]:
     return {
         gate_id: gate_evidence.__dict__.copy()
@@ -809,6 +851,27 @@ def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
     assert evidence.evidence_grade == "contest_full_frame_inflate_consumption_proof"
 
 
+def test_l5_v2_canonical_sideinfo_prefers_committed_full_frame_artifact(
+    tmp_path: Path,
+) -> None:
+    live_artifact_path = _write_contest_sideinfo_proof_artifact(tmp_path)
+    committed_artifact_path = _write_committed_contest_sideinfo_proof_artifact(
+        tmp_path
+    )
+
+    evidence = l5_v2_canonical_sideinfo_gate_evidence(repo_root=tmp_path)
+
+    assert evidence is not None
+    assert live_artifact_path.is_file()
+    assert evidence.artifact_path == (
+        l5_v2.TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH
+    )
+    assert evidence.artifact_sha256 == _file_sha256(committed_artifact_path)
+    assert evidence.evidence_grade == (
+        "contest_full_frame_inflate_consumption_proof_committed_custody"
+    )
+
+
 def test_l5_v2_dispatch_readiness_auto_consumes_canonical_sideinfo_artifact(
     tmp_path: Path,
 ) -> None:
@@ -1126,10 +1189,15 @@ def test_l5_v2_pr106_stack_cell_candidates_fail_closed_without_matrix(
     assert payload["promotion_eligible"] is False
 
 
-def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> None:
-    blocked = l5_v2_dispatch_readiness()
+def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans(
+    tmp_path: Path,
+) -> None:
+    blocked = l5_v2_dispatch_readiness(repo_root=tmp_path)
     all_gate_ids = {gate.gate_id for gate in l5_v2_required_gates()}
-    boolean_only = l5_v2_dispatch_readiness(dict.fromkeys(all_gate_ids, True))
+    boolean_only = l5_v2_dispatch_readiness(
+        dict.fromkeys(all_gate_ids, True),
+        repo_root=tmp_path,
+    )
 
     assert blocked["ready_for_dispatch"] is False
     assert blocked["all_gate_claims_satisfied"] is False

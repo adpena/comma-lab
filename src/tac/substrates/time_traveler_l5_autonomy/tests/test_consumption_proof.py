@@ -120,8 +120,15 @@ def test_committed_tt5l_sideinfo_consumption_proof_is_toy_scope_not_gate_final()
     assert readiness["ready_for_dispatch"] is False
 
 
-def test_l5_v2_canonical_sideinfo_gate_evidence_rejects_toy_scope() -> None:
-    evidence = l5_v2_canonical_sideinfo_gate_evidence()
+def test_l5_v2_canonical_sideinfo_gate_evidence_rejects_toy_scope(
+    tmp_path: Path,
+) -> None:
+    fixture_path = Path(TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH)
+    proof_path = tmp_path / TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
+    proof_path.parent.mkdir(parents=True, exist_ok=True)
+    proof_path.write_bytes(fixture_path.read_bytes())
+
+    evidence = l5_v2_canonical_sideinfo_gate_evidence(repo_root=tmp_path)
 
     assert evidence is None
 
