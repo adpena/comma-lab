@@ -96,6 +96,7 @@ _TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES = frozenset({
 })
 _TT5L_CONTEST_N_PAIRS = 600
 _TT5L_CONTEST_TOTAL_FRAMES = 1200
+_TT5L_CONTEST_RAW_OUTPUT_FRAME_NBYTES = 874 * 1164 * 3
 
 
 @dataclass(frozen=True)
@@ -1494,6 +1495,28 @@ def _contest_full_frame_sideinfo_blockers(
             "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
             "total_frames"
         )
+    if proof.get("raw_output_shape_compatible") is not True:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "raw_output_shape_compatible"
+        )
+    frame_nbytes = _non_bool_int(
+        _first_present(
+            proof,
+            (
+                "raw_output_frame_nbytes",
+                "frame_nbytes",
+                "contest_frame_nbytes",
+            ),
+        )
+    )
+    if frame_nbytes != _TT5L_CONTEST_RAW_OUTPUT_FRAME_NBYTES:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "raw_output_frame_nbytes"
+        )
     file_list_sha = str(proof.get("file_list_sha256") or "").strip().lower()
     if not _SHA256_HEX_RE.fullmatch(file_list_sha):
         blockers.append(
@@ -1552,6 +1575,22 @@ def _contest_full_frame_sideinfo_blockers(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
                     "inflated_outputs_manifest_path:total_frames"
+                )
+            manifest_frame_nbytes = _non_bool_int(
+                _first_present(
+                    manifest,
+                    (
+                        "raw_output_frame_nbytes",
+                        "frame_nbytes",
+                        "contest_frame_nbytes",
+                    ),
+                )
+            )
+            if manifest_frame_nbytes != _TT5L_CONTEST_RAW_OUTPUT_FRAME_NBYTES:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "inflated_outputs_manifest_path:raw_output_frame_nbytes"
                 )
             manifest_file_list_sha = str(
                 manifest.get("file_list_sha256") or ""

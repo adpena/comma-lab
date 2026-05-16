@@ -29,6 +29,7 @@ import brotli  # type: ignore[import-not-found]
 import numpy as np
 import torch
 
+from tac.substrates._shared.inflate_runtime import CAMERA_HW, raw_output_path
 from tac.substrates.time_traveler_l5_autonomy.architecture import (
     TimeTravelerConfig,
     TimeTravelerSubstrate,
@@ -60,6 +61,7 @@ TT5L_SIDEINFO_CONSUMPTION_DEFAULT_WORK_DIR = (
 )
 TT5L_CONTEST_PAIR_COUNT = 600
 TT5L_CONTEST_FRAME_COUNT = 1200
+TT5L_CONTEST_FRAME_NBYTES = CAMERA_HW[0] * CAMERA_HW[1] * 3
 
 _RUNTIME_TREE_FILES: tuple[str, ...] = (
     "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
@@ -322,21 +324,35 @@ def _raw_outputs_aggregate(
     output_dir: Path,
     file_list_entries: tuple[str, ...],
     repo_root: Path,
+    frame_nbytes: int = TT5L_CONTEST_FRAME_NBYTES,
 ) -> dict[str, Any]:
+    if isinstance(frame_nbytes, bool) or frame_nbytes <= 0:
+        raise ValueError(f"frame_nbytes must be a positive int, got {frame_nbytes!r}")
     records: list[dict[str, Any]] = []
+    total_frames = 0
     for entry in file_list_entries:
-        path = (output_dir / entry).resolve()
+        path = raw_output_path(output_dir, entry).resolve()
         try:
             path.relative_to(output_dir.resolve())
         except ValueError as exc:
             raise ValueError(f"output path escapes output_dir: {entry!r}") from exc
         if not path.is_file():
             raise FileNotFoundError(f"raw output listed in file_list not found: {path}")
+        nbytes = path.stat().st_size
+        if nbytes % frame_nbytes != 0:
+            raise ValueError(
+                "raw output byte size is not an integer number of contest "
+                f"frames: {path} has {nbytes} bytes, frame_nbytes={frame_nbytes}"
+            )
+        frame_count = nbytes // frame_nbytes
+        total_frames += frame_count
         records.append(
             {
                 "file_list_entry": entry,
                 "path": _display_path(path, repo_root),
-                "bytes": path.stat().st_size,
+                "bytes": nbytes,
+                "frame_count": frame_count,
+                "frame_nbytes": frame_nbytes,
                 "sha256": _sha256_file(path),
             }
         )
@@ -346,7 +362,9 @@ def _raw_outputs_aggregate(
     }
     return {
         "aggregate_sha256": _sha256_bytes(_canonical_json_bytes(aggregate_payload)),
-        "total_frames": len(records),
+        "total_frames": total_frames,
+        "video_count": len(records),
+        "frame_nbytes": frame_nbytes,
         "files": records,
     }
 
@@ -585,6 +603,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
     artifact_path: str | Path,
     manifest_path: str | Path,
     repo_root: str | Path | None = None,
+    frame_nbytes: int = TT5L_CONTEST_FRAME_NBYTES,
 ) -> TT5LConsumptionProofResult:
     """Build the real L5-v2 gate artifact from contest-shaped TT5L outputs.
 
@@ -645,11 +664,13 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         output_dir=baseline_outputs,
         file_list_entries=entries,
         repo_root=root,
+        frame_nbytes=frame_nbytes,
     )
     mutated_aggregate = _raw_outputs_aggregate(
         output_dir=mutated_outputs,
         file_list_entries=entries,
         repo_root=root,
+        frame_nbytes=frame_nbytes,
     )
     runtime_sha = _runtime_tree_sha256(root)
     pair_aggregate_payload = {
@@ -663,7 +684,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
     }
     pair_aggregate_sha = _sha256_bytes(_canonical_json_bytes(pair_aggregate_payload))
     n_pairs_hashed = parsed_baseline.num_pairs
-    total_frames = len(entries)
+    total_frames = baseline_aggregate["total_frames"]
     parser_consumed = bool(
         parsed_baseline.num_pairs == parsed_mutated.num_pairs
         and parsed_baseline.per_pair_bytes == parsed_mutated.per_pair_bytes
@@ -676,6 +697,11 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
     )
     output_changed = (
         baseline_aggregate["aggregate_sha256"] != mutated_aggregate["aggregate_sha256"]
+    )
+    raw_output_shape_compatible = bool(
+        baseline_aggregate["total_frames"] == mutated_aggregate["total_frames"]
+        and baseline_aggregate["video_count"] == mutated_aggregate["video_count"]
+        and baseline_aggregate["frame_nbytes"] == mutated_aggregate["frame_nbytes"]
     )
     section_offset, section_payload = _archive_section_payload(
         baseline_blob,
@@ -691,6 +717,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "consumption_mode": "contest_full_frame_sideinfo_mutation",
         "parser_consumed_bytes": parser_consumed,
         "output_changed": output_changed,
+        "raw_output_shape_compatible": raw_output_shape_compatible,
         "mutated_byte_offsets": _differing_offsets_within_section(
             baseline_blob,
             mutated_blob,
@@ -727,6 +754,8 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "file_list_sha256": _sha256_file(file_list),
         "n_pairs_hashed": n_pairs_hashed,
         "total_frames": total_frames,
+        "video_count": baseline_aggregate["video_count"],
+        "raw_output_frame_nbytes": baseline_aggregate["frame_nbytes"],
         "inflate_command": (
             "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh "
             "<archive_dir> <output_dir> <file_list>"
@@ -735,6 +764,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
     predicate_passed = bool(
         parser_consumed
         and output_changed
+        and raw_output_shape_compatible
         and n_pairs_hashed == TT5L_CONTEST_PAIR_COUNT
         and total_frames == TT5L_CONTEST_FRAME_COUNT
     )
@@ -758,6 +788,8 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "file_list_sha256": _sha256_file(file_list),
         "n_pairs_hashed": n_pairs_hashed,
         "total_frames": total_frames,
+        "video_count": baseline_aggregate["video_count"],
+        "raw_output_frame_nbytes": baseline_aggregate["frame_nbytes"],
         "baseline_outputs": baseline_aggregate,
         "mutated_outputs": mutated_aggregate,
         "score_claim": False,
@@ -792,6 +824,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
 
 
 __all__ = [
+    "TT5L_CONTEST_FRAME_NBYTES",
     "TT5L_SIDEINFO_CONSUMPTION_DEFAULT_ARTIFACT",
     "TT5L_SIDEINFO_CONSUMPTION_DEFAULT_MANIFEST",
     "TT5L_SIDEINFO_CONSUMPTION_DEFAULT_WORK_DIR",

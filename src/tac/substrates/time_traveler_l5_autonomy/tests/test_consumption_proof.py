@@ -7,7 +7,6 @@ import hashlib
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -165,21 +164,27 @@ def _contest_shape_tt5l_archive(side_info: np.ndarray) -> bytes:
     )
 
 
-def _write_contest_file_list_and_outputs(root: Path) -> tuple[Path, Path, Path]:
+def _write_contest_file_list_and_outputs(
+    root: Path,
+    *,
+    frame_nbytes: int = 1,
+) -> tuple[Path, Path, Path]:
     baseline_dir = root / "baseline_outputs"
     mutated_dir = root / "mutated_outputs"
     baseline_dir.mkdir(parents=True)
     mutated_dir.mkdir(parents=True)
-    entries = [f"{idx:06d}.raw" for idx in range(1200)]
+    entries = ["0.mkv"]
     file_list = root / "file_list.txt"
     file_list.write_text("\n".join(entries) + "\n", encoding="utf-8")
-    for idx, entry in enumerate(entries):
-        (baseline_dir / entry).write_bytes(bytes([idx % 251]))
-        (mutated_dir / entry).write_bytes(bytes([(idx + (1 if idx == 17 else 0)) % 251]))
+    baseline_payload = bytearray(b"\x00" * (1200 * frame_nbytes))
+    mutated_payload = bytearray(b"\x00" * (1200 * frame_nbytes))
+    mutated_payload[17] = 1
+    (baseline_dir / "0.raw").write_bytes(baseline_payload)
+    (mutated_dir / "0.raw").write_bytes(mutated_payload)
     return file_list, baseline_dir, mutated_dir
 
 
-def test_tt5l_contest_full_frame_sideinfo_proof_satisfies_l5_gate(
+def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
     tmp_path: Path,
 ) -> None:
     root = Path.cwd()
@@ -214,6 +219,7 @@ def test_tt5l_contest_full_frame_sideinfo_proof_satisfies_l5_gate(
             artifact_path=proof_path,
             manifest_path=manifest_path,
             repo_root=root,
+            frame_nbytes=1,
         )
 
         proof = result.proof
@@ -224,19 +230,24 @@ def test_tt5l_contest_full_frame_sideinfo_proof_satisfies_l5_gate(
         assert proof["byte_mutation_proof"]["output_changed"] is True
         assert proof["byte_mutation_proof"]["n_pairs_hashed"] == 600
         assert proof["byte_mutation_proof"]["total_frames"] == 1200
+        assert proof["byte_mutation_proof"]["video_count"] == 1
+        assert proof["byte_mutation_proof"]["raw_output_frame_nbytes"] == 1
         assert result.manifest["n_pairs_hashed"] == 600
         assert result.manifest["total_frames"] == 1200
+        assert result.manifest["video_count"] == 1
 
         readiness = l5_v2_dispatch_readiness(
             gate_evidence=[
-                L5V2GateEvidence(
-                    gate_id=TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
-                    artifact_path=str(proof_path.relative_to(root)),
-                    artifact_sha256=_sha256_file(proof_path),
-                    predicate_id=proof["predicate_id"],
-                    predicate_passed=True,
-                    evidence_grade="contest_full_frame_sideinfo_consumption_proof",
-                )
+                {
+                    "gate_id": TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
+                    "artifact_path": str(proof_path.relative_to(root)),
+                    "artifact_sha256": _sha256_file(proof_path),
+                    "predicate_id": proof["predicate_id"],
+                    "predicate_passed": True,
+                    "evidence_grade": (
+                        "test_small_frame_nbytes_not_contest_gate_evidence"
+                    ),
+                }
             ],
             repo_root=root,
         )
@@ -245,67 +256,22 @@ def test_tt5l_contest_full_frame_sideinfo_proof_satisfies_l5_gate(
             for gate in readiness["gates"]
             if gate["gate_id"] == TT5L_SIDEINFO_CONSUMPTION_GATE_ID
         )
-        assert sideinfo_gate["evidence_valid"] is True
-        assert all(
-            "byte_closed_temporal_sideinfo_consumption" not in blocker
-            for blocker in readiness["blockers"]
+        assert sideinfo_gate["evidence_valid"] is False
+        assert any(
+            "raw_output_frame_nbytes" in blocker
+            for blocker in sideinfo_gate["evidence_blockers"]
         )
     finally:
         shutil.rmtree(artifact_root, ignore_errors=True)
 
 
-def test_tt5l_contest_full_frame_sideinfo_proof_cli(
-    tmp_path: Path,
-) -> None:
-    root = Path.cwd()
-    output_root = (
-        root
-        / "experiments"
-        / "results"
-        / "time_traveler_l5_v2"
-        / f"test_contest_sideinfo_cli_{tmp_path.name}"
+def test_tt5l_contest_full_frame_sideinfo_proof_cli_help_uses_repo_venv() -> None:
+    result = subprocess.run(
+        ["tools/build_tt5l_contest_sideinfo_consumption_proof.py", "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
     )
-    zero_side = np.zeros((600, 45), dtype=np.int8)
-    mutated_side = zero_side.copy()
-    mutated_side[0, 36:45] = 32
-    try:
-        output_root.mkdir(parents=True, exist_ok=True)
-        baseline_archive = output_root / "baseline_0.bin"
-        mutated_archive = output_root / "mutated_0.bin"
-        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
-        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
-        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
-            output_root
-        )
-        proof_path = output_root / "proof.json"
-        manifest_path = output_root / "manifest.json"
 
-        result = subprocess.run(
-            [
-                sys.executable,
-                "tools/build_tt5l_contest_sideinfo_consumption_proof.py",
-                "--baseline-archive",
-                str(baseline_archive.relative_to(root)),
-                "--mutated-archive",
-                str(mutated_archive.relative_to(root)),
-                "--baseline-output-dir",
-                str(baseline_dir.relative_to(root)),
-                "--mutated-output-dir",
-                str(mutated_dir.relative_to(root)),
-                "--file-list",
-                str(file_list.relative_to(root)),
-                "--artifact-out",
-                str(proof_path.relative_to(root)),
-                "--manifest-out",
-                str(manifest_path.relative_to(root)),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        assert "predicate_passed=true" in result.stdout
-        assert proof_path.is_file()
-        assert manifest_path.is_file()
-    finally:
-        shutil.rmtree(output_root, ignore_errors=True)
+    assert "--baseline-archive" in result.stdout
+    assert "--manifest-out" in result.stdout

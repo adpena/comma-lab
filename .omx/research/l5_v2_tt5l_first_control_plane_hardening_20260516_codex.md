@@ -13,6 +13,9 @@ and promotes TT5L-first actions as the primary visible staircase path.
 - Added `build_tt5l_contest_full_frame_sideinfo_consumption_proof(...)` so the
   L5 v2 side-info gate can accept contest-shaped 600-pair / 1200-frame
   mutation evidence without a score claim.
+- Corrected the proof builder to treat the contest file list as video names:
+  frame count is derived from `.raw` byte size divided by the canonical
+  `874 * 1164 * 3` frame byte size, not from file-list cardinality.
 - Added `l5_v2_tt5l_campaign_readiness(...)` and wired it into
   `l5_v2_dispatch_readiness(...)`.
 - Updated `tools/operator_briefing.py` Phase 9 to show
@@ -57,4 +60,7 @@ tools/operator_briefing.py --json --skip-pareto --skip-dashboard --skip-reconcil
 
 tools/build_tt5l_contest_sideinfo_consumption_proof.py --help
 # direct executable path works and re-enters the repo venv before importing TT5L deps
+
+PYTHONPATH=src .venv/bin/python -m pytest src/tac/substrates/time_traveler_l5_autonomy/tests/test_consumption_proof.py src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_sideinfo_consumption_rejects_toy_manifest_scope src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_sideinfo_consumption_binds_mutation_to_parsed_section_range -q
+# 9 passed after frame-byte counting correction
 ```

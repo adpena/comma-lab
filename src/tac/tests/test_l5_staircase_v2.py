@@ -242,6 +242,7 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
             "section": "temporal_sideinfo",
             "parser_consumed_bytes": True,
             "output_changed": True,
+            "raw_output_shape_compatible": True,
             "section_offset": 1024,
             "section_nbytes": 16,
             "section_sha256": _sha(24),
@@ -262,6 +263,7 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
             "inflated_raw_output_aggregate_sha256": _sha(23),
             "n_pairs_hashed": 600,
             "total_frames": 1200,
+            "raw_output_frame_nbytes": 874 * 1164 * 3,
             "file_list_sha256": _sha(28),
             "baseline_raw_output_aggregate_sha256": _sha(29),
             "mutated_raw_output_aggregate_sha256": _sha(30),
@@ -296,6 +298,9 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
                             ],
                             "n_pairs_hashed": proof["n_pairs_hashed"],
                             "total_frames": proof["total_frames"],
+                            "raw_output_frame_nbytes": proof[
+                                "raw_output_frame_nbytes"
+                            ],
                             "file_list_sha256": proof["file_list_sha256"],
                             "baseline_raw_output_aggregate_sha256": proof[
                                 "baseline_raw_output_aggregate_sha256"
