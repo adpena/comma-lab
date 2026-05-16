@@ -55,6 +55,8 @@ def test_briefing_runs_all_three_phases():
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
+    assert "Phase 9 — L5-v2 / PR106 PacketIR frontier readiness" in proc.stdout
+    assert "next exact-eval targets:" in proc.stdout
 
 
 def test_briefing_skip_pareto_omits_phase1():
@@ -123,6 +125,23 @@ def test_briefing_json_composite_has_all_three_keys():
     assert integration["packet_compiler_grammars"] >= 1
     assert integration["canonical_packet_compiler"] == (
         "tac.packet_compiler.deterministic_compiler"
+    )
+    l5 = out["l5_v2_frontier_readiness"]
+    assert l5["schema"] == "pact.l5_v2_frontier_readiness.v1"
+    assert l5["score_claim"] is False
+    assert l5["promotion_eligible"] is False
+    assert l5["rank_or_kill_eligible"] is False
+    assert l5["ready_for_exact_eval_dispatch"] is False
+    assert l5["target_rows_are_fail_fast_only"] is True
+    assert l5["canonical_sideinfo_evidence_present"] is True
+    assert l5["next_exact_eval_target_count"] == 17
+    assert l5["packetir_status_counts"]["paired_exact_blocked"] == 3
+    assert l5["packetir_paired_candidate_count"] == 0
+    assert l5["pr106_stack_cell_candidate_count"] == 0
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in l5["blockers"]
+    assert all(
+        row["ready_for_exact_eval_dispatch"] is False
+        for row in l5["next_exact_eval_targets_sample"]
     )
     assert "provider_readiness" in out
     assert out["provider_readiness"].get("score_claim") is False

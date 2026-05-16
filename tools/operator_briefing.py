@@ -58,6 +58,11 @@ EXACT_READY_SUPPRESSION_MANIFEST = (
 )
 
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+from tac.optimization.l5_staircase_v2 import (  # noqa: E402
+    PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+    l5_v2_canonical_sideinfo_gate_evidence,
+    l5_v2_dispatch_readiness,
+)
 from tac.optimizer.exact_readiness import (  # noqa: E402
     ACTIVE_FLOOR_SCORE,
     as_bool,
@@ -1085,6 +1090,165 @@ def _section(title: str, body: str) -> str:
     return f"\n{bar}\n{title}\n{bar}\n\n{body}"
 
 
+def _load_l5_v2_packetir_matrix() -> dict[str, object]:
+    """Load the committed PR106 PacketIR matrix for L5-v2 operator routing."""
+
+    path = REPO_ROOT / PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH
+    if not path.is_file():
+        return {
+            "exists": False,
+            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+            "load_blockers": ["pr106_packetir_candidate_matrix_missing"],
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "exists": True,
+            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+            "load_blockers": [f"pr106_packetir_candidate_matrix_json_invalid:{exc.msg}"],
+        }
+    if not isinstance(payload, dict):
+        return {
+            "exists": True,
+            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+            "load_blockers": ["pr106_packetir_candidate_matrix_not_object"],
+        }
+    return {"exists": True, "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH, **payload}
+
+
+def _l5_v2_frontier_readiness() -> dict[str, object]:
+    """Read-only L5-v2/PR106 frontier status for operator briefing.
+
+    This is intentionally a visibility surface, not a dispatch actuator. The
+    PR106 next-target rows are fail-fast exact-eval targets only; every launch
+    still needs lane claim, axis-specific runtime-tree custody, Modal recovery,
+    and adversarial result review.
+    """
+
+    sideinfo_evidence = l5_v2_canonical_sideinfo_gate_evidence()
+    gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
+    readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
+    matrix = _load_l5_v2_packetir_matrix()
+    targets = [
+        target
+        for target in matrix.get("next_exact_eval_targets", [])
+        if isinstance(target, dict)
+    ]
+    summarized_targets = [
+        {
+            "candidate_id": target.get("candidate_id"),
+            "missing_axis": target.get("missing_axis"),
+            "recommended_provider": target.get("recommended_provider"),
+            "lane_id": target.get("lane_id"),
+            "pair_group_id": target.get("pair_group_id"),
+            "archive_path": target.get("archive_path"),
+            "dispatch_status": target.get("dispatch_status"),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        for target in targets[:5]
+    ]
+    matrix_blockers = [
+        str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
+    ]
+    blockers = [str(blocker) for blocker in readiness.get("blockers", [])]
+    for section in ("packetir_stack_evidence", "pr106_stack_cell_candidates"):
+        section_payload = readiness.get(section)
+        if isinstance(section_payload, dict):
+            blockers.extend(
+                str(blocker)
+                for blocker in section_payload.get("blockers", [])
+                if str(blocker)
+            )
+    blockers.extend(matrix_blockers)
+    target_count = int(matrix.get("next_exact_eval_target_count") or len(targets))
+    status_counts = matrix.get("status_counts") if isinstance(matrix, dict) else {}
+    if not isinstance(status_counts, dict):
+        status_counts = {}
+    return {
+        "schema": "pact.l5_v2_frontier_readiness.v1",
+        "subject_id": "time_traveler_l5_autonomy",
+        "packetir_matrix_path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+        "packetir_matrix_exists": matrix.get("exists") is True,
+        "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
+        "packetir_status_counts": status_counts,
+        "next_exact_eval_target_count": target_count,
+        "next_exact_eval_targets_sample": summarized_targets,
+        "canonical_sideinfo_evidence_present": sideinfo_evidence is not None,
+        "l5_ready_for_gate_probe_dispatch": bool(
+            readiness.get("ready_for_gate_probe_dispatch")
+        ),
+        "l5_ready_for_score_or_rank_dispatch": bool(
+            readiness.get("ready_for_score_or_rank_dispatch")
+        ),
+        "l5_ready_for_dispatch": bool(readiness.get("ready_for_dispatch")),
+        "pr106_stack_cell_candidate_count": int(
+            readiness.get("pr106_stack_cell_candidates", {}).get("candidate_count", 0)
+            if isinstance(readiness.get("pr106_stack_cell_candidates"), dict)
+            else 0
+        ),
+        "packetir_paired_candidate_count": int(
+            readiness.get("packetir_stack_evidence", {}).get("paired_candidate_count", 0)
+            if isinstance(readiness.get("packetir_stack_evidence"), dict)
+            else 0
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "target_rows_are_fail_fast_only": True,
+        "blockers": blockers,
+        "recommendation": (
+            "Close runtime-bound paired CPU/CUDA custody for PR106 PacketIR "
+            "targets before L5-v2 stack selection; no score/rank claim from "
+            "this briefing surface."
+        ),
+    }
+
+
+def _format_l5_v2_frontier_readiness() -> str:
+    payload = _l5_v2_frontier_readiness()
+    lines = [
+        "L5-v2 / PR106 frontier status (read-only; no score claim):",
+        f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
+        f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",
+        f"  L5 score/rank dispatch ready:   {payload['l5_ready_for_score_or_rank_dispatch']}",
+        f"  exact dispatch authority:        {payload['ready_for_exact_eval_dispatch']}",
+        f"  PacketIR matrix:                 {payload['packetir_matrix_path']}",
+        f"  PacketIR candidates:             {payload['packetir_candidate_count']}",
+        f"  PacketIR status counts:          {payload['packetir_status_counts']}",
+        f"  runtime-bound paired candidates: {payload['packetir_paired_candidate_count']}",
+        f"  stack-cell candidates:           {payload['pr106_stack_cell_candidate_count']}",
+        f"  next exact-eval targets:         {payload['next_exact_eval_target_count']}",
+        "",
+        "  Sample fail-fast targets:",
+    ]
+    sample = payload.get("next_exact_eval_targets_sample")
+    if isinstance(sample, list) and sample:
+        for target in sample:
+            if not isinstance(target, dict):
+                continue
+            lines.append(
+                "    - "
+                f"{target.get('lane_id')} [{target.get('missing_axis')}] "
+                f"via {target.get('recommended_provider')} — "
+                f"{target.get('dispatch_status')}"
+            )
+    else:
+        lines.append("    - none")
+    blockers = payload.get("blockers")
+    if isinstance(blockers, list) and blockers:
+        lines.append("")
+        lines.append("  First blockers:")
+        for blocker in blockers[:8]:
+            lines.append(f"    - {blocker}")
+    lines.append("")
+    lines.append(f"Recommendation: {payload['recommendation']}")
+    return "\n".join(lines)
+
+
 # Phase-6 xray toolkit: surface the diagnostic tools landed 2026-05-09 so
 # operators discover them without having to grep `tools/xray_*`. These are
 # pure-CPU diagnostic tools — no GPU, no dispatch, no score claims.
@@ -1659,6 +1823,7 @@ def main(argv: list[str] | None = None) -> int:
             "cooperative_receiver_solver_integration": (
                 _cooperative_receiver_solver_integration()
             ),
+            "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(),
         }
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
@@ -1782,6 +1947,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 8 — Per-phase dispatch readiness (next actionable step)",
         _format_dispatch_readiness(),
+    ))
+    parts.append(_section(
+        "Phase 9 — L5-v2 / PR106 PacketIR frontier readiness",
+        _format_l5_v2_frontier_readiness(),
     ))
     print("\n".join(parts))
     return 0
