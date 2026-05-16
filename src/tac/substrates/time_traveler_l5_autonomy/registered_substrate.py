@@ -7,6 +7,7 @@ can discover TT5L without importing the trainer script.
 
 from __future__ import annotations
 
+from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
 from tac.substrate_registry import (
     NOT_APPLICABLE_WITH_RATIONALE,
     SubstrateContract,
@@ -64,7 +65,7 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     hook_bit_allocator_class=NOT_APPLICABLE_WITH_RATIONALE,
     hook_autopilot_ranker_class_shift_token="time_traveler_l5_autonomy",
     hook_continual_learning_anchor_kind="cuda_only",
-    hook_probe_disambiguator=None,
+    hook_probe_disambiguator=L5V2_PROBE_TOOL_PATH,
     # 2.7 Compliance + 2.8 not-applicable rationales
     catalog_compliance_declarations=(
         "catalog_146_3arg_archive_grammar_honored",
@@ -82,10 +83,6 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
         "hook_bit_allocator_class": (
             "TT5L v1 uses a custom world-model packet plus side-info stream; "
             "per-tensor allocator hooks are not the controlling mechanism."
-        ),
-        "hook_probe_disambiguator": (
-            "No callable C1/Z5/TT5L disambiguator has landed yet; the hook "
-            "stays explicitly unsatisfied rather than naming a planned file."
         ),
     },
 )

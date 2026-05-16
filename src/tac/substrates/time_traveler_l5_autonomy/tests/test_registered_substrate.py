@@ -7,11 +7,13 @@ import importlib
 from pathlib import Path
 
 from tac.optimization.autopilot_dispatch_ranking import rank_dispatches
+from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
 from tac.optimization.substrate_composition_matrix import canonical_substrate_inventory
 from tac.substrate_registry import (
     _REGISTERED_SUBSTRATES,
     _clear_registry_for_tests,
     get_registered_substrates,
+    query_substrates_for_probe_disambiguators,
 )
 from tac.substrates.time_traveler_l5_autonomy.archive import (
     TT5L_MAGIC,
@@ -45,6 +47,8 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
             contract.hook_autopilot_ranker_class_shift_token
             == "time_traveler_l5_autonomy"
         )
+        assert contract.hook_probe_disambiguator == L5V2_PROBE_TOOL_PATH
+        assert Path(L5V2_PROBE_TOOL_PATH).is_file()
         assert contract.runtime_dep_closure == (
             "torch>=2.5,<2.7",
             "brotli",
@@ -88,3 +92,19 @@ def test_time_traveler_l5_declares_archive_numpy_runtime_dependency() -> None:
         if row.substrate_id == "time_traveler_l5_autonomy"
     )
     assert "numpy" in tt5l.runtime_dep_closure
+
+
+def test_time_traveler_l5_probe_disambiguator_is_auto_wire_visible() -> None:
+    snapshot = dict(_REGISTERED_SUBSTRATES)
+    try:
+        _clear_registry_for_tests()
+        module = importlib.import_module(
+            "tac.substrates.time_traveler_l5_autonomy.registered_substrate"
+        )
+        importlib.reload(module)
+
+        rows = query_substrates_for_probe_disambiguators()
+        assert rows["time_traveler_l5_autonomy"] == L5V2_PROBE_TOOL_PATH
+    finally:
+        _clear_registry_for_tests()
+        _REGISTERED_SUBSTRATES.update(snapshot)
