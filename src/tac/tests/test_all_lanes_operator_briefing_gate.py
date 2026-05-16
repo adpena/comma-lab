@@ -71,7 +71,59 @@ def _base_briefing_payload() -> dict[str, object]:
                         "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
                     ),
                     "local_ledger_present": True,
+                    "local_ledger_sha256": "a" * 64,
                     "lane_registry_registered": True,
+                    "l5_v2_asymptotic_next_action_status": {
+                        "schema": "l5_v2_asymptotic_next_action_status_v1",
+                        "candidate_id": (
+                            "z6_z7_z8_predictive_coding_world_models"
+                        ),
+                        "lane_id": (
+                            "lane_time_traveler_l5_z6_z7_z8_predictive_"
+                            "coding_world_models_scoping_design_20260516"
+                        ),
+                        "ledger_present": True,
+                        "ledger_sha256": "a" * 64,
+                        "lane_registry_registered": True,
+                        "canonical_replacement_lane_id": "",
+                        "canonical_replacement_lane_registered": False,
+                        "expected_first_artifact_status": [],
+                        "expected_first_artifacts_all_present": False,
+                        "next_prerequisite_status": {
+                            "status": "pending",
+                            "ready_for_l1_build": True,
+                            "ready_for_l1_scaffold_dispatch": False,
+                        },
+                        "ready_for_l1_build_semantics": (
+                            "ready_to_start_l1_scaffold_work_only_not_"
+                            "scaffold_ready"
+                        ),
+                    },
+                }
+            ],
+            "l5_v2_asymptotic_next_action_status": [
+                {
+                    "schema": "l5_v2_asymptotic_next_action_status_v1",
+                    "candidate_id": "z6_z7_z8_predictive_coding_world_models",
+                    "lane_id": (
+                        "lane_time_traveler_l5_z6_z7_z8_predictive_"
+                        "coding_world_models_scoping_design_20260516"
+                    ),
+                    "ledger_present": True,
+                    "ledger_sha256": "a" * 64,
+                    "lane_registry_registered": True,
+                    "canonical_replacement_lane_id": "",
+                    "canonical_replacement_lane_registered": False,
+                    "expected_first_artifact_status": [],
+                    "expected_first_artifacts_all_present": False,
+                    "next_prerequisite_status": {
+                        "status": "pending",
+                        "ready_for_l1_build": True,
+                        "ready_for_l1_scaffold_dispatch": False,
+                    },
+                    "ready_for_l1_build_semantics": (
+                        "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+                    ),
                 }
             ],
             "tt5l_campaign_readiness": {
@@ -646,6 +698,10 @@ def test_operator_briefing_dispatch_gate_rejects_asymptotic_false_authority() ->
     bad["ready_for_exact_eval_dispatch"] = True
     bad["lane_registry_registered"] = False
     bad["ready_for_l1_build_semantics"] = "ambiguous"
+    bad_status = dict(bad["l5_v2_asymptotic_next_action_status"])
+    bad_status["lane_registry_registered"] = False
+    bad_status["canonical_replacement_lane_registered"] = False
+    bad["l5_v2_asymptotic_next_action_status"] = bad_status
     l5["asymptotic_pursuit_candidates"] = [bad]
     payload["l5_v2_frontier_readiness"] = l5
 
@@ -662,7 +718,48 @@ def test_operator_briefing_dispatch_gate_rejects_asymptotic_false_authority() ->
     ) in failures
     assert (
         "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:"
+        "next_action_status_lane_registry_missing"
+    ) in failures
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
         "z6_z7_z8_predictive_coding_world_models:l1_semantics_missing"
+    ) in failures
+
+
+def test_operator_briefing_dispatch_gate_rejects_completed_asymptotic_action_ready() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])
+    bad = dict(l5["asymptotic_pursuit_candidates"][0])
+    bad["ready_for_l1_build"] = False
+    bad["l1_scaffold_present"] = True
+    bad["recommended_next_action_completed_or_superseded"] = True
+    bad["ready_for_recommended_next_action"] = True
+    bad["ready_for_l1_build_semantics"] = (
+        "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+    )
+    l5["asymptotic_pursuit_candidates"] = [bad]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:"
+        "completed_l1_semantics_invalid"
+    ) in failures
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:completed_action_still_ready"
     ) in failures
 
 

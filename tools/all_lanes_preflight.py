@@ -837,6 +837,21 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 f"asymptotic_candidate_count_mismatch:{len(asymptotic_candidates)}"
                 f"!={asymptotic_count}"
             )
+        asymptotic_next_action_status = l5.get(
+            "l5_v2_asymptotic_next_action_status"
+        )
+        if not isinstance(asymptotic_next_action_status, list):
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                "asymptotic_next_action_status_missing_or_not_list"
+            )
+            asymptotic_next_action_status = []
+        if len(asymptotic_next_action_status) != asymptotic_count:
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                f"asymptotic_next_action_status_count_mismatch:"
+                f"{len(asymptotic_next_action_status)}!={asymptotic_count}"
+            )
         for idx, candidate in enumerate(asymptotic_candidates):
             if not isinstance(candidate, dict):
                 failures.append(
@@ -868,12 +883,121 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                     "l5_v2_frontier_readiness:"
                     f"asymptotic_candidate:{candidate_id}:lane_registry_missing"
                 )
-            if candidate.get("ready_for_l1_build") is True and candidate.get(
-                "ready_for_l1_build_semantics"
-            ) != "ready_to_start_l1_scaffold_work_only_not_scaffold_ready":
+            next_action_status = candidate.get(
+                "l5_v2_asymptotic_next_action_status"
+            )
+            if not isinstance(next_action_status, dict):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:"
+                    "next_action_status_missing_or_not_object"
+                )
+                next_action_status = {}
+            else:
+                if next_action_status.get("schema") != (
+                    "l5_v2_asymptotic_next_action_status_v1"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_bad_schema"
+                    )
+                if str(next_action_status.get("candidate_id") or "") != candidate_id:
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_candidate_mismatch"
+                    )
+                if next_action_status.get("ledger_present") != candidate.get(
+                    "local_ledger_present"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_ledger_presence_mismatch"
+                    )
+                if next_action_status.get("ledger_sha256") != candidate.get(
+                    "local_ledger_sha256"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_ledger_sha_mismatch"
+                    )
+                if next_action_status.get("lane_registry_registered") != (
+                    candidate.get("lane_registry_registered")
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_registry_mismatch"
+                    )
+                canonical_replacement_registered = (
+                    next_action_status.get("canonical_replacement_lane_registered")
+                    is True
+                )
+                if (
+                    next_action_status.get("ledger_present") is True
+                    and next_action_status.get("lane_registry_registered") is not True
+                    and not canonical_replacement_registered
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_action_status_lane_registry_missing"
+                    )
+                next_prerequisite_status = next_action_status.get(
+                    "next_prerequisite_status"
+                )
+                if not isinstance(next_prerequisite_status, dict):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_prerequisite_status_missing_or_not_object"
+                    )
+                elif next_prerequisite_status.get("ready_for_l1_build") != (
+                    candidate.get("ready_for_l1_build")
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:"
+                        "next_prerequisite_l1_build_mismatch"
+                    )
+            l1_semantics = candidate.get("ready_for_l1_build_semantics")
+            valid_l1_semantics = {
+                "ready_to_start_l1_scaffold_work_only_not_scaffold_ready",
+                "l1_scaffold_present_next_action_completed",
+            }
+            if l1_semantics not in valid_l1_semantics:
                 failures.append(
                     "l5_v2_frontier_readiness:"
                     f"asymptotic_candidate:{candidate_id}:l1_semantics_missing"
+                )
+            if (
+                candidate.get("ready_for_l1_build") is True
+                and l1_semantics
+                != "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:l1_build_semantics_invalid"
+                )
+            if (
+                candidate.get("l1_scaffold_present") is True
+                and l1_semantics != "l1_scaffold_present_next_action_completed"
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:completed_l1_semantics_invalid"
+                )
+            if (
+                candidate.get("recommended_next_action_completed_or_superseded")
+                is True
+                and candidate.get("ready_for_recommended_next_action") is True
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:completed_action_still_ready"
                 )
         tt5l = l5.get("tt5l_campaign_readiness")
         if not isinstance(tt5l, dict):

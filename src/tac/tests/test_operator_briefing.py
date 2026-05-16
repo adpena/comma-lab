@@ -138,6 +138,7 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["rank_or_kill_eligible"] is False
     assert l5["ready_for_exact_eval_dispatch"] is False
     assert l5["asymptotic_pursuit_candidate_count"] == 3
+    assert len(l5["l5_v2_asymptotic_next_action_status"]) == 3
     assert {
         row["candidate_id"]
         for row in l5["asymptotic_pursuit_candidate_sample"]
@@ -166,6 +167,17 @@ def test_briefing_json_composite_has_all_three_keys():
         row["effective_recommended_next_action_id"].startswith(
             "completed_or_superseded:"
         )
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    )
+    assert all(
+        row["l5_v2_asymptotic_next_action_status"]["ledger_present"] is True
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    )
+    assert all(
+        row["l5_v2_asymptotic_next_action_status"][
+            "next_prerequisite_status"
+        ]["status"]
+        == "completed_or_superseded"
         for row in l5["asymptotic_pursuit_candidate_sample"]
     )
     assert l5["measurement_schedule_score_claim"] is False

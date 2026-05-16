@@ -65,9 +65,18 @@ OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
+# Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke (default for first-anchor v1).
+SMOKE_ONLY="${SMOKE_ONLY:-1}"
 Z6_VIDEO_PATH="${Z6_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 Z6_OUTPUT_DIR="${Z6_OUTPUT_DIR:-$OUTPUT_DIR}"
-Z6_EPOCHS="${Z6_EPOCHS:-300}"
+Z6_EPOCHS="${Z6_EPOCHS:-}"
+if [ -z "$Z6_EPOCHS" ]; then
+    if [ "$SMOKE_ONLY" = "1" ]; then
+        Z6_EPOCHS="3"
+    else
+        Z6_EPOCHS="300"
+    fi
+fi
 Z6_BATCH_SIZE="${Z6_BATCH_SIZE:-4}"
 Z6_LR="${Z6_LR:-5e-4}"
 Z6_LAMBDA_RESIDUAL_ENTROPY="${Z6_LAMBDA_RESIDUAL_ENTROPY:-1.0}"
@@ -77,9 +86,6 @@ Z6_IDENTITY_PREDICTOR="${Z6_IDENTITY_PREDICTOR:-false}"
 Z6_DEVICE="${Z6_DEVICE:-cuda}"
 Z6_UPSTREAM_DIR="${Z6_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 Z6_ENABLE_AUTOCAST_FP16="${Z6_ENABLE_AUTOCAST_FP16:-false}"
-
-# Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke (default for first-anchor v1).
-SMOKE_ONLY="${SMOKE_ONLY:-1}"
 
 DISPATCH_INSTANCE_JOB_ID="${Z6_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INSTANCE_JOB_ID:-}}"
 DISPATCH_CLAIMS_PATH="${Z6_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"

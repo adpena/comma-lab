@@ -180,6 +180,9 @@ L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH = (
 L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA = (
     "l5_v2_asymptotic_pursuit_candidates_v1"
 )
+L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA = (
+    "l5_v2_asymptotic_next_action_status_v1"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -439,6 +442,42 @@ def l5_v2_asymptotic_pursuit_candidates(
                 "advance using l1_build_blockers/dependency_blockers rather than "
                 "rebuilding the same scaffold."
             )
+        ready_for_recommended_next_action = (
+            ledger_present and lane_registry_registered and not l1_scaffold_present
+        )
+        ready_for_l1_build_semantics = (
+            "l1_scaffold_present_next_action_completed"
+            if l1_scaffold_present
+            else "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+        )
+        next_prerequisite_status = {
+            "status": recommended_next_action_status,
+            "action_id": effective_next_action_id,
+            "action": effective_next_action,
+            "ready_for_recommended_next_action": ready_for_recommended_next_action,
+            "ready_for_l1_build": ready_for_l1_build,
+            "ready_for_l1_scaffold_dispatch": False,
+            "l1_scaffold_present": l1_scaffold_present,
+            "blockers": list(l1_build_blockers),
+            "dependency_blockers": list(candidate.dependency_blockers),
+        }
+        l5_v2_asymptotic_next_action_status = {
+            "schema": L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA,
+            "candidate_id": candidate.candidate_id,
+            "lane_id": candidate.lane_id,
+            "local_ledger_path": candidate.local_ledger_path,
+            "ledger_present": ledger_present,
+            "ledger_sha256": ledger_sha256,
+            "lane_registry_registered": lane_registry_registered,
+            "canonical_replacement_lane_id": "",
+            "canonical_replacement_lane_registered": False,
+            "expected_first_artifact_status": expected_first_artifact_status,
+            "expected_first_artifacts_all_present": (
+                expected_first_artifacts_all_present
+            ),
+            "next_prerequisite_status": next_prerequisite_status,
+            "ready_for_l1_build_semantics": ready_for_l1_build_semantics,
+        }
         aggregate_blockers.extend(blockers)
         rows.append(
             {
@@ -459,24 +498,21 @@ def l5_v2_asymptotic_pursuit_candidates(
                 "rank_or_kill_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "ready_for_paid_dispatch": False,
-                "ready_for_recommended_next_action": (
-                    ledger_present and lane_registry_registered and not l1_scaffold_present
-                ),
+                "ready_for_recommended_next_action": ready_for_recommended_next_action,
                 "recommended_next_action_status": recommended_next_action_status,
                 "effective_recommended_next_action_id": effective_next_action_id,
                 "effective_recommended_next_action": effective_next_action,
                 "ready_for_l1_build": ready_for_l1_build,
-                "ready_for_l1_build_semantics": (
-                    "l1_scaffold_present_next_action_completed"
-                    if l1_scaffold_present
-                    else "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
-                ),
+                "ready_for_l1_build_semantics": ready_for_l1_build_semantics,
                 "l1_scaffold_present": l1_scaffold_present,
                 "recommended_next_action_completed_or_superseded": (
                     l1_scaffold_present
                 ),
                 "ready_for_l1_scaffold_dispatch": False,
                 "l1_build_blockers": l1_build_blockers,
+                "l5_v2_asymptotic_next_action_status": (
+                    l5_v2_asymptotic_next_action_status
+                ),
             }
         )
     return {
@@ -486,6 +522,9 @@ def l5_v2_asymptotic_pursuit_candidates(
         "candidate_count": len(rows),
         "candidate_ids": [str(row["candidate_id"]) for row in rows],
         "candidates": rows,
+        "l5_v2_asymptotic_next_action_status": [
+            row["l5_v2_asymptotic_next_action_status"] for row in rows
+        ],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -2409,6 +2448,13 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
             "claim_lane_before_dispatch": True,
             "terminal_claim_required": True,
+            "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+            "claim_lifecycle_owner": (
+                "tools/dispatch_modal_paired_auth_eval.py plus per-axis Modal "
+                "auth-eval wrappers"
+            ),
+            "preclaim_forbidden": True,
+            "standalone_active_claim_command": None,
             "lane_id": LANE_ID,
             "pair_group_id": pair_group_id,
             "required_axes": list(_REQUIRED_EXACT_AXES),
@@ -2432,9 +2478,21 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 f"--notes {pair_group_id}:<failure_class>:<job_id>"
             ),
             "command_template": (
-                ".venv/bin/python tools/claim_lane_dispatch.py claim "
-                f"--lane-id {LANE_ID} --notes tt5l_l5_v2_first_anchor && "
-                "<run TT5L CPU/CUDA paired timing smoke from recipe>"
+                ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+                "--archive <byte_closed_archive.zip> "
+                "--submission-dir <submission_runtime_dir> "
+                "--expected-archive-sha256 <archive_sha256> "
+                f"--lane-id-base {LANE_ID} "
+                f"--pair-group-id {pair_group_id} "
+                "--label l5_v2_tt5l_first_anchor "
+                "--run-id <utc_run_id> "
+                "--output-root experiments/results/l5_v2_paired_measurements "
+                "--gpu A100 "
+                "--claim-agent codex:l5_v2_paired_axis_plan "
+                "--claim-notes tt5l_l5_v2_first_anchor "
+                "--expected-runtime-tree-sha256 auto "
+                "--json-out <paired_dispatch_plan.json> "
+                "[--execute only after operator approval]"
             ),
             "score_claim": False,
             "promotion_eligible": False,

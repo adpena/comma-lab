@@ -1503,6 +1503,14 @@ def _l5_v2_frontier_readiness(
         for candidate in asymptotic_payload.get("candidates", [])
         if isinstance(candidate, dict)
     ]
+    asymptotic_next_action_status = [
+        status
+        for status in asymptotic_payload.get(
+            "l5_v2_asymptotic_next_action_status",
+            [],
+        )
+        if isinstance(status, dict)
+    ]
     architecture_lock_packet_blockers = architecture_lock_packet.get(
         "architecture_lock_blockers",
     )
@@ -1529,6 +1537,7 @@ def _l5_v2_frontier_readiness(
         "asymptotic_pursuit_candidate_count": len(asymptotic_candidates),
         "asymptotic_pursuit_candidates": asymptotic_candidates,
         "asymptotic_pursuit_candidate_sample": asymptotic_candidates[:3],
+        "l5_v2_asymptotic_next_action_status": asymptotic_next_action_status,
         "measurement_schedule_tool_path": measurement_schedule_tool_path,
         "measurement_schedule_artifact_path": measurement_schedule_artifact_path,
         "measurement_schedule_report_path": measurement_schedule_report_path,
@@ -1746,6 +1755,17 @@ def _format_l5_v2_frontier_readiness() -> str:
                 f"{candidate.get('expected_first_artifacts_all_present')}, "
                 f"l1_blockers={candidate.get('l1_build_blockers', [])})"
             )
+            status = candidate.get("l5_v2_asymptotic_next_action_status")
+            if isinstance(status, dict):
+                next_prerequisite = status.get("next_prerequisite_status")
+                if not isinstance(next_prerequisite, dict):
+                    next_prerequisite = {}
+                lines.append(
+                    "      next-status: "
+                    f"ledger={status.get('ledger_present')} "
+                    f"registry={status.get('lane_registry_registered')} "
+                    f"prereq={next_prerequisite.get('status')}"
+                )
     else:
         lines.append("    - none")
     lines.extend(

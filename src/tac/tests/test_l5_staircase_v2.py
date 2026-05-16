@@ -918,9 +918,11 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_paid_dispatch"] is False
+    assert len(payload["l5_v2_asymptotic_next_action_status"]) == 3
 
     rows = {row["candidate_id"]: row for row in payload["candidates"]}
     z6 = rows["z6_z7_z8_predictive_coding_world_models"]
+    z6_status = z6["l5_v2_asymptotic_next_action_status"]
     assert z6["recommended_next_action_id"] == "build_z6_l1_scaffold_first"
     assert z6["ready_for_recommended_next_action"] is False
     assert z6["recommended_next_action_status"] == "completed_or_superseded"
@@ -938,6 +940,19 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert z6["ready_for_l1_build_semantics"] == (
         "l1_scaffold_present_next_action_completed"
     )
+    assert z6_status["schema"] == l5_v2.L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA
+    assert z6_status["candidate_id"] == z6["candidate_id"]
+    assert z6_status["ledger_present"] is True
+    assert z6_status["ledger_sha256"] == z6["local_ledger_sha256"]
+    assert z6_status["lane_registry_registered"] is True
+    assert z6_status["expected_first_artifacts_all_present"] is True
+    assert z6_status["ready_for_l1_build_semantics"] == (
+        "l1_scaffold_present_next_action_completed"
+    )
+    assert z6_status["next_prerequisite_status"]["status"] == (
+        "completed_or_superseded"
+    )
+    assert z6_status["next_prerequisite_status"]["ready_for_l1_build"] is False
     assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
@@ -1003,6 +1018,47 @@ def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
         "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
         "scoping_design_20260516"
     ) in payload["blockers"]
+
+
+def test_l5_v2_asymptotic_pursuit_candidates_require_registry_with_ledger(
+    tmp_path: Path,
+) -> None:
+    ledger_rel = Path(
+        ".omx/research/"
+        "time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
+        "asymptotic_pursuit_scoping_design_20260516.md"
+    )
+    ledger_path = tmp_path / ledger_rel
+    ledger_path.parent.mkdir(parents=True)
+    ledger_path.write_text("# Z6 source ledger\n", encoding="utf-8")
+
+    payload = l5_v2.l5_v2_asymptotic_pursuit_candidates(repo_root=tmp_path)
+    rows = {row["candidate_id"]: row for row in payload["candidates"]}
+    z6 = rows["z6_z7_z8_predictive_coding_world_models"]
+
+    assert z6["local_ledger_present"] is True
+    assert z6["local_ledger_sha256"]
+    assert z6["lane_registry_registered"] is False
+    assert z6["l5_v2_asymptotic_next_action_status"]["ledger_present"] is True
+    assert z6["l5_v2_asymptotic_next_action_status"]["ledger_sha256"] == (
+        z6["local_ledger_sha256"]
+    )
+    assert (
+        z6["l5_v2_asymptotic_next_action_status"]["lane_registry_registered"]
+        is False
+    )
+    assert z6["ready_for_recommended_next_action"] is False
+    assert z6["ready_for_l1_build"] is False
+    assert z6["ready_for_l1_scaffold_dispatch"] is False
+    assert (
+        "l5_v2_asymptotic_pursuit_lane_registry_missing:"
+        "z6_z7_z8_predictive_coding_world_models:"
+        "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
+        "scoping_design_20260516"
+    ) in z6["blockers"]
+    assert "requires_l5_v2_asymptotic_pursuit_lane_registry_entry" in z6[
+        "l1_build_blockers"
+    ]
 
 
 def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
@@ -1884,6 +1940,9 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
     assert action["action_id"] == "prepare_tt5l_paired_cpu_cuda_axis_plan"
     assert action["claim_lane_before_dispatch"] is True
     assert action["terminal_claim_required"] is True
+    assert action["paired_dispatch_tool"] == "tools/dispatch_modal_paired_auth_eval.py"
+    assert action["preclaim_forbidden"] is True
+    assert action["standalone_active_claim_command"] is None
     assert action["required_axes"] == ["contest_cpu", "contest_cuda"]
     assert action["per_axis_job_id_fields"] == {
         "contest_cpu": "contest_cpu_job_id",
@@ -1892,6 +1951,11 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
     assert "tools/recover_modal_auth_eval.py" in action["harvest_command_template"]
     assert "completed_paired_axis_plan" in action["terminal_claim_success_template"]
     assert "failed_paired_axis_plan" in action["terminal_claim_failure_template"]
+    assert "tools/dispatch_modal_paired_auth_eval.py" in action["command_template"]
+    assert "--pair-group-id" in action["command_template"]
+    assert "[--execute only after operator approval]" in action["command_template"]
+    assert "&&" not in action["command_template"]
+    assert "claim_lane_dispatch.py claim" not in action["command_template"]
 
 
 def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
