@@ -619,7 +619,7 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
 
     assert [step.step_id for step in steps] == [
         "l5v2_00_source_and_alias_custody",
-        "l5v2_01_dykstra_feasibility_polytope",
+        "l5v2_01_dykstra_score_axis_sanity",
         "l5v2_02_sideinfo_consumption_proof",
         "l5v2_03_probe_disambiguator",
         "l5v2_04_paired_axis_anchor",
@@ -632,7 +632,7 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
         assert set(step.required_gate_ids) <= gate_ids
 
     dykstra_step = next(
-        step for step in steps if step.step_id == "l5v2_01_dykstra_feasibility_polytope"
+        step for step in steps if step.step_id == "l5v2_01_dykstra_score_axis_sanity"
     )
     assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH in dykstra_step.deliverable_surface
     assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH in dykstra_step.deliverable_surface
@@ -791,7 +791,7 @@ def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action(
     assert tt5l["dykstra_feasibility_artifact_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
-        "run_tt5l_dykstra_feasibility_polytope"
+        "run_tt5l_dykstra_score_axis_sanity"
     )
     assert tt5l["next_non_pr106_l5_action"]["phase"] == (
         "cargo_cult_unwind_feasibility"
@@ -799,6 +799,10 @@ def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action(
     assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH in tt5l[
         "next_non_pr106_l5_action"
     ]["expected_artifacts"]
+    command_template = tt5l["next_non_pr106_l5_action"]["command_template"]
+    assert "--tt5l-five-move-polytope" in command_template
+    assert "<score_axis_lower_bound>" in command_template
+    assert "<polytope_projected_lower_bound>" not in command_template
     assert "tt5l_dykstra_feasibility_artifact_missing" in tt5l["blockers"]
     assert "PR106" not in tt5l["next_non_pr106_l5_action"]["action_id"]
 
@@ -837,7 +841,7 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_empty_json(
     assert tt5l["dykstra_feasibility_artifact_valid"] is False
     assert "tt5l_dykstra_feasibility_artifact_empty" in tt5l["blockers"]
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
-        "run_tt5l_dykstra_feasibility_polytope"
+        "run_tt5l_dykstra_score_axis_sanity"
     )
 
 
@@ -855,7 +859,7 @@ def test_l5_v2_tt5l_dykstra_artifact_requires_archive_size_basis(
     assert tt5l["dykstra_feasibility_artifact_valid"] is False
     assert "tt5l_dykstra_feasibility_archive_size_bytes_missing" in tt5l["blockers"]
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
-        "run_tt5l_dykstra_feasibility_polytope"
+        "run_tt5l_dykstra_score_axis_sanity"
     )
 
 
@@ -957,7 +961,7 @@ def test_l5_v2_tt5l_dykstra_artifact_only_feasible_unlocks(
     assert blocker in tt5l["blockers"]
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
-        "run_tt5l_dykstra_feasibility_polytope"
+        "run_tt5l_dykstra_score_axis_sanity"
     )
 
 
@@ -984,7 +988,7 @@ def test_l5_v2_valid_gates_do_not_unlock_tt5l_timing_without_dykstra(
     assert tt5l["dykstra_feasibility_artifact_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
-        "run_tt5l_dykstra_feasibility_polytope"
+        "run_tt5l_dykstra_score_axis_sanity"
     )
 
 

@@ -28,6 +28,10 @@ No score claim, promotion claim, or exact-eval readiness claim is made here.
 - Dykstra artifacts now declare `feasibility_scope=score_axis_sanity_only` and
   `move_level_constraint_proof=false`; L5 v2 readiness rejects any artifact that
   is missing these fields or claims move-level feasibility authority.
+- The operator-facing L5 v2 Dykstra action is now labeled
+  `run_tt5l_dykstra_score_axis_sanity`, and its command template includes
+  `--tt5l-five-move-polytope` so the emitted artifact can satisfy the declared
+  TT5L constraint-id gate.
 - The C1/Z5/TT5L probe CLI exits nonzero when observations are missing and the
   verdict is blocked.
 - If a probe template already exists, the next action advances to populating and
@@ -95,3 +99,11 @@ Follow-up Dykstra flag regression:
 ```
 
 Result: `88 passed in 0.71s`.
+
+Follow-up operator-action wording/flag regression:
+
+```bash
+.venv/bin/python -m pytest src/tac/tests/test_l5_staircase_v2.py -q
+```
+
+Result: `78 passed in 0.51s`.

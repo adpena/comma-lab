@@ -232,12 +232,13 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             research_basis_ids=basis,
         ),
         L5V2Step(
-            step_id="l5v2_01_dykstra_feasibility_polytope",
-            title="Dykstra feasibility polytope",
+            step_id="l5v2_01_dykstra_score_axis_sanity",
+            title="Dykstra score-axis sanity",
             objective=(
-                "Project the retired additive TT5L five-move score band through "
-                "the contest formula and declared design-move constraint axes "
-                "before side-info proof or timing work."
+                "Project the retired additive TT5L score band through the "
+                "contest formula with declared design-move constraint ids before "
+                "side-info proof or timing work. This is not a move-level "
+                "feasibility proof."
             ),
             deliverable_surface=(
                 f"{TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH} + "
@@ -1302,14 +1303,15 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
 
     if not dykstra_valid:
         next_action = {
-            "action_id": "run_tt5l_dykstra_feasibility_polytope",
+            "action_id": "run_tt5l_dykstra_score_axis_sanity",
             "phase": "cargo_cult_unwind_feasibility",
             "command_template": (
                 f".venv/bin/python {TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH} "
                 f"--substrate-id {TT5L_DYKSTRA_SUBSTRATE_ID} "
-                "--predicted-band-lo <polytope_projected_lower_bound> "
-                "--predicted-band-hi <polytope_projected_upper_bound> "
+                "--predicted-band-lo <score_axis_lower_bound> "
+                "--predicted-band-hi <score_axis_upper_bound> "
                 "--archive-size-bytes <tt5l_target_or_candidate_archive_bytes> "
+                "--tt5l-five-move-polytope "
                 f"--output-json {TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH}"
             ),
             "expected_artifacts": [TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH],
