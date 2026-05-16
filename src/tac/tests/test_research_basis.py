@@ -63,6 +63,9 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
     assert "constriction_ans" in research_basis_ids_for_family("aq_huffman")
     assert "ans_duda_2009" in research_basis_ids_for_family("aq_huffman")
     assert "rans_duda_2013" in research_basis_ids_for_family("aq_huffman")
+    assert "rfc7932_brotli" in research_basis_ids_for_family("entropy")
+    assert "mlir_2020" in research_basis_ids_for_family("packet_ir")
+    assert "kaitai_struct" in research_basis_ids_for_family("packet_ir")
     assert "minnen_joint_priors_2018" in research_basis_ids_for_family("entropy")
     assert "tensorflow_compression" in research_basis_ids_for_family("entropy")
     assert "cool_chic_5_2026" in research_basis_ids_for_family("cool_chic")
@@ -76,12 +79,22 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
     assert "wire_2023" in research_basis_ids_for_family("wavelet")
     assert "mallat_mra_1989" in research_basis_ids_for_family("wavelet")
     assert "raft_2020" in research_basis_ids_for_family("raft")
+    assert "teconerv_2026" in research_basis_ids_for_family("hnerv")
+    assert "vjepa2_2025" in research_basis_ids_for_family("pretrained_driving_prior")
+    assert "vjepa2_1_dense_2026" in research_basis_ids_for_family(
+        "pretrained_driving_prior"
+    )
+    assert "deepfovea_2019" in research_basis_ids_for_family("foveation")
+    assert "dsslic_2019" in research_basis_ids_for_family("semantic_labels")
     l5_v2_ids = research_basis_ids_for_family("time_traveler_l5_v2")
     assert l5_v2_ids == [
         "rao_ballard_1999",
         "friston_free_energy_2010",
         "dreamerv3_2023",
         "ha_schmidhuber_world_models_2018",
+        "vjepa2_2025",
+        "vjepa2_1_dense_2026",
+        "teconerv_2026",
         "pnvc_2025",
         "dcvc_rt_2025",
         "unified_intra_inter_nvc_2025",
@@ -122,6 +135,14 @@ def test_legacy_research_basis_aliases_resolve_to_canonical_ids() -> None:
     assert canonical_research_basis_id("unified_intra_inter") == "unified_intra_inter_nvc_2025"
     assert canonical_research_basis_id("glvc") == "glvc_2025"
     assert canonical_research_basis_id("gnvc_vd") == "gnvc_vd_2025"
+    assert canonical_research_basis_id("teconerv") == "teconerv_2026"
+    assert canonical_research_basis_id("vjepa2") == "vjepa2_2025"
+    assert canonical_research_basis_id("vjepa2_1") == "vjepa2_1_dense_2026"
+    assert canonical_research_basis_id("deepfovea") == "deepfovea_2019"
+    assert canonical_research_basis_id("dsslic") == "dsslic_2019"
+    assert canonical_research_basis_id("mlir") == "mlir_2020"
+    assert canonical_research_basis_id("kaitai") == "kaitai_struct"
+    assert canonical_research_basis_id("brotli_rfc") == "rfc7932_brotli"
     manifest = research_basis_manifest(["balle_2018", "balle_hyperprior_2018"])
     assert manifest["source_count"] == 1
     assert manifest["sources"][0]["basis_id"] == "balle_hyperprior_2018"
@@ -144,6 +165,14 @@ def test_all_registered_research_sources_satisfy_required_contract() -> None:
     assert "unified_intra_inter_nvc_2025" in by_id
     assert "glvc_2025" in by_id
     assert "gnvc_vd_2025" in by_id
+    assert "teconerv_2026" in by_id
+    assert "vjepa2_2025" in by_id
+    assert "vjepa2_1_dense_2026" in by_id
+    assert "deepfovea_2019" in by_id
+    assert "dsslic_2019" in by_id
+    assert "mlir_2020" in by_id
+    assert "kaitai_struct" in by_id
+    assert "rfc7932_brotli" in by_id
     for basis_id, source in by_id.items():
         for field in REQUIRED_SOURCE_FIELDS:
             assert field in source, f"{basis_id} missing {field}"
