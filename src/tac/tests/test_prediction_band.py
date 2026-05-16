@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 from tac.optimization.prediction_band import (
     BandSource,
@@ -43,6 +44,14 @@ def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
     }
 
 
+def _write_anchor_files(base_dir: Path, band: PredictionBand) -> None:
+    for anchor in band.empirical_anchor.anchors:
+        for key in ("artifact_path", "log_path"):
+            path = base_dir / str(anchor[key])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f"{key}\n", encoding="utf-8")
+
+
 def _valid_band() -> PredictionBand:
     return PredictionBand(
         band_id="pb_test_valid_v1",
@@ -80,12 +89,16 @@ def _valid_band() -> PredictionBand:
     )
 
 
-def test_valid_prediction_band_can_influence_rank_reward():
+def test_valid_prediction_band_can_influence_rank_reward(tmp_path: Path):
+    band = _valid_band()
+    _write_anchor_files(tmp_path, band)
+
     verdict = validate_prediction_band(
-        _valid_band(),
+        band,
         expected_subject_id="z3_balle_hyperprior_bolton",
         expected_low=-0.010,
         expected_high=-0.001,
+        artifact_base_dir=tmp_path,
     )
     assert verdict.blockers == ()
     assert verdict.valid_for_rank_reward is True
@@ -205,6 +218,39 @@ def test_landed_anchor_missing_custody_blocks_rank_reward():
     assert "prediction_band_empirical_anchor_artifact_missing" in verdict.blockers
 
 
+def test_landed_anchor_requires_explicit_artifact_base_dir():
+    verdict = validate_prediction_band(
+        _valid_band(),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert (
+        "prediction_band_empirical_anchor_artifact_base_dir_missing"
+        in verdict.blockers
+    )
+
+
+def test_landed_anchor_missing_log_file_blocks_rank_reward(tmp_path: Path):
+    band = _valid_band()
+    artifact_path = tmp_path / str(band.empirical_anchor.anchors[0]["artifact_path"])
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("anchor\n", encoding="utf-8")
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_log_missing" in verdict.blockers
+
+
 def test_missing_nonzero_prediction_band_becomes_rank_blocker():
     verdict = validate_optional_prediction_band(
         None,
@@ -253,7 +299,7 @@ def test_mixed_landed_band_requires_paired_cpu_cuda_anchors():
     assert "prediction_band_empirical_anchor_paired_axes_missing" in verdict.blockers
 
 
-def test_mixed_landed_band_accepts_paired_cpu_cuda_anchors():
+def test_mixed_landed_band_accepts_paired_cpu_cuda_anchors(tmp_path: Path):
     base = _valid_band()
     band = replace(
         base,
@@ -264,12 +310,14 @@ def test_mixed_landed_band_accepts_paired_cpu_cuda_anchors():
             anchors=(_exact_anchor("contest_cpu"), _exact_anchor("contest_cuda")),
         ),
     )
+    _write_anchor_files(tmp_path, band)
 
     verdict = validate_prediction_band(
         band,
         expected_subject_id="z3_balle_hyperprior_bolton",
         expected_low=-0.010,
         expected_high=-0.001,
+        artifact_base_dir=tmp_path,
     )
 
     assert verdict.blockers == ()

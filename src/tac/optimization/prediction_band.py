@@ -14,6 +14,7 @@ import dataclasses
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from tac.exact_eval_custody import (
@@ -215,6 +216,7 @@ def validate_prediction_band(
     expected_low: float | None = None,
     expected_high: float | None = None,
     known_research_basis_ids: Mapping[str, object] | None = None,
+    artifact_base_dir: Path | str | None = None,
 ) -> PredictionBandVerdict:
     """Validate that a numeric band has enough custody to influence ranking."""
     known = known_research_basis_ids or RESEARCH_SOURCES
@@ -308,6 +310,8 @@ def validate_prediction_band(
         anchor_exact_axes_seen: set[str] = set()
         if band.axis not in (*EXACT_EVAL_AXES, MIXED_EXACT_EVAL_AXIS):
             blockers.append("prediction_band_axis_not_exact_eval")
+        if artifact_base_dir is None:
+            blockers.append("prediction_band_empirical_anchor_artifact_base_dir_missing")
         for anchor_idx, anchor in enumerate(empirical.anchors):
             anchor_axis = str(anchor.get("axis") or "")
             expected_anchor_axis: str | None = None
@@ -341,6 +345,7 @@ def validate_prediction_band(
                 require_log_path=True,
                 require_devices=True,
                 annotation_prefix=f"empirical_anchor_{anchor_idx}",
+                artifact_base_dir=artifact_base_dir,
             )
             blocker_map = {
                 "axis_missing": "prediction_band_empirical_anchor_axis_missing",
@@ -440,6 +445,7 @@ def validate_optional_prediction_band(
     low: float,
     high: float,
     axis: str,
+    artifact_base_dir: Path | str | None = None,
 ) -> PredictionBandVerdict:
     """Validate an optional JSON-style band payload.
 
@@ -468,6 +474,7 @@ def validate_optional_prediction_band(
         expected_subject_id=subject_id,
         expected_low=low,
         expected_high=high,
+        artifact_base_dir=artifact_base_dir,
     )
 
 
