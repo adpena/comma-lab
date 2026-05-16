@@ -113,6 +113,7 @@ def dispatch_claim_command(
     status: str,
     python_executable: str = ".venv/bin/python",
     claim_tool: str | Path = "tools/claim_lane_dispatch.py",
+    claims_path: str | Path | None = None,
     default_notes: str = "",
 ) -> list[str]:
     """Build the canonical lane-claim command without executing it."""
@@ -151,6 +152,8 @@ def dispatch_claim_command(
         "--notes",
         spec.notes or default_notes,
     ]
+    if claims_path is not None:
+        cmd.extend(["--claims-path", str(claims_path)])
     if spec.force:
         cmd.append("--force")
     return cmd
@@ -164,6 +167,7 @@ def record_dispatch_claim(
     default_notes: str = "",
     python_executable: str = ".venv/bin/python",
     claim_tool: str | Path = "tools/claim_lane_dispatch.py",
+    claims_path: str | Path | None = None,
 ) -> None:
     """Execute the canonical lane-claim command and fail closed on conflicts."""
 
@@ -172,6 +176,7 @@ def record_dispatch_claim(
         status=status,
         python_executable=python_executable,
         claim_tool=claim_tool,
+        claims_path=claims_path,
         default_notes=default_notes,
     )
     proc = subprocess.run(cmd, cwd=repo_root, text=True, check=False)
@@ -189,6 +194,7 @@ def terminal_dispatch_claim(
     notes: str,
     python_executable: str = ".venv/bin/python",
     claim_tool: str | Path = "tools/claim_lane_dispatch.py",
+    claims_path: str | Path | None = None,
 ) -> None:
     """Append a terminal claim row for a dispatch claim."""
 
@@ -207,6 +213,7 @@ def terminal_dispatch_claim(
         status=status,
         python_executable=python_executable,
         claim_tool=claim_tool,
+        claims_path=claims_path,
     )
 
 

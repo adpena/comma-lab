@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import sys
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -203,6 +205,110 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
     assert plan["existing_anchors_reused"]["contest_cuda"]["score"] == 0.2
+
+
+def test_execute_skip_records_terminal_claims_and_repointer_manifests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    output_root = tmp_path / "results"
+    runtime_hash = "a" * 64
+    subprocess_calls: list[list[str]] = []
+
+    def fake_anchor(
+        axis: str,
+        archive_sha256: str,
+        *,
+        repo_root: Path,
+        expected_runtime_tree_sha256: str = "",
+    ):
+        assert repo_root == tmp_path
+        assert expected_runtime_tree_sha256 == runtime_hash
+        return {
+            "axis": f"contest_{axis}",
+            "archive_sha256": archive_sha256,
+            "score": 0.19 if axis == "cuda" else 0.18,
+            "runtime_tree_sha256": runtime_hash,
+            "result_path": f"existing/{axis}.json",
+            "source": "unit_anchor_scan",
+            "custody_match": True,
+        }
+
+    def fake_run(cmd, *args, **kwargs):
+        if isinstance(cmd, list) and "tools/claim_lane_dispatch.py" in " ".join(map(str, cmd)):
+            return original_subprocess_run(cmd, *args, **kwargs)
+        subprocess_calls.append(list(cmd))
+        raise AssertionError(f"provider command should not run when anchors are reused: {cmd!r}")
+
+    original_subprocess_run = mod.subprocess.run
+    monkeypatch.setattr(mod, "find_promotable_anchor_for_axis_and_sha", fake_anchor)
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": runtime_hash,
+            "contest_cpu": runtime_hash,
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": runtime_hash,
+        },
+    )
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "dispatch_modal_paired_auth_eval.py",
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            "submissions/pr106_latent_sidecar_r2_pr101_grammar",
+            "--inflate-sh",
+            "inflate.sh",
+            "--run-id",
+            "unit_pair_run",
+            "--pair-group-id",
+            "unit_pair_group",
+            "--lane-id-base",
+            "lane_unit_pair",
+            "--output-root",
+            str(output_root),
+            "--repo-root",
+            str(tmp_path),
+            "--expected-runtime-tree-sha256",
+            runtime_hash,
+            "--skip-axis-if-promotable-anchor-exists",
+            "--execute",
+        ],
+    )
+
+    assert mod.main() == 0
+    assert subprocess_calls == []
+
+    claims_text = (
+        tmp_path / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    ).read_text(encoding="utf-8")
+    assert "lane_unit_pair_contest_cuda" in claims_text
+    assert "lane_unit_pair_contest_cpu" in claims_text
+    assert claims_text.count("completed_reused_existing_anchor") == 2
+
+    for axis in ("contest_cuda", "contest_cpu"):
+        repointer = (
+            output_root
+            / ("modal_auth_eval" if axis == "contest_cuda" else "modal_auth_eval_cpu")
+            / f"unit_pair_run_{'cuda' if axis == 'contest_cuda' else 'cpu'}"
+            / f"anchor_repointer_{axis}.json"
+        )
+        payload = json.loads(repointer.read_text(encoding="utf-8"))
+        assert payload["terminal_dispatch_claim"]["lane_id"] == f"lane_unit_pair_{axis}"
+        assert (
+            payload["terminal_dispatch_claim"]["status"]
+            == "completed_reused_existing_anchor"
+        )
+        assert payload["reused_anchor"]["source"] == "unit_anchor_scan"
 
 
 def test_paired_modal_plan_auto_computes_axis_specific_uploaded_runtime_hashes(

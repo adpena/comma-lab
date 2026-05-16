@@ -42,6 +42,7 @@ if str(_SRC_DIR) not in sys.path:
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tac.deploy.claims import DispatchClaimSpec, terminal_dispatch_claim  # noqa: E402
 from tac.deploy.modal.anchor_lookup import (  # noqa: E402
     find_promotable_anchor_for_axis_and_sha,
 )
@@ -211,6 +212,47 @@ def _resolve_axis_runtime_expectations(
             cuda_expected if cuda_expected and cuda_expected == cpu_expected else None
         ),
     }
+
+
+def _terminal_reused_anchor_claim(
+    *,
+    repo_root: Path,
+    claims_root: Path,
+    axis: str,
+    plan: dict[str, Any],
+    anchor: dict[str, Any],
+    claim_agent: str,
+    pair_group_id: str,
+    run_id: str,
+) -> str:
+    """Record terminal custody for a paired-dispatch axis reused from an anchor."""
+
+    lane_id = str(plan["lanes"][axis])
+    job_id = f"{run_id}_{axis}_reused_anchor"
+    archive_sha = str(plan["archive"]["sha256"])
+    notes = (
+        "paired Modal auth eval reused existing promotable anchor; "
+        f"axis={axis}; pair_group_id={pair_group_id}; archive_sha={archive_sha}; "
+        f"anchor_result_path={anchor.get('result_path')}; "
+        f"anchor_score={anchor.get('score')}; "
+        f"anchor_source={anchor.get('source')}; "
+        f"anchor_runtime_tree_sha256={anchor.get('runtime_tree_sha256')}"
+    )
+    terminal_dispatch_claim(
+        repo_root=repo_root,
+        spec=DispatchClaimSpec(
+            lane_id=lane_id,
+            instance_job_id=job_id,
+            agent=claim_agent,
+            platform="modal",
+        ),
+        status="completed_reused_existing_anchor",
+        notes=notes,
+        python_executable=sys.executable,
+        claim_tool=REPO_ROOT / "tools" / "claim_lane_dispatch.py",
+        claims_path=claims_root / ".omx" / "state" / "active_lane_dispatch_claims.md",
+    )
+    return job_id
 
 
 def _resolve_skipped_axes(
@@ -578,6 +620,16 @@ def main() -> int:
             output_dir = Path(plan["outputs"][axis])
             try:
                 output_dir.mkdir(parents=True, exist_ok=True)
+                terminal_claim_job_id = _terminal_reused_anchor_claim(
+                    repo_root=REPO_ROOT,
+                    claims_root=resolved_repo_root,
+                    axis=axis,
+                    plan=plan,
+                    anchor=anchor,
+                    claim_agent=args.claim_agent,
+                    pair_group_id=pair_group_id,
+                    run_id=run_id,
+                )
                 repointer = output_dir / f"anchor_repointer_{axis}.json"
                 repointer.write_text(
                     json.dumps(
@@ -587,6 +639,17 @@ def main() -> int:
                             "archive_sha256": plan["archive"]["sha256"],
                             "pair_group_id": pair_group_id,
                             "reused_anchor": anchor,
+                            "terminal_dispatch_claim": {
+                                "lane_id": plan["lanes"][axis],
+                                "instance_job_id": terminal_claim_job_id,
+                                "status": "completed_reused_existing_anchor",
+                                "claims_path": str(
+                                    resolved_repo_root
+                                    / ".omx"
+                                    / "state"
+                                    / "active_lane_dispatch_claims.md"
+                                ),
+                            },
                             "written_at_utc": dt.datetime.now(dt.UTC)
                             .isoformat(timespec="seconds")
                             .replace("+00:00", "Z"),
