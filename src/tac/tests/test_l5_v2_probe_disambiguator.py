@@ -267,6 +267,44 @@ def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
     assert "l5_v2_probe_axis_score_formula_mismatch:contest_cuda" in row["blockers"]
 
 
+def test_l5_v2_probe_blocks_macos_cpu_axis_evidence(tmp_path: Path) -> None:
+    bad_cpu = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
+        axis_evidence=(
+            dict(
+                _axis_evidence(
+                    "contest_cpu",
+                    repo_root=tmp_path,
+                    score_delta=-0.050,
+                ),
+                hardware="Apple Silicon macOS advisory host",
+                inflate_device="macos-apple-m2-cpu",
+                eval_device="cpu-mps",
+                auth_eval_command="contest_auth_eval --axis contest_cpu --device mps",
+            ),
+            _axis_evidence("contest_cuda", repo_root=tmp_path, score_delta=-0.050),
+        ),
+    )
+
+    verdict = evaluate_l5_v2_probe((bad_cpu,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_hardware_not_contest_cpu:contest_cpu" in row["blockers"]
+    assert (
+        "l5_v2_probe_axis_inflate_device_not_contest_cpu:contest_cpu"
+        in row["blockers"]
+    )
+    assert (
+        "l5_v2_probe_axis_eval_device_not_contest_cpu:contest_cpu"
+        in row["blockers"]
+    )
+    assert (
+        "l5_v2_probe_axis_auth_eval_command_not_contest_cpu:contest_cpu"
+        in row["blockers"]
+    )
+
+
 def test_l5_v2_probe_rejects_delta_not_derived_from_paired_axis_scores(
     tmp_path: Path,
 ) -> None:

@@ -22,6 +22,8 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
+    evaluate_l5_v2_probe,
+    observation_from_mapping,
 )
 from tac.optimization.prediction_band import (
     BandSource,
@@ -406,6 +408,16 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _canonical_json_sha256(payload: object) -> str:
+    encoded = json.dumps(
+        payload,
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _finite_json_number(value: object) -> bool:
     return (
         not isinstance(value, bool)
@@ -558,6 +570,28 @@ def _raw_output_aggregate_sha(row: Mapping[str, Any]) -> str:
         if value:
             return value
     return ""
+
+
+def _project_probe_verdict_for_recompute_check(
+    verdict: Mapping[str, Any],
+) -> dict[str, Any]:
+    fields = (
+        "schema",
+        "tool",
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "architecture_lock_allowed",
+        "selected_candidate_id",
+        "selected_delta",
+        "selected_delta_source",
+        "required_candidates",
+        "required_exact_axes",
+        "evaluated_observations",
+        "blockers",
+        "evidence_semantics",
+    )
+    return {field: verdict.get(field) for field in fields if field in verdict}
 
 
 def _paired_row_identity_blockers(
@@ -909,6 +943,60 @@ def _gate_semantic_blockers(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:paired_exact_axes_required"
             )
+        observation_rows = _mapping_items(
+            probe.get("observations") or probe.get("probe_observations")
+        )
+        if not observation_rows:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_missing:{gate_id}:probe_observations"
+            )
+        observations = []
+        for index, row in enumerate(observation_rows):
+            try:
+                observations.append(observation_from_mapping(row))
+            except (TypeError, ValueError) as exc:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:probe_observation:{index}:{exc}"
+                )
+        recomputed_verdict: dict[str, Any] | None = None
+        recomputed_verdict_sha256 = ""
+        if observations and len(observations) == len(observation_rows):
+            recomputed_verdict = evaluate_l5_v2_probe(
+                observations,
+                repo_root=repo_root,
+            )
+            recomputed_verdict_sha256 = _canonical_json_sha256(recomputed_verdict)
+            if recomputed_verdict.get("architecture_lock_allowed") is not True:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:recomputed_architecture_lock_allowed"
+                )
+            recomputed_blockers = recomputed_verdict.get("blockers")
+            if not isinstance(recomputed_blockers, list) or recomputed_blockers:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:recomputed_probe_blockers_nonempty"
+                )
+        declared_verdict_sha256 = str(
+            probe.get("verdict_sha256") or probe.get("probe_verdict_sha256") or ""
+        ).strip().lower()
+        if not declared_verdict_sha256:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_missing:{gate_id}:probe_verdict_sha256"
+            )
+        elif not _SHA256_HEX_RE.fullmatch(declared_verdict_sha256):
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_verdict_sha256"
+            )
+        elif (
+            recomputed_verdict_sha256
+            and declared_verdict_sha256 != recomputed_verdict_sha256
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:probe_verdict_sha256_mismatch"
+            )
         verdict = probe.get("verdict") or probe.get("probe_verdict")
         if not isinstance(verdict, Mapping):
             blockers.append(
@@ -940,6 +1028,16 @@ def _gate_semantic_blockers(
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:ready_for_exact_eval_dispatch"
+            )
+        if recomputed_verdict is not None and (
+            _canonical_json_sha256(_project_probe_verdict_for_recompute_check(verdict))
+            != _canonical_json_sha256(
+                _project_probe_verdict_for_recompute_check(recomputed_verdict)
+            )
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:probe_verdict_recompute_mismatch"
             )
         verdict_blockers = verdict.get("blockers")
         if not isinstance(verdict_blockers, list):

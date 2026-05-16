@@ -243,13 +243,26 @@ def _axis_evidence_blockers(
             "score_missing": "l5_v2_probe_axis_score_missing",
             "hardware_missing": "l5_v2_probe_axis_hardware_missing",
             "hardware_not_cuda": "l5_v2_probe_axis_hardware_not_cuda",
+            "hardware_not_contest_cpu": "l5_v2_probe_axis_hardware_not_contest_cpu",
             "inflate_device_missing": "l5_v2_probe_axis_inflate_device_missing",
             "inflate_device_not_cpu": "l5_v2_probe_axis_inflate_device_not_cpu",
+            "inflate_device_not_contest_cpu": (
+                "l5_v2_probe_axis_inflate_device_not_contest_cpu"
+            ),
             "inflate_device_not_cuda": "l5_v2_probe_axis_inflate_device_not_cuda",
             "eval_device_missing": "l5_v2_probe_axis_eval_device_missing",
             "eval_device_not_cpu": "l5_v2_probe_axis_eval_device_not_cpu",
+            "eval_device_not_contest_cpu": (
+                "l5_v2_probe_axis_eval_device_not_contest_cpu"
+            ),
             "eval_device_not_cuda": "l5_v2_probe_axis_eval_device_not_cuda",
             "auth_eval_command_missing": "l5_v2_probe_axis_auth_eval_command_missing",
+            "auth_eval_command_not_contest_cpu": (
+                "l5_v2_probe_axis_auth_eval_command_not_contest_cpu"
+            ),
+            "auth_eval_command_unrecognized": (
+                "l5_v2_probe_axis_auth_eval_command_unrecognized"
+            ),
             "log_path_missing": "l5_v2_probe_axis_log_path_missing",
             "log_path_file_missing": "l5_v2_probe_axis_log_path_file_missing",
             "artifact_path_file_missing": "l5_v2_probe_axis_artifact_path_file_missing",

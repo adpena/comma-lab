@@ -12,6 +12,11 @@ Status: landed
 2. The L5 v2 probe disambiguator could select an architecture from a finite
    freeform `predicted_or_measured_delta` even when paired CPU/CUDA axis rows
    did not bind that delta.
+3. The L5 v2 staircase gate could trust a stored probe verdict object instead
+   of recomputing it from the raw measured observations.
+4. Exact-eval CPU compliance blockers from the shared custody validator were
+   not all translated into L5 v2 probe blocker names, allowing advisory macOS
+   CPU evidence to become less visible in probe rows.
 
 ## Fix
 
@@ -23,11 +28,17 @@ Status: landed
   the observation delta to match the conservative paired CPU/CUDA value.
 - Probe selection now uses the paired-axis score delta and emits
   `selected_delta_source=paired_axis_score_delta`.
+- The staircase gate now requires raw probe observations, recomputes
+  `evaluate_l5_v2_probe(...)`, verifies the stored verdict SHA-256 against the
+  recomputed verdict, and rejects selected-candidate or blocker mismatches.
+- The probe disambiguator now surfaces contest-CPU hardware/device/auth-command
+  compliance blockers instead of dropping those validator results.
 
 ## Verification
 
 - `.venv/bin/python -m ruff check src/tac/optimization/l5_staircase_v2.py src/tac/optimization/l5_v2_probe_disambiguator.py src/tac/tests/test_l5_staircase_v2.py src/tac/tests/test_l5_v2_probe_disambiguator.py`
 - `.venv/bin/python -m pytest src/tac/tests/test_l5_staircase_v2.py src/tac/tests/test_l5_v2_probe_disambiguator.py src/tac/tests/test_exact_eval_custody.py src/tac/tests/test_cathedral_autopilot_autonomous_loop.py src/tac/tests/test_autopilot_dispatch_ranking.py src/tac/tests/test_research_basis.py -q`
+- `.venv/bin/python -m pytest src/tac/tests/test_l5_staircase_v2.py src/tac/tests/test_l5_v2_probe_disambiguator.py -q`
 
 ## Reactivation Criteria
 

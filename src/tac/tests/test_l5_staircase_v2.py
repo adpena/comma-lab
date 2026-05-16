@@ -22,6 +22,8 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
+    evaluate_l5_v2_probe,
+    observation_from_mapping,
 )
 from tac.optimization.substrate_composition_matrix import (
     build_composition_matrix,
@@ -35,6 +37,16 @@ def _sha(seed: int) -> str:
 
 def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _canonical_json_sha256(payload: object) -> str:
+    encoded = json.dumps(
+        payload,
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
@@ -90,7 +102,105 @@ def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
     return rows
 
 
-def _gate_artifact_payload(gate_id: str) -> dict[str, object]:
+def _probe_observation_payload(
+    *,
+    candidate_id: str,
+    delta: float,
+    repo_root: Path,
+    seed: int,
+) -> dict[str, object]:
+    archive_bytes = 1
+    archive_sha = _sha(200 + seed)
+    runtime_sha = _sha(300 + seed)
+    artifact_path = (
+        "experiments/results/time_traveler_l5_v2/"
+        f"{candidate_id}_probe_artifact.json"
+    )
+    artifact_file = repo_root / artifact_path
+    artifact_file.parent.mkdir(parents=True, exist_ok=True)
+    artifact_file.write_text(
+        json.dumps({"candidate_id": candidate_id, "delta": delta}, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    axis_evidence: list[dict[str, object]] = []
+    for axis in ("contest_cpu", "contest_cuda"):
+        log_path = (
+            "experiments/results/time_traveler_l5_v2/"
+            f"{candidate_id}_{axis}_probe.log"
+        )
+        log_file = repo_root / log_path
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file.write_text(f"{candidate_id} {axis}\n", encoding="utf-8")
+        axis_evidence.append(
+            {
+                "axis": axis,
+                "archive_sha256": archive_sha,
+                "runtime_tree_sha256": runtime_sha,
+                "score": 25.0 * archive_bytes / 37_545_489,
+                "seg_dist": 0.0,
+                "pose_dist": 0.0,
+                "archive_bytes": archive_bytes,
+                "n_samples": 600,
+                "hardware": "linux-x86_64" if axis == "contest_cpu" else "modal-t4",
+                "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
+                "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
+                "auth_eval_command": (
+                    f"contest_auth_eval --axis {axis} "
+                    f"--device {'cpu' if axis == 'contest_cpu' else 'cuda'}"
+                ),
+                "log_path": log_path,
+                "score_delta": delta,
+            }
+        )
+    return {
+        "candidate_id": candidate_id,
+        "predicted_or_measured_delta": delta,
+        "evidence_grade": "contest_paired_exact",
+        "exact_axes": ["contest_cpu", "contest_cuda"],
+        "artifact_path": artifact_path,
+        "artifact_sha256": _file_sha256(artifact_file),
+        "predicate_id": f"l5_v2_probe_{candidate_id}_predicate",
+        "predicate_passed": True,
+        "archive_sha256": archive_sha,
+        "runtime_tree_sha256": runtime_sha,
+        "axis_evidence": axis_evidence,
+        "sideinfo_consumed": True,
+        "byte_closed_archive": True,
+    }
+
+
+def _probe_disambiguator_payload(repo_root: Path) -> dict[str, object]:
+    deltas = {
+        "c1_world_model_foveation": -0.010,
+        "z5_predictive_coding_world_model": -0.020,
+        "time_traveler_l5_autonomy": -0.030,
+    }
+    observations = [
+        _probe_observation_payload(
+            candidate_id=candidate_id,
+            delta=deltas[candidate_id],
+            repo_root=repo_root,
+            seed=index,
+        )
+        for index, candidate_id in enumerate(L5V2_CANDIDATES)
+    ]
+    verdict = evaluate_l5_v2_probe(
+        tuple(observation_from_mapping(row) for row in observations),
+        repo_root=repo_root,
+    )
+    return {
+        "schema": L5V2_PROBE_SCHEMA,
+        "tool_path": L5V2_PROBE_TOOL_PATH,
+        "candidate_ids": list(L5V2_CANDIDATES),
+        "paired_exact_axes_required": True,
+        "observations": observations,
+        "verdict": verdict,
+        "verdict_sha256": _canonical_json_sha256(verdict),
+    }
+
+
+def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> dict[str, object]:
     payload: dict[str, object] = {
         "gate_id": gate_id,
         "predicate_id": f"l5_v2_{gate_id}_predicate",
@@ -121,33 +231,8 @@ def _gate_artifact_payload(gate_id: str) -> dict[str, object]:
             "inflated_raw_output_aggregate_sha256": _sha(23),
         }
     elif gate_id == "c1_z5_tt5l_probe_disambiguator":
-        payload["probe_disambiguator"] = {
-            "schema": L5V2_PROBE_SCHEMA,
-            "tool_path": L5V2_PROBE_TOOL_PATH,
-            "candidate_ids": list(L5V2_CANDIDATES),
-            "paired_exact_axes_required": True,
-            "verdict": {
-                "schema": L5V2_PROBE_SCHEMA,
-                "tool": L5V2_PROBE_TOOL_PATH,
-                "score_claim": False,
-                "promotion_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
-                "architecture_lock_allowed": True,
-                "selected_candidate_id": "time_traveler_l5_autonomy",
-                "required_candidates": list(L5V2_CANDIDATES),
-                "required_exact_axes": ["contest_cpu", "contest_cuda"],
-                "evaluated_observations": [
-                    {
-                        "candidate_id": candidate_id,
-                        "eligible_for_architecture_lock": True,
-                        "exact_axes": ["contest_cpu", "contest_cuda"],
-                        "blockers": [],
-                    }
-                    for candidate_id in L5V2_CANDIDATES
-                ],
-                "blockers": [],
-            },
-        }
+        assert repo_root is not None
+        payload["probe_disambiguator"] = _probe_disambiguator_payload(repo_root)
     elif gate_id == "paired_cpu_cuda_axis_plan":
         payload["paired_axis_plan"] = _axis_rows()
     elif gate_id == "exact_anchor_or_diagnostic_pair":
@@ -161,7 +246,7 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
     artifact_root.mkdir(parents=True, exist_ok=True)
     for gate in l5_v2_required_gates():
         artifact_path = artifact_root / f"{gate.gate_id}.json"
-        payload = _gate_artifact_payload(gate.gate_id)
+        payload = _gate_artifact_payload(gate.gate_id, repo_root=repo_root)
         if gate.gate_id == "byte_closed_temporal_sideinfo_consumption":
             proof = payload.get("byte_mutation_proof")
             assert isinstance(proof, dict)
@@ -494,7 +579,7 @@ def test_l5_v2_probe_gate_rejects_metadata_stub_without_probe_verdict(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "c1_z5_tt5l_probe_disambiguator"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     probe = payload["probe_disambiguator"]
     assert isinstance(probe, dict)
     probe.pop("verdict")
@@ -518,7 +603,7 @@ def test_l5_v2_probe_gate_rejects_blocked_or_incomplete_probe_verdict(
     evidence = _valid_gate_evidence_payloads(tmp_path)
     gate_id = "c1_z5_tt5l_probe_disambiguator"
     artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
-    payload = _gate_artifact_payload(gate_id)
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
     probe = payload["probe_disambiguator"]
     assert isinstance(probe, dict)
     verdict = probe["verdict"]
@@ -550,6 +635,73 @@ def test_l5_v2_probe_gate_rejects_blocked_or_incomplete_probe_verdict(
         "l5_v2_gate_artifact_semantics_missing:"
         "c1_z5_tt5l_probe_disambiguator:eligible_observations:"
         "time_traveler_l5_autonomy"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_probe_gate_recomputes_verdict_from_observations(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "c1_z5_tt5l_probe_disambiguator"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
+    probe = payload["probe_disambiguator"]
+    assert isinstance(probe, dict)
+    observations = probe["observations"]
+    assert isinstance(observations, list)
+    tt5l = next(
+        row for row in observations if row["candidate_id"] == "time_traveler_l5_autonomy"
+    )
+    tt5l["predicted_or_measured_delta"] = -0.030
+    for axis_row in tt5l["axis_evidence"]:
+        axis_row["score_delta"] = -0.005
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict_sha256_mismatch"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict_recompute_mismatch"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_probe_gate_rejects_selected_candidate_not_min_eligible_delta(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "c1_z5_tt5l_probe_disambiguator"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
+    probe = payload["probe_disambiguator"]
+    assert isinstance(probe, dict)
+    verdict = probe["verdict"]
+    assert isinstance(verdict, dict)
+    verdict["selected_candidate_id"] = "c1_world_model_foveation"
+    verdict["selected_delta"] = -0.010
+    probe["verdict_sha256"] = _canonical_json_sha256(verdict)
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict_sha256_mismatch"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict_recompute_mismatch"
         in readiness["blockers"]
     )
 
