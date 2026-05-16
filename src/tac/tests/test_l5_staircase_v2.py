@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -27,19 +28,35 @@ def _sha(seed: int) -> str:
     return f"{seed:064x}"[-64:]
 
 
-def _valid_gate_evidence() -> dict[str, L5V2GateEvidence]:
-    return {
-        gate.gate_id: L5V2GateEvidence(
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
+    out: dict[str, L5V2GateEvidence] = {}
+    artifact_root = repo_root / "experiments" / "results" / "time_traveler_l5_v2"
+    artifact_root.mkdir(parents=True, exist_ok=True)
+    for gate in l5_v2_required_gates():
+        artifact_path = artifact_root / f"{gate.gate_id}.json"
+        artifact_path.write_text(
+            f'{{"gate_id":"{gate.gate_id}","passed":true}}\n',
+            encoding="utf-8",
+        )
+        out[gate.gate_id] = L5V2GateEvidence(
             gate_id=gate.gate_id,
-            artifact_path=(
-                f"experiments/results/time_traveler_l5_v2/{gate.gate_id}.json"
-            ),
-            artifact_sha256=_sha(index + 1),
+            artifact_path=str(artifact_path.relative_to(repo_root)),
+            artifact_sha256=_file_sha256(artifact_path),
             predicate_id=f"l5_v2_{gate.gate_id}_predicate",
             predicate_passed=True,
             evidence_grade="contest_artifact",
         )
-        for index, gate in enumerate(l5_v2_required_gates())
+    return out
+
+
+def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object]]:
+    return {
+        gate_id: gate_evidence.__dict__.copy()
+        for gate_id, gate_evidence in _valid_gate_evidence(repo_root).items()
     }
 
 
@@ -117,17 +134,25 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
         blocker.startswith("l5_v2_gate_evidence_missing:")
         for blocker in blocked["blockers"]
     )
-    assert boolean_only["all_gate_claims_satisfied"] is True
+    assert boolean_only["all_gate_claims_satisfied"] is False
     assert boolean_only["all_gate_evidence_valid"] is False
     assert boolean_only["ready_for_dispatch"] is False
     assert boolean_only["promotion_eligible"] is False
     assert boolean_only["score_claim"] is False
     assert all(gate["claimed_satisfied"] is True for gate in boolean_only["gates"])
+    assert all(
+        gate["claimed_satisfied_without_artifact"] is True
+        for gate in boolean_only["gates"]
+    )
+    assert all(gate["status"] == "required" for gate in boolean_only["gates"])
     assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
 
 
-def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence() -> None:
-    ready = l5_v2_dispatch_readiness(gate_evidence=_valid_gate_evidence())
+def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) -> None:
+    ready = l5_v2_dispatch_readiness(
+        gate_evidence=_valid_gate_evidence(tmp_path),
+        repo_root=tmp_path,
+    )
 
     assert ready["all_gate_claims_satisfied"] is True
     assert ready["all_gate_evidence_valid"] is True
@@ -149,23 +174,52 @@ def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence() -> None:
     ],
 )
 def test_l5_v2_dispatch_readiness_rejects_bad_gate_evidence(
+    tmp_path: Path,
     field: str,
     value: object,
     expected_blocker: str,
 ) -> None:
-    evidence = {
-        gate_id: gate_evidence.__dict__.copy()
-        for gate_id, gate_evidence in _valid_gate_evidence().items()
-    }
+    evidence = _valid_gate_evidence_payloads(tmp_path)
     first_gate_id = next(iter(evidence))
     evidence[first_gate_id][field] = value
 
-    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence)
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
 
     assert readiness["all_gate_claims_satisfied"] is False
     assert readiness["all_gate_evidence_valid"] is False
     assert readiness["ready_for_dispatch"] is False
     assert f"{expected_blocker}{first_gate_id}" in readiness["blockers"]
+
+
+def test_l5_v2_dispatch_readiness_verifies_artifact_files_and_hashes(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    first_gate_id = next(iter(evidence))
+
+    evidence[first_gate_id]["artifact_sha256"] = _sha(99)
+    mismatched = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    assert mismatched["ready_for_dispatch"] is False
+    assert f"l5_v2_gate_artifact_sha256_mismatch:{first_gate_id}" in mismatched[
+        "blockers"
+    ]
+
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence[first_gate_id]["artifact_path"] = "experiments/results/missing_l5v2.json"
+    missing = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    assert missing["ready_for_dispatch"] is False
+    assert f"l5_v2_gate_artifact_file_missing:{first_gate_id}" in missing["blockers"]
+
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    outside = tmp_path.parent / "outside_l5v2.json"
+    outside.write_text("outside\n", encoding="utf-8")
+    evidence[first_gate_id]["artifact_path"] = str(outside)
+    evidence[first_gate_id]["artifact_sha256"] = _file_sha256(outside)
+    outside_repo = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    assert outside_repo["ready_for_dispatch"] is False
+    assert f"l5_v2_gate_artifact_path_outside_repo:{first_gate_id}" in outside_repo[
+        "blockers"
+    ]
 
 
 def test_l5_v2_prediction_band_flows_into_composition_row() -> None:

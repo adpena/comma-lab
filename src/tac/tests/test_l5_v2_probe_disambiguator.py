@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import dataclasses
+import hashlib
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
@@ -15,14 +18,24 @@ from tac.optimization.l5_v2_probe_disambiguator import (
 )
 
 
-def _eligible(candidate_id: str, delta: float) -> L5V2ProbeObservation:
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObservation:
+    artifact_path = repo_root / "experiments" / "results" / "l5_v2_probe" / f"{candidate_id}.json"
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        f'{{"candidate_id":"{candidate_id}","delta":{delta}}}\n',
+        encoding="utf-8",
+    )
     return L5V2ProbeObservation(
         candidate_id=candidate_id,
         predicted_or_measured_delta=delta,
         evidence_grade="contest_cpu_cuda_paired_exact",
         exact_axes=("contest_cpu", "contest_cuda"),
-        artifact_path=f"experiments/results/l5_v2_probe/{candidate_id}.json",
-        artifact_sha256="c" * 64,
+        artifact_path=str(artifact_path.relative_to(repo_root)),
+        artifact_sha256=_file_sha256(artifact_path),
         predicate_id=f"l5_v2_probe_{candidate_id}_predicate",
         predicate_passed=True,
         archive_sha256="a" * 64,
@@ -60,13 +73,14 @@ def test_l5_v2_probe_fails_closed_without_observations() -> None:
     assert verdict["score_claim"] is False
 
 
-def test_l5_v2_probe_selects_best_paired_exact_candidate() -> None:
+def test_l5_v2_probe_selects_best_paired_exact_candidate(tmp_path: Path) -> None:
     verdict = evaluate_l5_v2_probe(
         (
-            _eligible("c1_world_model_foveation", -0.010),
-            _eligible("z5_predictive_coding_world_model", -0.020),
-            _eligible("time_traveler_l5_autonomy", -0.030),
-        )
+            _eligible(tmp_path, "c1_world_model_foveation", -0.010),
+            _eligible(tmp_path, "z5_predictive_coding_world_model", -0.020),
+            _eligible(tmp_path, "time_traveler_l5_autonomy", -0.030),
+        ),
+        repo_root=tmp_path,
     )
 
     assert verdict["architecture_lock_allowed"] is True
@@ -75,23 +89,15 @@ def test_l5_v2_probe_selects_best_paired_exact_candidate() -> None:
     assert verdict["blockers"] == []
 
 
-def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations() -> None:
-    proxy = L5V2ProbeObservation(
-        candidate_id="time_traveler_l5_autonomy",
-        predicted_or_measured_delta=-0.050,
+def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations(tmp_path: Path) -> None:
+    proxy = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
         evidence_grade="macos_cpu_advisory",
         exact_axes=("contest_cpu",),
-        artifact_path="experiments/results/l5_v2_probe/tt5l.json",
-        artifact_sha256="c" * 64,
-        predicate_id="tt5l_probe_predicate",
-        predicate_passed=True,
-        archive_sha256="a" * 64,
-        runtime_tree_sha256="b" * 64,
         sideinfo_consumed=False,
-        byte_closed_archive=True,
     )
 
-    verdict = evaluate_l5_v2_probe((proxy,))
+    verdict = evaluate_l5_v2_probe((proxy,), repo_root=tmp_path)
     row = verdict["evaluated_observations"][0]
 
     assert verdict["architecture_lock_allowed"] is False
@@ -145,6 +151,34 @@ def test_l5_v2_probe_rejects_transient_artifact_and_bad_hashes() -> None:
     assert "l5_v2_probe_artifact_path_transient" in row["blockers"]
     assert "l5_v2_probe_archive_sha_invalid" in row["blockers"]
     assert "l5_v2_probe_runtime_tree_sha_invalid" in row["blockers"]
+
+
+def test_l5_v2_probe_verifies_artifact_files_and_hashes(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+
+    missing = dataclasses.replace(valid, artifact_path="experiments/results/missing.json")
+    missing_verdict = evaluate_l5_v2_probe((missing,), repo_root=tmp_path)
+    assert "l5_v2_probe_artifact_file_missing" in missing_verdict[
+        "evaluated_observations"
+    ][0]["blockers"]
+
+    mismatched = dataclasses.replace(valid, artifact_sha256="d" * 64)
+    mismatched_verdict = evaluate_l5_v2_probe((mismatched,), repo_root=tmp_path)
+    assert "l5_v2_probe_artifact_sha_mismatch" in mismatched_verdict[
+        "evaluated_observations"
+    ][0]["blockers"]
+
+    outside = tmp_path.parent / "outside_probe.json"
+    outside.write_text("outside\n", encoding="utf-8")
+    outside_repo = dataclasses.replace(
+        valid,
+        artifact_path=str(outside),
+        artifact_sha256=_file_sha256(outside),
+    )
+    outside_verdict = evaluate_l5_v2_probe((outside_repo,), repo_root=tmp_path)
+    assert "l5_v2_probe_artifact_path_outside_repo" in outside_verdict[
+        "evaluated_observations"
+    ][0]["blockers"]
 
 
 def test_l5_v2_probe_cli_emits_template() -> None:

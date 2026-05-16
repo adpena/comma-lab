@@ -8,9 +8,11 @@ the frontier path without treating source-backed theory as score evidence.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
@@ -317,20 +319,70 @@ def _is_transient_artifact_path(path: str) -> bool:
     return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
 
 
+def _default_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_artifact_path(path: str, repo_root: Path) -> tuple[Path | None, str | None]:
+    normalized = path.removeprefix("file:").strip()
+    if not normalized:
+        return None, None
+    artifact_path = Path(normalized).expanduser()
+    resolved = (
+        artifact_path.resolve()
+        if artifact_path.is_absolute()
+        else (repo_root / artifact_path).resolve()
+    )
+    try:
+        resolved.relative_to(repo_root)
+    except ValueError:
+        return resolved, "outside_repo"
+    return resolved, None
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _gate_evidence_blockers(
     gate: L5V2Gate,
     evidence: L5V2GateEvidence | None,
+    *,
+    repo_root: Path,
 ) -> list[str]:
     if evidence is None:
         return [f"l5_v2_gate_evidence_missing:{gate.gate_id}"]
 
     blockers: list[str] = []
+    resolved_artifact_path: Path | None = None
+    path_error: str | None = None
     if not evidence.artifact_path.strip():
         blockers.append(f"l5_v2_gate_artifact_path_missing:{gate.gate_id}")
     elif _is_transient_artifact_path(evidence.artifact_path):
         blockers.append(f"l5_v2_gate_artifact_path_transient:{gate.gate_id}")
+    else:
+        resolved_artifact_path, path_error = _resolve_artifact_path(
+            evidence.artifact_path,
+            repo_root,
+        )
+        if path_error == "outside_repo":
+            blockers.append(f"l5_v2_gate_artifact_path_outside_repo:{gate.gate_id}")
+        elif resolved_artifact_path is not None and not resolved_artifact_path.is_file():
+            blockers.append(f"l5_v2_gate_artifact_file_missing:{gate.gate_id}")
     if not _SHA256_HEX_RE.fullmatch(evidence.artifact_sha256.strip()):
         blockers.append(f"l5_v2_gate_artifact_sha256_invalid:{gate.gate_id}")
+    elif (
+        resolved_artifact_path is not None
+        and path_error is None
+        and resolved_artifact_path.is_file()
+        and _sha256_file(resolved_artifact_path)
+        != evidence.artifact_sha256.strip().lower()
+    ):
+        blockers.append(f"l5_v2_gate_artifact_sha256_mismatch:{gate.gate_id}")
     if not evidence.predicate_id.strip():
         blockers.append(f"l5_v2_gate_predicate_id_missing:{gate.gate_id}")
     if not evidence.predicate_passed:
@@ -345,6 +397,8 @@ def l5_v2_dispatch_readiness(
         | Iterable[L5V2GateEvidence | Mapping[str, Any]]
         | None
     ) = None,
+    *,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed dispatch readiness summary for L5 v2.
 
@@ -354,31 +408,39 @@ def l5_v2_dispatch_readiness(
     """
 
     satisfied_gate_ids = satisfied_gate_ids or {}
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
     evidence_by_gate = _coerce_gate_evidence(gate_evidence)
     gates = []
     blockers = []
     evidence_blockers = []
     for gate in l5_v2_required_gates():
         evidence = evidence_by_gate.get(gate.gate_id)
-        gate_evidence_blockers = _gate_evidence_blockers(gate, evidence)
+        gate_evidence_blockers = _gate_evidence_blockers(
+            gate,
+            evidence,
+            repo_root=resolved_repo_root,
+        )
         evidence_valid = not gate_evidence_blockers
-        satisfied = bool(satisfied_gate_ids.get(gate.gate_id)) or evidence_valid
-        status = "satisfied" if satisfied else gate.status
+        claimed_satisfied = bool(satisfied_gate_ids.get(gate.gate_id))
+        status = "satisfied" if evidence_valid else gate.status
         gate_payload = {
             **gate.__dict__,
             "status": status,
-            "claimed_satisfied": bool(satisfied_gate_ids.get(gate.gate_id)),
+            "claimed_satisfied": claimed_satisfied,
+            "claimed_satisfied_without_artifact": (
+                claimed_satisfied and not evidence_valid
+            ),
             "evidence_valid": evidence_valid,
             "evidence": evidence.__dict__ if evidence is not None else None,
             "evidence_blockers": gate_evidence_blockers,
         }
         gates.append(gate_payload)
-        if not satisfied:
+        if not evidence_valid:
             blockers.append(gate.blocker)
         evidence_blockers.extend(gate_evidence_blockers)
-    all_gate_claims_satisfied = all(
-        gate["claimed_satisfied"] or gate["evidence_valid"] for gate in gates
-    )
+    all_gate_claims_satisfied = all(gate["evidence_valid"] for gate in gates)
     all_gate_evidence_valid = all(gate["evidence_valid"] for gate in gates)
     return {
         "subject_id": SUBJECT_ID,

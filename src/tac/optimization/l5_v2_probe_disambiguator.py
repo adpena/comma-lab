@@ -11,6 +11,7 @@ for architecture lock-in.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import math
 import re
@@ -119,8 +120,43 @@ def _is_transient_artifact_path(path: str) -> bool:
     return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
 
 
-def _observation_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
+def _default_repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_artifact_path(path: str, repo_root: Path) -> tuple[Path | None, str | None]:
+    normalized = path.removeprefix("file:").strip()
+    if not normalized:
+        return None, None
+    artifact_path = Path(normalized).expanduser()
+    resolved = (
+        artifact_path.resolve()
+        if artifact_path.is_absolute()
+        else (repo_root / artifact_path).resolve()
+    )
+    try:
+        resolved.relative_to(repo_root)
+    except ValueError:
+        return resolved, "outside_repo"
+    return resolved, None
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _observation_blockers(
+    observation: L5V2ProbeObservation,
+    *,
+    repo_root: Path,
+) -> tuple[str, ...]:
     blockers: list[str] = []
+    resolved_artifact_path: Path | None = None
+    path_error: str | None = None
     if observation.candidate_id not in L5V2_CANDIDATES:
         blockers.append("l5_v2_probe_unknown_candidate")
     if not math.isfinite(observation.predicted_or_measured_delta):
@@ -129,8 +165,25 @@ def _observation_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
         blockers.append("l5_v2_probe_artifact_path_missing")
     elif _is_transient_artifact_path(observation.artifact_path):
         blockers.append("l5_v2_probe_artifact_path_transient")
+    else:
+        resolved_artifact_path, path_error = _resolve_artifact_path(
+            observation.artifact_path,
+            repo_root,
+        )
+        if path_error == "outside_repo":
+            blockers.append("l5_v2_probe_artifact_path_outside_repo")
+        elif resolved_artifact_path is not None and not resolved_artifact_path.is_file():
+            blockers.append("l5_v2_probe_artifact_file_missing")
     if not _is_sha256_hex(observation.artifact_sha256):
         blockers.append("l5_v2_probe_artifact_sha_invalid")
+    elif (
+        resolved_artifact_path is not None
+        and path_error is None
+        and resolved_artifact_path.is_file()
+        and _sha256_file(resolved_artifact_path)
+        != observation.artifact_sha256.strip().lower()
+    ):
+        blockers.append("l5_v2_probe_artifact_sha_mismatch")
     if not observation.predicate_id.strip():
         blockers.append("l5_v2_probe_predicate_id_missing")
     if not observation.predicate_passed:
@@ -181,9 +234,14 @@ def build_probe_template() -> dict[str, Any]:
 
 def evaluate_l5_v2_probe(
     observations: Iterable[L5V2ProbeObservation],
+    *,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Evaluate observations and return a fail-closed architecture verdict."""
 
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
     rows = tuple(observations)
     evaluated: list[dict[str, Any]] = []
     eligible: list[L5V2ProbeObservation] = []
@@ -200,7 +258,7 @@ def evaluate_l5_v2_probe(
         global_blockers.append("l5_v2_probe_candidate_coverage_incomplete")
 
     for row in rows:
-        blockers = _observation_blockers(row)
+        blockers = _observation_blockers(row, repo_root=resolved_repo_root)
         row_dict = dataclasses.asdict(row)
         row_dict["exact_axes"] = list(row.exact_axes)
         row_dict["eligible_for_architecture_lock"] = not blockers
