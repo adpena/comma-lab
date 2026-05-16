@@ -17,13 +17,16 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from itertools import pairwise
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pytest
 import torch
+
+if TYPE_CHECKING:
+    import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -139,7 +142,7 @@ def test_per_tensor_optimum_found_multi_start_kl_monotonic() -> None:
 
     _params, _kl, cum_kl_trace = tool.fit_mixture_multi_start(target, seed=0)
     # Monotonic non-increasing across multi-start iterations.
-    for prev, cur in zip(cum_kl_trace, cum_kl_trace[1:]):
+    for prev, cur in pairwise(cum_kl_trace):
         assert cur <= prev + 1e-9, (
             f"multi-start cumulative-best KL regressed: {prev} -> {cur}"
         )
@@ -187,6 +190,10 @@ def test_proxy_evidence_contract_blocks_dispatch() -> None:
     assert contract["family_falsified"] is False
     assert contract["falsification_scope"] == "measured_configuration_only"
     assert "missing_exact_cuda_auth_eval" in contract["dispatch_blockers"]
+    assert contract["source_fidelity_version"] == "literature_source_fidelity.v1"
+    assert "do not support a Pact contest-score claim" in contract["source_supports"]
+    assert contract["paper_claim_scope"] == "analogy"
+    assert "decoded tensor byte-faithful roundtrip" in contract["pact_must_prove"]
 
 
 def test_run_codec_on_tiny_state_dict(
@@ -218,6 +225,16 @@ def test_run_codec_on_tiny_state_dict(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["family_falsified"] is False
     assert manifest["falsification_scope"] == "measured_configuration_only"
+    assert manifest["source_fidelity_version"] == "literature_source_fidelity.v1"
+    assert manifest["paper_claim_scope"] == "analogy"
+    assert "pact_transfer_hypothesis" in manifest
+    assert "same-runtime exact contest CPU/CUDA evaluation before any score use" in manifest[
+        "pact_must_prove"
+    ]
+    source_records = manifest["literature_source_records"]
+    assert len(source_records) >= 6
+    assert all(row["url"].startswith("https://") for row in source_records)
+    assert all(row["source_supports"] for row in source_records)
     assert manifest["n_components"] == 7
     assert manifest["n_tensors"] == 2
     assert len(manifest["literature_citations"]) >= 5
@@ -226,5 +243,5 @@ def test_run_codec_on_tiny_state_dict(
         assert abs(sum(weights.values()) - 1.0) < 1e-6
         # Trace must be monotonic non-increasing.
         trace = row["multi_start_cum_kl_bits_trace"]
-        for prev, cur in zip(trace, trace[1:]):
+        for prev, cur in pairwise(trace):
             assert cur <= prev + 1e-9

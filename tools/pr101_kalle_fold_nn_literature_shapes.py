@@ -150,6 +150,70 @@ DISPATCH_BLOCKERS = (
     "requires_exact_cuda_auth_eval_before_any_score_use",
 )
 
+SOURCE_FIDELITY_VERSION = "literature_source_fidelity.v1"
+SOURCE_SUPPORTS = (
+    "The cited sources support plausible analytic PMF families for neural "
+    "initialization, sparse priors, trained quantization/Huffman coding, "
+    "outlier-aware INT8 quantization, and symmetric clipping. They do not "
+    "support a Pact contest-score claim or PR101 archive improvement by "
+    "themselves."
+)
+PACT_TRANSFER_HYPOTHESIS = (
+    "PR101 tensor symbols may be better compressed when per-tensor PMFs are fit "
+    "from source-motivated shape families instead of author-picked generic "
+    "mixtures."
+)
+PACT_MUST_PROVE = (
+    "decoded tensor byte-faithful roundtrip",
+    "decoder wired into a byte-closed runtime packet",
+    "targeted archive payload bytes actually changed and are consumed",
+    "full-frame inflate parity or explained intended frame delta",
+    "same-runtime exact contest CPU/CUDA evaluation before any score use",
+)
+PAPER_CLAIM_SCOPE = "analogy"
+LITERATURE_SOURCE_RECORDS = (
+    {
+        "source_id": "he_2015_kaiming",
+        "url": "https://arxiv.org/abs/1502.01852",
+        "source_supports": "variance-preserving rectifier initialization scale",
+    },
+    {
+        "source_id": "glorot_bengio_2010",
+        "url": "https://proceedings.mlr.press/v9/glorot10a.html",
+        "source_supports": "variance-preserving deep-network initialization scale",
+    },
+    {
+        "source_id": "han_mao_dally_2016",
+        "url": "https://arxiv.org/abs/1510.00149",
+        "source_supports": "trained quantization plus Huffman coding for NN weights",
+    },
+    {
+        "source_id": "mitchell_beauchamp_1988",
+        "url": "https://www.tandfonline.com/doi/abs/10.1080/01621459.1988.10478694",
+        "source_supports": "spike-and-slab prior family for sparse coefficients",
+    },
+    {
+        "source_id": "louizos_ullrich_welling_2017",
+        "url": "https://arxiv.org/abs/1705.08665",
+        "source_supports": "Bayesian compression and learned fixed-point precision",
+    },
+    {
+        "source_id": "dettmers_2022_llm_int8",
+        "url": "https://arxiv.org/abs/2208.07339",
+        "source_supports": "outlier-aware INT8 weight/activation behavior",
+    },
+    {
+        "source_id": "xiao_2023_smoothquant",
+        "url": "https://arxiv.org/abs/2211.10438",
+        "source_supports": "migration of quantization difficulty around outliers",
+    },
+    {
+        "source_id": "banner_2019_ptq4",
+        "url": "https://arxiv.org/abs/1810.05723",
+        "source_supports": "symmetric low-bit post-training quantization behavior",
+    },
+)
+
 # Reference baselines for delta accounting only (not "win/lose" verdict
 # strings; per Rule 2 we use empirical-band language).
 REFERENCE_BROTLI_OPTUNA_ARCHIVE_BYTES = 178_144
@@ -242,7 +306,7 @@ def trunc_normal_with_outliers_pmf(
     core /= core.sum()
     if outlier_width <= 1e-6:
         return core
-    half_width = max(int(round((N_SYMBOLS - 1) / 2 * outlier_width)), 1)
+    half_width = max(round((N_SYMBOLS - 1) / 2 * outlier_width), 1)
     tail = np.zeros(N_SYMBOLS, dtype=np.float64)
     tail[N_QUANT - half_width: N_QUANT + half_width + 1] = 1.0
     tail /= tail.sum()
@@ -309,7 +373,7 @@ def mixture_pmf(params: np.ndarray) -> np.ndarray:
         clip_mass_endpoints_pmf(),
     ]
     pmf = np.zeros(N_SYMBOLS, dtype=np.float64)
-    for w_i, shape_i in zip(w, shapes):
+    for w_i, shape_i in zip(w, shapes, strict=True):
         pmf += w_i * shape_i
     pmf = np.maximum(pmf, 1e-12)
     pmf /= pmf.sum()
@@ -504,6 +568,11 @@ def proxy_evidence_contract() -> dict[str, object]:
         "family_falsified": False,
         "falsification_scope": "measured_configuration_only",
         "dispatch_blockers": list(DISPATCH_BLOCKERS),
+        "source_fidelity_version": SOURCE_FIDELITY_VERSION,
+        "source_supports": SOURCE_SUPPORTS,
+        "pact_transfer_hypothesis": PACT_TRANSFER_HYPOTHESIS,
+        "pact_must_prove": list(PACT_MUST_PROVE),
+        "paper_claim_scope": PAPER_CLAIM_SCOPE,
     }
 
 
@@ -606,6 +675,7 @@ def run_codec(state_dict_path: Path, *, seed: int = 0) -> dict:
             "Dettmers et al. 2022 LLM.int8() — truncated normal with outliers",
             "Banner et al. 2019 — symmetric quantization clip-mass at endpoints",
         ],
+        "literature_source_records": list(LITERATURE_SOURCE_RECORDS),
         "n_tensors": len(FIXED_STATE_SCHEMA),
         "total_elements": total_elements,
         "metadata_blob_bytes": len(metadata_blob),
