@@ -429,6 +429,55 @@ def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
     return False
 
 
+def _repo_local_existing_file_blockers(
+    *,
+    value: object,
+    repo_root: Path,
+    missing_blocker: str,
+    invalid_blocker: str,
+) -> list[str]:
+    path_text = str(value or "").strip()
+    if not path_text:
+        return [missing_blocker]
+    if _is_transient_artifact_path(path_text):
+        return [f"{invalid_blocker}:transient"]
+    resolved, path_error = _resolve_artifact_path(path_text, repo_root)
+    if path_error == "outside_repo":
+        return [f"{invalid_blocker}:outside_repo"]
+    if resolved is None or not resolved.is_file():
+        return [f"{missing_blocker}:file_missing"]
+    return []
+
+
+def _inflate_command_has_canonical_signature(value: object) -> bool:
+    command = str(value or "").strip()
+    if not command:
+        return False
+    if "inflate.sh" not in command:
+        return False
+    parts = re.findall(r"[^\s]+", command)
+    try:
+        inflate_index = next(idx for idx, part in enumerate(parts) if part.endswith("inflate.sh"))
+    except StopIteration:
+        return False
+    positional_after = [
+        part for part in parts[inflate_index + 1 :] if part and not part.startswith("-")
+    ]
+    return len(positional_after) >= 3
+
+
+def _raw_output_aggregate_sha(row: Mapping[str, Any]) -> str:
+    for key in (
+        "inflated_raw_output_aggregate_sha256",
+        "raw_output_aggregate_sha256",
+        "inflated_outputs_aggregate_sha256",
+    ):
+        value = str(row.get(key) or "").strip().lower()
+        if value:
+            return value
+    return ""
+
+
 def _paired_row_identity_blockers(
     *,
     gate_id: str,
@@ -529,6 +578,29 @@ def _paired_row_identity_blockers(
                         "l5_v2_gate_artifact_semantics_missing:"
                         f"{gate_id}:{section}:{axis}:artifact_base_dir"
                     )
+                else:
+                    blockers.extend(
+                        _repo_local_existing_file_blockers(
+                            value=(
+                                row.get("inflated_outputs_manifest_path")
+                                or row.get("inflated_outputs_manifest")
+                            ),
+                            repo_root=repo_root,
+                            missing_blocker=(
+                                "l5_v2_gate_artifact_semantics_missing:"
+                                f"{gate_id}:{section}:{axis}:inflated_outputs_manifest_path"
+                            ),
+                            invalid_blocker=(
+                                "l5_v2_gate_artifact_semantics_invalid:"
+                                f"{gate_id}:{section}:{axis}:inflated_outputs_manifest_path"
+                            ),
+                        )
+                    )
+                if not _SHA256_HEX_RE.fullmatch(_raw_output_aggregate_sha(row)):
+                    blockers.append(
+                        "l5_v2_gate_artifact_semantics_invalid:"
+                        f"{gate_id}:{section}:{axis}:inflated_raw_output_aggregate_sha256"
+                    )
                 validation = validate_exact_eval_evidence(
                     row,
                     expected_axis=axis,
@@ -619,6 +691,33 @@ def _gate_semantic_blockers(
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:byte_mutation_proof:inflate_sha_pair"
+            )
+        blockers.extend(
+            _repo_local_existing_file_blockers(
+                value=(
+                    proof.get("inflated_outputs_manifest_path")
+                    or proof.get("inflated_outputs_manifest")
+                ),
+                repo_root=repo_root,
+                missing_blocker=(
+                    "l5_v2_gate_artifact_semantics_missing:"
+                    f"{gate_id}:byte_mutation_proof:inflated_outputs_manifest_path"
+                ),
+                invalid_blocker=(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:byte_mutation_proof:inflated_outputs_manifest_path"
+                ),
+            )
+        )
+        if not _SHA256_HEX_RE.fullmatch(_raw_output_aggregate_sha(proof)):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:inflated_raw_output_aggregate_sha256"
+            )
+        if not _inflate_command_has_canonical_signature(proof.get("inflate_command")):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:inflate_command"
             )
         return blockers
 

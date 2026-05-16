@@ -21,6 +21,7 @@ CONTEST_EXACT_SAMPLE_COUNT = 600
 SCORE_FORMULA_TOLERANCE = 1e-9
 CONTEST_EXACT_AXES = frozenset({"contest_cpu", "contest_cuda"})
 CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
+CPU_DEVICE_TOKENS = frozenset({"cpu", "x86", "x86_64"})
 NEGATED_DEVICE_TOKENS = frozenset({
     "disabled",
     "false",
@@ -104,6 +105,26 @@ def _contains_token(value: str, tokens: frozenset[str]) -> bool:
             continue
         return True
     return False
+
+
+def _auth_eval_command_has_expected_shape(command: str, semantic_axis: str) -> bool:
+    """Return true for recognizable contest auth-eval/evaluate invocations."""
+
+    lowered = command.lower()
+    parts = re.findall(r"[a-z0-9_./-]+", lowered)
+    has_entrypoint = any(
+        token.endswith("contest_auth_eval")
+        or token.endswith("contest_auth_eval.py")
+        or token.endswith("evaluate.py")
+        for token in parts
+    )
+    if not has_entrypoint:
+        return False
+    if semantic_axis == "contest_cuda":
+        return _contains_token(lowered, CUDA_DEVICE_TOKENS)
+    if semantic_axis == "contest_cpu":
+        return _contains_token(lowered, CPU_DEVICE_TOKENS)
+    return True
 
 
 def _is_transient_path_text(path_text: str) -> bool:
@@ -297,7 +318,9 @@ def validate_exact_eval_evidence(
             inflate_device, CUDA_DEVICE_TOKENS
         ):
             blockers.append("inflate_device_not_cuda")
-        elif semantic_axis == "contest_cpu" and "cpu" not in inflate_device.lower():
+        elif semantic_axis == "contest_cpu" and not _contains_token(
+            inflate_device, CPU_DEVICE_TOKENS
+        ):
             blockers.append("inflate_device_not_cpu")
         if not eval_device:
             blockers.append("eval_device_missing")
@@ -305,10 +328,19 @@ def validate_exact_eval_evidence(
             eval_device, CUDA_DEVICE_TOKENS
         ):
             blockers.append("eval_device_not_cuda")
-        elif semantic_axis == "contest_cpu" and "cpu" not in eval_device.lower():
+        elif semantic_axis == "contest_cpu" and not _contains_token(
+            eval_device, CPU_DEVICE_TOKENS
+        ):
             blockers.append("eval_device_not_cpu")
-    if require_auth_eval_command and not _clean_text(evidence.get("auth_eval_command")):
-        blockers.append("auth_eval_command_missing")
+    if require_auth_eval_command:
+        auth_eval_command = _clean_text(evidence.get("auth_eval_command"))
+        if not auth_eval_command:
+            blockers.append("auth_eval_command_missing")
+        elif semantic_axis in CONTEST_EXACT_AXES and not _auth_eval_command_has_expected_shape(
+            auth_eval_command,
+            semantic_axis,
+        ):
+            blockers.append("auth_eval_command_unrecognized")
     if require_log_path and not _clean_text(evidence.get("log_path")):
         blockers.append("log_path_missing")
     if require_artifact_path and not _clean_text(evidence.get("artifact_path")):

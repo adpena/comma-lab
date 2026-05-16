@@ -181,6 +181,44 @@ def test_validate_exact_eval_evidence_rejects_cuda_devices_for_cpu_axis(
     assert "eval_device_not_cpu" in verdict.blockers
 
 
+def test_validate_exact_eval_evidence_rejects_negated_cpu_tokens_for_cpu_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cpu")
+    evidence["inflate_device"] = "cpu-disabled"
+    evidence["eval_device"] = "no-cpu"
+    evidence["auth_eval_command"] = "experiments/contest_auth_eval.py --device no-cpu"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cpu",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "inflate_device_not_cpu" in verdict.blockers
+    assert "eval_device_not_cpu" in verdict.blockers
+    assert "auth_eval_command_unrecognized" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_requires_canonical_auth_eval_command(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cuda")
+    evidence["auth_eval_command"] = "python random_script.py --device cuda"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "auth_eval_command_unrecognized" in verdict.blockers
+
+
 def test_validate_exact_eval_evidence_rejects_partial_sample_contest_axis(
     tmp_path: Path,
 ) -> None:
