@@ -28,6 +28,7 @@ from tac.exact_eval_custody import (
 
 L5V2_PROBE_SCHEMA = "tac_l5_v2_probe_disambiguator_v1"
 L5V2_PROBE_TOOL_PATH = "tools/probe_l5_v2_staircase_disambiguator.py"
+L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH = "tools/build_l5_v2_probe_gate_artifact.py"
 L5V2_CANDIDATES: tuple[str, ...] = (
     "c1_world_model_foveation",
     "z5_predictive_coding_world_model",
@@ -145,6 +146,46 @@ def load_observations_json(path: Path) -> tuple[L5V2ProbeObservation, ...]:
         for row in rows_obj
         if isinstance(row, Mapping)
     )
+
+
+def _canonical_json_sha256(payload: Mapping[str, Any]) -> str:
+    encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode(
+        "utf-8"
+    )
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def build_l5_v2_probe_gate_artifact(
+    observations: Iterable[L5V2ProbeObservation],
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build the gate artifact consumed by L5 v2 staircase readiness."""
+
+    rows = tuple(observations)
+    verdict = evaluate_l5_v2_probe(rows, repo_root=repo_root)
+    observation_payloads: list[dict[str, Any]] = []
+    for row in rows:
+        row_dict = dataclasses.asdict(row)
+        row_dict["exact_axes"] = list(row.exact_axes)
+        row_dict["axis_evidence"] = [dict(item) for item in row.axis_evidence]
+        row_dict["runtime_tree_sha256_by_axis"] = dict(row.runtime_tree_sha256_by_axis)
+        observation_payloads.append(row_dict)
+    return {
+        "schema": "l5_v2_probe_gate_artifact_v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "probe_disambiguator": {
+            "schema": L5V2_PROBE_SCHEMA,
+            "tool_path": L5V2_PROBE_TOOL_PATH,
+            "candidate_ids": list(L5V2_CANDIDATES),
+            "paired_exact_axes_required": True,
+            "observations": observation_payloads,
+            "verdict": verdict,
+            "verdict_sha256": _canonical_json_sha256(verdict),
+        },
+    }
 
 
 def _missing_required_axes(observation: L5V2ProbeObservation) -> tuple[str, ...]:
@@ -532,10 +573,12 @@ def evaluate_l5_v2_probe(
 
 __all__ = [
     "L5V2_CANDIDATES",
+    "L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH",
     "L5V2_PROBE_SCHEMA",
     "L5V2_PROBE_TOOL_PATH",
     "REQUIRED_EXACT_AXES",
     "L5V2ProbeObservation",
+    "build_l5_v2_probe_gate_artifact",
     "build_probe_template",
     "evaluate_l5_v2_probe",
     "load_observations_json",

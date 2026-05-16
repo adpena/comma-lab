@@ -4,6 +4,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -12,9 +13,11 @@ import pytest
 
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
+    L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
     L5V2ProbeObservation,
+    build_l5_v2_probe_gate_artifact,
     build_probe_template,
     evaluate_l5_v2_probe,
     observation_from_mapping,
@@ -585,6 +588,74 @@ def test_l5_v2_probe_cli_emits_template() -> None:
     assert [row["candidate_id"] for row in payload["observations"]] == list(
         L5V2_CANDIDATES
     )
+
+
+def test_l5_v2_probe_gate_artifact_wraps_recomputable_verdict(tmp_path: Path) -> None:
+    observations = tuple(
+        _eligible(tmp_path, candidate_id, delta)
+        for candidate_id, delta in zip(
+            L5V2_CANDIDATES,
+            (-0.01, -0.02, -0.03),
+            strict=True,
+        )
+    )
+
+    artifact = build_l5_v2_probe_gate_artifact(observations, repo_root=tmp_path)
+    probe = artifact["probe_disambiguator"]
+
+    assert artifact["score_claim"] is False
+    assert artifact["promotion_eligible"] is False
+    assert probe["schema"] == L5V2_PROBE_SCHEMA
+    assert probe["tool_path"] == L5V2_PROBE_TOOL_PATH
+    assert probe["candidate_ids"] == list(L5V2_CANDIDATES)
+    assert probe["paired_exact_axes_required"] is True
+    assert probe["verdict"]["architecture_lock_allowed"] is True
+    assert probe["verdict"]["selected_candidate_id"] == "time_traveler_l5_autonomy"
+    assert len(probe["verdict_sha256"]) == 64
+
+
+def test_l5_v2_probe_gate_artifact_cli_exits_nonzero_when_blocked(
+    tmp_path: Path,
+) -> None:
+    repo_root = Path.cwd()
+    artifact_root = (
+        repo_root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_probe_gate_artifact_{tmp_path.name}"
+    )
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        template_path = artifact_root / "template.json"
+        output_path = artifact_root / "probe_gate_artifact.json"
+        template_path.write_text(json.dumps(build_probe_template()), encoding="utf-8")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH,
+                "--input-json",
+                str(template_path.relative_to(repo_root)),
+                "--output-json",
+                str(output_path.relative_to(repo_root)),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+
+        assert result.returncode == 1
+        assert output_path.is_file()
+        assert payload["probe_disambiguator"]["verdict"][
+            "architecture_lock_allowed"
+        ] is False
+        assert "l5_v2_probe_required_candidate_ineligible:time_traveler_l5_autonomy" in (
+            payload["probe_disambiguator"]["verdict"]["blockers"]
+        )
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
 
 
 def test_l5_v2_probe_cli_exits_nonzero_when_verdict_blocked() -> None:

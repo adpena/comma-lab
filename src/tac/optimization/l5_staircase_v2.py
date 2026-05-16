@@ -25,6 +25,7 @@ from tac.exact_eval_custody import (
 )
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
+    L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
     evaluate_l5_v2_probe,
@@ -76,6 +77,9 @@ TT5L_MODAL_A100_DISPATCH_RECIPE_PATH = (
 )
 TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH = (
     ".omx/research/l5_v2_probe_template_20260516_codex.json"
+)
+TT5L_PROBE_GATE_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_probe_gate_artifact_20260516_codex.json"
 )
 TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
@@ -1134,6 +1138,42 @@ def l5_v2_canonical_sideinfo_gate_evidence(
     return None
 
 
+def l5_v2_canonical_probe_gate_evidence(
+    *,
+    repo_root: str | Path | None = None,
+) -> L5V2GateEvidence | None:
+    """Return the discoverable L5 v2 probe-disambiguator gate artifact."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    artifact_path = TT5L_PROBE_GATE_ARTIFACT_PATH
+    proof_path = resolved_repo_root / artifact_path
+    if not proof_path.is_file():
+        return None
+    artifact_sha = _sha256_file(proof_path)
+    try:
+        payload = json.loads(proof_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if _gate_semantic_blockers(
+        "c1_z5_tt5l_probe_disambiguator",
+        payload,
+        repo_root=resolved_repo_root,
+    ):
+        return None
+    return L5V2GateEvidence(
+        gate_id="c1_z5_tt5l_probe_disambiguator",
+        artifact_path=artifact_path,
+        artifact_sha256=artifact_sha,
+        predicate_id="l5_v2_probe_disambiguator_architecture_lock_v1",
+        predicate_passed=True,
+        evidence_grade="l5_v2_probe_gate_artifact",
+    )
+
+
 def _gate_payload_by_id(readiness: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     gates = readiness.get("gates", [])
     if not isinstance(gates, list):
@@ -1374,14 +1414,11 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "probe_status": "observations_missing",
             "input_template": TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH,
             "command_template": (
-                f".venv/bin/python {L5V2_PROBE_TOOL_PATH} "
+                f".venv/bin/python {L5V2_PROBE_GATE_ARTIFACT_TOOL_PATH} "
                 f"--input-json {TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH} "
-                "--output-json experiments/results/time_traveler_l5_v2/"
-                "l5_v2_probe_verdict.json"
+                f"--output-json {TT5L_PROBE_GATE_ARTIFACT_PATH}"
             ),
-            "expected_artifacts": [
-                "experiments/results/time_traveler_l5_v2/l5_v2_probe_verdict.json"
-            ],
+            "expected_artifacts": [TT5L_PROBE_GATE_ARTIFACT_PATH],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -2720,6 +2757,12 @@ def l5_v2_dispatch_readiness(
         )
         if canonical_sideinfo is not None:
             evidence_by_gate[canonical_sideinfo.gate_id] = canonical_sideinfo
+    if "c1_z5_tt5l_probe_disambiguator" not in evidence_by_gate:
+        canonical_probe = l5_v2_canonical_probe_gate_evidence(
+            repo_root=resolved_repo_root,
+        )
+        if canonical_probe is not None:
+            evidence_by_gate[canonical_probe.gate_id] = canonical_probe
     gates = []
     blockers = []
     evidence_blockers = []
@@ -2852,12 +2895,14 @@ __all__ = [
     "TT5L_DYKSTRA_SCORE_FORMULA",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
+    "TT5L_PROBE_GATE_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
+    "l5_v2_canonical_probe_gate_evidence",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
     "l5_v2_packetir_section_entropy_evidence_payload",

@@ -1026,7 +1026,72 @@ def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
 
     assert action["action_id"] == "populate_and_evaluate_c1_z5_tt5l_probe_observations"
     assert action["probe_status"] == "observations_missing"
+    assert "tools/build_l5_v2_probe_gate_artifact.py" in action["command_template"]
+    assert "l5_v2_probe_gate_artifact_20260516_codex.json" in action[
+        "command_template"
+    ]
     assert action["score_claim"] is False
+
+
+def test_l5_v2_canonical_probe_gate_evidence_auto_consumes_valid_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / l5_v2.TT5L_PROBE_GATE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "probe_disambiguator": _probe_disambiguator_payload(tmp_path),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    evidence = l5_v2.l5_v2_canonical_probe_gate_evidence(repo_root=tmp_path)
+
+    assert evidence is not None
+    assert evidence.gate_id == "c1_z5_tt5l_probe_disambiguator"
+    assert evidence.artifact_path == l5_v2.TT5L_PROBE_GATE_ARTIFACT_PATH
+    assert evidence.predicate_passed is True
+
+
+def test_l5_v2_canonical_probe_gate_evidence_skips_blocked_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / l5_v2.TT5L_PROBE_GATE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "probe_disambiguator": {
+                    "schema": L5V2_PROBE_SCHEMA,
+                    "tool_path": L5V2_PROBE_TOOL_PATH,
+                    "candidate_ids": list(L5V2_CANDIDATES),
+                    "paired_exact_axes_required": True,
+                    "observations": [],
+                    "verdict": evaluate_l5_v2_probe(()),
+                    "verdict_sha256": _canonical_json_sha256(
+                        evaluate_l5_v2_probe(())
+                    ),
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    evidence = l5_v2.l5_v2_canonical_probe_gate_evidence(repo_root=tmp_path)
+
+    assert evidence is None
 
 
 def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
