@@ -311,6 +311,21 @@ def test_campaign_rows_carry_dispatch_blockers_to_autopilot():
     assert "z3_full_main_not_implemented_use_smoke_recipe_only" in row.blockers
 
 
+def test_uncustodied_prediction_bands_do_not_receive_autopilot_rank_reward():
+    result = rank_dispatches(drop_redundant_dominated=False)
+    by_id = {c.candidate_id: c for c in result.ranked_dispatches}
+    tt5l = by_id["singleton__time_traveler_l5_autonomy"]
+
+    assert tt5l.predicted_score_delta < 0.0
+    assert tt5l.prediction_band_verdict is not None
+    assert tt5l.prediction_band_verdict["valid_for_rank_reward"] is False
+    assert "prediction_band_baseline_missing" in tt5l.blockers
+    assert "prediction_band_empirical_anchor_missing" in tt5l.blockers
+    assert tt5l.expected_information_gain == 0.0
+    assert tt5l.eig_per_dollar == 0.0
+    assert "prediction_band_rank_reward_suppressed" in tt5l.composition_notes
+
+
 def test_campaign_blockers_prevent_autopilot_self_authorization(tmp_path):
     result = rank_dispatches(drop_redundant_dominated=False)
     z3 = {

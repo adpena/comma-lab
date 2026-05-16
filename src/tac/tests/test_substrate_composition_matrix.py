@@ -235,7 +235,11 @@ def test_uncustodied_prediction_band_blocks_clean_rank_authority():
     assert "prediction_band_missing" in row.dispatch_blockers
     assert row.prediction_band_verdict is not None
     assert row.prediction_band_verdict["valid_for_rank_reward"] is False
+    assert row.predicted_delta_alone_midpoint == -0.0015
+    assert row.expected_information_gain == 0.0
+    assert row.eig_per_dollar == 0.0
     assert "prediction_band_blockers" in row.notes
+    assert "prediction_band_rank_reward_suppressed" in row.notes
 
 
 # ── Matrix construction ──────────────────────────────────────────────────

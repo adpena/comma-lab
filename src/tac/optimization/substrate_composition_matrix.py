@@ -1686,18 +1686,16 @@ def per_substrate_pareto_rows(
     design": the EV/$ ranking is the canonical primary signal for the
     autopilot dispatch ranker (Deliverable 2).
 
-    EV is approximated as ``|predicted_delta_alone_midpoint|`` (the absolute
-    expected score improvement). Per CLAUDE.md "Forbidden empirical-claim-
-    without-evidence-tag", the EV is ``[predicted; substrate matrix v1]``,
-    not a measurement.
+    EV is approximated as ``|predicted_delta_alone_midpoint|`` only when the
+    row's prediction-band custody is valid for rank reward. Per CLAUDE.md
+    "Forbidden empirical-claim-without-evidence-tag", the EV is ``[predicted;
+    substrate matrix v1]``, not a measurement.
     """
     matrix = matrix or build_composition_matrix()
     rows: list[ParetoRow] = []
     for s in matrix.substrates:
         cost = DISPATCH_COST_USD_MIDPOINT.get(s.substrate_id, 0.0)
         delta_mid = s.predicted_delta_alone_midpoint()
-        # Information gain: |predicted delta|; clamps to 0 for zero-delta.
-        eig = abs(delta_mid)
         # Cost-zero is treated as cost-unknown (missing estimation), NOT free.
         # Emit eig_per_dollar=0.0 (sorts LAST per reverse=True ranking) and
         # surface a `cost_estimation_required` blocker so consumers see the
@@ -1705,7 +1703,6 @@ def per_substrate_pareto_rows(
         # RFC 8259 when JSON-serialized and (b) falsely promoted cost-unknown
         # rows to the top of the ranking, masking real signal.
         cost_estimation_pending = cost <= 0.0
-        eig_per_dollar = 0.0 if cost_estimation_pending else eig / cost
         blockers = list(s.dispatch_blockers)
         prediction_band_verdict = validate_optional_prediction_band(
             s.prediction_band,
@@ -1715,6 +1712,7 @@ def per_substrate_pareto_rows(
             axis=s.target_axis.value,
         )
         blockers.extend(prediction_band_verdict.blockers)
+        rank_reward_allowed = prediction_band_verdict.valid_for_rank_reward
         notes = (
             f"[predicted; substrate composition matrix v1] "
             f"target_axis={s.target_axis.value}, class={s.substrate_class.value}"
@@ -1749,6 +1747,8 @@ def per_substrate_pareto_rows(
                 "; prediction_band_annotations="
                 f"{list(prediction_band_verdict.annotations)!r}"
             )
+        if not rank_reward_allowed:
+            notes += "; prediction_band_rank_reward_suppressed"
         notes += (
             f"; license_ok={s.license_ok}"
             f"; inflate_dep_count={len(s.runtime_dep_closure)}"
@@ -1759,6 +1759,8 @@ def per_substrate_pareto_rows(
         if cost_estimation_pending:
             blockers.append("cost_estimation_required")
             notes += "; cost_estimation_required (cost=0.0 treated as unknown, not free)"
+        eig = abs(delta_mid) if rank_reward_allowed else 0.0
+        eig_per_dollar = 0.0 if cost_estimation_pending else eig / cost
         if not s.license_ok:
             blockers.append("license_clearance_required")
             notes += "; license_clearance_required"
@@ -1812,13 +1814,26 @@ def rank_substrates_by_ev_per_dollar(
 ) -> list[ParetoRow]:
     """Return Pareto rows sorted by EV/$ (best-first by default).
 
-    Cost-zero substrates (bolt-ons, allocators) are sorted to the top with
-    EV/$ = +inf when they have non-zero EV. Substrates with zero EV go last.
+    Cost-zero substrates are treated as cost-unknown, carry an explicit
+    blocker, and sort after cost-known rows when EV/$ ties.
     """
     rows = per_substrate_pareto_rows(matrix=matrix)
     if descending:
-        return sorted(rows, key=lambda r: r.eig_per_dollar, reverse=True)
-    return sorted(rows, key=lambda r: r.eig_per_dollar)
+        return sorted(
+            rows,
+            key=lambda r: (
+                r.eig_per_dollar,
+                "cost_estimation_required" not in r.dispatch_blockers,
+            ),
+            reverse=True,
+        )
+    return sorted(
+        rows,
+        key=lambda r: (
+            r.eig_per_dollar,
+            "cost_estimation_required" in r.dispatch_blockers,
+        ),
+    )
 
 
 # ── Composition-aware ranking (consumed by autopilot Deliverable 2) ──────

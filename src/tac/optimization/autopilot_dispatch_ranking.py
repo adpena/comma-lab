@@ -191,6 +191,12 @@ def _build_singleton_dispatch_candidates(
             "; " + "; ".join(campaign_metadata)
             if campaign_metadata else ""
         )
+        rank_reward_note = (
+            "; prediction_band_rank_reward_suppressed"
+            if r.prediction_band_verdict is not None
+            and not bool(r.prediction_band_verdict.get("valid_for_rank_reward"))
+            else ""
+        )
         out.append(
             RankedDispatchCandidate(
                 candidate_id=f"singleton__{r.substrate_id}",
@@ -205,6 +211,7 @@ def _build_singleton_dispatch_candidates(
                     f"singleton dispatch of {r.substrate_id}; "
                     f"axis={r.target_axis.value}, class={r.substrate_class.value}"
                     f"{metadata_note}"
+                    f"{rank_reward_note}"
                 ),
                 lane_class=r.lane_class,
                 literature_anchor=r.literature_anchor,
@@ -298,6 +305,14 @@ def _build_orthogonal_pair_candidates(
                 f"; metadata={list(campaign_metadata)!r}"
                 if campaign_metadata else ""
             )
+            rank_reward_note = (
+                "; prediction_band_rank_reward_suppressed"
+                if any(
+                    not bool(verdict.get("valid_for_rank_reward"))
+                    for verdict in prediction_band_verdicts
+                )
+                else ""
+            )
             out.append(
                 RankedDispatchCandidate(
                     candidate_id=f"orthogonal_pair__{ri.substrate_id}__{rj.substrate_id}",
@@ -313,6 +328,7 @@ def _build_orthogonal_pair_candidates(
                         f"alpha={cell.expected_alpha:.2f}; "
                         f"rationale={cell.rationale}"
                         f"{metadata_note}"
+                        f"{rank_reward_note}"
                     ),
                     lane_class=lane_class,
                     literature_anchor=literature_anchor,
