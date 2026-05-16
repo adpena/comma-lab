@@ -452,10 +452,8 @@ def test_composition_filter_orthogonal_substrates_all_kept(tmp_path):
     assert len(dropped) == 0
 
 
-def test_composition_filter_unknown_substrate_treated_as_skip(tmp_path):
-    """Unknown substrate names (not in the matrix) should not crash; they
-    pass through (the filter only refuses on positively classified
-    incompatible cells)."""
+def test_composition_filter_unknown_substrate_is_rank_suppressed(tmp_path):
+    """Unknown substrate names should not crash, but they are not clean rows."""
     payload = _canonical_ranking_payload()
     payload["ranked_dispatches"] = [
         {
@@ -483,6 +481,12 @@ def test_composition_filter_unknown_substrate_treated_as_skip(tmp_path):
     )
     assert len(kept) == 1
     assert len(dropped) == 0
+    assert rows[0].expected_information_gain == 0.0
+    assert (
+        "composition_matrix_unknown_substrate:totally_made_up_substrate_xyz"
+        in rows[0].blockers
+    )
+    assert "composition_matrix_unknown_substrate" in rows[0].notes
 
 
 def test_composition_filter_returns_typed_tuple_pairs(tmp_path):

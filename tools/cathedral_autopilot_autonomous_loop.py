@@ -144,6 +144,9 @@ except Exception:  # pragma: no cover - tests can stub these
 from tac.optimization.literature_source_scope import (  # noqa: E402
     literature_source_scope_blockers,
 )
+from tac.optimization.substrate_composition_matrix import (  # noqa: E402
+    canonical_substrate_inventory,
+)
 
 AUTONOMOUS_LOOP_SCHEMA = "tac_cathedral_autopilot_autonomous_loop_v1"
 
@@ -157,6 +160,9 @@ CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
 AUTOPILOT_CONTEST_TARGET_MODE = "contest_exact_eval"
 PLANNING_ONLY_SOURCE_BLOCKER = "planning_only_source_requires_operator_dispatch_packet"
 LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX = "literature_anchor_source_scope_missing"
+COMPOSITION_MATRIX_UNKNOWN_SUBSTRATE_BLOCKER_PREFIX = (
+    "composition_matrix_unknown_substrate"
+)
 AUTOPILOT_CLAIM_PLATFORM = "cathedral_autopilot"
 AUTOPILOT_CLAIM_STATUS = "active_autopilot_authorized_dispatch"
 AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
@@ -2241,6 +2247,22 @@ def _append_literature_source_scope_blockers(
     return source_scope_blockers
 
 
+def _canonical_substrate_ids() -> set[str]:
+    return {row.substrate_id for row in canonical_substrate_inventory()}
+
+
+def _composition_unknown_substrate_blockers(raw: dict[str, Any]) -> list[str]:
+    substrate_ids = raw.get("substrate_ids")
+    if not isinstance(substrate_ids, list | tuple):
+        return []
+    known = _canonical_substrate_ids()
+    return [
+        f"{COMPOSITION_MATRIX_UNKNOWN_SUBSTRATE_BLOCKER_PREFIX}:{substrate_id}"
+        for substrate_id in (str(item).strip() for item in substrate_ids)
+        if substrate_id and substrate_id not in known
+    ]
+
+
 def _candidate_has_effective_negative_delta_for_race_mode(
     candidate: CandidateRow,
     *,
@@ -2601,7 +2623,14 @@ def load_candidates_from_substrate_composition_ranking(
         notes_lines.extend(
             _append_literature_source_scope_blockers(raw, row_blockers)
         )
+        unknown_substrate_blockers = _composition_unknown_substrate_blockers(raw)
+        for blocker in unknown_substrate_blockers:
+            if blocker not in row_blockers:
+                row_blockers.append(blocker)
+        notes_lines.extend(unknown_substrate_blockers)
         expected_information_gain = float(raw["expected_information_gain"])
+        if unknown_substrate_blockers:
+            expected_information_gain = 0.0
         if (
             expected_information_gain > 0.0
             and not _prediction_band_allows_rank_reward(raw)
