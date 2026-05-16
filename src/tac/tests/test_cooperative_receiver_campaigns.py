@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from tac.optimization.cooperative_receiver_campaigns import (
+    TT5L_MEASURED_TIMING_SMOKE_COMMAND,
     build_campaign_queue,
     render_markdown,
     write_campaign_queue,
@@ -50,6 +51,24 @@ def test_campaign_queue_contains_four_team_convergence_and_blocks_dispatch() -> 
     assert all(validate_proxy_candidate(row) == [] for row in rows)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in rows)
     assert all(row["score_claim"] is False for row in rows)
+
+
+def test_time_traveler_campaigns_use_measured_timing_smoke_not_help() -> None:
+    manifest = build_campaign_queue()
+    rows = {row["campaign_id"]: row for row in manifest["top_k"]}
+    time_traveler_rows = [
+        rows["darts_confirmed_time_traveler_config"],
+        rows["time_traveler_world_model_substrate"],
+    ]
+
+    for row in time_traveler_rows:
+        command = row["timing_smoke_command"]
+        assert command == TT5L_MEASURED_TIMING_SMOKE_COMMAND
+        assert "smoke_time_traveler_l5_autonomy_macos_cpu.py" in command
+        assert " --help" not in command
+        assert "--epochs 1" in command
+        assert "--batch-size 1" in command
+        assert "--allow-non-darwin" in command
 
 
 def test_long_term_campaign_backfill_rows_have_metadata_and_dispatch_gates() -> None:

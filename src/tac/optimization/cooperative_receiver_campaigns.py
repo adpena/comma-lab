@@ -25,6 +25,11 @@ from tac.optimization.proxy_candidate_contract import (
 
 QUEUE_SCHEMA = "tac_cooperative_receiver_campaign_queue_v1"
 GENERATED_AT_STABLE = "1970-01-01T00:00:00Z"
+TT5L_MEASURED_TIMING_SMOKE_COMMAND = (
+    "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
+    "tools/smoke_time_traveler_l5_autonomy_macos_cpu.py "
+    "--epochs 1 --batch-size 1 --allow-non-darwin"
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -152,10 +157,7 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             predicted_delta_high=-0.045,
             estimated_cost_usd_low=3.00,
             estimated_cost_usd_high=8.00,
-            timing_smoke_command=(
-                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
-            ),
+            timing_smoke_command=TT5L_MEASURED_TIMING_SMOKE_COMMAND,
             byte_closed_packet_plan=(
                 "Lower the DARTS-selected architecture into the TT5L archive grammar, "
                 "prove deterministic inflate consumption, then run paired exact eval."
@@ -183,10 +185,7 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             predicted_delta_high=-0.023,
             estimated_cost_usd_low=3.00,
             estimated_cost_usd_high=8.00,
-            timing_smoke_command=(
-                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
-            ),
+            timing_smoke_command=TT5L_MEASURED_TIMING_SMOKE_COMMAND,
             byte_closed_packet_plan=(
                 "TT5L monolithic archive: world model + per-pair side info + AC "
                 "state + metadata; exact eval only after runtime closure."
