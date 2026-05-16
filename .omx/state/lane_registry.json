@@ -31622,6 +31622,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_stc_clean_source_v2_substrate_build_20260516",
+      "name": "STC clean-source v2 substrate build",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/train_substrate_stc_v2.py + src/tac/substrates/stc_v2/ (4 modules; 13 tests; Catalog #270 overall_pass=true)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "MEMORY entry queued: feedback_stc_v2_substrate_build_landed_20260516.md (subagent A respawn deliverable)"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_stc_v2.sh + .omx/operator_authorize_recipes/substrate_stc_v2_modal_t4_dispatch.yaml"
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31631,5 +31672,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T18:52:51Z"
+  "updated_at": "2026-05-16T19:32:16Z"
 }

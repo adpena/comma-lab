@@ -1,0 +1,211 @@
+schema_version: 1
+name: substrate_stc_v2_modal_t4_dispatch
+lane_id: lane_stc_clean_source_v2_substrate_build_20260516
+summary: |
+  STC clean-source v2 disambiguator dispatch on Modal T4 ($0.20 budget).
+  Design memo .omx/research/batched_reactivation_lane17_imp_stc_apogee_int4_full_stack_design_20260516.md
+  Section 2 + .omx/research/resurrection_audit_20260516.md Tier 1 #2.
+  UNIQUE-AND-COMPLETE-PER-METHOD: CUDA-derived SegNet argmax + Filler & Pevny
+  2010 syndrome-trellis boundary codec + STC v2 monolithic archive grammar
+  (single-file 0.bin with STCB blob + Lane A renderer.bin + Lane A
+  optimized_poses.pt). The original Lane STC kill was MPS-PROXY per CLAUDE.md
+  "MPS auth eval is NOISE"; the $0.20 CUDA re-run resolves the
+  UNDETERMINED-pending-CUDA verdict.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 8
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+
+# UNDETERMINED-pending-CUDA: research_only=true until the CUDA disambiguator
+# returns < 1 MB stcb_bytes (which would warrant L2 promotion + paired CPU/CUDA
+# auth-eval). Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
+# RESEARCH-ONLY" non-negotiable + Catalog #240 recipe-vs-trainer-state
+# consistency: trainer's _full_main is IMPLEMENTED (no NotImplementedError),
+# but the substrate is honest about its disambiguator status.
+dispatch_enabled: true
+research_only: true
+
+dispatch_blockers: []
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.20
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 1.15
+predicted_delta: "[diagnostic; substrate is a CODEC, not a trained renderer]"
+predicted_delta_basis: |
+  STC v2 SUBSTRATE IS A CODEC — predicted score depends ONLY on the
+  byte-count delta vs Lane A's 1.15 [contest-CUDA] anchor (anchor archive
+  ~677 KB).
+
+  DESIGN-MEMO Section 2.3 decision tree:
+    stcb_bytes < 200 KB  -> REACTIVATED; predicted [1.10, 1.13]
+                             (rate -0.02 to -0.04 vs Lane A; seg/pose flat
+                              by lossless mask path)
+    stcb_bytes 200 KB-1 MB -> COMPETITIVE; pivot to AV1+STC residual lane
+    stcb_bytes 1 MB-5 MB   -> RESEARCH_ONLY; STC alone doesn't beat AV1
+    stcb_bytes > 5 MB      -> HARD-EARNED FALSIFICATION; 3-section KILL memo
+
+  MPS-PROXY anchor (the 2026-04-29 PM falsification) was ~21 MB (50x AV1
+  baseline). The $0.20 CUDA disambiguator question: does CUDA argmax produce
+  a structurally simpler boundary set?
+
+literature_anchor: |
+  - Filler & Pevny 2010 "Minimizing additive distortion functions with
+    non-binary embedding operation in steganography" (canonical syndrome-
+    trellis coding)
+  - Witten-Neal-Cleary 1987 arithmetic coding (the STC inner coder)
+  - CLAUDE.md "MPS auth eval is NOISE" non-negotiable (the empirical anchor
+    that the original 50x kill was MPS-PROXY)
+  Source-supports: Filler & Pevny establishes that STC achieves the
+  rate-distortion bound for binary embedding under additive distortion
+  measures; PACT must prove the structural assumption that CUDA argmax has
+  small-enough boundary entropy to make STC competitive with AV1 on the
+  contest video.
+
+paper_claim_scope: |
+  Filler & Pevny 2010 establishes STC's information-theoretic optimality
+  for additive-distortion embedding. The contest mask source is 5-class
+  semantic argmax with H(argmax) ~ 2 bits / pixel as a Shannon lower
+  bound. AV1 monochrome achieves 0.014 bpp via interframe prediction + 2D
+  context which STC lacks; the question is whether boundary entropy on
+  CUDA-derived argmax is structurally smaller than MPS-derived.
+
+pact_must_prove: |
+  v2 produces an STCB byte count on contest-CUDA SegNet argmax masks that
+  is at least 10x smaller than the MPS-PROXY anchor of ~21 MB. Per the
+  Section 2.3 decision tree: < 1 MB unlocks REACTIVATED or COMPETITIVE
+  verdict; > 5 MB is hard-earned falsification. Either outcome resolves
+  the UNDETERMINED-pending-CUDA verdict.
+
+decode_complexity_evidence: |
+  Inflate runtime (substrate-package SCAFFOLD) ~100 LOC. Auth-eval inflate
+  is Lane A's submissions/robust_current/inflate.sh which already supports
+  masks.stcb dispatch per the legacy scripts/remote_lane_stc_clean_source.sh.
+  Dependencies: numpy + torch + pyav. Per-pair compute: STC decode (~ms) +
+  Lane A renderer forward (~tens-of-ms per pair) + write raw. Total inflate
+  budget for 600 pairs at scorer resolution << contest 30-min runtime.
+
+council_phase_5_prediction: 1.15
+substrate_tradition: STC_V2_BATCHED_REACTIVATION_DESIGN_MEMO_2026_05_16
+
+risk: |
+  MEDIUM-HIGH VARIANCE first-anchor disambiguator dispatch. The Dykstra-
+  feasibility check (design memo Section 2.2.10) predicts STC clean-source
+  as REPLACEMENT is unlikely to beat AV1's 421 KB structurally (STC has no
+  interframe / 2D context that AV1 exploits). The value of the $0.20 spend:
+  PROVING it empirically (not assuming MPS-CUDA drift on argmax matches the
+  23x PoseNet / 2x SegNet drift) OR pivoting to AV1+STC residual lane per
+  the design memo Op-B fallback.
+
+  (a) CUDA SEGNET ARGMAX BOUNDARY ENTROPY — assumes CUDA-vs-MPS drift on the
+      argmax tensor reduces STC's boundary count by 10x. If drift is only
+      2x (matching SegNet device drift), STC still 5MB+ and the lane is
+      hard-earned falsified.
+
+  (b) ANCHOR ARCHIVE STAGING — STC v2 swap-archive bundles Lane A renderer
+      + Lane A poses + STC masks. Lane A archive must exist at
+      experiments/results/lane_a_landed/archive_lane_a.zip on the worker.
+      The Modal mount manifest pulls it via the canonical builder.
+
+envelope_status: "FITS $0.20 envelope at p50 fallback"
+
+remote_driver: scripts/remote_lane_substrate_stc_v2.sh
+timeout_hours: 0.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+  - flag: --anchor-archive
+    default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+
+modal:
+  lane_script: scripts/remote_lane_substrate_stc_v2.sh
+  cost_band_trainer: experiments/train_substrate_stc_v2.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_stc_v2.py
+
+env_overrides:
+  STC_V2_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  STC_V2_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  STC_V2_ANCHOR_ARCHIVE: /workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip
+  STC_V2_OUTPUT_DIR: /workspace/pact/lane_stc_clean_source_v2_results/output
+  STC_V2_EPOCHS: "1"
+  STC_V2_UPSTREAM_DIR: /workspace/pact/upstream
+  STC_V2_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_stc_v2.sh
+  - upstream/videos/0.mkv
+  - experiments/results/lane_a_landed/archive_lane_a.zip
+  - experiments/train_substrate_stc_v2.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  $0.20 CUDA DISAMBIGUATOR dispatch per design memo
+  .omx/research/batched_reactivation_lane17_imp_stc_apogee_int4_full_stack_design_20260516.md
+  Section 2 + .omx/research/resurrection_audit_20260516.md Tier 1 #2.
+  research_only=true at landing per CLAUDE.md "Substrate scaffolds MUST be
+  COMPLETE or RESEARCH-ONLY"; flips to research_only=false on REACTIVATED
+  or COMPETITIVE verdict.
+
+  REACTIVATION CRITERIA (per design memo Section 2.4):
+    stcb_bytes < 200 KB -> REACTIVATED + paired contest-CUDA / contest-CPU
+                            anchor + L2 promotion + queue (stc_v2 x A-STACK)
+                            composition smoke
+    stcb_bytes 200 KB-1 MB -> COMPETITIVE; design lane_av1_plus_stc_residual
+    stcb_bytes 1 MB-5 MB   -> RESEARCH_ONLY; STC alone doesn't beat AV1
+    stcb_bytes > 5 MB      -> HARD-EARNED FALSIFICATION; 3-section KILL memo
+                              per CLAUDE.md "KILL is LAST RESORT" with
+                              council consensus + reactivation criteria
+
+  9-DIMENSION SUCCESS CHECKLIST (per design memo Section 2.2.9):
+    1. UNIQUENESS: Filler & Pevny 2010 STC is class-shift (steganography-
+       derived codec); distinct from AV1 monochrome which uses interframe
+       prediction + 2D context that STC lacks.
+    2. BEAUTY/ELEGANCE: ~500 LOC trainer + ~370 LOC substrate package
+       (codec 80 + archive 180 + inflate 100). Substrate inflate <=100 LOC
+       per HNeRV L4.
+    3. DISTINCTNESS: only steganography-derived mask codec; sister mask
+       codecs are AV1 monochrome (Lane A), grayscale-LUT (Selfcomp PR#56),
+       LZMA entropy (Lane MM v2).
+    4. RIGOR: premise verification PV-1 (CUDA argmax masks != MPS argmax
+       masks empirically via sha256); HARD-EARNED vs CARGO-CULTED ledger
+       (STC kernel HARD-EARNED; MPS-PROXY evidence CARGO-CULTED).
+    5. OPTIMIZATION PER TECHNIQUE: Catalog #290 canonical-vs-unique
+       decision per layer in trainer docstring (12 layers; 4 FORK / 8
+       ADOPT).
+    6. STACK-OF-STACKS-COMPOSABILITY: STC v2 IS a drop-in masks slot for
+       any archive grammar that ships discrete-class semantic masks
+       (Quantizr 0.33 paradigm); compositional with NSCS01/NSCS02 (sparse
+       pruning orthogonal) and apogee_int4 QAT (quantization tier
+       orthogonal).
+    7. DETERMINISTIC REPRODUCIBILITY: lossless codec; byte-stable; seed-
+       pinned (no training).
+    8. EXTREME OPTIMIZATION: STC encoder is CPU-bound after the SegNet
+       forward; ~5 min wall-clock for the SegNet pass + ~5 min for STC
+       encode at boundary_fraction=0.05 on 1200 frames.
+    9. OPTIMAL MINIMAL CONTEST SCORE: predicted band [1.10, 1.13] if
+       REACTIVATED (vs Lane A 1.15 anchor) -- modest improvement; the real
+       value is unlocking the compositional path with NSCS01/NSCS02 + QAT.
+
+  Cross-ref:
+    .omx/research/batched_reactivation_lane17_imp_stc_apogee_int4_full_stack_design_20260516.md
+    .omx/research/resurrection_audit_20260516.md (Tier 1 #2)
+    project_lane_stc_av1_regression_finding_20260429
+    feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md
+    feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md
