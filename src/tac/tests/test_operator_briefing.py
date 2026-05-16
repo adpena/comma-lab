@@ -257,6 +257,22 @@ def test_briefing_json_composite_has_all_three_keys():
         row["dispatch_command_executable"] is False
         for row in l5["paired_measurement_dispatch_plan_command_sample"]
     )
+    assert all(
+        row["ready_for_operator_dispatch"] is False
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
+    assert all(
+        row["ready_for_provider_dispatch"] is False
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
+    assert all(
+        row["readiness_blockers"]
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
+    assert all(
+        "requires_byte_closed_archive_path" in row["readiness_blockers"]
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
     assert l5["target_rows_are_fail_fast_only"] is True
     assert isinstance(l5["canonical_sideinfo_evidence_present"], bool)
     if not l5["canonical_sideinfo_evidence_present"]:

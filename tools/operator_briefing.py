@@ -1356,8 +1356,11 @@ def _load_l5_v2_paired_measurement_dispatch_plan() -> dict[str, object]:
             "pair_group_id": row.get("pair_group_id"),
             "dispatch_command_template": row.get("dispatch_command_template"),
             "dispatch_command_executable": row.get("dispatch_command_executable"),
+            "ready_for_operator_dispatch": row.get("ready_for_operator_dispatch"),
+            "ready_for_provider_dispatch": row.get("ready_for_provider_dispatch"),
             "measurement_blockers_to_close": row.get("measurement_blockers_to_close"),
             "dispatch_blockers": row.get("dispatch_blockers"),
+            "readiness_blockers": row.get("readiness_blockers"),
         }
         for row in work_units[:3]
         if isinstance(row, dict)

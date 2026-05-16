@@ -109,6 +109,8 @@ def test_l5_v2_dispatch_plan_preserves_pairing_and_recovery_lifecycle() -> None:
         assert row["claim_lifecycle_owner"].startswith(
             "tools/dispatch_modal_paired_auth_eval.py"
         )
+        assert row["ready_for_operator_dispatch"] is False
+        assert row["ready_for_provider_dispatch"] is False
         assert set(row["harvest_commands"]) == {"contest_cpu", "contest_cuda"}
         assert all(
             command.startswith(".venv/bin/python tools/recover_modal_auth_eval.py --output-dir ")
@@ -117,6 +119,12 @@ def test_l5_v2_dispatch_plan_preserves_pairing_and_recovery_lifecycle() -> None:
         assert "requires_byte_closed_archive_path" in row["dispatch_blockers"]
         assert "requires_archive_sha256" in row["dispatch_blockers"]
         assert "requires_submission_dir_or_inflate_runtime" in row["dispatch_blockers"]
+        assert row["blockers"] == row["readiness_blockers"]
+        assert set(row["measurement_blockers_to_close"]).issubset(
+            row["readiness_blockers"]
+        )
+        assert set(row["dispatch_blockers"]).issubset(row["readiness_blockers"])
+        assert "requires_byte_closed_archive_path" in row["readiness_blockers"]
 
 
 def test_l5_v2_dispatch_plan_top_level_blockers_include_row_and_dispatch_gaps() -> None:
@@ -153,6 +161,8 @@ def test_l5_v2_dispatch_plan_expands_sideinfo_curve_to_variant_pairs() -> None:
         ]
         assert variant in row["pair_group_id"]
         assert variant in row["dispatch_command_template"]
+        assert row["ready_for_operator_dispatch"] is False
+        assert row["ready_for_provider_dispatch"] is False
         assert row["dispatch_command_executable"] is False
 
 
@@ -201,6 +211,8 @@ def test_l5_v2_dispatch_plan_json_and_markdown_are_durable() -> None:
     assert "planning_only: `true`" in report
     assert "score_claim_valid: `false`" in report
     assert "paired_dispatch_tool" in report
+    assert "ready_for_operator_dispatch: `False`" in report
+    assert "readiness_blockers:" in report
     assert "tools/dispatch_modal_paired_auth_eval.py" in report
 
 

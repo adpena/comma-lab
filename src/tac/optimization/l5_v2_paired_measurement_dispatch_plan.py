@@ -267,6 +267,7 @@ def build_l5_v2_paired_measurement_dispatch_plan(
             )
             command_string = " ".join(command)
             dispatch_blockers = _dispatch_blockers(command_string)
+            readiness_blockers = _dedupe(measurement_blockers + dispatch_blockers)
             top_blockers.extend(measurement_blockers)
             top_blockers.extend(dispatch_blockers)
             lanes = {
@@ -295,6 +296,8 @@ def build_l5_v2_paired_measurement_dispatch_plan(
                     "required_axes": list(_REQUIRED_EXACT_AXES),
                     "provider": "modal",
                     "paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+                    "ready_for_operator_dispatch": False,
+                    "ready_for_provider_dispatch": False,
                     "dispatch_command": command,
                     "dispatch_command_template": command_string,
                     "dispatch_command_executable": False,
@@ -312,6 +315,8 @@ def build_l5_v2_paired_measurement_dispatch_plan(
                     ),
                     "measurement_blockers_to_close": measurement_blockers,
                     "dispatch_blockers": dispatch_blockers,
+                    "readiness_blockers": readiness_blockers,
+                    "blockers": readiness_blockers,
                 }
             )
 
@@ -387,10 +392,13 @@ def render_l5_v2_paired_measurement_dispatch_plan_markdown(
                 f"- pair_group_id: `{row.get('pair_group_id')}`",
                 f"- required_axes: `{row.get('required_axes')}`",
                 f"- paired_dispatch_tool: `{row.get('paired_dispatch_tool')}`",
+                f"- ready_for_operator_dispatch: `{row.get('ready_for_operator_dispatch')}`",
+                f"- ready_for_provider_dispatch: `{row.get('ready_for_provider_dispatch')}`",
                 f"- dispatch_command_executable: `{row.get('dispatch_command_executable')}`",
                 f"- claim_lifecycle_owner: `{row.get('claim_lifecycle_owner')}`",
                 f"- measurement_blockers_to_close: `{row.get('measurement_blockers_to_close')}`",
                 f"- dispatch_blockers: `{row.get('dispatch_blockers')}`",
+                f"- readiness_blockers: `{row.get('readiness_blockers')}`",
                 "- dispatch_command: "
                 f"`{row.get('dispatch_command_template')}`",
             ]

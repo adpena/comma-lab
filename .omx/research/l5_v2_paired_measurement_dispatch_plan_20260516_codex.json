@@ -51,6 +51,22 @@
         "contest_cpu": "experiments/results/l5_v2_probe/measure_c1_world_model_foveation_paired_exact/modal_auth_eval_cpu/l5_v2_measure_c1_world_model_foveation_paired_exact_paired_measurement_cpu",
         "contest_cuda": "experiments/results/l5_v2_probe/measure_c1_world_model_foveation_paired_exact/modal_auth_eval/l5_v2_measure_c1_world_model_foveation_paired_exact_paired_measurement_cuda"
       },
+      "blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "candidate_id": "c1_world_model_foveation",
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py and the per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
@@ -124,7 +140,25 @@
       "promotion_eligible": false,
       "provider": "modal",
       "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": false,
+      "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
         "contest_cuda"
@@ -144,6 +178,22 @@
         "contest_cpu": "experiments/results/l5_v2_probe/measure_z5_predictive_coding_paired_exact/modal_auth_eval_cpu/l5_v2_measure_z5_predictive_coding_paired_exact_paired_measurement_cpu",
         "contest_cuda": "experiments/results/l5_v2_probe/measure_z5_predictive_coding_paired_exact/modal_auth_eval/l5_v2_measure_z5_predictive_coding_paired_exact_paired_measurement_cuda"
       },
+      "blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "candidate_id": "z5_predictive_coding_world_model",
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py and the per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
@@ -217,7 +267,25 @@
       "promotion_eligible": false,
       "provider": "modal",
       "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": false,
+      "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
         "contest_cuda"
@@ -237,6 +305,17 @@
         "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
         "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda"
       },
+      "blockers": [
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_score_delta_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "candidate_id": "time_traveler_l5_autonomy",
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py and the per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
@@ -305,7 +384,20 @@
       "promotion_eligible": false,
       "provider": "modal",
       "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_score_delta_missing:contest_cuda",
+        "requires_byte_closed_archive_path",
+        "requires_archive_sha256",
+        "requires_submission_dir_or_inflate_runtime",
+        "requires_operator_execute_flag"
+      ],
       "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": false,
+      "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
         "contest_cuda"
