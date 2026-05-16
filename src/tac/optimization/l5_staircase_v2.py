@@ -1023,10 +1023,23 @@ def _coerce_gate_evidence(
 
     values: Iterable[L5V2GateEvidence | Mapping[str, Any]]
     if isinstance(gate_evidence, Mapping):
-        values = (
-            value if isinstance(value, L5V2GateEvidence) else {"gate_id": key, **value}
-            for key, value in gate_evidence.items()
-        )
+        def _mapping_values() -> Iterable[L5V2GateEvidence | Mapping[str, Any]]:
+            for key, value in gate_evidence.items():
+                if isinstance(value, L5V2GateEvidence):
+                    yield value
+                elif isinstance(value, Mapping):
+                    yield {"gate_id": key, **value}
+                else:
+                    yield {
+                        "gate_id": key,
+                        "artifact_path": "",
+                        "artifact_sha256": "",
+                        "predicate_id": "",
+                        "predicate_passed": False,
+                        "evidence_grade": "__non_object_gate_evidence__",
+                    }
+
+        values = _mapping_values()
     else:
         values = gate_evidence
 
@@ -1034,6 +1047,15 @@ def _coerce_gate_evidence(
     for value in values:
         if isinstance(value, L5V2GateEvidence):
             evidence = value
+        elif not isinstance(value, Mapping):
+            evidence = L5V2GateEvidence(
+                gate_id="",
+                artifact_path="",
+                artifact_sha256="",
+                predicate_id="",
+                predicate_passed=False,
+                evidence_grade="__non_object_gate_evidence__",
+            )
         else:
             evidence = L5V2GateEvidence(
                 gate_id=str(value.get("gate_id", "")),
@@ -1249,6 +1271,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     proof_tool_exists = (repo_root / TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH).is_file()
     dispatch_recipe_exists = (repo_root / TT5L_MODAL_A100_DISPATCH_RECIPE_PATH).is_file()
     probe_tool_exists = (repo_root / L5V2_PROBE_TOOL_PATH).is_file()
+    probe_template_exists = (
+        repo_root / TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    ).is_file()
     dykstra_status = _tt5l_dykstra_feasibility_status(repo_root=repo_root)
     dykstra_valid = dykstra_status["artifact_valid"] is True
 
@@ -1298,6 +1323,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 "--baseline-output-dir <baseline_inflated_raw_dir> "
                 "--mutated-output-dir <mutated_inflated_raw_dir> "
                 "--file-list <contest_file_list.txt> "
+                "--baseline-inflate-provenance <baseline_inflate_provenance.json> "
+                "--mutated-inflate-provenance <mutated_inflate_provenance.json> "
                 "--artifact-out "
                 "experiments/results/time_traveler_l5_v2/"
                 "tt5l_contest_sideinfo_consumption_proof.json "
@@ -1315,7 +1342,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-    elif not probe_valid:
+    elif not probe_valid and not probe_template_exists:
         next_action = {
             "action_id": "emit_c1_z5_tt5l_probe_template",
             "phase": "probe_disambiguator",
@@ -1324,6 +1351,25 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 f"--emit-template --output-json {TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH}"
             ),
             "expected_artifacts": [TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not probe_valid:
+        next_action = {
+            "action_id": "populate_and_evaluate_c1_z5_tt5l_probe_observations",
+            "phase": "probe_disambiguator",
+            "probe_status": "observations_missing",
+            "input_template": TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH,
+            "command_template": (
+                f".venv/bin/python {L5V2_PROBE_TOOL_PATH} "
+                f"--input-json {TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH} "
+                "--output-json experiments/results/time_traveler_l5_v2/"
+                "l5_v2_probe_verdict.json"
+            ),
+            "expected_artifacts": [
+                "experiments/results/time_traveler_l5_v2/l5_v2_probe_verdict.json"
+            ],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1715,11 +1761,37 @@ def _contest_full_frame_sideinfo_blockers(
             "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
             "raw_output_shape_compatible"
         )
-    if proof.get("non_target_sections_identical") is not True:
+    header_delta_allowed = False
+    allowed_header_delta = proof.get("allowed_header_delta")
+    if isinstance(allowed_header_delta, Mapping):
+        header_delta_allowed = allowed_header_delta.get("allowed") is True
+    if (
+        proof.get("non_target_sections_identical") is not True
+        and header_delta_allowed is not True
+    ):
         blockers.append(
             "l5_v2_gate_artifact_semantics_invalid:"
             "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
             "non_target_sections_identical"
+        )
+    if proof.get("non_target_payload_sections_identical") is not True:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "non_target_payload_sections_identical"
+        )
+    if proof.get("inflate_provenance_valid") is not True:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "inflate_provenance_valid"
+        )
+    provenance_blockers = proof.get("inflate_provenance_blockers")
+    if not isinstance(provenance_blockers, list) or provenance_blockers:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "inflate_provenance_blockers"
         )
     section_hashes = proof.get("section_hashes")
     if not isinstance(section_hashes, Mapping):
@@ -1729,6 +1801,21 @@ def _contest_full_frame_sideinfo_blockers(
             "section_hashes"
         )
     else:
+        header_section = section_hashes.get("tt5l_header")
+        if not isinstance(header_section, Mapping):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                "section_hashes:tt5l_header"
+            )
+        elif header_section.get("identical") is not True:
+            header_allowed = header_section.get("allowed_delta")
+            if not isinstance(header_allowed, Mapping) or header_allowed.get("allowed") is not True:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "section_hashes:tt5l_header"
+                )
         for section_name in ("world_model_blob", "ac_state_blob", "meta_blob"):
             section = section_hashes.get(section_name)
             if not isinstance(section, Mapping):
@@ -1759,12 +1846,22 @@ def _contest_full_frame_sideinfo_blockers(
                 "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
                 "section_hashes:per_pair_side_info_blob"
             )
-        elif target_section.get("target_section") is not True:
+        elif (
+            target_section.get("target_section") is not True
+            or target_section.get("identical") is True
+        ):
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
                 "section_hashes:per_pair_side_info_blob"
             )
+    provenance = proof.get("inflate_provenance")
+    if not isinstance(provenance, Mapping):
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_missing:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "inflate_provenance"
+        )
     frame_nbytes = _non_bool_int(
         _first_present(
             proof,
@@ -2487,6 +2584,8 @@ def _gate_evidence_blockers(
         return [f"l5_v2_gate_evidence_missing:{gate.gate_id}"]
 
     blockers: list[str] = []
+    if evidence.evidence_grade == "__non_object_gate_evidence__":
+        blockers.append(f"l5_v2_gate_evidence_non_object:{gate.gate_id}")
     resolved_artifact_path: Path | None = None
     path_error: str | None = None
     if not evidence.artifact_path.strip():

@@ -74,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         payload = evaluate_l5_v2_probe(observations)
     _write_or_print(payload, args.output_json)
+    if not args.emit_template and payload.get("architecture_lock_allowed") is not True:
+        return 1
     return 0
 
 

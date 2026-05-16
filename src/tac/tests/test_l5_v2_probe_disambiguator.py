@@ -585,3 +585,17 @@ def test_l5_v2_probe_cli_emits_template() -> None:
     assert [row["candidate_id"] for row in payload["observations"]] == list(
         L5V2_CANDIDATES
     )
+
+
+def test_l5_v2_probe_cli_exits_nonzero_when_verdict_blocked() -> None:
+    result = subprocess.run(
+        [sys.executable, L5V2_PROBE_TOOL_PATH],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 1
+    assert payload["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_observations_missing" in payload["blockers"]

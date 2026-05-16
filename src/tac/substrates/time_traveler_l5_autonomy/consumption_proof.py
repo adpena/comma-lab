@@ -68,6 +68,23 @@ _RUNTIME_TREE_FILES: tuple[str, ...] = (
     "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
     "src/tac/substrates/time_traveler_l5_autonomy/inflate.py",
 )
+_TT5L_HEADER_FIELD_NAMES: tuple[str, ...] = (
+    "magic",
+    "version",
+    "num_pairs",
+    "hidden_dim",
+    "num_hidden_layers",
+    "output_height",
+    "output_width",
+    "foveation_grid_h",
+    "foveation_grid_w",
+    "pose_dim",
+    "per_pair_bytes",
+    "world_len",
+    "side_len",
+    "ac_len",
+    "meta_len",
+)
 
 
 @dataclass(frozen=True)
@@ -269,7 +286,7 @@ def _section_hash_records(
     mutated_blob: bytes,
     *,
     target_section_name: str,
-) -> tuple[dict[str, dict[str, object]], bool]:
+) -> tuple[dict[str, dict[str, object]], bool, bool, dict[str, object]]:
     baseline_sections = parse_tt5l_archive_bytes(baseline_blob)
     mutated_sections = parse_tt5l_archive_bytes(mutated_blob)
     records: dict[str, dict[str, object]] = {}
@@ -296,16 +313,59 @@ def _section_hash_records(
             "mutated_sha256": _sha256_bytes(mutated_payload),
             "identical": baseline_payload == mutated_payload,
         }
-    non_target_sections = (
+    payload_non_target_sections = (
         "world_model_blob",
         "ac_state_blob",
         "meta_blob",
     )
-    non_target_identical = all(
+    non_target_payload_identical = all(
         records.get(section_name, {}).get("identical") is True
-        for section_name in non_target_sections
+        for section_name in payload_non_target_sections
     )
-    return records, bool(non_target_identical)
+    non_target_identical = bool(
+        non_target_payload_identical
+        and records.get("tt5l_header", {}).get("identical") is True
+    )
+    header_delta = _allowed_header_delta_record(baseline_blob, mutated_blob)
+    records.setdefault("tt5l_header", {})["allowed_delta"] = header_delta
+    return (
+        records,
+        non_target_identical,
+        bool(non_target_payload_identical),
+        header_delta,
+    )
+
+
+def _tt5l_header_fields(blob: bytes) -> dict[str, object]:
+    values = struct.unpack(TT5L_HEADER_FMT, blob[: struct.calcsize(TT5L_HEADER_FMT)])
+    return dict(zip(_TT5L_HEADER_FIELD_NAMES, values, strict=True))
+
+
+def _allowed_header_delta_record(
+    baseline_blob: bytes,
+    mutated_blob: bytes,
+) -> dict[str, object]:
+    baseline = _tt5l_header_fields(baseline_blob)
+    mutated = _tt5l_header_fields(mutated_blob)
+    changed_fields = [
+        name
+        for name in _TT5L_HEADER_FIELD_NAMES
+        if baseline.get(name) != mutated.get(name)
+    ]
+    allowed_fields = {"side_len"}
+    return {
+        "allowed": set(changed_fields).issubset(allowed_fields),
+        "changed_fields": changed_fields,
+        "allowed_changed_fields": sorted(allowed_fields),
+        "baseline": {
+            key: (value.hex() if isinstance(value, bytes) else value)
+            for key, value in baseline.items()
+        },
+        "mutated": {
+            key: (value.hex() if isinstance(value, bytes) else value)
+            for key, value in mutated.items()
+        },
+    }
 
 
 def _differing_offsets_within_section(
@@ -411,6 +471,74 @@ def _raw_outputs_aggregate(
         "frame_nbytes": frame_nbytes,
         "files": records,
     }
+
+
+def _load_json_object(path: Path, *, label: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label} JSON invalid: {path}: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object: {path}")
+    return payload
+
+
+def _validate_inflate_provenance(
+    *,
+    label: str,
+    provenance_path: Path | None,
+    archive_path: Path,
+    archive_sha256: str,
+    output_dir: Path,
+    output_aggregate_sha256: str,
+    runtime_tree_sha256: str,
+    file_list_path: Path,
+    file_list_sha256: str,
+    repo_root: Path,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    blockers: list[str] = []
+    if provenance_path is None:
+        return None, [f"{label}_output_provenance_missing"]
+    provenance = _load_json_object(
+        provenance_path,
+        label=f"{label}_inflate_provenance",
+    )
+    expected_pairs = {
+        "archive_sha256": archive_sha256,
+        "runtime_tree_sha256": runtime_tree_sha256,
+        "file_list_sha256": file_list_sha256,
+        "output_aggregate_sha256": output_aggregate_sha256,
+    }
+    for key, expected in expected_pairs.items():
+        actual = str(provenance.get(key) or "").strip().lower()
+        if actual != expected:
+            blockers.append(f"{label}_output_provenance_{key}_mismatch")
+    if provenance.get("exit_code") != 0:
+        blockers.append(f"{label}_output_provenance_exit_code_nonzero")
+    command = str(provenance.get("command") or "")
+    if (
+        "time_traveler_l5_autonomy/inflate.py" not in command
+        and "time_traveler_l5_autonomy/inflate.sh" not in command
+    ):
+        blockers.append(f"{label}_output_provenance_command_not_tt5l_inflate")
+    if provenance.get("score_claim") is not False:
+        blockers.append(f"{label}_output_provenance_score_claim_not_false")
+    if provenance.get("promotion_eligible") is not False:
+        blockers.append(f"{label}_output_provenance_promotion_eligible_not_false")
+    if provenance.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append(
+            f"{label}_output_provenance_ready_for_exact_eval_dispatch_not_false"
+        )
+    expected_paths = {
+        "archive_path": archive_path,
+        "output_dir": output_dir,
+        "file_list_path": file_list_path,
+    }
+    for key, expected_path in expected_paths.items():
+        actual = str(provenance.get(key) or "")
+        if actual != _display_path(expected_path, repo_root):
+            blockers.append(f"{label}_output_provenance_{key}_mismatch")
+    return provenance, blockers
 
 
 def _component_proof(
@@ -646,16 +774,17 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
     file_list_path: str | Path,
     artifact_path: str | Path,
     manifest_path: str | Path,
+    baseline_inflate_provenance_path: str | Path | None = None,
+    mutated_inflate_provenance_path: str | Path | None = None,
     repo_root: str | Path | None = None,
     frame_nbytes: int = TT5L_CONTEST_FRAME_NBYTES,
 ) -> TT5LConsumptionProofResult:
     """Build the real L5-v2 gate artifact from contest-shaped TT5L outputs.
 
-    This is the operational counterpart to the local toy proof above. It does
-    not run inflate itself; it consumes two already-inflated TT5L output trees
-    plus their shared contest file list, verifies the TT5L side-info section
-    changed and parses, and emits the contest-full-frame proof shape accepted by
-    the L5 v2 staircase gate.
+    This is the operational counterpart to the local toy proof above. It
+    consumes two TT5L output trees plus mandatory inflate provenance manifests,
+    verifies the TT5L side-info section changed and parses, and emits the
+    contest-full-frame proof shape accepted by the L5 v2 staircase gate.
     """
 
     root = Path(repo_root).resolve() if repo_root is not None else _repo_root()
@@ -685,6 +814,24 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         file_list_path,
         repo_root=root,
         label="file_list_path",
+    )
+    baseline_provenance_path = (
+        _resolve_existing_repo_path(
+            baseline_inflate_provenance_path,
+            repo_root=root,
+            label="baseline_inflate_provenance_path",
+        )
+        if baseline_inflate_provenance_path is not None
+        else None
+    )
+    mutated_provenance_path = (
+        _resolve_existing_repo_path(
+            mutated_inflate_provenance_path,
+            repo_root=root,
+            label="mutated_inflate_provenance_path",
+        )
+        if mutated_inflate_provenance_path is not None
+        else None
     )
     proof_path = _resolve_repo_custody_path(
         artifact_path,
@@ -755,11 +902,48 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         mutated_blob,
         "per_pair_side_info_blob",
     )
-    section_hashes, non_target_sections_identical = _section_hash_records(
+    (
+        section_hashes,
+        non_target_sections_identical,
+        non_target_payload_sections_identical,
+        allowed_header_delta,
+    ) = _section_hash_records(
         baseline_blob,
         mutated_blob,
         target_section_name="per_pair_side_info_blob",
     )
+    baseline_archive_sha = _sha256_bytes(baseline_blob)
+    mutated_archive_sha = _sha256_bytes(mutated_blob)
+    file_list_sha = _sha256_file(file_list)
+    baseline_provenance, baseline_provenance_blockers = _validate_inflate_provenance(
+        label="baseline",
+        provenance_path=baseline_provenance_path,
+        archive_path=baseline_archive,
+        archive_sha256=baseline_archive_sha,
+        output_dir=baseline_outputs,
+        output_aggregate_sha256=baseline_aggregate["aggregate_sha256"],
+        runtime_tree_sha256=runtime_sha,
+        file_list_path=file_list,
+        file_list_sha256=file_list_sha,
+        repo_root=root,
+    )
+    mutated_provenance, mutated_provenance_blockers = _validate_inflate_provenance(
+        label="mutated",
+        provenance_path=mutated_provenance_path,
+        archive_path=mutated_archive,
+        archive_sha256=mutated_archive_sha,
+        output_dir=mutated_outputs,
+        output_aggregate_sha256=mutated_aggregate["aggregate_sha256"],
+        runtime_tree_sha256=runtime_sha,
+        file_list_path=file_list,
+        file_list_sha256=file_list_sha,
+        repo_root=root,
+    )
+    inflate_provenance_blockers = [
+        *baseline_provenance_blockers,
+        *mutated_provenance_blockers,
+    ]
+    inflate_provenance_valid = not inflate_provenance_blockers
     byte_mutation_proof = {
         "section": "tt5l_temporal_sideinfo",
         "archive_section_name": "per_pair_side_info_blob",
@@ -768,6 +952,10 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "output_changed": output_changed,
         "raw_output_shape_compatible": raw_output_shape_compatible,
         "non_target_sections_identical": non_target_sections_identical,
+        "non_target_payload_sections_identical": (
+            non_target_payload_sections_identical
+        ),
+        "allowed_header_delta": allowed_header_delta,
         "section_hashes": section_hashes,
         "mutated_byte_offsets": _differing_offsets_within_section(
             baseline_blob,
@@ -782,8 +970,8 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "mutated_section_sha256": _sha256_bytes(mutated_section_payload),
         "baseline_archive_path": _display_path(baseline_archive, root),
         "mutated_archive_path": _display_path(mutated_archive, root),
-        "baseline_archive_sha256": _sha256_bytes(baseline_blob),
-        "mutated_archive_sha256": _sha256_bytes(mutated_blob),
+        "baseline_archive_sha256": baseline_archive_sha,
+        "mutated_archive_sha256": mutated_archive_sha,
         "runtime_tree_sha256": runtime_sha,
         "baseline_inflate_sha256": baseline_aggregate["aggregate_sha256"],
         "mutated_inflate_sha256": mutated_aggregate["aggregate_sha256"],
@@ -802,7 +990,14 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
             "aggregate_sha256"
         ],
         "file_list_path": _display_path(file_list, root),
-        "file_list_sha256": _sha256_file(file_list),
+        "file_list_sha256": file_list_sha,
+        "inflate_provenance_required": True,
+        "inflate_provenance_valid": inflate_provenance_valid,
+        "inflate_provenance_blockers": inflate_provenance_blockers,
+        "inflate_provenance": {
+            "baseline": baseline_provenance,
+            "mutated": mutated_provenance,
+        },
         "n_pairs_hashed": n_pairs_hashed,
         "total_frames": total_frames,
         "video_count": baseline_aggregate["video_count"],
@@ -816,7 +1011,9 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         parser_consumed
         and output_changed
         and raw_output_shape_compatible
-        and non_target_sections_identical
+        and non_target_payload_sections_identical
+        and (non_target_sections_identical or allowed_header_delta["allowed"] is True)
+        and inflate_provenance_valid
         and n_pairs_hashed == TT5L_CONTEST_PAIR_COUNT
         and total_frames == TT5L_CONTEST_FRAME_COUNT
     )
@@ -837,13 +1034,20 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
             "aggregate_sha256"
         ],
         "file_list_path": _display_path(file_list, root),
-        "file_list_sha256": _sha256_file(file_list),
+        "file_list_sha256": file_list_sha,
         "n_pairs_hashed": n_pairs_hashed,
         "total_frames": total_frames,
         "video_count": baseline_aggregate["video_count"],
         "raw_output_frame_nbytes": baseline_aggregate["frame_nbytes"],
         "baseline_outputs": baseline_aggregate,
         "mutated_outputs": mutated_aggregate,
+        "inflate_provenance_required": True,
+        "inflate_provenance_valid": inflate_provenance_valid,
+        "inflate_provenance_blockers": inflate_provenance_blockers,
+        "inflate_provenance": {
+            "baseline": baseline_provenance,
+            "mutated": mutated_provenance,
+        },
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

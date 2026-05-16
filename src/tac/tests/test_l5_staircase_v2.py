@@ -245,7 +245,24 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
             "output_changed": True,
             "raw_output_shape_compatible": True,
             "non_target_sections_identical": True,
+            "non_target_payload_sections_identical": True,
+            "allowed_header_delta": {
+                "allowed": True,
+                "changed_fields": [],
+                "allowed_changed_fields": ["side_len"],
+            },
             "section_hashes": {
+                "tt5l_header": {
+                    "target_section": False,
+                    "baseline_sha256": _sha(50),
+                    "mutated_sha256": _sha(50),
+                    "identical": True,
+                    "allowed_delta": {
+                        "allowed": True,
+                        "changed_fields": [],
+                        "allowed_changed_fields": ["side_len"],
+                    },
+                },
                 "world_model_blob": {
                     "target_section": False,
                     "baseline_sha256": _sha(51),
@@ -295,6 +312,43 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
             "file_list_sha256": _sha(28),
             "baseline_raw_output_aggregate_sha256": _sha(29),
             "mutated_raw_output_aggregate_sha256": _sha(30),
+            "inflate_provenance_required": True,
+            "inflate_provenance_valid": True,
+            "inflate_provenance_blockers": [],
+            "inflate_provenance": {
+                "baseline": {
+                    "schema": "tt5l_inflate_provenance_v1",
+                    "archive_sha256": _sha(25),
+                    "runtime_tree_sha256": _sha(27),
+                    "file_list_sha256": _sha(28),
+                    "output_aggregate_sha256": _sha(29),
+                    "command": (
+                        ".venv/bin/python "
+                        "src/tac/substrates/time_traveler_l5_autonomy/inflate.py "
+                        "archive_dir output_dir file_list.txt"
+                    ),
+                    "exit_code": 0,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "mutated": {
+                    "schema": "tt5l_inflate_provenance_v1",
+                    "archive_sha256": _sha(26),
+                    "runtime_tree_sha256": _sha(27),
+                    "file_list_sha256": _sha(28),
+                    "output_aggregate_sha256": _sha(30),
+                    "command": (
+                        ".venv/bin/python "
+                        "src/tac/substrates/time_traveler_l5_autonomy/inflate.py "
+                        "archive_dir output_dir file_list.txt"
+                    ),
+                    "exit_code": 0,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            },
         }
     elif gate_id == "c1_z5_tt5l_probe_disambiguator":
         assert repo_root is not None
@@ -901,6 +955,27 @@ def test_l5_v2_tt5l_timing_requires_dykstra_and_sideinfo_evidence(
     assert tt5l["first_anchor_timing_smoke_allowed"] is True
 
 
+def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    action = readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"]
+
+    assert action["action_id"] == "populate_and_evaluate_c1_z5_tt5l_probe_observations"
+    assert action["probe_status"] == "observations_missing"
+    assert action["score_claim"] is False
+
+
 def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
     tmp_path: Path,
 ) -> None:
@@ -1433,6 +1508,19 @@ def test_l5_v2_dispatch_readiness_rejects_non_bool_gate_evidence_predicate(
         l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
 
 
+def test_l5_v2_dispatch_readiness_rejects_non_object_gate_evidence(
+    tmp_path: Path,
+) -> None:
+    evidence: dict[str, object] = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    evidence[gate_id] = True
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert f"l5_v2_gate_evidence_non_object:{gate_id}" in readiness["blockers"]
+
+
 @pytest.mark.parametrize("value", ["false", "yes", 1])
 def test_l5_v2_dispatch_readiness_rejects_non_bool_gate_artifact_predicate(
     tmp_path: Path,
@@ -1961,6 +2049,7 @@ def test_l5_v2_sideinfo_consumption_requires_non_target_section_identity(
     proof = payload["byte_mutation_proof"]
     assert isinstance(proof, dict)
     proof["non_target_sections_identical"] = False
+    proof["non_target_payload_sections_identical"] = False
     section_hashes = proof["section_hashes"]
     assert isinstance(section_hashes, dict)
     world = section_hashes["world_model_blob"]
@@ -1976,7 +2065,7 @@ def test_l5_v2_sideinfo_consumption_requires_non_target_section_identity(
     assert (
         "l5_v2_gate_artifact_semantics_invalid:"
         "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
-        "non_target_sections_identical"
+        "non_target_payload_sections_identical"
         in readiness["blockers"]
     )
     assert (

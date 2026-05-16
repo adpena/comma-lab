@@ -27,6 +27,8 @@ from tac.substrates.time_traveler_l5_autonomy.architecture import (
 from tac.substrates.time_traveler_l5_autonomy.consumption_proof import (
     TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
     _build_toy_archive,
+    _raw_outputs_aggregate,
+    _runtime_tree_sha256,
     build_tt5l_contest_full_frame_sideinfo_consumption_proof,
     build_tt5l_sideinfo_consumption_proof,
 )
@@ -179,6 +181,45 @@ def _write_contest_file_list_and_outputs(
     return file_list, baseline_dir, mutated_dir
 
 
+def _write_inflate_provenance(
+    root: Path,
+    *,
+    label: str,
+    archive_path: Path,
+    output_dir: Path,
+    file_list: Path,
+    frame_nbytes: int = 1,
+) -> Path:
+    aggregate = _raw_outputs_aggregate(
+        output_dir=output_dir,
+        file_list_entries=("0.mkv",),
+        repo_root=root,
+        frame_nbytes=frame_nbytes,
+    )
+    payload = {
+        "schema": "tt5l_inflate_provenance_v1",
+        "archive_path": str(archive_path.relative_to(root)),
+        "archive_sha256": _sha256_file(archive_path),
+        "output_dir": str(output_dir.relative_to(root)),
+        "output_aggregate_sha256": aggregate["aggregate_sha256"],
+        "runtime_tree_sha256": _runtime_tree_sha256(root),
+        "file_list_path": str(file_list.relative_to(root)),
+        "file_list_sha256": _sha256_file(file_list),
+        "command": (
+            ".venv/bin/python "
+            "src/tac/substrates/time_traveler_l5_autonomy/inflate.py "
+            "<archive_dir> <output_dir> <file_list>"
+        ),
+        "exit_code": 0,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    path = output_dir.parent / f"{label}_inflate_provenance.json"
+    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
 def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
     tmp_path: Path,
 ) -> None:
@@ -202,6 +243,20 @@ def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
         file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
             artifact_root
         )
+        baseline_provenance = _write_inflate_provenance(
+            root,
+            label="baseline",
+            archive_path=baseline_archive,
+            output_dir=baseline_dir,
+            file_list=file_list,
+        )
+        mutated_provenance = _write_inflate_provenance(
+            root,
+            label="mutated",
+            archive_path=mutated_archive,
+            output_dir=mutated_dir,
+            file_list=file_list,
+        )
         proof_path = artifact_root / "tt5l_contest_sideinfo_proof.json"
         manifest_path = artifact_root / "tt5l_contest_outputs_manifest.json"
 
@@ -213,6 +268,8 @@ def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
             file_list_path=file_list,
             artifact_path=proof_path,
             manifest_path=manifest_path,
+            baseline_inflate_provenance_path=baseline_provenance,
+            mutated_inflate_provenance_path=mutated_provenance,
             repo_root=root,
             frame_nbytes=1,
         )
@@ -223,7 +280,8 @@ def test_tt5l_contest_full_frame_sideinfo_proof_counts_video_raw_frames(
         assert proof["score_claim"] is False
         assert proof["byte_mutation_proof"]["parser_consumed_bytes"] is True
         assert proof["byte_mutation_proof"]["output_changed"] is True
-        assert proof["byte_mutation_proof"]["non_target_sections_identical"] is True
+        assert proof["byte_mutation_proof"]["non_target_payload_sections_identical"] is True
+        assert proof["byte_mutation_proof"]["inflate_provenance_valid"] is True
         section_hashes = proof["byte_mutation_proof"]["section_hashes"]
         for section_name in ("world_model_blob", "ac_state_blob", "meta_blob"):
             assert section_hashes[section_name]["identical"] is True
@@ -293,6 +351,68 @@ def test_tt5l_contest_sideinfo_proof_rejects_non_target_section_change(
         file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
             artifact_root
         )
+        baseline_provenance = _write_inflate_provenance(
+            root,
+            label="baseline",
+            archive_path=baseline_archive,
+            output_dir=baseline_dir,
+            file_list=file_list,
+        )
+        mutated_provenance = _write_inflate_provenance(
+            root,
+            label="mutated",
+            archive_path=mutated_archive,
+            output_dir=mutated_dir,
+            file_list=file_list,
+        )
+
+        result = build_tt5l_contest_full_frame_sideinfo_consumption_proof(
+            baseline_archive_path=baseline_archive,
+            mutated_archive_path=mutated_archive,
+            baseline_output_dir=baseline_dir,
+            mutated_output_dir=mutated_dir,
+            file_list_path=file_list,
+            artifact_path=artifact_root / "proof.json",
+            manifest_path=artifact_root / "manifest.json",
+            baseline_inflate_provenance_path=baseline_provenance,
+            mutated_inflate_provenance_path=mutated_provenance,
+            repo_root=root,
+            frame_nbytes=1,
+        )
+
+        proof = result.proof["byte_mutation_proof"]
+        assert result.proof["predicate_passed"] is False
+        assert proof["parser_consumed_bytes"] is True
+        assert proof["output_changed"] is True
+        assert proof["non_target_payload_sections_identical"] is False
+        assert proof["section_hashes"]["ac_state_blob"]["identical"] is False
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
+
+
+def test_tt5l_contest_sideinfo_proof_requires_inflate_provenance(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_contest_sideinfo_provenance_{tmp_path.name}"
+    )
+    zero_side = np.zeros((600, 45), dtype=np.int8)
+    mutated_side = zero_side.copy()
+    mutated_side[17, 36:45] = 64
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        baseline_archive = artifact_root / "baseline_0.bin"
+        mutated_archive = artifact_root / "mutated_0.bin"
+        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
+        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
+        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
+            artifact_root
+        )
 
         result = build_tt5l_contest_full_frame_sideinfo_consumption_proof(
             baseline_archive_path=baseline_archive,
@@ -308,10 +428,13 @@ def test_tt5l_contest_sideinfo_proof_rejects_non_target_section_change(
 
         proof = result.proof["byte_mutation_proof"]
         assert result.proof["predicate_passed"] is False
-        assert proof["parser_consumed_bytes"] is True
-        assert proof["output_changed"] is True
-        assert proof["non_target_sections_identical"] is False
-        assert proof["section_hashes"]["ac_state_blob"]["identical"] is False
+        assert proof["inflate_provenance_valid"] is False
+        assert "baseline_output_provenance_missing" in proof[
+            "inflate_provenance_blockers"
+        ]
+        assert "mutated_output_provenance_missing" in proof[
+            "inflate_provenance_blockers"
+        ]
     finally:
         shutil.rmtree(artifact_root, ignore_errors=True)
 
@@ -337,6 +460,20 @@ def test_tt5l_contest_sideinfo_proof_cli_returns_nonzero_on_failed_predicate(
         file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
             artifact_root
         )
+        baseline_provenance = _write_inflate_provenance(
+            root,
+            label="baseline",
+            archive_path=baseline_archive,
+            output_dir=baseline_dir,
+            file_list=file_list,
+        )
+        mutated_provenance = _write_inflate_provenance(
+            root,
+            label="mutated",
+            archive_path=mutated_archive,
+            output_dir=mutated_dir,
+            file_list=file_list,
+        )
         proc = subprocess.run(
             [
                 "tools/build_tt5l_contest_sideinfo_consumption_proof.py",
@@ -350,6 +487,10 @@ def test_tt5l_contest_sideinfo_proof_cli_returns_nonzero_on_failed_predicate(
                 str(mutated_dir.relative_to(root)),
                 "--file-list",
                 str(file_list.relative_to(root)),
+                "--baseline-inflate-provenance",
+                str(baseline_provenance.relative_to(root)),
+                "--mutated-inflate-provenance",
+                str(mutated_provenance.relative_to(root)),
                 "--artifact-out",
                 str((artifact_root / "proof.json").relative_to(root)),
                 "--manifest-out",
@@ -378,4 +519,5 @@ def test_tt5l_contest_full_frame_sideinfo_proof_cli_help_uses_repo_venv() -> Non
 
     assert "--baseline-archive" in result.stdout
     assert "--manifest-out" in result.stdout
+    assert "--baseline-inflate-provenance" in result.stdout
     assert "--frame-nbytes" in result.stdout

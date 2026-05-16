@@ -3,8 +3,9 @@
 """Build a contest-full-frame TT5L side-info consumption proof.
 
 The tool is intentionally narrow: it consumes already-built TT5L baseline and
-side-info-mutated archives plus their already-inflated output directories. It
-does not run auth eval and does not claim score movement.
+side-info-mutated archives, already-inflated output directories, and mandatory
+inflate provenance manifests binding those outputs to the archive/runtime
+inflate command. It does not run auth eval and does not claim score movement.
 """
 
 from __future__ import annotations
@@ -49,6 +50,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--baseline-output-dir", required=True, type=Path)
     parser.add_argument("--mutated-output-dir", required=True, type=Path)
     parser.add_argument("--file-list", required=True, type=Path)
+    parser.add_argument("--baseline-inflate-provenance", required=True, type=Path)
+    parser.add_argument("--mutated-inflate-provenance", required=True, type=Path)
     parser.add_argument("--artifact-out", required=True, type=Path)
     parser.add_argument("--manifest-out", required=True, type=Path)
     parser.add_argument(
@@ -73,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
         file_list_path=args.file_list,
         artifact_path=args.artifact_out,
         manifest_path=args.manifest_out,
+        baseline_inflate_provenance_path=args.baseline_inflate_provenance,
+        mutated_inflate_provenance_path=args.mutated_inflate_provenance,
         repo_root=REPO_ROOT,
         frame_nbytes=args.frame_nbytes,
     )
