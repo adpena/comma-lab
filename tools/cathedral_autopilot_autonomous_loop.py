@@ -430,6 +430,8 @@ class CandidateRow:
             blockers.append("runtime_tree_sha256_malformed")
         if contest_exact_target and not has_exact_packet_hashes:
             blockers.append("contest_exact_eval_requires_archive_and_runtime_hash")
+        if contest_exact_target and self.ready_for_exact_eval_dispatch is not True:
+            blockers.append("contest_exact_eval_requires_ready_for_exact_eval_dispatch")
         elif not (has_dispatch_packet_hash or has_exact_packet_hashes):
             blockers.append("dispatch_packet_or_archive_runtime_hash_required")
         if self.ready_for_exact_eval_dispatch and not has_exact_packet_hashes:
@@ -2123,7 +2125,11 @@ def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
     return not ("[prediction" in notes or "[predicted" in notes)
 
 
-def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
+def load_candidates_from_jsonl(
+    path: Path,
+    *,
+    allow_dispatch_authority_flags: bool = False,
+) -> list[CandidateRow]:
     """Load CandidateRow objects from a JSONL file (one row per line).
 
     Z1 empirical revision fields (2026-05-14) are read from the row when
@@ -2151,11 +2157,10 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 f"{path}:{line_no} candidate "
                 f"{raw.get('candidate_id', '<missing-candidate-id>')!r}"
             )
-            for flag in (
-                "score_claim",
-                "promotion_eligible",
-                "ready_for_exact_eval_dispatch",
-            ):
+            authority_flags = ["score_claim", "promotion_eligible"]
+            if not allow_dispatch_authority_flags:
+                authority_flags.append("ready_for_exact_eval_dispatch")
+            for flag in authority_flags:
                 _require_planning_only_flag(raw, flag, context=context)
             mdl_density = _coerce_optional_float(raw.get("mdl_density"))
             mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
@@ -2221,7 +2226,11 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
                 score_claim=False,
                 promotion_eligible=False,
-                ready_for_exact_eval_dispatch=False,
+                ready_for_exact_eval_dispatch=(
+                    bool(raw.get("ready_for_exact_eval_dispatch", False))
+                    if allow_dispatch_authority_flags
+                    else False
+                ),
             ))
     return rows
 
@@ -3214,7 +3223,12 @@ def main(argv: list[str] | None = None) -> int:
             )
     else:
         def _source() -> list[CandidateRow]:
-            return load_candidates_from_jsonl(args.candidates_jsonl)
+            return load_candidates_from_jsonl(
+                args.candidates_jsonl,
+                allow_dispatch_authority_flags=(
+                    args.operator_authorized_le_5_dollar_mode
+                ),
+            )
 
     try:
         reports = run_continuous_loop(

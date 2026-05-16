@@ -247,6 +247,28 @@ def test_l5_v2_dispatch_readiness_verifies_artifact_files_and_hashes(
     ]
 
 
+def test_l5_v2_dispatch_readiness_verifies_gate_artifact_identity(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    first_gate_id = next(iter(evidence))
+    artifact_path = tmp_path / str(evidence[first_gate_id]["artifact_path"])
+    artifact_path.write_text(
+        '{"gate_id":"wrong_gate","passed":true}\n',
+        encoding="utf-8",
+    )
+    evidence[first_gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert readiness["ready_for_gate_probe_dispatch"] is False
+    assert (
+        f"l5_v2_gate_artifact_gate_id_mismatch:{first_gate_id}:wrong_gate"
+        in readiness["blockers"]
+    )
+
+
 def test_l5_v2_prediction_band_flows_into_composition_row() -> None:
     rows = {
         row.substrate_id: row

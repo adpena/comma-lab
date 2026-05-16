@@ -730,6 +730,61 @@ def test_refuses_cosmetic_candidate_without_change_proof(tmp_path: Path) -> None
     assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
 
 
+def test_refuses_unrelated_nested_provenance_diff_as_change_proof(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.pop("score_affecting_payload_changed")
+    row.pop("charged_bits_changed")
+    row["historical_provenance"] = {
+        "old_archive_sha256": "0" * 64,
+        "new_archive_sha256": "1" * 64,
+        "score_affecting_payload_changed": True,
+    }
+    queue.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["promoted_queue"] is None
+    assert "score_affecting_change_proof_missing" in result["report"]["blockers"]
+
+
+def test_accepts_named_score_affecting_change_proof_object(tmp_path: Path) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    payload = json.loads(queue.read_text(encoding="utf-8"))
+    row = payload["top_k"][0]
+    row.pop("score_affecting_payload_changed")
+    row.pop("charged_bits_changed")
+    row["score_affecting_change_proof"] = {
+        "source_archive_sha256": "0" * 64,
+        "candidate_archive_sha256": archive_sha,
+    }
+    queue.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+
+    assert result["report"]["ready_for_exact_eval_dispatch"] is True
+    assert result["promoted_queue"] is not None
+    assert (
+        "source_archive_sha256!=candidate_archive_sha256"
+        in result["report"]["facts"]["score_affecting_change_proofs"]
+    )
+
+
 def test_refuses_same_lane_active_claim(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
@@ -813,6 +868,36 @@ def test_refuses_same_lane_terminal_cuda_score_not_below_floor_for_same_archive(
         blocker.startswith(
             "same_lane_terminal_score_not_below_active_floor_for_same_archive"
         )
+        for blocker in result["report"]["blockers"]
+    )
+
+
+def test_refuses_same_lane_terminal_cuda_without_score_for_same_archive(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 |  | completed_contest_cuda_auth_eval | archive_sha={archive_sha}; score pending harvest |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        active_floor_score=0.2089810755823297,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith("same_lane_terminal_cuda_score_missing_for_same_archive")
         for blocker in result["report"]["blockers"]
     )
 

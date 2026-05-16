@@ -120,6 +120,13 @@ TRUE_CHANGE_FIELDS = (
     "byte_different",
     "archive_changed",
 )
+SCORE_AFFECTING_PROOF_OBJECT_KEYS = (
+    "score_affecting_change_proof",
+    "payload_diff_proof",
+    "archive_diff_proof",
+    "runtime_diff_proof",
+    "byte_diff_proof",
+)
 NO_OP_FIELDS = ("no_op", "is_noop", "no_op_payload", "noop")
 SHA_DIFF_FIELD_PAIRS = (
     ("source_archive_sha256", "candidate_archive_sha256"),
@@ -286,9 +293,15 @@ def score_affecting_change_proof(row: Mapping[str, Any]) -> tuple[bool, list[str
     if no_op_markers:
         return False, [f"explicit_no_op_marker:{','.join(no_op_markers)}"]
 
+    proof_mappings: list[Mapping[str, Any]] = [row]
+    for key in SCORE_AFFECTING_PROOF_OBJECT_KEYS:
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            proof_mappings.append(value)
+
     proofs: list[str] = []
     explicit_false: list[str] = []
-    for mapping in iter_mappings(row):
+    for mapping in proof_mappings:
         for key in TRUE_CHANGE_FIELDS:
             parsed = as_bool(mapping.get(key))
             if parsed is True:
@@ -567,6 +580,12 @@ def terminal_claim_result_conflicts(
             blockers.append(f"same_lane_terminal_negative_for_same_archive:{claim_id}")
             continue
         score = _terminal_claim_score(notes)
+        if status.startswith("completed_contest_cuda") and score is None:
+            blockers.append(
+                "same_lane_terminal_cuda_score_missing_for_same_archive:"
+                f"{claim_id}"
+            )
+            continue
         if status.startswith("completed_contest_cuda") and score is not None:
             if active_floor_score is not None and score >= active_floor_score:
                 blockers.append(

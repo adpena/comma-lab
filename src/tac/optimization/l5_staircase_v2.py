@@ -9,6 +9,7 @@ the frontier path without treating source-backed theory as score evidence.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -373,6 +374,44 @@ def _gate_evidence_blockers(
             blockers.append(f"l5_v2_gate_artifact_path_outside_repo:{gate.gate_id}")
         elif resolved_artifact_path is not None and not resolved_artifact_path.is_file():
             blockers.append(f"l5_v2_gate_artifact_file_missing:{gate.gate_id}")
+        elif resolved_artifact_path is not None and resolved_artifact_path.is_file():
+            try:
+                artifact_payload = json.loads(
+                    resolved_artifact_path.read_text(encoding="utf-8")
+                )
+            except json.JSONDecodeError as exc:
+                blockers.append(
+                    f"l5_v2_gate_artifact_json_invalid:{gate.gate_id}:{exc.msg}"
+                )
+            else:
+                if not isinstance(artifact_payload, Mapping):
+                    blockers.append(f"l5_v2_gate_artifact_json_not_object:{gate.gate_id}")
+                else:
+                    artifact_gate_id = str(artifact_payload.get("gate_id") or "").strip()
+                    if not artifact_gate_id:
+                        blockers.append(f"l5_v2_gate_artifact_gate_id_missing:{gate.gate_id}")
+                    elif artifact_gate_id != gate.gate_id:
+                        blockers.append(
+                            "l5_v2_gate_artifact_gate_id_mismatch:"
+                            f"{gate.gate_id}:{artifact_gate_id}"
+                        )
+                    artifact_predicate_id = str(
+                        artifact_payload.get("predicate_id") or ""
+                    ).strip()
+                    if (
+                        artifact_predicate_id
+                        and artifact_predicate_id != evidence.predicate_id.strip()
+                    ):
+                        blockers.append(
+                            "l5_v2_gate_artifact_predicate_id_mismatch:"
+                            f"{gate.gate_id}:{artifact_predicate_id}"
+                        )
+                    artifact_passed = artifact_payload.get(
+                        "predicate_passed",
+                        artifact_payload.get("passed"),
+                    )
+                    if artifact_passed is False:
+                        blockers.append(f"l5_v2_gate_artifact_predicate_failed:{gate.gate_id}")
     if not _SHA256_HEX_RE.fullmatch(evidence.artifact_sha256.strip()):
         blockers.append(f"l5_v2_gate_artifact_sha256_invalid:{gate.gate_id}")
     elif (

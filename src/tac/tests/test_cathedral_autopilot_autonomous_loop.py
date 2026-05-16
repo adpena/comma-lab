@@ -81,7 +81,8 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           target_modes: list[str] | None = None,
           dispatch_packet_sha256: str | None = None,
           archive_sha256: str | None = None,
-          runtime_tree_sha256: str | None = None) -> loop.CandidateRow:
+          runtime_tree_sha256: str | None = None,
+          ready_for_exact_eval_dispatch: bool = True) -> loop.CandidateRow:
     return loop.CandidateRow(
         candidate_id=cid,
         family=family,
@@ -105,6 +106,7 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
         runtime_tree_sha256=(
             runtime_tree_sha256 if runtime_tree_sha256 is not None else _sha("c")
         ),
+        ready_for_exact_eval_dispatch=ready_for_exact_eval_dispatch,
     )
 
 
@@ -661,6 +663,33 @@ def test_load_candidates_from_jsonl_refuses_authority_flags(tmp_path, flag):
         loop.load_candidates_from_jsonl(p)
 
 
+def test_load_candidates_from_jsonl_can_preserve_exact_ready_in_authorized_mode(
+    tmp_path,
+):
+    p = tmp_path / "cands.jsonl"
+    raw = {
+        "candidate_id": "exact_ready_row",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": 5.0,
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": _sha("a"),
+        "runtime_tree_sha256": _sha("b"),
+        "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+    }
+    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+
+    rows = loop.load_candidates_from_jsonl(
+        p,
+        allow_dispatch_authority_flags=True,
+    )
+
+    assert rows[0].ready_for_exact_eval_dispatch is True
+    assert rows[0].score_claim is False
+    assert rows[0].promotion_eligible is False
+
+
 @pytest.mark.parametrize("bad_cost", ["NaN", "Infinity", "-Infinity", "0"])
 def test_load_candidates_from_jsonl_refuses_non_finite_or_nonpositive_cost(
     tmp_path,
@@ -1098,6 +1127,20 @@ def test_can_authorize_accepts_valid_archive_runtime_hash_pair(tmp_path):
     assert reason == ""
 
 
+def test_can_authorize_refuses_contest_exact_without_exact_ready_authority(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256="",
+        archive_sha256=_sha("b"),
+        runtime_tree_sha256=_sha("c"),
+        ready_for_exact_eval_dispatch=False,
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "contest_exact_eval_requires_ready_for_exact_eval_dispatch" in reason
+
+
 def test_can_authorize_refuses_malformed_archive_runtime_hash_pair(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(
@@ -1436,6 +1479,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
             "runtime_tree_sha256": _sha("f"),
             "lane_id": "lane_test_auth_mode_uniq_abc123",
             "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+            "ready_for_exact_eval_dispatch": True,
         }) + "\n",
         encoding="utf-8",
     )
