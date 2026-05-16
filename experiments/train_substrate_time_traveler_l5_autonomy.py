@@ -378,6 +378,39 @@ def _archive_bytes_proxy_estimate(
     return int(world_model_bytes + n_pairs * per_pair_side_info_bytes)
 
 
+def _initialize_per_pair_side_info_float(
+    *,
+    n_pairs: int,
+    per_pair_side_info_bytes: int,
+    int8_scale: float,
+    device: Any,
+    generator: Any | None = None,
+) -> Any:
+    """Return trainable TT5L side-info initialized at the archive LSB scale.
+
+    The full trainer used to start this tensor as exact zeros while the smoke
+    path emitted random side-info. That made short or interrupted TT5L runs
+    indistinguishable from a no-side-channel archive even though the optimizer
+    was nominally wiring the residual stream. Initializing at roughly one int8
+    least-significant bit keeps the train/inflate path active from step zero
+    without changing the byte budget or archive grammar.
+    """
+    if n_pairs <= 0:
+        raise ValueError("n_pairs must be positive")
+    if per_pair_side_info_bytes <= 0:
+        raise ValueError("per_pair_side_info_bytes must be positive")
+    if int8_scale <= 0.0:
+        raise ValueError("int8_scale must be positive")
+
+    import torch
+
+    kwargs: dict[str, Any] = {"device": device}
+    if generator is not None:
+        kwargs["generator"] = generator
+    values = torch.randn(n_pairs, per_pair_side_info_bytes, **kwargs) / float(int8_scale)
+    return torch.nn.Parameter(values)
+
+
 def _byte_proxy_calibration(
     *,
     proxy_bytes: int,
@@ -1085,8 +1118,11 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage(f"substrate_built_{n_params}_params_wm{wm_bytes}_B")
 
         # 5. Per-pair side info parameter (the float pre-quant tensor; gradient flows here).
-        per_pair_side_info_float = torch.nn.Parameter(
-            0.0 * torch.randn(n_pairs, args.per_pair_side_info_bytes, device=device)
+        per_pair_side_info_float = _initialize_per_pair_side_info_float(
+            n_pairs=n_pairs,
+            per_pair_side_info_bytes=args.per_pair_side_info_bytes,
+            int8_scale=args.int8_scale,
+            device=device,
         )
 
         # 6. EMA shadow (Catalog #88).

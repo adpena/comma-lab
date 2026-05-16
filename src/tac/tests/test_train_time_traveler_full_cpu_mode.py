@@ -146,6 +146,27 @@ def test_archive_byte_proxy_calibration_records_drift(trainer_module):
     assert calibration["bin_to_proxy_ratio"] == pytest.approx(1500 / 1180)
 
 
+def test_full_trainer_side_info_initializes_at_quantized_lsb(trainer_module):
+    """TT5L full training must not start with an archive-dead side channel."""
+
+    generator = torch.Generator(device="cpu").manual_seed(1705)
+    side_info = trainer_module._initialize_per_pair_side_info_float(
+        n_pairs=8,
+        per_pair_side_info_bytes=45,
+        int8_scale=64.0,
+        device=torch.device("cpu"),
+        generator=generator,
+    )
+
+    quantized = (side_info.detach() * 64.0).round().clamp(-128, 127).to(torch.int8)
+
+    assert side_info.requires_grad is True
+    assert side_info.shape == (8, 45)
+    assert torch.count_nonzero(side_info.detach()).item() > 0
+    assert torch.count_nonzero(quantized).item() > 0
+    assert quantized.abs().max().item() < 8
+
+
 def test_shape_readiness_blocks_smoke_partial_and_full_cpu(trainer_module):
     smoke = trainer_module._shape_readiness_manifest(
         n_pairs=4,
