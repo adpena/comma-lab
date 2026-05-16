@@ -1956,7 +1956,7 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
     assert tt5l["sideinfo_effect_curve_artifact_valid"] is True
     assert tt5l["architecture_lock_allowed"] is False
     assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
-    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is True
     assert "tt5l_first_anchor_timing_smoke_artifact_missing" in tt5l["blockers"]
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_first_anchor_timing_smoke_artifact"

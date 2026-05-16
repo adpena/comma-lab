@@ -2243,7 +2243,6 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         and sideinfo_effect_curve_valid
         and probe_valid
         and paired_axis_plan_valid
-        and timing_smoke_valid
     )
     architecture_lock_allowed = (
         sideinfo_effect_curve_allowed

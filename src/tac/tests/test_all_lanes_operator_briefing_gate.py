@@ -378,9 +378,50 @@ def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_probe_plan(
 
     assert (
         "l5_v2_frontier_readiness:"
-        "tt5l_timing_smoke_without_dykstra_move_level_sideinfo_probe_paired_axis_plan_and_timing_artifact"
+        "tt5l_timing_smoke_without_dykstra_move_level_sideinfo_probe_paired_axis_plan"
         in failures
     )
+    assert "l5_v2_frontier_readiness:tt5l_dykstra_status_validity_mismatch" not in failures
+
+
+def test_operator_briefing_dispatch_gate_allows_tt5l_timing_before_artifact() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    tt5l = dict(l5["tt5l_campaign_readiness"])  # type: ignore[index]
+    tt5l["dykstra_feasibility_artifact_valid"] = True
+    tt5l["dykstra_feasibility_status"] = {
+        **tt5l["dykstra_feasibility_status"],  # type: ignore[arg-type]
+        "artifact_valid": True,
+    }
+    tt5l["move_level_feasibility_artifact_valid"] = True
+    tt5l["sideinfo_gate_evidence_valid"] = True
+    tt5l["probe_gate_evidence_valid"] = True
+    tt5l["paired_axis_plan_evidence_valid"] = True
+    tt5l["sideinfo_effect_curve_allowed"] = True
+    tt5l["sideinfo_effect_curve_artifact_valid"] = True
+    tt5l["first_anchor_timing_smoke_artifact_valid"] = False
+    tt5l["first_anchor_timing_smoke_allowed"] = True
+    tt5l["next_non_pr106_l5_action"] = {
+        "action_id": "materialize_tt5l_first_anchor_timing_smoke_artifact",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    l5["tt5l_campaign_readiness"] = tt5l
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert not any("tt5l_timing_smoke_without" in failure for failure in failures)
     assert "l5_v2_frontier_readiness:tt5l_dykstra_status_validity_mismatch" not in failures
 
 
