@@ -2530,6 +2530,71 @@ def preflight_all(
         check_substrate_design_memo_has_observability_surface_section(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #307 / #308 / #309 / #310 / #311 / #312 -
+        # FALSIFICATION-AUDIT-v2 Patterns D/E/F + Z6/Z7/Z8 design memo
+        # Patterns G/H/I. SIX-META-PATTERN STRICT GATES per the
+        # SUBAGENT B landing memo
+        # ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+        # Sister of Catalog #290 / #294 / #296 / #297 / #303 / #305 / #301 /
+        # #292 (existing memo-discipline gate family).
+        #
+        # Pattern D (#307): paradigm-vs-implementation falsification
+        # conflation. Empirical anchor: NSCS06 v6 was initially FALSIFIED at
+        # 105.15 substrate-class; v7 unwound 4-of-7 cargo-cults and achieved
+        # 58.89 (44% reduction) -- proof the paradigm was INTACT. Initial
+        # wire-in WARN-ONLY per "Strict-flip atomicity rule" (4 violations
+        # at landing: pre-Pattern-D resurrection/reactivation memos).
+        check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification(
+            strict=False, verbose=verbose,
+        )
+        # Pattern E (#308): probe-methodology-as-false-falsification.
+        # Empirical anchor: Wunderkind G1 v2 PIVOT kill-verdict based on
+        # single per-pair-dominant SegNet argmax probe; 4 alternative
+        # reducers unprobed (per-pair HISTOGRAM / per-region HISTOGRAM /
+        # per-segment-class / per-temporal-window). WARN-ONLY at landing
+        # (2 violations).
+        check_kill_verdict_enumerates_alternative_probe_methodologies(
+            strict=False, verbose=verbose,
+        )
+        # Pattern F (#309): plateau-without-asymptotic-counterfactual.
+        # Per HORIZON-CLASS standing directive 2026-05-16: every substrate
+        # design memo MUST classify by predicted CPU band (PLATEAU-ADJACENT
+        # / FRONTIER-PURSUIT / ASYMPTOTIC-PURSUIT). Empirical anchor: the
+        # 0.196-0.199 cluster IS the canonical plateau. WARN-ONLY at
+        # landing (5 violations: existing design memos predate the
+        # directive).
+        check_substrate_design_memo_declares_horizon_class(
+            strict=False, verbose=verbose,
+        )
+        # Pattern G (#310): F-asymptote-node-as-class-shift-not-bolt-on.
+        # Per Z6/Z7/Z8 design memo 2026-05-16: Z4 (cooperative-receiver
+        # loss) and Z5 (predictive-coding) as designed were BOLT-ONS; Z6/
+        # Z7/Z8 must be PRIMARY substrates with predictive-coding as
+        # architectural core. STRICT-from-byte-one at landing (0
+        # violations -- Z6/Z7/Z8 design memo already declares primary
+        # class-shift).
+        check_f_asymptote_substrate_design_is_class_shift_not_bolt_on(
+            strict=True, verbose=verbose,
+        )
+        # Pattern H (#311): predictive-coding-as-coverage-constraint. Per
+        # Z6/Z7/Z8 design memo Section 11 + Catalog #311: cooperative-
+        # receiver substrate without ego-motion conditioning degenerates
+        # to generic conditional entropy. WARN-ONLY at landing (9
+        # violations: sister Atick-Redlich / cooperative-receiver memos
+        # without ego-motion conditioning).
+        check_predictive_coding_substrate_design_has_ego_motion_conditioning(
+            strict=False, verbose=verbose,
+        )
+        # Pattern I (#312): hierarchical-predictive-coding-as-multi-scale-
+        # decorrelation. Per Z6/Z7/Z8 design memo Pattern I + Catalog
+        # #312: hierarchical predictive coding MUST bind ALL FOUR
+        # primitives (Rao-Ballard hierarchy + Mallat wavelet/CDF coding +
+        # Hafner DreamerV3 latent dynamics + Wyner-Ziv side-information)
+        # simultaneously. STRICT-from-byte-one at landing (0 violations
+        # -- Z8 design memo Sections 4.3 + 11 + 13 bind all 4).
+        check_hierarchical_predictive_coding_has_canonical_quadruple(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -65797,6 +65862,1586 @@ def check_substrate_design_memo_has_observability_surface_section(
             "fixed AND self-protected against' non-negotiables. Catalog #305 "
             "(MAX-OBSERVABILITY-INTO-BEHAVIOR; sister of Catalog #290 + #294 "
             "+ #303 + #296).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #307 - check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification
+#
+# FALSIFICATION-AUDIT-v2 Pattern D self-protection 2026-05-16. Refuses memos
+# claiming kill / falsified / retired / dead verdicts WITHOUT explicit
+# classification as PARADIGM-LEVEL vs IMPLEMENTATION-LEVEL falsification.
+#
+# Empirical anchor: NSCS06 v6 Strip-Everything dispatch landed 105.15 vs
+# predicted [0.10, 0.20] (553x OUTSIDE band) and was initially classified as
+# substrate-class FALSIFIED. But v7 unwound 4-of-7 cargo-cults and achieved
+# 44% score reduction (105.15 -> 58.89) -- proof that the PARADIGM (chroma-
+# preserving + numpy-only + per-method engineering + 30-sec-reviewable) was
+# INTACT and the v6 failure was IMPLEMENTATION-level cargo-cult stacking
+# (7 cargo-cults: closed-form-CDF / Y=R=G=B / spatial-independent / 2-of-6-
+# pose-warp / NO-neural-at-medal-band / symposium-#4-band-without-distortion-
+# model / PR#56-generalizes). FALSIFICATION-AUDIT-v2 Lens 7 promoted the
+# paradigm from Tier 3 to Tier 1 paradigm-intact-iterative-rescue.
+#
+# Per CLAUDE.md "Forbidden premature KILL without research exhaustion" +
+# "KILL/FALSIFIED memory verdicts" non-negotiables: every kill verdict MUST
+# document research-path exhaustion. Pattern D extends to the paradigm-vs-
+# implementation distinction: a memo that says "TECHNIQUE FALSIFIED" without
+# saying which LEVEL is operationally indistinguishable from premature kill.
+#
+# Acceptance cascade:
+#   (a) Body contains a paradigm-level classification token (one of:
+#       PARADIGM-LEVEL FALSIFICATION / paradigm-level falsification /
+#       paradigm_level_falsification / IMPLEMENTATION-LEVEL FALSIFICATION /
+#       implementation-level falsification / implementation_level_falsification /
+#       paradigm-intact / paradigm intact / paradigm_intact /
+#       implementation-cargo-cult / cargo-cult-implementation /
+#       implementation_cargo_cult).
+#   (b) Same-line waiver
+#       ``# PARADIGM_VS_IMPLEMENTATION_FALSIFICATION_OK:<rationale>``
+#       (placeholder rationales rejected so the docstring example cannot
+#       self-waive).
+#
+# In-scope memo filenames (case-insensitive):
+#   - ``.omx/research/*_design_<YYYYMMDD>.md``
+#   - ``.omx/research/*_falsification*_<YYYYMMDD>.md``
+#   - ``.omx/research/*_audit*_<YYYYMMDD>.md``
+#   - ``.omx/research/*_kill*_<YYYYMMDD>.md``
+#   - ``.omx/research/*_retir*_<YYYYMMDD>.md``
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" because
+# pre-cutoff (date < 2026-05-16) memos may carry kill verdicts without
+# the new classification discipline. Cutoff date filter exempts those.
+# Post-cutoff memos MUST comply or carry the waiver.
+#
+# Sister of Catalog #290 (canonical-vs-unique decision per layer) +
+# Catalog #294 (9-dim checklist) + Catalog #296 (predicted-band Dykstra) +
+# Catalog #301 (kill memos have substrate compatibility evidence).
+# ============================================================================
+
+_CHECK_307_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_307_WAIVER_TOKEN = "PARADIGM_VS_IMPLEMENTATION_FALSIFICATION_OK:"
+_CHECK_307_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+# Filename patterns scoping which memos are subject to this gate.
+_CHECK_307_FILENAME_PATTERNS = (
+    re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_falsification[^/]*_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_audit[^/]*_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_kill[^/]*_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_retir[^/]*_(\d{8})\.md$", re.IGNORECASE),
+)
+
+# Trigger tokens: a memo body containing one of these is treated as a
+# kill/falsified verdict candidate for this gate. Case-insensitive substring.
+_CHECK_307_KILL_VERDICT_TRIGGER_TOKENS = (
+    "technique falsified",
+    "substrate falsified",
+    "verdict: kill",
+    "verdict: killed",
+    "verdict: falsified",
+    "verdict: dead",
+    "verdict: retired",
+    "verdict: falsified",
+    "falsified at substrate class",
+    "falsified at substrate-class",
+    "permanently falsified",
+    "class-kill",
+    "class kill",
+    "substrate-class kill",
+    "substrate class kill",
+)
+
+# Acceptance tokens: presence of any of these in the body satisfies the
+# paradigm-vs-implementation classification requirement.
+_CHECK_307_CLASSIFICATION_TOKENS = (
+    "paradigm-level falsification",
+    "paradigm level falsification",
+    "paradigm_level_falsification",
+    "implementation-level falsification",
+    "implementation level falsification",
+    "implementation_level_falsification",
+    "paradigm-intact",
+    "paradigm intact",
+    "paradigm_intact",
+    "implementation-cargo-cult",
+    "implementation cargo cult",
+    "implementation_cargo_cult",
+    "cargo-cult-implementation",
+    "cargo cult implementation",
+    "cargo_cult_implementation",
+)
+
+
+def _check_307_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    for regex in _CHECK_307_FILENAME_PATTERNS:
+        m = regex.match(filename)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _check_307_body_has_trigger(body_lower: str) -> bool:
+    """Return True if memo body contains a kill-verdict trigger token."""
+    for tok in _CHECK_307_KILL_VERDICT_TRIGGER_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_307_body_has_classification(body_lower: str) -> bool:
+    """Return True if body satisfies paradigm-vs-implementation classification."""
+    for tok in _CHECK_307_CLASSIFICATION_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_307_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_307_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_307_WAIVER_TOKEN)
+    # Read until newline or end of body
+    tail_start = idx + len(_CHECK_307_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_307_WAIVER_PLACEHOLDERS:
+        return False
+    # First word check for placeholder prefix
+    for placeholder in _CHECK_307_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #307 - refuse kill / falsified / retired memos missing
+    paradigm-vs-implementation falsification classification.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion" +
+    "KILL/FALSIFIED memory verdicts" + FALSIFICATION-AUDIT-v2 Pattern D.
+
+    Empirical anchor: NSCS06 v6 Strip-Everything was initially classified as
+    substrate-class FALSIFIED; FALSIFICATION-AUDIT-v2 Lens 7 promoted to
+    Tier 1 paradigm-intact-iterative-rescue after v7 unwound 4-of-7 cargo-
+    cults and achieved 44% score reduction (105.15 -> 58.89).
+
+    Sister of Catalog #290 / #294 / #296 / #301.
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_307_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_307_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_307_body_has_trigger(body_lower):
+            continue  # not a kill-verdict memo
+        if _check_307_body_has_classification(body_lower):
+            continue  # paradigm-vs-implementation classified
+        if _check_307_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: kill-verdict memo dated {date_int} carries a kill / "
+            "falsified / retired token but lacks paradigm-vs-implementation "
+            "falsification classification. Per CLAUDE.md 'Forbidden premature "
+            "KILL' + FALSIFICATION-AUDIT-v2 Pattern D + Catalog #307: every "
+            "kill memo MUST distinguish PARADIGM-LEVEL falsification "
+            "(structural class-kill) from IMPLEMENTATION-LEVEL falsification "
+            "(cargo-cult stack on intact paradigm). Empirical anchor: NSCS06 "
+            "v6 was initially classified as FALSIFIED at 105.15; v7 unwound "
+            "4-of-7 cargo-cults and achieved 58.89 (44% reduction) -- proof "
+            "the paradigm was INTACT and v6 failure was implementation-level. "
+            "Either add a classification token (paradigm-level falsification / "
+            "implementation-level falsification / paradigm-intact / "
+            "implementation-cargo-cult) OR carry a same-line "
+            "`# PARADIGM_VS_IMPLEMENTATION_FALSIFICATION_OK:<rationale>` "
+            "waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification "
+            f"found {len(violations)} kill-verdict memo(s) lacking paradigm-vs-"
+            "implementation falsification classification. Per CLAUDE.md "
+            "'Forbidden premature KILL' + FALSIFICATION-AUDIT-v2 Pattern D + "
+            "Catalog #307 (PERMANENT EXTINCTION of paradigm-vs-implementation "
+            "conflation). Empirical anchor: NSCS06 v6 Strip-Everything was "
+            "initially FALSIFIED at 105.15; FALSIFICATION-AUDIT-v2 Lens 7 "
+            "promoted to Tier 1 paradigm-intact after v7 reduced score to "
+            "58.89 (44% reduction via 4-of-7 cargo-cult unwind).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #308 - check_kill_verdict_enumerates_alternative_probe_methodologies
+#
+# FALSIFICATION-AUDIT-v2 Pattern E self-protection 2026-05-16. Refuses memos
+# claiming kill / falsified / retired verdicts at the SUBSTRATE-class level
+# WITHOUT enumeration of at least N=3 alternative probe methodologies that
+# COULD produce different verdicts.
+#
+# Empirical anchor: Wunderkind G1 v2 PIVOT was classified as substrate-class
+# FALSIFIED based on a single per-pair-dominant SegNet argmax reducer
+# probe. The T2 council Q1 SPLIT-VERDICT later determined the probe
+# methodology was an ARTIFACT (chosen for archive grammar fit, not
+# information-theoretic optimality); 4 alternative reducers (per-pair
+# class HISTOGRAM / per-region class HISTOGRAM / per-segment-class /
+# per-temporal-window) were UNPROBED and could have produced different
+# verdicts. The verdict structure became RATIFY-FALSIFICATION-OF-THE-
+# SPECIFIC-METHODOLOGY + REQUEST-REINVESTIGATION-OF-ALTERNATIVES.
+#
+# Sister anchors: Lane STC clean-source (per-pair-dominant SegNet argmax
+# methodology); Wave 3 NeRV-family TERMINATED-API-CRASH (operational-probe-
+# failure mislabeled as substrate-probe).
+#
+# Per CLAUDE.md "Forbidden premature KILL without research exhaustion" +
+# FALSIFICATION-AUDIT-v2 Lens 8 + T2 council Q1 verdict structure.
+#
+# Acceptance cascade:
+#   (a) Body contains an enumeration token marking at least 3 alternative
+#       probe methodologies (one of: alternative probe methodologies /
+#       alternative-probe-methodologies / alternative reducers /
+#       alternative-reducers / N=3 alternative / >=3 alternative /
+#       three alternative probe / three alternative reducer /
+#       4 alternative reducers / 5 alternative reducers).
+#   (b) Body contains a probe-disambiguator-cite token (one of:
+#       tools/probe_*_disambiguator.py / RATIFY-FALSIFICATION-OF-THE-
+#       SPECIFIC-METHODOLOGY / REQUEST-REINVESTIGATION-OF-ALTERNATIVES /
+#       SPLIT-VERDICT).
+#   (c) Same-line waiver
+#       ``# ALTERNATIVE_PROBE_METHODOLOGIES_ENUMERATED_OK:<rationale>``.
+#
+# In-scope filenames (case-insensitive):
+#   - ``.omx/research/*_design_<YYYYMMDD>.md``
+#   - ``.omx/research/*_falsification*_<YYYYMMDD>.md``
+#   - ``.omx/research/*_kill*_<YYYYMMDD>.md``
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule".
+#
+# Sister of Catalog #301 (kill memos have substrate compatibility evidence) +
+# Catalog #292 (per-deliberation assumption surfacing) + Catalog #307
+# (paradigm-vs-implementation classification).
+# ============================================================================
+
+_CHECK_308_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_308_WAIVER_TOKEN = "ALTERNATIVE_PROBE_METHODOLOGIES_ENUMERATED_OK:"
+_CHECK_308_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+_CHECK_308_FILENAME_PATTERNS = (
+    re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_falsification[^/]*_(\d{8})\.md$", re.IGNORECASE),
+    re.compile(r"^.*_kill[^/]*_(\d{8})\.md$", re.IGNORECASE),
+)
+
+# Same trigger tokens as Catalog #307 (kill-verdict candidates).
+_CHECK_308_KILL_VERDICT_TRIGGER_TOKENS = _CHECK_307_KILL_VERDICT_TRIGGER_TOKENS
+
+# Acceptance: at least one alternative-probe-enumeration token OR
+# probe-disambiguator-cite token.
+_CHECK_308_ENUMERATION_TOKENS = (
+    "alternative probe methodologies",
+    "alternative-probe-methodologies",
+    "alternative_probe_methodologies",
+    "alternative reducers",
+    "alternative-reducers",
+    "alternative_reducers",
+    "n=3 alternative",
+    ">=3 alternative",
+    "three alternative probe",
+    "three alternative reducer",
+    "3 alternative probe",
+    "3 alternative reducer",
+    "4 alternative reducer",
+    "5 alternative reducer",
+    "ratify-falsification-of-the-specific-methodology",
+    "request-reinvestigation-of-alternatives",
+    "split-verdict",
+    "split verdict",
+)
+
+_CHECK_308_PROBE_DISAMBIGUATOR_REGEX = re.compile(
+    r"tools/probe_[a-z0-9_]+_disambiguator\.py",
+    re.IGNORECASE,
+)
+
+
+def _check_308_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    for regex in _CHECK_308_FILENAME_PATTERNS:
+        m = regex.match(filename)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _check_308_body_has_trigger(body_lower: str) -> bool:
+    """Return True if memo body contains a kill-verdict trigger token."""
+    for tok in _CHECK_308_KILL_VERDICT_TRIGGER_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_308_body_has_enumeration(body_lower: str, body_original: str) -> bool:
+    """Return True if body contains alternative-probe enumeration.
+
+    Excludes the waiver-token line from the enumeration scan so the waiver
+    text (which itself contains 'alternative probe') cannot self-satisfy
+    the enumeration acceptance branch.
+    """
+    # Strip lines containing the waiver token so the waiver text cannot
+    # self-satisfy the enumeration check.
+    waiver_lower = _CHECK_308_WAIVER_TOKEN.lower()
+    sanitized_lines = []
+    for line in body_lower.splitlines():
+        if waiver_lower in line:
+            continue
+        sanitized_lines.append(line)
+    sanitized = "\n".join(sanitized_lines)
+    for tok in _CHECK_308_ENUMERATION_TOKENS:
+        if tok in sanitized:
+            return True
+    if _CHECK_308_PROBE_DISAMBIGUATOR_REGEX.search(body_original):
+        return True
+    return False
+
+
+def _check_308_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_308_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_308_WAIVER_TOKEN)
+    tail_start = idx + len(_CHECK_308_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_308_WAIVER_PLACEHOLDERS:
+        return False
+    for placeholder in _CHECK_308_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_kill_verdict_enumerates_alternative_probe_methodologies(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #308 - refuse kill / falsified memos at substrate-class level
+    WITHOUT enumeration of >=3 alternative probe methodologies.
+
+    Per FALSIFICATION-AUDIT-v2 Pattern E + Lens 8 + T2 council Q1 verdict
+    structure (RATIFY-FALSIFICATION-OF-THE-SPECIFIC-METHODOLOGY +
+    REQUEST-REINVESTIGATION-OF-ALTERNATIVES).
+
+    Empirical anchor: Wunderkind G1 v2 PIVOT was classified substrate-class
+    FALSIFIED based on a single per-pair-dominant SegNet argmax probe; 4
+    alternative reducers were UNPROBED and could produce different verdicts.
+
+    Sister of Catalog #301 / #292 / #307.
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_308_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_308_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_308_body_has_trigger(body_lower):
+            continue
+        if _check_308_body_has_enumeration(body_lower, body):
+            continue
+        if _check_308_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: kill-verdict memo dated {date_int} carries a substrate-"
+            "class kill token but lacks enumeration of >=3 alternative probe "
+            "methodologies (or sister tools/probe_*_disambiguator.py cite). "
+            "Per FALSIFICATION-AUDIT-v2 Pattern E + Lens 8 + Catalog #308: "
+            "every substrate-class kill verdict MUST enumerate alternative "
+            "probe methodologies that could produce different verdicts. "
+            "Empirical anchor: Wunderkind G1 v2 PIVOT was kill-verdict based "
+            "on a single per-pair-dominant SegNet argmax probe; 4 alternative "
+            "reducers (per-pair HISTOGRAM / per-region HISTOGRAM / per-"
+            "segment-class / per-temporal-window) were UNPROBED. Either add "
+            "alternative-probe enumeration (alternative reducers / N=3 "
+            "alternative / SPLIT-VERDICT / RATIFY-FALSIFICATION-OF-THE-"
+            "SPECIFIC-METHODOLOGY) OR add a probe-disambiguator path "
+            "(tools/probe_*_disambiguator.py) OR carry a same-line "
+            "`# ALTERNATIVE_PROBE_METHODOLOGIES_ENUMERATED_OK:<rationale>` "
+            "waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_kill_verdict_enumerates_alternative_probe_methodologies] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_kill_verdict_enumerates_alternative_probe_methodologies] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_kill_verdict_enumerates_alternative_probe_methodologies "
+            f"found {len(violations)} substrate-class kill memo(s) lacking "
+            "alternative-probe enumeration. Per FALSIFICATION-AUDIT-v2 "
+            "Pattern E + Lens 8 + T2 council Q1 verdict structure + "
+            "Catalog #308. Empirical anchor: Wunderkind G1 v2 PIVOT.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #309 - check_substrate_design_memo_declares_horizon_class
+#
+# FALSIFICATION-AUDIT-v2 Pattern F self-protection 2026-05-16. Refuses
+# substrate design memos containing predicted-band sections WITHOUT explicit
+# horizon_class declaration (one of: PLATEAU-ADJACENT / FRONTIER-PURSUIT /
+# ASYMPTOTIC-PURSUIT).
+#
+# Per the HORIZON-CLASS evaluation axis standing directive 2026-05-16:
+# every substrate design memo MUST classify by predicted CPU band:
+#   - PLATEAU-ADJACENT: [0.180, 0.200]
+#   - FRONTIER-PURSUIT: [0.120, 0.180]
+#   - ASYMPTOTIC-PURSUIT: [0.050, 0.120]
+#
+# Empirical anchor: the 0.196-0.199 cluster IS the canonical plateau. Every
+# within-class refinement that lands in this cluster is plateau-adjacent;
+# pursuing more plateau-adjacent substrates without ANY asymptotic-pursuit
+# alternative is the structural failure mode (the "plateau trap"). The
+# apparatus's classification framework pre-HORIZON-CLASS did NOT classify
+# substrate work by predicted-band-horizon; every PROGRESS was treated as
+# equivalent regardless of whether it was plateau-adjacent or asymptotic.
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# HORIZON-CLASS Consequence 1 (every substrate design memo declares
+# HORIZON-CLASS) + Consequence 2 (K-measurement schedule budget allocation
+# by HORIZON-CLASS; ≥20% to asymptotic-pursuit) + Consequence 4 (plateau-
+# trap is structural failure mode).
+#
+# Acceptance cascade:
+#   (a) Body contains a horizon_class declaration token (one of:
+#       horizon_class: plateau_adjacent / horizon_class: frontier_pursuit /
+#       horizon_class: asymptotic_pursuit / horizon-class: plateau-adjacent /
+#       horizon-class: frontier-pursuit / horizon-class: asymptotic-pursuit /
+#       HORIZON-CLASS: PLATEAU-ADJACENT / HORIZON-CLASS: FRONTIER-PURSUIT /
+#       HORIZON-CLASS: ASYMPTOTIC-PURSUIT).
+#   (b) Body contains an explicit horizon-class section header
+#       (`## horizon-class:` / `## horizon_class:` / `## HORIZON-CLASS:`).
+#   (c) Same-line waiver
+#       ``# HORIZON_CLASS_DECLARATION_OK:<rationale>``.
+#
+# In-scope filenames: ``.omx/research/*_design_<YYYYMMDD>.md``.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule".
+#
+# Sister of Catalog #290 / #294 / #296 / #303 / #305.
+# ============================================================================
+
+_CHECK_309_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_309_WAIVER_TOKEN = "HORIZON_CLASS_DECLARATION_OK:"
+_CHECK_309_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+_CHECK_309_FILENAME_RE = re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE)
+
+# Predicted-band triggers (re-use Catalog #296 trigger set; case-insensitive).
+_CHECK_309_PREDICTED_BAND_TRIGGER_HEADERS = (
+    "## predicted δs band",
+    "## predicted delta s band",
+    "## predicted score band",
+    "## predicted band",
+    "## predicted cpu band",
+    "## predicted cuda band",
+)
+
+# Acceptance tokens: presence of one of these satisfies HORIZON-CLASS
+# classification.
+_CHECK_309_HORIZON_CLASS_TOKENS = (
+    "horizon_class: plateau_adjacent",
+    "horizon_class: frontier_pursuit",
+    "horizon_class: asymptotic_pursuit",
+    "horizon_class:plateau_adjacent",
+    "horizon_class:frontier_pursuit",
+    "horizon_class:asymptotic_pursuit",
+    "horizon-class: plateau-adjacent",
+    "horizon-class: frontier-pursuit",
+    "horizon-class: asymptotic-pursuit",
+    "horizon-class:plateau-adjacent",
+    "horizon-class:frontier-pursuit",
+    "horizon-class:asymptotic-pursuit",
+    "## horizon-class:",
+    "## horizon_class:",
+    "horizon-class: plateau_adjacent",
+    "horizon-class: frontier_pursuit",
+    "horizon-class: asymptotic_pursuit",
+)
+
+
+def _check_309_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    m = _CHECK_309_FILENAME_RE.match(filename)
+    if m:
+        try:
+            return int(m.group(1))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _check_309_body_has_predicted_band_trigger(body_lower: str) -> bool:
+    """Return True if memo body contains a predicted-band section trigger."""
+    for tok in _CHECK_309_PREDICTED_BAND_TRIGGER_HEADERS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_309_body_has_horizon_class(body_lower: str) -> bool:
+    """Return True if body contains a horizon-class declaration token."""
+    for tok in _CHECK_309_HORIZON_CLASS_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_309_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_309_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_309_WAIVER_TOKEN)
+    tail_start = idx + len(_CHECK_309_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_309_WAIVER_PLACEHOLDERS:
+        return False
+    for placeholder in _CHECK_309_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_substrate_design_memo_declares_horizon_class(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #309 - refuse substrate design memos with predicted-band
+    sections missing explicit horizon_class declaration.
+
+    Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive
+    2026-05-16: every substrate design memo MUST classify by predicted CPU
+    band (PLATEAU-ADJACENT / FRONTIER-PURSUIT / ASYMPTOTIC-PURSUIT).
+
+    Empirical anchor: the 0.196-0.199 cluster IS the canonical plateau;
+    pursuing more plateau-adjacent substrates without ANY asymptotic-pursuit
+    alternative is the structural failure mode (plateau trap).
+
+    Sister of Catalog #290 / #294 / #296 / #303 / #305.
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_309_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_309_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_309_body_has_predicted_band_trigger(body_lower):
+            continue
+        if _check_309_body_has_horizon_class(body_lower):
+            continue
+        if _check_309_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: substrate design memo dated {date_int} contains a "
+            "predicted-band section but lacks explicit horizon_class "
+            "declaration. Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-"
+            "CLASS standing directive 2026-05-16 + Catalog #309: every "
+            "substrate design memo MUST classify by predicted CPU band "
+            "(PLATEAU-ADJACENT [0.180, 0.200] / FRONTIER-PURSUIT [0.120, "
+            "0.180] / ASYMPTOTIC-PURSUIT [0.050, 0.120]). Empirical "
+            "anchor: the 0.196-0.199 cluster IS the canonical plateau; "
+            "the plateau trap (accumulating plateau-adjacent substrates "
+            "without asymptotic-pursuit alternatives) is the long-run "
+            "failure mode. Either add a horizon_class declaration "
+            "(horizon_class: plateau_adjacent / horizon_class: "
+            "frontier_pursuit / horizon_class: asymptotic_pursuit) OR "
+            "carry a same-line `# HORIZON_CLASS_DECLARATION_OK:<rationale>` "
+            "waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_design_memo_declares_horizon_class] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_design_memo_declares_horizon_class] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_design_memo_declares_horizon_class "
+            f"found {len(violations)} substrate design memo(s) with "
+            "predicted-band sections missing horizon_class declaration. "
+            "Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS "
+            "standing directive + Catalog #309.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #310 - check_f_asymptote_substrate_design_is_class_shift_not_bolt_on
+#
+# Z6/Z7/Z8 design memo Pattern G self-protection 2026-05-16. Refuses substrate
+# design memos claiming F-asymptote-class status with a bolt-on architecture
+# instead of a primary class-shift substrate.
+#
+# Per the Time-Traveler L5 Z6/Z7/Z8 scoping design memo 2026-05-16: Z4
+# (cooperative-receiver loss) and Z5 (predictive-coding) as designed were
+# BOLT-ONS to Z3/A1 substrates; ATW V1/V2 are CODEC bolt-ons on top of
+# existing substrates. Z6/Z7/Z8 must be PRIMARY substrates with predictive-
+# coding as the architectural core, not bolt-on objective terms.
+#
+# Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + "HNeRV /
+# leaderboard-implementation parity discipline" L7 (bolt-on vs substrate-
+# engineering split). A substrate claiming F-asymptote-class status with
+# bolt-on architecture IS by construction a within-class refinement of
+# whatever it bolts onto, not a class-shift.
+#
+# Trigger: body contains F-asymptote-claim token (one of: f-asymptote /
+# F-asymptote / f_asymptote / asymptotic-pursuit / asymptotic pursuit /
+# asymptotic_pursuit / asymptotic-floor / asymptotic floor / class-shift
+# in scorer-relationship / class shift in scorer-relationship).
+#
+# Acceptance cascade:
+#   (a) Body explicitly declares primary class-shift architecture (one of:
+#       primary_substrate / primary substrate / class-shift substrate /
+#       class shift substrate / class_shift_substrate / architectural core /
+#       architectural-core / architectural_core / scorer-relationship
+#       class-shift / scorer_relationship_class_shift / scorer relationship
+#       class shift / NOT bolt-on / not bolt-on / NOT-bolt-on /
+#       not_bolt_on / not a bolt-on / primary architecture / primary
+#       architectural primitive).
+#   (b) Body explicitly contrasts with bolt-on architecture (one of:
+#       distinct from bolt-on / contrast with bolt-on / vs bolt-on /
+#       not architectural bolt-on / primary not bolt-on / paradigm not bolt-on).
+#   (c) Same-line waiver
+#       ``# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:<rationale>``.
+#
+# In-scope filenames: ``.omx/research/*_design_<YYYYMMDD>.md``.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule".
+#
+# Sister of Catalog #290 / #294 / #296 / #303 / #309.
+# ============================================================================
+
+_CHECK_310_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_310_WAIVER_TOKEN = "F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:"
+_CHECK_310_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+_CHECK_310_FILENAME_RE = re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE)
+
+_CHECK_310_F_ASYMPTOTE_TRIGGER_TOKENS = (
+    "f-asymptote",
+    "f_asymptote",
+    "asymptotic-pursuit",
+    "asymptotic_pursuit",
+    "asymptotic pursuit",
+    "asymptotic-floor",
+    "asymptotic_floor",
+    "asymptotic floor",
+    "class-shift in scorer-relationship",
+    "class shift in scorer-relationship",
+    "class_shift_in_scorer_relationship",
+)
+
+# Either of the two acceptance facets satisfies (class-shift declaration
+# OR explicit contrast with bolt-on architecture).
+_CHECK_310_CLASS_SHIFT_TOKENS = (
+    "primary_substrate",
+    "primary substrate",
+    "class-shift substrate",
+    "class shift substrate",
+    "class_shift_substrate",
+    "architectural core",
+    "architectural-core",
+    "architectural_core",
+    "scorer-relationship class-shift",
+    "scorer relationship class shift",
+    "scorer_relationship_class_shift",
+    "not bolt-on",
+    "not bolt on",
+    "not_bolt_on",
+    "not-bolt-on",
+    "not a bolt-on",
+    "not a bolt on",
+    "primary architecture",
+    "primary architectural primitive",
+)
+
+_CHECK_310_BOLT_ON_CONTRAST_TOKENS = (
+    "distinct from bolt-on",
+    "contrast with bolt-on",
+    "vs bolt-on",
+    "not architectural bolt-on",
+    "primary not bolt-on",
+    "paradigm not bolt-on",
+    "primary substrate not bolt-on",
+    "primary substrate, not bolt-on",
+)
+
+
+def _check_310_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    m = _CHECK_310_FILENAME_RE.match(filename)
+    if m:
+        try:
+            return int(m.group(1))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _check_310_body_has_f_asymptote_trigger(body_lower: str) -> bool:
+    """Return True if memo body claims F-asymptote-class status."""
+    for tok in _CHECK_310_F_ASYMPTOTE_TRIGGER_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def _check_310_body_has_class_shift_declaration(body_lower: str) -> bool:
+    """Return True if body declares primary class-shift architecture.
+
+    Excludes lines containing the waiver token so the waiver text (which
+    itself contains 'not_bolt_on') cannot self-satisfy the acceptance check.
+    """
+    waiver_lower = _CHECK_310_WAIVER_TOKEN.lower()
+    sanitized_lines = []
+    for line in body_lower.splitlines():
+        if waiver_lower in line:
+            continue
+        sanitized_lines.append(line)
+    sanitized = "\n".join(sanitized_lines)
+    for tok in _CHECK_310_CLASS_SHIFT_TOKENS:
+        if tok in sanitized:
+            return True
+    for tok in _CHECK_310_BOLT_ON_CONTRAST_TOKENS:
+        if tok in sanitized:
+            return True
+    return False
+
+
+def _check_310_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_310_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_310_WAIVER_TOKEN)
+    tail_start = idx + len(_CHECK_310_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_310_WAIVER_PLACEHOLDERS:
+        return False
+    for placeholder in _CHECK_310_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_f_asymptote_substrate_design_is_class_shift_not_bolt_on(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #310 - refuse substrate design memos claiming F-asymptote-
+    class status with bolt-on architecture instead of primary class-shift.
+
+    Per Z6/Z7/Z8 design memo Pattern G + CLAUDE.md "UNIQUE-AND-COMPLETE-
+    PER-METHOD operating mode" + HNeRV parity L7 (bolt-on vs substrate-
+    engineering split).
+
+    Empirical anchor: Z4 (cooperative-receiver loss) and Z5 (predictive-
+    coding) as designed were BOLT-ONS to Z3/A1; Z6/Z7/Z8 must be PRIMARY
+    substrates with predictive-coding as the architectural core.
+
+    Sister of Catalog #290 / #294 / #296 / #303 / #309.
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_310_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_310_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_310_body_has_f_asymptote_trigger(body_lower):
+            continue
+        if _check_310_body_has_class_shift_declaration(body_lower):
+            continue
+        if _check_310_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: substrate design memo dated {date_int} claims F-"
+            "asymptote-class / asymptotic-pursuit status but lacks explicit "
+            "primary class-shift architecture declaration. Per Z6/Z7/Z8 "
+            "design memo Pattern G + Catalog #310: a substrate claiming F-"
+            "asymptote-class status with bolt-on architecture IS by "
+            "construction a within-class refinement, not a class-shift. "
+            "Empirical anchor: Z4/Z5 were bolt-ons to Z3/A1; Z6/Z7/Z8 must "
+            "be PRIMARY substrates with predictive-coding as architectural "
+            "core. Either add a primary-class-shift declaration (primary "
+            "substrate / class-shift substrate / architectural core / "
+            "scorer-relationship class-shift / NOT bolt-on / paradigm not "
+            "bolt-on) OR carry a same-line "
+            "`# F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK:<rationale>` waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_f_asymptote_substrate_design_is_class_shift_not_bolt_on] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_f_asymptote_substrate_design_is_class_shift_not_bolt_on] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_f_asymptote_substrate_design_is_class_shift_not_bolt_on "
+            f"found {len(violations)} substrate design memo(s) claiming "
+            "F-asymptote status without primary class-shift declaration. "
+            "Per Z6/Z7/Z8 Pattern G + CLAUDE.md UNIQUE-AND-COMPLETE-PER-"
+            "METHOD + HNeRV parity L7 + Catalog #310.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #311 - check_predictive_coding_substrate_design_has_ego_motion_conditioning
+#
+# Z6/Z7/Z8 design memo Pattern H self-protection 2026-05-16. Refuses substrate
+# design memos invoking Atick-Redlich cooperative-receiver framing WITHOUT
+# explicit ego-motion-conditioned next-frame prediction.
+#
+# Per the Z6/Z7/Z8 design memo 2026-05-16: Atick-Redlich 1990 cooperative-
+# receiver applied to dashcam video MUST be framed as ego-motion-conditioned
+# next-frame prediction — the predictor's COVERAGE constraint IS the per-pair
+# information-bottleneck bottleneck. Without ego-motion conditioning, the
+# cooperative-receiver framing degenerates to generic conditional entropy
+# claims (Pattern H trap).
+#
+# Empirical anchor: Z4 cooperative-receiver loss as scaffolded was generic
+# I(T;Y) maximization without ego-motion conditioning; its dispatch verdict
+# was PENDING Phase 2 council. Z6/Z7/Z8 explicitly bind the cooperative-
+# receiver theorem to ego-motion-conditioned next-frame prediction via the
+# FOE (focus-of-expansion) prior per Ballard's embodied-vision lens.
+#
+# Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8
+# design memo Section 11 (Atick-Redlich + Ballard FOE prior).
+#
+# Trigger: body contains Atick-Redlich / cooperative-receiver framing token.
+#
+# Acceptance cascade:
+#   (a) Body contains an ego-motion-conditioning token (one of:
+#       ego-motion / ego_motion / ego motion / FOE / focus-of-expansion /
+#       focus of expansion / next-frame prediction / next-frame predictor /
+#       next_frame_prediction / next_frame_predictor / next frame prediction /
+#       autoregressive predictor / autoregressive-predictor / pose-conditioned
+#       prediction / pose conditioned prediction / pose_conditioned_prediction).
+#   (b) Same-line waiver
+#       ``# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:<rationale>``.
+#
+# In-scope filenames: ``.omx/research/*_design_<YYYYMMDD>.md``.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule".
+#
+# Sister of Catalog #290 / #294 / #310 (paired G/H/I pattern).
+# ============================================================================
+
+_CHECK_311_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_311_WAIVER_TOKEN = "PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:"
+_CHECK_311_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+_CHECK_311_FILENAME_RE = re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE)
+
+# Trigger tokens: cooperative-receiver / Atick-Redlich framing.
+_CHECK_311_COOPERATIVE_RECEIVER_TOKENS = (
+    "atick-redlich",
+    "atick_redlich",
+    "atick redlich",
+    "cooperative-receiver",
+    "cooperative_receiver",
+    "cooperative receiver",
+)
+
+# Acceptance tokens: ego-motion-conditioned next-frame prediction.
+_CHECK_311_EGO_MOTION_TOKENS = (
+    "ego-motion",
+    "ego_motion",
+    "ego motion",
+    "foe",
+    "focus-of-expansion",
+    "focus_of_expansion",
+    "focus of expansion",
+    "next-frame prediction",
+    "next-frame predictor",
+    "next_frame_prediction",
+    "next_frame_predictor",
+    "next frame prediction",
+    "next frame predictor",
+    "autoregressive predictor",
+    "autoregressive-predictor",
+    "autoregressive_predictor",
+    "pose-conditioned prediction",
+    "pose-conditioned predictor",
+    "pose conditioned prediction",
+    "pose conditioned predictor",
+    "pose_conditioned_prediction",
+    "pose_conditioned_predictor",
+)
+
+
+def _check_311_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    m = _CHECK_311_FILENAME_RE.match(filename)
+    if m:
+        try:
+            return int(m.group(1))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _check_311_body_has_cooperative_receiver_trigger(body_lower: str) -> bool:
+    """Return True if memo body invokes cooperative-receiver framing.
+
+    Excludes lines containing the waiver token from the trigger scan so the
+    waiver text alone cannot self-trigger the gate.
+    """
+    waiver_lower = _CHECK_311_WAIVER_TOKEN.lower()
+    for line in body_lower.splitlines():
+        if waiver_lower in line:
+            continue
+        for tok in _CHECK_311_COOPERATIVE_RECEIVER_TOKENS:
+            if tok in line:
+                return True
+    return False
+
+
+def _check_311_body_has_ego_motion_conditioning(body_lower: str) -> bool:
+    """Return True if body declares ego-motion-conditioned prediction.
+
+    Excludes lines containing the waiver token so the waiver text (which
+    itself contains 'ego_motion') cannot self-satisfy acceptance.
+    """
+    waiver_lower = _CHECK_311_WAIVER_TOKEN.lower()
+    sanitized_lines = []
+    for line in body_lower.splitlines():
+        if waiver_lower in line:
+            continue
+        sanitized_lines.append(line)
+    sanitized = "\n".join(sanitized_lines)
+    for tok in _CHECK_311_EGO_MOTION_TOKENS:
+        if tok == "foe":
+            # Word-boundary check for FOE (or "foe " or " foe").
+            if re.search(r"\bfoe\b", sanitized):
+                return True
+            continue
+        if tok in sanitized:
+            return True
+    return False
+
+
+def _check_311_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_311_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_311_WAIVER_TOKEN)
+    tail_start = idx + len(_CHECK_311_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_311_WAIVER_PLACEHOLDERS:
+        return False
+    for placeholder in _CHECK_311_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_predictive_coding_substrate_design_has_ego_motion_conditioning(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #311 - refuse substrate design memos invoking cooperative-
+    receiver framing without explicit ego-motion-conditioned prediction.
+
+    Per Z6/Z7/Z8 design memo Pattern H + CLAUDE.md UNIQUE-AND-COMPLETE-PER-
+    METHOD operating mode.
+
+    Empirical anchor: Z4 cooperative-receiver loss as scaffolded was generic
+    I(T;Y) maximization without ego-motion conditioning. Z6/Z7/Z8 explicitly
+    bind cooperative-receiver to ego-motion-conditioned next-frame prediction
+    via the FOE prior per Ballard's embodied-vision lens.
+
+    Sister of Catalog #290 / #294 / #310 (paired G/H/I pattern).
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_311_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_311_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_311_body_has_cooperative_receiver_trigger(body_lower):
+            continue
+        if _check_311_body_has_ego_motion_conditioning(body_lower):
+            continue
+        if _check_311_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: substrate design memo dated {date_int} invokes "
+            "Atick-Redlich / cooperative-receiver framing but lacks explicit "
+            "ego-motion-conditioned next-frame prediction. Per Z6/Z7/Z8 "
+            "design memo Pattern H + Catalog #311: a cooperative-receiver "
+            "substrate without ego-motion conditioning degenerates to "
+            "generic conditional entropy claims. Empirical anchor: Z4 "
+            "cooperative-receiver loss as scaffolded was generic I(T;Y) "
+            "maximization without ego-motion. Either add an ego-motion-"
+            "conditioning token (ego-motion / FOE / focus-of-expansion / "
+            "next-frame prediction / autoregressive predictor / pose-"
+            "conditioned prediction) OR carry a same-line "
+            "`# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:<rationale>` "
+            "waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_predictive_coding_substrate_design_has_ego_motion_conditioning] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_predictive_coding_substrate_design_has_ego_motion_conditioning] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_predictive_coding_substrate_design_has_ego_motion_conditioning "
+            f"found {len(violations)} substrate design memo(s) invoking "
+            "cooperative-receiver without ego-motion conditioning. Per "
+            "Z6/Z7/Z8 Pattern H + Catalog #311.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #312 - check_hierarchical_predictive_coding_has_canonical_quadruple
+#
+# Z6/Z7/Z8 design memo Pattern I self-protection 2026-05-16. Refuses substrate
+# design memos claiming hierarchical predictive coding WITHOUT the canonical
+# Rao-Ballard + Mallat-CDF + DreamerV3 + Wyner-Ziv quadruple.
+#
+# Per the Z6/Z7/Z8 design memo 2026-05-16: hierarchical predictive coding is
+# the canonical instance of compositional multi-scale predictive coding +
+# cooperative-receiver + Wyner-Ziv triple — specifically Z8 implements all
+# four primitives. Without the quadruple, "hierarchical predictive coding"
+# claims degenerate to single-level prediction with hierarchy in name only.
+#
+# Empirical anchor: Z8 design memo Sections 4.3 + 11 + 13 explicitly bind:
+#   1. Rao-Ballard 1999 hierarchical predictive coding (multi-level error
+#      propagation)
+#   2. Mallat 1989 wavelet hierarchical priors (CDF coding of per-level
+#      residuals)
+#   3. Hafner DreamerV3 latent dynamics (stochastic + deterministic latent
+#      components)
+#   4. Wyner-Ziv 1976 side-information (top-level latent against frame_0;
+#      decoder-side prior)
+#
+# Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + "HNeRV /
+# leaderboard-implementation parity discipline" L7 (substrate-engineering
+# binds ALL ingredients simultaneously, not incrementally).
+#
+# Trigger: body contains a hierarchical-predictive-coding-claim token (one
+# of: hierarchical predictive coding / hierarchical-predictive-coding /
+# hierarchical_predictive_coding / multi-level predictive coding /
+# multi_level_predictive_coding / Rao-Ballard hierarchy / rao_ballard_hierarchy /
+# 3-level Rao-Ballard / 3-level rao-ballard / multi-scale predictive coding /
+# multi_scale_predictive_coding).
+#
+# Acceptance cascade requires ALL FOUR primitives:
+#   1. Rao-Ballard hierarchy token: rao-ballard / rao_ballard / rao ballard
+#   2. Mallat hierarchical prior or wavelet CDF token: mallat / wavelet
+#      hierarchical prior / wavelet hierarchical-prior / CDF coding /
+#      cdf_coding / cdf-coding / wavelet-multi-scale / wavelet multi-scale
+#   3. DreamerV3 latent dynamics token: dreamerv3 / dreamer-v3 / dreamer v3 /
+#      hafner / dreamer_v3 / latent dynamics / latent-dynamics
+#   4. Wyner-Ziv side-information token: wyner-ziv / wyner_ziv / wyner ziv
+#
+#   OR same-line waiver
+#   ``# HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK:<rationale>``.
+#
+# In-scope filenames: ``.omx/research/*_design_<YYYYMMDD>.md``.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule".
+#
+# Sister of Catalog #290 / #294 / #310 / #311 (paired G/H/I pattern).
+# ============================================================================
+
+_CHECK_312_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+_CHECK_312_WAIVER_TOKEN = "HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK:"
+_CHECK_312_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+_CHECK_312_FILENAME_RE = re.compile(r"^.*_design_(\d{8})\.md$", re.IGNORECASE)
+
+# Triggers: hierarchical-predictive-coding-claim tokens.
+_CHECK_312_HIERARCHICAL_PC_TRIGGER_TOKENS = (
+    "hierarchical predictive coding",
+    "hierarchical-predictive-coding",
+    "hierarchical_predictive_coding",
+    "multi-level predictive coding",
+    "multi_level_predictive_coding",
+    "multi level predictive coding",
+    "rao-ballard hierarchy",
+    "rao_ballard_hierarchy",
+    "rao ballard hierarchy",
+    "3-level rao-ballard",
+    "3 level rao-ballard",
+    "3-level rao ballard",
+    "multi-scale predictive coding",
+    "multi_scale_predictive_coding",
+    "multi scale predictive coding",
+)
+
+# 4 primitive-token sets; ALL four must be present.
+_CHECK_312_RAO_BALLARD_TOKENS = (
+    "rao-ballard",
+    "rao_ballard",
+    "rao ballard",
+)
+
+_CHECK_312_MALLAT_WAVELET_TOKENS = (
+    "mallat",
+    "wavelet hierarchical prior",
+    "wavelet hierarchical-prior",
+    "wavelet_hierarchical_prior",
+    "cdf coding",
+    "cdf-coding",
+    "cdf_coding",
+    "wavelet-multi-scale",
+    "wavelet multi-scale",
+    "wavelet_multi_scale",
+    "daubechies wavelet",
+    "daubechies-wavelet",
+    "daubechies_wavelet",
+)
+
+_CHECK_312_DREAMERV3_TOKENS = (
+    "dreamerv3",
+    "dreamer-v3",
+    "dreamer v3",
+    "dreamer_v3",
+    "hafner",
+    "latent dynamics",
+    "latent-dynamics",
+    "latent_dynamics",
+)
+
+_CHECK_312_WYNER_ZIV_TOKENS = (
+    "wyner-ziv",
+    "wyner_ziv",
+    "wyner ziv",
+)
+
+
+def _check_312_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    m = _CHECK_312_FILENAME_RE.match(filename)
+    if m:
+        try:
+            return int(m.group(1))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _check_312_body_has_hierarchical_pc_trigger(body_lower: str) -> bool:
+    """Return True if memo body claims hierarchical predictive coding.
+
+    Excludes lines containing the waiver token from the trigger scan so the
+    waiver text alone cannot self-trigger the gate.
+    """
+    waiver_lower = _CHECK_312_WAIVER_TOKEN.lower()
+    for line in body_lower.splitlines():
+        if waiver_lower in line:
+            continue
+        for tok in _CHECK_312_HIERARCHICAL_PC_TRIGGER_TOKENS:
+            if tok in line:
+                return True
+    return False
+
+
+def _check_312_body_has_quadruple(body_lower: str) -> tuple[bool, list[str]]:
+    """Return (all_present, missing_list).
+
+    Checks for all 4 canonical primitives (Rao-Ballard / Mallat-CDF /
+    DreamerV3 / Wyner-Ziv).
+    """
+    missing: list[str] = []
+    if not any(tok in body_lower for tok in _CHECK_312_RAO_BALLARD_TOKENS):
+        missing.append("Rao-Ballard hierarchy")
+    if not any(tok in body_lower for tok in _CHECK_312_MALLAT_WAVELET_TOKENS):
+        missing.append("Mallat wavelet / CDF coding")
+    if not any(tok in body_lower for tok in _CHECK_312_DREAMERV3_TOKENS):
+        missing.append("DreamerV3 latent dynamics")
+    if not any(tok in body_lower for tok in _CHECK_312_WYNER_ZIV_TOKENS):
+        missing.append("Wyner-Ziv side-information")
+    return (not missing), missing
+
+
+def _check_312_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder waiver appears in the body."""
+    if _CHECK_312_WAIVER_TOKEN not in body:
+        return False
+    idx = body.find(_CHECK_312_WAIVER_TOKEN)
+    tail_start = idx + len(_CHECK_312_WAIVER_TOKEN)
+    newline_idx = body.find("\n", tail_start)
+    if newline_idx == -1:
+        tail = body[tail_start:]
+    else:
+        tail = body[tail_start:newline_idx]
+    tail = tail.strip()
+    if not tail:
+        return False
+    if tail in _CHECK_312_WAIVER_PLACEHOLDERS:
+        return False
+    for placeholder in _CHECK_312_WAIVER_PLACEHOLDERS:
+        if placeholder and tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def check_hierarchical_predictive_coding_has_canonical_quadruple(
+    *,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #312 - refuse substrate design memos claiming hierarchical
+    predictive coding without the canonical Rao-Ballard + Mallat-CDF +
+    DreamerV3 + Wyner-Ziv quadruple.
+
+    Per Z6/Z7/Z8 design memo Pattern I + CLAUDE.md UNIQUE-AND-COMPLETE-PER-
+    METHOD + HNeRV parity L7 (substrate-engineering binds ALL ingredients).
+
+    Empirical anchor: Z8 design memo Sections 4.3 + 11 + 13 explicitly bind
+    all 4 primitives simultaneously. Without the quadruple, "hierarchical
+    predictive coding" claims degenerate to hierarchy in name only.
+
+    Sister of Catalog #290 / #294 / #310 / #311 (paired G/H/I pattern).
+
+    Memory: ``feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md``.
+    Lane: ``lane_six_meta_pattern_strict_gates_d_e_f_g_h_i_20260516``.
+    """
+    if research_dir is None:
+        research_target = Path(repo_root or REPO_ROOT).resolve() / ".omx" / "research"
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    if not research_target.is_dir():
+        return violations
+    try:
+        candidates = sorted(research_target.iterdir())
+    except OSError:
+        return violations
+    for entry in candidates:
+        if not entry.is_file():
+            continue
+        date_int = _check_312_in_scope(entry.name)
+        if date_int is None:
+            continue
+        if date_int < _CHECK_312_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            body = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = body.lower()
+        if not _check_312_body_has_hierarchical_pc_trigger(body_lower):
+            continue
+        ok, missing = _check_312_body_has_quadruple(body_lower)
+        if ok:
+            continue
+        if _check_312_waiver_present(body):
+            continue
+        try:
+            rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: substrate design memo dated {date_int} claims "
+            "hierarchical predictive coding but lacks "
+            f"{len(missing)} of 4 canonical primitives: "
+            f"{', '.join(missing)}. Per Z6/Z7/Z8 design memo Pattern I + "
+            "Catalog #312: hierarchical predictive coding MUST bind "
+            "Rao-Ballard hierarchy + Mallat wavelet / CDF coding + "
+            "Hafner DreamerV3 latent dynamics + Wyner-Ziv side-information "
+            "simultaneously. Without the quadruple, claims degenerate to "
+            "hierarchy in name only. Empirical anchor: Z8 design memo "
+            "Sections 4.3 + 11 + 13 explicitly bind all 4. Either add "
+            "the missing primitives OR carry a same-line "
+            "`# HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK:<rationale>` "
+            "waiver."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_hierarchical_predictive_coding_has_canonical_quadruple] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_hierarchical_predictive_coding_has_canonical_quadruple] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_hierarchical_predictive_coding_has_canonical_quadruple "
+            f"found {len(violations)} substrate design memo(s) claiming "
+            "hierarchical predictive coding without the canonical Rao-"
+            "Ballard + Mallat-CDF + DreamerV3 + Wyner-Ziv quadruple. Per "
+            "Z6/Z7/Z8 Pattern I + Catalog #312.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
