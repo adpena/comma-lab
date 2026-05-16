@@ -541,6 +541,32 @@ def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object
 
 
 def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
+    proof_artifact_path = (
+        repo_root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / "tt5l_move_level_solver_proof.json"
+    )
+    proof_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    proof_payload = {
+        "schema": "tt5l_move_level_solver_proof_fixture_v1",
+        "subject_id": l5_v2.TT5L_DYKSTRA_SUBSTRATE_ID,
+        "predicate_id": l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID,
+        "predicate_passed": True,
+        "move_level_constraint_proof": True,
+        "residual_max": 0.0,
+        "residual_tolerance": 1e-9,
+        "constraint_set_ids": sorted(l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof_artifact_path.write_text(
+        json.dumps(proof_payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    dykstra_artifact_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
     artifact_path = repo_root / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     artifact_path.write_text(
@@ -559,6 +585,20 @@ def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
                 "constraint_set_count": len(
                     l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
                 ),
+                "proof_artifact_path": str(proof_artifact_path.relative_to(repo_root)),
+                "proof_artifact_sha256": _file_sha256(proof_artifact_path),
+                "score_axis_sanity_artifact_path": str(
+                    dykstra_artifact_path.relative_to(repo_root)
+                ),
+                "score_axis_sanity_artifact_sha256": _file_sha256(
+                    dykstra_artifact_path
+                ),
+                "generated_by_tool": l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+                "generated_at_utc": "2026-05-16T00:00:00+00:00",
+                "command_argv": [
+                    ".venv/bin/python",
+                    "experiments/solve_tt5l_move_level_constraints.py",
+                ],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -1036,9 +1076,47 @@ def test_l5_v2_score_axis_dykstra_does_not_unlock_without_move_level_proof(
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_move_level_feasibility_proof"
     )
+    assert tt5l["next_non_pr106_l5_action"]["tool_path"] == (
+        l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH
+    )
+    assert l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH in tt5l[
+        "next_non_pr106_l5_action"
+    ]["command_template"]
+    assert "--proof-artifact" in tt5l["next_non_pr106_l5_action"][
+        "command_template"
+    ]
     assert tt5l["next_non_pr106_l5_action"][
         "score_axis_sanity_is_not_move_level_proof"
     ] is True
+
+
+def test_l5_v2_tt5l_move_level_feasibility_requires_proof_hash_match(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    proof_artifact_path = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / "tt5l_move_level_solver_proof.json"
+    )
+    proof_artifact_path.write_text(
+        json.dumps({"schema": "tampered"}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["move_level_feasibility_artifact_valid"] is False
+    assert "tt5l_move_level_feasibility_proof_artifact_sha256_mismatch" in tt5l[
+        "blockers"
+    ]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_move_level_feasibility_proof"
+    )
 
 
 def test_l5_v2_tt5l_dykstra_artifact_rejects_empty_json(

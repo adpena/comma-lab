@@ -110,6 +110,9 @@ TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA = "tt5l_move_level_feasibility_v1"
 TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID = (
     "tt5l_move_level_constraint_feasibility_v1"
 )
+TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH = (
+    "tools/build_tt5l_move_level_feasibility_artifact.py"
+)
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH = (
     "tools/build_tt5l_first_anchor_timing_smoke_artifact.py"
 )
@@ -1445,6 +1448,17 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         blockers.append("tt5l_move_level_feasibility_predicate_not_passed")
     if payload and payload.get("move_level_constraint_proof") is not True:
         blockers.append("tt5l_move_level_feasibility_proof_not_true")
+    generated_by_tool = str(payload.get("generated_by_tool") or "").strip()
+    if payload and generated_by_tool != TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH:
+        blockers.append("tt5l_move_level_feasibility_generated_by_tool_mismatch")
+    command_argv = payload.get("command_argv")
+    command_argv_valid = (
+        isinstance(command_argv, list)
+        and bool(command_argv)
+        and all(isinstance(item, str) and bool(item.strip()) for item in command_argv)
+    )
+    if payload and not command_argv_valid:
+        blockers.append("tt5l_move_level_feasibility_command_argv_missing")
 
     residual_max = _json_float(payload.get("residual_max"))
     residual_tolerance = _json_float(payload.get("residual_tolerance"))
@@ -1473,6 +1487,86 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         and constraint_set_count != len(TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS)
     ):
         blockers.append("tt5l_move_level_feasibility_constraint_set_count_mismatch")
+
+    proof_artifact_path = str(payload.get("proof_artifact_path") or "").strip()
+    resolved_proof_artifact: Path | None = None
+    if not proof_artifact_path:
+        if payload:
+            blockers.append("tt5l_move_level_feasibility_proof_artifact_path_missing")
+    elif _is_transient_artifact_path(proof_artifact_path):
+        blockers.append("tt5l_move_level_feasibility_proof_artifact_path_transient")
+    else:
+        resolved_proof_artifact, proof_path_error = _resolve_artifact_path(
+            proof_artifact_path,
+            repo_root,
+        )
+        if proof_path_error is not None:
+            blockers.append(
+                f"tt5l_move_level_feasibility_proof_artifact_path_{proof_path_error}"
+            )
+            resolved_proof_artifact = None
+        elif resolved_proof_artifact is None or not resolved_proof_artifact.is_file():
+            blockers.append("tt5l_move_level_feasibility_proof_artifact_missing")
+            resolved_proof_artifact = None
+
+    proof_artifact_sha256 = str(
+        payload.get("proof_artifact_sha256") or ""
+    ).strip().lower()
+    if payload and not _SHA256_HEX_RE.fullmatch(proof_artifact_sha256):
+        blockers.append("tt5l_move_level_feasibility_proof_artifact_sha256_invalid")
+    elif (
+        resolved_proof_artifact is not None
+        and _sha256_file(resolved_proof_artifact) != proof_artifact_sha256
+    ):
+        blockers.append("tt5l_move_level_feasibility_proof_artifact_sha256_mismatch")
+
+    score_axis_artifact_path = str(
+        payload.get("score_axis_sanity_artifact_path") or ""
+    ).strip()
+    resolved_score_axis_artifact: Path | None = None
+    if not score_axis_artifact_path:
+        if payload:
+            blockers.append(
+                "tt5l_move_level_feasibility_score_axis_sanity_artifact_path_missing"
+            )
+    elif _is_transient_artifact_path(score_axis_artifact_path):
+        blockers.append(
+            "tt5l_move_level_feasibility_score_axis_sanity_artifact_path_transient"
+        )
+    else:
+        resolved_score_axis_artifact, score_axis_path_error = _resolve_artifact_path(
+            score_axis_artifact_path,
+            repo_root,
+        )
+        if score_axis_path_error is not None:
+            blockers.append(
+                "tt5l_move_level_feasibility_score_axis_sanity_artifact_path_"
+                f"{score_axis_path_error}"
+            )
+            resolved_score_axis_artifact = None
+        elif (
+            resolved_score_axis_artifact is None
+            or not resolved_score_axis_artifact.is_file()
+        ):
+            blockers.append(
+                "tt5l_move_level_feasibility_score_axis_sanity_artifact_missing"
+            )
+            resolved_score_axis_artifact = None
+    score_axis_artifact_sha256 = str(
+        payload.get("score_axis_sanity_artifact_sha256") or ""
+    ).strip().lower()
+    if payload and not _SHA256_HEX_RE.fullmatch(score_axis_artifact_sha256):
+        blockers.append(
+            "tt5l_move_level_feasibility_score_axis_sanity_artifact_sha256_invalid"
+        )
+    elif (
+        resolved_score_axis_artifact is not None
+        and _sha256_file(resolved_score_axis_artifact) != score_axis_artifact_sha256
+    ):
+        blockers.append(
+            "tt5l_move_level_feasibility_score_axis_sanity_artifact_sha256_mismatch"
+        )
+
     for field in (
         "score_claim",
         "promotion_eligible",
@@ -1491,15 +1585,33 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "predicate_id": predicate_id or None,
         "predicate_passed": payload.get("predicate_passed"),
         "move_level_constraint_proof": payload.get("move_level_constraint_proof"),
+        "generated_by_tool": generated_by_tool or None,
+        "command_argv": list(command_argv) if command_argv_valid else None,
         "residual_max": residual_max,
         "residual_tolerance": residual_tolerance,
         "constraint_set_ids": sorted(constraint_ids),
         "constraint_set_count": constraint_set_count,
+        "proof_artifact_path": proof_artifact_path or None,
+        "proof_artifact_sha256": proof_artifact_sha256 or None,
+        "score_axis_sanity_artifact_path": score_axis_artifact_path or None,
+        "score_axis_sanity_artifact_sha256": score_axis_artifact_sha256 or None,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "blockers": blockers,
     }
+
+
+def tt5l_move_level_feasibility_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return public TT5L move-level feasibility proof custody status."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    return _tt5l_move_level_feasibility_status(repo_root=resolved_repo_root)
 
 
 def _tt5l_first_anchor_timing_smoke_status(*, repo_root: Path) -> dict[str, Any]:
@@ -1744,6 +1856,15 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         next_action = {
             "action_id": "materialize_tt5l_move_level_feasibility_proof",
             "phase": "cargo_cult_unwind_move_level_feasibility",
+            "tool_path": TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+            "command_template": (
+                f".venv/bin/python {TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH} "
+                "--proof-artifact "
+                "experiments/results/time_traveler_l5_v2/"
+                "tt5l_move_level_solver_proof.json "
+                "--proof-command-argv-json '<json-array-from-solver-run>' "
+                f"--output-json {TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH}"
+            ),
             "artifact_path": TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH,
             "predicate_id": TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID,
             "required_constraint_set_ids": sorted(TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS),
@@ -3448,6 +3569,7 @@ __all__ = [
     "TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",
     "TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA",
+    "TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
     "TT5L_PROBE_GATE_ARTIFACT_PATH",
     "TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH",
@@ -3471,4 +3593,5 @@ __all__ = [
     "l5_v2_staircase_steps",
     "l5_v2_tt5l_campaign_readiness",
     "tt5l_first_anchor_timing_smoke_status",
+    "tt5l_move_level_feasibility_status",
 ]
