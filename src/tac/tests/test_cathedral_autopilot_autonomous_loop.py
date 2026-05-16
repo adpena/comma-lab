@@ -695,6 +695,23 @@ def test_load_candidates_from_jsonl_refuses_string_authority_bool(tmp_path):
         loop.load_candidates_from_jsonl(p)
 
 
+@pytest.mark.parametrize("field", ["license_ok", "sideinfo_consumed", "exact_duplicate"])
+def test_load_candidates_from_jsonl_refuses_string_review_bools(tmp_path, field):
+    p = tmp_path / "cands.jsonl"
+    raw = {
+        "candidate_id": "review_bool_row",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": 5.0,
+        field: "false",
+    }
+    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=rf"non-boolean {field}"):
+        loop.load_candidates_from_jsonl(p)
+
+
 def test_load_exact_ready_queue_preserves_authority_after_live_audit(
     tmp_path,
     monkeypatch,
@@ -868,6 +885,79 @@ def test_load_probe_disambiguator_refuses_score_claim(tmp_path):
         loop.load_candidates_from_probe_disambiguator_output(p)
 
 
+@pytest.mark.parametrize("field", ["license_ok", "sideinfo_consumed", "exact_duplicate"])
+def test_load_probe_disambiguator_refuses_string_review_bools(tmp_path, field):
+    p = _write_probe_payload(tmp_path)
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    payload["autopilot_rows"][0][field] = "false"
+    p.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=rf"non-boolean {field}"):
+        loop.load_candidates_from_probe_disambiguator_output(p)
+
+
+def test_load_substrate_composition_alpha_index_absent_file_is_empty(tmp_path):
+    assert loop.load_substrate_composition_alpha_index(
+        tmp_path / "missing_matrix.json"
+    ) == {}
+
+
+def test_load_substrate_composition_alpha_index_invalid_json_fails_closed(tmp_path):
+    matrix_path = tmp_path / "substrate_composition_matrix.json"
+    matrix_path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="invalid JSON"):
+        loop.load_substrate_composition_alpha_index(matrix_path)
+
+
+def test_load_substrate_composition_alpha_index_bad_alpha_fails_closed(tmp_path):
+    matrix_path = tmp_path / "substrate_composition_matrix.json"
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "entries": {
+                    "a__x__b": [
+                        {
+                            "written_at_utc": "2026-05-16T00:00:00Z",
+                            "alpha": "not-a-number",
+                            "score_claim": False,
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="non-numeric alpha"):
+        loop.load_substrate_composition_alpha_index(matrix_path)
+
+
+def test_load_substrate_composition_alpha_index_string_score_claim_fails_closed(
+    tmp_path,
+):
+    matrix_path = tmp_path / "substrate_composition_matrix.json"
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "entries": {
+                    "a__x__b": [
+                        {
+                            "written_at_utc": "2026-05-16T00:00:00Z",
+                            "alpha": 0.5,
+                            "score_claim": "false",
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="non-boolean score_claim"):
+        loop.load_substrate_composition_alpha_index(matrix_path)
+
+
 def test_substrate_composition_matrix_preserves_zero_alpha(tmp_path):
     """alpha=0.0 is a real saturation signal, not a missing value."""
     matrix_path = tmp_path / "substrate_composition_matrix.json"
@@ -903,6 +993,73 @@ def test_substrate_composition_matrix_preserves_zero_alpha(tmp_path):
     )
 
     assert candidate.composition_alpha == pytest.approx(0.0)
+
+
+def test_substrate_composition_matrix_fallback_matches_exact_pair_ids(tmp_path):
+    matrix_path = tmp_path / "substrate_composition_matrix.json"
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "entries": {
+                    "aa__x__b": [
+                        {
+                            "written_at_utc": "2026-05-16T00:00:00Z",
+                            "alpha": 0.2,
+                            "score_claim": False,
+                        }
+                    ]
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    candidate_ab = _cand("candidate_ab")
+    candidate_aab = _cand("candidate_aab")
+
+    loop.apply_substrate_composition_matrix_to_candidates(
+        [candidate_ab, candidate_aab],
+        substrate_ids_by_candidate={
+            "candidate_ab": ("a", "b"),
+            "candidate_aab": ("aa", "b"),
+        },
+        matrix_path=matrix_path,
+    )
+
+    assert candidate_ab.composition_alpha is None
+    assert candidate_aab.composition_alpha == pytest.approx(0.2)
+
+
+def test_load_substrate_composition_ranking_requires_schema(tmp_path):
+    p = tmp_path / "ranking.json"
+    p.write_text(
+        json.dumps(
+            {
+                "matrix_schema": "tac_autopilot_dispatch_ranking_v1",
+                "score_claim": False,
+                "ranked_dispatches": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="schema unsupported"):
+        loop.load_candidates_from_substrate_composition_ranking(p)
+
+
+def test_candidate_substrate_ids_from_ranking_requires_schema(tmp_path):
+    p = tmp_path / "ranking.json"
+    p.write_text(
+        json.dumps(
+            {
+                "matrix_schema": "tac_autopilot_dispatch_ranking_v1",
+                "ranked_dispatches": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="schema unsupported"):
+        loop.candidate_substrate_ids_from_ranking(p)
 
 
 def test_main_accepts_probe_disambiguator_source(tmp_path):

@@ -2129,6 +2129,19 @@ def _json_bool_field(
     )
 
 
+def _json_optional_bool_field(
+    raw: dict[str, Any],
+    key: str,
+    *,
+    context: str,
+) -> bool | None:
+    """Read an optional JSON bool while preserving explicit null as unknown."""
+
+    if key not in raw or raw[key] is None:
+        return None
+    return _json_bool_field(raw, key, default=False, context=context)
+
+
 def _require_planning_only_flag(raw: dict[str, Any], key: str, *, context: str) -> None:
     if _json_bool_field(raw, key, default=False, context=context):
         raise ValueError(
@@ -2229,14 +2242,24 @@ def _candidate_row_from_raw(
         decode_complexity_evidence=str(raw.get("decode_complexity_evidence", "")),
         mdl_tier_c_density=mdl_tier_c_density,
         composition_alpha=composition_alpha,
-        license_ok=bool(raw.get("license_ok", True)),
-        inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
-        sideinfo_consumed=(
-            None
-            if raw.get("sideinfo_consumed") is None
-            else bool(raw.get("sideinfo_consumed"))
+        license_ok=_json_bool_field(
+            raw,
+            "license_ok",
+            default=True,
+            context=context,
         ),
-        exact_duplicate=bool(raw.get("exact_duplicate", False)),
+        inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+        sideinfo_consumed=_json_optional_bool_field(
+            raw,
+            "sideinfo_consumed",
+            context=context,
+        ),
+        exact_duplicate=_json_bool_field(
+            raw,
+            "exact_duplicate",
+            default=False,
+            context=context,
+        ),
         context_order=int(raw.get("context_order", 0) or 0),
         predicted_dispatch_risk=predicted_dispatch_risk,
         lane_id=str(raw.get("lane_id", "")),
@@ -2349,6 +2372,20 @@ def load_candidates_from_exact_ready_queue(
 SUBSTRATE_COMPOSITION_RANKING_SCHEMA = "tac_autopilot_dispatch_ranking_v1"
 
 
+def _require_substrate_composition_ranking_schema(
+    payload: dict[str, Any],
+    *,
+    context: str,
+) -> None:
+    schema = payload.get("schema")
+    if schema != SUBSTRATE_COMPOSITION_RANKING_SCHEMA:
+        raise ValueError(
+            f"{context} schema unsupported: {schema!r}; expected "
+            f"{SUBSTRATE_COMPOSITION_RANKING_SCHEMA!r}. Legacy ranking "
+            "artifacts need an explicit legacy blocker path before autopilot load."
+        )
+
+
 def load_candidates_from_substrate_composition_ranking(
     path: Path,
     *,
@@ -2388,14 +2425,24 @@ def load_candidates_from_substrate_composition_ranking(
     if not path.is_file():
         raise FileNotFoundError(f"substrate composition ranking JSON not found: {path}")
     payload = json.loads(path.read_text(encoding="utf-8"))
-    schema = payload.get("schema") or payload.get("matrix_schema")
+    if not isinstance(payload, dict):
+        raise ValueError("substrate composition ranking JSON must be an object")
+    _require_substrate_composition_ranking_schema(
+        payload,
+        context="substrate composition ranking JSON",
+    )
     if "ranked_dispatches" not in payload:
         raise ValueError(
             f"substrate composition ranking JSON missing 'ranked_dispatches' "
-            f"key (schema={schema!r}); got top-level keys: "
+            f"key (schema={payload.get('schema')!r}); got top-level keys: "
             f"{sorted(payload.keys())}"
         )
-    if payload.get("score_claim", False):
+    if _json_bool_field(
+        payload,
+        "score_claim",
+        default=False,
+        context="substrate composition ranking JSON",
+    ):
         raise ValueError(
             "substrate composition ranking JSON has score_claim=True; "
             "the autopilot ranker must remain planning-only "
@@ -2517,15 +2564,10 @@ def load_candidates_from_substrate_composition_ranking(
             composition_alpha=composition_alpha,
             license_ok=_json_bool_field(raw, "license_ok", default=True, context=context),
             inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
-            sideinfo_consumed=(
-                None
-                if raw.get("sideinfo_consumed") is None
-                else _json_bool_field(
-                    raw,
-                    "sideinfo_consumed",
-                    default=False,
-                    context=context,
-                )
+            sideinfo_consumed=_json_optional_bool_field(
+                raw,
+                "sideinfo_consumed",
+                context=context,
             ),
             exact_duplicate=_json_bool_field(
                 raw,
@@ -2580,25 +2622,43 @@ def load_substrate_composition_alpha_index(
         return {}
     try:
         payload = json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    entries = payload.get("entries") or {}
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError(
+            f"substrate composition matrix exists but is unreadable or invalid JSON: {p}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"substrate composition matrix must be a JSON object: {p}")
+    if "entries" not in payload:
+        raise ValueError(f"substrate composition matrix missing 'entries': {p}")
+    entries = payload.get("entries")
     if not isinstance(entries, dict):
-        return {}
+        raise ValueError(f"substrate composition matrix 'entries' must be an object: {p}")
     out: dict[str, float] = {}
     for pair_key, rows in entries.items():
-        if not isinstance(rows, list) or not rows:
+        if not isinstance(rows, list):
+            raise ValueError(
+                f"substrate composition matrix entry for pair {pair_key!r} "
+                "must be a list"
+            )
+        if not rows:
             continue
+        for i, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise ValueError(
+                    f"substrate composition matrix entry for pair {pair_key!r} "
+                    f"row {i} must be an object"
+                )
         # Pick most-recent by written_at_utc (string lexicographic compare
         # works because all timestamps use canonical UTC ISO format).
         latest = max(
-            (r for r in rows if isinstance(r, dict)),
+            rows,
             key=lambda r: r.get("written_at_utc", ""),
             default=None,
         )
         if latest is None:
             continue
-        if latest.get("score_claim", False):
+        context = f"substrate composition matrix entry for pair {pair_key!r}"
+        if _json_bool_field(latest, "score_claim", default=False, context=context):
             raise ValueError(
                 f"substrate composition matrix entry for pair {pair_key!r} "
                 "has score_claim=True; refuse to consume score-claimed "
@@ -2608,10 +2668,29 @@ def load_substrate_composition_alpha_index(
         if alpha_raw is None:
             continue
         try:
-            out[str(pair_key)] = float(alpha_raw)
-        except (TypeError, ValueError):
-            continue
+            alpha = float(alpha_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"substrate composition matrix entry for pair {pair_key!r} "
+                f"has non-numeric alpha={alpha_raw!r}"
+            ) from exc
+        if not math.isfinite(alpha):
+            raise ValueError(
+                f"substrate composition matrix entry for pair {pair_key!r} "
+                f"has non-finite alpha={alpha_raw!r}"
+            )
+        out[str(pair_key)] = alpha
     return out
+
+
+def _substrate_pair_ids_from_alpha_key(pair_key: str) -> tuple[str, str] | None:
+    parts = pair_key.split("__x__")
+    if len(parts) != 2:
+        return None
+    left, right = (p.strip() for p in parts)
+    if not left or not right:
+        return None
+    return left, right
 
 
 def apply_substrate_composition_matrix_to_candidates(
@@ -2649,10 +2728,11 @@ def apply_substrate_composition_matrix_to_candidates(
         if alpha is None:
             alpha = alpha_index.get(key_b)
         if alpha is None:
-            # Fallback: scan keys for any pair containing both substrate ids
-            # (the probe may emit keys in non-sorted form).
+            # Fallback: scan exact pair keys (the probe may emit keys in
+            # non-sorted form). Substring checks can cross-match unrelated ids.
             for k, v in alpha_index.items():
-                if a in k and b in k and "__x__" in k:
+                pair = _substrate_pair_ids_from_alpha_key(k)
+                if pair is not None and set(pair) == {a, b}:
                     alpha = v
                     break
         if alpha is not None:
@@ -2762,14 +2842,24 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 composition_alpha=_coerce_optional_float(
                     raw.get("composition_alpha")
                 ),
-                license_ok=bool(raw.get("license_ok", True)),
-                inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
-                sideinfo_consumed=(
-                    None
-                    if raw.get("sideinfo_consumed") is None
-                    else bool(raw.get("sideinfo_consumed"))
+                license_ok=_json_bool_field(
+                    raw,
+                    "license_ok",
+                    default=True,
+                    context=f"probe-disambiguator row {cid!r}",
                 ),
-                exact_duplicate=bool(raw.get("exact_duplicate", False)),
+                inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+                sideinfo_consumed=_json_optional_bool_field(
+                    raw,
+                    "sideinfo_consumed",
+                    context=f"probe-disambiguator row {cid!r}",
+                ),
+                exact_duplicate=_json_bool_field(
+                    raw,
+                    "exact_duplicate",
+                    default=False,
+                    context=f"probe-disambiguator row {cid!r}",
+                ),
                 context_order=int(raw.get("context_order", 0) or 0),
             )
         )
@@ -2783,6 +2873,12 @@ def candidate_substrate_ids_from_ranking(path: Path) -> dict[str, tuple[str, ...
     substrates a candidate touches without re-parsing the full ranking JSON.
     """
     payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("substrate composition ranking JSON must be an object")
+    _require_substrate_composition_ranking_schema(
+        payload,
+        context="substrate composition ranking JSON",
+    )
     if "ranked_dispatches" not in payload:
         raise ValueError(
             "substrate composition ranking JSON missing 'ranked_dispatches'"

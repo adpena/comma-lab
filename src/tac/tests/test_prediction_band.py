@@ -48,6 +48,14 @@ def _write_anchor_files(base_dir: Path, band: PredictionBand) -> None:
     baseline_path = base_dir / band.baseline.artifact_path
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
     baseline_path.write_text("baseline\n", encoding="utf-8")
+    for ledger_path_text in band.band_source.local_ledger_paths:
+        stripped = ledger_path_text.removeprefix("file:").strip()
+        ledger_path = Path(stripped)
+        if ledger_path.is_absolute():
+            continue
+        ledger_path = base_dir / ledger_path
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        ledger_path.write_text("ledger\n", encoding="utf-8")
     for anchor in band.empirical_anchor.anchors:
         for key in ("artifact_path", "log_path"):
             path = base_dir / str(anchor[key])
@@ -107,6 +115,76 @@ def test_valid_prediction_band_can_influence_rank_reward(tmp_path: Path):
     assert verdict.valid_for_rank_reward is True
     assert verdict.valid_for_dispatch_planning is True
     assert verdict.valid_for_promotion is False
+
+
+def test_source_ledger_missing_blocks_rank_reward(tmp_path: Path):
+    band = replace(
+        _valid_band(),
+        band_source=BandSource(
+            local_ledger_paths=("file:.omx/research/missing_prediction_band.md",),
+            research_basis_ids=("balle_hyperprior_2018",),
+            claim_scope="planning prior only",
+        ),
+    )
+    _write_anchor_files(tmp_path, replace(band, band_source=_valid_band().band_source))
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_source_ledger_path_missing" in verdict.blockers
+
+
+def test_source_ledger_transient_path_blocks_rank_reward(tmp_path: Path):
+    band = replace(
+        _valid_band(),
+        band_source=BandSource(
+            local_ledger_paths=("file:/tmp/prediction_band_source.md",),
+            research_basis_ids=("balle_hyperprior_2018",),
+            claim_scope="planning prior only",
+        ),
+    )
+    _write_anchor_files(tmp_path, band)
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_source_ledger_path_transient" in verdict.blockers
+
+
+def test_source_ledger_outside_repo_blocks_rank_reward(tmp_path: Path):
+    outside_path = tmp_path.parent / "outside_prediction_band_source.md"
+    band = replace(
+        _valid_band(),
+        band_source=BandSource(
+            local_ledger_paths=(f"file:{outside_path}",),
+            research_basis_ids=("balle_hyperprior_2018",),
+            claim_scope="planning prior only",
+        ),
+    )
+    _write_anchor_files(tmp_path, band)
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_source_ledger_path_outside_repo" in verdict.blockers
 
 
 def test_baseline_axis_mismatch_blocks_rank_reward():

@@ -65,6 +65,7 @@ import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from tac.optimization.l5_staircase_v2 import l5_v2_prediction_band_payload
@@ -82,6 +83,10 @@ PLANNING_ONLY = True
 SCORE_CLAIM = False
 PROMOTION_ELIGIBLE = False
 READY_FOR_EXACT_EVAL_DISPATCH = False
+
+
+def _default_artifact_base_dir() -> Path:
+    return Path(__file__).resolve().parents[3]
 
 
 # ── Substrate taxonomy ────────────────────────────────────────────────────
@@ -1682,6 +1687,8 @@ DISPATCH_COST_USD_MIDPOINT: dict[str, float] = {
 
 def per_substrate_pareto_rows(
     matrix: CompositionMatrix | None = None,
+    *,
+    artifact_base_dir: Path | str | None = None,
 ) -> list[ParetoRow]:
     """Compute per-substrate Pareto rows ranked by EV/$.
 
@@ -1695,6 +1702,7 @@ def per_substrate_pareto_rows(
     substrate matrix v1]``, not a measurement.
     """
     matrix = matrix or build_composition_matrix()
+    artifact_base_dir = artifact_base_dir or _default_artifact_base_dir()
     rows: list[ParetoRow] = []
     for s in matrix.substrates:
         cost = DISPATCH_COST_USD_MIDPOINT.get(s.substrate_id, 0.0)
@@ -1713,6 +1721,7 @@ def per_substrate_pareto_rows(
             low=s.predicted_delta_alone_band[0],
             high=s.predicted_delta_alone_band[1],
             axis=s.target_axis.value,
+            artifact_base_dir=artifact_base_dir,
         )
         blockers.extend(prediction_band_verdict.blockers)
         rank_reward_allowed = prediction_band_verdict.valid_for_rank_reward

@@ -306,6 +306,7 @@ def l5_v2_prediction_band_verdict() -> dict[str, Any]:
             expected_subject_id=SUBJECT_ID,
             expected_low=PREDICTED_DELTA_BAND[0],
             expected_high=PREDICTED_DELTA_BAND[1],
+            artifact_base_dir=_default_repo_root(),
         )
     )
 

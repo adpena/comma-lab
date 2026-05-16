@@ -315,6 +315,23 @@ def validate_prediction_band(
     source = band.band_source
     if not source.local_ledger_paths or not source.claim_scope.strip():
         blockers.append("prediction_band_source_missing")
+    elif artifact_base_dir is None:
+        blockers.append("prediction_band_source_artifact_base_dir_missing")
+    else:
+        for ledger_idx, ledger_path_text in enumerate(source.local_ledger_paths):
+            ledger_path, ledger_path_error = _repo_local_artifact_path(
+                ledger_path_text,
+                artifact_base_dir,
+            )
+            if ledger_path_error == "transient":
+                blockers.append("prediction_band_source_ledger_path_transient")
+                annotations.append(f"source_ledger_path_transient_index={ledger_idx}")
+            elif ledger_path_error == "outside_base_dir":
+                blockers.append("prediction_band_source_ledger_path_outside_repo")
+                annotations.append(f"source_ledger_path_outside_repo_index={ledger_idx}")
+            elif not ledger_path.is_file():
+                blockers.append("prediction_band_source_ledger_path_missing")
+                annotations.append(f"source_ledger_path_missing_index={ledger_idx}")
     if not source.research_basis_ids:
         blockers.append("prediction_band_research_basis_missing")
     else:
