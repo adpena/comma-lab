@@ -496,6 +496,40 @@ def _repo_local_existing_file_blockers(
     return []
 
 
+def _inflated_outputs_manifest_sha_blockers(
+    *,
+    manifest_value: object,
+    expected_aggregate_sha256: str,
+    repo_root: Path,
+    missing_blocker: str,
+    invalid_blocker: str,
+) -> list[str]:
+    blockers = _repo_local_existing_file_blockers(
+        value=manifest_value,
+        repo_root=repo_root,
+        missing_blocker=missing_blocker,
+        invalid_blocker=invalid_blocker,
+    )
+    if blockers:
+        return blockers
+    if not _SHA256_HEX_RE.fullmatch(expected_aggregate_sha256):
+        return [invalid_blocker]
+
+    resolved, path_error = _resolve_artifact_path(str(manifest_value or ""), repo_root)
+    if path_error == "outside_repo" or resolved is None or not resolved.is_file():
+        return [invalid_blocker]
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return [f"{invalid_blocker}:malformed_json"]
+    if not isinstance(payload, Mapping):
+        return [f"{invalid_blocker}:manifest_not_object"]
+    manifest_sha = _raw_output_aggregate_sha(payload)
+    if manifest_sha != expected_aggregate_sha256:
+        return [f"{invalid_blocker}:aggregate_sha256_mismatch"]
+    return []
+
+
 def _inflate_command_has_canonical_signature(value: object) -> bool:
     command = str(value or "").strip()
     if not command:
@@ -518,6 +552,7 @@ def _raw_output_aggregate_sha(row: Mapping[str, Any]) -> str:
         "inflated_raw_output_aggregate_sha256",
         "raw_output_aggregate_sha256",
         "inflated_outputs_aggregate_sha256",
+        "aggregate_sha256",
     ):
         value = str(row.get(key) or "").strip().lower()
         if value:
@@ -620,6 +655,7 @@ def _paired_row_identity_blockers(
                     f"{gate_id}:{section}:{axis}:evidence_grade"
                 )
             if anchor_type == "exact":
+                aggregate_sha = _raw_output_aggregate_sha(row)
                 if repo_root is None:
                     blockers.append(
                         "l5_v2_gate_artifact_semantics_missing:"
@@ -627,11 +663,12 @@ def _paired_row_identity_blockers(
                     )
                 else:
                     blockers.extend(
-                        _repo_local_existing_file_blockers(
-                            value=(
+                        _inflated_outputs_manifest_sha_blockers(
+                            manifest_value=(
                                 row.get("inflated_outputs_manifest_path")
                                 or row.get("inflated_outputs_manifest")
                             ),
+                            expected_aggregate_sha256=aggregate_sha,
                             repo_root=repo_root,
                             missing_blocker=(
                                 "l5_v2_gate_artifact_semantics_missing:"
@@ -643,7 +680,7 @@ def _paired_row_identity_blockers(
                             ),
                         )
                     )
-                if not _SHA256_HEX_RE.fullmatch(_raw_output_aggregate_sha(row)):
+                if not _SHA256_HEX_RE.fullmatch(aggregate_sha):
                     blockers.append(
                         "l5_v2_gate_artifact_semantics_invalid:"
                         f"{gate_id}:{section}:{axis}:inflated_raw_output_aggregate_sha256"
@@ -813,12 +850,14 @@ def _gate_semantic_blockers(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:byte_mutation_proof:inflate_sha_pair"
             )
+        aggregate_sha = _raw_output_aggregate_sha(proof)
         blockers.extend(
-            _repo_local_existing_file_blockers(
-                value=(
+            _inflated_outputs_manifest_sha_blockers(
+                manifest_value=(
                     proof.get("inflated_outputs_manifest_path")
                     or proof.get("inflated_outputs_manifest")
                 ),
+                expected_aggregate_sha256=aggregate_sha,
                 repo_root=repo_root,
                 missing_blocker=(
                     "l5_v2_gate_artifact_semantics_missing:"
@@ -830,7 +869,7 @@ def _gate_semantic_blockers(
                 ),
             )
         )
-        if not _SHA256_HEX_RE.fullmatch(_raw_output_aggregate_sha(proof)):
+        if not _SHA256_HEX_RE.fullmatch(aggregate_sha):
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:byte_mutation_proof:inflated_raw_output_aggregate_sha256"

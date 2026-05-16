@@ -167,7 +167,18 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
             assert isinstance(proof, dict)
             manifest_path = repo_root / str(proof["inflated_outputs_manifest_path"])
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
-            manifest_path.write_text('{"raw_output_aggregate_sha256":"ok"}\n', encoding="utf-8")
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "raw_output_aggregate_sha256": proof[
+                            "inflated_raw_output_aggregate_sha256"
+                        ],
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
         rows = payload.get("anchor_pair")
         if isinstance(rows, list):
             for row in rows:
@@ -176,7 +187,21 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
                 for key in ("artifact_path", "log_path", "inflated_outputs_manifest_path"):
                     custody_path = repo_root / str(row[key])
                     custody_path.parent.mkdir(parents=True, exist_ok=True)
-                    custody_path.write_text(f"{key}\n", encoding="utf-8")
+                    if key == "inflated_outputs_manifest_path":
+                        custody_path.write_text(
+                            json.dumps(
+                                {
+                                    "aggregate_sha256": row[
+                                        "inflated_raw_output_aggregate_sha256"
+                                    ],
+                                },
+                                sort_keys=True,
+                            )
+                            + "\n",
+                            encoding="utf-8",
+                        )
+                    else:
+                        custody_path.write_text(f"{key}\n", encoding="utf-8")
         artifact_path.write_text(
             json.dumps(payload, sort_keys=True) + "\n",
             encoding="utf-8",
@@ -722,6 +747,35 @@ def test_l5_v2_sideinfo_consumption_requires_archive_runtime_section_identity(
     )
 
 
+def test_l5_v2_sideinfo_consumption_binds_raw_aggregate_to_manifest(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    manifest_path = tmp_path / str(proof["inflated_outputs_manifest_path"])
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps({"aggregate_sha256": _sha(99)}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "inflated_outputs_manifest_path:aggregate_sha256_mismatch"
+        in readiness["blockers"]
+    )
+
+
 def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
     tmp_path: Path,
 ) -> None:
@@ -826,6 +880,36 @@ def test_l5_v2_exact_anchor_requires_inflated_output_manifest_custody(
         "l5_v2_gate_artifact_semantics_invalid:"
         "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:"
         "inflated_raw_output_aggregate_sha256"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_exact_anchor_binds_raw_aggregate_to_manifest(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "exact_anchor_or_diagnostic_pair"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["anchor_pair"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    manifest_path = tmp_path / str(cuda_row["inflated_outputs_manifest_path"])
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps({"aggregate_sha256": _sha(99)}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:"
+        "inflated_outputs_manifest_path:aggregate_sha256_mismatch"
         in readiness["blockers"]
     )
 

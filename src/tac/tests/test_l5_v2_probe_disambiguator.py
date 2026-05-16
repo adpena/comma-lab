@@ -25,7 +25,12 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _axis_evidence(axis: str, *, repo_root: Path | None = None) -> dict[str, object]:
+def _axis_evidence(
+    axis: str,
+    *,
+    repo_root: Path | None = None,
+    score_delta: float = 0.0,
+) -> dict[str, object]:
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
     log_path = f"experiments/results/l5_v2_probe/{axis}.log"
@@ -47,6 +52,7 @@ def _axis_evidence(axis: str, *, repo_root: Path | None = None) -> dict[str, obj
         "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": log_path,
+        "score_delta": score_delta,
     }
 
 
@@ -69,7 +75,7 @@ def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObse
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
         axis_evidence=tuple(
-            _axis_evidence(axis, repo_root=repo_root)
+            _axis_evidence(axis, repo_root=repo_root, score_delta=delta)
             for axis in ("contest_cpu", "contest_cuda")
         ),
         sideinfo_consumed=True,
@@ -122,6 +128,7 @@ def test_l5_v2_probe_selects_best_paired_exact_candidate(tmp_path: Path) -> None
     assert verdict["architecture_lock_allowed"] is True
     assert verdict["selected_candidate_id"] == "time_traveler_l5_autonomy"
     assert verdict["selected_delta"] == -0.030
+    assert verdict["selected_delta_source"] == "paired_axis_score_delta"
     assert verdict["blockers"] == []
 
 
@@ -241,12 +248,14 @@ def test_l5_v2_probe_blocks_string_only_paired_axes(tmp_path: Path) -> None:
 def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
     tmp_path: Path,
 ) -> None:
-    bad_axis_evidence = dict(_axis_evidence("contest_cuda", repo_root=tmp_path))
+    bad_axis_evidence = dict(
+        _axis_evidence("contest_cuda", repo_root=tmp_path, score_delta=-0.050)
+    )
     bad_axis_evidence["score"] = 0.123
     malformed = dataclasses.replace(
         _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
         axis_evidence=(
-            _axis_evidence("contest_cpu", repo_root=tmp_path),
+            _axis_evidence("contest_cpu", repo_root=tmp_path, score_delta=-0.050),
             bad_axis_evidence,
         ),
     )
@@ -256,6 +265,53 @@ def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
 
     assert verdict["architecture_lock_allowed"] is False
     assert "l5_v2_probe_axis_score_formula_mismatch:contest_cuda" in row["blockers"]
+
+
+def test_l5_v2_probe_rejects_delta_not_derived_from_paired_axis_scores(
+    tmp_path: Path,
+) -> None:
+    freeform = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+    axis_evidence = [
+        dict(row, score_delta=-0.010)
+        for row in freeform.axis_evidence
+    ]
+
+    verdict = evaluate_l5_v2_probe(
+        (dataclasses.replace(freeform, axis_evidence=tuple(axis_evidence)),),
+        repo_root=tmp_path,
+    )
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert row["paired_score_delta"] == -0.010
+    assert "l5_v2_probe_delta_not_bound_to_axis_evidence" in row["blockers"]
+
+
+def test_l5_v2_probe_selection_uses_paired_axis_score_delta(
+    tmp_path: Path,
+) -> None:
+    # CPU/CUDA deltas may diverge slightly; architecture lock uses the
+    # conservative paired value, not an unverified handwritten field.
+    c1 = _eligible(tmp_path, "c1_world_model_foveation", -0.030)
+    z5 = _eligible(tmp_path, "z5_predictive_coding_world_model", -0.020)
+    tt5l = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.010)
+    c1_rows = [
+        dict(row, score_delta=-0.040 if row["axis"] == "contest_cpu" else -0.030)
+        for row in c1.axis_evidence
+    ]
+
+    verdict = evaluate_l5_v2_probe(
+        (
+            dataclasses.replace(c1, axis_evidence=tuple(c1_rows)),
+            z5,
+            tt5l,
+        ),
+        repo_root=tmp_path,
+    )
+
+    assert verdict["architecture_lock_allowed"] is True
+    assert verdict["selected_candidate_id"] == "c1_world_model_foveation"
+    assert verdict["selected_delta"] == -0.030
 
 
 def test_l5_v2_probe_requires_durable_axis_log_files(tmp_path: Path) -> None:

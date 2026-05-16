@@ -19,7 +19,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from tac.exact_eval_custody import is_sha256_hex, validate_exact_eval_evidence
+from tac.exact_eval_custody import (
+    SCORE_FORMULA_TOLERANCE,
+    finite_float,
+    is_sha256_hex,
+    validate_exact_eval_evidence,
+)
 
 L5V2_PROBE_SCHEMA = "tac_l5_v2_probe_disambiguator_v1"
 L5V2_PROBE_TOOL_PATH = "tools/probe_l5_v2_staircase_disambiguator.py"
@@ -257,6 +262,47 @@ def _axis_evidence_blockers(
     return tuple(blockers)
 
 
+def _axis_score_delta(evidence: Mapping[str, Any]) -> float | None:
+    direct = finite_float(evidence.get("score_delta"))
+    if direct is not None:
+        return direct
+    component_deltas = evidence.get("component_deltas")
+    if isinstance(component_deltas, Mapping):
+        return finite_float(component_deltas.get("score_delta"))
+    return None
+
+
+def _paired_axis_score_delta(
+    observation: L5V2ProbeObservation,
+) -> tuple[float | None, tuple[str, ...]]:
+    blockers: list[str] = []
+    by_axis: dict[str, Mapping[str, Any]] = {}
+    for item in observation.axis_evidence:
+        axis = str(item.get("axis") or "")
+        if axis.strip():
+            by_axis[axis] = item
+
+    deltas: list[float] = []
+    for axis in REQUIRED_EXACT_AXES:
+        evidence = by_axis.get(axis)
+        if evidence is None:
+            continue
+        delta = _axis_score_delta(evidence)
+        if delta is None:
+            blockers.append(f"l5_v2_probe_axis_score_delta_missing:{axis}")
+            continue
+        deltas.append(delta)
+
+    paired_delta = max(deltas) if len(deltas) == len(REQUIRED_EXACT_AXES) else None
+    if (
+        paired_delta is not None
+        and abs(observation.predicted_or_measured_delta - paired_delta)
+        > SCORE_FORMULA_TOLERANCE
+    ):
+        blockers.append("l5_v2_probe_delta_not_bound_to_axis_evidence")
+    return paired_delta, tuple(blockers)
+
+
 def _observation_blockers(
     observation: L5V2ProbeObservation,
     *,
@@ -309,6 +355,8 @@ def _observation_blockers(
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
     blockers.extend(_axis_evidence_blockers(observation, repo_root=repo_root))
+    _paired_delta, paired_delta_blockers = _paired_axis_score_delta(observation)
+    blockers.extend(paired_delta_blockers)
     return tuple(dict.fromkeys(blockers))
 
 
@@ -347,6 +395,7 @@ def build_probe_template() -> dict[str, Any]:
                         "eval_device": "",
                         "auth_eval_command": "",
                         "log_path": "",
+                        "score_delta": None,
                     }
                     for axis in REQUIRED_EXACT_AXES
                 ],
@@ -371,7 +420,7 @@ def evaluate_l5_v2_probe(
     )
     rows = tuple(observations)
     evaluated: list[dict[str, Any]] = []
-    eligible: list[L5V2ProbeObservation] = []
+    eligible: list[tuple[L5V2ProbeObservation, float]] = []
     global_blockers: list[str] = []
     eligible_candidate_ids: set[str] = set()
 
@@ -387,14 +436,17 @@ def evaluate_l5_v2_probe(
 
     for row in rows:
         blockers = _observation_blockers(row, repo_root=resolved_repo_root)
+        paired_delta, _paired_delta_blockers = _paired_axis_score_delta(row)
         row_dict = dataclasses.asdict(row)
         row_dict["exact_axes"] = list(row.exact_axes)
+        row_dict["paired_score_delta"] = paired_delta
+        row_dict["selection_delta"] = paired_delta
         row_dict["eligible_for_architecture_lock"] = not blockers
         row_dict["blockers"] = list(blockers)
         row_dict["missing_exact_axes"] = list(_missing_required_axes(row))
         evaluated.append(row_dict)
-        if not blockers:
-            eligible.append(row)
+        if not blockers and paired_delta is not None:
+            eligible.append((row, paired_delta))
             eligible_candidate_ids.add(row.candidate_id)
 
     ineligible_required_candidates = [
@@ -407,11 +459,13 @@ def evaluate_l5_v2_probe(
 
     selected = min(
         eligible,
-        key=lambda row: row.predicted_or_measured_delta,
+        key=lambda item: item[1],
         default=None,
     )
     if selected is None:
         global_blockers.append("l5_v2_probe_no_eligible_candidate")
+    selected_observation = selected[0] if selected is not None else None
+    selected_delta = selected[1] if selected is not None else None
 
     return {
         "schema": L5V2_PROBE_SCHEMA,
@@ -420,10 +474,11 @@ def evaluate_l5_v2_probe(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "architecture_lock_allowed": selected is not None and not global_blockers,
-        "selected_candidate_id": selected.candidate_id if selected is not None else None,
-        "selected_delta": (
-            selected.predicted_or_measured_delta if selected is not None else None
+        "selected_candidate_id": (
+            selected_observation.candidate_id if selected_observation is not None else None
         ),
+        "selected_delta": selected_delta,
+        "selected_delta_source": "paired_axis_score_delta",
         "required_candidates": list(L5V2_CANDIDATES),
         "required_exact_axes": list(REQUIRED_EXACT_AXES),
         "evaluated_observations": evaluated,
