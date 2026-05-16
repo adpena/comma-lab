@@ -430,6 +430,19 @@ def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
     return False
 
 
+def _non_bool_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    return value if isinstance(value, int) else None
+
+
+def _first_present(mapping: Mapping[str, Any], keys: Iterable[str]) -> object:
+    for key in keys:
+        if key in mapping:
+            return mapping[key]
+    return None
+
+
 def _repo_local_existing_file_blockers(
     *,
     value: object,
@@ -670,17 +683,91 @@ def _gate_semantic_blockers(
                 f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:byte_mutation_proof:section"
             )
         offsets = proof.get("mutated_byte_offsets")
-        if (
-            not isinstance(offsets, list)
-            or not offsets
-            or any(
-                isinstance(item, bool) or not isinstance(item, int) or item < 0
+        valid_offsets = (
+            isinstance(offsets, list)
+            and bool(offsets)
+            and all(
+                isinstance(item, int) and not isinstance(item, bool) and item >= 0
                 for item in offsets
             )
-        ):
+        )
+        if not valid_offsets:
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:byte_mutation_proof:mutated_byte_offsets"
+            )
+        section_offset = _non_bool_int(
+            _first_present(
+                proof,
+                (
+                    "section_offset",
+                    "section_byte_offset",
+                    "section_start_offset",
+                    "absolute_section_offset",
+                ),
+            )
+        )
+        section_nbytes = _non_bool_int(
+            _first_present(
+                proof,
+                (
+                    "section_nbytes",
+                    "section_bytes",
+                    "section_byte_length",
+                    "section_length",
+                ),
+            )
+        )
+        if (
+            section_offset is None
+            or section_offset < 0
+            or section_nbytes is None
+            or section_nbytes <= 0
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:section_byte_range"
+            )
+        elif valid_offsets:
+            section_end = section_offset + section_nbytes
+            outside_offsets = [
+                int(item)
+                for item in offsets
+                if not (section_offset <= int(item) < section_end)
+            ]
+            if outside_offsets:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:byte_mutation_proof:mutated_byte_offsets_outside_section"
+                )
+        section_sha = str(
+            proof.get("section_sha256") or proof.get("parsed_section_sha256") or ""
+        ).strip().lower()
+        if not _SHA256_HEX_RE.fullmatch(section_sha):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:section_sha256"
+            )
+        baseline_archive_sha = str(
+            proof.get("baseline_archive_sha256") or proof.get("archive_sha256") or ""
+        ).strip().lower()
+        mutated_archive_sha = str(
+            proof.get("mutated_archive_sha256") or ""
+        ).strip().lower()
+        if (
+            not _SHA256_HEX_RE.fullmatch(baseline_archive_sha)
+            or not _SHA256_HEX_RE.fullmatch(mutated_archive_sha)
+            or baseline_archive_sha == mutated_archive_sha
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:archive_sha_pair"
+            )
+        runtime_sha = str(proof.get("runtime_tree_sha256") or "").strip().lower()
+        if not _SHA256_HEX_RE.fullmatch(runtime_sha):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:runtime_tree_sha256"
             )
         baseline_sha = str(proof.get("baseline_inflate_sha256") or "").strip().lower()
         mutated_sha = str(proof.get("mutated_inflate_sha256") or "").strip().lower()

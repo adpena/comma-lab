@@ -101,7 +101,13 @@ def _gate_artifact_payload(gate_id: str) -> dict[str, object]:
             "section": "temporal_sideinfo",
             "parser_consumed_bytes": True,
             "output_changed": True,
-            "mutated_byte_offsets": [0, 7],
+            "section_offset": 1024,
+            "section_nbytes": 16,
+            "section_sha256": _sha(24),
+            "baseline_archive_sha256": _sha(25),
+            "mutated_archive_sha256": _sha(26),
+            "runtime_tree_sha256": _sha(27),
+            "mutated_byte_offsets": [1024, 1031],
             "baseline_inflate_sha256": _sha(21),
             "mutated_inflate_sha256": _sha(22),
             "inflate_command": (
@@ -619,6 +625,66 @@ def test_l5_v2_sideinfo_consumption_requires_full_frame_inflate_custody(
     assert (
         "l5_v2_gate_artifact_semantics_invalid:"
         "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:inflate_command"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_sideinfo_consumption_binds_mutation_to_parsed_section_range(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    proof["mutated_byte_offsets"] = [0, 1024]
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "mutated_byte_offsets_outside_section"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_sideinfo_consumption_requires_archive_runtime_section_identity(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    proof.pop("section_sha256", None)
+    proof.pop("runtime_tree_sha256", None)
+    proof["mutated_archive_sha256"] = proof["baseline_archive_sha256"]
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:section_sha256"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "runtime_tree_sha256"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:archive_sha_pair"
         in readiness["blockers"]
     )
 
