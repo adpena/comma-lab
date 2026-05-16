@@ -44,7 +44,7 @@ PR106_R2_PR101_ARCHIVE = (
 )
 PR106_R2_PR101_RUNTIME = REPO_ROOT / "submissions/pr106_latent_sidecar_r2_pr101_grammar"
 PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
-PR106_R2_PR101_RUNTIME_TREE_SHA = "5506c0f62b5d58a1a3f873ed4c2d104e2b714be957dcd55af05131e50f01fbe3"
+PR106_R2_PR101_RUNTIME_TREE_SHA = "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2c1ca0cb3e666fc5c4bc"
 PR106_HDM8_FORMAT07_ARCHIVE = (
     REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 )
@@ -67,11 +67,15 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     expected_runtime_tree = (
         PR106_R2_PR101_RUNTIME_TREE_SHA if format_id == "0x02" else PR106_R2_RUNTIME_TREE_SHA
     )
+    expected_runtime_content_tree = pr106_runtime_source_manifest(runtime_dir)[
+        "runtime_content_tree_sha256"
+    ]
     manifest = prove_pr106_sidecar_runtime_decode_consumption(
         archive_path=archive_path,
         runtime_dir=runtime_dir,
         expected_archive_sha256=expected_sha,
         expected_runtime_source_tree_sha256=expected_runtime_tree,
+        expected_runtime_content_tree_sha256=expected_runtime_content_tree,
     )
 
     assert manifest["schema"] == "pr106_sidecar_runtime_decode_consumption_proof_v1"
@@ -82,8 +86,14 @@ def test_pr106_sidecar_runtime_decode_consumption_proof_is_nonpromotable(
     runtime_manifest = manifest["runtime_source_manifest"]
     assert isinstance(runtime_manifest, dict)
     assert runtime_manifest["runtime_source_tree_sha256"] == expected_runtime_tree
+    assert runtime_manifest["runtime_content_tree_sha256"] == expected_runtime_content_tree
     assert runtime_manifest["expected_runtime_source_tree_sha256"] == expected_runtime_tree
     assert runtime_manifest["expected_runtime_source_tree_sha256_matches"] is True
+    assert (
+        runtime_manifest["expected_runtime_content_tree_sha256"]
+        == expected_runtime_content_tree
+    )
+    assert runtime_manifest["expected_runtime_content_tree_sha256_matches"] is True
     assert manifest["format_id"] == format_id
     assert manifest["payload_sha256_changed"] is True
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
@@ -174,6 +184,23 @@ def test_pr106_sidecar_runtime_decode_consumption_fails_closed_on_runtime_tree_m
     assert manifest["score_claim"] is False
 
 
+def test_pr106_sidecar_runtime_decode_consumption_fails_closed_on_runtime_content_tree_mismatch() -> None:
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=PR106_R2_PR101_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        expected_archive_sha256=PR106_R2_PR101_SHA,
+        expected_runtime_content_tree_sha256="0" * 64,
+    )
+
+    runtime_manifest = manifest["runtime_source_manifest"]
+    assert isinstance(runtime_manifest, dict)
+    assert runtime_manifest["expected_runtime_content_tree_sha256_matches"] is False
+    assert manifest["blockers"] == ["expected_runtime_content_tree_sha256_mismatch"]
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is False
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is False
+    assert manifest["score_claim"] is False
+
+
 def test_pr106_sidecar_runtime_decode_consumption_fails_closed_on_malformed_sha() -> None:
     manifest = prove_pr106_sidecar_runtime_decode_consumption(
         archive_path=PR106_R2_PR101_ARCHIVE,
@@ -204,6 +231,22 @@ def test_pr106_sidecar_runtime_decode_consumption_fails_closed_on_malformed_runt
     assert isinstance(runtime_manifest, dict)
     assert runtime_manifest["expected_runtime_source_tree_sha256_well_formed"] is False
     assert manifest["blockers"] == ["expected_runtime_source_tree_sha256_malformed"]
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is False
+    assert manifest["score_claim"] is False
+
+
+def test_pr106_sidecar_runtime_decode_consumption_fails_closed_on_malformed_runtime_content_tree_sha() -> None:
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=PR106_R2_PR101_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        expected_archive_sha256=PR106_R2_PR101_SHA,
+        expected_runtime_content_tree_sha256="not-a-sha",
+    )
+
+    runtime_manifest = manifest["runtime_source_manifest"]
+    assert isinstance(runtime_manifest, dict)
+    assert runtime_manifest["expected_runtime_content_tree_sha256_well_formed"] is False
+    assert manifest["blockers"] == ["expected_runtime_content_tree_sha256_malformed"]
     assert manifest["runtime_sidecar_decode_consumption_claim"] is False
     assert manifest["score_claim"] is False
 
@@ -274,6 +317,8 @@ def test_pr106_runtime_source_manifest_is_deterministic_and_runtime_bound() -> N
     assert manifest_a == manifest_b
     assert manifest_a["schema"] == "pr106_runtime_source_manifest_v1"
     assert manifest_a["runtime_source_tree_sha256"] == PR106_R2_PR101_RUNTIME_TREE_SHA
+    assert isinstance(manifest_a["runtime_content_tree_sha256"], str)
+    assert len(manifest_a["runtime_content_tree_sha256"]) == 64
     assert manifest_a["required_files"] == [
         "inflate.sh",
         "inflate.py",

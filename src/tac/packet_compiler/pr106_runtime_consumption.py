@@ -148,12 +148,25 @@ def pr106_runtime_source_manifest(runtime_dir: Path) -> dict[str, object]:
     if not files:
         raise ValueError(f"runtime dir has no recognized source files: {runtime_dir}")
     tree_payload = json.dumps(files, sort_keys=True, separators=(",", ":")).encode()
+    content_payload = json.dumps(
+        [
+            {
+                "path": row["path"],
+                "bytes": row["bytes"],
+                "sha256": row["sha256"],
+            }
+            for row in files
+        ],
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
     return {
         "schema": "pr106_runtime_source_manifest_v1",
         "runtime_dir": runtime_dir.as_posix(),
         "required_files": list(_RUNTIME_SOURCE_REQUIRED),
         "files": files,
         "runtime_source_tree_sha256": sha256_hex(tree_payload),
+        "runtime_content_tree_sha256": sha256_hex(content_payload),
     }
 
 
@@ -517,6 +530,7 @@ def prove_pr106_sidecar_runtime_decode_consumption(
     expected_member_name: str | None = None,
     expected_archive_sha256: str | None = None,
     expected_runtime_source_tree_sha256: str | None = None,
+    expected_runtime_content_tree_sha256: str | None = None,
 ) -> dict[str, object]:
     """Prove a valid sidecar mutation is consumed by the runtime decoder.
 
@@ -548,10 +562,22 @@ def prove_pr106_sidecar_runtime_decode_consumption(
         canonical_expected_sha256(expected_runtime_source_tree_sha256)
     )
     runtime_tree_sha = str(runtime_manifest["runtime_source_tree_sha256"])
+    runtime_content_tree_sha = str(runtime_manifest["runtime_content_tree_sha256"])
     expected_runtime_tree_matches = (
         None
         if expected_runtime_tree_sha is None or expected_runtime_tree_sha_well_formed is False
         else runtime_tree_sha == expected_runtime_tree_sha
+    )
+    expected_runtime_content_tree_sha, expected_runtime_content_tree_sha_well_formed = (
+        canonical_expected_sha256(expected_runtime_content_tree_sha256)
+    )
+    expected_runtime_content_tree_matches = (
+        None
+        if (
+            expected_runtime_content_tree_sha is None
+            or expected_runtime_content_tree_sha_well_formed is False
+        )
+        else runtime_content_tree_sha == expected_runtime_content_tree_sha
     )
     runtime_manifest.update(
         {
@@ -560,12 +586,23 @@ def prove_pr106_sidecar_runtime_decode_consumption(
                 expected_runtime_tree_sha_well_formed
             ),
             "expected_runtime_source_tree_sha256_matches": expected_runtime_tree_matches,
+            "expected_runtime_content_tree_sha256": expected_runtime_content_tree_sha,
+            "expected_runtime_content_tree_sha256_well_formed": (
+                expected_runtime_content_tree_sha_well_formed
+            ),
+            "expected_runtime_content_tree_sha256_matches": (
+                expected_runtime_content_tree_matches
+            ),
         }
     )
     if expected_runtime_tree_sha_well_formed is False:
         blockers.append("expected_runtime_source_tree_sha256_malformed")
     elif expected_runtime_tree_matches is False:
         blockers.append("expected_runtime_source_tree_sha256_mismatch")
+    if expected_runtime_content_tree_sha_well_formed is False:
+        blockers.append("expected_runtime_content_tree_sha256_malformed")
+    elif expected_runtime_content_tree_matches is False:
+        blockers.append("expected_runtime_content_tree_sha256_mismatch")
     member = read_single_stored_member_archive(
         archive_bytes,
         expected_member_name=expected_member_name,
