@@ -380,9 +380,9 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             estimated_cost_usd_low=0.00,
             estimated_cost_usd_high=0.10,
             timing_smoke_command=(
-                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/build_cooperative_receiver_campaign_queue.py --output "
-                "reports/cooperative_receiver/campaign_queue.json"
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q "
+                "src/tac/tests/test_hnerv_wavelet_compress_time_harness.py "
+                "src/tac/tests/test_hnerv_wavelet_apply_gate.py"
             ),
             byte_closed_packet_plan=(
                 "Patch the PR95/PR101 decoder export path to emit thresholded "
@@ -445,8 +445,10 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             estimated_cost_usd_high=5.00,
             timing_smoke_command=(
                 "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/build_cooperative_receiver_campaign_queue.py --output "
-                "reports/cooperative_receiver/campaign_queue.json"
+                "experiments/probe_t17_a_codebook_perplexity_smoke.py "
+                "--smoke-iters 10 --batch-size 8 --codebook-size 64 "
+                "--operator-authorized --output "
+                "reports/cooperative_receiver/t17_a_codebook_perplexity_smoke.json"
             ),
             byte_closed_packet_plan=(
                 "Derive the codebook from a committed seed and fixed source bytes; "
@@ -475,8 +477,9 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             estimated_cost_usd_low=0.50,
             estimated_cost_usd_high=1.00,
             timing_smoke_command=(
-                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/build_lapose_foveation_atom_manifest.py --help"
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q "
+                "src/tac/codec/cooperative_receiver/tests/test_atick_redlich.py "
+                "src/tac/tests/test_lapose_foveation_atoms.py"
             ),
             byte_closed_packet_plan=(
                 "Materialize a SegMap/eigenmode payload with deterministic basis hash; "
@@ -505,9 +508,9 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             estimated_cost_usd_low=3.00,
             estimated_cost_usd_high=5.00,
             timing_smoke_command=(
-                "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/build_cooperative_receiver_campaign_queue.py --output "
-                "reports/cooperative_receiver/campaign_queue.json"
+                "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q "
+                "src/tac/tests/test_pr101_sensitivity_aware_mallat_wavelet_unit.py "
+                "src/tac/symposium_impls/tests/test_daubechies_wavelet_codec.py"
             ),
             byte_closed_packet_plan=(
                 "Build a substrate with fixed scattering kernels in source, train only "
@@ -651,10 +654,11 @@ def default_cooperative_receiver_candidates() -> list[CooperativeReceiverCandida
             estimated_cost_usd_high=150.00,
             timing_smoke_command=(
                 "PYTHONPATH=src:upstream:$PWD .venv/bin/python "
-                "tools/cathedral_autopilot_autonomous_loop.py --max-concurrency 4 "
-                "--max-total-cost-usd 5 --candidate-source "
+                "tools/cathedral_autopilot_autonomous_loop.py --iterations 1 "
+                "--max-dispatch-recommendations 4 --candidates-jsonl "
                 ".omx/state/autopilot_candidate_queue_solver_stack_wire_in_20260513.jsonl "
-                "--output reports/cathedral_autopilot_smoke_<timestamp>.jsonl"
+                "--require-operator-approval-on dispatch "
+                "--output reports/cathedral_autopilot_smoke.json"
             ),
             byte_closed_packet_plan=(
                 "Each C4 sub-move must lower through its own byte-closed packet "

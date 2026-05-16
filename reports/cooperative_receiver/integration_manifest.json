@@ -14,9 +14,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "darts_confirmed_time_traveler_config",
+        "campaign_tier": "medium_term",
         "candidate_id": "darts_confirmed_time_traveler_config",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            8.0
+          ],
+          "estimated_cost_usd_high": 8.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 5.5
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -25,12 +38,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          3.0,
+          8.0
+        ],
         "estimated_dispatch_cost_usd": 5.5,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.0525,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_darts_confirmed_time_traveler_config",
         "notes": "[predicted; cooperative-receiver planning-only] Materialize the DARTS-confirmed time-traveler configuration (25K params, 30 B/pair, 4x4 foveation, hidden 32, int8) as the highest-EV follow-on packet candidate. promotion_gate=DARTS config materialized + TT5L archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.0525,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -43,7 +64,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --epochs 1 --batch-size 1 --allow-non-darwin"
       },
       {
         "blockers": [
@@ -56,9 +84,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "time_traveler_world_model_substrate",
+        "campaign_tier": "medium_term",
         "candidate_id": "time_traveler_world_model_substrate",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            8.0
+          ],
+          "estimated_cost_usd_high": 8.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 5.5
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -67,12 +108,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          3.0,
+          8.0
+        ],
         "estimated_dispatch_cost_usd": 5.5,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.033,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_time_traveler_world_model_substrate",
         "notes": "[predicted; cooperative-receiver planning-only] Encode a small ego-motion world model once, then transmit only per-pair prediction errors under a cooperative-receiver loss. promotion_gate=TT5L archive roundtrip + macOS advisory smoke + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.033,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -85,7 +134,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --help"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --epochs 1 --batch-size 1 --allow-non-darwin"
       },
       {
         "blockers": [
@@ -98,9 +154,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "sabor_boundary_only_renderer",
+        "campaign_tier": "medium_term",
         "candidate_id": "sabor_boundary_only_renderer",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            2.0
+          ],
+          "estimated_cost_usd_high": 2.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 1.5
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -109,12 +178,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          1.0,
+          2.0
+        ],
         "estimated_dispatch_cost_usd": 1.5,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.018000000000000002,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_sabor_boundary_only_renderer",
         "notes": "[predicted; cooperative-receiver planning-only] Exploit SegNet argmax-stable interiors by charging boundary RGB and reconstructing interiors from class means plus tiny refinement. promotion_gate=SBO1 archive custody + scorer-free inflate + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.018000000000000002,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -127,6 +204,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/sabor_boundary_only_renderer/tests"
       },
       {
@@ -140,9 +224,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "s2sbs_hf_byte_stuffing",
+        "campaign_tier": "medium_term",
         "candidate_id": "s2sbs_hf_byte_stuffing",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -151,12 +248,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          1.0,
+          3.0
+        ],
         "estimated_dispatch_cost_usd": 2.0,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.015000000000000001,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_s2sbs_hf_byte_stuffing",
         "notes": "[predicted; cooperative-receiver planning-only] Use high-frequency regions attenuated by the scorer stems as a charged side-information channel for useful residual bytes. promotion_gate=S2S1 archive custody + byte-consumption proof + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.015000000000000001,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -169,6 +274,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/s2sbs_byte_stuffing/tests"
       },
       {
@@ -182,9 +294,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "driving_prior_pretrained_renderer_2032",
+        "campaign_tier": "medium_term",
         "candidate_id": "driving_prior_pretrained_renderer_2032",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            5.0,
+            30.0
+          ],
+          "estimated_cost_usd_high": 30.0,
+          "estimated_cost_usd_low": 5.0,
+          "estimated_cost_usd_mid": 17.5
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -193,12 +318,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          5.0,
+          30.0
+        ],
         "estimated_dispatch_cost_usd": 17.5,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.0085,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_driving_prior_pretrained_renderer_2032",
         "notes": "[predicted; cooperative-receiver planning-only] Pre-train a sub-100K dashcam renderer on public driving video distributions, then fine-tune only contest residuals using the fixed scorer as cooperative receiver and penultimate-feature saliency as the allocation signal. promotion_gate=dataset/license manifest + scorer penultimate-hook readiness + deterministic renderer export + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.0085,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -211,6 +344,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_driving_prior_readiness.py --output reports/cooperative_receiver/driving_prior_readiness.json"
       },
       {
@@ -224,9 +364,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "driving_prior_world_model_substrate",
+        "campaign_tier": "medium_term",
         "candidate_id": "driving_prior_world_model_substrate",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -235,12 +388,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          1.0,
+          3.0
+        ],
         "estimated_dispatch_cost_usd": 2.0,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.0075,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_driving_prior_world_model_substrate",
         "notes": "[predicted; cooperative-receiver planning-only] Exercise the DPW1 charged world-model archive grammar now: a small deterministic driving prior plus residual grid that can later absorb a trained public-driving prior without changing inflate semantics. promotion_gate=DPW1 byte-consumption proof + trained prior export + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.0075,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -253,6 +414,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/driving_prior_world_model/tests"
       },
       {
@@ -266,9 +434,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+        "campaign_tier": "medium_term",
         "candidate_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -277,12 +458,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          1.0,
+          3.0
+        ],
         "estimated_dispatch_cost_usd": 2.0,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.0125,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_h15_coord_mlp_residual_sidecar_pr103_on_pr106",
         "notes": "[predicted; cooperative-receiver planning-only] Build a Coord-MLP residual basis as an HNeRV-external PR103-on-PR106 sidecar: small, reviewable, and directly aimed at the current frontier without another family-internal retrain. promotion_gate=sidecar bytes changed and consumed + full-frame parity baseline + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.0125,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -295,6 +484,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_coord_mlp_residual_sidecar.py --output reports/cooperative_receiver/coord_mlp_residual_sidecar_probe.json"
       },
       {
@@ -308,9 +504,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "s7_donoho_hnerv_wavelet_threshold",
+        "campaign_tier": "medium_term",
         "candidate_id": "s7_donoho_hnerv_wavelet_threshold",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.0,
+            0.1
+          ],
+          "estimated_cost_usd_high": 0.1,
+          "estimated_cost_usd_low": 0.0,
+          "estimated_cost_usd_mid": 0.1
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -319,12 +528,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          0.0,
+          0.1
+        ],
         "estimated_dispatch_cost_usd": 0.1,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.015,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_s7_donoho_hnerv_wavelet_threshold",
         "notes": "[predicted; cooperative-receiver planning-only] Apply Donoho-Johnstone universal thresholding to HNeRV-family decoder weights in a wavelet basis before entropy coding. promotion_gate=state_dict_parity + full-frame inflate parity + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.015,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -337,7 +554,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/tests/test_hnerv_wavelet_compress_time_harness.py src/tac/tests/test_hnerv_wavelet_apply_gate.py"
       },
       {
         "blockers": [
@@ -350,9 +574,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "l2_sar_coherent_pose_spectrum",
+        "campaign_tier": "medium_term",
         "candidate_id": "l2_sar_coherent_pose_spectrum",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.0,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.0,
+          "estimated_cost_usd_mid": 0.5
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -361,12 +598,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          0.0,
+          1.0
+        ],
         "estimated_dispatch_cost_usd": 0.5,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.004,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_l2_sar_coherent_pose_spectrum",
         "notes": "[predicted; cooperative-receiver planning-only] Pose targets may be temporally smooth enough that sparse FFT/SAR-style coherent coding beats per-pair independent pose side information. promotion_gate=spectral concentration smoke + pose codec roundtrip + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.004,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -379,6 +624,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/probe_cooperative_receiver_pose_spectrum.py --pose-targets experiments/posenet_targets.bin --output reports/cooperative_receiver/pose_spectrum_l2.json"
       },
       {
@@ -392,9 +644,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "n4_video_keyed_codebook",
+        "campaign_tier": "medium_term",
         "candidate_id": "n4_video_keyed_codebook",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            5.0
+          ],
+          "estimated_cost_usd_high": 5.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 3.0
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -403,12 +668,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          1.0,
+          5.0
+        ],
         "estimated_dispatch_cost_usd": 3.0,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.003,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_n4_video_keyed_codebook",
         "notes": "[predicted; cooperative-receiver planning-only] A deterministic video-derived seed can specialize latent/codebook indices to this exact video without storing a generic codebook. promotion_gate=deterministic codebook regeneration + archive-byte reduction + exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.003,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -421,7 +694,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python experiments/probe_t17_a_codebook_perplexity_smoke.py --smoke-iters 10 --batch-size 8 --codebook-size 64 --operator-authorized --output reports/cooperative_receiver/t17_a_codebook_perplexity_smoke.json"
       },
       {
         "blockers": [
@@ -434,9 +714,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "b1_atick_redlich_segmap_eigenmodes",
+        "campaign_tier": "medium_term",
         "candidate_id": "b1_atick_redlich_segmap_eigenmodes",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.5,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.5,
+          "estimated_cost_usd_mid": 0.75
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -445,12 +738,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          0.5,
+          1.0
+        ],
         "estimated_dispatch_cost_usd": 0.75,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.01,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_b1_atick_redlich_segmap_eigenmodes",
         "notes": "[predicted; cooperative-receiver planning-only] SegMap signal should be encoded in whitened scorer eigenmodes, dropping low-power modes under the Atick-Redlich power constraint. promotion_gate=basis custody + decoded mask/pose coupling proof + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.01,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -463,7 +764,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_lapose_foveation_atom_manifest.py --help"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/codec/cooperative_receiver/tests/test_atick_redlich.py src/tac/tests/test_lapose_foveation_atoms.py"
       },
       {
         "blockers": [
@@ -476,9 +784,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "g5_mallat_scattering_decoder",
+        "campaign_tier": "medium_term",
         "candidate_id": "g5_mallat_scattering_decoder",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            5.0
+          ],
+          "estimated_cost_usd_high": 5.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 4.0
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -487,12 +808,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          3.0,
+          5.0
+        ],
         "estimated_dispatch_cost_usd": 4.0,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.03,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_g5_mallat_scattering_decoder",
         "notes": "[predicted; cooperative-receiver planning-only] A fixed wavelet-scattering decoder may replace learned decoder bytes, moving archive budget from weights into pair-specific latents. promotion_gate=trainer + archive grammar + runtime dependency closure + paired exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.03,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -505,7 +834,14 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
-        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/build_cooperative_receiver_campaign_queue.py --output reports/cooperative_receiver/campaign_queue.json"
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/tests/test_pr101_sensitivity_aware_mallat_wavelet_unit.py src/tac/symposium_impls/tests/test_daubechies_wavelet_codec.py"
       },
       {
         "blockers": [
@@ -518,9 +854,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "a1_plus_lapose_composition",
+        "campaign_tier": "medium_term",
         "candidate_id": "a1_plus_lapose_composition",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.3,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 0.3,
+          "estimated_cost_usd_mid": 1.65
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -529,12 +878,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          0.3,
+          3.0
+        ],
         "estimated_dispatch_cost_usd": 1.65,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.008,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_a1_plus_lapose_composition",
         "notes": "[predicted; cooperative-receiver planning-only] Compose A1's rate-frontier renderer with LAPose foveal RGB residuals so bytes target the pose-axis marginal regime instead of another HNeRV-family internal retrain. promotion_gate=sidecar byte-consumption proof + predicted packet below 0.19 target + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.008,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -547,6 +904,13 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/a1_plus_lapose/tests"
       },
       {
@@ -560,9 +924,22 @@
           "contest_cpu_axis_pair_missing",
           "lane_dispatch_claim_missing"
         ],
+        "campaign_id": "a1_plus_wavelet_residual_retarget",
+        "campaign_tier": "medium_term",
         "candidate_id": "a1_plus_wavelet_residual_retarget",
         "charged_bits_changed": false,
         "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.1,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.1,
+          "estimated_cost_usd_mid": 0.55
+        },
+        "dependency_gate": "byte_closed_archive_and_exact_eval_required",
         "deployment_target": "desktop_research",
         "dispatch_attempted": false,
         "dispatch_blockers": [
@@ -571,12 +948,20 @@
           "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
           "requires_non_proxy_score_evidence_before_promotion"
         ],
+        "estimated_cost_usd_band": [
+          0.1,
+          1.0
+        ],
         "estimated_dispatch_cost_usd": 0.55,
         "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "TBD",
         "expected_information_gain": 0.0035,
         "family": "cooperative_receiver_campaign",
         "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_a1_plus_wavelet_residual_retarget",
         "notes": "[predicted; cooperative-receiver planning-only] Retarget A1+wavelet away from generic byte shaving and toward score-sensitive edge/detail bands selected by xray/saliency probes. promotion_gate=score-sensitive wavelet atom selection + packet predicted below 0.19 + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": false,
         "predicted_score_delta": -0.0035,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -589,12 +974,369 @@
         "target_modes": [
           "contest_exact_eval_planning"
         ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        },
         "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python -m pytest -q src/tac/substrates/a1_plus_wavelet_residual/tests"
+      },
+      {
+        "blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ],
+        "campaign_id": "c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "campaign_tier": "medium_to_long_term",
+        "candidate_id": "c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            30.0,
+            50.0
+          ],
+          "estimated_cost_usd_high": 50.0,
+          "estimated_cost_usd_low": 30.0,
+          "estimated_cost_usd_mid": 40.0
+        },
+        "dependency_gate": "D4 frame-0 cooperative-receiver anchor must land successfully before C5 spend",
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion"
+        ],
+        "estimated_cost_usd_band": [
+          30.0,
+          50.0
+        ],
+        "estimated_dispatch_cost_usd": 40.0,
+        "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "4-8",
+        "expected_information_gain": 0.042499999999999996,
+        "family": "cooperative_receiver_campaign",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "notes": "[predicted; cooperative-receiver planning-only] Extend the D4 frame-0 Wyner-Ziv anchor into a full frame-1 plus pair-conditional cooperative-receiver substrate that operationalizes H(X|scorer) across both contest frames. promotion_gate=D4 success + C5 byte-consumption proof + paired [contest-CUDA]/[contest-CPU] exact eval in the [0.13, 0.17] band",
+        "operator_decision_required": false,
+        "predicted_score_delta": -0.042499999999999996,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "source_campaign_id": "c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "target_axis": "cooperative_receiver_pair_conditional",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_to_long_term",
+          "dependency_gate": "D4 frame-0 cooperative-receiver anchor must land successfully before C5 spend",
+          "expected_horizon_weeks": "4-8",
+          "operator_decision_required": false,
+          "timeline_status": "post_D4_authorize_after_frame0_anchor"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/run_modal_smoke_before_full.py --recipe .omx/operator_authorize_recipes/substrate_c5_full_cooperative_receiver_modal_t4_dispatch.yaml --smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
+      },
+      {
+        "blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ],
+        "campaign_id": "c4_queued_architectural_moves_campaign_20260514",
+        "campaign_tier": "short_to_medium_term",
+        "candidate_id": "c4_queued_architectural_moves_campaign_20260514",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            50.0,
+            150.0
+          ],
+          "estimated_cost_usd_high": 150.0,
+          "estimated_cost_usd_low": 50.0,
+          "estimated_cost_usd_mid": 100.0
+        },
+        "dependency_gate": "per-submove smoke-before-full and lane-claim gates",
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion"
+        ],
+        "estimated_cost_usd_band": [
+          50.0,
+          150.0
+        ],
+        "estimated_dispatch_cost_usd": 100.0,
+        "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "12-24",
+        "expected_information_gain": 0.04,
+        "family": "cooperative_receiver_campaign",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c4_queued_architectural_moves_campaign_20260514",
+        "notes": "[predicted; cooperative-receiver planning-only] Bundle the queued SC++, T10 IB, PR95 curriculum, NeRV-family, L2 Hinton-distilled, cathedral autopilot, and magic-codec moves as individually gated short-to-medium campaign rows instead of leaving them as orphan task text. promotion_gate=Per-submove byte-closed archive/runtime proof or training-time-only rationale + paired exact eval for score-affecting packets",
+        "operator_decision_required": false,
+        "predicted_score_delta": -0.04,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "source_campaign_id": "c4_queued_architectural_moves_campaign_20260514",
+        "target_axis": "queued_architecture_portfolio",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "timeline_metadata": {
+          "campaign_tier": "short_to_medium_term",
+          "dependency_gate": "per-submove smoke-before-full and lane-claim gates",
+          "expected_horizon_weeks": "12-24",
+          "operator_decision_required": false,
+          "timeline_status": "NOW_partial_per_submove_operator_routable"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/cathedral_autopilot_autonomous_loop.py --iterations 1 --max-dispatch-recommendations 4 --candidates-jsonl .omx/state/autopilot_candidate_queue_solver_stack_wire_in_20260513.jsonl --require-operator-approval-on dispatch --output reports/cathedral_autopilot_smoke.json"
+      },
+      {
+        "blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ],
+        "campaign_id": "c7_darts_supernet_architecture_search_campaign_20260514",
+        "campaign_tier": "medium_to_long_term",
+        "candidate_id": "c7_darts_supernet_architecture_search_campaign_20260514",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            100.0,
+            300.0
+          ],
+          "estimated_cost_usd_high": 300.0,
+          "estimated_cost_usd_low": 100.0,
+          "estimated_cost_usd_mid": 200.0
+        },
+        "dependency_gate": "C5 or C6 anchor recommended before full search spend",
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion"
+        ],
+        "estimated_cost_usd_band": [
+          100.0,
+          300.0
+        ],
+        "estimated_dispatch_cost_usd": 200.0,
+        "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "6-12",
+        "expected_information_gain": 0.017499999999999998,
+        "family": "cooperative_receiver_campaign",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c7_darts_supernet_architecture_search_campaign_20260514",
+        "notes": "[predicted; cooperative-receiver planning-only] Run a DARTS-SuperNet over the substrate-family search space so C5/C6 empirical anchors can inform discovered renderer and residual architectures instead of relying only on manual variants. promotion_gate=C5 or C6 empirical anchor + ranked top-K architectures + top-1 byte-closed export + paired exact eval",
+        "operator_decision_required": true,
+        "predicted_score_delta": -0.017499999999999998,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "source_campaign_id": "c7_darts_supernet_architecture_search_campaign_20260514",
+        "target_axis": "architecture_search_meta_campaign",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "timeline_metadata": {
+          "campaign_tier": "medium_to_long_term",
+          "dependency_gate": "C5 or C6 anchor recommended before full search spend",
+          "expected_horizon_weeks": "6-12",
+          "operator_decision_required": true,
+          "timeline_status": "post_C5_or_C6_anchor; stage0_smoke_optional_with_operator_funding"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/run_modal_smoke_before_full.py --recipe .omx/operator_authorize_recipes/substrate_c7_darts_supernet_smoke_modal_a100_dispatch.yaml --smoke-epochs 100 --smoke-batch-size 4 --search-space-size 8 --max-cost-usd 1.00"
+      },
+      {
+        "blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ],
+        "campaign_id": "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "campaign_tier": "long_term",
+        "candidate_id": "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            50.0,
+            100.0
+          ],
+          "estimated_cost_usd_high": 100.0,
+          "estimated_cost_usd_low": 50.0,
+          "estimated_cost_usd_mid": 75.0
+        },
+        "dependency_gate": "C1 world-model-foveation campaign must land successfully before C2 full spend",
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion"
+        ],
+        "estimated_cost_usd_band": [
+          50.0,
+          100.0
+        ],
+        "estimated_dispatch_cost_usd": 75.0,
+        "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "8-12",
+        "expected_information_gain": 0.015,
+        "family": "cooperative_receiver_campaign",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "notes": "[predicted; cooperative-receiver planning-only] Mature the full Time-Traveler L5 predictive receiver by combining cooperative-receiver, predictive coding, foveation, world model, and Tikhonov-regularized sub-100K parameter design. promotion_gate=C1 lands in-band + per-iteration improvements + mature L5 archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "operator_decision_required": true,
+        "predicted_score_delta": -0.015,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "source_campaign_id": "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "target_axis": "mature_predictive_receiver_l5",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "timeline_metadata": {
+          "campaign_tier": "long_term",
+          "dependency_gate": "C1 world-model-foveation campaign must land successfully before C2 full spend",
+          "expected_horizon_weeks": "8-12",
+          "operator_decision_required": true,
+          "timeline_status": "LATER_pending_C1_success_and_operator_cost_gate"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/run_modal_smoke_before_full.py --recipe .omx/operator_authorize_recipes/substrate_c2_z7_predictive_receiver_l5_iter1_modal_a100_dispatch.yaml --smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
+      },
+      {
+        "blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ],
+        "campaign_id": "c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "campaign_tier": "multi_year",
+        "candidate_id": "c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "charged_bits_changed": false,
+        "contest_cuda_auth_eval": false,
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            500.0,
+            2000.0
+          ],
+          "estimated_cost_usd_high": 2000.0,
+          "estimated_cost_usd_low": 500.0,
+          "estimated_cost_usd_mid": 1250.0
+        },
+        "dependency_gate": "C2 mature L5 campaign must land successfully before C3",
+        "deployment_target": "desktop_research",
+        "dispatch_attempted": false,
+        "dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion"
+        ],
+        "estimated_cost_usd_band": [
+          500.0,
+          2000.0
+        ],
+        "estimated_dispatch_cost_usd": 1250.0,
+        "exact_cuda_auth_eval": false,
+        "expected_horizon_weeks": "52-156",
+        "expected_information_gain": 0.035,
+        "family": "cooperative_receiver_campaign",
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "notes": "[predicted; cooperative-receiver planning-only] Preserve the multi-year sub-0.05 zen-floor pursuit as an operator-strategic campaign that compounds mature L5 iteration, production alignment, public release, and Shannon-vector-R(D) work. promotion_gate=C2 lands in-band + strategic operator authorization + generation improvements + public/production custody + paired exact eval",
+        "operator_decision_required": true,
+        "predicted_score_delta": -0.035,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_affecting_payload_changed": false,
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "source_campaign_id": "c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "target_axis": "multi_year_zen_floor_and_production_alignment",
+        "target_modes": [
+          "contest_exact_eval_planning"
+        ],
+        "timeline_metadata": {
+          "campaign_tier": "multi_year",
+          "dependency_gate": "C2 mature L5 campaign must land successfully before C3",
+          "expected_horizon_weeks": "52-156",
+          "operator_decision_required": true,
+          "timeline_status": "operator_strategic_decision_after_C2_success"
+        },
+        "timing_smoke_command": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/run_modal_smoke_before_full.py --recipe .omx/operator_authorize_recipes/substrate_c3_multi_year_iterN_modal_a100_dispatch.yaml --smoke-epochs 100 --smoke-batch-size 4 --max-cost-usd 0.50"
       }
     ],
     "score_claim": false
   },
-  "campaign_count": 14,
+  "campaign_count": 19,
   "campaign_queue_schema": "tac_cooperative_receiver_campaign_queue_v1",
   "continual_learning_hook": {
     "canonical_update_path": "tac.continual_learning.posterior_update_locked",
@@ -621,7 +1363,12 @@
       "b1_atick_redlich_segmap_eigenmodes",
       "g5_mallat_scattering_decoder",
       "a1_plus_lapose_composition",
-      "a1_plus_wavelet_residual_retarget"
+      "a1_plus_wavelet_residual_retarget",
+      "c5_full_cooperative_receiver_substrate_campaign_20260514",
+      "c4_queued_architectural_moves_campaign_20260514",
+      "c7_darts_supernet_architecture_search_campaign_20260514",
+      "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+      "c3_multi_year_zen_floor_sub_005_campaign_20260514"
     ],
     "schema": "cooperative_receiver_continual_learning_policy_v1",
     "score_claim": false
@@ -657,7 +1404,7 @@
     ]
   },
   "meta_lagrangian_hook": {
-    "atom_count": 14,
+    "atom_count": 19,
     "base_pose_dist": 0.0,
     "byte_closed_archive_manifest_attached_count": 0,
     "byte_closed_manifest_required_for_kkt": true,
@@ -670,8 +1417,13 @@
       "requires_exact_cuda_auth_eval"
     ],
     "family_group_counts": {
+      "architecture_search_meta_campaign": 1,
+      "cooperative_receiver_pair_conditional": 1,
+      "mature_predictive_receiver_l5": 1,
+      "multi_year_zen_floor_and_production_alignment": 1,
       "pose": 1,
       "pose_foveation_composition": 1,
+      "queued_architecture_portfolio": 1,
       "rate": 1,
       "rate_then_pose": 1,
       "representation": 1,
@@ -709,6 +1461,46 @@
       "rankable_dominated_count": 0,
       "rankable_frontier_count": 0,
       "scope_counts": {
+        "cooperative_receiver:architecture_search_meta_campaign": {
+          "dominated": 0,
+          "eligible": 0,
+          "frontier": 0,
+          "ineligible": 1,
+          "missing_byte_closed_manifest": 1,
+          "proxy": 1,
+          "rankable": 1,
+          "total": 1
+        },
+        "cooperative_receiver:cooperative_receiver_pair_conditional": {
+          "dominated": 0,
+          "eligible": 0,
+          "frontier": 0,
+          "ineligible": 1,
+          "missing_byte_closed_manifest": 1,
+          "proxy": 1,
+          "rankable": 1,
+          "total": 1
+        },
+        "cooperative_receiver:mature_predictive_receiver_l5": {
+          "dominated": 0,
+          "eligible": 0,
+          "frontier": 0,
+          "ineligible": 1,
+          "missing_byte_closed_manifest": 1,
+          "proxy": 1,
+          "rankable": 1,
+          "total": 1
+        },
+        "cooperative_receiver:multi_year_zen_floor_and_production_alignment": {
+          "dominated": 0,
+          "eligible": 0,
+          "frontier": 0,
+          "ineligible": 1,
+          "missing_byte_closed_manifest": 1,
+          "proxy": 1,
+          "rankable": 1,
+          "total": 1
+        },
         "cooperative_receiver:pose": {
           "dominated": 0,
           "eligible": 0,
@@ -720,6 +1512,16 @@
           "total": 1
         },
         "cooperative_receiver:pose_foveation_composition": {
+          "dominated": 0,
+          "eligible": 0,
+          "frontier": 0,
+          "ineligible": 1,
+          "missing_byte_closed_manifest": 1,
+          "proxy": 1,
+          "rankable": 1,
+          "total": 1
+        },
+        "cooperative_receiver:queued_architecture_portfolio": {
           "dominated": 0,
           "eligible": 0,
           "frontier": 0,
@@ -832,7 +1634,7 @@
       },
       "scope_default": "family_group"
     },
-    "proxy_row_count": 14,
+    "proxy_row_count": 19,
     "proxy_rows_dispatchable": false,
     "ready_for_exact_eval_dispatch": false,
     "requested_dispatchable_refused_count": 0,
@@ -1125,6 +1927,912 @@
         "selection_penalty_units": 185.0,
         "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
         "selection_score_delta": -0.018375,
+        "source_archive_sha256": "",
+        "source_artifact_bytes": null,
+        "source_artifact_bytes_source": "",
+        "source_dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ]
+      },
+      {
+        "allocation_inference": false,
+        "archive_bytes": null,
+        "archive_bytes_source": "",
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "cooperative_receiver:c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.35,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "planning",
+        "evidence_source_path": ".omx/research/campaign_lane_c5_full_cooperative_receiver_substrate_20260514.md",
+        "evidence_source_sha256": "54caf8b10b91a1ed9d9e7cf042f05b3cef0934e36e593122b5f3379fafe125d5",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "byte_closed_archive_missing",
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "lane_dispatch_claim_missing"
+            ],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval",
+              "requires_exact_eval_readiness_gate",
+              "exact_cuda_auth_eval_missing"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_or_admm_result_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "contest_cpu_axis_pair_missing"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "optimizer_candidate_queue_is_planning_only",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 19,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "byte_closed_archive_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_cpu_axis_pair_missing",
+            "lane_dispatch_claim_missing",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_cpu_pose_score_delta": 0.0,
+        "expected_cpu_score_calibration": "hnerv-anchored-extrapolated",
+        "expected_cpu_score_delta": -0.012713675214,
+        "expected_cpu_seg_score_delta": -0.012713675214,
+        "expected_cuda_score_delta": -0.014875,
+        "expected_information_gain_nats": 0.0425,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": -0.000425,
+        "expected_total_score_delta": -0.014875,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": true,
+          "source_fields": [
+            "expected_information_gain_nats"
+          ],
+          "total_variance_reduction": 0.0
+        },
+        "family": "cooperative_receiver",
+        "family_group": "cooperative_receiver_pair_conditional",
+        "field_interaction_contract": {
+          "assumption_count": 3,
+          "assumptions": [
+            "byte_closed_packet_required_before_pareto_binding",
+            "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+            "predicted_delta_is_cross_domain_prior_not_score_evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "byte_closed_packet_required_before_pareto_binding",
+          "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+          "predicted_delta_is_cross_domain_prior_not_score_evidence"
+        ],
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_or_admm_result_missing"
+          ],
+          "candidates": [],
+          "kind": "",
+          "residual": null,
+          "source": "",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          -0.014875,
+          0.0425
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_bytes": "min",
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 0.0,
+            "confidence": 0.35,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": -0.000425,
+            "expected_total_score_delta": -0.014875
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "cooperative_receiver:cooperative_receiver_pair_conditional",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.35,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": -0.000425,
+          "expected_total_score_delta": -0.014875
+        },
+        "pareto_scope": "cooperative_receiver:cooperative_receiver_pair_conditional",
+        "planning_priority_rankable": false,
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": true,
+        "rate_score_delta": 0.0,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [],
+        "score_claim": false,
+        "score_evidence_contract": {
+          "blockers": [
+            "missing_byte_closed_archive_manifest",
+            "planning_or_proxy_atom_not_score_evidence",
+            "proxy_or_planning_evidence_grade_not_score_evidence",
+            "missing_exact_cuda_positive_score_evidence"
+          ],
+          "exact_cuda_grade": false,
+          "exact_positive_cuda_evidence": false,
+          "expected_total_score_delta": -0.014875,
+          "planning_only_is_score_evidence": false,
+          "planning_priority_rankable": false,
+          "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+          "score_evidence_rankable": false,
+          "status": "blocked"
+        },
+        "score_evidence_rankable": false,
+        "score_lowering_evidence": false,
+        "seg_score_delta_confidence_weighted": -0.014875,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -0.014875,
+        "source_archive_sha256": "",
+        "source_artifact_bytes": null,
+        "source_artifact_bytes_source": "",
+        "source_dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ]
+      },
+      {
+        "allocation_inference": false,
+        "archive_bytes": null,
+        "archive_bytes_source": "",
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "cooperative_receiver:c4_queued_architectural_moves_campaign_20260514",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.35,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "planning",
+        "evidence_source_path": ".omx/research/campaign_lane_c4_queued_architectural_moves_20260514.md",
+        "evidence_source_sha256": "2d64112b227dec2479bbd5fa893d4b5b15f681975b1a09e97efd1fea3e184a2a",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "byte_closed_archive_missing",
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "lane_dispatch_claim_missing"
+            ],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval",
+              "requires_exact_eval_readiness_gate",
+              "exact_cuda_auth_eval_missing"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_or_admm_result_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "contest_cpu_axis_pair_missing"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "optimizer_candidate_queue_is_planning_only",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 19,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "byte_closed_archive_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_cpu_axis_pair_missing",
+            "lane_dispatch_claim_missing",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_cpu_pose_score_delta": 0.0,
+        "expected_cpu_score_calibration": "hnerv-anchored-extrapolated",
+        "expected_cpu_score_delta": -0.011965811966,
+        "expected_cpu_seg_score_delta": -0.011965811966,
+        "expected_cuda_score_delta": -0.014,
+        "expected_information_gain_nats": 0.04,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": -0.0004,
+        "expected_total_score_delta": -0.014,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": true,
+          "source_fields": [
+            "expected_information_gain_nats"
+          ],
+          "total_variance_reduction": 0.0
+        },
+        "family": "cooperative_receiver",
+        "family_group": "queued_architecture_portfolio",
+        "field_interaction_contract": {
+          "assumption_count": 3,
+          "assumptions": [
+            "byte_closed_packet_required_before_pareto_binding",
+            "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+            "predicted_delta_is_cross_domain_prior_not_score_evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "byte_closed_packet_required_before_pareto_binding",
+          "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+          "predicted_delta_is_cross_domain_prior_not_score_evidence"
+        ],
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_or_admm_result_missing"
+          ],
+          "candidates": [],
+          "kind": "",
+          "residual": null,
+          "source": "",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          -0.014,
+          0.04
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_bytes": "min",
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 0.0,
+            "confidence": 0.35,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": -0.0004,
+            "expected_total_score_delta": -0.014
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "cooperative_receiver:queued_architecture_portfolio",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.35,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": -0.0004,
+          "expected_total_score_delta": -0.014
+        },
+        "pareto_scope": "cooperative_receiver:queued_architecture_portfolio",
+        "planning_priority_rankable": false,
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": true,
+        "rate_score_delta": 0.0,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [],
+        "score_claim": false,
+        "score_evidence_contract": {
+          "blockers": [
+            "missing_byte_closed_archive_manifest",
+            "planning_or_proxy_atom_not_score_evidence",
+            "proxy_or_planning_evidence_grade_not_score_evidence",
+            "missing_exact_cuda_positive_score_evidence"
+          ],
+          "exact_cuda_grade": false,
+          "exact_positive_cuda_evidence": false,
+          "expected_total_score_delta": -0.014,
+          "planning_only_is_score_evidence": false,
+          "planning_priority_rankable": false,
+          "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+          "score_evidence_rankable": false,
+          "status": "blocked"
+        },
+        "score_evidence_rankable": false,
+        "score_lowering_evidence": false,
+        "seg_score_delta_confidence_weighted": -0.014,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -0.014,
+        "source_archive_sha256": "",
+        "source_artifact_bytes": null,
+        "source_artifact_bytes_source": "",
+        "source_dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ]
+      },
+      {
+        "allocation_inference": false,
+        "archive_bytes": null,
+        "archive_bytes_source": "",
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "cooperative_receiver:c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.35,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "planning",
+        "evidence_source_path": ".omx/research/campaign_lane_c3_multi_year_zen_floor_sub_005_20260514.md",
+        "evidence_source_sha256": "16cbda3ef49776232199e3133510428e870810d61573adc41eb8eedfed326b08",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "byte_closed_archive_missing",
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "lane_dispatch_claim_missing"
+            ],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval",
+              "requires_exact_eval_readiness_gate",
+              "exact_cuda_auth_eval_missing"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_or_admm_result_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "contest_cpu_axis_pair_missing"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "optimizer_candidate_queue_is_planning_only",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 19,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "byte_closed_archive_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_cpu_axis_pair_missing",
+            "lane_dispatch_claim_missing",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_cpu_pose_score_delta": 0.0,
+        "expected_cpu_score_calibration": "hnerv-anchored-extrapolated",
+        "expected_cpu_score_delta": -0.01047008547,
+        "expected_cpu_seg_score_delta": -0.01047008547,
+        "expected_cuda_score_delta": -0.01225,
+        "expected_information_gain_nats": 0.035,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": -0.00035000000000000005,
+        "expected_total_score_delta": -0.01225,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": true,
+          "source_fields": [
+            "expected_information_gain_nats"
+          ],
+          "total_variance_reduction": 0.0
+        },
+        "family": "cooperative_receiver",
+        "family_group": "multi_year_zen_floor_and_production_alignment",
+        "field_interaction_contract": {
+          "assumption_count": 3,
+          "assumptions": [
+            "byte_closed_packet_required_before_pareto_binding",
+            "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+            "predicted_delta_is_cross_domain_prior_not_score_evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "byte_closed_packet_required_before_pareto_binding",
+          "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+          "predicted_delta_is_cross_domain_prior_not_score_evidence"
+        ],
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_or_admm_result_missing"
+          ],
+          "candidates": [],
+          "kind": "",
+          "residual": null,
+          "source": "",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          -0.01225,
+          0.035
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_bytes": "min",
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 0.0,
+            "confidence": 0.35,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": -0.00035000000000000005,
+            "expected_total_score_delta": -0.01225
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "cooperative_receiver:multi_year_zen_floor_and_production_alignment",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.35,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": -0.00035000000000000005,
+          "expected_total_score_delta": -0.01225
+        },
+        "pareto_scope": "cooperative_receiver:multi_year_zen_floor_and_production_alignment",
+        "planning_priority_rankable": false,
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": true,
+        "rate_score_delta": 0.0,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [],
+        "score_claim": false,
+        "score_evidence_contract": {
+          "blockers": [
+            "missing_byte_closed_archive_manifest",
+            "planning_or_proxy_atom_not_score_evidence",
+            "proxy_or_planning_evidence_grade_not_score_evidence",
+            "missing_exact_cuda_positive_score_evidence"
+          ],
+          "exact_cuda_grade": false,
+          "exact_positive_cuda_evidence": false,
+          "expected_total_score_delta": -0.01225,
+          "planning_only_is_score_evidence": false,
+          "planning_priority_rankable": false,
+          "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+          "score_evidence_rankable": false,
+          "status": "blocked"
+        },
+        "score_evidence_rankable": false,
+        "score_lowering_evidence": false,
+        "seg_score_delta_confidence_weighted": -0.01225,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -0.01225,
         "source_archive_sha256": "",
         "source_artifact_bytes": null,
         "source_artifact_bytes_source": "",
@@ -2031,6 +3739,610 @@
         "selection_penalty_units": 185.0,
         "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
         "selection_score_delta": -0.0063,
+        "source_archive_sha256": "",
+        "source_artifact_bytes": null,
+        "source_artifact_bytes_source": "",
+        "source_dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ]
+      },
+      {
+        "allocation_inference": false,
+        "archive_bytes": null,
+        "archive_bytes_source": "",
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "cooperative_receiver:c7_darts_supernet_architecture_search_campaign_20260514",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.35,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "planning",
+        "evidence_source_path": ".omx/research/campaign_lane_c7_darts_supernet_architecture_search_20260514.md",
+        "evidence_source_sha256": "d3dcb28d40eda25e13422409ecf46294579b3e629c65b579cc4c7b0f745e8efb",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "byte_closed_archive_missing",
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "lane_dispatch_claim_missing"
+            ],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval",
+              "requires_exact_eval_readiness_gate",
+              "exact_cuda_auth_eval_missing"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_or_admm_result_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "contest_cpu_axis_pair_missing"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "optimizer_candidate_queue_is_planning_only",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 19,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "byte_closed_archive_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_cpu_axis_pair_missing",
+            "lane_dispatch_claim_missing",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_cpu_pose_score_delta": 0.0,
+        "expected_cpu_score_calibration": "hnerv-anchored-extrapolated",
+        "expected_cpu_score_delta": -0.005235042735,
+        "expected_cpu_seg_score_delta": -0.005235042735,
+        "expected_cuda_score_delta": -0.006125,
+        "expected_information_gain_nats": 0.0175,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": -0.00017499999999999997,
+        "expected_total_score_delta": -0.006125,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": true,
+          "source_fields": [
+            "expected_information_gain_nats"
+          ],
+          "total_variance_reduction": 0.0
+        },
+        "family": "cooperative_receiver",
+        "family_group": "architecture_search_meta_campaign",
+        "field_interaction_contract": {
+          "assumption_count": 3,
+          "assumptions": [
+            "byte_closed_packet_required_before_pareto_binding",
+            "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+            "predicted_delta_is_cross_domain_prior_not_score_evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "byte_closed_packet_required_before_pareto_binding",
+          "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+          "predicted_delta_is_cross_domain_prior_not_score_evidence"
+        ],
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_or_admm_result_missing"
+          ],
+          "candidates": [],
+          "kind": "",
+          "residual": null,
+          "source": "",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          -0.006125,
+          0.0175
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_bytes": "min",
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 0.0,
+            "confidence": 0.35,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": -0.00017499999999999997,
+            "expected_total_score_delta": -0.006125
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "cooperative_receiver:architecture_search_meta_campaign",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.35,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": -0.00017499999999999997,
+          "expected_total_score_delta": -0.006125
+        },
+        "pareto_scope": "cooperative_receiver:architecture_search_meta_campaign",
+        "planning_priority_rankable": false,
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": true,
+        "rate_score_delta": 0.0,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [],
+        "score_claim": false,
+        "score_evidence_contract": {
+          "blockers": [
+            "missing_byte_closed_archive_manifest",
+            "planning_or_proxy_atom_not_score_evidence",
+            "proxy_or_planning_evidence_grade_not_score_evidence",
+            "missing_exact_cuda_positive_score_evidence"
+          ],
+          "exact_cuda_grade": false,
+          "exact_positive_cuda_evidence": false,
+          "expected_total_score_delta": -0.006125,
+          "planning_only_is_score_evidence": false,
+          "planning_priority_rankable": false,
+          "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+          "score_evidence_rankable": false,
+          "status": "blocked"
+        },
+        "score_evidence_rankable": false,
+        "score_lowering_evidence": false,
+        "seg_score_delta_confidence_weighted": -0.006125,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -0.006125,
+        "source_archive_sha256": "",
+        "source_artifact_bytes": null,
+        "source_artifact_bytes_source": "",
+        "source_dispatch_blockers": [
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing"
+        ]
+      },
+      {
+        "allocation_inference": false,
+        "archive_bytes": null,
+        "archive_bytes_source": "",
+        "archive_manifest_custody": {
+          "archive_bytes": null,
+          "archive_bytes_valid": false,
+          "archive_sha256": "",
+          "archive_sha256_valid": false,
+          "blockers": [],
+          "exists": false,
+          "is_file": false,
+          "manifest_json_valid": false,
+          "path": "",
+          "score_claim_false": false,
+          "sha256": "",
+          "sha256_matches": false,
+          "sha256_valid": false,
+          "verified": false
+        },
+        "archive_manifest_path": "",
+        "archive_manifest_sha256": "",
+        "archive_ready_for_stack_review": false,
+        "atom_id": "cooperative_receiver:c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "byte_closed_archive_manifest_attached": false,
+        "byte_delta": 0,
+        "class_support": [],
+        "confidence": 0.35,
+        "conflicts_with_atoms": [],
+        "conflicts_with_families": [],
+        "dispatch_blockers": [
+          "planning_only_lagrangian_atom",
+          "requires_exact_cuda_auth_eval",
+          "optimizer_candidate_queue_is_planning_only",
+          "requires_exact_eval_readiness_gate",
+          "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+          "requires_non_proxy_score_evidence_before_promotion",
+          "byte_closed_archive_missing",
+          "exact_cuda_auth_eval_missing",
+          "contest_cpu_axis_pair_missing",
+          "lane_dispatch_claim_missing",
+          "requires_byte_closed_archive",
+          "proxy_row_not_dispatchable"
+        ],
+        "dispatchable": false,
+        "evidence_grade": "planning",
+        "evidence_source_path": ".omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md",
+        "evidence_source_sha256": "85d559abb6c4ebaf06725d7e4ec3e404b77c048e72bdec4a134bf8c0abf3b320",
+        "exact_dispatch_blockers": {
+          "blocker_categories": {
+            "custody": [
+              "byte_closed_archive_missing",
+              "requires_byte_closed_archive",
+              "missing_byte_closed_archive_manifest"
+            ],
+            "dirty_worktree": [],
+            "dispatch_claim": [
+              "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+              "lane_dispatch_claim_missing"
+            ],
+            "exact_cuda_eval": [
+              "requires_exact_cuda_auth_eval",
+              "requires_exact_eval_readiness_gate",
+              "exact_cuda_auth_eval_missing"
+            ],
+            "interaction_model": [],
+            "kkt_or_admm": [
+              "proxy_evidence_not_kkt_ready",
+              "kkt:kkt_proof_or_admm_result_missing",
+              "kkt_not_ready_for_field_planning"
+            ],
+            "other": [
+              "contest_cpu_axis_pair_missing"
+            ],
+            "pareto_frontier": [
+              "pareto_ineligible_atom",
+              "pareto_ineligible_for_field_selection"
+            ],
+            "proxy_or_planning": [
+              "planning_only_lagrangian_atom",
+              "optimizer_candidate_queue_is_planning_only",
+              "requires_non_proxy_score_evidence_before_promotion",
+              "proxy_row_not_dispatchable",
+              "proxy_row"
+            ],
+            "runtime": [],
+            "score_claim": []
+          },
+          "blocker_count": 19,
+          "blockers": [
+            "planning_only_lagrangian_atom",
+            "requires_exact_cuda_auth_eval",
+            "optimizer_candidate_queue_is_planning_only",
+            "requires_exact_eval_readiness_gate",
+            "requires_lane_dispatch_claim_before_gpu_or_remote_eval",
+            "requires_non_proxy_score_evidence_before_promotion",
+            "byte_closed_archive_missing",
+            "exact_cuda_auth_eval_missing",
+            "contest_cpu_axis_pair_missing",
+            "lane_dispatch_claim_missing",
+            "requires_byte_closed_archive",
+            "proxy_row_not_dispatchable",
+            "missing_byte_closed_archive_manifest",
+            "proxy_evidence_not_kkt_ready",
+            "kkt:kkt_proof_or_admm_result_missing",
+            "kkt_not_ready_for_field_planning",
+            "pareto_ineligible_atom",
+            "proxy_row",
+            "pareto_ineligible_for_field_selection"
+          ],
+          "dispatch_attempted": false,
+          "dispatchable": false,
+          "next_required_proof": [
+            "verified_byte_closed_archive_manifest_with_sha256_and_bytes",
+            "non_proxy_empirical_or_cuda_evidence",
+            "passed_kkt_proof_or_converged_admm_waterline_result",
+            "pareto_eligible_byte_closed_non_proxy_rankable_atom",
+            "candidate_packet_static_preflight_and_exact_cuda_auth_eval"
+          ],
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "exact_dispatch_blockers_v1",
+          "score_claim": false
+        },
+        "expected_cpu_pose_score_delta": 0.0,
+        "expected_cpu_score_calibration": "hnerv-anchored-extrapolated",
+        "expected_cpu_score_delta": -0.004487179487,
+        "expected_cpu_seg_score_delta": -0.004487179487,
+        "expected_cuda_score_delta": -0.00525,
+        "expected_information_gain_nats": 0.015,
+        "expected_pose_dist_delta": 0.0,
+        "expected_score_variance": 0.0,
+        "expected_seg_dist_delta": -0.00015,
+        "expected_total_score_delta": -0.00525,
+        "expected_uncertainty_reduction": {
+          "has_uncertainty_signal": true,
+          "source_fields": [
+            "expected_information_gain_nats"
+          ],
+          "total_variance_reduction": 0.0
+        },
+        "family": "cooperative_receiver",
+        "family_group": "mature_predictive_receiver_l5",
+        "field_interaction_contract": {
+          "assumption_count": 3,
+          "assumptions": [
+            "byte_closed_packet_required_before_pareto_binding",
+            "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+            "predicted_delta_is_cross_domain_prior_not_score_evidence"
+          ],
+          "blockers": [],
+          "conflicts_with_atoms": [],
+          "conflicts_with_families": [],
+          "interaction_model": "",
+          "schema": "field_interaction_contract_v1",
+          "status": "passed",
+          "volterra_order": null,
+          "volterra_order_source": "",
+          "volterra_scope": "undeclared_order_first_order_assumptions_only",
+          "volterra_terms": [],
+          "volterra_terms_declared": false
+        },
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "geometry_priors": [],
+        "hard_pair_support": [],
+        "interaction_assumptions": [
+          "byte_closed_packet_required_before_pareto_binding",
+          "cooperative_receiver_campaigns_are_not_additive_until_exact_eval",
+          "predicted_delta_is_cross_domain_prior_not_score_evidence"
+        ],
+        "kkt_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_evidence_not_kkt_ready",
+          "kkt:kkt_proof_or_admm_result_missing"
+        ],
+        "kkt_proof": {
+          "blockers": [
+            "kkt_proof_or_admm_result_missing"
+          ],
+          "candidates": [],
+          "kind": "",
+          "residual": null,
+          "source": "",
+          "status": "blocked",
+          "tolerance": null
+        },
+        "kkt_ready_for_field_planning": false,
+        "lexicographic_feasibility_tuple": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          -0.00525,
+          0.015
+        ],
+        "non_dominated_frontier_reason": {
+          "dominated_by": [],
+          "eligibility_blockers": [
+            "missing_byte_closed_archive_manifest",
+            "proxy_row"
+          ],
+          "eligible": false,
+          "frontier": false,
+          "objective_directions": {
+            "archive_bytes": "min",
+            "archive_ready_for_stack_review": "max",
+            "byte_delta": "min",
+            "confidence": "max",
+            "expected_pose_dist_delta": "min",
+            "expected_seg_dist_delta": "min",
+            "expected_total_score_delta": "min"
+          },
+          "objectives": {
+            "archive_ready_for_stack_review": 0.0,
+            "byte_delta": 0.0,
+            "confidence": 0.35,
+            "expected_pose_dist_delta": 0.0,
+            "expected_seg_dist_delta": -0.00015,
+            "expected_total_score_delta": -0.00525
+          },
+          "reason": "not_on_frontier_until_pareto_eligibility_blockers_clear",
+          "schema": "non_dominated_frontier_reason_v1",
+          "scope": "cooperative_receiver:mature_predictive_receiver_l5",
+          "status": "ineligible"
+        },
+        "observation_noise_variance": 0.0,
+        "openpilot_priors": [],
+        "pair_support": [],
+        "pareto_dominated_by": [],
+        "pareto_eligibility_blockers": [
+          "missing_byte_closed_archive_manifest",
+          "proxy_row"
+        ],
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_objectives": {
+          "archive_ready_for_stack_review": 0.0,
+          "byte_delta": 0.0,
+          "confidence": 0.35,
+          "expected_pose_dist_delta": 0.0,
+          "expected_seg_dist_delta": -0.00015,
+          "expected_total_score_delta": -0.00525
+        },
+        "pareto_scope": "cooperative_receiver:mature_predictive_receiver_l5",
+        "planning_priority_rankable": false,
+        "pose_score_delta_confidence_weighted": 0.0,
+        "proxy_row": true,
+        "rankable": true,
+        "rate_score_delta": 0.0,
+        "ready_for_exact_eval_dispatch": false,
+        "requested_dispatchable": false,
+        "research_basis_ids": [],
+        "score_claim": false,
+        "score_evidence_contract": {
+          "blockers": [
+            "missing_byte_closed_archive_manifest",
+            "planning_or_proxy_atom_not_score_evidence",
+            "proxy_or_planning_evidence_grade_not_score_evidence",
+            "missing_exact_cuda_positive_score_evidence"
+          ],
+          "exact_cuda_grade": false,
+          "exact_positive_cuda_evidence": false,
+          "expected_total_score_delta": -0.00525,
+          "planning_only_is_score_evidence": false,
+          "planning_priority_rankable": false,
+          "schema": "meta_lagrangian_atom_score_evidence_contract_v1",
+          "score_evidence_rankable": false,
+          "status": "blocked"
+        },
+        "score_evidence_rankable": false,
+        "score_lowering_evidence": false,
+        "seg_score_delta_confidence_weighted": -0.00525,
+        "selection_blockers": [
+          "kkt_not_ready_for_field_planning",
+          "missing_byte_closed_archive_manifest",
+          "pareto_ineligible_atom",
+          "proxy_row"
+        ],
+        "selection_penalty_terms": {
+          "kkt_not_ready_for_field_planning": 10.0,
+          "missing_byte_closed_archive_manifest": 100.0,
+          "pareto_ineligible_atom": 25.0,
+          "proxy_row": 50.0
+        },
+        "selection_penalty_units": 185.0,
+        "selection_policy": "planning-only; rankable, non-proxy, byte-closed Pareto frontier rows sort lexicographically before pure expected-score deltas; information gain is a deterministic tie-breaker; penalties are diagnostic only",
+        "selection_score_delta": -0.00525,
         "source_archive_sha256": "",
         "source_artifact_bytes": null,
         "source_artifact_bytes_source": "",
@@ -5180,6 +7492,32 @@
         "source_module": "tac.substrates.a1_plus_wavelet_residual.archive",
         "substrate_class": "a1_plus_wavelet_residual_composition_packet",
         "xray_label": "a1_plus_wavelet_residual_sidecar_v1"
+      },
+      {
+        "archive_version": "frame0_grain_selector_fgs1_v1",
+        "campaign_id": "hdm8_frame0_postdecode_selector",
+        "compiler_stage": "postdecode_scorer_aware_selector_pack",
+        "magic_ascii": "FGS1",
+        "magic_hex": "46475331",
+        "notes": "Archive-charged deterministic first-frame postdecode selector; stacks after any RGB decoder and must remain scorer-free at inflate time",
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_module": "submissions.hdm8_film_grain_sidecar.inflate",
+        "substrate_class": "frame0_postdecode_selector_packet",
+        "xray_label": "frame0_grain_selector_sidecar_v1"
+      },
+      {
+        "archive_version": "frame_exploit_selector_fes1_v1",
+        "campaign_id": "frame_exploit_segnet_posenet_selector",
+        "compiler_stage": "postdecode_pairwise_frame0_selector_pack",
+        "magic_ascii": "FES1",
+        "magic_hex": "46455331",
+        "notes": "Archive-charged PR106 sidecar selector derived from full-600 SegNet/PoseNet proxy rows; exact-CUDA gated before any score claim",
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_module": "submissions.frame_exploit_selector_sidecar.inflate",
+        "substrate_class": "frame_exploit_selector_sidecar_packet",
+        "xray_label": "frame_exploit_selector_sidecar_v1"
       }
     ],
     "ready_for_exact_eval_dispatch": false,
@@ -5206,7 +7544,20 @@
     "rows": [
       {
         "campaign_id": "darts_confirmed_time_traveler_config",
+        "campaign_tier": "medium_term",
         "candidate_id": "darts_confirmed_time_traveler_config",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            8.0
+          ],
+          "estimated_cost_usd_high": 8.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 5.5
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_darts_confirmed_time_traveler_config",
         "next_binding_gate": "DARTS config materialized + TT5L archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5216,11 +7567,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation_pose_segmentation_rate"
+        "pareto_scope": "cooperative_receiver:representation_pose_segmentation_rate",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "time_traveler_world_model_substrate",
+        "campaign_tier": "medium_term",
         "candidate_id": "time_traveler_world_model_substrate",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            8.0
+          ],
+          "estimated_cost_usd_high": 8.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 5.5
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_time_traveler_world_model_substrate",
         "next_binding_gate": "TT5L archive roundtrip + macOS advisory smoke + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5230,11 +7601,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation_pose_segmentation_rate"
+        "pareto_scope": "cooperative_receiver:representation_pose_segmentation_rate",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "sabor_boundary_only_renderer",
+        "campaign_tier": "medium_term",
         "candidate_id": "sabor_boundary_only_renderer",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            2.0
+          ],
+          "estimated_cost_usd_high": 2.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 1.5
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_sabor_boundary_only_renderer",
         "next_binding_gate": "SBO1 archive custody + scorer-free inflate + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5244,11 +7635,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:segmentation_rate"
+        "pareto_scope": "cooperative_receiver:segmentation_rate",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "s2sbs_hf_byte_stuffing",
+        "campaign_tier": "medium_term",
         "candidate_id": "s2sbs_hf_byte_stuffing",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_s2sbs_hf_byte_stuffing",
         "next_binding_gate": "S2S1 archive custody + byte-consumption proof + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5258,11 +7669,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:side_information_rate"
+        "pareto_scope": "cooperative_receiver:side_information_rate",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "driving_prior_pretrained_renderer_2032",
+        "campaign_tier": "medium_term",
         "candidate_id": "driving_prior_pretrained_renderer_2032",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            5.0,
+            30.0
+          ],
+          "estimated_cost_usd_high": 30.0,
+          "estimated_cost_usd_low": 5.0,
+          "estimated_cost_usd_mid": 17.5
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_driving_prior_pretrained_renderer_2032",
         "next_binding_gate": "dataset/license manifest + scorer penultimate-hook readiness + deterministic renderer export + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5272,11 +7703,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation_pretraining_residual"
+        "pareto_scope": "cooperative_receiver:representation_pretraining_residual",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "driving_prior_world_model_substrate",
+        "campaign_tier": "medium_term",
         "candidate_id": "driving_prior_world_model_substrate",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_driving_prior_world_model_substrate",
         "next_binding_gate": "DPW1 byte-consumption proof + trained prior export + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5286,11 +7737,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation_pretraining_residual"
+        "pareto_scope": "cooperative_receiver:representation_pretraining_residual",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+        "campaign_tier": "medium_term",
         "candidate_id": "h15_coord_mlp_residual_sidecar_pr103_on_pr106",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 2.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_h15_coord_mlp_residual_sidecar_pr103_on_pr106",
         "next_binding_gate": "sidecar bytes changed and consumed + full-frame parity baseline + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5300,11 +7771,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation_external_sidecar"
+        "pareto_scope": "cooperative_receiver:representation_external_sidecar",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "s7_donoho_hnerv_wavelet_threshold",
+        "campaign_tier": "medium_term",
         "candidate_id": "s7_donoho_hnerv_wavelet_threshold",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.0,
+            0.1
+          ],
+          "estimated_cost_usd_high": 0.1,
+          "estimated_cost_usd_low": 0.0,
+          "estimated_cost_usd_mid": 0.1
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_s7_donoho_hnerv_wavelet_threshold",
         "next_binding_gate": "state_dict_parity + full-frame inflate parity + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5314,11 +7805,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:rate_then_pose"
+        "pareto_scope": "cooperative_receiver:rate_then_pose",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "l2_sar_coherent_pose_spectrum",
+        "campaign_tier": "medium_term",
         "candidate_id": "l2_sar_coherent_pose_spectrum",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.0,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.0,
+          "estimated_cost_usd_mid": 0.5
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_l2_sar_coherent_pose_spectrum",
         "next_binding_gate": "spectral concentration smoke + pose codec roundtrip + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5328,11 +7839,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:pose"
+        "pareto_scope": "cooperative_receiver:pose",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "n4_video_keyed_codebook",
+        "campaign_tier": "medium_term",
         "candidate_id": "n4_video_keyed_codebook",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            1.0,
+            5.0
+          ],
+          "estimated_cost_usd_high": 5.0,
+          "estimated_cost_usd_low": 1.0,
+          "estimated_cost_usd_mid": 3.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_n4_video_keyed_codebook",
         "next_binding_gate": "deterministic codebook regeneration + archive-byte reduction + exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5342,11 +7873,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:rate"
+        "pareto_scope": "cooperative_receiver:rate",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "b1_atick_redlich_segmap_eigenmodes",
+        "campaign_tier": "medium_term",
         "candidate_id": "b1_atick_redlich_segmap_eigenmodes",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.5,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.5,
+          "estimated_cost_usd_mid": 0.75
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_b1_atick_redlich_segmap_eigenmodes",
         "next_binding_gate": "basis custody + decoded mask/pose coupling proof + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5356,11 +7907,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:segmentation"
+        "pareto_scope": "cooperative_receiver:segmentation",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "g5_mallat_scattering_decoder",
+        "campaign_tier": "medium_term",
         "candidate_id": "g5_mallat_scattering_decoder",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            3.0,
+            5.0
+          ],
+          "estimated_cost_usd_high": 5.0,
+          "estimated_cost_usd_low": 3.0,
+          "estimated_cost_usd_mid": 4.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_g5_mallat_scattering_decoder",
         "next_binding_gate": "trainer + archive grammar + runtime dependency closure + paired exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5370,11 +7941,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:representation"
+        "pareto_scope": "cooperative_receiver:representation",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "a1_plus_lapose_composition",
+        "campaign_tier": "medium_term",
         "candidate_id": "a1_plus_lapose_composition",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.3,
+            3.0
+          ],
+          "estimated_cost_usd_high": 3.0,
+          "estimated_cost_usd_low": 0.3,
+          "estimated_cost_usd_mid": 1.65
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_a1_plus_lapose_composition",
         "next_binding_gate": "sidecar byte-consumption proof + predicted packet below 0.19 target + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5384,11 +7975,31 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:pose_foveation_composition"
+        "pareto_scope": "cooperative_receiver:pose_foveation_composition",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
       },
       {
         "campaign_id": "a1_plus_wavelet_residual_retarget",
+        "campaign_tier": "medium_term",
         "candidate_id": "a1_plus_wavelet_residual_retarget",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            0.1,
+            1.0
+          ],
+          "estimated_cost_usd_high": 1.0,
+          "estimated_cost_usd_low": 0.1,
+          "estimated_cost_usd_mid": 0.55
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_a1_plus_wavelet_residual_retarget",
         "next_binding_gate": "score-sensitive wavelet atom selection + packet predicted below 0.19 + paired [contest-CUDA]/[contest-CPU] exact eval",
         "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
         "objectives": {
@@ -5398,7 +8009,184 @@
         },
         "pareto_eligible": false,
         "pareto_frontier": false,
-        "pareto_scope": "cooperative_receiver:segmentation_detail_composition"
+        "pareto_scope": "cooperative_receiver:segmentation_detail_composition",
+        "timeline_metadata": {
+          "campaign_tier": "medium_term",
+          "dependency_gate": "byte_closed_archive_and_exact_eval_required",
+          "expected_horizon_weeks": "TBD",
+          "operator_decision_required": false,
+          "timeline_status": "operator_routable"
+        }
+      },
+      {
+        "campaign_id": "c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "campaign_tier": "medium_to_long_term",
+        "candidate_id": "c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            30.0,
+            50.0
+          ],
+          "estimated_cost_usd_high": 50.0,
+          "estimated_cost_usd_low": 30.0,
+          "estimated_cost_usd_mid": 40.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c5_full_cooperative_receiver_substrate_campaign_20260514",
+        "next_binding_gate": "D4 success + C5 byte-consumption proof + paired [contest-CUDA]/[contest-CPU] exact eval in the [0.13, 0.17] band",
+        "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
+        "objectives": {
+          "estimated_dispatch_cost_usd": 40.0,
+          "ev_per_dollar_proxy": 0.0010624999999999999,
+          "predicted_score_delta": -0.042499999999999996
+        },
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cooperative_receiver:cooperative_receiver_pair_conditional",
+        "timeline_metadata": {
+          "campaign_tier": "medium_to_long_term",
+          "dependency_gate": "D4 frame-0 cooperative-receiver anchor must land successfully before C5 spend",
+          "expected_horizon_weeks": "4-8",
+          "operator_decision_required": false,
+          "timeline_status": "post_D4_authorize_after_frame0_anchor"
+        }
+      },
+      {
+        "campaign_id": "c4_queued_architectural_moves_campaign_20260514",
+        "campaign_tier": "short_to_medium_term",
+        "candidate_id": "c4_queued_architectural_moves_campaign_20260514",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            50.0,
+            150.0
+          ],
+          "estimated_cost_usd_high": 150.0,
+          "estimated_cost_usd_low": 50.0,
+          "estimated_cost_usd_mid": 100.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c4_queued_architectural_moves_campaign_20260514",
+        "next_binding_gate": "Per-submove byte-closed archive/runtime proof or training-time-only rationale + paired exact eval for score-affecting packets",
+        "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
+        "objectives": {
+          "estimated_dispatch_cost_usd": 100.0,
+          "ev_per_dollar_proxy": 0.0004,
+          "predicted_score_delta": -0.04
+        },
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cooperative_receiver:queued_architecture_portfolio",
+        "timeline_metadata": {
+          "campaign_tier": "short_to_medium_term",
+          "dependency_gate": "per-submove smoke-before-full and lane-claim gates",
+          "expected_horizon_weeks": "12-24",
+          "operator_decision_required": false,
+          "timeline_status": "NOW_partial_per_submove_operator_routable"
+        }
+      },
+      {
+        "campaign_id": "c7_darts_supernet_architecture_search_campaign_20260514",
+        "campaign_tier": "medium_to_long_term",
+        "candidate_id": "c7_darts_supernet_architecture_search_campaign_20260514",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            100.0,
+            300.0
+          ],
+          "estimated_cost_usd_high": 300.0,
+          "estimated_cost_usd_low": 100.0,
+          "estimated_cost_usd_mid": 200.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c7_darts_supernet_architecture_search_campaign_20260514",
+        "next_binding_gate": "C5 or C6 empirical anchor + ranked top-K architectures + top-1 byte-closed export + paired exact eval",
+        "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
+        "objectives": {
+          "estimated_dispatch_cost_usd": 200.0,
+          "ev_per_dollar_proxy": 8.749999999999999e-05,
+          "predicted_score_delta": -0.017499999999999998
+        },
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cooperative_receiver:architecture_search_meta_campaign",
+        "timeline_metadata": {
+          "campaign_tier": "medium_to_long_term",
+          "dependency_gate": "C5 or C6 anchor recommended before full search spend",
+          "expected_horizon_weeks": "6-12",
+          "operator_decision_required": true,
+          "timeline_status": "post_C5_or_C6_anchor; stage0_smoke_optional_with_operator_funding"
+        }
+      },
+      {
+        "campaign_id": "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "campaign_tier": "long_term",
+        "candidate_id": "c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            50.0,
+            100.0
+          ],
+          "estimated_cost_usd_high": 100.0,
+          "estimated_cost_usd_low": 50.0,
+          "estimated_cost_usd_mid": 75.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c2_z7_mature_predictive_receiver_l5_campaign_20260514",
+        "next_binding_gate": "C1 lands in-band + per-iteration improvements + mature L5 archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval",
+        "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
+        "objectives": {
+          "estimated_dispatch_cost_usd": 75.0,
+          "ev_per_dollar_proxy": 0.00019999999999999998,
+          "predicted_score_delta": -0.015
+        },
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cooperative_receiver:mature_predictive_receiver_l5",
+        "timeline_metadata": {
+          "campaign_tier": "long_term",
+          "dependency_gate": "C1 world-model-foveation campaign must land successfully before C2 full spend",
+          "expected_horizon_weeks": "8-12",
+          "operator_decision_required": true,
+          "timeline_status": "LATER_pending_C1_success_and_operator_cost_gate"
+        }
+      },
+      {
+        "campaign_id": "c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "campaign_tier": "multi_year",
+        "candidate_id": "c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "cost_metadata": {
+          "cost_source": "campaign_ledger_planning_band",
+          "estimated_cost_usd_band": [
+            500.0,
+            2000.0
+          ],
+          "estimated_cost_usd_high": 2000.0,
+          "estimated_cost_usd_low": 500.0,
+          "estimated_cost_usd_mid": 1250.0
+        },
+        "lane_class": "substrate_engineering",
+        "lane_id": "lane_c3_multi_year_zen_floor_sub_005_campaign_20260514",
+        "next_binding_gate": "C2 lands in-band + strategic operator authorization + generation improvements + public/production custody + paired exact eval",
+        "non_binding_rationale": "prediction/proxy row lacks verified byte-closed archive manifest and exact eval evidence",
+        "objectives": {
+          "estimated_dispatch_cost_usd": 1250.0,
+          "ev_per_dollar_proxy": 2.8000000000000003e-05,
+          "predicted_score_delta": -0.035
+        },
+        "pareto_eligible": false,
+        "pareto_frontier": false,
+        "pareto_scope": "cooperative_receiver:multi_year_zen_floor_and_production_alignment",
+        "timeline_metadata": {
+          "campaign_tier": "multi_year",
+          "dependency_gate": "C2 mature L5 campaign must land successfully before C3",
+          "expected_horizon_weeks": "52-156",
+          "operator_decision_required": true,
+          "timeline_status": "operator_strategic_decision_after_C2_success"
+        }
       }
     ]
   },
@@ -5505,6 +8293,32 @@
         "source_module": "tac.substrates.a1_plus_wavelet_residual.archive",
         "substrate_class": "a1_plus_wavelet_residual_composition_packet",
         "xray_label": "a1_plus_wavelet_residual_sidecar_v1"
+      },
+      {
+        "archive_version": "frame0_grain_selector_fgs1_v1",
+        "campaign_id": "hdm8_frame0_postdecode_selector",
+        "compiler_stage": "postdecode_scorer_aware_selector_pack",
+        "magic_ascii": "FGS1",
+        "magic_hex": "46475331",
+        "notes": "Archive-charged deterministic first-frame postdecode selector; stacks after any RGB decoder and must remain scorer-free at inflate time",
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_module": "submissions.hdm8_film_grain_sidecar.inflate",
+        "substrate_class": "frame0_postdecode_selector_packet",
+        "xray_label": "frame0_grain_selector_sidecar_v1"
+      },
+      {
+        "archive_version": "frame_exploit_selector_fes1_v1",
+        "campaign_id": "frame_exploit_segnet_posenet_selector",
+        "compiler_stage": "postdecode_pairwise_frame0_selector_pack",
+        "magic_ascii": "FES1",
+        "magic_hex": "46455331",
+        "notes": "Archive-charged PR106 sidecar selector derived from full-600 SegNet/PoseNet proxy rows; exact-CUDA gated before any score claim",
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "source_module": "submissions.frame_exploit_selector_sidecar.inflate",
+        "substrate_class": "frame_exploit_selector_sidecar_packet",
+        "xray_label": "frame_exploit_selector_sidecar_v1"
       }
     ],
     "static_archive_classifier": "tools/xray_substrate_classifier.py"

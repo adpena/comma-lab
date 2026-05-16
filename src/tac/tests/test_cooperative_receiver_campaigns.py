@@ -71,6 +71,17 @@ def test_time_traveler_campaigns_use_measured_timing_smoke_not_help() -> None:
         assert "--allow-non-darwin" in command
 
 
+def test_campaign_queue_timing_smokes_are_not_placeholders() -> None:
+    manifest = build_campaign_queue()
+
+    for row in manifest["top_k"]:
+        command = row["timing_smoke_command"]
+        assert " --help" not in command
+        assert "<timestamp>" not in command
+        assert "tools/build_cooperative_receiver_campaign_queue.py" not in command
+        assert "PYTHONPATH=src:upstream:$PWD" in command
+
+
 def test_long_term_campaign_backfill_rows_have_metadata_and_dispatch_gates() -> None:
     manifest = build_campaign_queue()
     rows = {row["campaign_id"]: row for row in manifest["top_k"]}

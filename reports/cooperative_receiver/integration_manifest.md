@@ -1,11 +1,11 @@
 # Cooperative-Receiver Solver Integration
 
 - schema: `tac_cooperative_receiver_solver_integration_v1`
-- campaign_count: `14`
+- campaign_count: `19`
 - score_claim: `false`
 - ready_for_exact_eval_dispatch: `false`
-- meta_lagrangian_rows: `14`
-- xray_grammars: `7`
+- meta_lagrangian_rows: `19`
+- xray_grammars: `9`
 
 | rank | campaign | predicted delta | cost | compiler/xray surface | next gate |
 |---:|---|---:|---:|---|---|
@@ -23,3 +23,8 @@
 | 12 | `g5_mallat_scattering_decoder` | `-0.030000` | `$4.00` | `planning_only_no_packet_magic_yet` | trainer + archive grammar + runtime dependency closure + paired exact eval |
 | 13 | `a1_plus_lapose_composition` | `-0.008000` | `$1.65` | `LPA1` / `a1_plus_lapose_composition_packet` | sidecar byte-consumption proof + predicted packet below 0.19 target + paired [contest-CUDA]/[contest-CPU] exact eval |
 | 14 | `a1_plus_wavelet_residual_retarget` | `-0.003500` | `$0.55` | `WAV1` / `a1_plus_wavelet_residual_composition_packet` | score-sensitive wavelet atom selection + packet predicted below 0.19 + paired [contest-CUDA]/[contest-CPU] exact eval |
+| 15 | `c5_full_cooperative_receiver_substrate_campaign_20260514` | `-0.042500` | `$40.00` | `planning_only_no_packet_magic_yet` | D4 success + C5 byte-consumption proof + paired [contest-CUDA]/[contest-CPU] exact eval in the [0.13, 0.17] band |
+| 16 | `c4_queued_architectural_moves_campaign_20260514` | `-0.040000` | `$100.00` | `planning_only_no_packet_magic_yet` | Per-submove byte-closed archive/runtime proof or training-time-only rationale + paired exact eval for score-affecting packets |
+| 17 | `c7_darts_supernet_architecture_search_campaign_20260514` | `-0.017500` | `$200.00` | `planning_only_no_packet_magic_yet` | C5 or C6 empirical anchor + ranked top-K architectures + top-1 byte-closed export + paired exact eval |
+| 18 | `c2_z7_mature_predictive_receiver_l5_campaign_20260514` | `-0.015000` | `$75.00` | `planning_only_no_packet_magic_yet` | C1 lands in-band + per-iteration improvements + mature L5 archive roundtrip + paired [contest-CUDA]/[contest-CPU] exact eval |
+| 19 | `c3_multi_year_zen_floor_sub_005_campaign_20260514` | `-0.035000` | `$1250.00` | `planning_only_no_packet_magic_yet` | C2 lands in-band + strategic operator authorization + generation improvements + public/production custody + paired exact eval |
