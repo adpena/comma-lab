@@ -106,16 +106,32 @@ def _contains_token(value: str, tokens: frozenset[str]) -> bool:
     return False
 
 
-def _resolve_evidence_path(value: object, base_dir: Path) -> Path | None:
+def _is_transient_path_text(path_text: str) -> bool:
+    return (
+        path_text.startswith("/tmp/")
+        or path_text.startswith("/var/tmp/")
+        or path_text.startswith("/private/tmp/")
+    )
+
+
+def _resolve_evidence_path(value: object, base_dir: Path) -> tuple[Path | None, str | None]:
     """Resolve an evidence path relative to ``base_dir`` for custody checks."""
 
     path_text = _clean_text(value).removeprefix("file:").strip()
     if not path_text:
-        return None
+        return None, "missing"
+    if _is_transient_path_text(path_text):
+        return None, "transient"
+    resolved_base = base_dir.resolve()
     path = Path(path_text).expanduser()
     if not path.is_absolute():
-        path = base_dir / path
-    return path
+        path = resolved_base / path
+    resolved_path = path.resolve(strict=False)
+    try:
+        resolved_path.relative_to(resolved_base)
+    except ValueError:
+        return resolved_path, "outside_base_dir"
+    return resolved_path, None
 
 
 def contest_score(seg_dist: float, pose_dist: float, archive_bytes: int) -> float:
@@ -301,12 +317,26 @@ def validate_exact_eval_evidence(
     base_dir = Path(artifact_base_dir) if artifact_base_dir is not None else None
     if base_dir is not None:
         if require_log_path and "log_path_missing" not in blockers:
-            log_path = _resolve_evidence_path(evidence.get("log_path"), base_dir)
-            if log_path is None or not log_path.is_file():
+            log_path, log_path_error = _resolve_evidence_path(
+                evidence.get("log_path"),
+                base_dir,
+            )
+            if log_path_error == "transient":
+                blockers.append("log_path_transient")
+            elif log_path_error == "outside_base_dir":
+                blockers.append("log_path_outside_base_dir")
+            elif log_path is None or not log_path.is_file():
                 blockers.append("log_path_file_missing")
         if require_artifact_path and "artifact_path_missing" not in blockers:
-            artifact_path = _resolve_evidence_path(evidence.get("artifact_path"), base_dir)
-            if artifact_path is None or not artifact_path.is_file():
+            artifact_path, artifact_path_error = _resolve_evidence_path(
+                evidence.get("artifact_path"),
+                base_dir,
+            )
+            if artifact_path_error == "transient":
+                blockers.append("artifact_path_transient")
+            elif artifact_path_error == "outside_base_dir":
+                blockers.append("artifact_path_outside_base_dir")
+            elif artifact_path is None or not artifact_path.is_file():
                 blockers.append("artifact_path_file_missing")
 
     if (

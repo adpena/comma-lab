@@ -215,3 +215,26 @@ def test_validate_exact_eval_evidence_rejects_missing_log_artifact_file(
 
     assert "log_path_file_missing" in verdict.blockers
     assert "artifact_path_file_missing" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_transient_or_outside_paths(
+    tmp_path: Path,
+) -> None:
+    outside_dir = tmp_path.parent / f"{tmp_path.name}_outside"
+    outside_dir.mkdir(exist_ok=True)
+    outside_artifact = outside_dir / "outside.json"
+    outside_artifact.write_text("{}\n", encoding="utf-8")
+    evidence = _valid_contest_evidence(tmp_path)
+    evidence["log_path"] = "/tmp/transient.log"
+    evidence["artifact_path"] = str(outside_artifact)
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "log_path_transient" in verdict.blockers
+    assert "artifact_path_outside_base_dir" in verdict.blockers

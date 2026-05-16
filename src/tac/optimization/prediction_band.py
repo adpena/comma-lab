@@ -125,6 +125,33 @@ def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _is_transient_artifact_path(path_text: str) -> bool:
+    return (
+        path_text.startswith("/tmp/")
+        or path_text.startswith("/var/tmp/")
+        or path_text.startswith("/private/tmp/")
+    )
+
+
+def _repo_local_artifact_path(
+    path_text: str,
+    artifact_base_dir: Path | str,
+) -> tuple[Path, str | None]:
+    base_dir = Path(artifact_base_dir).resolve()
+    stripped = path_text.removeprefix("file:").strip()
+    if _is_transient_artifact_path(stripped):
+        return Path(stripped), "transient"
+    path = Path(stripped).expanduser()
+    if not path.is_absolute():
+        path = base_dir / path
+    resolved = path.resolve(strict=False)
+    try:
+        resolved.relative_to(base_dir)
+    except ValueError:
+        return resolved, "outside_base_dir"
+    return resolved, None
+
+
 def prediction_band_from_mapping(payload: Mapping[str, Any]) -> PredictionBand:
     """Parse a JSON-style mapping into a typed prediction band."""
     baseline = _mapping(payload.get("baseline"))
@@ -257,6 +284,19 @@ def validate_prediction_band(
         blockers.append("prediction_band_baseline_custody_missing")
     if not baseline.artifact_path.strip():
         blockers.append("prediction_band_baseline_artifact_missing")
+    elif artifact_base_dir is None:
+        blockers.append("prediction_band_baseline_artifact_base_dir_missing")
+    else:
+        baseline_artifact_path, baseline_artifact_error = _repo_local_artifact_path(
+            baseline.artifact_path,
+            artifact_base_dir,
+        )
+        if baseline_artifact_error == "transient":
+            blockers.append("prediction_band_baseline_artifact_transient")
+        elif baseline_artifact_error == "outside_base_dir":
+            blockers.append("prediction_band_baseline_artifact_outside_repo")
+        elif not baseline_artifact_path.is_file():
+            blockers.append("prediction_band_baseline_artifact_missing")
 
     source = band.band_source
     if not source.local_ledger_paths or not source.claim_scope.strip():
@@ -355,6 +395,8 @@ def validate_prediction_band(
                 "runtime_tree_sha_invalid": "prediction_band_empirical_anchor_custody_missing",
                 "artifact_path_missing": "prediction_band_empirical_anchor_artifact_missing",
                 "artifact_path_file_missing": "prediction_band_empirical_anchor_artifact_missing",
+                "artifact_path_transient": "prediction_band_empirical_anchor_artifact_missing",
+                "artifact_path_outside_base_dir": "prediction_band_empirical_anchor_artifact_missing",
                 "n_samples_missing": "prediction_band_empirical_anchor_n_samples_missing",
                 "n_samples_not_contest_exact": "prediction_band_empirical_anchor_n_samples_not_contest_exact",
                 "hardware_missing": "prediction_band_empirical_anchor_hardware_missing",
@@ -362,6 +404,8 @@ def validate_prediction_band(
                 "auth_eval_command_missing": "prediction_band_empirical_anchor_command_missing",
                 "log_path_missing": "prediction_band_empirical_anchor_log_missing",
                 "log_path_file_missing": "prediction_band_empirical_anchor_log_missing",
+                "log_path_transient": "prediction_band_empirical_anchor_log_missing",
+                "log_path_outside_base_dir": "prediction_band_empirical_anchor_log_missing",
                 "inflate_device_missing": "prediction_band_empirical_anchor_inflate_device_missing",
                 "inflate_device_not_cpu": "prediction_band_empirical_anchor_inflate_device_not_cpu",
                 "inflate_device_not_cuda": "prediction_band_empirical_anchor_inflate_device_not_cuda",
@@ -379,6 +423,8 @@ def validate_prediction_band(
                 "runtime_tree_sha_invalid": "empirical_anchor_custody_missing_index",
                 "artifact_path_missing": "empirical_anchor_artifact_missing_index",
                 "artifact_path_file_missing": "empirical_anchor_artifact_missing_index",
+                "artifact_path_transient": "empirical_anchor_artifact_missing_index",
+                "artifact_path_outside_base_dir": "empirical_anchor_artifact_missing_index",
                 "n_samples_missing": "empirical_anchor_n_samples_missing_index",
                 "n_samples_not_contest_exact": "empirical_anchor_n_samples_not_contest_exact_index",
                 "hardware_missing": "empirical_anchor_hardware_missing_index",
@@ -386,6 +432,8 @@ def validate_prediction_band(
                 "auth_eval_command_missing": "empirical_anchor_command_missing_index",
                 "log_path_missing": "empirical_anchor_log_missing_index",
                 "log_path_file_missing": "empirical_anchor_log_missing_index",
+                "log_path_transient": "empirical_anchor_log_missing_index",
+                "log_path_outside_base_dir": "empirical_anchor_log_missing_index",
                 "inflate_device_missing": "empirical_anchor_inflate_device_missing_index",
                 "inflate_device_not_cpu": "empirical_anchor_inflate_device_not_cpu_index",
                 "inflate_device_not_cuda": "empirical_anchor_inflate_device_not_cuda_index",

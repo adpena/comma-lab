@@ -45,6 +45,9 @@ def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
 
 
 def _write_anchor_files(base_dir: Path, band: PredictionBand) -> None:
+    baseline_path = base_dir / band.baseline.artifact_path
+    baseline_path.parent.mkdir(parents=True, exist_ok=True)
+    baseline_path.write_text("baseline\n", encoding="utf-8")
     for anchor in band.empirical_anchor.anchors:
         for key in ("artifact_path", "log_path"):
             path = base_dir / str(anchor[key])
@@ -235,6 +238,9 @@ def test_landed_anchor_requires_explicit_artifact_base_dir():
 
 def test_landed_anchor_missing_log_file_blocks_rank_reward(tmp_path: Path):
     band = _valid_band()
+    baseline_path = tmp_path / band.baseline.artifact_path
+    baseline_path.parent.mkdir(parents=True, exist_ok=True)
+    baseline_path.write_text("baseline\n", encoding="utf-8")
     artifact_path = tmp_path / str(band.empirical_anchor.anchors[0]["artifact_path"])
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
     artifact_path.write_text("anchor\n", encoding="utf-8")
@@ -249,6 +255,28 @@ def test_landed_anchor_missing_log_file_blocks_rank_reward(tmp_path: Path):
 
     assert verdict.valid_for_rank_reward is False
     assert "prediction_band_empirical_anchor_log_missing" in verdict.blockers
+
+
+def test_baseline_artifact_file_must_be_repo_local(tmp_path: Path):
+    band = _valid_band()
+    _write_anchor_files(tmp_path, band)
+
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            baseline=replace(
+                band.baseline,
+                artifact_path="/tmp/stale_baseline.json",
+            ),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_baseline_artifact_transient" in verdict.blockers
 
 
 def test_missing_nonzero_prediction_band_becomes_rank_blocker():
