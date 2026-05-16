@@ -170,7 +170,30 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
+def _axis_evidence_path_blockers(
+    evidence: Mapping[str, Any],
+    *,
+    axis: str,
+    repo_root: Path,
+) -> tuple[str, ...]:
+    blockers: list[str] = []
+    log_path = str(evidence.get("log_path") or "")
+    if not log_path.strip():
+        return ()
+    if _is_transient_artifact_path(log_path):
+        blockers.append(f"l5_v2_probe_axis_log_path_transient:{axis}")
+        return tuple(blockers)
+    _resolved, path_error = _resolve_artifact_path(log_path, repo_root)
+    if path_error == "outside_repo":
+        blockers.append(f"l5_v2_probe_axis_log_path_outside_repo:{axis}")
+    return tuple(blockers)
+
+
+def _axis_evidence_blockers(
+    observation: L5V2ProbeObservation,
+    *,
+    repo_root: Path,
+) -> tuple[str, ...]:
     blockers: list[str] = []
     by_axis: dict[str, Mapping[str, Any]] = {}
     for item in observation.axis_evidence:
@@ -184,6 +207,13 @@ def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...
             blockers.append(f"l5_v2_probe_axis_evidence_missing:{axis}")
             continue
 
+        blockers.extend(
+            _axis_evidence_path_blockers(
+                evidence,
+                axis=axis,
+                repo_root=repo_root,
+            )
+        )
         validation = validate_exact_eval_evidence(
             evidence,
             expected_axis=axis,
@@ -193,6 +223,7 @@ def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...
             require_auth_eval_command=True,
             require_log_path=True,
             require_devices=True,
+            artifact_base_dir=repo_root,
         )
         blocker_map = {
             "archive_sha_invalid": "l5_v2_probe_axis_archive_sha_invalid",
@@ -277,7 +308,7 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_runtime_tree_sha_invalid")
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
-    blockers.extend(_axis_evidence_blockers(observation))
+    blockers.extend(_axis_evidence_blockers(observation, repo_root=repo_root))
     return tuple(dict.fromkeys(blockers))
 
 

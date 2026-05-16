@@ -25,9 +25,14 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _axis_evidence(axis: str) -> dict[str, object]:
+def _axis_evidence(axis: str, *, repo_root: Path | None = None) -> dict[str, object]:
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
+    log_path = f"experiments/results/l5_v2_probe/{axis}.log"
+    if repo_root is not None:
+        path = repo_root / log_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{axis} exact-eval log\n", encoding="utf-8")
     return {
         "axis": axis,
         "archive_sha256": "a" * 64,
@@ -41,7 +46,7 @@ def _axis_evidence(axis: str) -> dict[str, object]:
         "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
         "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
-        "log_path": f"experiments/results/l5_v2_probe/{axis}.log",
+        "log_path": log_path,
     }
 
 
@@ -63,7 +68,10 @@ def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObse
         predicate_passed=True,
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
-        axis_evidence=tuple(_axis_evidence(axis) for axis in ("contest_cpu", "contest_cuda")),
+        axis_evidence=tuple(
+            _axis_evidence(axis, repo_root=repo_root)
+            for axis in ("contest_cpu", "contest_cuda")
+        ),
         sideinfo_consumed=True,
         byte_closed_archive=True,
     )
@@ -233,12 +241,12 @@ def test_l5_v2_probe_blocks_string_only_paired_axes(tmp_path: Path) -> None:
 def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
     tmp_path: Path,
 ) -> None:
-    bad_axis_evidence = dict(_axis_evidence("contest_cuda"))
+    bad_axis_evidence = dict(_axis_evidence("contest_cuda", repo_root=tmp_path))
     bad_axis_evidence["score"] = 0.123
     malformed = dataclasses.replace(
         _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
         axis_evidence=(
-            _axis_evidence("contest_cpu"),
+            _axis_evidence("contest_cpu", repo_root=tmp_path),
             bad_axis_evidence,
         ),
     )
@@ -248,6 +256,52 @@ def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
 
     assert verdict["architecture_lock_allowed"] is False
     assert "l5_v2_probe_axis_score_formula_mismatch:contest_cuda" in row["blockers"]
+
+
+def test_l5_v2_probe_requires_durable_axis_log_files(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+    axis_evidence = [dict(row) for row in valid.axis_evidence]
+    cuda_row = next(row for row in axis_evidence if row["axis"] == "contest_cuda")
+    cuda_row["log_path"] = "experiments/results/l5_v2_probe/missing_cuda.log"
+
+    verdict = evaluate_l5_v2_probe(
+        (dataclasses.replace(valid, axis_evidence=tuple(axis_evidence)),),
+        repo_root=tmp_path,
+    )
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_log_path_file_missing:contest_cuda" in row["blockers"]
+
+
+def test_l5_v2_probe_rejects_transient_or_outside_axis_logs(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+
+    transient_rows = [dict(row) for row in valid.axis_evidence]
+    next(row for row in transient_rows if row["axis"] == "contest_cuda")[
+        "log_path"
+    ] = "/tmp/l5v2_cuda.log"
+    transient = evaluate_l5_v2_probe(
+        (dataclasses.replace(valid, axis_evidence=tuple(transient_rows)),),
+        repo_root=tmp_path,
+    )
+    assert "l5_v2_probe_axis_log_path_transient:contest_cuda" in transient[
+        "evaluated_observations"
+    ][0]["blockers"]
+
+    outside_log = tmp_path.parent / "outside_l5v2_cuda.log"
+    outside_log.write_text("outside\n", encoding="utf-8")
+    outside_rows = [dict(row) for row in valid.axis_evidence]
+    next(row for row in outside_rows if row["axis"] == "contest_cuda")[
+        "log_path"
+    ] = str(outside_log)
+    outside = evaluate_l5_v2_probe(
+        (dataclasses.replace(valid, axis_evidence=tuple(outside_rows)),),
+        repo_root=tmp_path,
+    )
+    assert "l5_v2_probe_axis_log_path_outside_repo:contest_cuda" in outside[
+        "evaluated_observations"
+    ][0]["blockers"]
 
 
 def test_l5_v2_probe_blocks_observations_without_artifact_predicate_custody() -> None:
