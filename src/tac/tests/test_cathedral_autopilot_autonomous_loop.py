@@ -80,6 +80,29 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
     )
 
 
+def _claim_row(
+    *,
+    timestamp: str = "2026-05-16T00:00:00Z",
+    lane_id: str,
+    job_id: str = "job_1",
+    status: str = "active_dispatch",
+    notes: str = "",
+) -> str:
+    return (
+        f"| {timestamp} | test-agent | {lane_id} | modal | {job_id} |  | "
+        f"{status} | {notes} |"
+    )
+
+
+def _claims_text(*rows: str) -> str:
+    return "\n".join([
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |",
+        "|---|---|---|---|---|---|---|---|",
+        *rows,
+        "",
+    ])
+
+
 # ── rank_candidates ────────────────────────────────────────────────────────
 
 
@@ -179,7 +202,7 @@ def test_check_dispatch_claim_no_file_returns_false(tmp_path):
 
 def test_check_dispatch_claim_present_returns_true(tmp_path):
     p = tmp_path / "claims.md"
-    p.write_text("c1 some active claim row\n", encoding="utf-8")
+    p.write_text(_claims_text(_claim_row(lane_id="c1")), encoding="utf-8")
     has, reason = loop.check_dispatch_claim_conflict("c1", claims_path=p)
     assert has is True
     assert "c1" in reason
@@ -187,7 +210,10 @@ def test_check_dispatch_claim_present_returns_true(tmp_path):
 
 def test_check_dispatch_claim_present_by_lane_id_returns_true(tmp_path):
     p = tmp_path / "claims.md"
-    p.write_text("lane_exact_eval_a active claim row\n", encoding="utf-8")
+    p.write_text(
+        _claims_text(_claim_row(lane_id="lane_exact_eval_a")),
+        encoding="utf-8",
+    )
     has, reason = loop.check_dispatch_claim_conflict(
         "candidate_a", claim_keys=["lane_exact_eval_a"], claims_path=p
     )
@@ -197,9 +223,56 @@ def test_check_dispatch_claim_present_by_lane_id_returns_true(tmp_path):
 
 def test_check_dispatch_claim_absent_in_file_returns_false(tmp_path):
     p = tmp_path / "claims.md"
-    p.write_text("c2 some other claim\n", encoding="utf-8")
+    p.write_text(_claims_text(_claim_row(lane_id="c2")), encoding="utf-8")
     has, _ = loop.check_dispatch_claim_conflict("c1", claims_path=p)
     assert has is False
+
+
+def test_check_dispatch_claim_terminal_row_does_not_block(tmp_path):
+    p = tmp_path / "claims.md"
+    p.write_text(
+        _claims_text(
+            _claim_row(
+                timestamp="2026-05-16T00:00:00Z",
+                lane_id="lane_done",
+                job_id="job_done",
+                status="active_dispatch",
+            ),
+            _claim_row(
+                timestamp="2026-05-16T00:10:00Z",
+                lane_id="lane_done",
+                job_id="job_done",
+                status="completed_modal_auth_eval",
+            ),
+        ),
+        encoding="utf-8",
+    )
+    has, reason = loop.check_dispatch_claim_conflict(
+        "candidate_done",
+        claim_keys=["lane_done"],
+        claims_path=p,
+        now_utc=loop.dt.datetime(2026, 5, 16, 1, 0, tzinfo=loop.dt.UTC),
+    )
+    assert has is False
+    assert reason == ""
+
+
+def test_check_dispatch_claim_exact_lane_id_matching_only(tmp_path):
+    p = tmp_path / "claims.md"
+    p.write_text(
+        _claims_text(
+            _claim_row(
+                lane_id="lane_exact_eval_a_extra",
+                notes="mentions lane_exact_eval_a in notes only",
+            )
+        ),
+        encoding="utf-8",
+    )
+    has, reason = loop.check_dispatch_claim_conflict(
+        "candidate_a", claim_keys=["lane_exact_eval_a"], claims_path=p
+    )
+    assert has is False
+    assert reason == ""
 
 
 # ── Loop iteration ────────────────────────────────────────────────────────
@@ -219,7 +292,7 @@ def test_one_iteration_emits_halt_events(tmp_path):
 
 def test_one_iteration_blocks_conflicted_candidate(tmp_path):
     p = tmp_path / "claims.md"
-    p.write_text("a active\n", encoding="utf-8")
+    p.write_text(_claims_text(_claim_row(lane_id="a")), encoding="utf-8")
     cands = [_cand("a"), _cand("b")]
     rep = loop.run_one_loop_iteration(cands, claims_path=p)
     assert rep.n_candidates_blocked_by_dispatch_claim == 1
@@ -229,7 +302,7 @@ def test_one_iteration_blocks_conflicted_candidate(tmp_path):
 
 def test_one_iteration_blocks_conflicted_lane_id(tmp_path):
     p = tmp_path / "claims.md"
-    p.write_text("lane_a active\n", encoding="utf-8")
+    p.write_text(_claims_text(_claim_row(lane_id="lane_a")), encoding="utf-8")
     cands = [_cand("candidate_a", lane_id="lane_a"), _cand("candidate_b")]
     rep = loop.run_one_loop_iteration(cands, claims_path=p)
     assert rep.n_candidates_blocked_by_dispatch_claim == 1
@@ -607,9 +680,9 @@ def _auth_mode(
     cumulative_cap: float = 20.0,
     helper_exists: bool = True,
 ) -> loop.OperatorAuthorizedModeConfig:
-    helper = tmp_path / "claim_lane_dispatch.py"
-    if helper_exists:
-        helper.write_text("# canonical helper\n", encoding="utf-8")
+    helper = TOOLS_DIR / "claim_lane_dispatch.py"
+    if not helper_exists:
+        helper = tmp_path / "missing_claim_lane_dispatch.py"
     journal = tmp_path / "autopilot_journal.jsonl"
     return loop.OperatorAuthorizedModeConfig(
         enabled=enabled,
@@ -720,16 +793,53 @@ def test_record_authorization_increments_cumulative(tmp_path):
 def test_make_dispatch_halt_event_authorized_when_mode_on_and_env_set(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(cost_usd=3.0)
+    claims_path = tmp_path / "claims.md"
     e = loop.make_dispatch_halt_event(
         c,
         requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
         auth_mode=cfg,
         env_authorized=True,
+        claims_path=claims_path,
     )
     assert e.autopilot_authorized is True
     assert e.autopilot_tag == loop.AUTOPILOT_AUTHORIZED_TAG
     assert e.requires_approval is False
+    assert e.autopilot_claim_recorded is True
+    assert e.autopilot_claim_instance_job_id
     assert cfg.cumulative_spent_usd == 3.0
+    claim_text = claims_path.read_text(encoding="utf-8")
+    assert "lane_c1" in claim_text
+    assert loop.AUTOPILOT_CLAIM_STATUS in claim_text
+
+
+def test_make_dispatch_halt_event_self_authorization_requires_successful_claim(tmp_path):
+    bad_helper = tmp_path / "bad_claim_helper.py"
+    bad_helper.write_text(
+        "import sys\nprint('claim failed intentionally', file=sys.stderr)\nsys.exit(3)\n",
+        encoding="utf-8",
+    )
+    cfg = loop.OperatorAuthorizedModeConfig(
+        enabled=True,
+        per_dispatch_cap_usd=5.0,
+        cumulative_cap_usd=20.0,
+        canonical_helper_script=bad_helper,
+        journal_path=tmp_path / "journal.jsonl",
+    )
+    c = _cand("claim_required", cost_usd=3.0)
+    e = loop.make_dispatch_halt_event(
+        c,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=True,
+        claims_path=tmp_path / "claims.md",
+    )
+    assert e.autopilot_authorized is False
+    assert e.autopilot_claim_recorded is False
+    assert e.requires_approval is True
+    assert "dispatch claim is required" in e.autopilot_refused_reason
+    assert "claim failed intentionally" in e.autopilot_refused_reason
+    assert "dispatch_claim_required_for_self_authorization" in e.blockers
+    assert cfg.cumulative_spent_usd == 0.0
 
 
 def test_make_dispatch_halt_event_refused_when_env_not_set(tmp_path):
@@ -755,6 +865,7 @@ def test_make_dispatch_halt_event_refused_when_over_per_dispatch_cap(tmp_path):
         requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
         auth_mode=cfg,
         env_authorized=True,
+        claims_path=tmp_path / "claims.md",
     )
     assert e.autopilot_authorized is False
     assert e.requires_approval is True
@@ -896,9 +1007,9 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
         }) + "\n",
         encoding="utf-8",
     )
-    helper = tmp_path / "claim_lane_dispatch.py"
-    helper.write_text("# canonical\n", encoding="utf-8")
+    helper = TOOLS_DIR / "claim_lane_dispatch.py"
     journal = tmp_path / "journal.jsonl"
+    claims_path = tmp_path / "claims.md"
     monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
     rc = loop.main([
         "--candidates-jsonl", str(cand_file),
@@ -906,7 +1017,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
         "--operator-authorized-le-5-dollar-mode",
         "--journal-path", str(journal),
         "--canonical-helper-script", str(helper),
-        "--claims-path", str(tmp_path / "no_claims.md"),
+        "--claims-path", str(claims_path),
     ])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
@@ -914,6 +1025,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
     assert payload["operator_authorized_mode"]["env_authorized"] is True
     assert payload["operator_authorized_mode"]["cumulative_spent_usd"] == 2.0
     assert journal.is_file()
+    assert "lane_test_auth_mode_uniq_abc123" in claims_path.read_text(encoding="utf-8")
 
 
 def test_main_authorized_mode_without_env_warns_but_still_runs(tmp_path, monkeypatch, capsys):
@@ -972,6 +1084,7 @@ def test_authorized_event_serialization_round_trip(tmp_path):
         requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
         auth_mode=cfg,
         env_authorized=True,
+        claims_path=tmp_path / "claims.md",
     )
     report = loop.LoopIterationReport(
         iteration=1,
@@ -985,5 +1098,6 @@ def test_authorized_event_serialization_round_trip(tmp_path):
     serialized = loop.serialize_report(report)
     assert serialized["halt_events"][0]["autopilot_authorized"] is True
     assert serialized["halt_events"][0]["autopilot_tag"] == loop.AUTOPILOT_AUTHORIZED_TAG
+    assert serialized["halt_events"][0]["autopilot_claim_recorded"] is True
     # JSON round-trip:
     assert json.loads(json.dumps(serialized))["halt_events"][0]["autopilot_authorized"] is True

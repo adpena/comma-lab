@@ -57,11 +57,13 @@ that satisfy ALL of:
      met).
 
 When all five preconditions hold, each candidate that fits the per-dispatch
-cap is tagged ``[autopilot-claude-le-5-dollar]`` in its halt event, and a
-structured log row is appended to the configured journal path. Candidates
-crossing either cap remain HALT-and-ASK as before. The cumulative-envelope
-counter is per-process (the loop's state); the canonical persistent ledger
-is :mod:`tools.claim_lane_dispatch`, which the loop continues to delegate to.
+cap must first record a lane claim through :mod:`tools.claim_lane_dispatch`.
+Only after the claim helper succeeds is the candidate tagged
+``[autopilot-claude-le-5-dollar]`` with ``requires_approval=False`` and
+written to the configured journal path. Candidates crossing either cap, or
+whose claim helper invocation fails, remain HALT-and-ASK as before. The
+cumulative-envelope counter is per-process (the loop's state); the canonical
+persistent ledger is :mod:`tools.claim_lane_dispatch`.
 
 No KILL verdict is ever auto-authorized.
 
@@ -89,6 +91,8 @@ import argparse
 import dataclasses
 import datetime as dt
 import json
+import re
+import subprocess
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -103,6 +107,11 @@ except ModuleNotFoundError:  # pragma: no cover
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
+
+try:  # Reuse the canonical parser/conflict semantics from the claim helper.
+    from tools import claim_lane_dispatch as _claim_lane_dispatch
+except ModuleNotFoundError:  # pragma: no cover - direct tools/ import mode
+    import claim_lane_dispatch as _claim_lane_dispatch  # type: ignore[no-redef]
 
 # W/I/A I-1 wire-in (2026-05-12, decision I-1): the autonomous loop's
 # rank_candidates step now optionally consumes the continual-learning posterior
@@ -142,6 +151,10 @@ AUTOPILOT_AUTHORIZED_TAG = "[autopilot-claude-le-5-dollar]"
 CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
 AUTOPILOT_CONTEST_TARGET_MODE = "contest_exact_eval"
 PLANNING_ONLY_SOURCE_BLOCKER = "planning_only_source_requires_operator_dispatch_packet"
+AUTOPILOT_CLAIM_PLATFORM = "cathedral_autopilot"
+AUTOPILOT_CLAIM_STATUS = "active_autopilot_authorized_dispatch"
+AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
+AUTOPILOT_CLAIM_TTL_HOURS = 24.0
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -418,6 +431,9 @@ class HaltEvent:
     autopilot_tag: str = ""
     autopilot_authorized_reason: str = ""
     autopilot_refused_reason: str = ""
+    autopilot_claim_recorded: bool = False
+    autopilot_claim_instance_job_id: str = ""
+    autopilot_claim_reason: str = ""
 
 
 @dataclass
@@ -1213,6 +1229,105 @@ def cost_band_envelope_check(
     return prediction.p50_cost_usd, prediction.confidence_tag, payload
 
 
+def _claim_token(value: str, *, fallback: str, max_len: int = 96) -> str:
+    """Return a claim-helper-safe token with no whitespace."""
+    token = re.sub(r"[^A-Za-z0-9_.:-]+", "_", str(value or "").strip())
+    token = token.strip("._:-")
+    return (token[:max_len] or fallback)
+
+
+def _claim_note_value(value: object) -> str:
+    return re.sub(r"\s+", " ", str(value or "").replace("|", "/")).strip()
+
+
+def _autopilot_claim_instance_job_id(candidate: CandidateRow) -> str:
+    slug = _claim_token(
+        candidate.candidate_id or candidate.lane_id,
+        fallback="candidate",
+        max_len=80,
+    )
+    packet_hash = (
+        candidate.dispatch_packet_sha256
+        or candidate.archive_sha256
+        or candidate.runtime_tree_sha256
+    )
+    suffix = _claim_token(packet_hash[:12], fallback="nohash", max_len=16)
+    return f"cathedral_autopilot_{slug}_{suffix}"
+
+
+def _record_autopilot_dispatch_claim(
+    candidate: CandidateRow,
+    *,
+    auth_mode: OperatorAuthorizedModeConfig,
+    claims_path: Path,
+) -> tuple[bool, str, str]:
+    """Claim the lane before self-authorization can become non-blocking."""
+    helper = auth_mode.canonical_helper_script
+    instance_job_id = _autopilot_claim_instance_job_id(candidate)
+    if helper is None or not helper.is_file():
+        return (
+            False,
+            f"canonical claim helper {helper!r} is unavailable",
+            instance_job_id,
+        )
+
+    notes = "; ".join(
+        part for part in (
+            "Cathedral autopilot self-authorization claim before requires_approval=false",
+            f"candidate_id={_claim_note_value(candidate.candidate_id)}",
+            f"dispatch_packet_sha256={_claim_note_value(candidate.dispatch_packet_sha256)}",
+            f"archive_sha256={_claim_note_value(candidate.archive_sha256)}",
+            f"runtime_tree_sha256={_claim_note_value(candidate.runtime_tree_sha256)}",
+            f"estimated_cost_usd={candidate.estimated_dispatch_cost_usd:.4f}",
+            "remote_provider_job_spawned=false",
+        ) if part
+    )
+    cmd = [
+        sys.executable,
+        str(helper),
+        "claim",
+        "--lane-id",
+        candidate.lane_id,
+        "--platform",
+        AUTOPILOT_CLAIM_PLATFORM,
+        "--instance-job-id",
+        instance_job_id,
+        "--agent",
+        AUTOPILOT_CLAIM_AGENT,
+        "--status",
+        AUTOPILOT_CLAIM_STATUS,
+        "--notes",
+        notes,
+        "--ttl-hours",
+        str(AUTOPILOT_CLAIM_TTL_HOURS),
+    ]
+    cmd.extend(["--claims-path", str(claims_path)])
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:  # pragma: no cover - filesystem/interpreter failure
+        return (
+            False,
+            f"dispatch claim helper invocation failed: {type(exc).__name__}: {exc}",
+            instance_job_id,
+        )
+    stdout = result.stdout.strip()
+    stderr = result.stderr.strip()
+    if result.returncode != 0:
+        detail = stderr or stdout or "no output"
+        return (
+            False,
+            f"dispatch claim helper refused claim with rc={result.returncode}: {detail}",
+            instance_job_id,
+        )
+    return True, stdout or "dispatch claim recorded", instance_job_id
+
+
 def make_dispatch_halt_event(
     candidate: CandidateRow,
     *,
@@ -1220,6 +1335,7 @@ def make_dispatch_halt_event(
     blockers: list[str] | None = None,
     auth_mode: OperatorAuthorizedModeConfig | None = None,
     env_authorized: bool | None = None,
+    claims_path: Path | None = None,
 ) -> HaltEvent:
     """Construct a HALT event for one dispatch decision.
 
@@ -1227,8 +1343,9 @@ def make_dispatch_halt_event(
     is in ``requires_approval_classes``, ``requires_approval=True`` UNLESS the
     operator-authorized le-$5/individual mode is engaged AND every precondition
     holds for THIS candidate. In that case the event is tagged
-    ``[autopilot-claude-le-5-dollar]`` and ``requires_approval`` is set to
-    False so the loop does not wait for the operator on this row.
+    ``[autopilot-claude-le-5-dollar]`` only after
+    :mod:`tools.claim_lane_dispatch` records a lane claim. ``requires_approval``
+    is set to False only after that claim succeeds.
 
     The dual-gate check (CLI flag + env-var) lives entirely inside this
     function; callers cannot bypass it. When ``env_authorized`` is None the
@@ -1241,10 +1358,18 @@ def make_dispatch_halt_event(
     autopilot_tag = ""
     autopilot_reason = ""
     autopilot_refused = ""
+    autopilot_claim_recorded = False
+    autopilot_claim_instance_job_id = ""
+    autopilot_claim_reason = ""
 
     if auth_mode is not None and auth_mode.enabled:
-        env_ok = _env_authorizes_mode() if env_authorized is None else bool(env_authorized)
+        env_ok = (
+            _env_authorizes_mode()
+            if env_authorized is None
+            else bool(env_authorized)
+        )
         if not env_ok:
+            requires = True
             autopilot_refused = (
                 f"env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
                 f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED} is missing; CLI "
@@ -1253,19 +1378,51 @@ def make_dispatch_halt_event(
         else:
             ok, reason = auth_mode.can_authorize(candidate)
             if ok:
-                autopilot_authorized = True
-                autopilot_tag = AUTOPILOT_AUTHORIZED_TAG
-                autopilot_reason = (
-                    f"per-dispatch cost ${candidate.estimated_dispatch_cost_usd:.4f} "
-                    f"<= cap ${auth_mode.per_dispatch_cap_usd:.4f}; "
-                    f"cumulative ${auth_mode.cumulative_spent_usd + candidate.estimated_dispatch_cost_usd:.4f} "
-                    f"<= envelope ${auth_mode.cumulative_cap_usd:.4f}"
-                )
-                # Reserve cost in the per-process counter so the next candidate
-                # in this iteration sees the updated cumulative.
-                auth_mode.record_authorization(candidate)
-                requires = False
+                if claims_path is None:
+                    autopilot_claim_reason = (
+                        "claims_path is required before self-authorization so "
+                        "tests and direct callers cannot silently write an "
+                        "implicit dispatch claim"
+                    )
+                else:
+                    (
+                        autopilot_claim_recorded,
+                        autopilot_claim_reason,
+                        autopilot_claim_instance_job_id,
+                    ) = _record_autopilot_dispatch_claim(
+                        candidate,
+                        auth_mode=auth_mode,
+                        claims_path=claims_path,
+                    )
+                if autopilot_claim_recorded:
+                    prospective = (
+                        auth_mode.cumulative_spent_usd
+                        + candidate.estimated_dispatch_cost_usd
+                    )
+                    autopilot_authorized = True
+                    autopilot_tag = AUTOPILOT_AUTHORIZED_TAG
+                    autopilot_reason = (
+                        f"per-dispatch cost ${candidate.estimated_dispatch_cost_usd:.4f} "
+                        f"<= cap ${auth_mode.per_dispatch_cap_usd:.4f}; "
+                        f"cumulative ${prospective:.4f} "
+                        f"<= envelope ${auth_mode.cumulative_cap_usd:.4f}; "
+                        f"dispatch claim recorded as {autopilot_claim_instance_job_id}"
+                    )
+                    # Reserve cost in the per-process counter so the next
+                    # candidate in this iteration sees the updated cumulative.
+                    auth_mode.record_authorization(candidate)
+                    requires = False
+                else:
+                    requires = True
+                    autopilot_refused = (
+                        "dispatch claim is required before self-authorization; "
+                        f"{autopilot_claim_reason}"
+                    )
+                    halt_blockers.append(
+                        "dispatch_claim_required_for_self_authorization"
+                    )
             else:
+                requires = True
                 autopilot_refused = reason
 
     return HaltEvent(
@@ -1297,6 +1454,9 @@ def make_dispatch_halt_event(
         autopilot_tag=autopilot_tag,
         autopilot_authorized_reason=autopilot_reason,
         autopilot_refused_reason=autopilot_refused,
+        autopilot_claim_recorded=autopilot_claim_recorded,
+        autopilot_claim_instance_job_id=autopilot_claim_instance_job_id,
+        autopilot_claim_reason=autopilot_claim_reason,
     )
 
 
@@ -1335,6 +1495,9 @@ def append_autopilot_journal_row(
         "autopilot_tag": event.autopilot_tag,
         "autopilot_authorized_reason": event.autopilot_authorized_reason,
         "autopilot_refused_reason": event.autopilot_refused_reason,
+        "autopilot_claim_recorded": event.autopilot_claim_recorded,
+        "autopilot_claim_instance_job_id": event.autopilot_claim_instance_job_id,
+        "autopilot_claim_reason": event.autopilot_claim_reason,
         "blockers": list(event.blockers),
         "claude_md_compliance_tags": [
             "operator_authorized_le_5_dollar_mode",
@@ -1389,6 +1552,8 @@ def check_dispatch_claim_conflict(
     *,
     claim_keys: list[str] | tuple[str, ...] | None = None,
     claims_path: Path | None = None,
+    now_utc: dt.datetime | None = None,
+    ttl_hours: float = AUTOPILOT_CLAIM_TTL_HOURS,
 ) -> tuple[bool, str]:
     """Check the active-lane-dispatch-claims registry for a conflicting claim.
 
@@ -1396,27 +1561,50 @@ def check_dispatch_claim_conflict(
     file exists yet (cold start) or no conflicting claim is found.
 
     The claims file is the markdown registry referenced in CLAUDE.md
-    "CROSS-AGENT DISPATCH COORDINATION". This helper does a simple substring
-    scan; the canonical conflict-resolution logic lives in
-    :mod:`tools.claim_lane_dispatch`.
+    "CROSS-AGENT DISPATCH COORDINATION". This helper uses the canonical parsed
+    claim-row semantics from :mod:`tools.claim_lane_dispatch`: exact
+    ``lane_id`` matching only, latest row per ``(lane_id, instance/job_id)``,
+    and terminal rows close older nonterminal rows for the same job.
     """
-    p = claims_path or (REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md")
+    p = claims_path or (
+        REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    )
     if not p.is_file():
         return False, ""
-    text = p.read_text(encoding="utf-8")
     keys: list[str] = []
     for key in [candidate_id, *(claim_keys or [])]:
         s = str(key or "").strip()
         if s and s not in keys:
             keys.append(s)
-    for key in keys:
-        # Conservative match — the canonical TTL-aware logic lives elsewhere.
-        if key in text:
-            return True, (
-                f"dispatch claim key {key!r} for candidate_id {candidate_id!r} "
-                f"appears in active-lane-dispatch-claims registry at {p}. "
-                "Consult tools/claim_lane_dispatch.py before dispatch."
-            )
+    if not keys:
+        return False, ""
+    try:
+        text = p.read_text(encoding="utf-8")
+        claims = _claim_lane_dispatch._parse_claims(text)
+        latest_claims = _claim_lane_dispatch._latest_claims_by_job(claims)
+    except Exception as exc:
+        return True, (
+            f"could not parse active-lane-dispatch-claims registry at {p} "
+            f"with tools/claim_lane_dispatch.py ({type(exc).__name__}: {exc}); "
+            "fail closed before dispatch"
+        )
+    now = now_utc or dt.datetime.now(dt.UTC)
+    ttl = dt.timedelta(hours=ttl_hours)
+    for claim in latest_claims.values():
+        if claim.lane_id not in keys:
+            continue
+        if _claim_lane_dispatch._is_terminal(claim.status):
+            continue
+        stale = _claim_lane_dispatch._claim_is_stale_nonterminal(
+            claim, now_utc=now, ttl=ttl
+        )
+        state = "stale nonterminal" if stale else "active"
+        return True, (
+            f"{state} dispatch claim for exact lane_id {claim.lane_id!r} "
+            f"(candidate_id {candidate_id!r}, job {claim.instance_job_id!r}, "
+            f"status {claim.status!r}) is present at {p}. "
+            "Close or supersede it with tools/claim_lane_dispatch.py before dispatch."
+        )
     return False, ""
 
 
@@ -1502,6 +1690,9 @@ def run_one_loop_iteration(
     halt_events: list[HaltEvent] = []
     n_blocked = 0
     n_ranked = 0
+    effective_claims_path = claims_path or (
+        REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    )
 
     for cand in ranked:
         if max_dispatch_recommendations is not None and n_ranked >= max_dispatch_recommendations:
@@ -1510,7 +1701,7 @@ def run_one_loop_iteration(
         has_conflict, reason = check_dispatch_claim_conflict(
             cand.candidate_id,
             claim_keys=cand.dispatch_claim_keys(),
-            claims_path=claims_path,
+            claims_path=effective_claims_path,
         )
         if has_conflict:
             n_blocked += 1
@@ -1525,6 +1716,7 @@ def run_one_loop_iteration(
             blockers=event_blockers,
             auth_mode=auth_mode,
             env_authorized=env_authorized,
+            claims_path=effective_claims_path,
         )
         halt_events.append(event)
         n_ranked += 1
