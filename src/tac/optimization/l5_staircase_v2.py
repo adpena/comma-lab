@@ -475,11 +475,35 @@ def _paired_row_identity_blockers(
                         "l5_v2_gate_artifact_semantics_invalid:"
                         f"{gate_id}:{section}:{axis}:{field}"
                     )
-        if require_anchor_type and row.get("anchor_type") not in {"exact", "diagnostic"}:
+        anchor_type = str(row.get("anchor_type") or "").strip()
+        if require_anchor_type and anchor_type not in {"exact", "diagnostic"}:
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:{section}:{axis}:anchor_type"
             )
+        elif require_anchor_type:
+            if row.get("score_claim") is not False:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:{axis}:score_claim"
+                )
+            evidence_grade = str(row.get("evidence_grade") or "").strip().lower()
+            if anchor_type == "exact" and "contest" not in evidence_grade:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:{axis}:evidence_grade"
+                )
+            if anchor_type == "diagnostic":
+                if "diagnostic" not in evidence_grade:
+                    blockers.append(
+                        "l5_v2_gate_artifact_semantics_invalid:"
+                        f"{gate_id}:{section}:{axis}:evidence_grade"
+                    )
+                if not str(row.get("diagnostic_reason") or "").strip():
+                    blockers.append(
+                        "l5_v2_gate_artifact_semantics_missing:"
+                        f"{gate_id}:{section}:{axis}:diagnostic_reason"
+                    )
     return blockers
 
 

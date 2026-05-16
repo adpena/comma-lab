@@ -54,6 +54,14 @@ def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
         }
         if anchor_type is not None:
             row["anchor_type"] = anchor_type
+            row["score_claim"] = False
+            row["evidence_grade"] = (
+                "contest_paired_exact"
+                if anchor_type == "exact"
+                else "paired_diagnostic"
+            )
+            if anchor_type == "diagnostic":
+                row["diagnostic_reason"] = "diagnostic anchor, not promotion evidence"
         rows.append(row)
     return rows
 
@@ -400,6 +408,50 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
     assert (
         "l5_v2_gate_artifact_semantics_invalid:"
         "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda:seg_dist_delta"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "exact_anchor_or_diagnostic_pair"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["anchor_pair"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    cuda_row["score_claim"] = True
+    cuda_row["evidence_grade"] = "advisory_proxy"
+    cpu_row = next(row for row in rows if row["axis"] == "contest_cpu")
+    cpu_row["anchor_type"] = "diagnostic"
+    cpu_row["evidence_grade"] = "contest_paired_exact"
+    cpu_row.pop("diagnostic_reason", None)
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:score_claim"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:evidence_grade"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cpu:evidence_grade"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cpu:diagnostic_reason"
         in readiness["blockers"]
     )
 
