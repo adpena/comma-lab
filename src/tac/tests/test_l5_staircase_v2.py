@@ -320,6 +320,11 @@ def test_l5_v2_research_basis_is_explicit_and_canonical() -> None:
         "vjepa2_2025",
         "vjepa2_1_dense_2026",
         "teconerv_2026",
+        "neural_dsc_2021",
+        "dcvc_2021",
+        "fvc_2021",
+        "scale_space_flow_2020",
+        "video_interpolation_codec_2018",
         "pnvc_2025",
         "dcvc_rt_2025",
         "unified_intra_inter_nvc_2025",
@@ -330,12 +335,17 @@ def test_l5_v2_research_basis_is_explicit_and_canonical() -> None:
         "c3_neural_compression_2024",
         "atick_redlich_1990",
         "wyner_ziv_1976",
+        "slepian_wolf_1973",
         "lu_dvc_2019",
         "rissanen_mdl_1978",
         "mackay_itila_2003",
         "tishby_information_bottleneck_1999",
         "tishby_zaslavsky_2015",
         "balle_hyperprior_2018",
+        "elic_2022",
+        "checkerboard_context_2021",
+        "rdp_tradeoff_2019",
+        "coin_2021",
         "hnerv_2023",
     )
 
@@ -738,6 +748,29 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
     assert (
         "l5_v2_gate_artifact_semantics_invalid:"
         "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda:seg_dist_delta"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_rejects_duplicate_axis_rows(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "paired_cpu_cuda_axis_plan"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["paired_axis_plan"]
+    assert isinstance(rows, list)
+    rows.append(dict(next(row for row in rows if row["axis"] == "contest_cpu")))
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:duplicate_axis:contest_cpu"
         in readiness["blockers"]
     )
 

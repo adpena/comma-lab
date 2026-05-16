@@ -164,6 +164,11 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload,
     reexpand_pr101_rank_elided_sidecar_payload,
 )
+from tac.packet_compiler.pr106_context_recode import (
+    emit_pr106_context_source_payload,
+    prove_pr106_context_archive_identity,
+    prove_pr106_context_source_identity,
+)
 from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid as build_pr106_latent_candidate_grid,
     choose_latent_corrections_from_score_table_file,
@@ -526,6 +531,9 @@ __all__ = [
     "lossless_pr106_sidecar_recode_candidates",
     "mutate_pr106_sidecar_semantic_correction",
     "parse_pr106_sidecar_packet",
+    "emit_pr106_context_source_payload",
+    "prove_pr106_context_archive_identity",
+    "prove_pr106_context_source_identity",
     "prove_pr106_sidecar_packet_ir_identity",
     "prove_pr106_same_runtime_full_frame_parity",
     "prove_pr106_sidecar_runtime_decode_consumption",

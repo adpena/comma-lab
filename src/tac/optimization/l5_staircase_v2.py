@@ -450,6 +450,27 @@ def _axis_row_map(value: object) -> dict[str, Mapping[str, Any]]:
     return out
 
 
+def _axis_row_duplicate_blockers(
+    value: object,
+    *,
+    gate_id: str,
+    section: str,
+) -> list[str]:
+    seen: set[str] = set()
+    blockers: list[str] = []
+    for row in _mapping_items(value):
+        axis = str(row.get("axis") or "").strip()
+        if axis not in _REQUIRED_EXACT_AXES:
+            continue
+        if axis in seen:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:{section}:duplicate_axis:{axis}"
+            )
+        seen.add(axis)
+    return blockers
+
+
 def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
     parts = re.findall(r"[a-z0-9]+", value.lower())
     for idx, part in enumerate(parts):
@@ -1099,28 +1120,42 @@ def _gate_semantic_blockers(
         return blockers
 
     if gate_id == "paired_cpu_cuda_axis_plan":
-        rows = _axis_row_map(
-            artifact_payload.get("paired_axis_plan")
-            or artifact_payload.get("axis_plan")
+        rows_obj = artifact_payload.get("paired_axis_plan") or artifact_payload.get(
+            "axis_plan"
         )
-        return _paired_row_identity_blockers(
-            gate_id=gate_id,
-            rows=rows,
-            section="paired_axis_plan",
-        )
+        rows = _axis_row_map(rows_obj)
+        return [
+            *_axis_row_duplicate_blockers(
+                rows_obj,
+                gate_id=gate_id,
+                section="paired_axis_plan",
+            ),
+            *_paired_row_identity_blockers(
+                gate_id=gate_id,
+                rows=rows,
+                section="paired_axis_plan",
+            ),
+        ]
 
     if gate_id == "exact_anchor_or_diagnostic_pair":
-        rows = _axis_row_map(
-            artifact_payload.get("anchor_pair")
-            or artifact_payload.get("diagnostic_pair")
+        rows_obj = artifact_payload.get("anchor_pair") or artifact_payload.get(
+            "diagnostic_pair"
         )
-        return _paired_row_identity_blockers(
-            gate_id=gate_id,
-            rows=rows,
-            section="anchor_pair",
-            require_anchor_type=True,
-            repo_root=repo_root,
-        )
+        rows = _axis_row_map(rows_obj)
+        return [
+            *_axis_row_duplicate_blockers(
+                rows_obj,
+                gate_id=gate_id,
+                section="anchor_pair",
+            ),
+            *_paired_row_identity_blockers(
+                gate_id=gate_id,
+                rows=rows,
+                section="anchor_pair",
+                require_anchor_type=True,
+                repo_root=repo_root,
+            ),
+        ]
 
     return blockers
 

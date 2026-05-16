@@ -245,6 +245,26 @@ def test_l5_v2_probe_blocks_string_only_paired_axes(tmp_path: Path) -> None:
     assert "l5_v2_probe_axis_evidence_missing:contest_cuda" in row["blockers"]
 
 
+def test_l5_v2_probe_rejects_duplicate_axis_evidence_rows(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+    duplicate_cpu = dict(valid.axis_evidence[0])
+    duplicate_cpu["score_delta"] = -0.500
+
+    verdict = evaluate_l5_v2_probe(
+        (
+            dataclasses.replace(
+                valid,
+                axis_evidence=(*valid.axis_evidence, duplicate_cpu),
+            ),
+        ),
+        repo_root=tmp_path,
+    )
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_evidence_duplicate:contest_cpu" in row["blockers"]
+
+
 def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
     tmp_path: Path,
 ) -> None:

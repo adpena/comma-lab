@@ -9,13 +9,22 @@ from tac.packet_compiler.pr106_context_recode import (
     build_pr106_context_recode_report,
     build_stored_zip_for_tests,
     decode_context_recode_section,
+    emit_pr106_context_source_payload,
     encode_context_recode_section,
     load_pr106_context_source_from_archive,
     parse_pr106_context_source,
+    prove_pr106_context_archive_identity,
+    prove_pr106_context_source_identity,
 )
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / "tools/plan_or_build_pr106_context_recode.py"
+PR106_R2_ARCHIVE = REPO / "submissions/pr106_latent_sidecar_r2/archive.zip"
+PR106_R2_SHA = "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f"
+PR106_R2_PR101_ARCHIVE = (
+    REPO / "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip"
+)
+PR106_R2_PR101_SHA = "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383"
 
 
 def test_context_recode_section_changes_bytes_and_roundtrips() -> None:
@@ -75,6 +84,61 @@ def test_pr106_context_report_declares_low_order_blocked() -> None:
     assert "context_order_not_high_order" in candidate["blockers"]
     assert "zero_order_arithmetic_control_falsified_not_candidate" in candidate["blockers"]
     assert result.report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr106_context_source_identity_proof_is_nonpromotable() -> None:
+    payload = _synthetic_pr106_payload()
+    source = parse_pr106_context_source(payload)
+    proof = prove_pr106_context_source_identity(source)
+
+    assert emit_pr106_context_source_payload(source) == payload
+    assert proof["schema"] == "pr106_context_source_identity_proof_v1"
+    assert proof["context_packet_ir_identity_passed"] is True
+    assert proof["blockers"] == []
+    assert proof["emitted_inner_payload"]["byte_identical_to_source_inner"] is True
+    assert proof["emitted_payload"]["byte_identical_to_source_payload"] is True
+    assert proof["runtime_consumption_claim"] is False
+    assert proof["full_frame_inflate_output_parity_claim"] is False
+    assert proof["contest_axis_claim"] is False
+    assert proof["score_claim"] is False
+    assert proof["promotion_eligible"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr106_context_archive_identity_proof_on_release_archives() -> None:
+    for archive, expected_sha, expected_format in (
+        (PR106_R2_ARCHIVE, PR106_R2_SHA, "0x01"),
+        (PR106_R2_PR101_ARCHIVE, PR106_R2_PR101_SHA, "0x02"),
+    ):
+        proof = prove_pr106_context_archive_identity(
+            archive_path=archive,
+            expected_archive_sha256=expected_sha,
+        )
+
+        assert proof["schema"] == "pr106_context_source_identity_proof_v1"
+        assert proof["context_packet_ir_identity_passed"] is True
+        assert proof["blockers"] == []
+        assert proof["archive"]["expected_sha256_matches"] is True
+        assert proof["member"]["name"] == "0.bin"
+        assert proof["source"]["wrapper"]["format_id"] == expected_format
+        assert proof["emitted_inner_payload"]["byte_identical_to_source_inner"] is True
+        assert proof["emitted_payload"]["byte_identical_to_source_payload"] is True
+        assert proof["emitted_archive"]["byte_identical_to_source_archive"] is True
+        assert proof["score_claim"] is False
+        assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_pr106_context_archive_identity_proof_fails_closed_on_sha_mismatch() -> None:
+    proof = prove_pr106_context_archive_identity(
+        archive_path=PR106_R2_ARCHIVE,
+        expected_archive_sha256="0" * 64,
+    )
+
+    assert proof["context_packet_ir_identity_passed"] is False
+    assert proof["archive"]["expected_sha256_matches"] is False
+    assert proof["blockers"] == ["expected_archive_sha256_mismatch"]
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
 
 
 def test_cli_writes_profile_markdown_and_prototype(tmp_path: Path) -> None:

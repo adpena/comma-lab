@@ -19,7 +19,7 @@ import struct
 import zipfile
 from bisect import bisect_right
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,9 @@ from tac.lossless.range_coder import RangeDecoder, RangeEncoder, cumulative_freq
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_MAGIC,
     StoredZipMember,
+    canonical_expected_sha256,
+    emit_pr106_sidecar_packet,
+    emit_single_stored_member_archive,
     parse_pr106_sidecar_packet,
     read_single_stored_member_archive,
     sha256_hex,
@@ -352,6 +355,160 @@ def build_pr106_context_recode_report(
         "dispatch_blockers": exact_blockers,
     }
     return PR106ContextRecodeBuildResult(report=report, prototype_section_bytes=prototype_bytes)
+
+
+def emit_pr106_context_source_payload(source: PR106ContextSource) -> bytes:
+    """Re-emit the payload consumed by the PR106 context view.
+
+    This is identity plumbing for PacketIR custody. It does not emit a context
+    recode candidate and it never claims runtime or score consumption.
+    """
+
+    inner_payload = source.packed.to_bytes()
+    if source.wrapper is None:
+        return inner_payload
+    packet = parse_pr106_sidecar_packet(source.payload)
+    return emit_pr106_sidecar_packet(replace(packet, pr106_bytes=inner_payload))
+
+
+def prove_pr106_context_source_identity(
+    source: PR106ContextSource,
+) -> dict[str, object]:
+    """Prove context-view parse/re-emit identity for a parsed PR106 source."""
+
+    emitted_inner = source.packed.to_bytes()
+    emitted_payload = emit_pr106_context_source_payload(source)
+    blockers: list[str] = []
+    if emitted_inner != source.inner_payload:
+        blockers.append("context_inner_payload_parse_emit_not_identity")
+    if emitted_payload != source.payload:
+        blockers.append("context_payload_parse_emit_not_identity")
+
+    return {
+        "schema": "pr106_context_source_identity_proof_v1",
+        "proof_scope": (
+            "context_recode_source_parse_emit_identity_not_runtime_inflate_not_score"
+        ),
+        "source": {
+            **source.source,
+            "payload_bytes": len(source.payload),
+            "payload_sha256": sha256_hex(source.payload),
+            "inner_pr106_bytes": len(source.inner_payload),
+            "inner_pr106_sha256": sha256_hex(source.inner_payload),
+            "wrapper": source.wrapper,
+        },
+        "sections": [section.manifest() for section in source.sections],
+        "emitted_inner_payload": {
+            "bytes": len(emitted_inner),
+            "sha256": sha256_hex(emitted_inner),
+            "byte_identical_to_source_inner": emitted_inner == source.inner_payload,
+        },
+        "emitted_payload": {
+            "bytes": len(emitted_payload),
+            "sha256": sha256_hex(emitted_payload),
+            "byte_identical_to_source_payload": emitted_payload == source.payload,
+        },
+        "context_packet_ir_identity_passed": not blockers,
+        "blockers": blockers,
+        "proof_not_score": True,
+        "evidence_axis": "packet-ir-context-parser-local-no-score",
+        "runtime_consumption_claim": False,
+        "full_frame_inflate_output_parity_claim": False,
+        "contest_axis_claim": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "required_next_proof": (
+            "prototype runtime decoder integration plus same-runtime full-frame "
+            "parity and exact contest auth eval before score language"
+        ),
+    }
+
+
+def prove_pr106_context_archive_identity(
+    *,
+    archive_path: str | Path,
+    expected_member_name: str | None = None,
+    expected_archive_sha256: str | None = None,
+) -> dict[str, object]:
+    """Prove context-view parse/re-emit identity for a single-member archive."""
+
+    archive = Path(archive_path)
+    archive_bytes = archive.read_bytes()
+    archive_sha = sha256_hex(archive_bytes)
+    expected_archive_sha, expected_archive_sha_well_formed = canonical_expected_sha256(
+        expected_archive_sha256
+    )
+    member = read_single_stored_member_archive(
+        archive_bytes,
+        expected_member_name=expected_member_name,
+    )
+    source = parse_pr106_context_source(
+        member.payload,
+        member=member,
+        source={
+            "mode": "archive",
+            "path": str(archive),
+            "archive_bytes": len(archive_bytes),
+            "archive_sha256": archive_sha,
+            "member_name": member.name,
+            "member_bytes": len(member.payload),
+            "member_sha256": sha256_hex(member.payload),
+            "zip_overhead_bytes": len(archive_bytes) - len(member.payload),
+        },
+    )
+    source_proof = prove_pr106_context_source_identity(source)
+    emitted_payload = emit_pr106_context_source_payload(source)
+    emitted_archive = emit_single_stored_member_archive(
+        replace(member, payload=emitted_payload)
+    )
+    blockers = list(source_proof["blockers"])
+    if expected_archive_sha_well_formed is False:
+        blockers.append("expected_archive_sha256_malformed")
+    if (
+        expected_archive_sha_well_formed is True
+        and expected_archive_sha is not None
+        and archive_sha != expected_archive_sha
+    ):
+        blockers.append("expected_archive_sha256_mismatch")
+    if emitted_archive != archive_bytes:
+        blockers.append("context_single_member_zip_parse_emit_not_identity")
+
+    proof = dict(source_proof)
+    proof.update(
+        {
+            "archive": {
+                "path": archive.as_posix(),
+                "bytes": len(archive_bytes),
+                "sha256": archive_sha,
+                "expected_sha256": expected_archive_sha,
+                "expected_sha256_well_formed": expected_archive_sha_well_formed,
+                "expected_sha256_matches": (
+                    None
+                    if expected_archive_sha is None
+                    or expected_archive_sha_well_formed is False
+                    else archive_sha == expected_archive_sha
+                ),
+            },
+            "member": {
+                "name": member.name,
+                "expected_name": expected_member_name,
+                "expected_name_matches": (
+                    None if expected_member_name is None else member.name == expected_member_name
+                ),
+                "payload_bytes": len(member.payload),
+                "payload_sha256": sha256_hex(member.payload),
+            },
+            "emitted_archive": {
+                "bytes": len(emitted_archive),
+                "sha256": sha256_hex(emitted_archive),
+                "byte_identical_to_source_archive": emitted_archive == archive_bytes,
+            },
+            "context_packet_ir_identity_passed": not blockers,
+            "blockers": blockers,
+        }
+    )
+    return proof
 
 
 def profile_section(

@@ -204,6 +204,8 @@ def _axis_evidence_blockers(
     for item in observation.axis_evidence:
         axis = str(item.get("axis") or "")
         if axis.strip():
+            if axis in by_axis:
+                blockers.append(f"l5_v2_probe_axis_evidence_duplicate:{axis}")
             by_axis[axis] = item
 
     for axis in REQUIRED_EXACT_AXES:
