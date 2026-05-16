@@ -136,6 +136,8 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     )
     assert boolean_only["all_gate_claims_satisfied"] is False
     assert boolean_only["all_gate_evidence_valid"] is False
+    assert boolean_only["ready_for_gate_probe_dispatch"] is False
+    assert boolean_only["ready_for_score_or_rank_dispatch"] is False
     assert boolean_only["ready_for_dispatch"] is False
     assert boolean_only["promotion_eligible"] is False
     assert boolean_only["score_claim"] is False
@@ -156,11 +158,34 @@ def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) ->
 
     assert ready["all_gate_claims_satisfied"] is True
     assert ready["all_gate_evidence_valid"] is True
-    assert ready["ready_for_dispatch"] is True
-    assert ready["blockers"] == []
+    assert ready["ready_for_gate_probe_dispatch"] is True
+    assert ready["ready_for_score_or_rank_dispatch"] is False
+    assert ready["ready_for_dispatch"] is False
+    assert "prediction_band_not_dispatch_ready" in ready["blockers"]
+    assert "prediction_band:prediction_band_baseline_missing" in ready["blockers"]
+    assert "prediction_band:prediction_band_empirical_anchor_missing" in ready[
+        "blockers"
+    ]
+    assert ready["prediction_band_rank_ready"] is False
     assert ready["promotion_eligible"] is False
     assert ready["score_claim"] is False
     assert all(gate["evidence_valid"] is True for gate in ready["gates"])
+
+
+def test_l5_v2_valid_gates_do_not_unlock_blocked_prediction_band(
+    tmp_path: Path,
+) -> None:
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=_valid_gate_evidence(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    assert readiness["all_gate_evidence_valid"] is True
+    assert readiness["ready_for_gate_probe_dispatch"] is True
+    assert readiness["prediction_band_verdict"]["valid_for_rank_reward"] is False
+    assert readiness["ready_for_score_or_rank_dispatch"] is False
+    assert readiness["ready_for_dispatch"] is False
+    assert "prediction_band_not_dispatch_ready" in readiness["blockers"]
 
 
 @pytest.mark.parametrize(

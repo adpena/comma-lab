@@ -442,6 +442,24 @@ def l5_v2_dispatch_readiness(
         evidence_blockers.extend(gate_evidence_blockers)
     all_gate_claims_satisfied = all(gate["evidence_valid"] for gate in gates)
     all_gate_evidence_valid = all(gate["evidence_valid"] for gate in gates)
+    prediction_band_verdict = l5_v2_prediction_band_verdict()
+    prediction_band_rank_ready = bool(
+        prediction_band_verdict.get("valid_for_rank_reward")
+    )
+    prediction_band_blockers = [
+        str(blocker)
+        for blocker in prediction_band_verdict.get("blockers", [])
+        if str(blocker)
+    ]
+    score_dispatch_blockers: list[str] = []
+    if not prediction_band_rank_ready:
+        score_dispatch_blockers.append("prediction_band_not_dispatch_ready")
+        score_dispatch_blockers.extend(
+            f"prediction_band:{blocker}" for blocker in prediction_band_blockers
+        )
+    ready_for_score_or_rank_dispatch = (
+        all_gate_evidence_valid and prediction_band_rank_ready
+    )
     return {
         "subject_id": SUBJECT_ID,
         "lane_id": LANE_ID,
@@ -451,11 +469,14 @@ def l5_v2_dispatch_readiness(
         "promotion_eligible": False,
         "all_gate_claims_satisfied": all_gate_claims_satisfied,
         "all_gate_evidence_valid": all_gate_evidence_valid,
-        "ready_for_dispatch": all_gate_evidence_valid,
-        "blockers": blockers + evidence_blockers,
+        "ready_for_gate_probe_dispatch": all_gate_evidence_valid,
+        "ready_for_score_or_rank_dispatch": ready_for_score_or_rank_dispatch,
+        "ready_for_dispatch": ready_for_score_or_rank_dispatch,
+        "blockers": blockers + evidence_blockers + score_dispatch_blockers,
         "gates": gates,
         "steps": [step.__dict__ for step in l5_v2_staircase_steps()],
-        "prediction_band_verdict": l5_v2_prediction_band_verdict(),
+        "prediction_band_verdict": prediction_band_verdict,
+        "prediction_band_rank_ready": prediction_band_rank_ready,
     }
 
 
