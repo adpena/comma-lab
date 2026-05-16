@@ -52,6 +52,21 @@ def _load_bridge_module():
     return mod
 
 
+def _load_autopilot_module():
+    import sys
+
+    name = "cathedral_autopilot_autonomous_loop"
+    if name in sys.modules:
+        return sys.modules[name]
+    script = _REPO_ROOT / "tools" / "cathedral_autopilot_autonomous_loop.py"
+    spec = importlib.util.spec_from_file_location(name, str(script))
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
 @pytest.fixture(scope="module")
 def bridge():
     return _load_bridge_module()
@@ -230,6 +245,72 @@ def test_write_then_load_roundtrip(bridge, tmp_path):
     payload_ids = {r["candidate_id"] for r in payload["ranked_dispatches"]}
     for row in rows:
         assert row.candidate_id in payload_ids
+
+
+def test_autopilot_consumer_suppresses_blocked_prediction_band_eig(tmp_path):
+    autopilot = _load_autopilot_module()
+    path = tmp_path / "ranking.json"
+    path.write_text(
+        json.dumps({
+            "schema": "tac_autopilot_dispatch_ranking_v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ranked_dispatches": [{
+                "candidate_id": "singleton__time_traveler_l5_autonomy",
+                "family": "predictive_receiver",
+                "substrate_ids": ["time_traveler_l5_autonomy"],
+                "predicted_score_delta": -0.050,
+                "expected_information_gain": 10.0,
+                "estimated_dispatch_cost_usd": 5.0,
+                "composition_notes": "[predicted; stale L5 prior]",
+                "fits_per_dispatch_cap": True,
+                "fits_cumulative_envelope": True,
+                "prediction_band_verdict": {"valid_for_rank_reward": False},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }],
+        }),
+        encoding="utf-8",
+    )
+
+    rows = autopilot.load_candidates_from_substrate_composition_ranking(path)
+
+    assert rows[0].expected_information_gain == 0.0
+    assert "prediction_band_rank_reward_suppressed" in rows[0].blockers
+    assert "prediction_band_rank_reward_suppressed" in rows[0].notes
+
+
+def test_autopilot_consumer_rejects_string_envelope_bools(tmp_path):
+    autopilot = _load_autopilot_module()
+    path = tmp_path / "ranking.json"
+    path.write_text(
+        json.dumps({
+            "schema": "tac_autopilot_dispatch_ranking_v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ranked_dispatches": [{
+                "candidate_id": "bad_bool",
+                "family": "predictive_receiver",
+                "substrate_ids": ["time_traveler_l5_autonomy"],
+                "predicted_score_delta": -0.050,
+                "expected_information_gain": 10.0,
+                "estimated_dispatch_cost_usd": 5.0,
+                "composition_notes": "[predicted; stale L5 prior]",
+                "fits_per_dispatch_cap": "false",
+                "fits_cumulative_envelope": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }],
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="non-boolean fits_per_dispatch_cap"):
+        autopilot.load_candidates_from_substrate_composition_ranking(path)
 
 
 def test_campaign_metadata_emitted_for_z3_bare_cell(bridge):

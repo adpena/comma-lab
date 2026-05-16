@@ -152,6 +152,22 @@ def test_rank_by_predicted_score_delta_most_negative_first():
     assert [c.candidate_id for c in ranked] == ["c2", "c1", "c3"]
 
 
+def test_rank_by_predicted_score_delta_neutralizes_suppressed_prediction_band():
+    blocked = _cand(
+        "blocked_l5",
+        predicted_delta=-0.050,
+        blockers=["prediction_band_rank_reward_suppressed"],
+    )
+    clean = _cand("clean_small", predicted_delta=-0.001)
+
+    ranked = loop.rank_candidates(
+        [blocked, clean],
+        rank_axis="predicted_score_delta",
+    )
+
+    assert [c.candidate_id for c in ranked] == ["clean_small", "blocked_l5"]
+
+
 def test_rank_unknown_axis_raises():
     with pytest.raises(ValueError, match="rank_axis"):
         loop.rank_candidates([], rank_axis="something_made_up")

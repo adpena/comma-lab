@@ -1159,11 +1159,15 @@ def rank_candidates(
         _require_candidate_planning_cost(candidate)
 
     def _effective_delta(c: CandidateRow) -> float:
+        if _candidate_prediction_band_rank_reward_suppressed(c):
+            return 0.0
         if apply_z1_empirical_revision:
             return apply_z1_empirical_revision_to_candidate_delta(c)
         return c.predicted_score_delta
 
     def _effective_eig_per_dollar(c: CandidateRow) -> float:
+        if _candidate_prediction_band_rank_reward_suppressed(c):
+            return 0.0
         base = c.eig_per_dollar()
         if not apply_z1_empirical_revision:
             return base
@@ -2160,6 +2164,17 @@ def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
     return not ("[prediction" in notes or "[predicted" in notes)
 
 
+def _candidate_prediction_band_rank_reward_suppressed(c: CandidateRow) -> bool:
+    """Return true when prediction-band custody already suppressed rank reward."""
+
+    blockers = set(c.blockers or [])
+    notes = str(c.notes or "")
+    return (
+        "prediction_band_rank_reward_suppressed" in blockers
+        or "prediction_band_rank_reward_suppressed" in notes
+    )
+
+
 def _candidate_row_from_raw(
     raw: dict[str, Any],
     *,
@@ -2388,20 +2403,52 @@ def load_candidates_from_substrate_composition_ranking(
         )
     rows: list[CandidateRow] = []
     for raw in payload["ranked_dispatches"]:
-        if raw.get("score_claim", False):
+        context = (
+            "substrate composition ranked dispatch "
+            f"{raw.get('candidate_id')!r}"
+        )
+        if _json_bool_field(raw, "score_claim", default=False, context=context):
             raise ValueError(
                 f"ranked dispatch {raw.get('candidate_id')!r} has score_claim=True; "
                 "refuse to consume score-claimed planning rows"
             )
-        if raw.get("ready_for_exact_eval_dispatch", False):
+        if _json_bool_field(
+            raw,
+            "promotion_eligible",
+            default=False,
+            context=context,
+        ):
+            raise ValueError(
+                f"ranked dispatch {raw.get('candidate_id')!r} has "
+                "promotion_eligible=True; refuse to consume promotion-claimed "
+                "planning rows"
+            )
+        if _json_bool_field(
+            raw,
+            "ready_for_exact_eval_dispatch",
+            default=False,
+            context=context,
+        ):
             raise ValueError(
                 f"ranked dispatch {raw.get('candidate_id')!r} has "
                 "ready_for_exact_eval_dispatch=True; refuse to consume in autopilot "
                 "(operator-gated promotion path required)"
             )
-        if only_fits_per_dispatch_cap and not raw.get("fits_per_dispatch_cap", True):
+        fits_per_dispatch_cap = _json_bool_field(
+            raw,
+            "fits_per_dispatch_cap",
+            default=True,
+            context=context,
+        )
+        fits_cumulative_envelope = _json_bool_field(
+            raw,
+            "fits_cumulative_envelope",
+            default=True,
+            context=context,
+        )
+        if only_fits_per_dispatch_cap and not fits_per_dispatch_cap:
             continue
-        if only_in_envelope and not raw.get("fits_cumulative_envelope", True):
+        if only_in_envelope and not fits_cumulative_envelope:
             continue
         notes_lines = [
             "[predicted; substrate composition matrix v1]",
@@ -2428,6 +2475,15 @@ def load_candidates_from_substrate_composition_ranking(
         row_blockers = list(raw.get("blockers", []))
         if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
             row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
+        expected_information_gain = float(raw["expected_information_gain"])
+        if (
+            expected_information_gain > 0.0
+            and not _prediction_band_allows_rank_reward(raw)
+        ):
+            expected_information_gain = 0.0
+            if "prediction_band_rank_reward_suppressed" not in row_blockers:
+                row_blockers.append("prediction_band_rank_reward_suppressed")
+            notes_lines.append("prediction_band_rank_reward_suppressed")
         # Catalog #227 wire-in: read optional composition_alpha if present
         # (the canonical Z3xC6 probe-disambiguator emits this).
         composition_alpha_raw = raw.get("composition_alpha")
@@ -2441,14 +2497,11 @@ def load_candidates_from_substrate_composition_ranking(
             candidate_id=str(raw["candidate_id"]),
             family=str(raw["family"]),
             predicted_score_delta=float(raw["predicted_score_delta"]),
-            expected_information_gain=float(raw["expected_information_gain"]),
+            expected_information_gain=expected_information_gain,
             estimated_dispatch_cost_usd=_require_finite_nonnegative_float(
                 raw["estimated_dispatch_cost_usd"],
                 field="estimated_dispatch_cost_usd",
-                context=(
-                    "substrate composition ranked dispatch "
-                    f"{raw.get('candidate_id')!r}"
-                ),
+                context=context,
             ),
             blockers=row_blockers,
             notes="\n".join(notes_lines),
@@ -2462,20 +2515,28 @@ def load_candidates_from_substrate_composition_ranking(
                 raw.get("decode_complexity_evidence", "")
             ),
             composition_alpha=composition_alpha,
-            license_ok=bool(raw.get("license_ok", True)),
+            license_ok=_json_bool_field(raw, "license_ok", default=True, context=context),
             inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
             sideinfo_consumed=(
                 None
                 if raw.get("sideinfo_consumed") is None
-                else bool(raw.get("sideinfo_consumed"))
+                else _json_bool_field(
+                    raw,
+                    "sideinfo_consumed",
+                    default=False,
+                    context=context,
+                )
             ),
-            exact_duplicate=bool(raw.get("exact_duplicate", False)),
+            exact_duplicate=_json_bool_field(
+                raw,
+                "exact_duplicate",
+                default=False,
+                context=context,
+            ),
             context_order=int(raw.get("context_order", 0) or 0),
-            score_claim=bool(raw.get("score_claim", False)),
-            promotion_eligible=bool(raw.get("promotion_eligible", False)),
-            ready_for_exact_eval_dispatch=bool(
-                raw.get("ready_for_exact_eval_dispatch", False)
-            ),
+            score_claim=False,
+            promotion_eligible=False,
+            ready_for_exact_eval_dispatch=False,
         ))
     return rows
 

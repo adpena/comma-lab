@@ -21,6 +21,16 @@ CONTEST_EXACT_SAMPLE_COUNT = 600
 SCORE_FORMULA_TOLERANCE = 1e-9
 CONTEST_EXACT_AXES = frozenset({"contest_cpu", "contest_cuda"})
 CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
+NEGATED_DEVICE_TOKENS = frozenset({
+    "disabled",
+    "false",
+    "no",
+    "non",
+    "not",
+    "off",
+    "unavailable",
+    "without",
+})
 
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
@@ -82,10 +92,18 @@ def _clean_text(value: object) -> str:
 
 
 def _contains_token(value: str, tokens: frozenset[str]) -> bool:
-    """Return true when lowercased device/hardware text carries any token."""
+    """Return true only for non-negated device/hardware capability tokens."""
 
-    lowered = value.lower()
-    return any(token in lowered for token in tokens)
+    parts = re.findall(r"[a-z0-9]+", value.lower())
+    for idx, part in enumerate(parts):
+        if part not in tokens:
+            continue
+        prev_token = parts[idx - 1] if idx > 0 else ""
+        next_token = parts[idx + 1] if idx + 1 < len(parts) else ""
+        if prev_token in NEGATED_DEVICE_TOKENS or next_token in NEGATED_DEVICE_TOKENS:
+            continue
+        return True
+    return False
 
 
 def _resolve_evidence_path(value: object, base_dir: Path) -> Path | None:

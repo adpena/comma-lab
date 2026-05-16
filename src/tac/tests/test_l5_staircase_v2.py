@@ -439,6 +439,36 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
     )
 
 
+def test_l5_v2_dispatch_readiness_rejects_negated_cuda_axis_semantics(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "paired_cpu_cuda_axis_plan"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["paired_axis_plan"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    cuda_row["inflate_device"] = "cpu-no-cuda"
+    cuda_row["eval_device"] = "cuda-disabled"
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda_inflate_device"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda_eval_device"
+        in readiness["blockers"]
+    )
+
+
 def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
     tmp_path: Path,
 ) -> None:

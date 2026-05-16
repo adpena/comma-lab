@@ -45,6 +45,17 @@ PREDICTED_DELTA_AXIS = "mixed"
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
+_CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
+_NEGATED_DEVICE_TOKENS = frozenset({
+    "disabled",
+    "false",
+    "no",
+    "non",
+    "not",
+    "off",
+    "unavailable",
+    "without",
+})
 
 
 @dataclass(frozen=True)
@@ -405,6 +416,19 @@ def _axis_row_map(value: object) -> dict[str, Mapping[str, Any]]:
     return out
 
 
+def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
+    parts = re.findall(r"[a-z0-9]+", value.lower())
+    for idx, part in enumerate(parts):
+        if part not in tokens:
+            continue
+        prev_token = parts[idx - 1] if idx > 0 else ""
+        next_token = parts[idx + 1] if idx + 1 < len(parts) else ""
+        if prev_token in _NEGATED_DEVICE_TOKENS or next_token in _NEGATED_DEVICE_TOKENS:
+            continue
+        return True
+    return False
+
+
 def _paired_row_identity_blockers(
     *,
     gate_id: str,
@@ -458,12 +482,12 @@ def _paired_row_identity_blockers(
                     f"{gate_id}:{section}:contest_cpu_eval_device"
                 )
         else:
-            if "cuda" not in inflate_device and "gpu" not in inflate_device:
+            if not _contains_non_negated_token(inflate_device, _CUDA_DEVICE_TOKENS):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cuda_inflate_device"
                 )
-            if "cuda" not in eval_device and "gpu" not in eval_device:
+            if not _contains_non_negated_token(eval_device, _CUDA_DEVICE_TOKENS):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cuda_eval_device"

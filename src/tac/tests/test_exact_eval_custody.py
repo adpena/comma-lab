@@ -141,6 +141,27 @@ def test_validate_exact_eval_evidence_rejects_cpu_devices_for_cuda_axis(
     assert "eval_device_not_cuda" in verdict.blockers
 
 
+def test_validate_exact_eval_evidence_rejects_negated_cuda_tokens(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cuda")
+    evidence["hardware"] = "cpu-no-cuda"
+    evidence["inflate_device"] = "no-cuda-cpu"
+    evidence["eval_device"] = "cuda-disabled"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "hardware_not_cuda" in verdict.blockers
+    assert "inflate_device_not_cuda" in verdict.blockers
+    assert "eval_device_not_cuda" in verdict.blockers
+
+
 def test_validate_exact_eval_evidence_rejects_cuda_devices_for_cpu_axis(
     tmp_path: Path,
 ) -> None:
