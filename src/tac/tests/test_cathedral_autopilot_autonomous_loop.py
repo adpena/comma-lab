@@ -53,7 +53,11 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           predicted_delta: float = -0.005,
           eig: float = 0.5,
           cost_usd: float = 5.0,
-          blockers: list[str] | None = None) -> loop.CandidateRow:
+          blockers: list[str] | None = None,
+          dispatch_packet_ready: bool = True,
+          lane_id: str | None = None,
+          target_modes: list[str] | None = None,
+          dispatch_packet_sha256: str | None = None) -> loop.CandidateRow:
     return loop.CandidateRow(
         candidate_id=cid,
         family=family,
@@ -61,6 +65,18 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
         expected_information_gain=eig,
         estimated_dispatch_cost_usd=cost_usd,
         blockers=list(blockers or []),
+        dispatch_packet_ready=dispatch_packet_ready,
+        lane_id=lane_id if lane_id is not None else f"lane_{cid}",
+        target_modes=(
+            list(target_modes)
+            if target_modes is not None
+            else [loop.AUTOPILOT_CONTEST_TARGET_MODE]
+        ),
+        dispatch_packet_sha256=(
+            dispatch_packet_sha256
+            if dispatch_packet_sha256 is not None
+            else f"dispatch_packet_sha256_for_{cid}"
+        ),
     )
 
 
@@ -169,6 +185,16 @@ def test_check_dispatch_claim_present_returns_true(tmp_path):
     assert "c1" in reason
 
 
+def test_check_dispatch_claim_present_by_lane_id_returns_true(tmp_path):
+    p = tmp_path / "claims.md"
+    p.write_text("lane_exact_eval_a active claim row\n", encoding="utf-8")
+    has, reason = loop.check_dispatch_claim_conflict(
+        "candidate_a", claim_keys=["lane_exact_eval_a"], claims_path=p
+    )
+    assert has is True
+    assert "lane_exact_eval_a" in reason
+
+
 def test_check_dispatch_claim_absent_in_file_returns_false(tmp_path):
     p = tmp_path / "claims.md"
     p.write_text("c2 some other claim\n", encoding="utf-8")
@@ -199,6 +225,16 @@ def test_one_iteration_blocks_conflicted_candidate(tmp_path):
     assert rep.n_candidates_blocked_by_dispatch_claim == 1
     assert rep.n_candidates_ranked == 1
     assert all(e.candidate_id != "a" for e in rep.halt_events)
+
+
+def test_one_iteration_blocks_conflicted_lane_id(tmp_path):
+    p = tmp_path / "claims.md"
+    p.write_text("lane_a active\n", encoding="utf-8")
+    cands = [_cand("candidate_a", lane_id="lane_a"), _cand("candidate_b")]
+    rep = loop.run_one_loop_iteration(cands, claims_path=p)
+    assert rep.n_candidates_blocked_by_dispatch_claim == 1
+    assert rep.n_candidates_ranked == 1
+    assert all(e.candidate_id != "candidate_a" for e in rep.halt_events)
 
 
 def test_one_iteration_race_mode_trims_to_negative_delta(tmp_path):
@@ -360,6 +396,8 @@ def test_load_candidates_from_jsonl(tmp_path):
     rows = loop.load_candidates_from_jsonl(p)
     assert len(rows) == 2
     assert rows[0].candidate_id == "a"
+    assert rows[0].dispatch_packet_ready is False
+    assert rows[0].target_modes == []
     assert rows[1].blockers == ["needs_phase2_anchor"]
 
 
@@ -400,7 +438,8 @@ def test_load_probe_disambiguator_autopilot_rows_read_only(tmp_path):
     row = rows[0]
     assert row.candidate_id == "lane_zen_floor_probe_disambiguator_20260514"
     assert row.family == "zen_floor_planning_probe"
-    assert row.blockers == ["byte_closed_codec_candidate_required_before_dispatch"]
+    assert "byte_closed_codec_candidate_required_before_dispatch" in row.blockers
+    assert loop.PLANNING_ONLY_SOURCE_BLOCKER in row.blockers
     assert row.mdl_tier_c_density == pytest.approx(0.25)
     assert row.composition_alpha == pytest.approx(0.8)
     assert "[probe-disambiguator; read-only planning]" in row.notes
@@ -644,6 +683,23 @@ def test_can_authorize_refuses_non_positive_cost(tmp_path):
     assert "non-positive" in reason
 
 
+def test_can_authorize_refuses_planning_row_without_dispatch_packet(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_ready=False,
+        lane_id="",
+        target_modes=[],
+        dispatch_packet_sha256="",
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "dispatch-authority packet" in reason
+    assert "dispatch_packet_ready_false" in reason
+    assert "lane_id_required_for_dispatch_packet" in reason
+    assert "contest_exact_eval_target_mode_required" in reason
+
+
 def test_can_authorize_approves_within_caps(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(cost_usd=4.5)
@@ -718,7 +774,6 @@ def test_make_dispatch_halt_event_no_auth_mode_keeps_existing_behaviour(tmp_path
 
 
 def test_kill_event_never_auto_authorized(tmp_path):
-    cfg = _auth_mode(tmp_path)
     e = loop.make_kill_halt_event("c1", "advisory")
     # KILL events bypass dispatch helpers; they always require approval.
     assert e.requires_approval is True
@@ -834,6 +889,10 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
             "predicted_score_delta": -0.005,
             "expected_information_gain": 0.5,
             "estimated_dispatch_cost_usd": 2.0,
+            "dispatch_packet_ready": True,
+            "dispatch_packet_sha256": "dispatch_packet_sha256_for_test_auth_mode_uniq_abc123",
+            "lane_id": "lane_test_auth_mode_uniq_abc123",
+            "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
         }) + "\n",
         encoding="utf-8",
     )

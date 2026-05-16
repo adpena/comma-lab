@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# ruff: noqa: E402, I001
 """Tests for the cathedral autopilot end-to-end wire to QQ's substrate
 composition matrix ranking.
 
@@ -44,7 +45,7 @@ TOOLS_DIR = Path(__file__).resolve().parents[3] / "tools"
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
-import cathedral_autopilot_autonomous_loop as loop  # noqa: E402
+import cathedral_autopilot_autonomous_loop as loop
 
 
 # ── Fixture: canonical ranking JSON ───────────────────────────────────────
@@ -218,6 +219,8 @@ def test_load_ranking_carries_predicted_tag_in_notes(tmp_path):
     for r in rows:
         assert "[predicted; substrate composition matrix v1]" in r.notes
         assert "substrate_ids:" in r.notes
+        assert loop.PLANNING_ONLY_SOURCE_BLOCKER in r.blockers
+        assert r.dispatch_packet_ready is False
 
 
 def test_load_ranking_refuses_top_level_score_claim_true(tmp_path):
@@ -329,7 +332,7 @@ def test_composition_filter_returns_reason_for_dropped_candidates(tmp_path):
     _, dropped = loop.filter_composition_incompatible_dispatches(
         rows, candidate_substrate_ids=sub_map,
     )
-    for cid, reason in dropped:
+    for _cid, reason in dropped:
         assert "substrate composition matrix" in reason or "substrate" in reason
         assert "refuse" in reason.lower() or "compose" in reason.lower()
 

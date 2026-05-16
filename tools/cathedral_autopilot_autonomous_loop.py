@@ -140,6 +140,8 @@ DEFAULT_PER_DISPATCH_CAP_USD = 5.00
 DEFAULT_CUMULATIVE_CAP_USD = 20.00
 AUTOPILOT_AUTHORIZED_TAG = "[autopilot-claude-le-5-dollar]"
 CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
+AUTOPILOT_CONTEST_TARGET_MODE = "contest_exact_eval"
+PLANNING_ONLY_SOURCE_BLOCKER = "planning_only_source_requires_operator_dispatch_packet"
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -234,11 +236,65 @@ class CandidateRow:
     # None = no preflight evidence (don't penalize lack-of-evidence per the
     # sister Z1 / Tier C / composition_alpha conventions).
     predicted_dispatch_risk: float | None = None
+    # Dispatch authority / custody fields. These are intentionally absent from
+    # read-only planning sources; operator-authorized self-dispatch requires a
+    # real dispatch packet instead of inferred readiness from rank/cost.
+    lane_id: str = ""
+    claim_keys: list[str] = field(default_factory=list)
+    target_modes: list[str] = field(default_factory=list)
+    dispatch_packet_ready: bool = False
+    dispatch_packet_sha256: str = ""
+    archive_sha256: str = ""
+    runtime_tree_sha256: str = ""
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
 
     def eig_per_dollar(self) -> float:
         if self.estimated_dispatch_cost_usd <= 0.0:
             return float("inf")
         return self.expected_information_gain / self.estimated_dispatch_cost_usd
+
+    def dispatch_claim_keys(self) -> list[str]:
+        """Return candidate/lane/claim identifiers for conflict checks."""
+        keys = [self.candidate_id, self.lane_id, *self.claim_keys]
+        deduped: list[str] = []
+        for key in keys:
+            s = str(key or "").strip()
+            if s and s not in deduped:
+                deduped.append(s)
+        return deduped
+
+    def dispatch_authority_blockers(self) -> list[str]:
+        """Return blockers that prevent autonomous dispatch authorization.
+
+        Planning rows are useful for ranking, but they are not executable
+        packets. The le-$5 autopilot path may only self-authorize rows that
+        already carry lane identity, contest target metadata, and a hash of the
+        dispatch packet or exact archive/runtime packet being launched.
+        """
+        blockers: list[str] = []
+        if self.score_claim:
+            blockers.append("score_claim_true_requires_operator_review")
+        if self.promotion_eligible:
+            blockers.append("promotion_eligible_true_requires_operator_review")
+        if not self.dispatch_packet_ready:
+            blockers.append("dispatch_packet_ready_false")
+        if not self.lane_id.strip():
+            blockers.append("lane_id_required_for_dispatch_packet")
+        if AUTOPILOT_CONTEST_TARGET_MODE not in set(self.target_modes):
+            blockers.append("contest_exact_eval_target_mode_required")
+        has_dispatch_packet_hash = bool(self.dispatch_packet_sha256.strip())
+        has_exact_packet_hashes = bool(
+            self.archive_sha256.strip() and self.runtime_tree_sha256.strip()
+        )
+        if not (has_dispatch_packet_hash or has_exact_packet_hashes):
+            blockers.append("dispatch_packet_or_archive_runtime_hash_required")
+        if self.ready_for_exact_eval_dispatch and not has_exact_packet_hashes:
+            blockers.append(
+                "ready_for_exact_eval_dispatch_requires_archive_and_runtime_hash"
+            )
+        return blockers
 
 
 @dataclass
@@ -291,6 +347,13 @@ class OperatorAuthorizedModeConfig:
                 f"candidate cost {candidate.estimated_dispatch_cost_usd:.4f} is "
                 "non-positive; refuse to authorize a malformed estimate"
             )
+        authority_blockers = candidate.dispatch_authority_blockers()
+        if authority_blockers:
+            return False, (
+                f"candidate is not a dispatch-authority packet; unresolved "
+                f"authority blockers {authority_blockers!r}; operator must "
+                "adjudicate before any autonomous dispatch"
+            )
         if not self.canonical_helper_script or not self.canonical_helper_script.is_file():
             return False, (
                 f"canonical helper script {self.canonical_helper_script!r} does not "
@@ -335,6 +398,13 @@ class HaltEvent:
     requires_approval: bool
     halt_at_utc: str = ""
     blockers: list[str] = field(default_factory=list)
+    lane_id: str = ""
+    claim_keys: list[str] = field(default_factory=list)
+    target_modes: list[str] = field(default_factory=list)
+    dispatch_packet_sha256: str = ""
+    archive_sha256: str = ""
+    runtime_tree_sha256: str = ""
+    ready_for_exact_eval_dispatch: bool = False
     decision: OperatorDecision | None = None
     decision_at_utc: str | None = None
     decision_notes: str = ""
@@ -1211,6 +1281,13 @@ def make_dispatch_halt_event(
         requires_approval=requires,
         halt_at_utc=dt.datetime.now(dt.UTC).isoformat(),
         blockers=halt_blockers,
+        lane_id=candidate.lane_id,
+        claim_keys=candidate.dispatch_claim_keys(),
+        target_modes=list(candidate.target_modes),
+        dispatch_packet_sha256=candidate.dispatch_packet_sha256,
+        archive_sha256=candidate.archive_sha256,
+        runtime_tree_sha256=candidate.runtime_tree_sha256,
+        ready_for_exact_eval_dispatch=candidate.ready_for_exact_eval_dispatch,
         autopilot_authorized=autopilot_authorized,
         autopilot_tag=autopilot_tag,
         autopilot_authorized_reason=autopilot_reason,
@@ -1239,6 +1316,13 @@ def append_autopilot_journal_row(
         "schema": "tac_cathedral_autopilot_authorized_journal_v1",
         "iteration": iteration,
         "candidate_id": event.candidate_id,
+        "lane_id": event.lane_id,
+        "claim_keys": list(event.claim_keys),
+        "target_modes": list(event.target_modes),
+        "dispatch_packet_sha256": event.dispatch_packet_sha256,
+        "archive_sha256": event.archive_sha256,
+        "runtime_tree_sha256": event.runtime_tree_sha256,
+        "ready_for_exact_eval_dispatch": event.ready_for_exact_eval_dispatch,
         "predicted_score_delta": event.predicted_score_delta,
         "estimated_cost_usd": event.estimated_cost_usd,
         "halt_at_utc": event.halt_at_utc,
@@ -1298,6 +1382,7 @@ def inject_operator_decision(
 def check_dispatch_claim_conflict(
     candidate_id: str,
     *,
+    claim_keys: list[str] | tuple[str, ...] | None = None,
     claims_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Check the active-lane-dispatch-claims registry for a conflicting claim.
@@ -1314,12 +1399,19 @@ def check_dispatch_claim_conflict(
     if not p.is_file():
         return False, ""
     text = p.read_text(encoding="utf-8")
-    if candidate_id in text:
+    keys: list[str] = []
+    for key in [candidate_id, *(claim_keys or [])]:
+        s = str(key or "").strip()
+        if s and s not in keys:
+            keys.append(s)
+    for key in keys:
         # Conservative match — the canonical TTL-aware logic lives elsewhere.
-        return True, (
-            f"candidate_id {candidate_id!r} appears in active-lane-dispatch-claims "
-            f"registry at {p}. Consult tools/claim_lane_dispatch.py before dispatch."
-        )
+        if key in text:
+            return True, (
+                f"dispatch claim key {key!r} for candidate_id {candidate_id!r} "
+                f"appears in active-lane-dispatch-claims registry at {p}. "
+                "Consult tools/claim_lane_dispatch.py before dispatch."
+            )
     return False, ""
 
 
@@ -1411,7 +1503,9 @@ def run_one_loop_iteration(
             break
         # Cross-agent dispatch claim check
         has_conflict, reason = check_dispatch_claim_conflict(
-            cand.candidate_id, claims_path=claims_path
+            cand.candidate_id,
+            claim_keys=cand.dispatch_claim_keys(),
+            claims_path=claims_path,
         )
         if has_conflict:
             n_blocked += 1
@@ -1591,6 +1685,24 @@ def _coerce_optional_float(value: object) -> float | None:
         return None
 
 
+def _coerce_str_list(value: object) -> list[str]:
+    """Return a normalized string list for JSONL/JSON candidate metadata."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        items = [value]
+    elif isinstance(value, (list, tuple, set)):
+        items = list(value)
+    else:
+        items = [value]
+    out: list[str] = []
+    for item in items:
+        s = str(item or "").strip()
+        if s and s not in out:
+            out.append(s)
+    return out
+
+
 def _require_planning_only_flag(raw: dict[str, Any], key: str, *, context: str) -> None:
     if raw.get(key, False):
         raise ValueError(
@@ -1647,6 +1759,18 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 mdl_tier_c_density=mdl_tier_c_density,
                 composition_alpha=composition_alpha,
                 predicted_dispatch_risk=predicted_dispatch_risk,
+                lane_id=str(raw.get("lane_id", "")),
+                claim_keys=_coerce_str_list(raw.get("claim_keys")),
+                target_modes=_coerce_str_list(raw.get("target_modes")),
+                dispatch_packet_ready=bool(raw.get("dispatch_packet_ready", False)),
+                dispatch_packet_sha256=str(raw.get("dispatch_packet_sha256", "")),
+                archive_sha256=str(raw.get("archive_sha256", "")),
+                runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
+                score_claim=bool(raw.get("score_claim", False)),
+                promotion_eligible=bool(raw.get("promotion_eligible", False)),
+                ready_for_exact_eval_dispatch=bool(
+                    raw.get("ready_for_exact_eval_dispatch", False)
+                ),
             ))
     return rows
 
@@ -1738,6 +1862,9 @@ def load_candidates_from_substrate_composition_ranking(
         if raw.get("campaign_metadata"):
             notes_lines.append(f"campaign_metadata: {raw.get('campaign_metadata')!r}")
         lane_class_raw = raw.get("lane_class")
+        row_blockers = list(raw.get("blockers", []))
+        if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
+            row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
         # Catalog #227 wire-in: read optional composition_alpha if present
         # (the canonical Z3xC6 probe-disambiguator emits this).
         composition_alpha_raw = raw.get("composition_alpha")
@@ -1753,12 +1880,17 @@ def load_candidates_from_substrate_composition_ranking(
             predicted_score_delta=float(raw["predicted_score_delta"]),
             expected_information_gain=float(raw["expected_information_gain"]),
             estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
-            blockers=list(raw.get("blockers", [])),
+            blockers=row_blockers,
             notes="\n".join(notes_lines),
             mdl_density=_coerce_optional_float(raw.get("mdl_density")),
             lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
             literature_anchor=str(raw.get("literature_anchor", "")),
             composition_alpha=composition_alpha,
+            score_claim=bool(raw.get("score_claim", False)),
+            promotion_eligible=bool(raw.get("promotion_eligible", False)),
+            ready_for_exact_eval_dispatch=bool(
+                raw.get("ready_for_exact_eval_dispatch", False)
+            ),
         ))
     return rows
 
@@ -1925,6 +2057,9 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 "refusing to consume it as an autopilot planning row"
             )
         lane_class_raw = raw.get("lane_class")
+        row_blockers = list(raw.get("blockers", []))
+        if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
+            row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
         notes = "\n".join(
             [
                 "[probe-disambiguator; read-only planning]",
@@ -1941,7 +2076,7 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 predicted_score_delta=float(raw.get("predicted_score_delta", 0.0)),
                 expected_information_gain=float(raw.get("expected_information_gain", 0.0)),
                 estimated_dispatch_cost_usd=float(raw.get("estimated_dispatch_cost_usd", 0.0)),
-                blockers=list(raw.get("blockers", [])),
+                blockers=row_blockers,
                 notes=notes,
                 mdl_density=_coerce_optional_float(raw.get("mdl_density")),
                 lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
