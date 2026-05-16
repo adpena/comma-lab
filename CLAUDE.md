@@ -542,6 +542,199 @@ submission checker, wire it into `preflight_all()`, `tools/all_lanes_preflight.p
 `tools/operator_briefing.py`, a runbook, or a dated `.omx/research/` ledger.
 Do not leave high-signal tooling buried under an obscure filename.
 
+### State JSONL archival policy (NEW 2026-05-16 — premortem #10)
+
+`.omx/state/*.jsonl` files exceeding 10 MB MUST archive older rows to
+`.omx/state/archive/<filename>_<YYYY-MM>.jsonl` and keep only the most-recent
+90-day window in the live file. The canonical helper is
+`tools/archive_jsonl_state.py` which scans `.omx/state/` for over-size JSONLs,
+partitions rows by their UTC timestamp field, archives older rows under fcntl
+LOCK_EX, atomically rewrites the live file (write-tmp + os.replace per Catalog
+#128 / #131 / #245 sister discipline), and updates the archive manifest at
+`.omx/state/archive/_index.json`.
+
+The existing append-only ledgers honor the policy:
+
+- `.omx/state/commit-serializer.log` (Catalog #117 / #157 / #174 sources)
+- `.omx/state/modal_call_id_ledger.jsonl` (Catalog #245 source)
+- `.omx/state/subagent_progress.jsonl` (Catalog #206 source)
+- `.omx/state/cost_band_posterior.jsonl` (Catalog #175 / #177 source)
+- `.omx/state/lane_maturity_audit.log` (Catalog #90 source)
+
+Per the 12-month premortem (`.omx/research/12_month_frustration_premortem_and_
+recommendations_20260516.md` Category L + Section 3 #10): the 12-month
+manifestation without this policy is `.omx/state/` >5 GB; serializer log scans
+in Catalog #117/#157/#174/#206/#289 become hot-path bottlenecks; `git status`
+performance degrades. No STRICT preflight gate for now — operational hygiene
+enforced by the monthly `tools/archive_jsonl_state.py --apply` operator
+cadence.
+
+Usage:
+
+```bash
+# Preview the archival plan:
+.venv/bin/python tools/archive_jsonl_state.py
+
+# Execute (creates .omx/state/archive/<filename>_<YYYY-MM>.jsonl):
+.venv/bin/python tools/archive_jsonl_state.py --apply
+
+# Per-file with custom retention:
+.venv/bin/python tools/archive_jsonl_state.py \\
+    --target .omx/state/commit-serializer.log --retain-days 60 --apply
+```
+
+## Substrate retirement discipline — NON-NEGOTIABLE
+
+**Source:** 12-month premortem (`.omx/research/12_month_frustration_premortem_
+and_recommendations_20260516.md` Category E + Section 3 #1) +
+PREMORTEM-CONSOLIDATION-WAVE landing 2026-05-16. Per the premortem: at current
+cadence we project 200+ stale L1 SCAFFOLD substrate lanes by 2027-05-16; the
+cathedral autopilot ranker over-fits on the 200+ scale; every dispatch wave
+that DOES fire spends $20-100 chasing one substrate, leaving the other 199
+untouched; the "research-substrate trap" (8th forbidden pattern per HNeRV
+parity discipline) becomes systemic.
+
+### The rule
+
+Every substrate at L1+ for >30 days without paid dispatch (or `lane_maturity.py
+mark` activity) MUST satisfy one of:
+
+1. **Advance to L2+** with empirical anchor (real-archive empirical / contest-
+   CUDA gate satisfied). The lane is no longer L1 by definition.
+2. **Declare `research_only: true`** with `reactivation_criteria` pinned in
+   lane registry notes per CLAUDE.md "HNeRV / leaderboard-implementation
+   parity discipline" lesson 2 (export-first design).
+3. **Move to `archived/` directory** with terminal verdict + reactivation
+   criteria. Declared via top-level `archived: true` field OR `lane_state=
+   archived` token in notes per CLAUDE.md "Forbidden premature KILL" — the
+   lane is not killed, it is archived with explicit reactivation criteria.
+4. **Same-line waiver** `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` in lane
+   notes / evidence for the rare deliberate operator-approved deferral
+   (placeholder `<rationale>` literal rejected).
+
+### Concrete enforcement
+
+- STRICT preflight Catalog #298 (`check_substrate_lane_l1_scaffold_not_stale_
+  dispatch`) — refuses in-scope L1 substrate lanes with `impl_complete=true`
+  and no audit-log activity within 30 days unless one of the 4 opt-outs
+  applies. WARN-ONLY at landing per "Strict-flip atomicity rule"; strict-flip
+  pending operator-routed backfill sweep of existing stale L1 lanes.
+- Canonical operator-facing audit tool: `tools/audit_stale_l1_substrates.py`
+  produces the monthly retirement candidate list with per-lane verdict
+  (ACTIVE_RECENT_DISPATCH / ACTIVE_RECENT_MARK / STALE_PENDING_DECISION /
+  OPT_OUT_RESEARCH_ONLY / OPT_OUT_SUBSTRATE_ENGINEERING / OPT_OUT_ARCHIVED).
+- Pair with the "stop adding new substrates without retiring one" informal
+  discipline (premortem Section 5 anti-pattern #2): new substrate adoption
+  requires explicit retirement of an L1 SCAFFOLD that has been idle >60 days.
+
+### Cross-references
+
+Sister of Catalog #220 (L1 scaffold operational mechanism declaration) +
+Catalog #272 (distinguishing-feature integration contract) + Catalog #233
+(L1->L2 promotion canonical 4-gate). Together they extinct the "L1 SCAFFOLD
+substrate accumulates indefinitely without dispatch resolution" failure mode.
+Per CLAUDE.md "Forbidden premature KILL without research exhaustion": the
+default verdict is DEFERRED-pending-research / `research_only=true`, NEVER
+KILL. Archived state is dormant-with-reactivation, not kill.
+
+## Gate consolidation discipline — NON-NEGOTIABLE
+
+**Source:** 12-month premortem (`.omx/research/12_month_frustration_premortem_
+and_recommendations_20260516.md` Category A + Section 3 #5 + Section 5
+anti-pattern #1) + PREMORTEM-CONSOLIDATION-WAVE landing 2026-05-16. Per the
+premortem: at current cadence (~5-10 new gates/week) the catalog # crosses
+500 by Q4 2026 and 700+ by 2027-05-16. `preflight.py` swells past 100K LOC.
+Operator-authorize harness's 30-second budget breaks. New gates get added but
+reviewed only by their author. META-meta phantom-row incidents (the Catalog
+#273-#278 phantom landings 2026-05-15) become the rule, not the exception.
+
+### The rule
+
+No new STRICT preflight gate may be claimed past **Catalog #400** without one
+of:
+
+1. **Retirement of an existing strict gate.** Mark the old gate DEPRECATED in
+   the CLAUDE.md catalog table; remove the orchestrator callsite from
+   `preflight_all()` after a 30-day deprecation window.
+2. **Operator-explicit "exceed-quota" approval with rationale** — file-level
+   `# CATALOG_QUOTA_EXCEEDED_OK:<rationale>` waiver in the first 200 lines of
+   CLAUDE.md (placeholder rationales `<rationale>` / `<reason>` rejected).
+3. **The new gate REPLACES an existing strict gate.** Delete the old entry +
+   its orchestrator callsite in the same commit batch.
+
+New gates that would push count past #400 trigger an explicit "stop and
+consolidate" pause: review the existing 295+ gates for retirement candidates
+BEFORE adding the new one. The pause is operator-facing — the agent surfaces
+the candidate retirements, the operator decides.
+
+### Concrete enforcement
+
+- STRICT preflight Catalog #299 (`check_catalog_quota_under_400`) — refuses
+  CLAUDE.md catalog table entries above the #400 quota without the file-level
+  waiver. Initial wire-in is WARN-ONLY because the current registered catalog
+  max is ~299 so the quota is not yet binding. Strict-flip planned when
+  catalog # actually approaches 400 (so the operator gets the explicit "stop
+  and consolidate" pause at the right moment).
+- Sister of Catalog #118 (no duplicate numbers) + Catalog #159 (catalog text
+  matches strict value) + Catalog #176 (strict callsites have CLAUDE.md row)
+  + Catalog #185 (LIVE_COUNT drift detection) + Catalog #186 (catalog claim
+  committed via serializer). Together they extinct the catalog # drift /
+  phantom-row / exhaustion failure modes at FIVE surfaces: number uniqueness
+  (#118) + text-strict parity (#159) + callsite-has-row (#176) + live-count
+  drift (#185) + claim-transactional (#186) + quota brake (#299).
+
+### Cross-references
+
+Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against":
+EVERY new STRICT gate's introduction MUST evaluate whether it could be
+written as a META-meta gate that subsumes >=3 sister cases (one gate kills
+three bug classes) BEFORE landing. Pure-additive gate landings are the slow
+death per premortem Section 5 anti-pattern #10.
+
+## Memory file rotation discipline — NON-NEGOTIABLE
+
+**Source:** 12-month premortem (`.omx/research/12_month_frustration_premortem_
+and_recommendations_20260516.md` Category D + Section 3 #6) +
+PREMORTEM-CONSOLIDATION-WAVE landing 2026-05-16. Per the premortem: memory
+directory exceeds 3,000 files by 2027-05-16; MEMORY.md grows past 1,000
+indexed lines; only top ~50 are loaded at session start; cross-reference graph
+rots silently; new subagents repeatedly rediscover lessons the system already
+learned.
+
+### The rule
+
+Operator + agent memory hygiene cadence:
+
+1. **MEMORY.md index lines exceed 200 chars** after summarization → triage to
+   category-summary file via `tools/cluster_summarize_memory_category.py
+   --category <prefix> --write-skeleton`. The skeleton is filled in (operator
+   or LLM-using subagent writes 2-3 paragraph cluster summary), then the
+   constituent MEMORY.md index entries are replaced by a single pointer to
+   the cluster memo. Detail stays in originals; the cluster is the new
+   top-of-mind summary.
+2. **Memory files older than 60 days superseded by a newer memo** → mark
+   `superseded_by: <newer_name>` in YAML frontmatter (or the first 30 body
+   lines). The `tools/audit_memory_file_freshness.py` tool surfaces
+   candidates monthly.
+3. **Broken cross-references** (memo X cites memo Y by name; Y renamed and
+   no longer on disk) → rename Y back OR update X to point at the canonical
+   successor. The audit tool's "broken_references" verdict surfaces these.
+
+### Concrete enforcement (operational, NO STRICT gate)
+
+- Canonical audit: `.venv/bin/python tools/audit_memory_file_freshness.py`
+  produces the 3-class report (stale-by-age + index-line-overflow +
+  broken-references).
+- Canonical cluster helper: `.venv/bin/python tools/cluster_summarize_memory_
+  category.py --category feedback_grand_council_ --write-skeleton` writes
+  `.omx/research/MEMORY_CLUSTER_<category>_<YYYYQQ>.md` skeleton.
+- No STRICT preflight gate at landing — operational hygiene only. The
+  operator runs the audit monthly; the agent surfaces candidates in
+  session-start summaries.
+- Per premortem Section 5 anti-pattern #5: do NOT add new memory file
+  category prefixes (`council_audit_*`, `decision_log_*`, etc.) — extend the
+  audit + cluster tools first to handle new prefixes structurally.
+
 ## Preflight failure messages must cite the rule chain — NON-NEGOTIABLE
 
 **Source:** Catalog #273-#278 META principle (2026-05-15) — see
@@ -2388,6 +2581,10 @@ Catalog #291 OSS-hermetic implementation note (2026-05-15 follow-up): the runtim
 280. `check_dispatch_protocol_unresolved_recipe_blocks_unless_paired_waiver` — Codex review bklem3v5j HIGH F2 self-protection 2026-05-15. Refuses any state of `tools/canonical_dispatch_optimization_protocol.py` where the unresolved-recipe branch of `_verify_tier2` / `_verify_tier3` sets per-signal True (vacuous PASS) without paired-env discipline (`--allow-no-recipe-advisory-mode` AND `--no-recipe-rationale <text>` per Catalog #199 sister). Bug class anchor: codex review bklem3v5j HIGH F2 caught that when `recipe_path is None` the prior implementation marked every Tier 2 recipe-field check `True` (vacuous PASS) which made strict callers silently approve dispatch with NO recipe-side coverage; Tier 3 recipe-vs-trainer-state divergence (the Z3 v2 / Z4 / Z5 bug class anchor; Catalog #240) had the same pattern. A strict CLI / preflight invocation with no recipe could therefore return `overall_pass=True` while skipping `min_vram_gb` / `target_modes` / `video_input_strategy` / `canary_status` / hardware-routing / research-only checks. Companion runtime fix (a) added paired-env kwargs `allow_no_recipe_advisory_mode: bool = False` + `no_recipe_rationale: str | None = None` to `_verify_tier2` / `_verify_tier3` / `verify_dispatch_protocol_complete`; (b) changed the unresolved-recipe branches to BLOCK every Tier 2/3 signal (default fail-closed); (c) added CLI flags `--allow-no-recipe-advisory-mode` + `--no-recipe-rationale <text>` with paired-env validator that raises `SystemExit(11)` on bare opt-in without rationale; (d) per codex's explicit recommendation, even when paired advisory-mode is opted into, `--strict` STILL exits nonzero (the umbrella retains an explicit advisory-mode blocker so advisory != pass). Empirical receipts: `--strict` on a recipe-less invocation → rc=1 (was rc=0 before fix); bare `--allow-no-recipe-advisory-mode` (no rationale) → rc=11; paired `--allow-no-recipe-advisory-mode --no-recipe-rationale <text>` + `--strict` → rc=1 (advisory != pass). File-level `# DISPATCH_PROTOCOL_UNRESOLVED_RECIPE_VACUOUS_OK:<rationale>` waiver in the file's first 80 lines accepts the rare deliberate case (placeholder `<rationale>` / `<reason>` literal rejected). STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" + "Strict-flip atomicity rule" non-negotiables — live count at landing: 0 (the F2 fix lands in the same commit batch). 14 dedicated tests in `src/tac/tests/test_check_280_dispatch_protocol_unresolved_recipe_blocks.py` covering live-repo regression guard, positive (vacuous-True F2 regression flagged / missing paired-env kwargs flagged / missing blocker-message tokens flagged), negative (canonical fix accepted), waiver semantics (rationale accepted / placeholder rejected), strict-mode raises with Catalog #280, edge cases (missing target file silent), orchestrator strict=True wire-in regression guard, AND 3 CLI subprocess regression tests per codex's explicit recommendations: (i) `--strict` recipe-less exits nonzero, (ii) bare advisory opt-in without rationale rejected rc=11, (iii) paired advisory opt-in + `--strict` STILL nonzero (advisory != pass). Sister of Catalog #199 (`check_operator_authorize_bypass_requires_session_budget` — the canonical paired-env discipline gate this gate's recommendation derives from) + Catalog #270 (the umbrella protocol gate this gate self-protects).
 
 296. `check_substrate_predicted_band_has_dykstra_feasibility_check` — META-CARGO-CULT META-CC-1 self-protection 2026-05-16 (per `.omx/research/meta_assumption_backfill_audit_all_staircase_substrates_20260516.md` + `.omx/research/grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md` + commit `4292c8ce2` (symposium) + commit `b0a7ff474` (META-assumption audit)). Refuses substrate design memos at `.omx/research/*_design_<YYYYMMDD>.md` containing the literal section header `## Predicted ΔS band` (case-insensitive; also matches `## Predicted delta S band` / `## Predicted score band` / `## Predicted band`) UNLESS the memo body has ONE of: (a) Dykstra-feasibility token (`dykstra` / `convex feasibility` / `alternating projection` / `intersection of constraints`); (b) first-principles citation token (`Shannon` / `R(D)` / `MDL` / `Tishby` / `Daubechies` / `Mallat` / `Wyner` / `Atick-Redlich` / `Rao-Ballard`); (c) sister probe-disambiguator path matching the regex `tools/probe_*_disambiguator.py`; (d) same-line waiver `# PREDICTED_BAND_VIBES_OK:<rationale>` on the section-header line (placeholder `<rationale>` / `<reason>` literals + bare-no-rationale + HTML-comment-marker-only rationales all rejected). Bug class anchor: NSCS06 v6 dispatch landed 105.15 vs predicted [0.10, 0.20] (553x OUTSIDE band) because 5-move composition was assumed additive under contest polytope constraints WITHOUT a Dykstra-feasibility intersection check. D1 1.18x OUTSIDE band. C6 MDL-IBPS + Time-Traveler L5 carry similar cargo-cult-prediction risk. Per CLAUDE.md "Meta-Lagrangian/Pareto solver - NON-NEGOTIABLE": *"Prefer solvable math over arbitrary sweeps. New knobs must be grounded in entropy/MDL, Fisher/Hessian/Jacobian or Frechet sensitivity, Dykstra/ADMM feasibility, Bayesian experimental design, optimal transport/camera geometry..."* Per CLAUDE.md "Council conduct": Dykstra co-leads the inner quintet pact specifically because alternating-projections feasibility IS the arbiter of whether a multi-constraint composition is achievable rather than just predicted. Sister of Catalog #290 (canonical-vs-unique decision per layer) + Catalog #229 (premise verification before edit) + Catalog #292 (per-deliberation assumption surfacing) + Catalog #294 (9-dimension success checklist evidence). Together they close the "design memo discipline" surface across multiple orthogonal axes: per-layer canonical decisions (#290) + premise verification (#229) + per-round assumption surfacing (#292) + 9-dim checklist (#294) + Dykstra-feasibility for predicted bands (#296). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 0 (22 design memos scanned clean; all existing predicted-band sections cite Shannon / MDL / Dykstra / Daubechies / Mallat / Tishby / Wyner / Atick-Redlich / Rao-Ballard or a sister probe-disambiguator path). Strict-flip planned as sister substrate authors continue landing new design memos and the count converges to a stable 0 baseline. 28 dedicated tests in `src/tac/tests/test_check_296_predicted_band_dykstra.py` covering live-repo regression guard (≤5 ceiling), out-of-scope (no research dir / empty dir / memo without trigger / non-design-suffix), positive (predicted-band-without-dykstra / delta-S-variant / score-band-variant), negative (dykstra token accepts / convex-feasibility accepts / Shannon citation accepts / MDL citation accepts / probe-disambiguator path accepts), waiver semantics (rationale accepted / `<rationale>` + `<reason>` placeholders rejected / bare-no-rationale rejected), strict-mode (raises with Catalog #296 message / silent on clean), aggregation (multi-violation), string repo_root accepted, verbose output (clean + dirty), invalid date suffix skipped, unicode decode error tolerated. Memory: `feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md`. Lane: `lane_catalog_296_297_metacargocult_strict_gates_20260516`.
+
+298. `check_substrate_lane_l1_scaffold_not_stale_dispatch` — PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md "Substrate retirement discipline" non-negotiable + the 12-month premortem (`.omx/research/12_month_frustration_premortem_and_recommendations_20260516.md` Category E + Section 3 #1). Refuses any in-scope L1 substrate lane in `.omx/state/lane_registry.json` (id-substring matched against the canonical `_CHECK_298_IN_SCOPE_ID_SUBSTRINGS` set mirroring Catalog #220 / #272) with `impl_complete=true` that has no `tools/lane_maturity.py mark` activity within the 30-day staleness window (via `.omx/state/lane_maturity_audit.log` scan) AND no opt-out. Opt-out cascade per CLAUDE.md "Substrate retirement discipline" non-negotiable: (a) `research_only=true` top-level field OR notes-token `research_only=true` / `research-only=true`; (b) `lane_class=substrate_engineering` / `lane_class=research_substrate` top-level field OR notes-token; (c) `archived=true` top-level field OR notes-token `lane_state=archived` / `terminal_verdict`; (d) `target_modes` list containing `research_substrate` / `research_only`; (e) same-line waiver `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` in lane notes / evidence (placeholder `<rationale>` / `<reason>` literals rejected). Bug class: premortem Category E. At current cadence we project 200+ stale L1 SCAFFOLD substrate lanes by 2027-05-16; the cathedral autopilot ranker over-fits on the 200+ scale; every dispatch wave that DOES fire spends $20-100 chasing one substrate, leaving the other 199 untouched. Companion canonical operator-facing audit tool `tools/audit_stale_l1_substrates.py` produces the monthly retirement candidate list with per-lane verdict (ACTIVE_RECENT_DISPATCH / ACTIVE_RECENT_MARK / STALE_PENDING_DECISION / OPT_OUT_RESEARCH_ONLY / OPT_OUT_SUBSTRATE_ENGINEERING / OPT_OUT_ARCHIVED). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" because the operator-routed backfill sweep of existing stale L1 lanes is itself the strict-flip atomic. Live count at landing: 0 (75 in-scope substrate lanes scanned; 31 ACTIVE_RECENT_MARK + 28 OPT_OUT_RESEARCH_ONLY + 16 OPT_OUT_SUBSTRATE_ENGINEERING; all currently within 30-day mark window per WAVE-9 substrate canvas activity). Strict-flip planned once cadence shifts produce real stale candidates AND the operator-routed retirement sweep clears them. Sister of Catalog #220 (substrate L1+ scaffold operational mechanism declaration) + Catalog #272 (distinguishing-feature integration contract) + Catalog #233 (L1->L2 promotion canonical 4-gate) + Catalog #90 (lane registry consistency). Together they extinct the "L1 SCAFFOLD substrate accumulates indefinitely without dispatch resolution" failure mode that drives premortem Category E. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this gate enforces RETIREMENT (research_only / archived / waiver) not KILL — the default verdict for stale L1 is DEFERRED-pending-decision, never killed. Memory: `feedback_premortem_consolidation_wave_5_items_landed_20260516.md`. Lane: `lane_premortem_consolidation_wave_5_items_20260516`.
+
+299. `check_catalog_quota_under_400` — PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md "Gate consolidation discipline" non-negotiable + the 12-month premortem (`.omx/research/12_month_frustration_premortem_and_recommendations_20260516.md` Category A + Section 3 #5 + Section 5 anti-pattern #1). Refuses CLAUDE.md catalog table entries (any `^N. \`check_*\`` line) where N > `_CHECK_299_CATALOG_QUOTA` (= 400) unless the CLAUDE.md file first 200 lines carry a file-level `# CATALOG_QUOTA_EXCEEDED_OK:<rationale>` waiver (placeholder `<rationale>` / `<reason>` literals rejected). Bug class: premortem Category A. At current cadence (~5-10 new gates/week) the catalog # crosses 500 by Q4 2026 and 700+ by 2027-05-16. `preflight.py` swells past 100K LOC. Strict-mode `preflight_all()` execution time grows past 60 seconds even in `--scope dev` mode. The operator-authorize harness's 30-second budget breaks; dispatchers either start skipping preflight or get used to multi-minute pre-flights. New gates get added but reviewed only by their author. META-meta gates (#118, #159, #176, #185, #186, #289) themselves drift because nobody audits the META-meta surface. The Catalog #273-#278 phantom-row incident (2026-05-15) becomes the rule, not the exception. The quota brake at #400 forces an explicit "stop and consolidate" pause: review the existing 295+ gates for retirement candidates BEFORE adding the new one. New gates past the quota MUST satisfy ONE of: (a) retire an existing strict gate (mark DEPRECATED + remove orchestrator callsite after 30 days), (b) carry the file-level waiver, OR (c) REPLACE an existing strict gate (delete old entry + orchestrator callsite in the same commit batch). Initial wire-in is WARN-ONLY because the current registered catalog max is ~299 so the quota is not yet binding. Strict-flip planned when catalog # approaches 400 (so the operator gets the explicit "stop and consolidate" pause at the right moment). Live count at landing: 0 (max registered catalog # = 299, well under quota of 400). Sister of Catalog #118 (no duplicate numbers) + Catalog #159 (catalog text matches strict value) + Catalog #176 (strict callsites have CLAUDE.md row) + Catalog #185 (LIVE_COUNT drift detection) + Catalog #186 (catalog claim committed via serializer). Together they extinct the catalog # drift / phantom-row / exhaustion failure modes at SIX surfaces: number uniqueness (#118) + text-strict parity (#159) + callsite-has-row (#176) + live-count drift (#185) + claim-transactional (#186) + quota brake (#299). Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable: EVERY new STRICT gate's introduction MUST evaluate whether it could be written as a META-meta gate that subsumes >=3 sister cases (one gate kills three bug classes) BEFORE landing. Pure-additive gate landings are the slow death per premortem Section 5 anti-pattern #10. Memory: `feedback_premortem_consolidation_wave_5_items_landed_20260516.md`. Lane: `lane_premortem_consolidation_wave_5_items_20260516`.
 
 297. `check_substrate_signal_axis_destruction_has_reversibility_probe` — META-CARGO-CULT META-CC-2 self-protection 2026-05-16 (per `.omx/research/meta_assumption_backfill_audit_all_staircase_substrates_20260516.md` + `.omx/research/grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md` + commit `4292c8ce2` (symposium) + commit `b0a7ff474` (META-assumption audit)). Refuses substrate trainers + codec modules under `src/tac/substrates/*/` and `experiments/train_substrate_*.py` files containing forbidden signal-axis-destruction tokens: (1) `Y=R=G=B` / `R=G=B=Y` chained-assignment (NSCS06 grayscale-to-RGB replication anchor); (2) `grayscale_to_rgb(...duplicate...)` call with duplicate semantics; (3) `frame.mean(...color...)` chroma-collapsing axis-mean; (4) `rgb_grey = (r+g+b)/3` manual chroma-to-luma reduction; (5) `single_channel_only` variable / kwarg / comment marker; (6) `_grayscale_to_rgb` helper function name; (7) `_drop_chroma` helper function name. Per-line acceptance cascade: (a) sister probe file exists at `tools/probe_<substrate_id>_reversibility*.py` (canonical pattern, sister derived from `src/tac/substrates/<id>/` parent dir OR `experiments/train_substrate_<id>.py` filename token); (b) same-line waiver `# SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:<rationale>` on the destruction-token line (placeholder `<rationale>` / `<reason>` literals rejected); (c) enclosing function name contains the substring `_compress_time_only` signaling explicitly that destruction lives only at compress time and the downstream loss does NOT route through SegNet/PoseNet on the destroyed signal. Pure comment lines (starting with `#` after leading whitespace) are NOT flagged so docstring/comment mentions are tolerated. Test files (`/tests/` subdir, `test_*.py` filenames) + vendored intake clones + generated build/oss-export artifacts excluded. Bug class anchors: NSCS06 Y=R=G=B chroma replication (seg=64.59 because SegNet's stride-2 stem cannot recover destroyed chroma); NSCS06 np.roll global translation (pose=149.03 empirical proof that PoseNet is NOT translation-invariant); Z3-G1 empty `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""` slots (silent reproduction of Z3 v2 baseline 0.19869 to 5 decimals — empty slots never affect the score). Per CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level deconstruction and entropy discipline" + Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #139 (no-op detector packet compiler) + Catalog #105 (no-op provenance): every transform that mutates archive bytes MUST be paired with a proof that the mutation actually affects the score, not just an assumption. Sister of Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #272 (distinguishing-feature integration contract) + Catalog #139 (packet compiler no-op detector) + Catalog #105 (no-op provenance). Together they close the "compress-destroys-signal-without-inflate-reconstruction" surface across multiple orthogonal axes: L1+ scaffold byte-addition (#220) + distinguishing-feature contract (#272) + packet compiler no-op detector (#139) + no-op provenance (#105) + signal-axis destruction reversibility probe (#297). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 2 (`src/tac/substrates/nscs06_carmack_hotz_strip_everything/inflate.py:42` + `:111` — the `_grayscale_to_rgb` helper def + invocation; NSCS06 lane is already `research_only=true` per the v6 falsification per commit `a16eb06fd`). Strict-flip planned after either (a) operator-routed NSCS06 redesign lands a sister `tools/probe_nscs06_carmack_hotz_strip_everything_reversibility.py` proving the chroma reconstruction is empirically reversible per the contest scorer's actual gradient response, OR (b) the NSCS06 `_grayscale_to_rgb` helper definition is rewritten into a `_compress_time_only`-named function, OR (c) operator-approved same-line waivers documenting the deferred reversibility status. 24 dedicated tests in `src/tac/tests/test_check_297_signal_axis_reversibility.py` covering live-repo regression guard (≤5 ceiling), out-of-scope (no substrates dir / empty / file without tokens), positive (every destruction pattern flagged: grayscale_to_rgb helper / Y=R=G=B chained / _drop_chroma / single_channel_only / rgb_grey literal / grayscale_to_rgb call with duplicate / train_substrate_*.py file in experiments), negative (sister probe file accepts / probe with suffix accepts / same-line waiver / `_compress_time_only` function short-circuits), waiver semantics (`<rationale>` + `<reason>` placeholders rejected), comment-line tolerance (pure comment with pattern NOT flagged), strict-mode (raises with Catalog #297 message / silent on clean), aggregation (multi-violation one file / multi-violation across files), test files excluded, string repo_root accepted, syntax-error file tolerated, verbose output (clean + dirty). Memory: `feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md`. Lane: `lane_catalog_296_297_metacargocult_strict_gates_20260516`.
 

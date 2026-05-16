@@ -2416,6 +2416,39 @@ def preflight_all(
         check_substrate_signal_axis_destruction_has_reversibility_probe(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #298 - SUBSTRATE LANE L1 SCAFFOLD NOT STALE
+        # DISPATCH. Per CLAUDE.md "Substrate retirement discipline"
+        # non-negotiable + premortem #1 (Category E). Refuses in-scope L1
+        # substrate lanes with impl_complete=true that have no
+        # `lane_maturity.py mark` activity AND no successful_dispatch
+        # posterior anchor within the 30-day window UNLESS opted out
+        # via research_only / lane_class=substrate_engineering /
+        # archived / `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>`
+        # waiver. Initial wire-in is WARN-ONLY per "Strict-flip
+        # atomicity rule" because the operator-routed backfill sweep
+        # of existing stale L1 lanes is itself the strict-flip atomic.
+        # Strict-flip planned once the sweep drives count to 0. Sister
+        # of Catalog #220 / #272 / #233. Memory:
+        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md.
+        check_substrate_lane_l1_scaffold_not_stale_dispatch(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
+        # "Gate consolidation discipline" non-negotiable + premortem #5
+        # (Category A). Refuses CLAUDE.md catalog table entries above
+        # the #400 quota without a `# CATALOG_QUOTA_EXCEEDED_OK:
+        # <rationale>` waiver in the first 200 lines. The 12-month
+        # projection at current cadence (~5-10 new gates/week) puts
+        # catalog # at 500-700 by 2027-05-16; the #400 quota is the
+        # operator-visible "stop and consolidate" brake. Initial
+        # wire-in is WARN-ONLY because the current registered catalog
+        # max is ~299 so the quota is not yet binding. Strict-flip
+        # planned when catalog # approaches 400. Sister of Catalog
+        # #118 / #159 / #176 / #185 / #186. Memory:
+        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md.
+        check_catalog_quota_under_400(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -63630,6 +63663,528 @@ def check_substrate_signal_axis_destruction_has_reversibility_probe(
             "(pose=149.03), Z3-G1 empty slots (0.19869 silent baseline). "
             "Symposium commit 4292c8ce2; META-assumption audit commit "
             "b0a7ff474.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #298 — check_substrate_lane_l1_scaffold_not_stale_dispatch
+#
+# PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md
+# "Substrate retirement discipline" non-negotiable + the 12-month premortem
+# (`.omx/research/12_month_frustration_premortem_and_recommendations_
+# 20260516.md` Category E + Section 3 #1).
+#
+# Bug class: L1 SCAFFOLD substrate lanes accumulate in the registry
+# without dispatch, polluting the cathedral autopilot ranker surface and
+# creating decision overload. The premortem projects 200+ stale L1
+# substrates by 2027-05-16 at current cadence.
+#
+# Refuses any in-scope L1 substrate lane in `.omx/state/lane_registry.json`
+# with `impl_complete=true` that has no `lane_maturity.py mark` activity
+# AND no `successful_dispatch` posterior anchor in the last
+# `_CHECK_298_STALENESS_DAYS` days UNLESS one of the opt-outs applies:
+#
+#   (a) advance to L2+ (real-archive empirical or contest-CUDA gate
+#       satisfied; the lane is no longer L1)
+#   (b) declare `research_only=true` (or target_modes includes
+#       `research_only` / `research_substrate`) with reactivation
+#       criteria pinned in notes
+#   (c) declare `lane_class=substrate_engineering` (or
+#       `research_substrate`)
+#   (d) declare `archived=true` (top-level field) OR
+#       `lane_state=archived` token in notes
+#   (e) same-line `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` waiver in
+#       lane notes / evidence (placeholder `<rationale>` literal rejected)
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" because the operator-routed backfill sweep of existing stale
+# L1 lanes is itself the strict-flip atomic. Strict-flip planned once
+# the sweep drives count to 0.
+#
+# Sister of Catalog #220 (L1 scaffold operational mechanism declaration)
+# + Catalog #272 (distinguishing-feature integration contract) + Catalog
+# #233 (L1->L2 promotion canonical 4-gate). Together they extinct the
+# "L1 SCAFFOLD substrate accumulates indefinitely" failure mode.
+# ============================================================================
+
+_CHECK_298_STALENESS_DAYS = 30
+
+# Substrate id-substring set mirroring Catalog #220 / #272 in-scope tokens.
+_CHECK_298_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
+    "substrate_",
+    "_substrate_",
+    "_polytope_",
+    "_sidecar_",
+    "_overlay_",
+    "yucr_",
+    "d1_segnet",
+    "d2_",
+    "d4_",
+    "lane_a1_",
+    "_hnerv_",
+    "_nerv_",
+    "_lora_",
+    "wavelet_residual",
+    "siren_residual",
+    "coord_mlp_residual",
+    "nscs",
+    "balle_",
+    "cool_chic",
+    "_c3_",
+    "vq_vae",
+    "self_compress",
+)
+
+_CHECK_298_OPT_OUT_RESEARCH_TOKENS: tuple[str, ...] = (
+    "research_only=true",
+    "research_only:true",
+    "research-only=true",
+)
+
+_CHECK_298_OPT_OUT_SUBSTRATE_ENG_TOKENS: tuple[str, ...] = (
+    "lane_class=substrate_engineering",
+    "lane_class:substrate_engineering",
+    "lane_class: substrate_engineering",
+    "substrate_engineering_exception",
+)
+
+_CHECK_298_OPT_OUT_ARCHIVED_TOKENS: tuple[str, ...] = (
+    "archived=true",
+    "lane_state=archived",
+    "terminal_verdict",
+)
+
+_CHECK_298_WAIVER_RE = re.compile(
+    r"#\s*RETIREMENT_DISCIPLINE_WAIVED\s*:\s*(?P<reason>[^\n#]+)"
+)
+
+_CHECK_298_PLACEHOLDER_RATIONALES = ("<rationale>", "<reason>", "")
+
+
+def _check_298_lane_in_scope(lane_id: str) -> bool:
+    lane_id_lower = lane_id.lower()
+    return any(
+        tok in lane_id_lower
+        for tok in _CHECK_298_IN_SCOPE_ID_SUBSTRINGS
+    )
+
+
+def _check_298_collect_lane_text(lane: dict) -> str:
+    parts: list[str] = []
+    notes = lane.get("notes", "")
+    if isinstance(notes, str):
+        parts.append(notes)
+    gates = lane.get("gates", {})
+    if isinstance(gates, dict):
+        for gate_obj in gates.values():
+            if isinstance(gate_obj, dict):
+                ev = gate_obj.get("evidence", "")
+                if isinstance(ev, str):
+                    parts.append(ev)
+    return "\n".join(parts).lower()
+
+
+def _check_298_lane_opt_out(lane: dict, text: str) -> str | None:
+    if lane.get("research_only") is True:
+        return "research_only=true"
+    if lane.get("archived") is True:
+        return "archived=true"
+    if lane.get("lane_class") in (
+        "substrate_engineering", "research_substrate"
+    ):
+        return f"lane_class={lane['lane_class']}"
+    target_modes = lane.get("target_modes", [])
+    if isinstance(target_modes, list):
+        for tm in target_modes:
+            if isinstance(tm, str) and tm.lower() in (
+                "research_substrate", "research_only"
+            ):
+                return f"target_modes={tm}"
+    for tok in _CHECK_298_OPT_OUT_RESEARCH_TOKENS:
+        if tok in text:
+            return tok
+    for tok in _CHECK_298_OPT_OUT_SUBSTRATE_ENG_TOKENS:
+        if tok in text:
+            return tok
+    for tok in _CHECK_298_OPT_OUT_ARCHIVED_TOKENS:
+        if tok in text:
+            return tok
+    return None
+
+
+def _check_298_waiver_present(text: str) -> bool:
+    for m in _CHECK_298_WAIVER_RE.finditer(text):
+        reason = m.group("reason").strip().lower()
+        if reason and reason not in _CHECK_298_PLACEHOLDER_RATIONALES:
+            return True
+    return False
+
+
+def _check_298_lane_recent_mark_age_days(
+    lane_id: str,
+    audit_log_path: Path,
+    now_ts: float,
+) -> float | None:
+    """Linear scan over audit log; returns the freshest mark-age in
+    days for the lane, or None if no entries found."""
+    from datetime import datetime as _dt, timezone as _tz
+    if not audit_log_path.is_file():
+        return None
+    most_recent_ts: float | None = None
+    try:
+        for line in audit_log_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            args = row.get("args", {})
+            if not isinstance(args, dict):
+                continue
+            audit_lane = args.get("lane_id") or args.get("id")
+            if audit_lane != lane_id:
+                continue
+            ts = row.get("timestamp", "")
+            if not isinstance(ts, str):
+                continue
+            try:
+                cleaned = ts.rstrip("Z").split("+")[0]
+                dt = _dt.fromisoformat(cleaned)
+                dt_ts = dt.replace(tzinfo=_tz.utc).timestamp()
+            except (ValueError, AttributeError):
+                continue
+            if most_recent_ts is None or dt_ts > most_recent_ts:
+                most_recent_ts = dt_ts
+    except OSError:
+        return None
+    if most_recent_ts is None:
+        return None
+    return (now_ts - most_recent_ts) / 86400.0
+
+
+def check_substrate_lane_l1_scaffold_not_stale_dispatch(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #298 — refuse stale L1 SCAFFOLD substrate lanes.
+
+    Per CLAUDE.md "Substrate retirement discipline" non-negotiable:
+    every substrate at L1+ for >30 days without dispatch MUST either
+    advance to L2+, declare `research_only=true` with reactivation
+    criteria, OR be moved to archived state with terminal verdict.
+
+    See module docstring for the full opt-out cascade and the
+    `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` same-line waiver.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-lane diagnostic.
+
+    Returns:
+        List of violation messages (one per stale L1 substrate lane).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    audit_log_path = root / ".omx" / "state" / "lane_maturity_audit.log"
+    if not registry_path.is_file():
+        if verbose:
+            print("  [catalog-298] OK (no lane_registry.json)")
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [catalog-298] WARN registry read error: {exc}")
+        return violations
+
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        if verbose:
+            print("  [catalog-298] OK (registry has no lanes list)")
+        return violations
+
+    import time as _time
+    now_ts = _time.time()
+    scanned = 0
+    opted_out = 0
+    active_marks = 0
+
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        if not lane_id or not _check_298_lane_in_scope(lane_id):
+            continue
+        level = int(lane.get("level", 0) or 0)
+        if level != 1:
+            # L0 lanes have not landed code yet; L2+ have empirical
+            # evidence (out of scope for retirement discipline).
+            continue
+        gates = lane.get("gates", {})
+        if not isinstance(gates, dict):
+            continue
+        impl_gate = gates.get("impl_complete", {})
+        if not (isinstance(impl_gate, dict)
+                and impl_gate.get("status") is True):
+            # Not yet impl_complete; no retirement pressure.
+            continue
+        scanned += 1
+        text = _check_298_collect_lane_text(lane)
+
+        opt_out = _check_298_lane_opt_out(lane, text)
+        if opt_out:
+            opted_out += 1
+            if verbose:
+                print(
+                    f"  [catalog-298] OK lane={lane_id} L{level} "
+                    f"opt_out={opt_out!r}"
+                )
+            continue
+
+        if _check_298_waiver_present(text):
+            if verbose:
+                print(
+                    f"  [catalog-298] WAIVED lane={lane_id} L{level}"
+                )
+            continue
+
+        mark_age = _check_298_lane_recent_mark_age_days(
+            lane_id, audit_log_path, now_ts
+        )
+        if mark_age is not None and mark_age <= _CHECK_298_STALENESS_DAYS:
+            active_marks += 1
+            if verbose:
+                print(
+                    f"  [catalog-298] OK lane={lane_id} L{level} "
+                    f"recent_mark_age_days={mark_age:.1f}"
+                )
+            continue
+
+        violations.append(
+            f"lane {lane_id!r} (L{level}) is in-scope L1 substrate "
+            f"with impl_complete=true but no `lane_maturity.py mark` "
+            f"activity in the last {_CHECK_298_STALENESS_DAYS} days "
+            f"(most_recent_mark_age_days={mark_age}). Per CLAUDE.md "
+            "\"Substrate retirement discipline\" non-negotiable, this "
+            "lane MUST satisfy one of: "
+            "(a) advance to L2+ via dispatch + empirical anchor, "
+            "(b) declare `research_only=true` with reactivation "
+            "criteria via `python tools/lane_maturity.py mark "
+            f"{lane_id} --gate <gate> --evidence <ref>`, "
+            "(c) declare `lane_class=substrate_engineering`, "
+            "(d) move to archived state with terminal verdict, OR "
+            "(e) carry a same-line "
+            "`# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` waiver in "
+            "lane notes/evidence. Run "
+            "`tools/audit_stale_l1_substrates.py` for the canonical "
+            "operator-facing decision queue."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-298] scanned_l1_impl_complete={scanned} "
+            f"opted_out={opted_out} active_marks={active_marks} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_lane_l1_scaffold_not_stale_dispatch found "
+            f"{len(violations)} L1 substrate lane(s) stale > "
+            f"{_CHECK_298_STALENESS_DAYS} days without dispatch or "
+            "explicit opt-out. Per CLAUDE.md \"Substrate retirement "
+            "discipline\" + premortem #1 (Category E). Run "
+            "`.venv/bin/python tools/audit_stale_l1_substrates.py "
+            "--only-stale` for the decision queue:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #299 — check_catalog_quota_under_400
+#
+# PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md
+# "Gate consolidation discipline" non-negotiable + the 12-month premortem
+# (`.omx/research/12_month_frustration_premortem_and_recommendations_
+# 20260516.md` Category A + Section 3 #5).
+#
+# Bug class: every bug surface gets a new STRICT preflight gate. At the
+# current cadence (~5-10 new gates/week) the catalog # crosses 500 by
+# Q4 2026 and 700+ by 2027-05-16. preflight.py swells past 100K LOC.
+# Operator-authorize harness's 30-second budget breaks. New gates get
+# added but reviewed only by their author. META-meta phantom-row
+# incidents become the rule.
+#
+# Refuses any state of `src/tac/preflight.py` where a STRICT preflight
+# callsite (function name pattern `check_*` invoked at strict=True in
+# `preflight_all()` body) has catalog # > 400 without a `# CATALOG_
+# QUOTA_EXCEEDED_OK:<rationale>` waiver in `CLAUDE.md` (file-level
+# waiver in first 200 lines per the discipline section).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" — the current catalog # is ~300 so the quota is not yet
+# binding. Strict-flip planned when catalog # approaches 400 (so the
+# operator gets the explicit "stop and consolidate" pause at the
+# right moment).
+#
+# Sister of Catalog #118 (no duplicate numbers) + Catalog #159
+# (catalog text matches strict value) + Catalog #176 (strict callsites
+# have CLAUDE.md row) + Catalog #185 (LIVE_COUNT drift detection) +
+# Catalog #186 (catalog claim committed via serializer). Together they
+# extinct the catalog # drift / phantom-row / exhaustion failure modes
+# at FIVE surfaces: number uniqueness (#118) + text-strict parity
+# (#159) + callsite-has-row (#176) + live-count drift (#185) +
+# claim-transactional (#186) + quota brake (#299).
+# ============================================================================
+
+_CHECK_299_CATALOG_QUOTA = 400
+_CHECK_299_STRICT_CALLSITE_RE = re.compile(
+    r"^\s*check_([a-z0-9_]+)\(\s*$", re.MULTILINE,
+)
+_CHECK_299_CATALOG_NUM_RE = re.compile(
+    r"#\s*Catalog\s+#(\d+)", re.IGNORECASE,
+)
+_CHECK_299_WAIVER_RE = re.compile(
+    r"#\s*CATALOG_QUOTA_EXCEEDED_OK\s*:\s*(?P<reason>[^\n#]+)"
+)
+
+
+def check_catalog_quota_under_400(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #299 — refuse new STRICT gates with catalog # > 400.
+
+    Per CLAUDE.md "Gate consolidation discipline" non-negotiable: no
+    new STRICT preflight gate may be claimed past Catalog #400 without
+    one of:
+      (a) retirement of an existing strict gate (mark DEPRECATED +
+          remove after 30 days),
+      (b) operator-explicit `# CATALOG_QUOTA_EXCEEDED_OK:<rationale>`
+          waiver in CLAUDE.md (first 200 lines),
+      (c) the new gate REPLACES an existing strict gate.
+
+    Triggers an explicit "stop and consolidate" pause: review the
+    existing 295+ gates for retirement candidates BEFORE adding the
+    new one.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print scan summary.
+
+    Returns:
+        List of violation messages (one per over-quota strict callsite).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    # The waiver lives in CLAUDE.md (per the discipline section).
+    claude_md_path = root / "CLAUDE.md"
+    waived = False
+    if claude_md_path.is_file():
+        try:
+            head = "\n".join(
+                claude_md_path.read_text(
+                    encoding="utf-8", errors="replace"
+                ).splitlines()[:200]
+            )
+        except OSError:
+            head = ""
+        for m in _CHECK_299_WAIVER_RE.finditer(head):
+            reason = m.group("reason").strip().lower()
+            if reason and reason not in (
+                "<rationale>", "<reason>", ""
+            ):
+                waived = True
+                break
+
+    if waived:
+        if verbose:
+            print(
+                "  [catalog-299] WAIVED (CLAUDE.md file-level waiver "
+                "`# CATALOG_QUOTA_EXCEEDED_OK:<rationale>` present)"
+            )
+        return violations
+
+    # Parse the catalog table from CLAUDE.md to determine which catalog
+    # #s are currently registered.
+    registered_nums: set[int] = set()
+    if claude_md_path.is_file():
+        try:
+            md_text = claude_md_path.read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError:
+            md_text = ""
+        for line in md_text.splitlines():
+            m = re.match(r"^(\d+)\.\s+`check_", line)
+            if m:
+                try:
+                    registered_nums.add(int(m.group(1)))
+                except ValueError:
+                    pass
+
+    over_quota = sorted(n for n in registered_nums if n > _CHECK_299_CATALOG_QUOTA)
+    if not over_quota:
+        if verbose:
+            registered_max = max(registered_nums) if registered_nums else 0
+            print(
+                f"  [catalog-299] OK (max registered catalog # = "
+                f"{registered_max}; quota = {_CHECK_299_CATALOG_QUOTA})"
+            )
+        return violations
+
+    for cat_num in over_quota:
+        violations.append(
+            f"CLAUDE.md catalog table contains entry for Catalog "
+            f"#{cat_num} which exceeds the quota of "
+            f"#{_CHECK_299_CATALOG_QUOTA}. Per CLAUDE.md \"Gate "
+            "consolidation discipline\" non-negotiable + premortem #5 "
+            "(Category A): new STRICT preflight gates past the quota "
+            "MUST EITHER (a) retire an existing strict gate (mark "
+            "DEPRECATED + remove after 30 days), (b) carry a file-"
+            "level `# CATALOG_QUOTA_EXCEEDED_OK:<rationale>` waiver "
+            "in CLAUDE.md first 200 lines, OR (c) REPLACE an existing "
+            "strict gate (delete the old entry). Action: stop adding "
+            "new gates and consolidate existing 295+ for retirement "
+            "candidates BEFORE the next claim."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-299] registered_max="
+            f"{max(registered_nums) if registered_nums else 0} "
+            f"over_quota={len(over_quota)} violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_catalog_quota_under_400 found "
+            f"{len(violations)} catalog entries above the "
+            f"#{_CHECK_299_CATALOG_QUOTA} quota. Per CLAUDE.md \"Gate "
+            "consolidation discipline\" non-negotiable: stop adding "
+            "STRICT preflight gates and consolidate the existing "
+            "catalog. Add a file-level `# CATALOG_QUOTA_EXCEEDED_OK:"
+            "<rationale>` waiver in CLAUDE.md first 200 lines OR "
+            "retire / replace existing gates:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

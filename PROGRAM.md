@@ -1,5 +1,19 @@
 # program
 
+**Reading order (refreshed 2026-05-16):** new readers (operators or
+collaborators) should read `HANDOFF.md` first (30-minute orientation),
+then `SYSTEM_MAP.md` (structural diagram), then this file (mission +
+architecture), then `CLAUDE.md` (agent-binding contracts).
+
+The "Architecture" / "Experiment profiles" sections below describe the
+2026-04 WILDE / SHIRAZ / GREEN cycle. The current substrate canvas
+(43+ substrate trainers) is documented in `SYSTEM_MAP.md` §1 and
+`.omx/state/lane_registry.json` (758+ lanes). The frontier today is
+A1 at `0.1928 [contest-CPU]`, NOT the renderer-only path described
+below. See `HANDOFF.md` §2 for current frontier state.
+
+---
+
 Mission: minimize the official challenge score on a pinned upstream snapshot using a task-aware neural renderer, trained end-to-end against the frozen scorers.
 
 ## Primary objectives
