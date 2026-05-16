@@ -341,7 +341,7 @@
   "score_claim": false,
   "source_records": [
     {
-      "accepted_for_observation": true,
+      "accepted_for_observation": false,
       "axis": "contest_cuda",
       "axis_evidence": {
         "archive_bytes": 34603,
@@ -365,8 +365,19 @@
       },
       "blockers": [],
       "candidate_id": "time_traveler_l5_autonomy",
+      "custody_blockers": [
+        "n_samples_missing",
+        "hardware_missing",
+        "inflate_device_missing",
+        "eval_device_missing",
+        "auth_eval_command_missing",
+        "log_path_missing",
+        "inflated_outputs_manifest_path_missing"
+      ],
+      "custody_valid_for_observation": false,
       "exists": true,
       "path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
+      "recognized_for_observation": true,
       "sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba"
     },
     {
@@ -394,8 +405,11 @@
       },
       "blockers": [],
       "candidate_id": "time_traveler_l5_autonomy",
+      "custody_blockers": [],
+      "custody_valid_for_observation": true,
       "exists": true,
       "path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+      "recognized_for_observation": true,
       "sha256": "6355dd30b9239abd6b50a84123381e605c3cd00cb3d2ceee423d1248a23527b5"
     },
     {
@@ -423,8 +437,11 @@
       },
       "blockers": [],
       "candidate_id": "time_traveler_l5_autonomy",
+      "custody_blockers": [],
+      "custody_valid_for_observation": true,
       "exists": true,
       "path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.json",
+      "recognized_for_observation": true,
       "sha256": "21bf9f3487b26bc56f59a75a0928252a71c877f01b9bd1d51dd2d9973fdeb342"
     },
     {
@@ -435,8 +452,11 @@
         "source_exact_axis_missing_or_unrecognized"
       ],
       "candidate_id": "c1_world_model_foveation",
+      "custody_blockers": [],
+      "custody_valid_for_observation": false,
       "exists": true,
       "path": "experiments/results/c1_probe_v2_realvideo_20260514T174815Z/probe_v2_realvideo.json",
+      "recognized_for_observation": false,
       "sha256": "6ca7efd6ff008c7237da581e0163a15c2bdb3c6d3754a72de5eb02ae0a4866f7"
     },
     {
@@ -447,8 +467,11 @@
         "source_exact_axis_missing_or_unrecognized"
       ],
       "candidate_id": "c1_world_model_foveation",
+      "custody_blockers": [],
+      "custody_valid_for_observation": false,
       "exists": true,
       "path": "experiments/results/c1_probe_v2_realvideo_20260514T174815Z/probe_v2_realvideo_higher_capacity.json",
+      "recognized_for_observation": false,
       "sha256": "f47ac4b7731cc880c6d2fe9bb8991f21254f1ac0668fb0b243eee475f682630b"
     },
     {
@@ -459,8 +482,11 @@
         "source_exact_axis_missing_or_unrecognized"
       ],
       "candidate_id": "c1_world_model_foveation",
+      "custody_blockers": [],
+      "custody_valid_for_observation": false,
       "exists": true,
       "path": "reports/raw/c1_wm_probe_20260514T161531Z.json",
+      "recognized_for_observation": false,
       "sha256": "3a47891425321ac52f02c3dd0a003caef7c3153d777f6b811fdf4a1513c9e6c2"
     },
     {
@@ -471,8 +497,11 @@
         "source_exact_axis_missing_or_unrecognized"
       ],
       "candidate_id": "c1_world_model_foveation",
+      "custody_blockers": [],
+      "custody_valid_for_observation": false,
       "exists": true,
       "path": "reports/raw/c1_fov_probe_20260514T161537Z.json",
+      "recognized_for_observation": false,
       "sha256": "80e7ab0ab42e2bffba7ff0b6f22b81f31c17690ddc9894806ac511c2064354a3"
     }
   ],

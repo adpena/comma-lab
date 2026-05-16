@@ -24,6 +24,7 @@ from tac.exact_eval_custody import (
     finite_float,
     normalize_sha256,
     positive_int,
+    validate_exact_eval_evidence,
 )
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
@@ -442,6 +443,29 @@ def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
     return sum(1 for field in fields if evidence.get(field) not in (None, ""))
 
 
+def _axis_custody_blockers(
+    evidence: Mapping[str, Any],
+    *,
+    axis: str,
+    repo_root: Path,
+) -> list[str]:
+    validation = validate_exact_eval_evidence(
+        evidence,
+        expected_axis=axis,
+        expected_archive_sha256=evidence.get("archive_sha256"),
+        expected_runtime_tree_sha256=evidence.get("runtime_tree_sha256"),
+        require_artifact_path=True,
+        require_hardware=True,
+        require_auth_eval_command=True,
+        require_log_path=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=repo_root,
+    )
+    return list(validation.blockers)
+
+
 def _source_blockers(
     *,
     candidate_id: str | None,
@@ -520,6 +544,12 @@ def build_l5_v2_probe_observation_intake(
             existing = grouped_axis_evidence[candidate_id].get(axis)
             if existing is None or _axis_evidence_quality(axis_evidence) > _axis_evidence_quality(existing):
                 grouped_axis_evidence[candidate_id][axis] = axis_evidence
+        custody_blockers = (
+            _axis_custody_blockers(axis_evidence, axis=axis, repo_root=root)
+            if axis_evidence is not None and axis is not None
+            else []
+        )
+        recognized_for_observation = not blockers
         source_record = {
             "path": _relative_path(resolved, root),
             "exists": True,
@@ -527,7 +557,14 @@ def build_l5_v2_probe_observation_intake(
             "candidate_id": candidate_id,
             "axis": axis,
             "axis_evidence": axis_evidence,
-            "accepted_for_observation": not blockers,
+            "recognized_for_observation": recognized_for_observation,
+            "custody_valid_for_observation": (
+                recognized_for_observation and not custody_blockers
+            ),
+            "accepted_for_observation": (
+                recognized_for_observation and not custody_blockers
+            ),
+            "custody_blockers": custody_blockers,
             "blockers": blockers,
         }
         source_records.append(source_record)
@@ -641,7 +678,10 @@ def render_l5_v2_probe_observation_intake_markdown(intake: Mapping[str, Any]) ->
         lines.append(
             f"- `{source.get('path')}`: exists=`{str(source.get('exists')).lower()}`, "
             f"candidate=`{source.get('candidate_id')}`, axis=`{source.get('axis')}`, "
-            f"accepted=`{str(source.get('accepted_for_observation')).lower()}`, blockers=`{blocker_text}`"
+            f"recognized=`{str(source.get('recognized_for_observation')).lower()}`, "
+            f"custody_valid=`{str(source.get('custody_valid_for_observation')).lower()}`, "
+            f"accepted=`{str(source.get('accepted_for_observation')).lower()}`, "
+            f"blockers=`{blocker_text}`"
         )
     lines.append("")
     return "\n".join(lines)

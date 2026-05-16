@@ -7,6 +7,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from tac.exact_eval_custody import contest_score
 from tac.optimization.l5_v2_probe_intake import (
     build_l5_v2_probe_observation_intake,
 )
@@ -30,7 +31,11 @@ def test_l5_v2_probe_intake_classifies_single_tt5l_cuda_as_incomplete(
             "exact_cuda_evidence": True,
             "archive_sha256": "a" * 64,
             "runtime_tree_sha256": "b" * 64,
-            "canonical_score": 3.9,
+            "canonical_score": contest_score(
+                seg_dist=0.025,
+                pose_dist=0.18,
+                archive_bytes=34603,
+            ),
             "segnet_distortion": 0.025,
             "posenet_distortion": 0.18,
             "empirical_archive_bytes": 34603,
@@ -134,13 +139,22 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
                 "gpu_model": "Tesla T4",
                 "inflate_device_policy": "auto",
                 "archive_sha256": "a" * 64,
+                "inflated_output_manifest": {
+                    "payload": {
+                        "aggregate_sha256": "c" * 64,
+                    },
+                },
                 "inflate_runtime_manifest": {
                     "runtime_tree_sha256": "b" * 64,
                 },
             },
             "score_axis": "contest_cuda",
             "exact_cuda_evidence": True,
-            "canonical_score": 3.9,
+            "canonical_score": contest_score(
+                seg_dist=0.025,
+                pose_dist=0.18,
+                archive_bytes=34603,
+            ),
             "avg_segnet_dist": 0.025,
             "avg_posenet_dist": 0.18,
             "archive_size_bytes": 34603,
@@ -150,6 +164,19 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
     )
     log_path = artifact.parent / "contest_auth_eval.stdout.log"
     log_path.write_text("contest auth eval completed\n", encoding="utf-8")
+    manifest_path = artifact.parent / "inflated_outputs_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "contest_auth_eval_inflated_output_manifest_v1",
+                "aggregate_sha256": "c" * 64,
+                "raw_file_count": 1,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
 
@@ -161,12 +188,45 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
     assert evidence["inflate_device"] == "auto"
     assert evidence["eval_device"] == "cuda"
     assert evidence["log_path"].endswith("contest_auth_eval.stdout.log")
+    assert evidence["inflated_outputs_manifest_path"].endswith(
+        "inflated_outputs_manifest.json"
+    )
+    assert evidence["inflated_outputs_manifest_sha256"]
+    assert evidence["raw_output_aggregate_sha256"] == "c" * 64
+    assert intake["source_records"][0]["recognized_for_observation"] is True
+    assert intake["source_records"][0]["custody_valid_for_observation"] is True
+    assert intake["source_records"][0]["accepted_for_observation"] is True
     tt5l = {
         row["candidate_id"]: row
         for row in intake["verdict"]["evaluated_observations"]
     }["time_traveler_l5_autonomy"]
     assert "l5_v2_probe_axis_log_path_missing:contest_cuda" not in tt5l["blockers"]
     assert "l5_v2_probe_contest_evidence_grade_missing" not in tt5l["blockers"]
+
+
+def test_l5_v2_probe_intake_splits_recognition_from_custody_validity(
+    tmp_path: Path,
+) -> None:
+    artifact = _write_json(
+        tmp_path / "tt5l_cuda_partial.json",
+        {
+            "lane_id": "lane_time_traveler_l5_autonomy_exact_cuda",
+            "score_axis": "contest_cuda",
+            "exact_cuda_evidence": True,
+            "archive_sha256": "a" * 64,
+            "runtime_tree_sha256": "b" * 64,
+            "canonical_score": 3.9,
+        },
+    )
+
+    intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
+
+    source = intake["source_records"][0]
+    assert source["recognized_for_observation"] is True
+    assert source["custody_valid_for_observation"] is False
+    assert source["accepted_for_observation"] is False
+    assert "n_samples_missing" in source["custody_blockers"]
+    assert "inflated_outputs_manifest_path_missing" in source["custody_blockers"]
 
 
 def test_l5_v2_probe_intake_records_missing_candidate_sources(tmp_path: Path) -> None:
