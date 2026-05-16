@@ -22,10 +22,9 @@ from tac.preflight import (
     check_admm_lagrangian_bisection_convergent,
     check_codec_pipeline_op_order_deterministic,
     check_evidence_row_has_falsification_scope_when_negative,
-    check_public_pr_intake_clones_pristine,
     check_per_tensor_K_side_info_matches_decoder_expectation,
+    check_public_pr_intake_clones_pristine,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -241,6 +240,9 @@ def test_exact_negative_with_legacy_result_review_packet_passes(
                 "runtime_custody": {},
                 "score_recomputation": {},
                 "dispatch_claim_state": {},
+                "reactivation_criteria": [
+                    "rerun same archive/runtime after implementation change",
+                ],
             }
         ),
         encoding="utf-8",
@@ -263,6 +265,50 @@ def test_exact_negative_with_legacy_result_review_packet_passes(
     assert check_evidence_row_has_falsification_scope_when_negative(
         repo_root=tmp_path, strict=True, verbose=False
     ) == []
+
+
+def test_exact_negative_result_review_packet_requires_reactivation_criteria(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "reports").mkdir(parents=True)
+    (tmp_path / ".omx" / "research").mkdir(parents=True)
+    review_path = tmp_path / ".omx" / "research" / "review.json"
+    review_path.write_text(
+        json.dumps(
+            {
+                "schema": "tac_result_review_packet_v1",
+                "review_requirements": {
+                    "engineering_review_required": True,
+                    "contest_compliance_review_required": True,
+                },
+                "runtime_custody": {},
+                "score_recomputation": {},
+                "dispatch_claim_state": {},
+                "reactivation_criteria": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    evidence_path = tmp_path / "reports" / "cathedral_autopilot_evidence.jsonl"
+    evidence_path.write_text(
+        json.dumps(
+            {
+                "technique": "cuda_negative_review_packet",
+                "evidence_grade": "[contest-CUDA A-negative]",
+                "family_falsified": False,
+                "falsification_scope": "measured_config_only",
+                "contest_dispatch_verdict": "measured_config_retired_exact_cuda_negative",
+                "exact_result_review_packet": ".omx/research/review.json",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    violations = check_evidence_row_has_falsification_scope_when_negative(
+        repo_root=tmp_path, strict=False, verbose=False
+    )
+    assert violations
+    assert "reactivation_criteria" in violations[0]
 
 
 def test_family_kill_with_engineering_bug_found_fails(tmp_path: Path) -> None:

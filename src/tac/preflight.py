@@ -31172,6 +31172,15 @@ def _result_review_packet_is_valid_for_forensic_review(
         return False, f"exact_result_review_packet not an object: {review_packet}"
     if payload.get("schema") != "tac_result_review_packet_v1":
         return False, f"unexpected review packet schema: {review_packet}"
+    criteria = payload.get("reactivation_criteria")
+    if not (
+        isinstance(criteria, list)
+        and any(isinstance(item, str) and item.strip() for item in criteria)
+    ):
+        return False, (
+            "review packet lacks non-empty reactivation_criteria: "
+            f"{review_packet}"
+        )
     audit = payload.get("engineering_forensic_audit")
     if isinstance(audit, dict):
         return _engineering_forensic_audit_is_valid(audit)
