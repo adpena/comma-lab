@@ -61957,44 +61957,24 @@ def check_grand_council_deliberation_has_explicit_assumption_statements(
 # in both the canonical inventory and serialized Pareto rows.
 # ============================================================================
 
-_CHECK_293_REQUIRED_SCOPE_FIELDS: tuple[str, ...] = (
-    "source_supports",
-    "paper_claim_scope",
-    "pact_must_prove",
-    "decode_complexity_evidence",
+from tac.optimization.literature_source_scope import (  # noqa: E402
+    LITERATURE_SOURCE_SCOPE_EMPTY_MARKERS,
+    LITERATURE_SOURCE_SCOPE_REQUIRED_FIELDS,
+    literature_source_scope_row_get,
+    literature_source_scope_violation_message,
+    non_placeholder_literature_source_text,
 )
 
-_CHECK_293_EMPTY_SCOPE_MARKERS = frozenset(
-    (
-        "",
-        "none",
-        "null",
-        "n/a",
-        "na",
-        "tbd",
-        "todo",
-        "unknown",
-        "<source>",
-        "<evidence>",
-        "<rationale>",
-        "<reason>",
-    )
-)
+_CHECK_293_REQUIRED_SCOPE_FIELDS = LITERATURE_SOURCE_SCOPE_REQUIRED_FIELDS
+_CHECK_293_EMPTY_SCOPE_MARKERS = LITERATURE_SOURCE_SCOPE_EMPTY_MARKERS
 
 
 def _check_293_row_get(row: object, field: str) -> object:
-    if isinstance(row, dict):
-        return row.get(field)
-    return getattr(row, field, None)
+    return literature_source_scope_row_get(row, field)
 
 
 def _check_293_non_placeholder_text(value: object) -> bool:
-    if value is None:
-        return False
-    text = str(value).strip()
-    if not text:
-        return False
-    return text.lower() not in _CHECK_293_EMPTY_SCOPE_MARKERS
+    return non_placeholder_literature_source_text(value)
 
 
 def _check_293_source_scope_violations(
@@ -62010,25 +61990,12 @@ def _check_293_source_scope_violations(
         ("serialized_pareto_rows", pareto_rows),
     ):
         for row in rows:
-            anchor = _check_293_row_get(row, "literature_anchor")
-            if not _check_293_non_placeholder_text(anchor):
-                continue
-            substrate_id = _check_293_row_get(row, "substrate_id")
-            row_id = str(substrate_id).strip() if substrate_id is not None else "?"
-            missing = [
-                field
-                for field in _CHECK_293_REQUIRED_SCOPE_FIELDS
-                if not _check_293_non_placeholder_text(_check_293_row_get(row, field))
-            ]
-            if not missing:
-                continue
-            violations.append(
-                f"{surface} row {row_id!r} carries literature_anchor={str(anchor)!r} "
-                f"but lacks non-placeholder source-scope field(s): {', '.join(missing)}. "
-                "Every Cathedral/autopilot literature anchor must state what the source "
-                "supports, the paper-claim scope, what Pact must prove empirically, and "
-                "decode-complexity evidence before the row can influence planning."
+            violation = literature_source_scope_violation_message(
+                surface=surface,
+                row=row,
             )
+            if violation:
+                violations.append(violation)
     return violations
 
 

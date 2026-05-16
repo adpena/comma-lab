@@ -582,6 +582,139 @@ def test_load_evidence_rejects_string_booleans_and_preserves_string_blocker(
     assert autopilot._is_explicitly_promotable_evidence(row) is False
 
 
+def test_load_evidence_preserves_literature_source_scope(tmp_path: Path) -> None:
+    autopilot = _load_autopilot()
+    ev_path = tmp_path / "evidence.jsonl"
+    ev_path.write_text(
+        json.dumps({
+            "technique": "compressai_balle_hyperprior",
+            "empirical_archive_bytes": 162_000,
+            "literature_anchor": "balle_2018",
+            "source_supports": "Scale hyperpriors support learned image compression.",
+            "paper_claim_scope": "Natural-image compression; not Pact score evidence.",
+            "pact_must_prove": "Byte-closed contest archive plus paired eval.",
+            "decode_complexity_evidence": "T4 inflate timing still required.",
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    evidence = autopilot._load_evidence(ev_path)
+    row = evidence[0]
+
+    assert row.literature_anchor == "balle_2018"
+    assert row.source_supports.startswith("Scale hyperpriors")
+    assert row.paper_claim_scope.startswith("Natural-image")
+    assert row.pact_must_prove.startswith("Byte-closed")
+    assert row.decode_complexity_evidence.startswith("T4")
+    assert not [
+        blocker for blocker in row.dispatch_blockers
+        if blocker.startswith("literature_anchor_source_scope_missing:")
+    ]
+
+
+def test_literature_anchor_missing_source_scope_fails_closed(tmp_path: Path) -> None:
+    autopilot = _load_autopilot()
+    archive_sha = "a" * 64
+    runtime_sha = "b" * 64
+    ev_path = tmp_path / "evidence.jsonl"
+    row = {
+        "technique": "compressai_balle_hyperprior",
+        "empirical_archive_bytes": 162_000,
+        "empirical_score": 0.18,
+        "score_contest_cuda": 0.18,
+        "evidence_grade": "[contest-CUDA]",
+        **_promotable_exact_cuda_fields(0.18, 162_000),
+        "score_claim": True,
+        "promotion_eligible": True,
+        "rank_or_kill_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": archive_sha,
+        "runtime_tree_sha256": runtime_sha,
+        "literature_anchor": "balle_2018",
+        "source_supports": "",
+        "paper_claim_scope": "Natural-image compression; not Pact score evidence.",
+        "pact_must_prove": "TBD",
+        "decode_complexity_evidence": "T4 inflate timing still required.",
+    }
+    ev_path.write_text(json.dumps(row) + "\n", encoding="utf-8")
+
+    evidence = autopilot._load_evidence(ev_path)
+    loaded = evidence[0]
+
+    assert (
+        "literature_anchor_source_scope_missing:source_supports"
+        in loaded.dispatch_blockers
+    )
+    assert (
+        "literature_anchor_source_scope_missing:pact_must_prove"
+        in loaded.dispatch_blockers
+    )
+    assert autopilot._is_explicitly_promotable_evidence(loaded) is False
+
+
+def test_direct_literature_evidence_missing_scope_is_not_promotable() -> None:
+    autopilot = _load_autopilot()
+    evidence = autopilot.TechniqueEvidence(
+        technique="compressai_balle_hyperprior",
+        empirical_archive_bytes=162_000,
+        empirical_score=0.18,
+        score_contest_cuda=0.18,
+        evidence_grade="[contest-CUDA]",
+        **_promotable_exact_cuda_fields(0.18, 162_000),
+        score_claim=True,
+        promotion_eligible=True,
+        rank_or_kill_eligible=True,
+        ready_for_exact_eval_dispatch=True,
+        archive_sha256="a" * 64,
+        runtime_tree_sha256="b" * 64,
+        literature_anchor="balle_2018",
+        source_supports="",
+        paper_claim_scope="Natural-image compression; not Pact score evidence.",
+        pact_must_prove="Byte-closed contest archive plus paired eval.",
+        decode_complexity_evidence="T4 inflate timing still required.",
+    )
+
+    blockers = autopilot._promotability_blockers(evidence)
+
+    assert autopilot._is_explicitly_promotable_evidence(evidence) is False
+    assert "literature_anchor_source_scope_missing:source_supports" in blockers
+
+
+def test_unknown_literature_evidence_keeps_source_scope_in_validation_queue() -> None:
+    autopilot = _load_autopilot()
+    evidence = [
+        autopilot.TechniqueEvidence(
+            technique="nscs99_literature_seed",
+            empirical_archive_bytes=121_000,
+            literature_anchor="cool_chic_2026",
+            source_supports="Cool-Chic supports overfitted neural image compression.",
+            paper_claim_scope="Image compression, not this video challenge.",
+            pact_must_prove="Byte-closed runtime and exact eval.",
+            decode_complexity_evidence="Decoder timing smoke required.",
+            score_claim=False,
+            promotion_eligible=False,
+            rank_or_kill_eligible=False,
+            ready_for_exact_eval_dispatch=False,
+            cuda_eval_worth_testing=True,
+            dispatch_blockers=["missing_exact_cuda_auth_eval"],
+        )
+    ]
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        prior_evidence=evidence,
+        target_score=0.190,
+    )
+
+    queued = next(
+        row for row in plan.validation_queue
+        if row["technique"] == "nscs99_literature_seed"
+    )
+    assert queued["literature_anchors"] == ["cool_chic_2026"]
+    assert queued["source_scope"][0]["pact_must_prove"].startswith("Byte-closed")
+
+
 def test_negated_exact_cuda_requirement_does_not_retire_measured_config() -> None:
     autopilot = _load_autopilot()
     evidence = autopilot.TechniqueEvidence(

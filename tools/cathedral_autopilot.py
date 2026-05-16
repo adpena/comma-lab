@@ -67,6 +67,11 @@ from tac.optimization.candidate_evidence_contract import (  # noqa: E402
     promotable_exact_cuda_evidence_blockers,
 )
 from tac.optimization.cuda_cpu_axis_calibration import CudaCpuCalibration  # noqa: E402
+from tac.optimization.literature_source_scope import (  # noqa: E402
+    LITERATURE_SOURCE_SCOPE_REQUIRED_FIELDS,
+    literature_source_scope_blockers,
+    source_scope_values,
+)
 from tac.score_geometry import (  # noqa: E402
     contest_score,
     equal_score_curve_archive_bytes,
@@ -648,6 +653,11 @@ class TechniqueEvidence:
     falsification_scope: str = ""
     reactivation_criteria: list[str] = field(default_factory=list)
     dispatch_blockers: list[str] = field(default_factory=list)
+    literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
     score_affecting_payload_changed: bool | None = None
     charged_bits_changed: bool | None = None
     cuda_eval_worth_testing: bool | None = None
@@ -760,6 +770,8 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
         try:
             schema_blockers: list[str] = []
             dispatch_blockers = _evidence_dispatch_blockers(r.get("dispatch_blockers"))
+            source_scope = source_scope_values(r)
+            source_scope_blockers = literature_source_scope_blockers(r)
             out.append(TechniqueEvidence(
                 technique=str(r["technique"]),
                 empirical_archive_bytes=_first_int(
@@ -891,6 +903,11 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
             reactivation_criteria=[
                 str(item) for item in r.get("reactivation_criteria", [])
             ] if isinstance(r.get("reactivation_criteria", []), list) else [],
+            literature_anchor=source_scope["literature_anchor"],
+            source_supports=source_scope["source_supports"],
+            paper_claim_scope=source_scope["paper_claim_scope"],
+            pact_must_prove=source_scope["pact_must_prove"],
+            decode_complexity_evidence=source_scope["decode_complexity_evidence"],
             score_affecting_payload_changed=_strict_json_bool(
                 r, "score_affecting_payload_changed", schema_blockers
             ),
@@ -906,6 +923,7 @@ def _load_evidence(path: Path) -> list[TechniqueEvidence]:
                 dict.fromkeys(
                     [
                         *dispatch_blockers,
+                        *source_scope_blockers,
                         *(
                             [
                                 "invalid_evidence_schema_non_promotable",
@@ -937,13 +955,19 @@ def _is_explicitly_promotable_evidence(evidence: TechniqueEvidence) -> bool:
     the producer explicitly records score/promotion/dispatch readiness and has
     no dispatch blockers.
     """
-    return not promotable_exact_cuda_evidence_blockers(asdict(evidence))
+    return not _promotability_blockers(evidence)
 
 
 def _promotability_blockers(evidence: TechniqueEvidence) -> list[str]:
     """Machine-readable blockers for exact-CUDA promotion semantics."""
 
-    return promotable_exact_cuda_evidence_blockers(asdict(evidence))
+    row = asdict(evidence)
+    return list(
+        dict.fromkeys([
+            *promotable_exact_cuda_evidence_blockers(row),
+            *literature_source_scope_blockers(row),
+        ])
+    )
 
 
 def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
@@ -988,6 +1012,7 @@ def _is_explicitly_contest_cpu_evidence(evidence: TechniqueEvidence) -> bool:
         evidence.score_claim is True
         and evidence.rank_or_kill_eligible is True
         and not evidence.dispatch_blockers
+        and not literature_source_scope_blockers(asdict(evidence))
         and not axis_blockers
         and not proxy_marker
     )
@@ -1422,6 +1447,8 @@ def summarize_evidence_semantics(
                 "dispatch_blockers": [],
                 "evidence_grades": [],
                 "verdicts": [],
+                "literature_anchors": [],
+                "source_scope": [],
                 "empirical_archive_bytes": [],
                 "min_empirical_archive_bytes": None,
                 "latest_timestamp": "",
@@ -1443,6 +1470,18 @@ def summarize_evidence_semantics(
             bucket["sources"].append(row.source)
         if row.evidence_grade and row.evidence_grade not in bucket["evidence_grades"]:
             bucket["evidence_grades"].append(row.evidence_grade)
+        if row.literature_anchor and row.literature_anchor not in bucket["literature_anchors"]:
+            bucket["literature_anchors"].append(row.literature_anchor)
+        if row.literature_anchor:
+            scope = {
+                "literature_anchor": row.literature_anchor,
+                **{
+                    field: getattr(row, field)
+                    for field in LITERATURE_SOURCE_SCOPE_REQUIRED_FIELDS
+                },
+            }
+            if scope not in bucket["source_scope"]:
+                bucket["source_scope"].append(scope)
         if (
             row.contest_dispatch_verdict
             and row.contest_dispatch_verdict not in bucket["verdicts"]
@@ -2186,6 +2225,8 @@ def build_validation_queue(
                 "score_claim": False,
                 "dispatch_blockers": item.get("dispatch_blockers", []),
                 "sources": item.get("empirical_anchor_sources", []),
+                "literature_anchor": item.get("literature_anchor", ""),
+                "source_scope": item.get("source_scope", []),
             })
 
     for bucket in evidence_report.get("unknown_evidence_techniques", []):
@@ -2223,6 +2264,8 @@ def build_validation_queue(
             "score_claim": False,
             "dispatch_blockers": bucket.get("dispatch_blockers", []),
             "sources": bucket.get("sources", []),
+            "literature_anchors": bucket.get("literature_anchors", []),
+            "source_scope": bucket.get("source_scope", []),
             "latest_timestamp": bucket.get("latest_timestamp", ""),
             "n_rows": bucket.get("n_rows", 0),
         })
