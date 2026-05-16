@@ -47,7 +47,7 @@ TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
     ".omx/research/tt5l_sideinfo_consumption_proof_20260516_codex.json"
 )
 TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256 = (
-    "8d3a2285c8b6b2804b78c01b50d857973fe0f553db3546a71a2a2959f3332c76"
+    "8bb68ba5e14f0bbb0511812cbb7b7465e58ef639997e300558c04c3cdae98605"
 )
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
@@ -56,7 +56,7 @@ PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
     ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
 )
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = (
-    "03889d2af21468a752fb031375b040cce00fa78a934e1224c217e1c6f64bdd23"
+    "1e5345f0d290abb76089d1ececa3f367f3310e0067a3a644f5a58c06cdee137c"
 )
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
@@ -427,6 +427,16 @@ def l5_v2_packetir_stack_evidence_payload(
                 "avg_segnet_dist": evidence.get("avg_segnet_dist"),
                 "avg_posenet_dist": evidence.get("avg_posenet_dist"),
                 "evidence_grade": evidence.get("evidence_grade"),
+                "runtime_tree_sha256": evidence.get("runtime_tree_sha256"),
+                "runtime_content_tree_sha256": evidence.get(
+                    "runtime_content_tree_sha256"
+                ),
+                "auth_eval_command": evidence.get("auth_eval_command"),
+                "hardware": evidence.get("hardware"),
+                "inflate_device": evidence.get("inflate_device"),
+                "eval_device": evidence.get("eval_device"),
+                "log_path": evidence.get("log_path"),
+                "artifact_path": evidence.get("artifact_path"),
                 "path": evidence.get("path"),
             }
         if axis_blockers:
@@ -446,6 +456,8 @@ def l5_v2_packetir_stack_evidence_payload(
                 "ready_for_exact_eval_dispatch": False,
             }
         )
+    if matrix and not paired_candidates:
+        blockers.append("l5_v2_packetir_no_runtime_bound_paired_exact_candidates")
 
     return {
         "schema": L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA,
@@ -506,7 +518,7 @@ def l5_v2_pr106_stack_cell_candidates(
             archive_size = _non_bool_int(axis_row.get("archive_size_bytes"))
             if archive_size is not None and archive_size >= 0:
                 archive_sizes.append(archive_size)
-        source_max_axis_score = max(scores.values()) if scores else None
+        source_worst_axis_score = max(scores.values()) if scores else None
         candidates.append(
             {
                 "cell_id": f"{SUBJECT_ID}+{row.get('candidate_id')}",
@@ -516,13 +528,14 @@ def l5_v2_pr106_stack_cell_candidates(
                 "source_archive_sha256": row.get("archive_sha256"),
                 "source_archive_path": row.get("archive_path"),
                 "source_axis_scores": scores,
-                "source_max_axis_score": source_max_axis_score,
+                "source_worst_axis_score": source_worst_axis_score,
                 "source_max_archive_size_bytes": max(archive_sizes)
                 if archive_sizes
                 else None,
                 "selection_basis": (
                     "paired PR106 PacketIR source rows only; lower max paired "
-                    "axis score sorts first but is not a composite score claim"
+                    "axis score is labelled as worst-axis score and sorts first; "
+                    "this is not a composite score claim"
                 ),
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -537,8 +550,8 @@ def l5_v2_pr106_stack_cell_candidates(
     candidates.sort(
         key=lambda item: (
             float("inf")
-            if item["source_max_axis_score"] is None
-            else float(item["source_max_axis_score"]),
+            if item["source_worst_axis_score"] is None
+            else float(item["source_worst_axis_score"]),
             float("inf")
             if item["source_max_archive_size_bytes"] is None
             else float(item["source_max_archive_size_bytes"]),

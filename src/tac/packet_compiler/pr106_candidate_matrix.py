@@ -34,6 +34,18 @@ PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_MD = (
 
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
+_MODAL_EXACT_EVAL_ENTRYPOINTS = {
+    "contest_cpu": "experiments/modal_auth_eval_cpu.py",
+    "contest_cuda": "experiments/modal_auth_eval.py",
+}
+_MODAL_EXACT_EVAL_OUTPUT_ROOTS = {
+    "contest_cpu": "experiments/results/modal_auth_eval_cpu",
+    "contest_cuda": "experiments/results/modal_auth_eval",
+}
+_MODAL_EXACT_EVAL_PROVIDERS = {
+    "contest_cpu": "modal_linux_x86_64_cpu",
+    "contest_cuda": "modal_t4_cuda",
+}
 
 
 @dataclass(frozen=True)
@@ -385,6 +397,19 @@ def _resolve(path: str | Path, repo_root: Path) -> Path:
     return candidate if candidate.is_absolute() else repo_root / candidate
 
 
+def _repo_relative_path_text(value: object, repo_root: Path) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    path = Path(text)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return text
+
+
 def _normalize_format_id(value: object) -> str:
     text = str(value or "").strip()
     if not text:
@@ -577,7 +602,7 @@ def _load_runtime_consumption(
         "format_id": _normalize_format_id(payload.get("format_id")),
         "sidecar_kind": payload.get("sidecar_kind"),
         "source_archive_sha256": source_archive_sha,
-        "runtime_dir": payload.get("runtime_dir"),
+        "runtime_dir": _repo_relative_path_text(payload.get("runtime_dir"), repo_root),
         "runtime_inflate_py_sha256": payload.get("runtime_inflate_py_sha256"),
         "runtime_source_tree_sha256": runtime_source_tree_sha,
         "runtime_content_tree_sha256": runtime_content_tree_sha,
@@ -718,6 +743,7 @@ def _candidate_status(
 
 def _paired_exact_status_blockers(
     exact_evidence: Mapping[str, Mapping[str, Any]],
+    runtime: Mapping[str, Any],
 ) -> list[str]:
     blockers: list[str] = []
     valid_axes = {
@@ -735,7 +761,183 @@ def _paired_exact_status_blockers(
         }
         if len(runtime_content_shas) != 1 or len(next(iter(runtime_content_shas))) != 64:
             blockers.append("paired_exact_eval_runtime_content_tree_sha_mismatch")
+        runtime_consumption_content_sha = str(
+            runtime.get("runtime_content_tree_sha256") or ""
+        )
+        if len(runtime_consumption_content_sha) != 64:
+            blockers.append(
+                "paired_exact_eval_runtime_consumption_content_tree_sha_missing"
+            )
+        elif runtime_content_shas != {runtime_consumption_content_sha}:
+            blockers.append(
+                "paired_exact_eval_runtime_content_tree_sha_mismatch_with_consumption"
+            )
     return blockers
+
+
+def _valid_exact_axes(
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> tuple[ContestAxis, ...]:
+    return tuple(
+        axis
+        for axis in _REQUIRED_EXACT_AXES
+        if exact_evidence.get(axis, {}).get("exists") is True
+        and exact_evidence.get(axis, {}).get("valid") is True
+    )
+
+
+def _missing_exact_axes(
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> tuple[ContestAxis, ...]:
+    valid_axes = set(_valid_exact_axes(exact_evidence))
+    return tuple(axis for axis in _REQUIRED_EXACT_AXES if axis not in valid_axes)
+
+
+def _axis_blockers(
+    *,
+    axis: ContestAxis,
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    evidence = exact_evidence.get(axis)
+    if not isinstance(evidence, Mapping):
+        return ["exact_eval_artifact_not_listed"]
+    blockers = [str(item) for item in evidence.get("blockers", []) if str(item)]
+    if not blockers and evidence.get("exists") is not True:
+        blockers.append("exact_eval_json_missing")
+    if not blockers and evidence.get("valid") is not True:
+        blockers.append("exact_eval_invalid_without_blocker")
+    return blockers
+
+
+def _stable_pair_group_id(row: Mapping[str, Any]) -> str:
+    candidate_id = str(row.get("candidate_id") or "candidate")
+    archive_sha = str(row.get("archive_sha256") or "").strip().lower()
+    suffix = archive_sha[:12] if archive_sha else "archive_sha_missing"
+    return f"pair_pr106_packetir_{candidate_id}_{suffix}"
+
+
+def _stable_lane_id(row: Mapping[str, Any], axis: ContestAxis) -> str:
+    return f"pr106_packetir_{row.get('candidate_id')}_{axis}"
+
+
+def _modal_command_template(
+    *,
+    axis: ContestAxis,
+    archive_path: str,
+    runtime_dir: str,
+    pair_group_id: str,
+    lane_id: str,
+) -> str:
+    entrypoint = _MODAL_EXACT_EVAL_ENTRYPOINTS[axis]
+    output_root = _MODAL_EXACT_EVAL_OUTPUT_ROOTS[axis]
+    output_dir = f"{output_root}/{lane_id}_<UTC>"
+    parts = [
+        "PYTHONPATH=src:upstream:$PWD",
+        ".venv/bin/modal",
+        "run",
+        "--detach",
+        entrypoint,
+        "--archive",
+        archive_path,
+        "--output-dir",
+        output_dir,
+        "--detach",
+        "--provider-detach-ack",
+        "--lane-id",
+        lane_id,
+        "--instance-job-id",
+        f"{lane_id}_<UTC>",
+        "--pair-group-id",
+        pair_group_id,
+    ]
+    if runtime_dir:
+        parts.extend(["--submission-dir", runtime_dir, "--inflate-sh", "inflate.sh"])
+        parts.extend(
+            [
+                "--expected-runtime-tree-sha256",
+                "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+            ]
+        )
+    if axis == "contest_cuda":
+        parts.extend(["--gpu", "T4"])
+    return " ".join(parts)
+
+
+def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    targets: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("archive_exists") is not True:
+            continue
+        identity = row.get("packet_ir_identity")
+        runtime = row.get("runtime_consumption")
+        exact_evidence = row.get("exact_axis_evidence")
+        if not isinstance(identity, Mapping) or identity.get("passed") is not True:
+            continue
+        if not isinstance(runtime, Mapping) or runtime.get("valid") is not True:
+            continue
+        if not isinstance(exact_evidence, Mapping):
+            continue
+        missing_axes = _missing_exact_axes(exact_evidence)
+        if not missing_axes:
+            continue
+        runtime_dir = str(runtime.get("runtime_dir") or "")
+        archive_path = str(row.get("archive_path") or "")
+        pair_group_id = _stable_pair_group_id(row)
+        existing_valid_axes = list(_valid_exact_axes(exact_evidence))
+        for axis in missing_axes:
+            lane_id = _stable_lane_id(row, axis)
+            targets.append(
+                {
+                    "candidate_id": row.get("candidate_id"),
+                    "format_id": row.get("format_id") or row.get("expected_format_id"),
+                    "missing_axis": axis,
+                    "recommended_provider": _MODAL_EXACT_EVAL_PROVIDERS[axis],
+                    "modal_entrypoint": _MODAL_EXACT_EVAL_ENTRYPOINTS[axis],
+                    "archive_path": archive_path,
+                    "archive_sha256": row.get("archive_sha256"),
+                    "archive_bytes": identity.get("archive_bytes"),
+                    "runtime_dir": runtime_dir,
+                    "inflate_sh": "inflate.sh" if runtime_dir else "submissions/robust_current/inflate.sh",
+                    "runtime_source_tree_sha256": runtime.get(
+                        "runtime_source_tree_sha256"
+                    ),
+                    "runtime_content_tree_sha256": runtime.get(
+                        "runtime_content_tree_sha256"
+                    ),
+                    "runtime_inflate_py_sha256": runtime.get(
+                        "runtime_inflate_py_sha256"
+                    ),
+                    "existing_valid_axes": existing_valid_axes,
+                    "axis_blockers": _axis_blockers(
+                        axis=axis,
+                        exact_evidence=exact_evidence,
+                    ),
+                    "pair_group_id": pair_group_id,
+                    "lane_id": lane_id,
+                    "instance_job_id_template": f"{lane_id}_<UTC>",
+                    "output_dir_template": (
+                        f"{_MODAL_EXACT_EVAL_OUTPUT_ROOTS[axis]}/{lane_id}_<UTC>"
+                    ),
+                    "provider_detach_required": True,
+                    "dispatch_status": (
+                        "requires_claim_lane_dispatch_before_provider_launch"
+                    ),
+                    "expected_runtime_tree_sha256_policy": (
+                        "compute_axis_specific_modal_uploaded_runtime_tree_sha256"
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "command_template": _modal_command_template(
+                        axis=axis,
+                        archive_path=archive_path,
+                        runtime_dir=runtime_dir,
+                        pair_group_id=pair_group_id,
+                        lane_id=lane_id,
+                    ),
+                }
+            )
+    return targets
 
 
 def _row_for_candidate(
@@ -841,7 +1043,7 @@ def _row_for_candidate(
         runtime=runtime,
         exact_evidence=exact_evidence,
     )
-    status_blockers = _paired_exact_status_blockers(exact_evidence)
+    status_blockers = _paired_exact_status_blockers(exact_evidence, runtime)
     if status == "paired_exact_measured" and status_blockers:
         status = "paired_exact_blocked"
     row.update(
@@ -871,6 +1073,7 @@ def build_pr106_packetir_candidate_matrix(
     for row in rows:
         status = str(row["status"])
         status_counts[status] = status_counts.get(status, 0) + 1
+    next_exact_eval_targets = _next_exact_eval_targets(rows)
     return {
         "schema": PR106_PACKETIR_CANDIDATE_MATRIX_SCHEMA,
         "proof_scope": (
@@ -878,6 +1081,8 @@ def build_pr106_packetir_candidate_matrix(
         ),
         "candidate_count": len(rows),
         "status_counts": status_counts,
+        "next_exact_eval_target_count": len(next_exact_eval_targets),
+        "next_exact_eval_targets": next_exact_eval_targets,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -938,6 +1143,38 @@ def render_pr106_packetir_candidate_matrix_markdown(matrix: Mapping[str, Any]) -
                 blockers=blocker_text,
             )
         )
+    targets = matrix.get("next_exact_eval_targets", [])
+    if isinstance(targets, list) and targets:
+        lines.extend(
+            [
+                "",
+                "## Next exact eval targets",
+                "",
+                "These are fail-fast dispatch targets only. They still require a "
+                "`tools/claim_lane_dispatch.py` claim and Modal recovery before any "
+                "score or promotion claim.",
+                "",
+                "| candidate | missing axis | provider | lane | dispatch status | archive | axis blockers |",
+                "|---|---|---|---|---|---|---|",
+            ]
+        )
+        for target in targets:
+            if not isinstance(target, Mapping):
+                continue
+            blockers = ", ".join(
+                str(item) for item in target.get("axis_blockers", [])
+            )
+            lines.append(
+                "| {candidate} | `{axis}` | `{provider}` | `{lane}` | `{dispatch}` | `{archive}` | {blockers} |".format(
+                    candidate=target.get("candidate_id"),
+                    axis=target.get("missing_axis"),
+                    provider=target.get("recommended_provider"),
+                    lane=target.get("lane_id"),
+                    dispatch=target.get("dispatch_status"),
+                    archive=target.get("archive_path"),
+                    blockers=blockers or "-",
+                )
+            )
     lines.append("")
     return "\n".join(lines)
 

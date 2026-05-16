@@ -8,7 +8,7 @@
     "consumption_mode": "per_pair_residual_decode",
     "inflate_command": "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh <archive_dir> <output_dir> <file_list>",
     "inflated_outputs_manifest_path": ".omx/research/tt5l_sideinfo_consumption_manifest_20260516_codex.json",
-    "inflated_raw_output_aggregate_sha256": "e2854684aa269c99bc395e2c99ab838208dea4076753bd094d580d8d014a1fde",
+    "inflated_raw_output_aggregate_sha256": "83f7ccf35b66c4126a8a10856a2457f913eb74c0cad536e843202e5fcd7833cc",
     "mutated_archive_sha256": "9de7feeee5757ee006413481952f3a94052878943c714e765de164c738d2fc9e",
     "mutated_byte_offsets": [
       2485,
@@ -23,7 +23,7 @@
     "mutated_section_sha256": "da954ac793807b87a0bf40137afefd554591bd47ec292a2d25ea90c8ea06a9c9",
     "output_changed": true,
     "parser_consumed_bytes": true,
-    "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+    "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
     "section": "tt5l_temporal_sideinfo",
     "section_nbytes": 10,
     "section_offset": 2481,
@@ -47,7 +47,7 @@
       "mutated_section_sha256": "b99493eb5776104e71e5a0d3571c980f201c883ab5ca285f7e7a57a9a612aeaa",
       "output_changed": true,
       "parser_consumed_bytes": true,
-      "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+      "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
       "section": "tt5l_ac_state_residual_calibration",
       "section_nbytes": 18,
       "section_offset": 2494,
@@ -72,7 +72,7 @@
       "mutated_section_sha256": "da954ac793807b87a0bf40137afefd554591bd47ec292a2d25ea90c8ea06a9c9",
       "output_changed": true,
       "parser_consumed_bytes": true,
-      "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+      "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
       "section": "tt5l_temporal_sideinfo",
       "section_nbytes": 10,
       "section_offset": 2481,
@@ -90,7 +90,7 @@
     "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
     "src/tac/substrates/time_traveler_l5_autonomy/inflate.py"
   ],
-  "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+  "runtime_tree_sha256": "4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4",
   "schema": "tt5l_sideinfo_consumption_proof_v1",
   "score_claim": false
 }

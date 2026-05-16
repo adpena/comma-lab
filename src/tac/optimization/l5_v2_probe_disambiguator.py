@@ -226,6 +226,7 @@ def _axis_evidence_blockers(
             expected_axis=axis,
             expected_archive_sha256=observation.archive_sha256,
             expected_runtime_tree_sha256=observation.runtime_tree_sha256,
+            require_artifact_path=True,
             require_hardware=True,
             require_auth_eval_command=True,
             require_log_path=True,
@@ -267,6 +268,11 @@ def _axis_evidence_blockers(
             ),
             "log_path_missing": "l5_v2_probe_axis_log_path_missing",
             "log_path_file_missing": "l5_v2_probe_axis_log_path_file_missing",
+            "artifact_path_missing": "l5_v2_probe_axis_artifact_path_missing",
+            "artifact_path_transient": "l5_v2_probe_axis_artifact_path_transient",
+            "artifact_path_outside_base_dir": (
+                "l5_v2_probe_axis_artifact_path_outside_repo"
+            ),
             "artifact_path_file_missing": "l5_v2_probe_axis_artifact_path_file_missing",
             "score_formula_mismatch": "l5_v2_probe_axis_score_formula_mismatch",
         }
@@ -410,6 +416,7 @@ def build_probe_template() -> dict[str, Any]:
                         "eval_device": "",
                         "auth_eval_command": "",
                         "log_path": "",
+                        "artifact_path": "",
                         "score_delta": None,
                     }
                     for axis in REQUIRED_EXACT_AXES

@@ -34,10 +34,16 @@ def _axis_evidence(
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
     log_path = f"experiments/results/l5_v2_probe/{axis}.log"
+    artifact_path = f"experiments/results/l5_v2_probe/{axis}.json"
     if repo_root is not None:
-        path = repo_root / log_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"{axis} exact-eval log\n", encoding="utf-8")
+        log_file = repo_root / log_path
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_file.write_text(f"{axis} exact-eval log\n", encoding="utf-8")
+        artifact_file = repo_root / artifact_path
+        artifact_file.write_text(
+            f'{{"axis":"{axis}","score_delta":{score_delta}}}\n',
+            encoding="utf-8",
+        )
     return {
         "axis": axis,
         "archive_sha256": "a" * 64,
@@ -52,6 +58,7 @@ def _axis_evidence(
         "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": log_path,
+        "artifact_path": artifact_path,
         "score_delta": score_delta,
     }
 
@@ -102,6 +109,8 @@ def test_l5_v2_probe_template_is_fail_closed_and_complete() -> None:
             "contest_cpu",
             "contest_cuda",
         ]
+        for axis_row in row["axis_evidence"]:
+            assert axis_row["artifact_path"] == ""
 
 
 def test_l5_v2_probe_fails_closed_without_observations() -> None:
@@ -386,6 +395,32 @@ def test_l5_v2_probe_requires_durable_axis_log_files(tmp_path: Path) -> None:
 
     assert verdict["architecture_lock_allowed"] is False
     assert "l5_v2_probe_axis_log_path_file_missing:contest_cuda" in row["blockers"]
+
+
+def test_l5_v2_probe_requires_axis_artifact_path_for_architecture_lock(
+    tmp_path: Path,
+) -> None:
+    tt5l = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.030)
+    axis_evidence = [dict(row) for row in tt5l.axis_evidence]
+    cuda_row = next(row for row in axis_evidence if row["axis"] == "contest_cuda")
+    cuda_row["artifact_path"] = ""
+
+    verdict = evaluate_l5_v2_probe(
+        (
+            _eligible(tmp_path, "c1_world_model_foveation", -0.010),
+            _eligible(tmp_path, "z5_predictive_coding_world_model", -0.020),
+            dataclasses.replace(tt5l, axis_evidence=tuple(axis_evidence)),
+        ),
+        repo_root=tmp_path,
+    )
+    row = next(
+        item
+        for item in verdict["evaluated_observations"]
+        if item["candidate_id"] == "time_traveler_l5_autonomy"
+    )
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_artifact_path_missing:contest_cuda" in row["blockers"]
 
 
 def test_l5_v2_probe_rejects_transient_or_outside_axis_logs(tmp_path: Path) -> None:

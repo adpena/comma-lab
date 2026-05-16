@@ -49,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
                 "schema": matrix["schema"],
                 "candidate_count": matrix["candidate_count"],
                 "status_counts": matrix["status_counts"],
+                "next_exact_eval_target_count": matrix[
+                    "next_exact_eval_target_count"
+                ],
                 "artifact_paths": matrix["artifact_paths"],
                 "artifact_sha256": matrix["artifact_sha256"],
                 "score_claim": matrix["score_claim"],

@@ -24,12 +24,13 @@ This is the third move on the staircase, building on:
 - Step 3 (Z5 predictive-coding world-model): replaces independent per-pair
   encoding with predictor-residual encoding
 
-**Hypothesis:** the differentiable predictive-coding world-model reduces
-residual bytes by 20-40% vs Z4 → Step 3 band **[0.155, 0.180]** per
-Time-Traveler's asymptote estimate (zen-floor council). NOT a Markov-1
-first-order predictor (insufficient ego-motion context); a 2-3 layer
-hierarchical predictor with foveation-hint integration (handoff to C1
-sister subagent's foveation lane when that lands).
+**Hypothesis:** the differentiable predictive-coding world-model may reduce
+residual bytes vs Z4 enough to test the Step 3 band **[0.155, 0.180]** per
+Time-Traveler's asymptote estimate (zen-floor council). That magnitude is a
+contest planning prior, not something Rao-Ballard or Friston establishes. NOT
+a Markov-1 first-order predictor (insufficient ego-motion context); a 2-3 layer
+hierarchical predictor with foveation-hint integration (handoff to C1 sister
+subagent's foveation lane when that lands).
 
 **Across-class differentiation from Step 2:**
 
@@ -38,11 +39,12 @@ sister subagent's foveation lane when that lands).
 - Z5 encodes (encoder_state + decoder_state + predictor_state +
   predictor_init_state + per-pair RESIDUAL r_t) where the predictor
   computes ``z_t = predictor(z_{t-1}, r_{t-1}, ego_motion)`` recursively.
-- Total bytes: Z4_arc + ~50KB predictor (FP4-quantized) - savings from
-  smaller per-pair residual (predicted 20-40% reduction).
+- Total bytes: Z4_arc + ~50KB predictor (FP4-quantized) - any empirically
+  measured savings from smaller per-pair residual.
 
-**Predicted ΔS:** -0.025 to -0.038 vs Z4 → predicted score band
-**[0.155, 0.180]** `[mathematical-derivation; Time-Traveler-asymptote]`.
+**Predicted ΔS:** -0.025 to -0.038 vs Z4 → planning score band
+**[0.155, 0.180]** `[planning-prior; Time-Traveler-asymptote]`. The numeric
+band cannot influence promotion or rank reward until paired exact anchors land.
 
 **Stacking with Z3+Z4 is mandatory**: Z5 cannot be evaluated in isolation
 because the inflate-time predictor needs the same byte-format hyperprior
@@ -112,9 +114,9 @@ Memo at ``tools/probe_z5_predictive_coding_vs_no_prediction_disambiguator.py``
    directly from predictor forecast uncertainty; register
    ``bit_allocator.predictive_coding_residual_v1``.
 4. **Cathedral autopilot dispatch hook** — recipe registered; gated by
-   Catalog #167 smoke-before-full; ranker v2 (Catalog #219) receives
-   ``literature_anchor=Rao-Ballard1999`` (-0.02 to -0.03 class-shift
-   reward).
+   Catalog #167 smoke-before-full; ranker v2 receives
+   ``literature_anchor=Rao-Ballard1999`` as source-basis metadata only. No
+   class-shift reward is valid until a paired exact anchor exists.
 5. **Continual-learning posterior** — every Z5 empirical anchor seeds the
    posterior with the FIRST predictive-coding-class anchor; expected
    substantial MDL-density shift confirms or refutes the predictor-class

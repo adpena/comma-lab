@@ -26,6 +26,7 @@ def _sha(seed: str) -> str:
 def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
+    is_cpu = axis == "contest_cpu"
     return {
         "axis": axis,
         "archive_sha256": _sha("c"),
@@ -35,10 +36,14 @@ def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
         "pose_dist": 0.0,
         "archive_bytes": archive_bytes,
         "n_samples": 600,
-        "hardware": "modal-t4",
-        "inflate_device": "cuda" if axis == "contest_cuda" else "cpu",
-        "eval_device": "cuda" if axis == "contest_cuda" else "cpu",
-        "auth_eval_command": f"contest_auth_eval --axis {axis}",
+        "hardware": "modal-linux-x86_64-cpu" if is_cpu else "modal-t4-cuda",
+        "inflate_device": "cpu" if is_cpu else "cuda",
+        "eval_device": "cpu" if is_cpu else "cuda",
+        "auth_eval_command": (
+            "experiments/contest_auth_eval.py --device cpu"
+            if is_cpu
+            else "experiments/contest_auth_eval.py --device cuda"
+        ),
         "log_path": f"experiments/results/z3/{axis}.log",
         "artifact_path": "experiments/results/z3/anchor.json",
     }
@@ -428,6 +433,45 @@ def test_mixed_landed_band_accepts_paired_cpu_cuda_anchors(tmp_path: Path):
 
     assert verdict.blockers == ()
     assert verdict.valid_for_rank_reward is True
+
+
+def test_prediction_band_rejects_non_cpu_hardware_on_contest_cpu_anchor(
+    tmp_path: Path,
+):
+    bad_cpu_anchor = {
+        **_exact_anchor("contest_cpu"),
+        "hardware": "modal-t4-cuda",
+        "inflate_device": "mps",
+        "eval_device": "mps",
+        "auth_eval_command": "experiments/contest_auth_eval.py --device cuda",
+    }
+    band = replace(
+        _valid_band(),
+        axis="mixed",
+        baseline=replace(_valid_band().baseline, axis="mixed"),
+        empirical_anchor=EmpiricalAnchorRef(
+            status="landed",
+            anchors=(bad_cpu_anchor, _exact_anchor("contest_cuda")),
+        ),
+    )
+    _write_anchor_files(tmp_path, band)
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_hardware_not_contest_cpu" in verdict.blockers
+    assert "prediction_band_empirical_anchor_inflate_device_not_cpu" in verdict.blockers
+    assert "prediction_band_empirical_anchor_eval_device_not_cpu" in verdict.blockers
+    assert (
+        "prediction_band_empirical_anchor_command_unrecognized"
+        in verdict.blockers
+    )
 
 
 def test_hyphenated_contest_cuda_axis_is_not_exact_eval_authority():

@@ -17,7 +17,9 @@ tag; no ``[contest-CUDA]`` claims are produced by this module.
 
 Per CLAUDE.md "Cross-paradigm composition rules" + "substrate vs codec
 composition meta-pattern" + the May-2026 race postmortem, the rules below
-encode the **composability classes** the council has empirically validated:
+encode **planning composability classes**. They are orthogonality heuristics
+pending pairwise exact anchors unless a row cites a concrete exact-eval
+artifact:
 
 - Two **residual** substrates compose orthogonally if they target
   DIFFERENT score axes (wavelet=spatial-high-freq + c3=temporal-low-freq

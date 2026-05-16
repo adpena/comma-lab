@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
+
+import pytest
 
 from tac.optimization.l5_staircase_v2 import (
     TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
@@ -28,35 +31,56 @@ def _sha256_file(path: Path) -> str:
 def test_tt5l_sideinfo_consumption_proof_builder_is_deterministic(
     tmp_path: Path,
 ) -> None:
-    proof_path = tmp_path / "proof.json"
-    manifest_path = tmp_path / "manifest.json"
-    work_dir = tmp_path / "work"
-
-    first = build_tt5l_sideinfo_consumption_proof(
-        artifact_path=proof_path,
-        manifest_path=manifest_path,
-        work_dir=work_dir,
-        repo_root=Path.cwd(),
+    output_root = (
+        Path("experiments/results/time_traveler_l5_v2/test_consumption_proof")
+        / tmp_path.name
     )
-    first_sha = _sha256_file(first.proof_path)
-    second = build_tt5l_sideinfo_consumption_proof(
-        artifact_path=proof_path,
-        manifest_path=manifest_path,
-        work_dir=work_dir,
-        repo_root=Path.cwd(),
-    )
+    proof_path = output_root / "proof.json"
+    manifest_path = output_root / "manifest.json"
+    work_dir = output_root / "work"
 
-    assert _sha256_file(second.proof_path) == first_sha
-    proof = second.proof
-    assert proof["predicate_passed"] is True
-    assert proof["score_claim"] is False
-    assert proof["promotion_eligible"] is False
-    assert proof["ready_for_exact_eval_dispatch"] is False
-    assert proof["byte_mutation_proof"]["parser_consumed_bytes"] is True
-    assert proof["byte_mutation_proof"]["output_changed"] is True
-    assert proof["component_proofs"]["ac_state"]["parser_consumed_bytes"] is True
-    assert proof["component_proofs"]["ac_state"]["output_changed"] is True
-    assert "not_real_range_or_ans_entropy_decoder" in proof["ac_state_status"]
+    try:
+        first = build_tt5l_sideinfo_consumption_proof(
+            artifact_path=proof_path,
+            manifest_path=manifest_path,
+            work_dir=work_dir,
+            repo_root=Path.cwd(),
+        )
+        first_sha = _sha256_file(first.proof_path)
+        second = build_tt5l_sideinfo_consumption_proof(
+            artifact_path=proof_path,
+            manifest_path=manifest_path,
+            work_dir=work_dir,
+            repo_root=Path.cwd(),
+        )
+
+        assert _sha256_file(second.proof_path) == first_sha
+        proof = second.proof
+        assert proof["predicate_passed"] is True
+        assert proof["score_claim"] is False
+        assert proof["promotion_eligible"] is False
+        assert proof["ready_for_exact_eval_dispatch"] is False
+        assert proof["byte_mutation_proof"]["parser_consumed_bytes"] is True
+        assert proof["byte_mutation_proof"]["output_changed"] is True
+        assert proof["component_proofs"]["ac_state"]["parser_consumed_bytes"] is True
+        assert proof["component_proofs"]["ac_state"]["output_changed"] is True
+        assert "not_real_range_or_ans_entropy_decoder" in proof["ac_state_status"]
+        for record in second.manifest["outputs"].values():
+            assert not str(record["path"]).startswith("/")
+    finally:
+        shutil.rmtree(Path.cwd() / output_root.parent, ignore_errors=True)
+
+
+def test_tt5l_sideinfo_consumption_proof_rejects_outside_repo_outputs(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(ValueError, match="artifact_path must be inside repo root"):
+        build_tt5l_sideinfo_consumption_proof(
+            artifact_path=tmp_path / "proof.json",
+            manifest_path="experiments/results/time_traveler_l5_v2/manifest.json",
+            work_dir="experiments/results/time_traveler_l5_v2/work",
+            repo_root=Path.cwd(),
+        )
 
 
 def test_committed_tt5l_sideinfo_consumption_proof_satisfies_l5_gate() -> None:

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import tac.optimization.l5_staircase_v2 as l5_v2
 from tac.optimization.l5_staircase_v2 import (
     L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA,
     L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA,
@@ -137,6 +138,23 @@ def _probe_observation_payload(
         log_file = repo_root / log_path
         log_file.parent.mkdir(parents=True, exist_ok=True)
         log_file.write_text(f"{candidate_id} {axis}\n", encoding="utf-8")
+        axis_artifact_path = (
+            "experiments/results/time_traveler_l5_v2/"
+            f"{candidate_id}_{axis}_probe.json"
+        )
+        axis_artifact_file = repo_root / axis_artifact_path
+        axis_artifact_file.write_text(
+            json.dumps(
+                {
+                    "axis": axis,
+                    "candidate_id": candidate_id,
+                    "score_delta": delta,
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         axis_evidence.append(
             {
                 "axis": axis,
@@ -155,6 +173,7 @@ def _probe_observation_payload(
                     f"--device {'cpu' if axis == 'contest_cpu' else 'cuda'}"
                 ),
                 "log_path": log_path,
+                "artifact_path": axis_artifact_path,
                 "score_delta": delta,
             }
         )
@@ -410,28 +429,14 @@ def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> 
         PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
     )
     assert payload["source_candidate_count"] == 16
-    assert payload["paired_candidate_count"] == 3
+    assert payload["paired_candidate_count"] == 0
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
-    assert payload["blockers"] == []
-    paired = {
-        row["candidate_id"]: row
-        for row in payload["paired_candidates"]
-        if isinstance(row, dict)
-    }
-    assert "format_0x0c_exact_radix" in paired
-    assert "format_0x0d_latent_score_table" in paired
-    assert "prefix_top_16_pr101grammar" in paired
-    for row in paired.values():
-        assert row["score_claim"] is False
-        assert row["promotion_eligible"] is False
-        assert row["ready_for_exact_eval_dispatch"] is False
-        axis_evidence = row["axis_evidence"]
-        assert isinstance(axis_evidence, dict)
-        assert set(axis_evidence) == {"contest_cpu", "contest_cuda"}
-        assert axis_evidence["contest_cpu"]["valid"] is True
-        assert axis_evidence["contest_cuda"]["valid"] is True
+    assert payload["paired_candidates"] == []
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in payload[
+        "blockers"
+    ]
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
@@ -450,31 +455,92 @@ def test_l5_v2_pr106_stack_cell_candidates_are_blocked_proposals() -> None:
     payload = l5_v2_pr106_stack_cell_candidates()
 
     assert payload["schema"] == L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA
-    assert payload["source_packetir_paired_candidate_count"] == 3
-    assert payload["candidate_count"] == 3
+    assert payload["source_packetir_paired_candidate_count"] == 0
+    assert payload["candidate_count"] == 0
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
-    assert payload["blockers"] == []
-    first = payload["candidates"][0]
-    assert first["cell_id"].startswith(f"{SUBJECT_ID}+")
-    assert set(first["source_axis_scores"]) == {"contest_cpu", "contest_cuda"}
-    assert first["score_claim"] is False
-    assert first["promotion_eligible"] is False
-    assert first["ready_for_exact_eval_dispatch"] is False
-    assert {
-        "requires_l5_v2_composite_archive_materialization",
-        "requires_l5_v2_composite_paired_exact_eval",
-        "requires_composite_sideinfo_consumption_proof",
-    } <= set(first["blockers"])
+    assert payload["candidates"] == []
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in payload[
+        "blockers"
+    ]
+    assert "l5_v2_pr106_stack_cell_candidates_missing" in payload["blockers"]
 
 
 def test_l5_v2_pr106_stack_cell_candidates_honor_top_k() -> None:
     payload = l5_v2_pr106_stack_cell_candidates(top_k=2)
 
-    assert payload["candidate_count"] == 2
-    assert len(payload["candidates"]) == 2
+    assert payload["candidate_count"] == 0
+    assert payload["candidates"] == []
     assert payload["score_claim"] is False
+
+
+def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    matrix_relpath = Path(".omx/research/test_pr106_packetir_matrix.json")
+    matrix_path = tmp_path / matrix_relpath
+    matrix_path.parent.mkdir(parents=True)
+    matrix = {
+        "schema": "pr106_packetir_candidate_matrix_v1",
+        "candidate_count": 1,
+        "status_counts": {"paired_exact_measured": 1},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rows": [
+            {
+                "candidate_id": "format_0x0c_exact_radix",
+                "format_id": "0x0C",
+                "status": "paired_exact_measured",
+                "archive_sha256": _sha(12),
+                "archive_path": "submissions/pr106/archive.zip",
+                "exact_axis_evidence": {
+                    "contest_cpu": {
+                        "valid": True,
+                        "canonical_score": 0.190,
+                        "archive_sha256": _sha(12),
+                        "archive_size_bytes": 186327,
+                        "artifact_path": "experiments/results/cpu/result.json",
+                    },
+                    "contest_cuda": {
+                        "valid": True,
+                        "canonical_score": 0.226,
+                        "archive_sha256": _sha(12),
+                        "archive_size_bytes": 186327,
+                        "artifact_path": "experiments/results/cuda/result.json",
+                    },
+                },
+            }
+        ],
+    }
+    matrix_path.write_text(
+        json.dumps(matrix, allow_nan=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH",
+        str(matrix_relpath),
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256",
+        _file_sha256(matrix_path),
+    )
+
+    payload = l5_v2_pr106_stack_cell_candidates(repo_root=tmp_path)
+
+    assert payload["candidate_count"] == 1
+    candidate = payload["candidates"][0]
+    assert candidate["source_axis_scores"] == {
+        "contest_cpu": 0.190,
+        "contest_cuda": 0.226,
+    }
+    assert candidate["source_worst_axis_score"] == 0.226
+    assert "source_max_axis_score" not in candidate
+    assert candidate["score_claim"] is False
 
 
 def test_l5_v2_pr106_stack_cell_candidates_fail_closed_without_matrix(
@@ -521,9 +587,9 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     )
     assert all(gate["status"] == "required" for gate in boolean_only["gates"])
     assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
-    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 3
+    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 0
     assert blocked["packetir_stack_evidence"]["score_claim"] is False
-    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 3
+    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 0
     assert blocked["pr106_stack_cell_candidates"]["promotion_eligible"] is False
 
 

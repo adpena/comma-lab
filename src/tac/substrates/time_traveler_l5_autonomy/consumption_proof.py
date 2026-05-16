@@ -109,9 +109,26 @@ def _runtime_tree_sha256(repo_root: Path) -> str:
 
 def _display_path(path: Path, root: Path) -> str:
     try:
-        return str(path.relative_to(root))
+        return str(path.resolve().relative_to(root.resolve()))
     except ValueError:
         return str(path)
+
+
+def _resolve_repo_custody_path(
+    value: str | Path | None,
+    default_value: str,
+    *,
+    repo_root: Path,
+    label: str,
+) -> Path:
+    raw_path = Path(value or default_value)
+    resolved = raw_path if raw_path.is_absolute() else repo_root / raw_path
+    resolved = resolved.resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ValueError(f"{label} must be inside repo root: {resolved}") from exc
+    return resolved
 
 
 def _toy_config_and_state_dict() -> tuple[TimeTravelerConfig, dict[str, torch.Tensor]]:
@@ -245,11 +262,16 @@ def _differing_offsets_within_section(
     return offsets or [baseline_start]
 
 
-def _inflate_and_hash(archive_bytes: bytes, output_path: Path) -> dict[str, Any]:
+def _inflate_and_hash(
+    archive_bytes: bytes,
+    output_path: Path,
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
     frames = inflate_one_video(archive_bytes, output_path, device="cpu")
     raw_sha = _sha256_file(output_path)
     return {
-        "path": str(output_path),
+        "path": _display_path(output_path, repo_root),
         "frames": frames,
         "bytes": output_path.stat().st_size,
         "sha256": raw_sha,
@@ -309,9 +331,24 @@ def build_tt5l_sideinfo_consumption_proof(
     """Build and write the byte-closed TT5L side-info consumption proof."""
 
     root = Path(repo_root).resolve() if repo_root is not None else _repo_root()
-    proof_path = root / (artifact_path or TT5L_SIDEINFO_CONSUMPTION_DEFAULT_ARTIFACT)
-    manifest_out = root / (manifest_path or TT5L_SIDEINFO_CONSUMPTION_DEFAULT_MANIFEST)
-    work = root / (work_dir or TT5L_SIDEINFO_CONSUMPTION_DEFAULT_WORK_DIR)
+    proof_path = _resolve_repo_custody_path(
+        artifact_path,
+        TT5L_SIDEINFO_CONSUMPTION_DEFAULT_ARTIFACT,
+        repo_root=root,
+        label="artifact_path",
+    )
+    manifest_out = _resolve_repo_custody_path(
+        manifest_path,
+        TT5L_SIDEINFO_CONSUMPTION_DEFAULT_MANIFEST,
+        repo_root=root,
+        label="manifest_path",
+    )
+    work = _resolve_repo_custody_path(
+        work_dir,
+        TT5L_SIDEINFO_CONSUMPTION_DEFAULT_WORK_DIR,
+        repo_root=root,
+        label="work_dir",
+    )
     work.mkdir(parents=True, exist_ok=True)
 
     cfg, state_dict = _toy_config_and_state_dict()
@@ -350,9 +387,21 @@ def build_tt5l_sideinfo_consumption_proof(
     ):
         (work / name).write_bytes(blob)
 
-    baseline_output = _inflate_and_hash(baseline_archive, work / "baseline.raw")
-    sideinfo_output = _inflate_and_hash(sideinfo_archive, work / "sideinfo_mutated.raw")
-    ac_state_output = _inflate_and_hash(ac_state_archive, work / "ac_state_mutated.raw")
+    baseline_output = _inflate_and_hash(
+        baseline_archive,
+        work / "baseline.raw",
+        repo_root=root,
+    )
+    sideinfo_output = _inflate_and_hash(
+        sideinfo_archive,
+        work / "sideinfo_mutated.raw",
+        repo_root=root,
+    )
+    ac_state_output = _inflate_and_hash(
+        ac_state_archive,
+        work / "ac_state_mutated.raw",
+        repo_root=root,
+    )
 
     parsed_baseline = parse_archive(baseline_archive)
     parsed_sideinfo = parse_archive(sideinfo_archive)

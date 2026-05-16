@@ -22,19 +22,20 @@ until it is materialized, consumption-proved, and paired exact-evaluated.
   - verifies `top_k`
   - verifies fail-closed behavior without the PR106 matrix artifact
 
-## Current Top-3 Proposal Order
+## Current Proposal Status
 
 Generated with `l5_v2_pr106_stack_cell_candidates(top_k=3)`:
 
-1. `time_traveler_l5_autonomy+format_0x0d_latent_score_table`
-   - source max axis score: `0.22712591739832488`
-2. `time_traveler_l5_autonomy+format_0x0c_exact_radix`
-   - source max axis score: `0.22776488386973992`
-3. `time_traveler_l5_autonomy+prefix_top_16_pr101grammar`
-   - source max axis score: `0.23010997767094082`
+- Candidate count: `0`.
+- Selector blockers:
+  - `l5_v2_packetir_no_runtime_bound_paired_exact_candidates`
+  - `l5_v2_pr106_stack_cell_candidates_missing`
 
-These values are sorting keys from source PR106 paired rows, not composite
-score claims.
+The previous top-3 PR106 PacketIR rows are no longer stack-cell candidates
+because the paired exact gate now requires runtime-consumption content-tree
+custody to match both exact axes. Future populated candidates use
+`source_worst_axis_score` as the sorting key; that value is not a composite
+score claim.
 
 Every proposed cell carries:
 
@@ -62,17 +63,19 @@ print(p["schema"])
 print("candidate_count", p["candidate_count"])
 print("blockers", p["blockers"])
 for row in p["candidates"]:
-    print(row["cell_id"], row["source_max_axis_score"], row["blockers"])
+    print(row["cell_id"], row["source_worst_axis_score"], row["blockers"])
 PY
 ```
 
 Observed results:
 
 - `All checks passed!`
-- `49 passed`
+- `54 passed`
 - selector schema `l5_v2_pr106_packetir_stack_cell_candidates_v1`
-- top-k blockers `[]` at selector level; each cell still carries the required
-  composite-materialization blockers listed above.
+- candidate count `0`
+- selector blockers:
+  `l5_v2_packetir_no_runtime_bound_paired_exact_candidates`,
+  `l5_v2_pr106_stack_cell_candidates_missing`
 
 ## Follow-Up
 

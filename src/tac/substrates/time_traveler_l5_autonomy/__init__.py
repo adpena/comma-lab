@@ -12,17 +12,20 @@ grammar at 95-110 KB target size:
 2. **Predictive coding hierarchy** (Rao-Ballard 1999): per-pair side info is
    only the residual the world model cannot predict.
 3. **Foveation matched to ego-motion** (Gibson 1950, Lee 1976, LAPose): a
-   log-polar foveation grid centered on the camera focus-of-expansion gives
-   5-10x effective resolution gain on score-relevant regions.
+   log-polar foveation grid centered on the camera focus-of-expansion is a
+   planning hypothesis for concentrating bytes on score-relevant regions. Any
+   effective-resolution gain is contest-empirical, not established by the cited
+   foveation literature alone.
 4. **Differentiable world model**: a small MLP renderer + Lie-algebra ego-pose
    dynamics prior encodes "physics" once (~25 KB) instead of pixels per frame.
-5. **Sub-100K params + Tikhonov regularization**: ~35 KB decoder weights
-   beats PR101's ~114 KB at predicted score 0.150-0.170.
+5. **Sub-100K params + Tikhonov regularization**: ~35 KB decoder weights target
+   a smaller byte budget than PR101's ~114 KB payload while preserving enough
+   scorer-relevant structure to test the 0.150-0.170 planning band.
 
-**Predicted contest-CPU score: 0.150-0.170** ``[time-traveler-prediction]``
-(NOT a score claim — score authority requires CUDA + CPU paired auth eval on
-1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU AND
-CUDA").
+**Planning band: 0.150-0.170** ``[time-traveler-hypothesis]``. This is not a
+score claim and is not paper-derived evidence of contest score movement. Score
+authority requires CUDA + CPU paired auth eval on 1:1 contest-CI hardware per
+CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
 
 Catalog #124 STRICT archive-grammar 8 fields (declared inline so the AST
 walker sees them):

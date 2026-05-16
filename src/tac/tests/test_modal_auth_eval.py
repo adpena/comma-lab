@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+import tac.deploy.modal.auth_eval as modal_auth_eval_helpers
 from tac.deploy.modal.auth_eval import (
     modal_uploaded_submission_dir_runtime_manifest,
     prepare_modal_auth_eval_request,
@@ -393,6 +394,21 @@ def test_prepare_modal_auth_eval_request_centralizes_upload_shape(tmp_path):
     assert len(prepared.submission_dir_zip_sha256 or "") == 64
     assert prepared.output_dir.parent == (tmp_path / "modal_results").resolve()
     assert "candidate_archive" in prepared.output_dir.name
+
+
+def test_modal_auth_eval_public_api_exports_reusable_custody_helpers() -> None:
+    expected = {
+        "ModalArtifactWriteError",
+        "PreparedModalAuthEvalRequest",
+        "UnsafeModalArtifactPath",
+        "materialize_modal_artifacts",
+        "prepare_modal_auth_eval_request",
+        "safe_modal_artifact_path",
+    }
+
+    assert expected <= set(modal_auth_eval_helpers.__all__)
+    for name in expected:
+        assert hasattr(modal_auth_eval_helpers, name)
 
 
 def test_modal_uploaded_submission_dir_runtime_manifest_uses_remote_shape() -> None:

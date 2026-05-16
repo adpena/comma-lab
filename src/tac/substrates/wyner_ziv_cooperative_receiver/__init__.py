@@ -6,22 +6,23 @@ Per ``feedback_expert_team_signal_processing_alien_tech_landed_20260513.md``
 the **#1 ranked technique with predicted ΔS -0.05** — the largest single-
 substrate ΔS prediction in the entire alien-tech catalog.
 
-The contest IS Wyner-Ziv compression: the SegNet + PoseNet scorer is the
-KNOWN side-information at the receiver. The encoder transmits only the
-conditional bits ``H(source | scorer_weights + architecture + preprocessing)``
-needed to reconstruct frames that the scorer accepts as low-distortion;
-generic source bits (``H(source)``) are wasted because the scorer discards
-most of them at preprocessing.
+The contest has a Wyner-Ziv-shaped training/planning analogy: the fixed SegNet
++ PoseNet scorer can define side-information-like sensitivity during training
+and analysis. The inflate runtime must remain scorer-free. Any decoder
+side-information used at inflate must be deterministic from charged archive
+bytes and fixed contest-compliant runtime code; scorer weights or scorer
+forward passes are not legal decoder side information.
 
 Mathematical contract per Slepian-Wolf-Wyner-Ziv 1973-1976 + DISCUS 2003
 (Pradhan-Ramchandran):
 
     R_WZ(D) = inf { I(X; U) - I(Y; U) : E[d(X, X_hat(U, Y))] <= D }
 
-where ``X`` is the source frame pair, ``Y`` is the side-information (the
-scorer's sensitivity at every pixel given the *other* frame in the pair +
-the contest preprocessing), ``U`` is an auxiliary random variable, and
-``X_hat`` is the receiver's reconstruction.  The DISCUS construction
+where ``X`` is the source frame pair, ``Y`` is the side-information available
+to the decoder, ``U`` is an auxiliary random variable, and ``X_hat`` is the
+receiver's reconstruction. In this repository, scorer-derived ``Y`` is a
+training/planning proxy unless it is replaced by a byte-closed deterministic
+runtime signal. The DISCUS construction
 realizes ``R_WZ(D)`` via Slepian-Wolf cosets: bin source frames into
 cosets of a structured code; transmit only the (small) coset index; the
 receiver disambiguates by picking the coset member nearest to the
@@ -36,10 +37,9 @@ Distinction from Atick-Redlich (sister cooperative-receiver primitive in
   information at the decoder explicitly; the encoder is "scorer-aware"
   but the decoder is generic.
 * **Wyner-Ziv 1976** — *side-information at the decoder*: the encoder
-  ASSUMES the decoder has access to ``Y`` (here: scorer + scorer
-  preprocessing of paired frames) and only transmits the ``H(X | Y)``
-  bits the decoder cannot reconstruct from ``Y`` alone. The decoder
-  computes ``Y`` from the same scorer the encoder targeted.
+  assumes the decoder has access to ``Y`` and only transmits the ``H(X | Y)``
+  bits the decoder cannot reconstruct from ``Y`` alone. For contest-compliant
+  Pact archives, ``Y`` must be fixed/charged and scorer-free at inflate.
 
 The two are complementary, NOT redundant: Atick-Redlich shapes the
 encoder loss; Wyner-Ziv shapes the archive grammar. The Time-Traveler
@@ -48,13 +48,13 @@ substrate uses Wyner-Ziv (cooperative-receiver loss + Slepian-Wolf
 binning of source frames into cosets so the archive transmits the coset
 index, not the full source).
 
-**Predicted contest-CPU score band: 0.140-0.150** ``[wyner-ziv-prediction]``
-(NOT a score claim — score authority requires CUDA + CPU paired auth eval
-on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU
-AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE"). Predicted ΔS of -0.05
-relative to PR101 baseline 0.193 lands in the 0.140-0.150 range; clears
-the sub-0.188 gate per ``feedback_solver_stack_wire_in_sweep_landed_20260513``
-autopilot dispatch ranking.
+**Planning band: 0.140-0.150** ``[wyner-ziv-hypothesis]`` (NOT a score claim —
+score authority requires CUDA + CPU paired auth eval on 1:1 contest-CI hardware
+per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA, ON 1:1
+CONTEST-COMPLIANT HARDWARE"). The ΔS -0.05 estimate is an internal planning
+prior relative to PR101 baseline 0.193, not a literature-derived contest
+guarantee. It can inform probes, but cannot clear promotion or ranking gates
+without byte-closed exact evidence.
 
 Catalog #124 STRICT archive-grammar 8 fields (declared inline so the AST
 walker observes them):
@@ -123,12 +123,12 @@ __all__ = [
     "PER_PAIR_COSET_INDEX_BITS",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
-    "SideInfoPredictor",
     "WZ1_HEADER_FMT",
     "WZ1_HEADER_SIZE",
     "WZ1_MAGIC",
     "WZ1_SCHEMA_VERSION",
     "WZ1_SECTION_ROLES",
+    "SideInfoPredictor",
     "WynerZivArchive",
     "WynerZivConfig",
     "WynerZivCooperativeReceiverLoss",

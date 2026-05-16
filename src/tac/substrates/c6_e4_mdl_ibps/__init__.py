@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: MIT
 """tac.substrates.c6_e4_mdl_ibps — Minimum Description Length × Information Bottleneck Predictive Substrate.
 
-The zen-Z1 LARGEST single bet for substrate-class shift per
+The zen-Z1 largest single bet for substrate-class shift per
 `.omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md` +
-`.omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md`. Z1 empirically
-proved the HNeRV-family substrate class is saturated at ~99.3% MDL density on
-A1; sub-0.10 requires a DIFFERENT substrate class, not a more efficient
-encoding of the HNeRV grammar. C6 is the across-class-shift substrate.
+`.omx/research/zen_floor_band_v2_post_z1_ablation_20260514.md`. Z1 is an
+internal ablation interpreted as evidence that the measured HNeRV-family basin
+is highly MDL-dense on A1; it is not a theorem from IB/MDL literature and does
+not by itself prove sub-0.10 impossibility inside HNeRV. C6 is the proposed
+across-class-shift substrate to test that interpretation.
 
 Core insight (Tishby-Zaslavsky 2015 Information Bottleneck + Rissanen 1978 MDL)
 ------------------------------------------------------------------------------
@@ -141,22 +142,22 @@ from tac.substrates.c6_e4_mdl_ibps.score_aware_loss import (
 
 __all__ = [
     "EVAL_HW",
-    "IBDecoder",
-    "IBEncoder",
-    "IBMDLLoss",
     "IBPS1_HEADER_FMT",
     "IBPS1_HEADER_SIZE",
     "IBPS1_MAGIC",
     "IBPS1_SCHEMA_VERSION",
     "IBPS1_SECTION_ROLES",
+    "NUM_PAIRS",
+    "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
+    "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
+    "IBDecoder",
+    "IBEncoder",
+    "IBMDLLoss",
     "MDLIBPSArchive",
     "MDLIBPSConfig",
     "MDLIBPSLossWeights",
     "MDLIBPSScoreAwareLoss",
     "MDLIBPSSubstrate",
-    "NUM_PAIRS",
-    "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
-    "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "pack_archive",
     "parse_archive",
     "parse_ibps1_archive_bytes",
