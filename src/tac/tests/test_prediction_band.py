@@ -33,7 +33,7 @@ def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
         "seg_dist": 0.0,
         "pose_dist": 0.0,
         "archive_bytes": archive_bytes,
-        "n_samples": 1200,
+        "n_samples": 600,
         "hardware": "modal-t4",
         "inflate_device": "cuda" if axis == "contest_cuda" else "cpu",
         "eval_device": "cuda" if axis == "contest_cuda" else "cpu",

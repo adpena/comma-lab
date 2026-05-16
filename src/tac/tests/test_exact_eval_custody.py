@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from tac.exact_eval_custody import (
+    CONTEST_EXACT_SAMPLE_COUNT,
     contest_score,
     extract_archive_sha256,
     extract_runtime_tree_sha256,
@@ -38,29 +41,50 @@ def test_extract_archive_sha256_accepts_common_exact_eval_fields() -> None:
     assert is_sha256_hex("g" * 64) is False
 
 
-def test_validate_exact_eval_evidence_requires_formula_and_devices() -> None:
+def _valid_contest_evidence(tmp_path: Path, *, axis: str = "contest_cuda") -> dict[str, object]:
+    log_path = tmp_path / f"{axis}.log"
+    artifact_path = tmp_path / f"{axis}.json"
+    log_path.write_text("ok\n", encoding="utf-8")
+    artifact_path.write_text("{}\n", encoding="utf-8")
+    archive_bytes = 123
+    score = contest_score(seg_dist=0.001, pose_dist=0.0004, archive_bytes=archive_bytes)
+    if axis == "contest_cuda":
+        hardware = "modal-t4"
+        inflate_device = "cuda"
+        eval_device = "cuda"
+    else:
+        hardware = "linux-x86_64"
+        inflate_device = "cpu"
+        eval_device = "cpu"
+    return {
+        "axis": axis,
+        "archive_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "score": score,
+        "seg_dist": 0.001,
+        "pose_dist": 0.0004,
+        "archive_bytes": archive_bytes,
+        "n_samples": CONTEST_EXACT_SAMPLE_COUNT,
+        "hardware": hardware,
+        "inflate_device": inflate_device,
+        "eval_device": eval_device,
+        "auth_eval_command": f"contest_auth_eval --axis {axis}",
+        "log_path": log_path.name,
+        "artifact_path": artifact_path.name,
+    }
+
+
+def test_validate_exact_eval_evidence_requires_formula_and_devices(tmp_path: Path) -> None:
     archive_bytes = 123
     score = contest_score(seg_dist=0.001, pose_dist=0.0004, archive_bytes=archive_bytes)
     valid = validate_exact_eval_evidence(
-        {
-            "axis": "contest_cuda",
-            "archive_sha256": "a" * 64,
-            "runtime_tree_sha256": "b" * 64,
-            "score": score,
-            "seg_dist": 0.001,
-            "pose_dist": 0.0004,
-            "archive_bytes": archive_bytes,
-            "n_samples": 1200,
-            "hardware": "modal-t4",
-            "inflate_device": "cuda",
-            "eval_device": "cuda",
-            "auth_eval_command": "contest_auth_eval --axis contest_cuda",
-            "log_path": "experiments/results/cuda.log",
-        },
+        _valid_contest_evidence(tmp_path),
         expected_axis="contest_cuda",
         expected_archive_sha256="a" * 64,
         expected_runtime_tree_sha256="b" * 64,
+        require_artifact_path=True,
         require_devices=True,
+        artifact_base_dir=tmp_path,
     )
 
     assert valid.blockers == ()
@@ -94,3 +118,79 @@ def test_validate_exact_eval_evidence_fails_closed_on_partial_rows() -> None:
     assert "auth_eval_command_missing" in verdict.blockers
     assert "log_path_missing" in verdict.blockers
     assert "artifact_path_missing" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_cpu_devices_for_cuda_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cuda")
+    evidence["hardware"] = "linux-x86_64"
+    evidence["inflate_device"] = "cpu"
+    evidence["eval_device"] = "cpu"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "hardware_not_cuda" in verdict.blockers
+    assert "inflate_device_not_cuda" in verdict.blockers
+    assert "eval_device_not_cuda" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_cuda_devices_for_cpu_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cpu")
+    evidence["inflate_device"] = "cuda"
+    evidence["eval_device"] = "cuda"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cpu",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "inflate_device_not_cpu" in verdict.blockers
+    assert "eval_device_not_cpu" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_partial_sample_contest_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path)
+    evidence["n_samples"] = CONTEST_EXACT_SAMPLE_COUNT - 1
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "n_samples_not_contest_exact" in verdict.blockers
+
+
+def test_validate_exact_eval_evidence_rejects_missing_log_artifact_file(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path)
+    evidence["log_path"] = "missing.log"
+    evidence["artifact_path"] = "missing.json"
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "log_path_file_missing" in verdict.blockers
+    assert "artifact_path_file_missing" in verdict.blockers

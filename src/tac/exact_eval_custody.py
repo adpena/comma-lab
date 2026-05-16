@@ -13,10 +13,14 @@ import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 CONTEST_REFERENCE_BYTES = 37_545_489
+CONTEST_EXACT_SAMPLE_COUNT = 600
 SCORE_FORMULA_TOLERANCE = 1e-9
+CONTEST_EXACT_AXES = frozenset({"contest_cpu", "contest_cuda"})
+CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
 
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
@@ -69,6 +73,31 @@ def positive_int(value: object) -> int | None:
     if isinstance(value, int) and value > 0:
         return value
     return None
+
+
+def _clean_text(value: object) -> str:
+    """Return stripped string text for JSON scalar fields."""
+
+    return str(value or "").strip()
+
+
+def _contains_token(value: str, tokens: frozenset[str]) -> bool:
+    """Return true when lowercased device/hardware text carries any token."""
+
+    lowered = value.lower()
+    return any(token in lowered for token in tokens)
+
+
+def _resolve_evidence_path(value: object, base_dir: Path) -> Path | None:
+    """Resolve an evidence path relative to ``base_dir`` for custody checks."""
+
+    path_text = _clean_text(value).removeprefix("file:").strip()
+    if not path_text:
+        return None
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = base_dir / path
+    return path
 
 
 def contest_score(seg_dist: float, pose_dist: float, archive_bytes: int) -> float:
@@ -161,6 +190,7 @@ def validate_exact_eval_evidence(
     require_log_path: bool = True,
     require_devices: bool = False,
     annotation_prefix: str = "",
+    artifact_base_dir: Path | str | None = None,
 ) -> ExactEvalEvidenceValidation:
     """Validate one axis-labelled exact-eval evidence row.
 
@@ -173,7 +203,7 @@ def validate_exact_eval_evidence(
     annotations: list[str] = []
     prefix = f"{annotation_prefix}_" if annotation_prefix else ""
 
-    axis = str(evidence.get("axis") or "").strip()
+    axis = _clean_text(evidence.get("axis"))
     if expected_axis is not None:
         if not axis:
             blockers.append("axis_missing")
@@ -204,6 +234,8 @@ def validate_exact_eval_evidence(
 
     if n_samples is None:
         blockers.append("n_samples_missing")
+    elif (expected_axis or axis) in CONTEST_EXACT_AXES and n_samples != CONTEST_EXACT_SAMPLE_COUNT:
+        blockers.append("n_samples_not_contest_exact")
     if archive_bytes is None:
         blockers.append("archive_bytes_missing")
     if seg_dist is None or seg_dist < 0.0:
@@ -213,19 +245,51 @@ def validate_exact_eval_evidence(
     if score is None:
         blockers.append("score_missing")
 
-    if require_hardware and not str(evidence.get("hardware") or "").strip():
+    semantic_axis = expected_axis or axis
+    hardware = _clean_text(evidence.get("hardware"))
+    inflate_device = _clean_text(evidence.get("inflate_device"))
+    eval_device = _clean_text(evidence.get("eval_device"))
+
+    if require_hardware and not hardware:
         blockers.append("hardware_missing")
+    elif semantic_axis == "contest_cuda" and hardware and not _contains_token(
+        hardware, CUDA_DEVICE_TOKENS
+    ):
+        blockers.append("hardware_not_cuda")
     if require_devices:
-        if not str(evidence.get("inflate_device") or "").strip():
+        if not inflate_device:
             blockers.append("inflate_device_missing")
-        if not str(evidence.get("eval_device") or "").strip():
+        elif semantic_axis == "contest_cuda" and not _contains_token(
+            inflate_device, CUDA_DEVICE_TOKENS
+        ):
+            blockers.append("inflate_device_not_cuda")
+        elif semantic_axis == "contest_cpu" and "cpu" not in inflate_device.lower():
+            blockers.append("inflate_device_not_cpu")
+        if not eval_device:
             blockers.append("eval_device_missing")
-    if require_auth_eval_command and not str(evidence.get("auth_eval_command") or "").strip():
+        elif semantic_axis == "contest_cuda" and not _contains_token(
+            eval_device, CUDA_DEVICE_TOKENS
+        ):
+            blockers.append("eval_device_not_cuda")
+        elif semantic_axis == "contest_cpu" and "cpu" not in eval_device.lower():
+            blockers.append("eval_device_not_cpu")
+    if require_auth_eval_command and not _clean_text(evidence.get("auth_eval_command")):
         blockers.append("auth_eval_command_missing")
-    if require_log_path and not str(evidence.get("log_path") or "").strip():
+    if require_log_path and not _clean_text(evidence.get("log_path")):
         blockers.append("log_path_missing")
-    if require_artifact_path and not str(evidence.get("artifact_path") or "").strip():
+    if require_artifact_path and not _clean_text(evidence.get("artifact_path")):
         blockers.append("artifact_path_missing")
+
+    base_dir = Path(artifact_base_dir) if artifact_base_dir is not None else None
+    if base_dir is not None:
+        if require_log_path and "log_path_missing" not in blockers:
+            log_path = _resolve_evidence_path(evidence.get("log_path"), base_dir)
+            if log_path is None or not log_path.is_file():
+                blockers.append("log_path_file_missing")
+        if require_artifact_path and "artifact_path_missing" not in blockers:
+            artifact_path = _resolve_evidence_path(evidence.get("artifact_path"), base_dir)
+            if artifact_path is None or not artifact_path.is_file():
+                blockers.append("artifact_path_file_missing")
 
     if (
         score is not None
@@ -252,6 +316,7 @@ def validate_exact_eval_evidence(
 
 
 __all__ = [
+    "CONTEST_EXACT_SAMPLE_COUNT",
     "CONTEST_REFERENCE_BYTES",
     "SCORE_FORMULA_TOLERANCE",
     "ExactEvalEvidenceValidation",

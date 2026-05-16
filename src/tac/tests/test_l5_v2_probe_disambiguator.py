@@ -33,7 +33,7 @@ def _axis_evidence(axis: str) -> dict[str, object]:
         "seg_dist": 0.0,
         "pose_dist": 0.0,
         "archive_bytes": archive_bytes,
-        "n_samples": 1200,
+        "n_samples": 600,
         "hardware": "gha-linux-x86_64" if axis == "contest_cpu" else "modal-t4",
         "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
         "eval_device": "cpu" if axis == "contest_cpu" else "cuda",

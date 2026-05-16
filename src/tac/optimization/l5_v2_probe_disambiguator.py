@@ -72,6 +72,14 @@ def _as_tuple_mapping(value: object) -> tuple[Mapping[str, Any], ...]:
     return tuple(item for item in value if isinstance(item, Mapping))
 
 
+def _require_literal_json_bool(value: object, *, field_name: str) -> bool:
+    if value is True:
+        return True
+    if value is False:
+        return False
+    raise ValueError(f"{field_name} must be a literal JSON boolean")
+
+
 def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation:
     """Parse a JSON-style observation mapping."""
 
@@ -85,12 +93,21 @@ def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation
         artifact_path=str(payload.get("artifact_path") or ""),
         artifact_sha256=str(payload.get("artifact_sha256") or ""),
         predicate_id=str(payload.get("predicate_id") or ""),
-        predicate_passed=bool(payload.get("predicate_passed", False)),
+        predicate_passed=_require_literal_json_bool(
+            payload.get("predicate_passed", False),
+            field_name="predicate_passed",
+        ),
         archive_sha256=str(payload.get("archive_sha256") or ""),
         runtime_tree_sha256=str(payload.get("runtime_tree_sha256") or ""),
         axis_evidence=_as_tuple_mapping(payload.get("axis_evidence")),
-        sideinfo_consumed=bool(payload.get("sideinfo_consumed", False)),
-        byte_closed_archive=bool(payload.get("byte_closed_archive", False)),
+        sideinfo_consumed=_require_literal_json_bool(
+            payload.get("sideinfo_consumed", False),
+            field_name="sideinfo_consumed",
+        ),
+        byte_closed_archive=_require_literal_json_bool(
+            payload.get("byte_closed_archive", False),
+            field_name="byte_closed_archive",
+        ),
         notes=str(payload.get("notes") or ""),
     )
 
@@ -183,15 +200,23 @@ def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...
             "runtime_tree_sha_invalid": "l5_v2_probe_axis_runtime_tree_sha_invalid",
             "runtime_tree_sha_mismatch": "l5_v2_probe_axis_runtime_tree_sha_mismatch",
             "n_samples_missing": "l5_v2_probe_axis_n_samples_missing",
+            "n_samples_not_contest_exact": "l5_v2_probe_axis_n_samples_not_contest_exact",
             "archive_bytes_missing": "l5_v2_probe_axis_archive_bytes_missing",
             "seg_dist_missing": "l5_v2_probe_axis_seg_dist_missing",
             "pose_dist_missing": "l5_v2_probe_axis_pose_dist_missing",
             "score_missing": "l5_v2_probe_axis_score_missing",
             "hardware_missing": "l5_v2_probe_axis_hardware_missing",
+            "hardware_not_cuda": "l5_v2_probe_axis_hardware_not_cuda",
             "inflate_device_missing": "l5_v2_probe_axis_inflate_device_missing",
+            "inflate_device_not_cpu": "l5_v2_probe_axis_inflate_device_not_cpu",
+            "inflate_device_not_cuda": "l5_v2_probe_axis_inflate_device_not_cuda",
             "eval_device_missing": "l5_v2_probe_axis_eval_device_missing",
+            "eval_device_not_cpu": "l5_v2_probe_axis_eval_device_not_cpu",
+            "eval_device_not_cuda": "l5_v2_probe_axis_eval_device_not_cuda",
             "auth_eval_command_missing": "l5_v2_probe_axis_auth_eval_command_missing",
             "log_path_missing": "l5_v2_probe_axis_log_path_missing",
+            "log_path_file_missing": "l5_v2_probe_axis_log_path_file_missing",
+            "artifact_path_file_missing": "l5_v2_probe_axis_artifact_path_file_missing",
             "score_formula_mismatch": "l5_v2_probe_axis_score_formula_mismatch",
         }
         for blocker in validation.blockers:
@@ -238,13 +263,13 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_artifact_sha_mismatch")
     if not observation.predicate_id.strip():
         blockers.append("l5_v2_probe_predicate_id_missing")
-    if not observation.predicate_passed:
+    if observation.predicate_passed is not True:
         blockers.append("l5_v2_probe_predicate_failed")
     if _missing_required_axes(observation):
         blockers.append("l5_v2_probe_paired_exact_axes_missing")
-    if not observation.byte_closed_archive:
+    if observation.byte_closed_archive is not True:
         blockers.append("l5_v2_probe_byte_closed_archive_missing")
-    if not observation.sideinfo_consumed:
+    if observation.sideinfo_consumed is not True:
         blockers.append("l5_v2_probe_sideinfo_consumption_missing")
     if not is_sha256_hex(observation.archive_sha256):
         blockers.append("l5_v2_probe_archive_sha_invalid")
