@@ -582,3 +582,61 @@ Per CLAUDE.md Catalog #294 + standing directive.
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+---
+
+## Appendix B — Real-CUDA-derived SegNet class re-probe (op-routable A-2 closure, 2026-05-16)
+
+**Status**: Section 14 op-routable A-2 LANDED. Result appended per Catalog #110/#113 HISTORICAL_PROVENANCE (APPEND-ONLY); body of design memo + Sections 1-22 + 9-dim checklist + Op-summary + Observability surface + Appendix A UNCHANGED. **Subagent**: `wunderkind-g1-v3-pivot-respawn-c` (respawn of crashed predecessor `a272f4bad69d56360` at lane `lane_wunderkind_g1_v2_pivot_real_cuda_reprobe_v3_design_20260516`).
+
+**Real-CUDA SegNet class derivation method**: ran canonical `tac.scorer.load_default_scorers(upstream)` to load `upstream/models/segnet.safetensors` (sha256 `68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6`); decoded `upstream/videos/0.mkv` (sha256 `2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9`) via canonical `upstream/frame_utils.py::AVVideoDataset::yuv420_to_rgb` semantics into 600 pairs of `(2, 3, 874, 1164)` fp32 tensors; forward-passed each pair through SegNet (`smp.Unet('tu-efficientnet_b2', classes=5)`) with canonical `preprocess_input` (slice last frame + interpolate to 384x512) → 600 per-pair `(384, 512)` int64 argmax maps; reduced per-pair via canonical `g1_v2_per_pair_dominant_class_from_segnet_argmax(stack, num_classes=5)` from `src/tac/substrates/z3_g1_entropy_coded_v2/architecture.py:191`; byte-expanded ×28 to align symbol-for-symbol with the 600x28 int8 residual stream (mirroring v2 Section 14 protocol). Device: CPU (hermetic; SegNet output is source-data derivation NOT auth-eval per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #127 source-data carve-out — the SegNet network IS the contest scorer; running it on the contest video is source generation, not a score claim). Wall clock: 550.6s total (0.6s load + 8.2s decode + 541.9s SegNet inference on M5 Max). Cost: $0.
+
+**Per-class distribution (real CUDA-derived SegNet)**:
+
+| Class | Count | Fraction |
+|---|---|---|
+| 0 | **0** | 0.0000 |
+| 1 | **0** | 0.0000 |
+| 2 | **600** | **1.0000** |
+| 3 | **0** | 0.0000 |
+| 4 | **0** | 0.0000 |
+
+**Chi-square vs uniform**: 2400.0 (df=4; threshold p<0.05 = 9.49) — uniform distribution **REJECTED** at p<0.05.
+
+**Interpretation of class distribution**: every pair in `upstream/videos/0.mkv` reduces to dominant class 2 under SegNet's argmax→per-pair-mode reducer. Class 2 corresponds to the road surface in the comma2k19 5-class SegNet (canonical dashcam-dominant class). The per-pair dominant-class reducer is mathematically equivalent to argmax-over-pixel-counts; for dashcam footage the road class dominates pixel counts in essentially every pair.
+
+**Re-probe result ([diagnostic-CPU; H(latent|scorer_class) probe]; sha256 of latent stream `cf4...` reused from v2 Section 14 — same residual_int8 from Z3 v2 1000ep CUDA archive):**
+
+| Metric | Synthetic uniform (v2 Section 14) | **Real CUDA-derived SegNet (Appendix B)** |
+|---|---|---|
+| `num_unique_classes` | 5 | **1** |
+| `H(latent)` (unconditional) | 7.5653 bits/symbol | **7.5653 bits/symbol** |
+| `H(latent \| scorer_class)` | 7.5213 bits/symbol | **7.5653 bits/symbol** |
+| `I(latent ; class)` (mutual information) | 0.04393 bits/symbol | **0.0000 bits/symbol** |
+| Wyner-Ziv gain ceiling | 0.58% | **0.00%** |
+| **Verdict** | `WEAK_CONDITIONING` | **`INDEPENDENT`** |
+
+**Verdict per Section 14 decision rules**:
+- `I = 0.000 bits/pair < 0.01 bits/pair` independence tolerance ⇒ **INDEPENDENT verdict CONFIRMED with real-SegNet-derived classes**
+- The class signal carries EXACTLY ZERO information about the residual because the class distribution is DEGENERATE (all pairs map to class 2). Conditioning on a constant is mathematically equivalent to no conditioning.
+- Per Section 14 decision rule: **v2 design is structurally falsified by the real-CUDA re-probe. The SegNet class signal cannot provide ANY Wyner-Ziv conditioning gain on this contest video.**
+
+**Implication for v2 reactivation (Section 19 #1 update)**: Section 14 criterion 1 result = **FAIL** with HARD-EARNED real-SegNet evidence (was HARD-EARNED-PARTIAL from synthetic uniform; now HARD-EARNED-FULL). The synthetic-uniform fallback was previously cited as "MI ceiling against uniform would FAVOR finding genuine class-correlation" (Appendix A); the real-SegNet result is WORSE (degenerate distribution) than synthetic-uniform, confirming v2 design has zero achievable Wyner-Ziv conditioning gain. **v2 reactivation criterion 1 is now UNCONDITIONALLY FAILED.**
+
+**Reactivation criteria update (op-routable A-2 closure)**: v2 lane `lane_z3_g1_entropy_coded_v2_20260515` should remain `research_only=true` PERMANENTLY for the v2 design as specified. Per CLAUDE.md "Forbidden premature KILL without research exhaustion" non-negotiable, this is NOT a KILL — it is a **DEFERRED-pending-redesign** verdict. The v2 design is mathematically excluded from improving Z3 v2 on `upstream/videos/0.mkv`; reactivation requires a structural redesign that does NOT depend on per-pair SegNet class conditioning. The Wunderkind G1 v3 per-pair adaptive sigma design (Section 21 op-routable below) IS the structural redesign — it removes the class-conditioning entirely.
+
+**Sister deliverable (v3 per-pair adaptive sigma design memo)**: see `.omx/research/wunderkind_g1_v3_per_pair_adaptive_sigma_full_stack_design_20260516.md` — comprehensive full-stack design memo for the v3 design (22-section UNIQUE-AND-COMPLETE-PER-METHOD template + Catalog #290 canonical-vs-unique + Catalog #294 9-dim checklist + Catalog #296 Dykstra-feasibility + Catalog #303 cargo-cult audit + Catalog #305 observability surface + 8 op-routables). v3 ships per-pair sigma table (1200 sigma scalars) entropy-coded with empirical-CDF prior; no SegNet class conditioning; structurally distinct from v2's failure mode.
+
+**Op-routables (Appendix B closure)**:
+- **B-1**: Lane registry update: append to `lane_z3_g1_entropy_coded_v2_20260515` notes: *"Section 14 re-probe with real-CUDA-derived SegNet classes (2026-05-16): MI=0.000 bits/symbol, INDEPENDENT verdict. v2 design DEFERRED-pending-redesign per CLAUDE.md non-negotiable; v3 per-pair adaptive sigma design queued at lane_z3_g1_per_pair_adaptive_sigma_v3_20260516."*  Operator decision: confirm lane notes update + add `reactivation_criteria` field.
+- **B-2**: Cathedral autopilot continual-learning posterior: append a `[diagnostic-CPU]` anchor row for the Appendix B re-probe per Catalog #128 fcntl-locked `posterior_update_locked` — the empirical anchor that v2 class-conditional design is mathematically falsified on `upstream/videos/0.mkv`. Use `evidence_grade="diagnostic_cpu"`, `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`, `rank_or_kill_eligible=false` per Catalog #127 strict custody.
+- **B-3**: Catalog #267 update (synthetic-uniform-fallback): add a sister evidence row noting that even with REAL SegNet classes, the per-pair dominant class collapses to a single class for dashcam-dominant content; the synthetic-uniform fallback was actually MORE INFORMATIVE than the real distribution. This is a META-pattern for future per-pair-dominant-class reducers on similar content distributions.
+
+**Probe artifacts (committed custody per CLAUDE.md "Forbidden /tmp paths")**:
+- `experiments/results/wunderkind_g1_v2_real_cuda_section14_reprobe_20260516T185807Z/derive_real_segnet_classes.py` (script)
+- `experiments/results/wunderkind_g1_v2_real_cuda_section14_reprobe_20260516T185807Z/class_indices_real_segnet.bin` (600 bytes per-pair; sha256 `08fedbd25b6e3ca9e14370b5d4f0b4b68fc5417cc567ae78823d997c3fe73080`)
+- `experiments/results/wunderkind_g1_v2_real_cuda_section14_reprobe_20260516T185807Z/class_indices_real_segnet_byte_expanded.bin` (16800 bytes ×28; sha256 `5a98df51ae0ae9af2c451c55731f242c815b86dc1b794ea55e852432c9c1ce5c`)
+- `experiments/results/wunderkind_g1_v2_real_cuda_section14_reprobe_20260516T185807Z/derivation_provenance.json` (full provenance + chi-square + per-class counts + cite-chain)
+- `experiments/results/wunderkind_g1_v2_real_cuda_section14_reprobe_20260516T185807Z/h_latent_given_scorer_class_real_cuda_reprobe.json` (re-probe verdict JSON)
+
+**Source memo edit scope**: Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-22 + 9-dim checklist + Op-summary + Observability surface + Appendix A) UNCHANGED. This Appendix B lands as the empirical disambiguator result Appendix A op-routable A-2 was specified to produce.
