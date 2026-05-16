@@ -1122,9 +1122,15 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             lane_class="substrate_engineering substrate_class_shift predictive_receiver",
             literature_anchor=(
                 "Rao-Ballard1999; DreamerV3; Atick-Redlich1990; "
-                "Wyner-Ziv1976; Balle2018; HNeRV2023"
+                "Wyner-Ziv1976; PNVC2025; SNeRV2025; MetaNeRV2025; "
+                "C3_2024; Balle2018; HNeRV2023"
             ),
-            source_supports="Predictive coding, world models, and temporal INR papers support temporal residual and latent-dynamics hypotheses.",
+            source_supports=(
+                "Predictive coding, world models, practical INR codecs, "
+                "spectral NeRV variants, and low-complexity neural compression "
+                "support temporal residual, latent-dynamics, frequency-split, "
+                "and decode-budget hypotheses."
+            ),
             paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
             decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only and must not claim side-info consumption.",

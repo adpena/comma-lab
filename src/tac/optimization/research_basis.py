@@ -44,6 +44,9 @@ RESEARCH_SOURCE_ALIASES: dict[str, str] = {
     "mackay2003": "mackay_itila_2003",
     "wyner_ziv": "wyner_ziv_1976",
     "tishby_zaslavsky": "tishby_zaslavsky_2015",
+    "pnvc": "pnvc_2025",
+    "snerv_spectra": "snerv_spectra_2025",
+    "metanerv": "metanerv_2025",
 }
 
 
@@ -919,6 +922,40 @@ RESEARCH_SOURCES: dict[str, dict[str, Any]] = {
             "exact_cuda_auth_eval",
         ],
     },
+    "pnvc_2025": {
+        "title": "PNVC: Towards Practical INR-based Video Compression",
+        "authors": ["Ge Gao", "Ho Man Kwan", "Fan Zhang", "David Bull"],
+        "year": 2025,
+        "venue_or_status": "AAAI 2025",
+        "url": "https://doi.org/10.1609/aaai.v39i3.32315",
+        "lineage": [
+            "inr_video_compression",
+            "practical_neural_codec",
+            "entropy_modeling",
+            "decode_complexity",
+        ],
+        "local_paradigms": [
+            "time_traveler_l5",
+            "nerv_family",
+            "stack_of_stacks",
+            "entropy",
+        ],
+        "local_variables": [
+            "structural_reparameterization",
+            "hierarchical_quality_control",
+            "modulation_entropy_payload",
+            "scale_aware_positional_embedding",
+            "decode_wallclock_seconds",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "PNVC-style entropy tables, modulation signals, quality layers, and reparameterized weights are planning priors until all bytes are emitted inside the contest archive and consumed by scorer-free inflate.",
+        "hardening_blockers": [
+            "byte_closed_entropy_payload",
+            "t4_decode_timing_smoke",
+            "same_axis_pr95_pr101_baseline",
+            "paired_cpu_cuda_exact_eval",
+        ],
+    },
     "snerv_scalable_2024": {
         "title": "SNeRV: Scalable Neural Representations for Video Coding",
         "authors": ["SNeRV scalable authors"],
@@ -1430,6 +1467,10 @@ FAMILY_RESEARCH_BASIS_IDS: dict[str, list[str]] = {
         "friston_free_energy_2010",
         "dreamerv3_2023",
         "ha_schmidhuber_world_models_2018",
+        "pnvc_2025",
+        "snerv_spectra_2025",
+        "metanerv_2025",
+        "c3_neural_compression_2024",
         "atick_redlich_1990",
         "wyner_ziv_1976",
         "lu_dvc_2019",
