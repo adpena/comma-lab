@@ -435,6 +435,24 @@ def _byte_proxy_calibration(
     }
 
 
+def _apply_archive_build_skipped_provenance(provenance: dict[str, Any]) -> dict[str, Any]:
+    """Mark a TT5L run with no emitted packet as non-promoting."""
+    blockers = list(dict.fromkeys([
+        *provenance.get("dispatch_blockers", []),
+        "archive_build_skipped_no_archive_zip",
+        "auth_eval_skipped_archive_build_skipped",
+        "no_byte_closed_packet_for_score_claim",
+    ]))
+    provenance.update({
+        "archive_build_skipped": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_blockers": blockers,
+    })
+    return provenance
+
+
 def _shape_readiness_manifest(
     *,
     n_pairs: int,
@@ -1041,6 +1059,15 @@ def _full_main(args: argparse.Namespace) -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     stage_log: list[dict[str, str]] = []
+    auth_eval_json_path = args.output_dir / "auth_eval.json"
+    archive_build_skipped = bool(args.skip_archive_build)
+    bin_sha = ""
+    bin_size = 0
+    archive_zip_sha = ""
+    archive_zip_size = 0
+    byte_proxy_calibration: dict[str, Any] = {
+        "archive_build_skipped": archive_build_skipped
+    }
 
     def _stage(name: str) -> None:
         msg = {"stage": name, "at": _utc_now_iso()}
@@ -1351,95 +1378,101 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage(f"trained_best_epoch_{best_epoch}_val_lag_{best_val_lag:.5f}_elapsed_{train_elapsed:.1f}s")
 
         # 10. Load best EMA checkpoint and build the archive.
-        best_ckpt = torch.load(ckpt_best_path, weights_only=False, map_location=device)
-        substrate.load_state_dict(best_ckpt["state_dict"])
-        substrate.eval()
-        per_pair_side_info_float_final = best_ckpt["per_pair_side_info_float"].to(device)
-        per_pair_side_info_int8 = quantize_per_pair_residual_int8(
-            per_pair_side_info_float_final, scale=args.int8_scale
-        )
-
-        meta = {
-            "int8_scale": float(args.int8_scale),
-            "first_omega": float(cfg.first_omega),
-            "hidden_omega": float(cfg.hidden_omega),
-            "coord_feature_freqs": int(cfg.coord_feature_freqs),
-            "coord_dim": int(cfg.coord_dim),
-            "markov_transition_band": int(cfg.markov_transition_band),
-            "atick_redlich_cooperative_receiver": True,
-            "predictive_coding_hierarchy": True,
-            "world_model_kind": "differentiable_physics_renderer",
-        }
-        bin_bytes = pack_archive(
-            world_model_state_dict=substrate.state_dict(),
-            per_pair_side_info=per_pair_side_info_int8,
-            meta=meta,
-            num_pairs=cfg.num_pairs,
-            hidden_dim=cfg.hidden_dim,
-            num_hidden_layers=cfg.num_hidden_layers,
-            output_height=cfg.output_height,
-            output_width=cfg.output_width,
-            foveation_grid_h=cfg.foveation_grid_h,
-            foveation_grid_w=cfg.foveation_grid_w,
-            pose_dim=cfg.pose_dim,
-            per_pair_bytes=cfg.per_pair_side_info_bytes,
-        )
-        bin_sha = _sha256_bytes(bin_bytes)
-        bin_size = len(bin_bytes)
-        print(
-            f"[{SUBSTRATE_TAG}-full] TT5L archive: {bin_size} B sha256={bin_sha[:16]}..."
-        )
-        _stage(f"archive_built_{bin_size}_B_sha{bin_sha[:8]}")
-
-        # 11. Build runtime tree + archive.zip.
-        submission_dir = args.output_dir / "submission_dir"
-        _write_runtime(submission_dir)
-        (submission_dir / "0.bin").write_bytes(bin_bytes)
-        archive_zip_path = args.output_dir / "archive.zip"
-        _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
-        archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
-        archive_zip_size = archive_zip_path.stat().st_size
-        byte_proxy_calibration = _byte_proxy_calibration(
-            proxy_bytes=archive_bytes_proxy_int,
-            bin_bytes=bin_size,
-            archive_zip_bytes=archive_zip_size,
-        )
-        shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
-        _stage("archive_emitted")
-
-        # 12. Auth eval ([contest-CUDA] inline) via the canonical
-        # ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call``
-        # helper. The gate refuses at smoke / full-CPU advisory / non-CUDA
-        # paths per CLAUDE.md "Auth eval EVERYWHERE" + HNeRV parity lesson
-        # L13. Time-traveler routes the full-CPU advisory-only branch
-        # through the canonical FULL_CPU_REFUSAL_REASON so downstream
-        # manifests carry a stable refusal token.
-        auth_eval_json_path = args.output_dir / "auth_eval.json"
-        auth_result = _canon_gate_auth_eval_call(
-            args=args,
-            archive_zip=archive_zip_path,
-            inflate_sh=submission_dir / "inflate.sh",
-            upstream_dir=args.upstream_dir,
-            output_json=auth_eval_json_path,
-            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
-            substrate_tag=SUBSTRATE_TAG,
-            device=device,
-            full_cpu_active=full_cpu_active,
-        )
-        if auth_result is None:
-            if full_cpu_active:
-                _stage("auth_eval_skipped_full_cpu_advisory_only")
-            else:
-                _stage("auth_eval_skipped_gate_refused")
+        if archive_build_skipped:
+            _stage("archive_build_skipped_by_operator_flag")
+            _stage("auth_eval_skipped_archive_build_skipped")
         else:
-            # Defense-in-depth: validate the claim a second time via the
-            # canonical requirer (older code path that also stamps custody).
-            _canon_require_contest_cuda_auth_eval_claim(
-                auth_eval_json_path,
-                archive_sha256=archive_zip_sha,
-                substrate_tag=SUBSTRATE_TAG,
+            best_ckpt = torch.load(ckpt_best_path, weights_only=False, map_location=device)
+            substrate.load_state_dict(best_ckpt["state_dict"])
+            substrate.eval()
+            per_pair_side_info_float_final = best_ckpt["per_pair_side_info_float"].to(device)
+            per_pair_side_info_int8 = quantize_per_pair_residual_int8(
+                per_pair_side_info_float_final, scale=args.int8_scale
             )
-            _stage("auth_eval_cuda_done_valid_claim")
+
+            meta = {
+                "int8_scale": float(args.int8_scale),
+                "first_omega": float(cfg.first_omega),
+                "hidden_omega": float(cfg.hidden_omega),
+                "coord_feature_freqs": int(cfg.coord_feature_freqs),
+                "coord_dim": int(cfg.coord_dim),
+                "markov_transition_band": int(cfg.markov_transition_band),
+                "atick_redlich_cooperative_receiver": True,
+                "predictive_coding_hierarchy": True,
+                "world_model_kind": "differentiable_physics_renderer",
+            }
+            bin_bytes = pack_archive(
+                world_model_state_dict=substrate.state_dict(),
+                per_pair_side_info=per_pair_side_info_int8,
+                meta=meta,
+                num_pairs=cfg.num_pairs,
+                hidden_dim=cfg.hidden_dim,
+                num_hidden_layers=cfg.num_hidden_layers,
+                output_height=cfg.output_height,
+                output_width=cfg.output_width,
+                foveation_grid_h=cfg.foveation_grid_h,
+                foveation_grid_w=cfg.foveation_grid_w,
+                pose_dim=cfg.pose_dim,
+                per_pair_bytes=cfg.per_pair_side_info_bytes,
+            )
+            bin_sha = _sha256_bytes(bin_bytes)
+            bin_size = len(bin_bytes)
+            print(
+                f"[{SUBSTRATE_TAG}-full] TT5L archive: "
+                f"{bin_size} B sha256={bin_sha[:16]}..."
+            )
+            _stage(f"archive_built_{bin_size}_B_sha{bin_sha[:8]}")
+
+            # 11. Build runtime tree + archive.zip.
+            submission_dir = args.output_dir / "submission_dir"
+            _write_runtime(submission_dir)
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            archive_zip_path = args.output_dir / "archive.zip"
+            _build_archive_zip(
+                archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir
+            )
+            archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
+            archive_zip_size = archive_zip_path.stat().st_size
+            byte_proxy_calibration = _byte_proxy_calibration(
+                proxy_bytes=archive_bytes_proxy_int,
+                bin_bytes=bin_size,
+                archive_zip_bytes=archive_zip_size,
+            )
+            shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
+            _stage("archive_emitted")
+
+            # 12. Auth eval ([contest-CUDA] inline) via the canonical
+            # ``tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call``
+            # helper. The gate refuses at smoke / full-CPU advisory / non-CUDA
+            # paths per CLAUDE.md "Auth eval EVERYWHERE" + HNeRV parity lesson
+            # L13. Time-traveler routes the full-CPU advisory-only branch
+            # through the canonical FULL_CPU_REFUSAL_REASON so downstream
+            # manifests carry a stable refusal token.
+            auth_result = _canon_gate_auth_eval_call(
+                args=args,
+                archive_zip=archive_zip_path,
+                inflate_sh=submission_dir / "inflate.sh",
+                upstream_dir=args.upstream_dir,
+                output_json=auth_eval_json_path,
+                contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                substrate_tag=SUBSTRATE_TAG,
+                device=device,
+                full_cpu_active=full_cpu_active,
+            )
+            if auth_result is None:
+                if full_cpu_active:
+                    _stage("auth_eval_skipped_full_cpu_advisory_only")
+                else:
+                    _stage("auth_eval_skipped_gate_refused")
+            else:
+                # Defense-in-depth: validate the claim a second time via the
+                # canonical requirer (older code path that also stamps custody).
+                _canon_require_contest_cuda_auth_eval_claim(
+                    auth_eval_json_path,
+                    archive_sha256=archive_zip_sha,
+                    substrate_tag=SUBSTRATE_TAG,
+                )
+                _stage("auth_eval_cuda_done_valid_claim")
     finally:
         unpatch_upstream_yuv6(yuv6_token)
         _stage("upstream_yuv6_unpatched")
@@ -1496,6 +1529,8 @@ def _full_main(args: argparse.Namespace) -> int:
         provenance["promotion_eligible"] = False
         provenance["ready_for_exact_eval_dispatch"] = False
         provenance["dispatch_blockers"] = list(shape_readiness["promotion_blockers"])
+    if archive_build_skipped:
+        _apply_archive_build_skipped_provenance(provenance)
     # Advisory-only fields when --full-cpu is active (Catalog #127 + #192).
     if full_cpu_active:
         provenance["full_cpu_mode"] = True

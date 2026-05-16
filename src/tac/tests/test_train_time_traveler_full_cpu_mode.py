@@ -167,6 +167,31 @@ def test_full_trainer_side_info_initializes_at_quantized_lsb(trainer_module):
     assert quantized.abs().max().item() < 8
 
 
+def test_skip_archive_build_provenance_is_non_promoting(trainer_module):
+    """``--skip-archive-build`` must not leave a promotable phantom packet."""
+
+    provenance = {
+        "dispatch_blockers": ["existing_blocker"],
+        "score_claim": True,
+        "promotion_eligible": True,
+        "ready_for_exact_eval_dispatch": True,
+    }
+
+    result = trainer_module._apply_archive_build_skipped_provenance(provenance)
+
+    assert result is provenance
+    assert provenance["archive_build_skipped"] is True
+    assert provenance["score_claim"] is False
+    assert provenance["promotion_eligible"] is False
+    assert provenance["ready_for_exact_eval_dispatch"] is False
+    assert provenance["dispatch_blockers"] == [
+        "existing_blocker",
+        "archive_build_skipped_no_archive_zip",
+        "auth_eval_skipped_archive_build_skipped",
+        "no_byte_closed_packet_for_score_claim",
+    ]
+
+
 def test_shape_readiness_blocks_smoke_partial_and_full_cpu(trainer_module):
     smoke = trainer_module._shape_readiness_manifest(
         n_pairs=4,
