@@ -37,6 +37,7 @@ Covers:
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -482,6 +483,43 @@ def test_load_candidates_from_jsonl(tmp_path):
     assert rows[1].blockers == ["needs_phase2_anchor"]
 
 
+@pytest.mark.parametrize(
+    "flag",
+    ["score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"],
+)
+def test_load_candidates_from_jsonl_refuses_authority_flags(tmp_path, flag):
+    p = tmp_path / "cands.jsonl"
+    raw = {
+        "candidate_id": "authority_row",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": 5.0,
+        flag: True,
+    }
+    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match=rf"{flag}=True"):
+        loop.load_candidates_from_jsonl(p)
+
+
+@pytest.mark.parametrize("bad_cost", ["NaN", "Infinity", "-Infinity", "0"])
+def test_load_candidates_from_jsonl_refuses_non_finite_or_nonpositive_cost(
+    tmp_path,
+    bad_cost,
+):
+    p = tmp_path / "cands.jsonl"
+    raw = {
+        "candidate_id": "bad_cost",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": bad_cost,
+    }
+    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+        loop.load_candidates_from_jsonl(p)
+
+
 def _write_probe_payload(tmp_path: Path, payload: dict | None = None) -> Path:
     payload = payload or {
         "schema": "zen_floor_disambiguator_v1",
@@ -798,7 +836,16 @@ def test_can_authorize_refuses_non_positive_cost(tmp_path):
     c = _cand(cost_usd=0.0)
     ok, reason = cfg.can_authorize(c)
     assert ok is False
-    assert "non-positive" in reason
+    assert "not finite-positive" in reason
+
+
+@pytest.mark.parametrize("bad_cost", [math.nan, math.inf, -math.inf])
+def test_can_authorize_refuses_non_finite_cost(tmp_path, bad_cost):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=bad_cost)
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "not finite-positive" in reason
 
 
 def test_can_authorize_refuses_planning_row_without_dispatch_packet(tmp_path):

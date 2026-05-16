@@ -91,6 +91,7 @@ import argparse
 import dataclasses
 import datetime as dt
 import json
+import math
 import re
 import subprocess
 import sys
@@ -356,6 +357,29 @@ class OperatorAuthorizedModeConfig:
         """
         if not self.enabled:
             return False, "operator-authorized mode is OFF (default safe HALT-and-ASK)"
+        if not math.isfinite(self.per_dispatch_cap_usd) or self.per_dispatch_cap_usd <= 0.0:
+            return False, (
+                f"per-dispatch cap {self.per_dispatch_cap_usd!r} is not finite-positive; "
+                "operator must fix authorized-mode configuration"
+            )
+        if not math.isfinite(self.cumulative_cap_usd) or self.cumulative_cap_usd <= 0.0:
+            return False, (
+                f"cumulative cap {self.cumulative_cap_usd!r} is not finite-positive; "
+                "operator must fix authorized-mode configuration"
+            )
+        if (
+            not math.isfinite(candidate.estimated_dispatch_cost_usd)
+            or candidate.estimated_dispatch_cost_usd <= 0.0
+        ):
+            return False, (
+                f"candidate cost {candidate.estimated_dispatch_cost_usd!r} is "
+                "not finite-positive; refuse to authorize a malformed estimate"
+            )
+        if not math.isfinite(self.cumulative_spent_usd) or self.cumulative_spent_usd < 0.0:
+            return False, (
+                f"cumulative spent {self.cumulative_spent_usd!r} is malformed; "
+                "operator must reset or audit authorized-mode state"
+            )
         if candidate.estimated_dispatch_cost_usd > self.per_dispatch_cap_usd:
             return False, (
                 f"candidate cost ${candidate.estimated_dispatch_cost_usd:.4f} "
@@ -371,11 +395,6 @@ class OperatorAuthorizedModeConfig:
             return False, (
                 f"candidate has unresolved blockers {candidate.blockers!r}; "
                 "operator must adjudicate before any dispatch"
-            )
-        if candidate.estimated_dispatch_cost_usd <= 0.0:
-            return False, (
-                f"candidate cost {candidate.estimated_dispatch_cost_usd:.4f} is "
-                "non-positive; refuse to authorize a malformed estimate"
             )
         authority_blockers = candidate.dispatch_authority_blockers()
         if authority_blockers:
@@ -1894,6 +1913,23 @@ def _coerce_optional_float(value: object) -> float | None:
         return None
 
 
+def _require_finite_positive_float(
+    value: object,
+    *,
+    field: str,
+    context: str,
+) -> float:
+    try:
+        out = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{context} has non-numeric {field}={value!r}") from exc
+    if not math.isfinite(out) or out <= 0.0:
+        raise ValueError(
+            f"{context} must carry finite positive {field}; got {value!r}"
+        )
+    return out
+
+
 def _coerce_str_list(value: object) -> list[str]:
     """Return a normalized string list for JSONL/JSON candidate metadata."""
     if value is None:
@@ -1939,11 +1975,21 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     """
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
-        for line in f:
+        for line_no, line in enumerate(f, start=1):
             s = line.strip()
             if not s:
                 continue
             raw = json.loads(s)
+            context = (
+                f"{path}:{line_no} candidate "
+                f"{raw.get('candidate_id', '<missing-candidate-id>')!r}"
+            )
+            for flag in (
+                "score_claim",
+                "promotion_eligible",
+                "ready_for_exact_eval_dispatch",
+            ):
+                _require_planning_only_flag(raw, flag, context=context)
             mdl_density = _coerce_optional_float(raw.get("mdl_density"))
             mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
             composition_alpha = _coerce_optional_float(raw.get("composition_alpha"))
@@ -1959,7 +2005,11 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 family=raw["family"],
                 predicted_score_delta=float(raw["predicted_score_delta"]),
                 expected_information_gain=float(raw["expected_information_gain"]),
-                estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
+                estimated_dispatch_cost_usd=_require_finite_positive_float(
+                    raw["estimated_dispatch_cost_usd"],
+                    field="estimated_dispatch_cost_usd",
+                    context=context,
+                ),
                 blockers=list(raw.get("blockers", [])),
                 notes=str(raw.get("notes", "")),
                 mdl_density=mdl_density,
@@ -1984,11 +2034,9 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 dispatch_packet_sha256=str(raw.get("dispatch_packet_sha256", "")),
                 archive_sha256=str(raw.get("archive_sha256", "")),
                 runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
-                score_claim=bool(raw.get("score_claim", False)),
-                promotion_eligible=bool(raw.get("promotion_eligible", False)),
-                ready_for_exact_eval_dispatch=bool(
-                    raw.get("ready_for_exact_eval_dispatch", False)
-                ),
+                score_claim=False,
+                promotion_eligible=False,
+                ready_for_exact_eval_dispatch=False,
             ))
     return rows
 
