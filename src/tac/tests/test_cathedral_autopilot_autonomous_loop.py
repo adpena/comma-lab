@@ -941,6 +941,30 @@ def test_load_probe_disambiguator_autopilot_rows_read_only(tmp_path):
     assert "[probe-disambiguator; read-only planning]" in row.notes
 
 
+def test_load_probe_disambiguator_blocks_unscoped_literature_rank_reward(tmp_path):
+    p = _write_probe_payload(tmp_path)
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    raw = payload["autopilot_rows"][0]
+    raw.pop("source_supports")
+    raw.pop("paper_claim_scope")
+    raw.pop("pact_must_prove")
+    raw.pop("decode_complexity_evidence")
+    raw.pop("mdl_tier_c_density")
+    raw.pop("composition_alpha")
+    p.write_text(json.dumps(payload), encoding="utf-8")
+
+    row = loop.load_candidates_from_probe_disambiguator_output(p)[0]
+
+    assert any(
+        blocker.startswith(f"{loop.LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX}:")
+        for blocker in row.blockers
+    )
+    assert loop.LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX in row.notes
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(row) == pytest.approx(
+        0.0
+    )
+
+
 def test_load_probe_disambiguator_suppresses_prediction_band_rank_reward(tmp_path):
     p = _write_probe_payload(tmp_path)
     payload = json.loads(p.read_text(encoding="utf-8"))

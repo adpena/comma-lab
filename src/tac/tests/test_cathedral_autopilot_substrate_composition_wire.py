@@ -292,6 +292,44 @@ def test_load_ranking_carries_lane_class_literature_and_campaign_metadata(tmp_pa
     assert "lane_z3_balle_hyperprior_bolton_campaign_20260514" in z3.notes
 
 
+def test_load_ranking_blocks_unscoped_literature_rank_reward(tmp_path):
+    payload = _canonical_ranking_payload()
+    payload["ranked_dispatches"] = [
+        {
+            "candidate_id": "singleton__unscoped_l5_predictive",
+            "family": "predictive_coding",
+            "substrate_ids": ["l5_v2_predictive_receiver"],
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.005,
+            "estimated_dispatch_cost_usd": 0.50,
+            "eig_per_dollar": 0.010,
+            "composition_notes": (
+                "[predicted; substrate composition matrix v1] "
+                "unscoped literature-anchor regression fixture"
+            ),
+            "literature_anchor": "Rao-Ballard predictive coding",
+            "blockers": [],
+            "fits_per_dispatch_cap": True,
+            "fits_cumulative_envelope": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    ]
+    p = _write_ranking(tmp_path, payload)
+
+    row = loop.load_candidates_from_substrate_composition_ranking(p)[0]
+
+    assert any(
+        blocker.startswith(f"{loop.LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX}:")
+        for blocker in row.blockers
+    )
+    assert loop.LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX in row.notes
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(row) == pytest.approx(
+        -0.005
+    )
+
+
 # ── candidate_substrate_ids_from_ranking ───────────────────────────────────
 
 

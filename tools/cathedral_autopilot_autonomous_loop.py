@@ -2226,6 +2226,19 @@ def _candidate_literature_anchor_rank_reward_suppressed(c: CandidateRow) -> bool
     ) or LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX in notes
 
 
+def _append_literature_source_scope_blockers(
+    raw: dict[str, Any],
+    blockers: list[str],
+) -> list[str]:
+    """Add literature source-scope blockers to a planning row blocker list."""
+
+    source_scope_blockers = literature_source_scope_blockers(raw)
+    for blocker in source_scope_blockers:
+        if blocker not in blockers:
+            blockers.append(blocker)
+    return source_scope_blockers
+
+
 def _candidate_has_effective_negative_delta_for_race_mode(
     candidate: CandidateRow,
     *,
@@ -2264,10 +2277,7 @@ def _candidate_row_from_raw(
         str(lane_class_raw) if lane_class_raw is not None else None
     )
     blockers = list(raw.get("blockers", []))
-    source_scope_blockers = literature_source_scope_blockers(raw)
-    for blocker in source_scope_blockers:
-        if blocker not in blockers:
-            blockers.append(blocker)
+    source_scope_blockers = _append_literature_source_scope_blockers(raw, blockers)
     notes = str(raw.get("notes", ""))
     if source_scope_blockers:
         notes = (
@@ -2586,6 +2596,9 @@ def load_candidates_from_substrate_composition_ranking(
         row_blockers = list(raw.get("blockers", []))
         if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
             row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
+        notes_lines.extend(
+            _append_literature_source_scope_blockers(raw, row_blockers)
+        )
         expected_information_gain = float(raw["expected_information_gain"])
         if (
             expected_information_gain > 0.0
@@ -2878,6 +2891,19 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
         row_blockers = list(raw.get("blockers", []))
         if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
             row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
+        source_scope_blockers = _append_literature_source_scope_blockers(
+            raw, row_blockers
+        )
+        if source_scope_blockers:
+            raw_notes = str(raw.get("notes", ""))
+            raw = {
+                **raw,
+                "notes": (
+                    f"{raw_notes}; {'; '.join(source_scope_blockers)}"
+                    if raw_notes
+                    else "; ".join(source_scope_blockers)
+                ),
+            }
         expected_information_gain = float(raw.get("expected_information_gain", 0.0))
         if (
             expected_information_gain > 0.0
