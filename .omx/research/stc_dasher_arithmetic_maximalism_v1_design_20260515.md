@@ -226,3 +226,67 @@ Per CLAUDE.md "Subagent coherence-by-default" non-negotiable.
 ```
 
 Computed level after marks: **L1** (2/7 gates: impl_complete + memory_entry).
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive. Per-dimension PRESENT/MISSING/N/A.
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PARTIAL. Memo declares STC (syndrome-trellis coding per Filler-Fridrich 2011) + Dasher-style adaptive arithmetic coding (per Ward-Mackay-Blunsom 2002) on top of a Quantizr-class baseline. PR95 binding is DEFERRED to trainer-build time; design memo focuses on codec layer.
+2. **Score-aware loss path** — PARTIAL. STC-Dasher is post-train entropy coder; the underlying trainer (Quantizr-class or A1-class) provides the score-aware loss path; STC-Dasher does not add a new loss surface. Will route through canonical helpers per Catalog #164.
+3. **Archive grammar + export contract** — PARTIAL. Memo declares STC syndrome wire format + Dasher adaptive-context tables at design level. Per Catalog #124 the 8 archive-grammar fields are declared at design-time; operational-runtime byte-mutation smoke (Catalog #272) DEFERRED to trainer-build.
+4. **Inflate runtime closure** — DEFERRED. inflate.py decoder for STC + Dasher arithmetic should fit ≤100 LOC per HNeRV parity L4 (STC decoder ~30 LOC + Dasher decoder ~50 LOC + dispatch shell ~20 LOC). Not yet written.
+5. **Mask/pose coupling + scorer routing** — N/A AT DESIGN STAGE — codec is post-trainer; mask/pose coupling lives upstream.
+6. **Composability with other substrates** — PRESENT (composition matrix below). STC-Dasher is post-train entropy coder; orthogonal to renderer-architecture substrates (NSCS01/NSCS02/NSCS06); redundant with other entropy coders (NSCS03/ATW).
+7. **Tier 1/2/3 engineering** — DEFERRED to trainer-recipe pair time.
+8. **Custody + apples-to-apples evidence** — N/A AT DESIGN STAGE — research-only design memo. All score predictions `[prediction]` tagged.
+9. **Predicted ΔS band with first-principles derivation** — PRESENT (see below).
+
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md Catalog #290 + "UNIQUE-AND-COMPLETE-PER-METHOD operating mode".
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Architecture (underlying renderer) | ADOPT CANONICAL | STC-Dasher is post-train; underlying renderer is canonical Quantizr-class or A1-class. HARD-EARNED per Quantizr empirical 0.33 anchor + A1 frontier. |
+| Score-aware loss | ADOPT CANONICAL | `score_pair_components` per Catalog #164 — no codec-specific loss. HARD-EARNED. |
+| Archive grammar | UNIQUE FORK | STC syndrome wire format + Dasher adaptive-context tables are codec-specific bytes that cannot be shared with NSP1/NSCS03/ATW. HARD-EARNED per Filler-Fridrich 2011 syndrome-trellis canonical + Mackay-Blunsom-Ward 2002 Dasher canonical. |
+| Inflate runtime | ADOPT CANONICAL skeleton | ≤100 LOC budget + canonical `select_inflate_device` + torch+brotli closure (brotli used as STC byte-pack outer wrap). HARD-EARNED. |
+| Export contract | UNIQUE FORK | ZIP STORED `0.bin` with STC syndrome bytes + Dasher state. HARD-EARNED per HNeRV parity L3. |
+| Training curriculum | ADOPT CANONICAL | Underlying renderer trains canonically (2-frame curriculum + EMA + eval_roundtrip + etc.). STC-Dasher applies post-train. HARD-EARNED. |
+| Tier-1 engineering | ADOPT CANONICAL | All Tier 1 primitives (autocast/TF32/torch.compile/no_grad) apply to the underlying renderer. HARD-EARNED. |
+| Scorer routing | ADOPT CANONICAL | `load_differentiable_scorers` + Catalog #164/#222. HARD-EARNED. |
+
+## Predicted ΔS band
+
+Per Dimension 9.
+
+**RESEARCH-ONLY-NO-SCORE-CLAIM** until: (a) trainer + STC-Dasher post-train pipeline lands + smoke greens-up; (b) paired Tier C MDL ablation per Catalog #227; (c) 5/5 council PROCEED.
+
+**First-principles upper-bound**:
+- STC near Shannon limit per Filler-Fridrich 2011 syndrome-trellis: payload embedding efficiency approaches `H(p) / log2(1/p)` bits-per-symbol. For Quantizr-class baseline (88K params @ FP4 + brotli ≈ 64 KB total), brotli's general-purpose model leaves an estimated 5-15% slack vs adaptive arithmetic.
+- Dasher adaptive arithmetic per Mackay-Blunsom-Ward 2002: prediction model adapts per-token context; expected gain 3-8% over static brotli model.
+- Combined STC + Dasher: 5-15% archive byte reduction over canonical Quantizr-class brotli baseline.
+- ΔS translation: A1 baseline rate-term ≈ 0.233; 10% rate reduction → rate ΔS ≈ -0.023. Distortion side unchanged (codec is post-train; encoder weights identical).
+
+**Predicted bands** (research-only-no-score-claim):
+- `[contest-CUDA T4 prediction]` band: [0.180, 0.196] (within-class refactor per Z1 framework; if STC+Dasher are 100% lossless then distortion preserved; only rate moves).
+- `[contest-CPU GHA Linux x86_64 prediction]` band: [0.175, 0.191] (paired with CUDA gap ≈ -0.005).
+- Score-improvement-mechanism: WITHIN-CLASS refactor (improved entropy coding of same canonical bytes); per Z1 framework Tier C density expected ≈ 0.85-0.95 (within-class plateau).
+
+**Reactivation criteria if smoke produces ΔS > 0 (regression)**: STC+Dasher are lossless by construction; any score regression points to (a) integer-rounding errors in adaptive context tables; (b) brotli outer-wrap interaction; (c) inflate-side decoder bug — investigate before declaring negative.
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C plan.
+
+| With substrate | Axis orthogonality | Composition class | Expected ΔS | Rationale |
+|---|---|---|---|---|
+| **NSCS01** (nullspace split renderer) | ORTHOGONAL (codec vs renderer-architecture) | ADDITIVE | additive (~0.010-0.020) | NSCS01 + STC-Dasher composes the renderer-architecture refactor with optimal entropy coding on the resulting bytes. Strong pairing. |
+| **NSCS02/NSCS06** (Carmack-Hotz strip-everything) | NEAR-REDUNDANT (both target rate term) | SATURATING | floor at -0.005 | Strip-everything reduces bytes BEFORE coding; STC-Dasher reduces bytes BY coding; combined leverage limited (the post-strip bytes are already low-entropy). |
+| **NSCS03** (Ballé end-to-end joint codec) | REDUNDANT (both end-to-end entropy coders) | SATURATING | floor at -0.005 | NSCS03 trains an end-to-end learned entropy coder; STC-Dasher is post-train adaptive. Choose ONE. |
+| **ATW codec** (cooperative-receiver) | REDUNDANT (both post-train entropy coders) | SATURATING | floor at -0.005 | Both occupy the post-train codec slot. Choose ONE. ATW is cooperative-receiver-specific (potentially across-class per Z1); STC-Dasher is general-purpose (within-class). |
+
+Per Catalog #227, STC-Dasher within-class density (expected ~0.90) inherits the within-class penalty when ranked alone. Paired with NSCS01 (architecture-refactor) the combined density stays within-class but the additive composition_alpha bonus per Subagent C plan keeps it competitive. Recommended next-wave: `NSCS01 + STC-Dasher` as a single-axis-refactor + entropy-floor pair; do NOT stack STC-Dasher with NSCS03/ATW (redundant codec slot).
+

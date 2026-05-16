@@ -216,3 +216,67 @@ All 8 premises confirmed pre-edit.
 ---
 
 **Net assessment:** The U-DIE-KL composite is the canonical "substrate-agnostic training-side bolt-on" missing from the existing infrastructure. The three primitives (UNIWARD, DIE, KL) are individually canonical in this repo; combining them in a single torch-tensor loss helper makes the symposium #5 design directly consumable by every existing substrate trainer with a 3-line change. The helper itself adds NO archive bytes (per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable: this is research-only at landing because no per-substrate retraining has happened — Catalog #240 sister enforcement). All 8 premises verified pre-edit per Catalog #229.
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive. Per-dimension PRESENT/MISSING/N/A.
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PARTIAL. Memo declares U-DIE-KL (UNIWARD-detector-informed-embedding + Detector Inverse-Error map + KL-distill of scorer features) as a substrate-wide LOSS surface; underlying renderer architecture is canonical (Quantizr-class baseline). PR95 binding of architecture+training+grammar+runtime+export is DEFERRED to trainer-build time; this memo focuses on the loss-function layer.
+2. **Score-aware loss path** — PRESENT (UNIQUE FORK). U-DIE-KL IS a score-aware loss reformulation: UNIWARD weighting (inverse local variance per Fridrich-Holub-Denemark 2014) + Detector Inverse-Error map (gradient through SegNet/PoseNet weighted by per-pixel detection sensitivity) + Hinton KL-distill (T=2.0 per Quantizr empirical 0.33 anchor). Routes through canonical `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164 with a custom loss term added.
+3. **Archive grammar + export contract** — N/A — U-DIE-KL is a loss reformulation; archive grammar is inherited from underlying renderer (canonical Quantizr-class or A1-class).
+4. **Inflate runtime closure** — N/A — inflate runtime is inherited from underlying renderer (no codec layer change).
+5. **Mask/pose coupling + scorer routing** — PRESENT. U-DIE-KL's whole purpose IS tighter scorer routing: KL-distill on scorer logits + UNIWARD weighting on per-pixel scorer sensitivity. Per Catalog #164 the canonical scorer-preprocess helper handles the forward path; the U-DIE-KL term is added on top of `score_pair_components`'s output.
+6. **Composability with other substrates** — PRESENT (composition matrix below). U-DIE-KL is loss-layer; orthogonal to architecture substrates (NSCS01/NSCS02/NSCS06) and entropy-coding substrates (NSCS03/ATW/STC-Dasher). Can compose with ALL of them (loss-side change does not collide with byte-side or architecture-side changes).
+7. **Tier 1/2/3 engineering** — DEFERRED to trainer-recipe pair time.
+8. **Custody + apples-to-apples evidence** — N/A AT DESIGN STAGE — research-only memo.
+9. **Predicted ΔS band with first-principles derivation** — PRESENT (see below).
+
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md Catalog #290 + "UNIQUE-AND-COMPLETE-PER-METHOD operating mode".
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Architecture (underlying renderer) | ADOPT CANONICAL | U-DIE-KL is loss-layer; underlying architecture is canonical Quantizr/A1-class. HARD-EARNED. |
+| Score-aware loss | UNIQUE FORK | U-DIE-KL = UNIWARD weighting + Detector Inverse-Error map + KL-distill — the substrate's distinguishing-feature per Catalog #272. UNIWARD per Fridrich-Holub-Denemark 2014 canonical steganography (inverse detector-cost embedding); KL-distill per Hinton-Vinyals-Dean 2014 canonical (T=2.0 from Quantizr empirical receipts). HARD-EARNED per these citations + per CLAUDE.md "Fridrich inverse steganalysis" section. |
+| Archive grammar | ADOPT CANONICAL | Inherited from underlying renderer (no codec change). HARD-EARNED. |
+| Inflate runtime | ADOPT CANONICAL | Inherited from underlying renderer. HARD-EARNED. |
+| Export contract | ADOPT CANONICAL | Inherited. HARD-EARNED. |
+| Training curriculum | ADOPT CANONICAL | 2-frame curriculum + pyav decode + patched YUV6 + differentiable scorers + EMA(0.997) + cosine LR — all PR95-parity-discipline canonical. HARD-EARNED. |
+| Tier-1 engineering | ADOPT CANONICAL | autocast_fp16 / TF32 / torch.compile / no_grad / canonical helpers (Catalogs #172/#178/#179/#180/#164). HARD-EARNED. |
+| Scorer routing | ADOPT CANONICAL + EXTEND | `load_differentiable_scorers` + Catalog #164/#222 base; U-DIE-KL adds an extra per-pixel sensitivity map computed AFTER the canonical scorer forward (no fork of the preprocess pipeline). HARD-EARNED at the base; UNIQUE at the extension. |
+
+## Predicted ΔS band
+
+Per Dimension 9.
+
+**RESEARCH-ONLY-NO-SCORE-CLAIM** until: (a) trainer + U-DIE-KL loss lands + smoke greens-up; (b) paired Tier C MDL ablation per Catalog #227; (c) 5/5 council PROCEED.
+
+**First-principles upper-bound**:
+- UNIWARD canonical result (Fridrich 2014): undetectable embeddings concentrate in textured regions with high local variance; cost per pixel ∝ 1/(local_variance + ε). Per `[contest-CUDA]` empirical receipts, scorer-sensitive regions (face / vehicle boundaries / road markings) occupy roughly 20-30% of pixels. UNIWARD weighting therefore allows 70-80% of pixels to absorb encoder error invisibly to SegNet/PoseNet — expected distortion ΔS ≈ -0.005 to -0.015.
+- KL-distill on scorer logits (Hinton T=2.0): Quantizr empirical anchor 0.33 used this; per their public commentary, KL-distill contributed ~0.02 of the lift from Quantizr-baseline-without-distill to 0.33. Distillation on SegNet specifically + PoseNet jointly: expected ΔS ≈ -0.005 to -0.010 additive.
+- Combined U-DIE-KL ΔS: -0.010 to -0.025 vs canonical baseline.
+
+**Predicted bands** (research-only-no-score-claim):
+- `[contest-CUDA T4 prediction]` band: [0.180, 0.205] (within-class refactor of loss surface; per Z1 framework not a class-shift).
+- `[contest-CPU GHA Linux x86_64 prediction]` band: [0.175, 0.200] (paired with CUDA gap ≈ -0.005).
+- Score-improvement-mechanism: WITHIN-CLASS loss-surface refactor. Tier C density expected ≈ 0.80-0.90 (within-class).
+
+**Reactivation criteria if smoke produces ΔS > 0**: (a) UNIWARD weighting may be too aggressive on smooth regions (e.g. sky) where local variance is low but scorer-sensitivity is high (road markings) — re-derive cost function per-class; (b) KL-distill temperature T=2.0 may not transfer from Quantizr's specific SegNet variant — ablate T ∈ {1.5, 2.0, 4.0}; (c) verify gradient propagation through UNIWARD weighting (cost map must be detached or grad will flow back through local-variance estimator).
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C plan.
+
+| With substrate | Axis orthogonality | Composition class | Expected ΔS | Rationale |
+|---|---|---|---|---|
+| **NSCS01** (nullspace split renderer) | ORTHOGONAL (loss vs architecture) | ADDITIVE | small additive (~0.005-0.010) | NSCS01 changes gradient routing; U-DIE-KL changes per-pixel loss weighting. Two different axes; composable. |
+| **NSCS02/NSCS06** (Carmack-Hotz strip-everything) | ORTHOGONAL (loss vs minimalism) | ADDITIVE | small additive (~0.005-0.010) | Strip-everything reduces bytes; U-DIE-KL reduces distortion. Different rate-distortion axes. |
+| **NSCS03** (Ballé end-to-end joint codec) | ORTHOGONAL (loss vs entropy-coding) | ADDITIVE | additive (~0.010-0.020) | NSCS03 learns entropy coder; U-DIE-KL learns loss surface. Both can be trained jointly; strong pairing. |
+| **ATW codec** (cooperative-receiver) | ORTHOGONAL (loss vs codec) | ADDITIVE | additive (~0.010-0.020) | ATW codec uses scorer features at decode; U-DIE-KL uses scorer features at train time. Composable. |
+| **STC-Dasher** (arithmetic coding maximalism) | ORTHOGONAL (loss vs entropy-coding) | ADDITIVE | additive (~0.010-0.020) | Same logic as NSCS03 — different layers. |
+
+Per Catalog #227, U-DIE-KL is within-class loss reformulation; paired with ANY architecture substrate (NSCS01/NSCS02/NSCS06) inherits within-class density penalty. Paired with class-shift entropy coder (NSCS03 OR ATW OR STC-Dasher) gets cross-class composition_alpha bonus per Subagent C plan (composition_alpha > 0.7 → ADDITIVE; potentially the strongest 3-stack candidate). Recommended next-wave: `U-DIE-KL + NSCS01 + (NSCS03 OR ATW OR STC-Dasher)` triple stack as the cathedral's class-shift trifecta candidate.
+

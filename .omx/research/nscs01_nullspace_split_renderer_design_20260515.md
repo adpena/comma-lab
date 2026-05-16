@@ -240,3 +240,51 @@ helper. NSCS01 ADOPTS canonical at every layer where the canonical pattern
 is hygiene (EMA / TF32 / device-select / NVML env / auth-eval gate / Catalog
 #164 preprocess contract). The decision per layer is documented inline in
 the table at §7.
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive `feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md`. Per-dimension PRESENT/MISSING/N/A with citations.
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PRESENT. Section "Architecture (canonical PR95 binding)" in this memo declares pyav decode + patched YUV6 + differentiable scorers + EMA(0.997) + eval_roundtrip + AdamW+cosine + mini-batch reconstruct + canonical gate_auth_eval_call + require_contest_cuda_auth_eval_claim + posterior_update_locked + detect_hardware_substrate bound into one trainer; sister landing memo `feedback_nscs01_full_main_implementation_pr95_paradigm_landed_20260515.md` cites `experiments/train_substrate_nscs01_nullspace_split_renderer.py::_full_main` (~420 LOC) with verbatim canonical-token list. PR95 parity discipline lessons 1-13 honored.
+2. **Score-aware loss path (gradient-through-SegNet/PoseNet)** — PRESENT (UNIQUE FORK). Section "Score-aware loss (UNIQUE FORK — nullspace split-frame gradient routing)" declares `frame_0_loss = pose + pixel_0` (no SegNet term per `upstream/modules.py:108` `x[:, -1, ...]` slice that puts frame[0] in nullspace) and `frame_1_loss = seg + pose + pixel_1`. Loss honors CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" (apply_eval_roundtrip_during_training in inner loop) + "scorer-preprocess differentiable" (patch_upstream_yuv6_globally before load_differentiable_scorers per Catalog #164). New `TestNullspaceGradientProperty` test verifies seg_term.backward() leaves frame_0_head.grad==0 (the exploit invariant).
+3. **Archive grammar + export contract (NSP1 single-file 0.bin)** — PRESENT (UNIQUE FORK). Section "Archive grammar (UNIQUE FORK — NSP1)" declares magic header `b"NSP1\x00"`, fixed offsets `FRAME_0_HEAD_LEN` + `FRAME_1_HEAD_LEN` + `SHARED_BACKBONE_LEN` + `POSE_LEN`, brotli-9 over int8-quantized weights, ZIP `STORED` member `0.bin` per HNeRV parity L3 monolithic single-file rule. Per Catalog #124 the 8 fields (archive_grammar / parser_section_manifest / inflate_runtime_loc_budget=≤100 LOC / runtime_dep_closure=`torch+brotli` / export_format=NSP1 / score_aware_loss=NullspaceSplitScoreAwareLoss / bolt_on_loc_budget=N/A (substrate engineering exception) / no_op_detector_planned=byte-mutation smoke per Catalog #272) all declared inline.
+4. **Inflate runtime closure (≤ 100 LOC, ≤ 2 deps)** — PRESENT. Section "Inflate runtime (canonical contract)" cites inflate.py ≤100 LOC + `select_inflate_device` helper per Catalog #205 + torch+brotli closure + per-video loop pattern + no scorer/network references per Catalog #146. Runtime-closure smoke logged via `experiments/train_substrate_nscs01_nullspace_split_renderer.py::_full_main` post-train inflate parity check.
+5. **Mask/pose coupling + scorer routing** — PRESENT. Section "Mask/pose coupling gate (Catalog #105 + Lesson 10)" declares per-pair decoded mask SHA-256s + mask disagreement record + pose regeneration via canonical pipeline + geometry diagnostics. Score-aware loss routes through `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164 (no hand-rolled scorer forward).
+6. **Composability with other substrates** — PRESENT (this section + sister composition matrix below). NSCS01's frame_0-only-pose-pixel + frame_1-only-seg-pose-pixel split is orthogonal to D4 (frame_0 byte-identity exploit; D4 takes frame_0=GT free + NSCS01 takes frame_0 = pose-trained low-rate output ↔ they're alternative same-axis solutions, NOT stackable). Orthogonal to NSCS03 Ballé end-to-end joint codec (NSCS01 = renderer-architecture split; NSCS03 = entropy-coding split). See `## Stack-of-stacks composition matrix` below.
+7. **Tier 1/2/3 engineering (autocast/TF32/torch.compile/no_grad/canonical helpers + min_vram_gb/min_smoke_gpu/target_modes + canonical auth-eval + scorer loader order + recipe-vs-trainer consistency)** — PRESENT. Section "Tier-1 engineering (canonical adoption)" cites autocast_fp16 (Catalog #172), TF32 (Catalog #178), torch.compile (Catalog #179), no_grad-at-eval (Catalog #180), canonical scorer-loss helper (Catalog #164), canonical inflate device (Catalog #205), mini-batch reconstruct (Catalog #218), canonical auth-eval helper (Catalog #226), reverse scorer-loader pattern flagged (Catalog #222). Recipe declares min_vram_gb / min_smoke_gpu / target_modes per Catalog #170/#215/#182 (recipe research_only=true until smoke greens-up).
+8. **Custody + apples-to-apples evidence (lane tags, [contest-CUDA] vs [contest-CPU vs advisory])** — PRESENT. Section "Custody discipline" declares `require_contest_cuda_auth_eval_claim` (Catalog #127) + `posterior_update_locked` (Catalog #128) + `detect_hardware_substrate(axis="cuda")` (Catalog #190) + dual CUDA+CPU paired eval at promotion time per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA" non-negotiable. Sister landing memo: `feedback_nscs01_full_main_implementation_pr95_paradigm_landed_20260515.md`. Lane `lane_nscs01_nullspace_split_renderer_20260515` L1 in registry per Catalog #126.
+9. **Predicted ΔS band with first-principles derivation** — PRESENT (see `## Predicted ΔS band` below). RESEARCH-ONLY-NO-SCORE-CLAIM until smoke greens-up + paired Tier C MDL ablation lands + 5-PROCEED council consensus per CLAUDE.md "Forbidden premature KILL".
+
+## Predicted ΔS band
+
+Per Dimension 9 + CLAUDE.md "Apples-to-apples evidence discipline" + sister NSCS01 landing memo. First-principles derivation with axis labels.
+
+**RESEARCH-ONLY-NO-SCORE-CLAIM** until: (a) Modal smoke greens-up via `experiments/train_substrate_nscs01_nullspace_split_renderer.py` 100-epoch dispatch (council-gated; no `--auth-eval-on-best` until export contract verified) AND (b) paired Tier C MDL ablation per Catalog #227 distinguishes within-class vs across-class signature AND (c) 5/5 inner-quintet council PROCEED with explicit per-member assumption-statement per Catalog #292.
+
+**First-principles upper-bound on the exploit's score lift**:
+- SegNet contribution at A1 frontier ≈ `100 * d_seg_avg ≈ 100 * 0.000674 = 0.0674` per CLAUDE.md "SegNet vs PoseNet importance — operating-point dependent" empirical receipts on PR106.
+- NSCS01 does NOT free SegNet bytes (still trains frame_1 segmap as normal); the exploit frees ~half of the **pixel-loss budget** on frame_0 (no pose+seg cross-talk on frame_0 → smoother frame_0 reconstruction → smaller frame_1-derived pose error compounds less). Predicted seg ΔS contribution: bounded by frame_1's existing seg accuracy ceiling; expected near-zero direct seg lift.
+- PoseNet at A1 frontier: `sqrt(10 * d_pose_avg) ≈ sqrt(10 * 3.4e-5) ≈ 0.018`. NSCS01 routes pose loss to BOTH frames (no nullspace constraint on pose), so pose path is canonical. Expected pose ΔS: near-zero or marginal regression if split-architecture has fewer parameters per axis.
+- Rate-term: NSP1 archive grammar adds frame_0_head + frame_1_head + shared_backbone + pose; predicted archive bytes ~250-350 KB vs A1's 350 KB. Rate ΔS: `25 * Δbytes / 37545489 ≈ 25 * -50000 / 37545489 ≈ -0.000033` (third decimal place; below noise floor).
+
+**Predicted bands** (research-only-no-score-claim until empirical):
+- `[contest-CUDA T4 prediction]` band: [0.190, 0.205] (matches A1 cluster; the exploit is a refactor, NOT a class-shift per Z1 ablation framework).
+- `[contest-CPU GHA Linux x86_64 prediction]` band: [0.185, 0.198] (paired with CUDA gap ≈ -0.005 to -0.010 per PR102 + Z3 v2 empirical anchor).
+- Score-improvement-mechanism: ARCHITECTURAL REFACTOR (within-class per Z1) — NOT a substrate-class shift. Tier C density expected > 0.70 (within-class per Catalog #227). Per Z1 ablation framework, within-class refactors yield bounded improvements; expected best case ΔS ≤ 0.005 vs A1 baseline.
+
+**Reactivation criteria if smoke produces ΔS > +0.020 (regression)**: (a) re-verify nullspace gradient assertion in real pipeline (the `x[:, -1, ...]` SegNet slice may not be the only frame_0 gradient sink in practice); (b) check pose error compounding via 2-frame curriculum; (c) ablation per-frame pose loss weighting.
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C dispatch plan `.omx/research/4_substrate_plus_3_stack_dispatch_plan_20260515.md`. Pairwise composition predictions with sister NSCS substrates in the 4-substrate wave.
+
+| With substrate | Axis orthogonality | Predicted composition class | Expected ΔS contribution | Rationale |
+|---|---|---|---|---|
+| **NSCS02** (Carmack-Hotz strip-everything) | ORTHOGONAL (architecture-refactor vs minimalism-bytecount) | ADDITIVE | small (~0.000-0.005) | NSCS01 refactors gradient routing; NSCS02 minimizes archive bytes via stripping. Both within-class per Z1; combined effect bounded by within-class plateau. |
+| **NSCS03** (Ballé 2018 end-to-end joint codec) | ORTHOGONAL (renderer-architecture vs entropy-coding) | ADDITIVE | small (~0.005-0.010) | NSCS01 = renderer split; NSCS03 = learned entropy coder. NSCS03 changes rate term materially; NSCS01 changes distortion term marginally. Per Quantizr empirical (FP4+brotli=0.33), an end-to-end learned entropy coder is a stronger lever than within-class architecture refactor. |
+| **NSCS06** (Carmack-Hotz strip-everything codec variant per `feedback_grand_reunion_fields_grade_passion_full_council_debrief_..._20260515.md`) | REDUNDANT-WITH-NSCS02 | SATURATING | floor at -0.005 | NSCS06 is a sister of NSCS02 (same operating logic: minimize archive bytes); cannot compose additively with NSCS02. NSCS01+NSCS06 ≈ NSCS01+NSCS02 expected. |
+
+Per Catalog #227 cathedral autopilot ranker `apply_z1_empirical_revision_to_candidate_delta`: NSCS01 paired with any other within-class candidate (NSCS02/NSCS06) inherits the within-class density penalty (Tier C density > 0.70 → predicted ΔS floored at -0.005). Paired with NSCS03 (across-class entropy-coder shift) gets +0.01 additive class-shift reward. Recommended composition for the next dispatch wave per Subagent C: `NSCS01 + NSCS03 + (NSCS02 OR NSCS06, NOT BOTH)`.
+

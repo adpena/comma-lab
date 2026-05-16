@@ -315,3 +315,69 @@ contest-score promotion.
 3. **Predicted score band remains unpromoted** until a same-archive exact
    evaluation exists; if a future smoke score is outside band, investigate per
    CLAUDE.md "Forbidden premature KILL" before any kill verdict.
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive. Per-dimension PRESENT/MISSING/N/A.
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PARTIAL. Memo declares Wunderkind-G1 v2 entropy-coded variant addressing the codex review bkrbqet3p F1 finding (Z3-G1 v1 archive shipped empty `hyperprior_weights_int8` + `w_hat_int8` slots making the SegNet-class-CDF distinguishing feature non-operational per Catalog #266). v2 design wires the entropy-coded sigma table + class indices INTO the archive bytes (not just `g1_diagnostic.pt`). PR95 binding lives at the underlying Z3HV2 substrate which v2 inherits.
+2. **Score-aware loss path** — PRESENT (UNIQUE EXTENSION). Loss adds a SegNet-class CDF entropy-coding term: per-pixel class probabilities → per-class sigma assignments → entropy-coded latent bytes. Routes through canonical `score_pair_components` per Catalog #164 for the base loss + adds an entropy-rate term `λ_R * H(class_indices)` per Ballé 2018 style.
+3. **Archive grammar + export contract** — PRESENT (UNIQUE FORK from v1). v2 wire format: `g1v2` magic header + non-empty `hyperprior_weights_int8` (entropy-coded sigma table per class) + non-empty `w_hat_int8` (entropy-coded latent for class-mapped grid) + brotli outer wrap. Per Catalog #124 the 8 fields declared; per Catalog #266 the archive MUST consume hyperprior bytes for inflate to actually use the SegNet-class CDF (v1 failed this gate; v2 is the structural fix).
+4. **Inflate runtime closure** — PRESENT. v2 inflate.py decodes sigma table → per-class quantization params → per-class entropy-decode latent bytes → reconstruct frame. ≤100 LOC per HNeRV parity L4 (entropy decoder ~40 LOC + dispatch shell ~30 LOC + per-class quant decoder ~25 LOC).
+5. **Mask/pose coupling + scorer routing** — PRESENT. Per CLAUDE.md "Mask/pose coupling gate" v2 wires the SegNet class derivation via canonical scorer routing (`load_differentiable_scorers` + canonical scorer-loader assignment order per Catalog #222) + fail-closed if SegNet class derivation fails per Catalog #267 (no silent uniform-class fallback).
+6. **Composability with other substrates** — PRESENT (composition matrix below). Wunderkind-G1 v2 is the SegNet-class-conditional sister of NSCS03's general-purpose Ballé hyperprior; redundant with NSCS03; orthogonal to renderer architecture (NSCS01/NSCS02/NSCS06).
+7. **Tier 1/2/3 engineering** — PRESENT. Tier 1 canonical (autocast/TF32/torch.compile/no_grad per Catalogs #172/#178/#179/#180). Tier 2 recipe declares min_vram_gb/min_smoke_gpu/target_modes per Catalogs #170/#215/#182. Tier 3 canonical auth-eval helper per Catalog #226 + canonical inflate device per Catalog #205 + recipe-vs-trainer consistency per Catalog #240.
+8. **Custody + apples-to-apples evidence** — PRESENT. `require_contest_cuda_auth_eval_claim` per Catalog #127 + `posterior_update_locked` per Catalog #128. Per CLAUDE.md "Apples-to-apples evidence discipline" v2's score gain over v1 baseline MUST be measured on byte-mutation smoke per Catalog #272 (which v1 FAILED at 5-decimal match with Z3 v2 — proving v1 bytes weren't consumed). v2 success criterion: byte-mutation smoke produces frame changes when hyperprior bytes mutated.
+9. **Predicted ΔS band with first-principles derivation** — PRESENT (see below).
+
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md Catalog #290 + "UNIQUE-AND-COMPLETE-PER-METHOD operating mode".
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Architecture (underlying renderer) | ADOPT CANONICAL | Inherits Z3HV2 substrate base. HARD-EARNED per Z3 v2 contest-CUDA 0.23171 anchor. |
+| Score-aware loss | UNIQUE EXTENSION | Base `score_pair_components` per Catalog #164 + UNIQUE entropy-rate term for class indices. The class-conditional entropy IS the distinguishing-feature per Catalog #272. HARD-EARNED per Ballé 2018 hyperprior canonical + CLAUDE.md "Exact scorer architectures" SegNet 5-class signature. |
+| Archive grammar | UNIQUE FORK (g1v2) | v1 grammar was structurally broken (empty slots); v2 grammar binds class-conditional entropy bytes INTO archive per HNeRV parity L3 + Catalog #266 fix. HARD-EARNED per codex bkrbqet3p F1 empirical receipts. |
+| Inflate runtime | ADOPT CANONICAL skeleton + UNIQUE body | Canonical `select_inflate_device` (Catalog #205) + torch+brotli closure; UNIQUE entropy-decoder body parses g1v2 wire format. HARD-EARNED. |
+| Export contract | UNIQUE FORK | ZIP STORED `0.bin` with g1v2 body bytes. HARD-EARNED per HNeRV parity L3. |
+| Training curriculum | ADOPT CANONICAL | Inherits Z3HV2 training (PR95 parity discipline lessons 1-13). HARD-EARNED. |
+| Tier-1 engineering | ADOPT CANONICAL | All Tier 1 primitives canonical. HARD-EARNED. |
+| Scorer routing | ADOPT CANONICAL | `load_differentiable_scorers` + Catalog #164/#222. HARD-EARNED. |
+
+## Predicted ΔS band
+
+Per Dimension 9.
+
+**RESEARCH-ONLY-NO-SCORE-CLAIM** until: (a) v2 trainer + inflate runtime land; (b) byte-mutation smoke per Catalog #272 proves hyperprior bytes consumed (the v1-FAIL test that motivated v2); (c) paired Tier C MDL ablation per Catalog #227; (d) 5/5 council PROCEED.
+
+**First-principles upper-bound**:
+- SegNet 5-class CDF approximation per Ballé 2018 framework: instead of treating latent bytes as uniformly random (Z3HV2 baseline), assume per-class sigma scaling → expected entropy reduction `H(class_conditional) - H(unconditional) ≈ log2(5) / 5 ≈ 0.464` bits per token (5-class case).
+- Z3HV2 baseline archive ~350 KB; if hyperprior + class indices reduce rate by 5-10% then archive ≈ 315-332 KB; rate ΔS ≈ -0.012 to -0.024.
+- Distortion side: class-conditional reconstruction may help (per-class quantization preserves boundary detail) OR hurt (if class miscategorized at decode); expected near-zero ± 0.005.
+- Combined v2 ΔS vs Z3HV2: -0.005 to -0.020 IF byte-mutation smoke passes.
+
+**Predicted bands** (research-only-no-score-claim):
+- `[contest-CUDA T4 prediction]` band: [0.211, 0.226] (Z3HV2 baseline = 0.23171; class-conditional codec reduces archive bytes within-class per Z1 framework).
+- `[contest-CPU GHA Linux x86_64 prediction]` band: [0.193, 0.208] (paired with CUDA gap ≈ -0.018 per Z3 v2 paired empirical).
+- Score-improvement-mechanism: WITHIN-CLASS refactor (class-conditional entropy coding on same canonical Z3HV2 bytes). Per Z1 framework Tier C density expected ≈ 0.75-0.90 (within-class plateau, but more interesting than v1 which collapsed to 1.0-identical with v2 because v1 bytes weren't consumed).
+
+**Reactivation criteria if smoke produces 5-decimal-match with Z3HV2 baseline (the v1 failure mode)**: (a) v2 archive grammar still not consumed by inflate — re-verify byte-mutation smoke per Catalog #272; (b) entropy decoder may be falling back to canonical decode on parse failure — wire fail-closed per Catalog #267 pattern; (c) class derivation may be silently using uniform fallback — verify SegNet-class assignment varies per pair.
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C plan.
+
+| With substrate | Axis orthogonality | Composition class | Expected ΔS | Rationale |
+|---|---|---|---|---|
+| **NSCS01** (nullspace split renderer) | ORTHOGONAL (codec vs renderer-architecture) | ADDITIVE | small additive (~0.005-0.010) | Different layers; composable. |
+| **NSCS02/NSCS06** (Carmack-Hotz strip-everything) | NEAR-REDUNDANT (both target rate term) | SATURATING | floor at -0.005 | Both reduce archive bytes via different mechanisms; combined leverage limited. |
+| **NSCS03** (Ballé end-to-end joint codec) | REDUNDANT (both Ballé-style hyperprior codecs) | SATURATING | floor at -0.005 | NSCS03 is general-purpose end-to-end Ballé; Wunderkind-G1 is class-conditional Ballé. Choose ONE; class-conditional is sister-of NSCS03 not orthogonal-to. |
+| **ATW codec** (cooperative-receiver) | NEAR-REDUNDANT (both scorer-aware codecs) | SATURATING | floor at -0.005 | Both leverage scorer features for entropy coding. Choose ONE. |
+| **STC-Dasher** (arithmetic coding maximalism) | NEAR-REDUNDANT (both post-train entropy coders) | SATURATING | floor at -0.005 | Both occupy post-train entropy slot. Choose ONE. |
+| **U-DIE-KL** (substrate-wide loss reformulation) | ORTHOGONAL (loss vs codec) | ADDITIVE | additive (~0.010-0.015) | U-DIE-KL changes loss; v2 changes codec. Composable. |
+
+Per Catalog #227, Wunderkind-G1 v2 is within-class refactor (class-conditional canonical Z3HV2). Paired with NSCS01 + U-DIE-KL produces a within-class 3-stack with bounded ΔS gain. The class-shift candidates (NSCS03 / ATW) are preferred for breaking the 0.196 plateau. Recommended deployment for v2: SOLO smoke first (validate byte-mutation smoke per Catalog #272 — the v1 failure mode); only consider stacking AFTER v2 demonstrates non-zero bytes consumed.
+

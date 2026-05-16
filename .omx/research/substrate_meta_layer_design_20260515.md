@@ -408,3 +408,69 @@ Per CLAUDE.md "Subagent coherence-by-default":
   this landing satisfies via `.omx/tmp/meta_layer_premise_verifier.py`).
 - Catalog #230 (`check_bulk_rewrite_respects_sister_subagent_ownership_map` —
   this landing honors the sister-subagent ownership map).
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive `feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md`. **NOTE**: substrate_meta_layer is META INFRASTRUCTURE not a substrate. The 9 dimensions are scoped to "what does the META layer's contract guarantee for every substrate that USES it" — not "what score does the META layer itself achieve" (it has no archive bytes of its own).
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PRESENT. The META layer's `SubstrateContract` (36-field schema) is the structural encoding of PR95 binding: every substrate registered via `@register_substrate(SubstrateContract(...))` MUST declare archive_grammar + parser_section_manifest + inflate_runtime_loc_budget + runtime_dep_closure + export_format + score_aware_loss + bolt_on_loc_budget + no_op_detector_planned (the 8 fields per Catalog #124). Per Catalog #241 every L1+ substrate scaffold MUST use the META layer OR carry `LEGACY_SUBSTRATE_PRE_META_LAYER:<rationale>` waiver.
+2. **Score-aware loss path** — PRESENT. META layer routes the `score_aware_loss` field to canonical `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164 by default; substrates that need a unique fork declare `score_aware_loss=unique:<class>` with rationale.
+3. **Archive grammar + export contract** — PRESENT. META layer's `archive_grammar` + `export_format` fields force every substrate to declare its grammar at design-time per HNeRV parity L2 export-first design + Catalog #124. The `auto_generate_inflate_template` Phase 2 design item (per memo body) will further extend this to canonical inflate skeleton generation.
+4. **Inflate runtime closure** — PRESENT. `inflate_runtime_loc_budget` field enforces ≤100 LOC; `runtime_dep_closure` enforces dependency declaration. Per Catalog #146 the inflate template auto-emits the 3 required positional args + per-video loop.
+5. **Mask/pose coupling + scorer routing** — PRESENT. META layer enforces canonical scorer-loader assignment order `(posenet, segnet) = ...` per Catalog #222 + canonical `load_differentiable_scorers` per Catalog #164. The `_run_canonical_validation` hook in `register_substrate` decorator refuses contracts that violate the 36-field invariants.
+6. **Composability with other substrates** — N/A — META layer IS the composition primitive; it doesn't compose with substrates, substrates use it. See `## Stack-of-stacks composition matrix` below for how the META layer enables the 3-stack composition matrix per Subagent C plan.
+7. **Tier 1/2/3 engineering** — PRESENT. META layer's recipe-generation auto-emits Tier 1 flags (autocast_fp16 / TF32 / torch.compile / no_grad per Catalogs #172/#178/#179/#180) + Tier 2 hardware fields (min_vram_gb / min_smoke_gpu / target_modes per Catalogs #170/#215/#182) + Tier 3 canonical auth-eval routing per Catalog #226.
+8. **Custody + apples-to-apples evidence** — PRESENT. META layer enforces `require_contest_cuda_auth_eval_claim` per Catalog #127 at the contract layer + `posterior_update_locked` per Catalog #128 at the result-write layer. Per Catalog #242 the contract validation refuses any registered substrate whose 36-field invariants fail.
+9. **Predicted ΔS band with first-principles derivation** — N/A AT META LAYER — the META layer has no ΔS of its own; it's infrastructure. See `## Predicted ΔS band` below for the META layer's IMPACT on substrates' ΔS bands.
+
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md Catalog #290 + "UNIQUE-AND-COMPLETE-PER-METHOD operating mode". **NOTE**: this memo is for the META layer ITSELF; the canonical-vs-unique decision is whether the META layer enforces canonical-share or unique-fork as the DEFAULT for each contract field. Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" the default is FORK with measured/principled rationale; canonical adoption is OPT-IN.
+
+| Contract field | META-layer default | Rationale |
+|---|---|---|
+| `architecture` | UNIQUE-PER-SUBSTRATE | Per HNeRV parity L7 substrate engineering happens ONCE per architecture class. The META layer requires explicit architecture declaration; canonical shared architecture is FORBIDDEN. |
+| `score_aware_loss` | ADOPT CANONICAL (`score_pair_components`) | HARD-EARNED per Catalog #164 + CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" + "scorer-preprocess differentiable". The scorer-preprocess pipeline is universal across substrates; forking is forbidden absent a principled mismatch. Substrates that need a unique loss declare `score_aware_loss=unique:<class>` with rationale per the falling-rule list. |
+| `archive_grammar` | UNIQUE-PER-SUBSTRATE | The bytes ARE the distinguishing feature per Catalog #272. Canonical archive grammar would collapse all substrates into the same wire format; the META layer requires per-substrate grammar declaration. |
+| `inflate_runtime_loc_budget` | ADOPT CANONICAL (≤100 LOC) | HARD-EARNED per HNeRV parity L4 + Catalog #146. The 100 LOC budget is universal. |
+| `runtime_dep_closure` | ADOPT CANONICAL skeleton (torch+brotli) | HARD-EARNED per CLAUDE.md "Forbidden silent-skip cascades" + Catalog #146. Substrates may extend (e.g. ATW adds `constriction`) but not contract below the canonical floor. |
+| `export_format` | UNIQUE-PER-SUBSTRATE | Per Catalog #124 substrates must declare their export format (NSP1 / NSCS03 / g1v2 / etc.); canonical export is forbidden. |
+| `score_aware_loss=unique:<class>` rationale field | UNIQUE per substrate | Per Catalog #290 every substrate scaffold MUST document its canonical-vs-unique decisions in the design memo (this is the META layer's enforcement of Catalog #290). |
+| Tier 1 engineering flags (autocast/TF32/torch.compile/no_grad) | ADOPT CANONICAL | HARD-EARNED per Catalogs #172/#178/#179/#180. Universal speedups; forking is forbidden. |
+| Auth-eval routing | ADOPT CANONICAL (`gate_auth_eval_call`) | HARD-EARNED per Catalog #226 + CLAUDE.md "Apples-to-apples evidence discipline". Canonical helper routes both axes (CUDA + CPU) + applies `require_contest_cuda_auth_eval_claim` per Catalog #127. |
+| Scorer-loader assignment order | ADOPT CANONICAL (`(posenet, segnet) = ...`) | HARD-EARNED per Catalog #222. Reversed order is a bug class anchored in C6 5ep smoke; canonical is the safer default. |
+
+## Predicted ΔS band
+
+Per Dimension 9. **NOTE**: META layer has no ΔS of its own. This section describes the META layer's IMPACT on the substrate canvas's ΔS distribution.
+
+**RESEARCH-INFRASTRUCTURE-NO-SCORE-CLAIM**: the META layer is a structural protection layer; it does not directly produce contest-CUDA or contest-CPU scores.
+
+**First-principles impact on substrate canvas**:
+- **Floor effect**: by enforcing the 36-field contract structurally, the META layer extincts the bug-class "substrate scaffold ships at L1 but lacks operational mechanism" per Catalog #220 (the Z3-G1 v1 → v2 pattern). Predicted impact: REDUCES the fraction of L1 substrates that produce phantom scores; INCREASES the fraction that produce real ΔS evidence.
+- **Ceiling effect**: by defaulting to UNIQUE-PER-SUBSTRATE on architecture + archive_grammar + export_format, the META layer prevents canonicalization-suppression of substrate-optimal scores per `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md`. Predicted impact: breaks the 0.196-0.199 within-class plateau by allowing per-substrate unique engineering.
+- **Velocity effect**: by auto-emitting Tier 1 engineering flags + Tier 2 recipe fields + Tier 3 canonical routing, the META layer reduces per-substrate scaffolding cost from ~600 LOC to ~150 LOC (substrate-engineering portion); the bolt-on portion stays ≤350 LOC per HNeRV parity L7. Predicted impact: accelerates the substrate canvas exploration rate by 2-4×.
+
+**No per-axis prediction bands**: the META layer's effects are distribution-wide, not per-substrate. The Subagent C dispatch plan's 4-substrate-plus-3-stack composition matrix is the empirical anchor for measuring META layer impact.
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C dispatch plan. **NOTE**: META layer IS the composition primitive; this section describes how the META layer enables composition of OTHER substrates.
+
+The META layer's `SubstrateContract` 36-field schema includes:
+- `composable_with: list[str]` — declared compositions per substrate; populated from the per-substrate composition matrix (each substrate's `## Stack-of-stacks composition matrix` section per Catalog #294).
+- `composition_alpha_default: float` — default composition_alpha for the cathedral autopilot ranker per Catalog #227. ORTHOGONAL pair → 1.0 (ADDITIVE); NEAR-REDUNDANT pair → 0.5 (SUB-ADDITIVE); REDUNDANT pair → 0.0 (SATURATING).
+- `class_shift_lit_anchors: list[str]` — literature anchors per CLAUDE.md "Grand Council" roster expansion (Atick-Redlich / Tishby-Zaslavsky / Rao-Ballard / Wyner-Ziv / etc.).
+
+The META layer feeds these fields to:
+- `tools/cathedral_autopilot_autonomous_loop.py::load_substrate_composition_alpha_index` → `apply_substrate_composition_matrix_to_candidates` per Catalog #227.
+- `.omx/state/substrate_composition_matrix.json` (the posterior surface; HISTORICAL_PROVENANCE per Catalog #113; APPEND-ONLY per Catalog #131).
+
+The 4-substrate + 3-stack composition matrix per Subagent C plan operates ON TOP of this META infrastructure:
+- 4 substrates: NSCS01 (nullspace split renderer) / NSCS02 (Carmack-Hotz strip-everything) / NSCS03 (Ballé 2018 end-to-end joint codec) / NSCS06 (Carmack-Hotz codec variant).
+- 3 stacks: each stack is a `composable_with` triple per the per-substrate composition matrices. Strongest predicted stack per Subagent C: `NSCS01 + NSCS03 + (NSCS02 OR NSCS06, NOT BOTH)` for cross-axis additivity.
+
+Per `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md` operator retrospective: the META layer's existence ITSELF can suppress substrate-optimal engineering if the canonical defaults are too aggressive. The falling-rule list (EMPIRICAL → PRINCIPLED → UNCLEAR → OBVIOUS-FIT) per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" is the META layer's structural protection against its own canonicalization reflex.
+

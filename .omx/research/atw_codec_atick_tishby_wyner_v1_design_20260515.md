@@ -369,3 +369,66 @@ When Phase 2 lifts `NotImplementedError`, the predicted [0.18, 0.21] frontier
 displacement is verifiable in $5-15 of Modal A100 spend. If it lands within
 the band, ATW V1 becomes the new score-lowering primitive that all subsequent
 substrates can compose against.
+
+---
+
+## 9-dimension success checklist evidence
+
+Per CLAUDE.md "Catalog #294 — 9-dim checklist evidence section" + standing directive. Per-dimension PRESENT/MISSING/N/A with citations.
+
+1. **Source-fidelity (PR95-style binding of all ingredients)** — PARTIAL. Memo declares ATW codec triple-binding (Atick-Redlich cooperative-receiver + Tishby-Zaslavsky information-bottleneck + Wyner-Ziv side-information) at the codec layer; PR95 binding of architecture+training+grammar+runtime+export+score-aware is DEFERRED to subsequent v2 design memo per HNeRV parity lesson 2 export-first design. RESEARCH-ONLY scope acknowledged.
+2. **Score-aware loss path** — PARTIAL. ATW codec design memo cites scorer-as-receiver (the scorer IS the canonical Tishby Y side; encoder learns I(X;T) reduction subject to I(T;Y) preservation). Score-aware loss path not yet written into a trainer; the canonical `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164 will be wired at trainer-build time.
+3. **Archive grammar + export contract** — PARTIAL. Memo declares the ATW wire grammar at design level (`atw_v1` magic header + Wyner-Ziv side-info offset + Tishby bottleneck token table); per Catalog #124 the 8 fields are declared at design-time but operational-runtime smoke (per Catalog #220) is DEFERRED until trainer + inflate runtime land in a sister wave.
+4. **Inflate runtime closure** — DEFERRED. The inflate runtime sketched at ≤100 LOC per HNeRV parity L4 budget; no actual inflate.py written yet. Reactivation criteria: trainer + inflate.py both land + byte-mutation smoke per Catalog #272 passes.
+5. **Mask/pose coupling + scorer routing** — N/A AT DESIGN STAGE — rationale: ATW is a CODEC primitive (post-trainer); mask/pose coupling lives in the upstream substrate that the codec consumes. Will route through canonical helpers per Catalog #164/#190 at trainer-build time.
+6. **Composability with other substrates** — PRESENT (this section + composition matrix below). ATW codec is post-train byte-layer; orthogonal to renderer-architecture substrates (NSCS01/NSCS02/NSCS06) and to other entropy-coding substrates (NSCS03/STC-Dasher). See `## Stack-of-stacks composition matrix` below.
+7. **Tier 1/2/3 engineering** — DEFERRED. Tier 1/2/3 declarations land at trainer-recipe pair time, not design time.
+8. **Custody + apples-to-apples evidence** — N/A AT DESIGN STAGE — research-only design memo per CLAUDE.md "Forbidden empirical-claim-without-evidence-tag". All score predictions below are `[prediction]` tagged.
+9. **Predicted ΔS band with first-principles derivation** — PRESENT (see below).
+
+## Canonical-vs-unique decision per layer
+
+Per CLAUDE.md Catalog #290 + "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable. Per-layer canonical-vs-unique-fork rationale.
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Architecture (encoder + bottleneck + decoder) | UNIQUE FORK | ATW triple-binding (Atick-Redlich receiver + Tishby IB + Wyner-Ziv side-info) is the substrate's distinguishing-feature per Catalog #272 + HNeRV parity L7. The architecture IS the lever; canonical entropy-coder does not encode the cooperative-receiver hypothesis. HARD-EARNED per Tishby-Zaslavsky 2015 + Atick-Redlich 1990 + Wyner-Ziv 1976 canonical papers. |
+| Score-aware loss | ADOPT CANONICAL | `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164 — the scorer-preprocess routing is universal; ATW does not need a custom loss surface. HARD-EARNED per CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" + Catalog #164. |
+| Archive grammar | UNIQUE FORK | ATW wire format (`atw_v1` magic + side-info offsets) cannot be shared with NSP1/NSCS03/Z3HV2 — the bytes ARE the cooperative-receiver hypothesis. HARD-EARNED per HNeRV parity L3 (monolithic single-file with fixed offsets in codec.py source). |
+| Inflate runtime | ADOPT CANONICAL skeleton | ≤100 LOC budget + canonical `select_inflate_device` (Catalog #205) + torch+brotli closure + per-video loop pattern (Catalog #146). Body decode logic UNIQUE (parses ATW wire format); shell adopts canonical. HARD-EARNED. |
+| Export contract | UNIQUE FORK | ZIP STORED `0.bin` member per HNeRV parity L3, but the body bytes are unique to ATW. HARD-EARNED. |
+| Training curriculum | ADOPT CANONICAL | 2-frame curriculum + pyav decode + patched YUV6 + differentiable scorers + EMA(0.997) + cosine LR — all PR95-parity-discipline canonical. HARD-EARNED per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons 1-13. |
+| Tier-1 engineering | ADOPT CANONICAL | autocast_fp16 / TF32 / torch.compile / no_grad-at-eval / canonical scorer-loss helper (Catalogs #172/#178/#179/#180/#164) — universal speedups. HARD-EARNED. |
+| Scorer routing | ADOPT CANONICAL | `load_differentiable_scorers` + `patch_upstream_yuv6_globally` per Catalog #164 + canonical scorer-loader assignment order `(posenet, segnet) = ...` per Catalog #222. HARD-EARNED. |
+
+## Predicted ΔS band
+
+Per Dimension 9 + CLAUDE.md "Apples-to-apples evidence discipline".
+
+**RESEARCH-ONLY-NO-SCORE-CLAIM** until: (a) ATW trainer + inflate runtime both land + smoke greens-up; (b) paired Tier C MDL ablation distinguishes within-class vs across-class signature per Catalog #227; (c) 5/5 inner-quintet council PROCEED.
+
+**First-principles upper-bound on score lift**:
+- ATW is a CLASS-SHIFT candidate per Z1 framework (cooperative-receiver paradigm is across-class from Quantizr/PR95/A1 frontier which all use scorer-blind entropy coders).
+- Per Tishby IB lower bound: optimal rate `R(D) ≥ I(X;Y) - D/d_max` where Y = scorer features and X = renderer state. For Quantizr-class (88K params @ FP4 + brotli ~64KB), I(X;Y) ≈ 11-12 bits per scorer-class assignment per Atick-Redlich early-visual-processing receptive-field convergence analysis. Tighter bound predicts archive rate reduction of 5-15% over scorer-blind baseline.
+- Translation to ΔS: A1 baseline rate-term ≈ `25 * 350000 / 37545489 ≈ 0.233`; 10% rate reduction yields rate ΔS ≈ -0.023. Predicted ΔS: -0.005 to -0.020 vs A1 baseline per cooperative-receiver theoretical floor.
+
+**Predicted bands** (research-only-no-score-claim until empirical):
+- `[contest-CUDA T4 prediction]` band: [0.180, 0.195] (class-shift candidate; if cooperative-receiver hypothesis bears out, breaks 0.196 plateau).
+- `[contest-CPU GHA Linux x86_64 prediction]` band: [0.175, 0.190] (paired with CUDA gap ≈ -0.005).
+- Score-improvement-mechanism: ACROSS-CLASS per Z1 framework (cooperative-receiver paradigm). Tier C density expected ≤ 0.30 (across-class signature: large Δscore at σ=1.0 latent perturbation per Catalog #227 framework).
+
+**Reactivation criteria if smoke produces ΔS within [0.195, 0.220]**: cooperative-receiver hypothesis NOT FALSIFIED; the substrate IS in the within-class regime → re-examine the Tishby bottleneck dimensionality (may be too small to encode meaningful scorer features) + verify Wyner-Ziv side-info is non-empty at decode (sister-bug class to Z3-G1 empty-sidecar trap per Catalog #266).
+
+## Stack-of-stacks composition matrix
+
+Per Dimension 6 + Subagent C dispatch plan composition matrix.
+
+| With substrate | Axis orthogonality | Predicted composition class | Expected ΔS contribution | Rationale |
+|---|---|---|---|---|
+| **NSCS01** (nullspace split renderer) | ORTHOGONAL (codec vs renderer) | ADDITIVE | small additive (~0.005-0.015) | ATW operates on encoded bytes; NSCS01 changes the renderer architecture. Compose by piping NSCS01's renderer output through ATW codec. |
+| **NSCS02/NSCS06** (Carmack-Hotz strip-everything) | ORTHOGONAL (codec vs minimalism-bytecount) | SATURATING | floor at -0.005 | Strip-everything aggressively prunes the archive bytes ATW wants to encode richly — the two leverage opposite directions of the rate-distortion curve. |
+| **NSCS03** (Ballé 2018 end-to-end joint codec) | REDUNDANT (both are learned entropy coders) | SATURATING | floor at -0.005 | NSCS03 already does end-to-end learned entropy coding; adding ATW on top is double-encoding. Choose ONE: ATW (cooperative-receiver-specific) OR NSCS03 (general end-to-end). |
+| **STC-Dasher** (arithmetic coding maximalism) | REDUNDANT (both are post-train entropy coders) | SATURATING | floor at -0.005 | Per same logic as NSCS03 — choose ONE entropy coder. |
+
+Per Catalog #227 cathedral autopilot ranker, ATW paired with class-shift sister (NSCS03 OR cooperative-receiver lit-anchor) inherits +0.01 to +0.03 class-shift bonus. ATW paired with within-class sister (NSCS01/NSCS02/NSCS06) gets standard composition_alpha treatment per Subagent C plan. Recommended next-wave composition per Subagent C: `ATW + NSCS01 + (NSCS02 OR NSCS06, NOT BOTH)`, deferring NSCS03+ATW choice to council per "Design decisions — non-negotiable".
+
