@@ -39,10 +39,19 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 _SRC_DIR = REPO_ROOT / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from tac.deploy.modal.anchor_lookup import (  # noqa: E402
     find_promotable_anchor_for_axis_and_sha,
 )
+from tac.deploy.modal.auth_eval import (  # noqa: E402
+    modal_uploaded_submission_dir_runtime_manifest,
+)
+
+CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
+CPU_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval_cpu/submission_dir"
+AUTO_RUNTIME_TREE = "auto"
 
 
 def _utc_now_compact() -> str:
@@ -64,6 +73,10 @@ def _sha256(path: Path) -> str:
 def _optional_arg(cmd: list[str], flag: str, value: str) -> None:
     if value:
         cmd.extend([flag, value])
+
+
+def _is_sha256(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-fA-F]{64}", str(value or "").strip()))
 
 
 def _normalize_inflate_sh_for_submission_dir(
@@ -91,10 +104,119 @@ def _normalize_inflate_sh_for_submission_dir(
     return rel.as_posix()
 
 
+def _modal_uploaded_runtime_hashes_for_axis(
+    *,
+    submission_dir: str,
+    inflate_sh_rel: str,
+    remote_submission_dir: str,
+) -> dict[str, str]:
+    """Return the runtime hashes the Modal wrapper will enforce remotely."""
+    if not submission_dir:
+        return {}
+    from experiments.contest_auth_eval import _runtime_dependency_manifest
+
+    submission_path = Path(submission_dir).resolve()
+    local_inflate_sh = (submission_path / inflate_sh_rel).resolve()
+    local_manifest = _runtime_dependency_manifest(local_inflate_sh, REPO_ROOT / "upstream")
+    projected = modal_uploaded_submission_dir_runtime_manifest(
+        local_manifest,
+        remote_submission_dir=remote_submission_dir,
+    )
+    return {
+        "runtime_tree_sha256": str(projected.get("runtime_tree_sha256") or ""),
+        "runtime_content_tree_sha256": str(
+            projected.get("runtime_content_tree_sha256") or ""
+        ),
+    }
+
+
+def _resolve_axis_runtime_expectations(
+    *,
+    submission_dir: str,
+    inflate_sh_rel: str,
+    expected_runtime_tree_sha256: str,
+    expected_cuda_runtime_tree_sha256: str = "",
+    expected_cpu_runtime_tree_sha256: str = "",
+) -> dict[str, Any]:
+    """Resolve per-axis runtime-tree hashes before Modal app startup.
+
+    Uploaded ``--submission-dir`` runtimes hash differently on CUDA and CPU
+    Modal wrappers because the remote extraction roots differ. The paired
+    launcher therefore must either compute per-axis hashes locally or reject a
+    legacy single hash before provider work starts.
+    """
+
+    common = str(expected_runtime_tree_sha256 or "").strip()
+    cuda_expected = str(expected_cuda_runtime_tree_sha256 or common).strip()
+    cpu_expected = str(expected_cpu_runtime_tree_sha256 or common).strip()
+    should_auto = (
+        bool(submission_dir)
+        and (
+            not cuda_expected
+            or not cpu_expected
+            or cuda_expected.lower() == AUTO_RUNTIME_TREE
+            or cpu_expected.lower() == AUTO_RUNTIME_TREE
+            or common.lower() == AUTO_RUNTIME_TREE
+        )
+    )
+    should_validate = bool(submission_dir) and (
+        should_auto or bool(cuda_expected) or bool(cpu_expected)
+    )
+    observed: dict[str, dict[str, str]] = {}
+    if should_validate:
+        observed = {
+            "contest_cuda": _modal_uploaded_runtime_hashes_for_axis(
+                submission_dir=submission_dir,
+                inflate_sh_rel=inflate_sh_rel,
+                remote_submission_dir=CUDA_REMOTE_SUBMISSION_DIR,
+            ),
+            "contest_cpu": _modal_uploaded_runtime_hashes_for_axis(
+                submission_dir=submission_dir,
+                inflate_sh_rel=inflate_sh_rel,
+                remote_submission_dir=CPU_REMOTE_SUBMISSION_DIR,
+            ),
+        }
+        if should_auto:
+            if not cuda_expected or cuda_expected.lower() == AUTO_RUNTIME_TREE:
+                cuda_expected = observed["contest_cuda"]["runtime_tree_sha256"]
+            if not cpu_expected or cpu_expected.lower() == AUTO_RUNTIME_TREE:
+                cpu_expected = observed["contest_cpu"]["runtime_tree_sha256"]
+
+    for axis, expected in (
+        ("contest_cuda", cuda_expected),
+        ("contest_cpu", cpu_expected),
+    ):
+        if expected and not _is_sha256(expected):
+            raise ValueError(
+                f"{axis} expected runtime tree must be a 64-char sha256 or 'auto'; "
+                f"got {expected!r}"
+            )
+        actual = observed.get(axis, {}).get("runtime_tree_sha256")
+        if actual and expected and expected != actual:
+            content = observed.get(axis, {}).get("runtime_content_tree_sha256", "")
+            raise ValueError(
+                "expected runtime tree does not match the Modal uploaded "
+                f"--submission-dir runtime for {axis}: expected={expected} "
+                f"actual={actual} runtime_content_tree_sha256={content}. "
+                "Use --expected-runtime-tree-sha256 auto or the per-axis "
+                "--expected-cuda-runtime-tree-sha256/--expected-cpu-runtime-tree-sha256 "
+                "flags."
+            )
+
+    return {
+        "contest_cuda": cuda_expected,
+        "contest_cpu": cpu_expected,
+        "observed_uploaded_runtime": observed,
+        "common_expected_runtime_tree_sha256": (
+            cuda_expected if cuda_expected and cuda_expected == cpu_expected else None
+        ),
+    }
+
+
 def _resolve_skipped_axes(
     *,
     archive_sha256: str,
-    expected_runtime_tree_sha256: str,
+    expected_runtime_tree_sha256_by_axis: dict[str, str],
     skip_if_anchor_exists: bool,
     repo_root: Path,
 ) -> dict[str, dict[str, Any] | None]:
@@ -107,20 +229,22 @@ def _resolve_skipped_axes(
     """
     if not skip_if_anchor_exists:
         return {"contest_cuda": None, "contest_cpu": None}
-    if not expected_runtime_tree_sha256:
+    cuda_runtime = expected_runtime_tree_sha256_by_axis.get("contest_cuda", "")
+    cpu_runtime = expected_runtime_tree_sha256_by_axis.get("contest_cpu", "")
+    if not cuda_runtime and not cpu_runtime:
         return {"contest_cuda": None, "contest_cpu": None}
     return {
         "contest_cuda": find_promotable_anchor_for_axis_and_sha(
             "cuda",
             archive_sha256,
             repo_root=repo_root,
-            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            expected_runtime_tree_sha256=cuda_runtime,
         ),
         "contest_cpu": find_promotable_anchor_for_axis_and_sha(
             "cpu",
             archive_sha256,
             repo_root=repo_root,
-            expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+            expected_runtime_tree_sha256=cpu_runtime,
         ),
     }
 
@@ -139,6 +263,8 @@ def build_plan(
     claim_agent: str,
     claim_notes: str,
     expected_runtime_tree_sha256: str = "",
+    expected_cuda_runtime_tree_sha256: str = "",
+    expected_cpu_runtime_tree_sha256: str = "",
     skip_axis_if_promotable_anchor_exists: bool = False,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -154,6 +280,17 @@ def build_plan(
         submission_dir=submission_dir,
         inflate_sh=inflate_sh,
     )
+    runtime_expectations = _resolve_axis_runtime_expectations(
+        submission_dir=submission_dir,
+        inflate_sh_rel=inflate_sh_for_cmd,
+        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        expected_cuda_runtime_tree_sha256=expected_cuda_runtime_tree_sha256,
+        expected_cpu_runtime_tree_sha256=expected_cpu_runtime_tree_sha256,
+    )
+    expected_runtime_by_axis = {
+        "contest_cuda": str(runtime_expectations.get("contest_cuda") or ""),
+        "contest_cpu": str(runtime_expectations.get("contest_cpu") or ""),
+    }
     cuda_output = output_root / "modal_auth_eval" / f"{run_id}_cuda"
     cpu_output = output_root / "modal_auth_eval_cpu" / f"{run_id}_cpu"
     cuda_lane = f"{lane_id_base}_contest_cuda"
@@ -211,8 +348,16 @@ def build_plan(
     ]
     _optional_arg(cuda_cmd, "--submission-dir", submission_dir)
     _optional_arg(cpu_cmd, "--submission-dir", submission_dir)
-    _optional_arg(cuda_cmd, "--expected-runtime-tree-sha256", expected_runtime_tree_sha256)
-    _optional_arg(cpu_cmd, "--expected-runtime-tree-sha256", expected_runtime_tree_sha256)
+    _optional_arg(
+        cuda_cmd,
+        "--expected-runtime-tree-sha256",
+        expected_runtime_by_axis["contest_cuda"],
+    )
+    _optional_arg(
+        cpu_cmd,
+        "--expected-runtime-tree-sha256",
+        expected_runtime_by_axis["contest_cpu"],
+    )
 
     # Resolve per-axis skip-decisions before assembling the plan dict so the
     # plan carries an authoritative record of which axes were re-used vs
@@ -220,7 +365,7 @@ def build_plan(
     skip_root = repo_root if repo_root is not None else REPO_ROOT
     skipped = _resolve_skipped_axes(
         archive_sha256=archive_sha,
-        expected_runtime_tree_sha256=expected_runtime_tree_sha256,
+        expected_runtime_tree_sha256_by_axis=expected_runtime_by_axis,
         skip_if_anchor_exists=skip_axis_if_promotable_anchor_exists,
         repo_root=skip_root,
     )
@@ -243,7 +388,8 @@ def build_plan(
         if not expected_runtime_tree_sha256:
             plan_notes.append(
                 "No expected_runtime_tree_sha256 was supplied, so runtime-bound anchor reuse "
-                "is disabled and both axes remain eligible for fresh dispatch."
+                "is disabled unless --submission-dir allowed the paired launcher to compute "
+                "per-axis Modal uploaded runtime-tree hashes."
             )
 
     return {
@@ -260,7 +406,23 @@ def build_plan(
             "submission_dir": submission_dir or None,
             "inflate_sh": inflate_sh_for_cmd,
             "inflate_sh_original": inflate_sh if inflate_sh_for_cmd != inflate_sh else None,
-            "expected_runtime_tree_sha256": expected_runtime_tree_sha256 or None,
+            "expected_runtime_tree_sha256": runtime_expectations.get(
+                "common_expected_runtime_tree_sha256"
+            ),
+            "expected_runtime_tree_sha256_by_axis": {
+                key: (value or None) for key, value in expected_runtime_by_axis.items()
+            },
+            "expected_runtime_content_tree_sha256_by_axis": {
+                axis: (
+                    runtime_expectations.get("observed_uploaded_runtime", {})
+                    .get(axis, {})
+                    .get("runtime_content_tree_sha256")
+                )
+                for axis in ("contest_cuda", "contest_cpu")
+            },
+            "modal_uploaded_runtime_manifest_by_axis": runtime_expectations.get(
+                "observed_uploaded_runtime", {}
+            ),
         },
         "outputs": {
             "contest_cuda": str(cuda_output),
@@ -303,7 +465,25 @@ def main() -> int:
     parser.add_argument("--gpu", default="T4")
     parser.add_argument("--claim-agent", default="codex:modal_paired_auth_eval")
     parser.add_argument("--claim-notes", default="")
-    parser.add_argument("--expected-runtime-tree-sha256", default="")
+    parser.add_argument(
+        "--expected-runtime-tree-sha256",
+        default="",
+        help=(
+            "Legacy/common runtime-tree expectation. With --submission-dir, pass "
+            "'auto' (or omit the flag) to compute the Modal-uploaded per-axis "
+            "runtime-tree hashes locally before provider startup."
+        ),
+    )
+    parser.add_argument(
+        "--expected-cuda-runtime-tree-sha256",
+        default="",
+        help="Contest-CUDA Modal uploaded runtime-tree hash, or 'auto'.",
+    )
+    parser.add_argument(
+        "--expected-cpu-runtime-tree-sha256",
+        default="",
+        help="Contest-CPU Modal uploaded runtime-tree hash, or 'auto'.",
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument(
@@ -339,22 +519,28 @@ def main() -> int:
     pair_group_id = _safe_slug(args.pair_group_id or run_id)
     lane_id_base = _safe_slug(args.lane_id_base or f"lane_{pair_group_id}")
     resolved_repo_root = (args.repo_root or Path.cwd()).resolve()
-    plan = build_plan(
-        archive=args.archive,
-        submission_dir=args.submission_dir,
-        inflate_sh=args.inflate_sh,
-        run_id=run_id,
-        pair_group_id=pair_group_id,
-        lane_id_base=lane_id_base,
-        output_root=args.output_root,
-        modal_bin=args.modal_bin,
-        gpu=args.gpu,
-        claim_agent=args.claim_agent,
-        claim_notes=args.claim_notes,
-        expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
-        skip_axis_if_promotable_anchor_exists=args.skip_axis_if_promotable_anchor_exists,
-        repo_root=resolved_repo_root,
-    )
+    try:
+        plan = build_plan(
+            archive=args.archive,
+            submission_dir=args.submission_dir,
+            inflate_sh=args.inflate_sh,
+            run_id=run_id,
+            pair_group_id=pair_group_id,
+            lane_id_base=lane_id_base,
+            output_root=args.output_root,
+            modal_bin=args.modal_bin,
+            gpu=args.gpu,
+            claim_agent=args.claim_agent,
+            claim_notes=args.claim_notes,
+            expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
+            expected_cuda_runtime_tree_sha256=args.expected_cuda_runtime_tree_sha256,
+            expected_cpu_runtime_tree_sha256=args.expected_cpu_runtime_tree_sha256,
+            skip_axis_if_promotable_anchor_exists=args.skip_axis_if_promotable_anchor_exists,
+            repo_root=resolved_repo_root,
+        )
+    except ValueError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        return 2
     text = json.dumps(plan, indent=2, sort_keys=True)
     if args.json_out:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)

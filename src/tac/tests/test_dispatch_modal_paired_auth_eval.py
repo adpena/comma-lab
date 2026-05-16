@@ -55,6 +55,16 @@ def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
         "find_promotable_anchor_for_axis_and_sha",
         lambda *_args, **_kwargs: None,
     )
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": "",
+            "contest_cpu": "",
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": None,
+        },
+    )
 
     plan = mod.build_plan(
         archive=archive,
@@ -99,6 +109,16 @@ def test_paired_modal_plan_relativizes_inflate_sh_under_submission_dir(
         mod,
         "find_promotable_anchor_for_axis_and_sha",
         lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": "",
+            "contest_cpu": "",
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": None,
+        },
     )
 
     plan = mod.build_plan(
@@ -151,6 +171,16 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
         return None
 
     monkeypatch.setattr(mod, "find_promotable_anchor_for_axis_and_sha", fake_anchor)
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": "a" * 64,
+            "contest_cpu": "a" * 64,
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": "a" * 64,
+        },
+    )
 
     plan = mod.build_plan(
         archive=archive,
@@ -173,3 +203,111 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
     assert plan["existing_anchors_reused"]["contest_cuda"]["score"] == 0.2
+
+
+def test_paired_modal_plan_auto_computes_axis_specific_uploaded_runtime_hashes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    cuda_hash = "c" * 64
+    cpu_hash = "d" * 64
+
+    def fake_uploaded_hashes(*, remote_submission_dir: str, **_kwargs):
+        if remote_submission_dir == mod.CUDA_REMOTE_SUBMISSION_DIR:
+            return {
+                "runtime_tree_sha256": cuda_hash,
+                "runtime_content_tree_sha256": "e" * 64,
+            }
+        if remote_submission_dir == mod.CPU_REMOTE_SUBMISSION_DIR:
+            return {
+                "runtime_tree_sha256": cpu_hash,
+                "runtime_content_tree_sha256": "e" * 64,
+            }
+        raise AssertionError(remote_submission_dir)
+
+    monkeypatch.setattr(mod, "_modal_uploaded_runtime_hashes_for_axis", fake_uploaded_hashes)
+    monkeypatch.setattr(
+        mod,
+        "find_promotable_anchor_for_axis_and_sha",
+        lambda *_args, **_kwargs: None,
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        submission_dir=str(runtime),
+        inflate_sh=str(runtime / "inflate.sh"),
+        run_id="unit_pair_run",
+        pair_group_id="unit_pair_group",
+        lane_id_base="lane_unit_pair",
+        output_root=Path("experiments/results"),
+        modal_bin=".venv/bin/modal",
+        gpu="T4",
+        claim_agent="codex:test",
+        claim_notes="unit test",
+    )
+
+    assert plan["runtime"]["expected_runtime_tree_sha256"] is None
+    assert plan["runtime"]["expected_runtime_tree_sha256_by_axis"] == {
+        "contest_cuda": cuda_hash,
+        "contest_cpu": cpu_hash,
+    }
+    assert (
+        plan["commands"]["contest_cuda"][
+            plan["commands"]["contest_cuda"].index("--expected-runtime-tree-sha256") + 1
+        ]
+        == cuda_hash
+    )
+    assert (
+        plan["commands"]["contest_cpu"][
+            plan["commands"]["contest_cpu"].index("--expected-runtime-tree-sha256") + 1
+        ]
+        == cpu_hash
+    )
+
+
+def test_paired_modal_plan_rejects_legacy_single_hash_before_provider_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n")
+    (runtime / "inflate.py").write_text("print('ok')\n")
+
+    monkeypatch.setattr(
+        mod,
+        "_modal_uploaded_runtime_hashes_for_axis",
+        lambda **_kwargs: {
+            "runtime_tree_sha256": "b" * 64,
+            "runtime_content_tree_sha256": "c" * 64,
+        },
+    )
+
+    with pytest.raises(ValueError, match="expected runtime tree does not match"):
+        mod.build_plan(
+            archive=archive,
+            submission_dir=str(runtime),
+            inflate_sh="inflate.sh",
+            run_id="unit_pair_run",
+            pair_group_id="unit_pair_group",
+            lane_id_base="lane_unit_pair",
+            output_root=Path("experiments/results"),
+            modal_bin=".venv/bin/modal",
+            gpu="T4",
+            claim_agent="codex:test",
+            claim_notes="unit test",
+            expected_runtime_tree_sha256="a" * 64,
+        )
