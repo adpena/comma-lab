@@ -54,6 +54,10 @@ TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
 TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256 = (
     "8bb68ba5e14f0bbb0511812cbb7b7465e58ef639997e300558c04c3cdae98605"
 )
+TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
+    "experiments/results/time_traveler_l5_v2/"
+    "tt5l_contest_sideinfo_consumption_proof.json"
+)
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
 )
@@ -1030,36 +1034,54 @@ def l5_v2_canonical_sideinfo_gate_evidence(
     *,
     repo_root: str | Path | None = None,
 ) -> L5V2GateEvidence | None:
-    """Return the committed TT5L side-info proof iff path and SHA match."""
+    """Return the strongest discoverable TT5L side-info proof."""
 
     resolved_repo_root = (
         Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
     )
-    proof_path = resolved_repo_root / TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
-    if not proof_path.is_file():
-        return None
-    if _sha256_file(proof_path) != TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256:
-        return None
-    try:
-        proof = json.loads(proof_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(proof, Mapping):
-        return None
-    if _gate_semantic_blockers(
-        "byte_closed_temporal_sideinfo_consumption",
-        proof,
-        repo_root=resolved_repo_root,
-    ):
-        return None
-    return L5V2GateEvidence(
-        gate_id="byte_closed_temporal_sideinfo_consumption",
-        artifact_path=TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
-        artifact_sha256=TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256,
-        predicate_id=TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
-        predicate_passed=True,
-        evidence_grade="local_no_gpu_parser_and_inflate_consumption_proof",
+    candidates = (
+        (
+            TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
+            None,
+            "contest_full_frame_inflate_consumption_proof",
+        ),
+        (
+            TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
+            TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256,
+            "legacy_local_parser_and_inflate_consumption_proof",
+        ),
     )
+    for artifact_path, expected_sha, evidence_grade in candidates:
+        proof_path = resolved_repo_root / artifact_path
+        if not proof_path.is_file():
+            continue
+        artifact_sha = _sha256_file(proof_path)
+        if expected_sha is not None and artifact_sha != expected_sha:
+            continue
+        try:
+            proof = json.loads(proof_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(proof, Mapping):
+            continue
+        if _gate_semantic_blockers(
+            "byte_closed_temporal_sideinfo_consumption",
+            proof,
+            repo_root=resolved_repo_root,
+        ):
+            continue
+        predicate_id = str(
+            proof.get("predicate_id") or TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID
+        ).strip()
+        return L5V2GateEvidence(
+            gate_id="byte_closed_temporal_sideinfo_consumption",
+            artifact_path=artifact_path,
+            artifact_sha256=artifact_sha,
+            predicate_id=predicate_id,
+            predicate_passed=True,
+            evidence_grade=evidence_grade,
+        )
+    return None
 
 
 def _gate_payload_by_id(readiness: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -2474,6 +2496,12 @@ def l5_v2_dispatch_readiness(
         Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
     )
     evidence_by_gate = _coerce_gate_evidence(gate_evidence)
+    if "byte_closed_temporal_sideinfo_consumption" not in evidence_by_gate:
+        canonical_sideinfo = l5_v2_canonical_sideinfo_gate_evidence(
+            repo_root=resolved_repo_root,
+        )
+        if canonical_sideinfo is not None:
+            evidence_by_gate[canonical_sideinfo.gate_id] = canonical_sideinfo
     gates = []
     blockers = []
     evidence_blockers = []
@@ -2596,6 +2624,7 @@ __all__ = [
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
+    "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",

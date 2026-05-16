@@ -19,6 +19,7 @@ from tac.optimization.l5_staircase_v2 import (
     PREDICTED_DELTA_BAND,
     SUBJECT_ID,
     L5V2GateEvidence,
+    l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
     l5_v2_packetir_section_entropy_evidence_payload,
     l5_v2_packetir_stack_evidence_payload,
@@ -350,6 +351,45 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
             evidence_grade="contest_artifact",
         )
     return out
+
+
+def _write_contest_sideinfo_proof_artifact(repo_root: Path) -> Path:
+    payload = _gate_artifact_payload(
+        "byte_closed_temporal_sideinfo_consumption",
+        repo_root=repo_root,
+    )
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    manifest_path = repo_root / str(proof["inflated_outputs_manifest_path"])
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "raw_output_aggregate_sha256": proof[
+                    "inflated_raw_output_aggregate_sha256"
+                ],
+                "n_pairs_hashed": proof["n_pairs_hashed"],
+                "total_frames": proof["total_frames"],
+                "raw_output_frame_nbytes": proof["raw_output_frame_nbytes"],
+                "file_list_sha256": proof["file_list_sha256"],
+                "baseline_raw_output_aggregate_sha256": proof[
+                    "baseline_raw_output_aggregate_sha256"
+                ],
+                "mutated_raw_output_aggregate_sha256": proof[
+                    "mutated_raw_output_aggregate_sha256"
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    artifact_path = (
+        repo_root / l5_v2.TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    return artifact_path
 
 
 def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object]]:
@@ -740,6 +780,35 @@ def test_l5_v2_tt5l_timing_requires_dykstra_and_sideinfo_evidence(
         gate_evidence=_valid_gate_evidence(tmp_path),
         repo_root=tmp_path,
     )
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["sideinfo_gate_evidence_valid"] is True
+    assert tt5l["first_anchor_timing_smoke_allowed"] is True
+
+
+def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_contest_sideinfo_proof_artifact(tmp_path)
+
+    evidence = l5_v2_canonical_sideinfo_gate_evidence(repo_root=tmp_path)
+
+    assert evidence is not None
+    assert evidence.artifact_path == (
+        l5_v2.TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
+    )
+    assert evidence.artifact_sha256 == _file_sha256(artifact_path)
+    assert evidence.evidence_grade == "contest_full_frame_inflate_consumption_proof"
+
+
+def test_l5_v2_dispatch_readiness_auto_consumes_canonical_sideinfo_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_contest_sideinfo_proof_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
     tt5l = readiness["tt5l_campaign_readiness"]
 
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
