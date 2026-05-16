@@ -46,6 +46,27 @@ GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 _CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
+_CPU_DEVICE_TOKENS = frozenset({"cpu", "x86", "x86_64"})
+_CONTEST_CPU_FORBIDDEN_TOKENS = frozenset({
+    "aarch64",
+    "ane",
+    "apple",
+    "arm",
+    "arm64",
+    "darwin",
+    "m1",
+    "m2",
+    "m3",
+    "m4",
+    "mac",
+    "macbook",
+    "macbookpro",
+    "macos",
+    "metal",
+    "mlx",
+    "mps",
+    "osx",
+})
 _NEGATED_DEVICE_TOKENS = frozenset({
     "disabled",
     "false",
@@ -430,6 +451,18 @@ def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
     return False
 
 
+def _contains_any_token(value: str, tokens: frozenset[str]) -> bool:
+    parts = set(re.findall(r"[a-z0-9]+", value.lower()))
+    return bool(parts & tokens)
+
+
+def _contains_contest_cpu_token(value: str) -> bool:
+    return _contains_non_negated_token(
+        value,
+        _CPU_DEVICE_TOKENS,
+    ) and not _contains_any_token(value, _CONTEST_CPU_FORBIDDEN_TOKENS)
+
+
 def _non_bool_int(value: object) -> int | None:
     if isinstance(value, bool):
         return None
@@ -534,12 +567,12 @@ def _paired_row_identity_blockers(
         inflate_device = str(row.get("inflate_device") or "").lower()
         eval_device = str(row.get("eval_device") or "").lower()
         if axis == "contest_cpu":
-            if "cpu" not in inflate_device:
+            if not _contains_contest_cpu_token(inflate_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_inflate_device"
                 )
-            if "cpu" not in eval_device:
+            if not _contains_contest_cpu_token(eval_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_eval_device"
