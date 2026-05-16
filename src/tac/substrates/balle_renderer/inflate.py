@@ -33,6 +33,10 @@ from tac.substrates._shared.inflate_runtime import (
 
 from .architecture import BalleRendererConfig, BalleRendererSubstrate
 from .archive import BRV1_RENDER_SILENT_SIDEINFO_BLOCKER, parse_archive
+from .brv2_sideinfo import (
+    inflate_brv2_one_video,
+    is_brv2_archive,
+)
 
 
 def _is_brv1_smoke_or_research_packet(
@@ -107,6 +111,13 @@ def inflate_one_video(
         output_raw_path: where to write the raw tensor stream.
         device: ``"auto"``/``"cpu"``/``"cuda"`` via ``PACT_INFLATE_DEVICE``.
     """
+    if is_brv2_archive(archive_bytes):
+        return inflate_brv2_one_video(
+            archive_bytes,
+            output_raw_path,
+            device=device,
+        )
+
     arc = parse_archive(archive_bytes)
     meta = arc.meta
     _require_non_smoke_sideinfo_decode_contract(

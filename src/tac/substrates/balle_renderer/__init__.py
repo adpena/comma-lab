@@ -91,17 +91,31 @@ from .archive import (
     pack_archive,
     parse_archive,
 )
+from .brv2_sideinfo import (
+    BRV2_CONSUMED_SIDEINFO_CONTRACT,
+    BalleRendererBRV2Archive,
+    decode_brv2_consumed_latents,
+    encode_brv2_latent_residuals,
+    pack_brv2_archive,
+    parse_brv2_archive,
+)
 from .score_aware_loss import (
     BalleRendererScoreAwareLoss,
     BalleScoreAwareLossWeights,
 )
 
 __all__ = [
+    "BRV2_CONSUMED_SIDEINFO_CONTRACT",
     "BalleRendererArchive",
+    "BalleRendererBRV2Archive",
     "BalleRendererConfig",
     "BalleRendererScoreAwareLoss",
     "BalleRendererSubstrate",
     "BalleScoreAwareLossWeights",
+    "decode_brv2_consumed_latents",
+    "encode_brv2_latent_residuals",
     "pack_archive",
+    "pack_brv2_archive",
     "parse_archive",
+    "parse_brv2_archive",
 ]

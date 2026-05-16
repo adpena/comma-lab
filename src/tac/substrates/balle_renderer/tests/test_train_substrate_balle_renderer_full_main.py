@@ -431,8 +431,10 @@ def test_write_runtime_inflate_py_under_size_budget(trainer_module, tmp_path):
     )
 
 
-def test_build_archive_zip_is_deterministic(trainer_module, tmp_path):
-    """Archive zip with same bytes + same submission_dir must yield identical bytes."""
+def test_build_archive_zip_is_deterministic_charged_payload_only(
+    trainer_module, tmp_path
+):
+    """archive.zip is byte-stable and contains only charged payload bytes."""
     sub = tmp_path / "sub"
     trainer_module._write_runtime(sub)
     bin_bytes = b"BRV1\x01" + b"\x00" * 100
@@ -448,9 +450,9 @@ def test_build_archive_zip_is_deterministic(trainer_module, tmp_path):
     assert zip_a.read_bytes() == zip_b.read_bytes()
     with zipfile.ZipFile(zip_a, "r") as zf:
         names = set(zf.namelist())
-    assert "0.bin" in names
-    assert "inflate.sh" in names
-    assert "inflate.py" in names
+    assert names == {"0.bin"}
+    assert (sub / "inflate.sh").is_file()
+    assert (sub / "inflate.py").is_file()
 
 
 def test_full_main_custody_uses_archive_zip_sha_not_0bin():
@@ -772,7 +774,7 @@ _FULL_MAIN_REQUIRED_TOKENS = (
     "ema.state_dict()",
     # Auth-eval invocation (CLAUDE.md "Auth eval EVERYWHERE")
     "contest_auth_eval",
-    "--device",
+    "device=device",
     # Continual-learning posterior (Catalog #128)
     "posterior_update_locked",
     # Provenance manifest

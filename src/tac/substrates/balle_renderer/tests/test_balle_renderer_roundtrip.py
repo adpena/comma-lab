@@ -14,6 +14,8 @@ The β substrate roundtrip proves:
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 import torch
 
@@ -29,6 +31,15 @@ from tac.substrates.balle_renderer.archive import (
     BRV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
+)
+from tac.substrates.balle_renderer.brv2_sideinfo import (
+    BRV2_CONSUMED_SIDEINFO_CONTRACT,
+    BRV2_SIDEINFO_GAIN_META_KEY,
+    brv2_section_offsets,
+    decode_brv2_consumed_latents,
+    encode_brv2_latent_residuals,
+    pack_brv2_archive,
+    parse_brv2_archive,
 )
 from tac.substrates.balle_renderer.inflate import inflate_one_video
 
@@ -97,6 +108,44 @@ def _make_meta(cfg: BalleRendererConfig, *, smoke: bool = True) -> dict:
             else "brv2_consumed_sideinfo_required"
         ),
     }
+
+
+def _make_brv2_meta(cfg: BalleRendererConfig) -> dict:
+    meta = _make_meta(cfg, smoke=False)
+    meta["sideinfo_consumption_contract"] = BRV2_CONSUMED_SIDEINFO_CONTRACT
+    meta[BRV2_SIDEINFO_GAIN_META_KEY] = 16.0
+    return meta
+
+
+def _make_brv2_blob(
+    cfg: BalleRendererConfig,
+    *,
+    seed: int,
+) -> tuple[bytes, BalleRendererSubstrate, torch.Tensor]:
+    torch.manual_seed(seed)
+    model = BalleRendererSubstrate(cfg).eval()
+    with torch.no_grad():
+        base = torch.linspace(0.75, 1.25, steps=cfg.latent_dim)
+        model.latents.copy_(base.view(1, -1).repeat(cfg.num_pairs, 1))
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        hyper_latents = model.hyper_analysis(latents)
+    meta = _make_brv2_meta(cfg)
+    residuals = encode_brv2_latent_residuals(
+        model,
+        latents,
+        hyper_latents,
+        meta,
+    )
+    blob = pack_brv2_archive(
+        enc_sd,
+        dec_sd,
+        hp_sd,
+        hyper_latents,
+        residuals,
+        meta,
+    )
+    return blob, model, latents
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #91 contract
@@ -408,6 +457,82 @@ def test_inflate_rejects_mutated_scales_stream(tmp_path):
     with pytest.raises(RuntimeError, match="scales stream failed closure check"):
         inflate_one_video(blob, out_raw, device="cpu")
     assert not out_raw.exists()
+
+
+def test_brv2_roundtrip_reconstructs_latents_through_consumed_sideinfo():
+    """BRV2 parser must not return direct main-latent authority.
+
+    The inflate/runtime contract reconstructs main latents from
+    hyper-latents plus residuals, so a caller cannot bypass the consumed
+    sideinfo path by copying ``arc.latents`` like BRV1 did.
+    """
+    cfg = _smoke_cfg()
+    blob, model, target_latents = _make_brv2_blob(cfg, seed=41)
+    arc = parse_brv2_archive(blob)
+
+    assert not hasattr(arc, "latents")
+    assert arc.hyper_latents.shape == (cfg.num_pairs, cfg.hyper_latent_dim)
+    assert arc.latent_residuals.shape == (cfg.num_pairs, cfg.latent_dim)
+
+    decoded = decode_brv2_consumed_latents(model, arc).cpu()
+    residual_step = float(arc.meta["_brv2_residual_quant_scale"])
+    hyper_step = float(arc.meta["_brv2_hyper_quant_scale"])
+    assert torch.allclose(
+        decoded,
+        target_latents,
+        atol=max(6e-2, 4.0 * (residual_step + hyper_step)),
+    )
+
+
+def test_brv2_inflate_consumes_hyper_sideinfo_mutation_changes_output(tmp_path):
+    """Mutating BRV2 hyper-latent bytes must change rendered output bytes."""
+    cfg = BalleRendererConfig(
+        latent_dim=8,
+        hyper_latent_dim=4,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(16, 12, 8, 6, 4, 4, 4),
+        hyper_mlp_channels=(8, 8),
+        sin_frequency=30.0,
+        num_pairs=1,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+    )
+    blob, _model, _target_latents = _make_brv2_blob(cfg, seed=42)
+
+    out_a = tmp_path / "brv2_a.raw"
+    frames = inflate_one_video(blob, out_a, device="cpu")
+    assert frames == 2
+
+    offsets = brv2_section_offsets(blob)
+    hyper_start, hyper_end = offsets["hyper_latents"]
+    assert hyper_end - hyper_start >= 2
+    mutated = bytearray(blob)
+    mutated[hyper_start + 1] ^= 0x7F
+
+    out_b = tmp_path / "brv2_b.raw"
+    frames_b = inflate_one_video(bytes(mutated), out_b, device="cpu")
+    assert frames_b == 2
+    assert out_a.read_bytes() != out_b.read_bytes()
+
+
+def test_brv2_decode_requires_declared_consumed_sideinfo_contract():
+    """BRV2 decode fails closed if the explicit sideinfo contract is absent."""
+    cfg = _smoke_cfg()
+    blob, model, _target_latents = _make_brv2_blob(cfg, seed=43)
+    arc = parse_brv2_archive(blob)
+    bad_arc = replace(
+        arc,
+        meta={
+            **arc.meta,
+            "sideinfo_consumption_contract": "brv1_smoke_closure_check_only",
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="missing consumed-sideinfo contract"):
+        decode_brv2_consumed_latents(model, bad_arc)
 
 
 def test_forward_pass_returns_rate_components():
