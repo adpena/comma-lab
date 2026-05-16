@@ -41,24 +41,24 @@ import smoke_time_traveler_l5_autonomy_macos_cpu as smoke  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
-def test_verdict_classifier_pass_in_band() -> None:
-    """Score inside [low, high] returns PASS_IN_BAND."""
+def test_verdict_classifier_pass_in_historical_band() -> None:
+    """Score inside explicitly supplied retired band returns PASS_IN_BAND."""
     v = smoke._classify_verdict(
         0.160, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.PASS_IN_BAND
 
 
-def test_verdict_classifier_pass_below_band() -> None:
-    """Score below predicted band returns PASS_BELOW_BAND (better than predicted)."""
+def test_verdict_classifier_pass_below_historical_band() -> None:
+    """Score below explicitly supplied retired band returns PASS_BELOW_BAND."""
     v = smoke._classify_verdict(
         0.140, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.PASS_BELOW_BAND
 
 
-def test_verdict_classifier_warn_above_band() -> None:
-    """Score above band but below escalation returns WARN_ABOVE_BAND."""
+def test_verdict_classifier_warn_above_historical_band() -> None:
+    """Score above retired band but below escalation returns WARN_ABOVE_BAND."""
     v = smoke._classify_verdict(
         0.180, band_low=0.150, band_high=0.170, escalation=0.190
     )
@@ -92,10 +92,10 @@ def test_verdict_classifier_eval_error_on_none() -> None:
 def test_escalation_threshold_default_matches_design_memo() -> None:
     """Per design memo: contest-axis recheck above 0.190; old band retired."""
     assert smoke.ESCALATION_THRESHOLD == 0.190
-    assert smoke.PREDICTED_BAND_LOW is None
-    assert smoke.PREDICTED_BAND_HIGH is None
-    assert smoke.RETIRED_PREDICTED_BAND_LOW == 0.150
-    assert smoke.RETIRED_PREDICTED_BAND_HIGH == 0.170
+    assert smoke.HISTORICAL_BAND_LOW is None
+    assert smoke.HISTORICAL_BAND_HIGH is None
+    assert smoke.RETIRED_TT5L_BAND_LOW == 0.150
+    assert smoke.RETIRED_TT5L_BAND_HIGH == 0.170
 
 
 def test_resolve_output_dir_refuses_tmp(tmp_path: Path) -> None:
@@ -120,8 +120,8 @@ def test_dry_run_returns_pass_summary(tmp_path: Path) -> None:
     args.output_dir = tmp_path / "smoke_out"
     args.dry_run = True
     args.allow_non_darwin = True
-    args.predicted_band_low = None
-    args.predicted_band_high = None
+    args.historical_band_low = None
+    args.historical_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False
@@ -138,8 +138,8 @@ def test_dry_run_returns_pass_summary(tmp_path: Path) -> None:
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["ranking_only"] is True
     assert summary["verdict"] == smoke.SmokeVerdict.PASS_NO_ACTIVE_BAND
-    assert summary["active_predicted_band"] is False
-    assert summary["in_predicted_band"] is None
+    assert summary["active_historical_band"] is False
+    assert summary["in_historical_band"] is None
     assert summary["eval_payload"]["dry_run"] is True
 
 
@@ -153,8 +153,8 @@ def test_stub_interface_falls_back_when_sister_not_ready(tmp_path: Path) -> None
     args.output_dir = tmp_path / "smoke_stub"
     args.dry_run = False
     args.allow_non_darwin = True
-    args.predicted_band_low = None
-    args.predicted_band_high = None
+    args.historical_band_low = None
+    args.historical_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = True
@@ -227,8 +227,8 @@ def test_non_darwin_guard_emits_skip(tmp_path: Path) -> None:
     args.allow_non_darwin = False
     args.output_dir = tmp_path / "ndr"
     args.dry_run = True
-    args.predicted_band_low = None
-    args.predicted_band_high = None
+    args.historical_band_low = None
+    args.historical_band_high = None
     args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False
@@ -418,7 +418,7 @@ def test_smoke_summary_carries_catalog_192_compliance_flags(tmp_path: Path) -> N
     assert summary["promotion_eligible"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["ranking_only"] is True
-    assert summary["in_predicted_band"] is True
+    assert summary["in_historical_band"] is True
     assert summary["above_escalation_threshold"] is False
     # Dispatch blockers list mirrors macos_cpu_advisory_signal DISPATCH_BLOCKERS.
     assert "macos_cpu_advisory_not_score_evidence" in summary["dispatch_blockers"]

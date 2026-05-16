@@ -8,8 +8,8 @@ substrate's full pipeline (trainer → archive build → inflate → auth eval
 ``--device cpu``) on the local macOS host and tags the result
 ``[macOS-CPU advisory]`` per Catalog #192. The old additive TT5L band
 ``[0.150, 0.170]`` is retired by the 2026-05-16 cargo-cult unwind; by default
-this harness emits no active predicted-band classification. Operators may pass
-``--predicted-band-*`` only for explicitly labelled historical re-analysis.
+this harness emits no active historical-band classification. Operators may pass
+``--historical-band-*`` only for explicitly labelled retired-band re-analysis.
 macOS-CPU output can never falsify or promote the architecture.
 
 CLAUDE.md compliance:
@@ -78,10 +78,10 @@ from tac.optimization.macos_cpu_advisory_signal import (  # noqa: E402
 # The additive [0.150, 0.170] band is retained only as retired historical
 # context. The active defaults are None so a smoke run cannot silently treat the
 # retired band as a dispatch or falsification target.
-RETIRED_PREDICTED_BAND_LOW: float = 0.150
-RETIRED_PREDICTED_BAND_HIGH: float = 0.170
-PREDICTED_BAND_LOW: float | None = None
-PREDICTED_BAND_HIGH: float | None = None
+RETIRED_TT5L_BAND_LOW: float = 0.150
+RETIRED_TT5L_BAND_HIGH: float = 0.170
+HISTORICAL_BAND_LOW: float | None = None
+HISTORICAL_BAND_HIGH: float | None = None
 
 # Advisory escalation threshold per design memo. Above this, the architecture
 # needs paired contest-axis recheck; macOS-CPU advisory output cannot falsify a
@@ -99,10 +99,10 @@ RESULTS_ROOT: Path = REPO_ROOT / "experiments" / "results"
 class SmokeVerdict:
     """Verdict tokens returned by the harness."""
 
-    PASS_IN_BAND = "pass_in_predicted_band"
-    PASS_BELOW_BAND = "pass_below_band_better_than_predicted"
-    PASS_NO_ACTIVE_BAND = "pass_no_active_predicted_band"
-    WARN_ABOVE_BAND = "warn_above_predicted_band"
+    PASS_IN_BAND = "historical_band_pass_inside_retired_band"
+    PASS_BELOW_BAND = "historical_band_pass_below_retired_band"
+    PASS_NO_ACTIVE_BAND = "pass_no_active_historical_band"
+    WARN_ABOVE_BAND = "historical_band_warn_above_retired_band"
     ESCALATE_ABOVE_THRESHOLD = "escalate_above_threshold_requires_contest_axis_recheck"
     SUBSTRATE_NOT_READY = "substrate_not_ready_stub_only"
     EVAL_HARNESS_ERROR = "eval_harness_error"
@@ -159,21 +159,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
-        "--predicted-band-low",
+        "--historical-band-low",
+        dest="historical_band_low",
         type=float,
-        default=PREDICTED_BAND_LOW,
+        default=HISTORICAL_BAND_LOW,
         help=(
             "Optional lower bound for explicitly labelled historical "
-            "predicted-band re-analysis. Default: no active predicted band."
+            "retired-band re-analysis. Default: no active historical band."
         ),
     )
     parser.add_argument(
-        "--predicted-band-high",
+        "--historical-band-high",
+        dest="historical_band_high",
         type=float,
-        default=PREDICTED_BAND_HIGH,
+        default=HISTORICAL_BAND_HIGH,
         help=(
             "Optional upper bound for explicitly labelled historical "
-            "predicted-band re-analysis. Default: no active predicted band."
+            "retired-band re-analysis. Default: no active historical band."
         ),
     )
     parser.add_argument(
@@ -551,14 +553,15 @@ def _emit_summary(
         "ready_for_exact_eval_dispatch": False,
         "ranking_only": True,
         "score_macos_cpu": score,
-        "predicted_band_low": band_low,
-        "predicted_band_high": band_high,
-        "active_predicted_band": band_low is not None and band_high is not None,
-        "retired_predicted_band_low": RETIRED_PREDICTED_BAND_LOW,
-        "retired_predicted_band_high": RETIRED_PREDICTED_BAND_HIGH,
-        "retired_predicted_band_active": False,
+        "historical_band_low": band_low,
+        "historical_band_high": band_high,
+        "active_historical_band": band_low is not None and band_high is not None,
+        "retired_historical_band_low": RETIRED_TT5L_BAND_LOW,
+        "retired_historical_band_high": RETIRED_TT5L_BAND_HIGH,
+        "retired_historical_band_active": False,
+        "retired_band_origin": "tt5l_additive_prediction_retired_20260516",
         "escalation_threshold": escalation,
-        "in_predicted_band": (
+        "in_historical_band": (
             None if score is None or band_low is None or band_high is None
             else (band_low <= score <= band_high)
         ),
@@ -602,8 +605,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         return _emit_summary(
             verdict=SmokeVerdict.NON_DARWIN,
             score=None,
-            band_low=args.predicted_band_low,
-            band_high=args.predicted_band_high,
+            band_low=args.historical_band_low,
+            band_high=args.historical_band_high,
             escalation=args.escalation_threshold,
             archive_bytes=None,
             manifest_path=None,
@@ -620,8 +623,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         return _emit_summary(
             verdict=SmokeVerdict.PASS_NO_ACTIVE_BAND,
             score=None,
-            band_low=args.predicted_band_low,
-            band_high=args.predicted_band_high,
+            band_low=args.historical_band_low,
+            band_high=args.historical_band_high,
             escalation=args.escalation_threshold,
             archive_bytes=None,
             manifest_path=None,
@@ -641,8 +644,8 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             return _emit_summary(
                 verdict=SmokeVerdict.EVAL_HARNESS_ERROR,
                 score=None,
-                band_low=args.predicted_band_low,
-                band_high=args.predicted_band_high,
+                band_low=args.historical_band_low,
+                band_high=args.historical_band_high,
                 escalation=args.escalation_threshold,
                 archive_bytes=None,
                 manifest_path=None,
@@ -725,16 +728,16 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
     else:
         verdict = _classify_verdict(
             score,
-            band_low=args.predicted_band_low,
-            band_high=args.predicted_band_high,
+            band_low=args.historical_band_low,
+            band_high=args.historical_band_high,
             escalation=args.escalation_threshold,
         )
 
     return _emit_summary(
         verdict=verdict,
         score=score,
-        band_low=args.predicted_band_low,
-        band_high=args.predicted_band_high,
+        band_low=args.historical_band_low,
+        band_high=args.historical_band_high,
         escalation=args.escalation_threshold,
         archive_bytes=archive_bytes if archive is not None else None,
         manifest_path=manifest_path,
