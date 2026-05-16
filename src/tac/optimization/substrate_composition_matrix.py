@@ -1115,7 +1115,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_stage="L5 staircase predictive-receiver packet",
             campaign_priority="long_term_campaign_l5",
             lane_class="substrate_engineering substrate_class_shift predictive_receiver",
-            literature_anchor="Rao-Ballard1999; DreamerV3; TeNeRV; TeCoNeRV",
+            literature_anchor=(
+                "Rao-Ballard1999; DreamerV3; Atick-Redlich1990; "
+                "Wyner-Ziv1976; Balle2018; HNeRV2023"
+            ),
             source_supports="Predictive coding, world models, and temporal INR papers support temporal residual and latent-dynamics hypotheses.",
             paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",

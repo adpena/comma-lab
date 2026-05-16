@@ -428,3 +428,20 @@ def test_score_claim_inside_prediction_band_fails_closed():
     )
     assert verdict.valid_for_dispatch_planning is False
     assert "prediction_band_score_claim_forbidden" in verdict.blockers
+
+
+def test_prediction_band_mapping_rejects_string_authority_bools():
+    band = _valid_band()
+    payload = {**prediction_band_to_dict(band), "score_claim": "false"}
+
+    verdict = validate_optional_prediction_band(
+        payload,
+        subject_id="z3_balle_hyperprior_bolton",
+        low=-0.010,
+        high=-0.001,
+        axis="contest_cuda",
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_parse_failed" in verdict.blockers
+    assert any("score_claim must be a literal JSON boolean" in item for item in verdict.annotations)

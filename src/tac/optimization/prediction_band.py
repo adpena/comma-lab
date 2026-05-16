@@ -125,6 +125,20 @@ def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _literal_json_bool(
+    payload: Mapping[str, Any],
+    key: str,
+    *,
+    default: bool,
+) -> bool:
+    if key not in payload:
+        return default
+    value = payload[key]
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"{key} must be a literal JSON boolean")
+
+
 def _is_transient_artifact_path(path_text: str) -> bool:
     return (
         path_text.startswith("/tmp/")
@@ -202,8 +216,8 @@ def prediction_band_from_mapping(payload: Mapping[str, Any]) -> PredictionBand:
             status=str(empirical_anchor.get("status") or "absent"),  # type: ignore[arg-type]
             anchors=anchor_tuple,
         ),
-        planning_only=bool(payload.get("planning_only", True)),
-        score_claim=bool(payload.get("score_claim", False)),
+        planning_only=_literal_json_bool(payload, "planning_only", default=True),
+        score_claim=_literal_json_bool(payload, "score_claim", default=False),
     )
 
 
