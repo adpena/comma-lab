@@ -19,6 +19,7 @@ from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_SCORE,
     ACTIVE_SCORE_FRONTIER_SCORE,
 )
+from tac.optimizer.exact_readiness import runtime_dependency_manifest  # noqa: E402
 
 
 def _write_json(path: Path, payload: object) -> Path:
@@ -71,10 +72,14 @@ def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Pa
             "score_claim": False,
         },
     )
+    runtime_tree_sha256 = runtime_dependency_manifest(
+        submission,
+        REPO_ROOT,
+    )["runtime_tree_sha256"]
     queue = _write_json(
         tmp_path / "exact_ready_queue.json",
         {
-            "schema": "optimizer_candidate_exact_eval_ready_queue_v1",
+            "schema": "noncanonical_dispatch_ready_fixture_v1",
             "dispatch_ready": [
                 {
                     "candidate_id": "fixture",
@@ -88,6 +93,7 @@ def test_parallel_dispatch_refuses_stale_exact_ready_terminal_claim(tmp_path: Pa
                     "archive_path": str(submission / "archive.zip"),
                     "submission_dir": str(submission),
                     "inflate_sh_path": str(inflate),
+                    "runtime_tree_sha256": runtime_tree_sha256,
                     "candidate_archive_sha256": archive_sha,
                     "candidate_archive_bytes": archive_bytes,
                     "score_affecting_payload_changed": True,

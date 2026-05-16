@@ -890,6 +890,44 @@ def test_allows_runtime_changed_candidate_after_different_runtime_terminal(
     assert result["promoted_queue"] is not None
 
 
+def test_refuses_runtime_mismatch_without_score_affecting_runtime_change(
+    tmp_path: Path,
+) -> None:
+    submission, archive_bytes, archive_sha = _make_submission(tmp_path)
+    queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)
+    initial = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+    )
+    runtime_sha = initial["promoted_queue"]["dispatch_ready"][0]["runtime_tree_sha256"]
+    old_runtime_sha = "0" * 64 if runtime_sha != "0" * 64 else "1" * 64
+    claims = tmp_path / ".omx/state/active_lane_dispatch_claims.md"
+    claims.parent.mkdir(parents=True)
+    claims.write_text(
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        f"| 2026-05-10T00:01:00Z | test | fixture_lane | modal | job1 |  | completed_contest_cuda_auth_eval_negative | archive_sha={archive_sha}; score_recomputed=41.35 |\n"
+        f"| 2026-05-10T00:00:00Z | test | fixture_lane | modal | job1 |  | active_dispatching | archive_sha={archive_sha}; runtime_tree_sha={old_runtime_sha}; score_claim=false_until_modal_validation |\n",
+        encoding="utf-8",
+    )
+
+    result = promote_candidate_for_exact_eval(
+        queue,
+        "fixture_candidate",
+        repo_root=tmp_path,
+        active_floor_archive_bytes=None,
+        dispatch_claims_path=claims,
+    )
+
+    assert result["promoted_queue"] is None
+    assert any(
+        blocker.startswith("same_lane_terminal_runtime_mismatch_for_same_archive")
+        for blocker in result["report"]["blockers"]
+    )
+
+
 def test_allows_same_lane_terminal_infra_failure_for_same_archive(tmp_path: Path) -> None:
     submission, archive_bytes, archive_sha = _make_submission(tmp_path)
     queue = _make_queue(tmp_path, submission, archive_bytes, archive_sha)

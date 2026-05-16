@@ -50,6 +50,10 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
+from tac.exact_eval_custody import (  # noqa: E402
+    extract_runtime_tree_sha256,
+    is_sha256_hex,
+)
 from tac.hdm8_selector_cuda_gate import validate_hdm8_selector_cuda_gate_context  # noqa: E402
 from tac.hnerv_frontier_defaults import (  # noqa: E402
     ACTIVE_FLOOR_ARCHIVE_BYTES,
@@ -181,14 +185,7 @@ PREDICTED_SCORE_FIELDS = (
     "predicted_score_band",
 )
 CONTEST_TARGET_MARKERS = {
-    "contest",
-    "contest_cuda",
     "contest_exact_eval",
-    "contest_generalized",
-    "contest_one_video_replay",
-    "leaderboard",
-    "score_lowering",
-    "comma_video_compression_challenge",
 }
 PRODUCTION_TARGET_MARKERS = {
     "production",
@@ -258,10 +255,7 @@ class DispatchInputError(ValueError):
 
 
 def _is_sha256(value: object) -> bool:
-    if not isinstance(value, str):
-        return False
-    text = value.strip().lower()
-    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+    return is_sha256_hex(value)
 
 
 def _sha256_file(path: Path) -> str:
@@ -350,33 +344,7 @@ def _candidate_archive_sha256(candidate: dict) -> str:
 
 
 def _candidate_runtime_tree_sha256(candidate: dict) -> str:
-    for key in (
-        "candidate_runtime_tree_sha256",
-        "runtime_tree_sha256",
-        "expected_runtime_tree_sha256",
-        "inflate_runtime_tree_sha256",
-    ):
-        value = candidate.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip().lower()
-    for outer_key in (
-        "runtime_manifest",
-        "inflate_runtime_manifest",
-        "runtime_custody",
-        "provenance",
-    ):
-        nested = candidate.get(outer_key)
-        if not isinstance(nested, dict):
-            continue
-        value = nested.get("runtime_tree_sha256")
-        if isinstance(value, str) and value.strip():
-            return value.strip().lower()
-        inflate_manifest = nested.get("inflate_runtime_manifest")
-        if isinstance(inflate_manifest, dict):
-            value = inflate_manifest.get("runtime_tree_sha256")
-            if isinstance(value, str) and value.strip():
-                return value.strip().lower()
-    return ""
+    return extract_runtime_tree_sha256(candidate)
 
 
 def _candidate_exact_score(candidate: dict) -> float | None:
@@ -511,6 +479,13 @@ def _target_mode_blockers(candidate: dict) -> list[str]:
             "contest_exact_eval target metadata for paid dispatch"
         ]
     blockers: list[str] = []
+    if not _candidate_targets_contest_dispatch(candidate):
+        mode_text = ",".join(sorted(modes))
+        blockers.append(
+            f"contest_exact_eval_target_mode_missing:{mode_text}; "
+            "parallel_dispatch_top_k requires explicit contest_exact_eval "
+            "target metadata for paid dispatch"
+        )
     if modes & PRODUCTION_TARGET_MARKERS and not _candidate_targets_contest_dispatch(candidate):
         mode_text = ",".join(sorted(modes))
         blockers.append(
@@ -974,11 +949,31 @@ def _load_top_k(
         for candidate in candidates
         if isinstance(candidate, dict) and candidate.get("candidate_id") is not None
     ]
+    blocked: list[str] = []
+    for idx, candidate in enumerate(candidates):
+        if not isinstance(candidate, dict):
+            blocked.append(f"candidate[{idx}]: not an object")
+            continue
+        candidate_id = candidate.get("candidate_id", f"candidate[{idx}]")
+        for blocker in _candidate_blockers(
+            candidate,
+            ranked_input_dir=ranked_input.parent,
+            active_floor_archive_bytes=active_floor_archive_bytes,
+            active_floor_score=active_floor_score,
+            allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
+            operator_override_reason=operator_override_reason,
+        ):
+            blocked.append(f"{candidate_id}: {blocker}")
+    if blocked:
+        details = "\n  - ".join(blocked[:20])
+        raise DispatchInputError(
+            "ranked-input contains non-dispatch-ready candidates; refusing paid dispatch:\n  - "
+            + details
+        )
     if (
         selected_candidate_ids
         and dispatch_claims_path is not None
         and isinstance(payload, dict)
-        and payload.get("schema") == "optimizer_candidate_exact_eval_ready_queue_v1"
     ):
         try:
             ranked_input.relative_to(REPO.resolve())
@@ -1011,27 +1006,6 @@ def _load_top_k(
                 "ranked-input exact-ready audit failed; refusing paid dispatch:\n  - "
                 + "\n  - ".join(details)
             )
-    blocked: list[str] = []
-    for idx, candidate in enumerate(candidates):
-        if not isinstance(candidate, dict):
-            blocked.append(f"candidate[{idx}]: not an object")
-            continue
-        candidate_id = candidate.get("candidate_id", f"candidate[{idx}]")
-        for blocker in _candidate_blockers(
-            candidate,
-            ranked_input_dir=ranked_input.parent,
-            active_floor_archive_bytes=active_floor_archive_bytes,
-            active_floor_score=active_floor_score,
-            allow_above_active_floor_dispatch=allow_above_active_floor_dispatch,
-            operator_override_reason=operator_override_reason,
-        ):
-            blocked.append(f"{candidate_id}: {blocker}")
-    if blocked:
-        details = "\n  - ".join(blocked[:20])
-        raise DispatchInputError(
-            "ranked-input contains non-dispatch-ready candidates; refusing paid dispatch:\n  - "
-            + details
-        )
     return candidates
 
 

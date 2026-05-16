@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tac.optimizer.exact_readiness import runtime_dependency_manifest
+
 REPO = Path(__file__).resolve().parents[3]
 
 
@@ -44,12 +46,46 @@ def _write_ranked_input(tmp_path: Path, candidates: list[dict]) -> Path:
 
 
 def _write_archive(path: Path, payload: bytes = b"fixture") -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
     info = zipfile.ZipInfo("x")
     info.date_time = (1980, 1, 1, 0, 0, 0)
     info.external_attr = 0o644 << 16
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr(info, payload)
     return path
+
+
+def _write_runtime_custody_files(archive: Path) -> str:
+    runtime_root = archive.parent
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    archive_size = archive.stat().st_size
+    (runtime_root / "inflate.sh").write_text(
+        "#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n",
+        encoding="utf-8",
+    )
+    (runtime_root / "inflate.sh").chmod(0o755)
+    (runtime_root / "report.txt").write_text(
+        f"archive_sha256={archive_sha} archive_bytes={archive_size}\n",
+        encoding="utf-8",
+    )
+    (runtime_root / "archive_manifest.json").write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": archive_sha,
+                "candidate_archive_bytes": archive_size,
+                "score_claim": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return str(
+        runtime_dependency_manifest(runtime_root, runtime_root.parent)[
+            "runtime_tree_sha256"
+        ]
+    )
 
 
 def _write_archive_with_members(path: Path, names: list[str]) -> Path:
@@ -65,13 +101,14 @@ def _write_archive_with_members(path: Path, names: list[str]) -> Path:
 
 
 def _ready_custody_candidate(tmp_path: Path, **overrides) -> dict:
-    archive = _write_archive(tmp_path / "archive.zip")
+    archive = _write_archive(tmp_path / "submission" / "archive.zip")
+    runtime_tree_sha256 = _write_runtime_custody_files(archive)
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": archive.as_posix(),
         "archive_size_bytes": archive.stat().st_size,
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "runtime_tree_sha256": "f" * 64,
+        "runtime_tree_sha256": runtime_tree_sha256,
     }
     candidate.update(overrides)
     return candidate
@@ -144,14 +181,14 @@ def test_parallel_dispatch_accepts_candidate_archive_schema_with_exact_custody(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
-    archive = _write_archive(tmp_path / "pr101_candidate.zip", b"pr101")
+    archive = _write_archive(tmp_path / "submission" / "pr101_candidate.zip", b"pr101")
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": None,
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "runtime_tree_sha256": "f" * 64,
+        "runtime_tree_sha256": _write_runtime_custody_files(archive),
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
@@ -363,14 +400,14 @@ def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_defaul
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
-    archive = _write_archive(tmp_path / "candidate_archive.zip")
+    archive = _write_archive(tmp_path / "submission" / "candidate_archive.zip")
     candidate = {
         **_ready_lightning_candidate(),
         "archive_path": None,
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
-        "runtime_tree_sha256": "f" * 64,
+        "runtime_tree_sha256": _write_runtime_custody_files(archive),
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
@@ -597,7 +634,7 @@ def test_parallel_dispatch_allows_dual_contest_and_production_target_with_custod
     assert loaded == [candidate]
 
 
-def test_parallel_dispatch_allows_contest_generalized_profile_with_custody(
+def test_parallel_dispatch_rejects_contest_generalized_without_exact_eval_marker(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool("parallel_dispatch_top_k")
@@ -608,9 +645,15 @@ def test_parallel_dispatch_allows_contest_generalized_profile_with_custody(
     )
     ranked = _write_ranked_input(tmp_path, [candidate])
 
-    loaded = tool._load_top_k(ranked, k=None)
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
 
-    assert loaded == [candidate]
+    assert "contest_exact_eval_target_mode_missing:contest_generalized" in message
+    assert "requires explicit contest_exact_eval target metadata" in message
 
 
 def test_parallel_dispatch_rejects_edge_adaptive_profile_without_contest_marker(

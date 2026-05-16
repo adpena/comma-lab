@@ -479,6 +479,21 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
         packet.get("dry_run_ready")
         or packet.get("ready_for_exact_eval_dispatch_claim")
     )
+    missing_env = list(packet.get("missing_env") or [])
+    submit_gate_blockers: list[str] = []
+    if not static_ready:
+        submit_gate_blockers.append("static_preflight_not_ready")
+    if not compliance_ok:
+        submit_gate_blockers.append("static_compliance_not_ok")
+    if not payload_diff_ready:
+        submit_gate_blockers.append("payload_diff_not_ready")
+    if not dry_run_ready:
+        submit_gate_blockers.append("dry_run_not_ready")
+    if missing_env:
+        submit_gate_blockers.append("missing_submit_environment")
+    blockers.extend(
+        blocker for blocker in submit_gate_blockers if blocker not in blockers
+    )
     commands = dict(packet.get("commands") or {})
     packet_suppressed_commands = dict(packet.get("suppressed_commands") or {})
     operator_next_steps = dict(packet.get("operator_next_steps") or {})
@@ -502,20 +517,29 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
                 },
             ],
         }
+    ready_for_submit = (
+        bool(packet.get("ready_for_submit"))
+        and repeat_dispatch_allowed
+        and not submit_gate_blockers
+        and not blockers
+    )
     return {
         "lane_id": lane["lane_id"],
         "name": lane["name"],
         "packet_path": lane["packet_path"],
-        "ready_for_submit": bool(packet.get("ready_for_submit")) and not terminal_blockers,
+        "ready_for_submit": ready_for_submit,
         "repeat_dispatch_allowed": repeat_dispatch_allowed,
         "dispatch_action": (
             "copy_safe_submit_after_gates"
+            if ready_for_submit
+            else "blocked_static_or_env_gates"
             if repeat_dispatch_allowed
             else "terminal_exact_eval_evidence_stop"
         ),
         "blockers": blockers,
         "terminal_exact_eval_evidence_blockers": terminal_blockers,
-        "missing_env": list(packet.get("missing_env") or []),
+        "missing_env": missing_env,
+        "submit_gate_blockers": submit_gate_blockers,
         "archive_sha256": archive_sha256,
         "runtime_tree_sha256": runtime_tree_sha256,
         "score_affecting_runtime_changed": runtime_changed,

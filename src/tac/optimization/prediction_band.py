@@ -12,24 +12,25 @@ from __future__ import annotations
 
 import dataclasses
 import math
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from tac.exact_eval_custody import (
+    is_sha256_hex,
+    validate_exact_eval_evidence,
+)
 from tac.optimization.research_basis import (
     RESEARCH_SOURCES,
     ResearchBasisError,
     canonical_research_basis_id,
 )
 
-SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-SCORE_ARCHIVE_BYTES_DENOMINATOR = 37_545_489
-SCORE_FORMULA_TOLERANCE = 1e-9
-
 BandKind = Literal["delta_score", "absolute_score"]
 SupersessionStatus = Literal["active", "superseded", "deprecated"]
 AnchorStatus = Literal["absent", "pending", "diagnostic_only", "landed", "superseded"]
+EXACT_EVAL_AXES = ("contest_cpu", "contest_cuda")
+MIXED_EXACT_EVAL_AXIS = "mixed"
 
 
 @dataclass(frozen=True)
@@ -105,10 +106,6 @@ class PredictionBandVerdict:
         }
 
 
-def is_sha256_hex(value: object) -> bool:
-    return isinstance(value, str) and bool(SHA256_HEX_RE.fullmatch(value))
-
-
 def _as_tuple_str(value: object) -> tuple[str, ...]:
     if value is None:
         return ()
@@ -125,23 +122,6 @@ def _as_tuple_str(value: object) -> tuple[str, ...]:
 
 def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
-
-
-def _finite_float(value: object) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int | float):
-        out = float(value)
-        return out if math.isfinite(out) else None
-    return None
-
-
-def _positive_int(value: object) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int) and value > 0:
-        return value
-    return None
 
 
 def prediction_band_from_mapping(payload: Mapping[str, Any]) -> PredictionBand:
@@ -325,79 +305,101 @@ def validate_prediction_band(
     elif empirical.status == "landed" and not empirical.anchors:
         blockers.append("prediction_band_empirical_anchor_missing")
     elif empirical.status == "landed":
+        anchor_exact_axes_seen: set[str] = set()
+        if band.axis not in (*EXACT_EVAL_AXES, MIXED_EXACT_EVAL_AXIS):
+            blockers.append("prediction_band_axis_not_exact_eval")
         for anchor_idx, anchor in enumerate(empirical.anchors):
             anchor_axis = str(anchor.get("axis") or "")
+            expected_anchor_axis: str | None = None
             if not anchor_axis.strip():
                 blockers.append("prediction_band_empirical_anchor_axis_missing")
                 annotations.append(f"empirical_anchor_axis_missing_index={anchor_idx}")
+            elif band.axis == MIXED_EXACT_EVAL_AXIS:
+                if anchor_axis in EXACT_EVAL_AXES:
+                    anchor_exact_axes_seen.add(anchor_axis)
+                    expected_anchor_axis = anchor_axis
+                else:
+                    blockers.append("prediction_band_empirical_anchor_axis_mismatch")
+                    annotations.append(
+                        f"empirical_anchor_axis_mismatch_index={anchor_idx}:"
+                        f"{anchor_axis!r}!={band.axis!r}"
+                    )
+            elif band.axis in EXACT_EVAL_AXES:
+                expected_anchor_axis = band.axis
             elif band.axis.strip() and anchor_axis != band.axis:
                 blockers.append("prediction_band_empirical_anchor_axis_mismatch")
                 annotations.append(
                     f"empirical_anchor_axis_mismatch_index={anchor_idx}:"
                     f"{anchor_axis!r}!={band.axis!r}"
                 )
-            score = anchor.get("score")
-            score_value = _finite_float(score)
-            if (
-                isinstance(score, bool)
-                or score_value is None
-            ):
-                blockers.append("prediction_band_empirical_anchor_score_missing")
-                annotations.append(f"empirical_anchor_score_missing_index={anchor_idx}")
-            if not is_sha256_hex(anchor.get("archive_sha256")) or not is_sha256_hex(
-                anchor.get("runtime_tree_sha256")
-            ):
-                blockers.append("prediction_band_empirical_anchor_custody_missing")
-                annotations.append(
-                    f"empirical_anchor_custody_missing_index={anchor_idx}"
-                )
-            if not str(anchor.get("artifact_path") or "").strip():
-                blockers.append("prediction_band_empirical_anchor_artifact_missing")
-                annotations.append(
-                    f"empirical_anchor_artifact_missing_index={anchor_idx}"
-                )
-            seg_dist = _finite_float(anchor.get("seg_dist"))
-            pose_dist = _finite_float(anchor.get("pose_dist"))
-            archive_bytes = _positive_int(anchor.get("archive_bytes"))
-            n_samples = _positive_int(anchor.get("n_samples"))
-            if n_samples is None:
-                blockers.append("prediction_band_empirical_anchor_n_samples_missing")
-                annotations.append(f"empirical_anchor_n_samples_missing_index={anchor_idx}")
-            if not str(anchor.get("hardware") or "").strip():
-                blockers.append("prediction_band_empirical_anchor_hardware_missing")
-                annotations.append(f"empirical_anchor_hardware_missing_index={anchor_idx}")
-            if not str(anchor.get("auth_eval_command") or "").strip():
-                blockers.append("prediction_band_empirical_anchor_command_missing")
-                annotations.append(f"empirical_anchor_command_missing_index={anchor_idx}")
-            if not str(anchor.get("log_path") or "").strip():
-                blockers.append("prediction_band_empirical_anchor_log_missing")
-                annotations.append(f"empirical_anchor_log_missing_index={anchor_idx}")
-            if archive_bytes is None:
-                blockers.append("prediction_band_empirical_anchor_archive_bytes_missing")
-                annotations.append(f"empirical_anchor_archive_bytes_missing_index={anchor_idx}")
-            if seg_dist is None or seg_dist < 0.0:
-                blockers.append("prediction_band_empirical_anchor_seg_dist_missing")
-                annotations.append(f"empirical_anchor_seg_dist_missing_index={anchor_idx}")
-            if pose_dist is None or pose_dist < 0.0:
-                blockers.append("prediction_band_empirical_anchor_pose_dist_missing")
-                annotations.append(f"empirical_anchor_pose_dist_missing_index={anchor_idx}")
-            if (
-                score_value is not None
-                and seg_dist is not None
-                and pose_dist is not None
-                and archive_bytes is not None
-            ):
-                recomputed = (
-                    100.0 * seg_dist
-                    + math.sqrt(10.0 * pose_dist)
-                    + 25.0 * archive_bytes / SCORE_ARCHIVE_BYTES_DENOMINATOR
-                )
-                if abs(score_value - recomputed) > SCORE_FORMULA_TOLERANCE:
-                    blockers.append("prediction_band_empirical_anchor_score_formula_mismatch")
+            validation = validate_exact_eval_evidence(
+                anchor,
+                expected_axis=expected_anchor_axis,
+                require_artifact_path=True,
+                require_hardware=True,
+                require_auth_eval_command=True,
+                require_log_path=True,
+                require_devices=True,
+                annotation_prefix=f"empirical_anchor_{anchor_idx}",
+            )
+            blocker_map = {
+                "axis_missing": "prediction_band_empirical_anchor_axis_missing",
+                "axis_mismatch": "prediction_band_empirical_anchor_axis_mismatch",
+                "score_missing": "prediction_band_empirical_anchor_score_missing",
+                "archive_sha_invalid": "prediction_band_empirical_anchor_custody_missing",
+                "runtime_tree_sha_invalid": "prediction_band_empirical_anchor_custody_missing",
+                "artifact_path_missing": "prediction_band_empirical_anchor_artifact_missing",
+                "n_samples_missing": "prediction_band_empirical_anchor_n_samples_missing",
+                "hardware_missing": "prediction_band_empirical_anchor_hardware_missing",
+                "auth_eval_command_missing": "prediction_band_empirical_anchor_command_missing",
+                "log_path_missing": "prediction_band_empirical_anchor_log_missing",
+                "inflate_device_missing": "prediction_band_empirical_anchor_inflate_device_missing",
+                "eval_device_missing": "prediction_band_empirical_anchor_eval_device_missing",
+                "archive_bytes_missing": "prediction_band_empirical_anchor_archive_bytes_missing",
+                "seg_dist_missing": "prediction_band_empirical_anchor_seg_dist_missing",
+                "pose_dist_missing": "prediction_band_empirical_anchor_pose_dist_missing",
+                "score_formula_mismatch": "prediction_band_empirical_anchor_score_formula_mismatch",
+            }
+            annotation_map = {
+                "score_missing": "empirical_anchor_score_missing_index",
+                "archive_sha_invalid": "empirical_anchor_custody_missing_index",
+                "runtime_tree_sha_invalid": "empirical_anchor_custody_missing_index",
+                "artifact_path_missing": "empirical_anchor_artifact_missing_index",
+                "n_samples_missing": "empirical_anchor_n_samples_missing_index",
+                "hardware_missing": "empirical_anchor_hardware_missing_index",
+                "auth_eval_command_missing": "empirical_anchor_command_missing_index",
+                "log_path_missing": "empirical_anchor_log_missing_index",
+                "inflate_device_missing": "empirical_anchor_inflate_device_missing_index",
+                "eval_device_missing": "empirical_anchor_eval_device_missing_index",
+                "archive_bytes_missing": "empirical_anchor_archive_bytes_missing_index",
+                "seg_dist_missing": "empirical_anchor_seg_dist_missing_index",
+                "pose_dist_missing": "empirical_anchor_pose_dist_missing_index",
+            }
+            for blocker in validation.blockers:
+                public_blocker = blocker_map.get(blocker)
+                if public_blocker is None:
+                    continue
+                blockers.append(public_blocker)
+                annotation_key = annotation_map.get(blocker)
+                if annotation_key is not None:
+                    annotations.append(f"{annotation_key}={anchor_idx}")
+            for validation_annotation in validation.annotations:
+                if "score_formula_mismatch:" in validation_annotation:
+                    mismatch = validation_annotation.rsplit(":", 1)[-1]
                     annotations.append(
                         f"empirical_anchor_score_formula_mismatch_index={anchor_idx}:"
-                        f"{score_value:.12g}!={recomputed:.12g}"
+                        f"{mismatch}"
                     )
+        if band.axis == MIXED_EXACT_EVAL_AXIS:
+            missing_axes = [
+                axis for axis in EXACT_EVAL_AXES if axis not in anchor_exact_axes_seen
+            ]
+            if missing_axes:
+                blockers.append("prediction_band_empirical_anchor_paired_axes_missing")
+                annotations.append(
+                    "empirical_anchor_paired_axes_missing="
+                    + ",".join(missing_axes)
+                )
 
     valid_for_rank_reward = not blockers
     valid_for_dispatch_planning = "prediction_band_score_claim_forbidden" not in blockers
@@ -462,6 +464,8 @@ def prediction_band_to_dict(band: PredictionBand) -> dict[str, Any]:
 
 
 __all__ = [
+    "EXACT_EVAL_AXES",
+    "MIXED_EXACT_EVAL_AXIS",
     "AnchorStatus",
     "BandKind",
     "BandSource",

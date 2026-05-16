@@ -22,7 +22,7 @@ def _sha(seed: str) -> str:
     return (seed * 64)[:64]
 
 
-def _exact_anchor(axis: str = "contest-cuda") -> dict[str, object]:
+def _exact_anchor(axis: str = "contest_cuda") -> dict[str, object]:
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
     return {
@@ -35,6 +35,8 @@ def _exact_anchor(axis: str = "contest-cuda") -> dict[str, object]:
         "archive_bytes": archive_bytes,
         "n_samples": 1200,
         "hardware": "modal-t4",
+        "inflate_device": "cuda" if axis == "contest_cuda" else "cpu",
+        "eval_device": "cuda" if axis == "contest_cuda" else "cpu",
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": f"experiments/results/z3/{axis}.log",
         "artifact_path": "experiments/results/z3/anchor.json",
@@ -48,10 +50,10 @@ def _valid_band() -> PredictionBand:
         band_kind="delta_score",
         low=-0.010,
         high=-0.001,
-        axis="contest-cuda",
+        axis="contest_cuda",
         baseline=BaselineRef(
             label="a1_cpu_cuda_pair",
-            axis="contest-cuda",
+            axis="contest_cuda",
             score=0.1928,
             archive_sha256=_sha("a"),
             runtime_tree_sha256=_sha("b"),
@@ -134,7 +136,7 @@ def test_landed_anchor_requires_exact_eval_metric_closure():
             empirical_anchor=EmpiricalAnchorRef(
                 status="landed",
                 anchors=({
-                    "axis": "contest-cuda",
+                    "axis": "contest_cuda",
                     "archive_sha256": _sha("c"),
                     "runtime_tree_sha256": _sha("d"),
                     "score": 0.1987,
@@ -152,6 +154,8 @@ def test_landed_anchor_requires_exact_eval_metric_closure():
     assert "prediction_band_empirical_anchor_hardware_missing" in verdict.blockers
     assert "prediction_band_empirical_anchor_command_missing" in verdict.blockers
     assert "prediction_band_empirical_anchor_log_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_inflate_device_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_eval_device_missing" in verdict.blockers
     assert "prediction_band_empirical_anchor_archive_bytes_missing" in verdict.blockers
     assert "prediction_band_empirical_anchor_seg_dist_missing" in verdict.blockers
     assert "prediction_band_empirical_anchor_pose_dist_missing" in verdict.blockers
@@ -184,7 +188,7 @@ def test_landed_anchor_missing_custody_blocks_rank_reward():
             empirical_anchor=EmpiricalAnchorRef(
                 status="landed",
                 anchors=({
-                    "axis": "contest-cuda",
+                    "axis": "contest_cuda",
                     "score": "0.1987",
                     "artifact_path": "",
                 },),
@@ -227,6 +231,73 @@ def test_zero_delta_missing_band_is_annotation_only():
     assert "prediction_band_zero_delta_no_rank_reward" in verdict.annotations
 
 
+def test_mixed_landed_band_requires_paired_cpu_cuda_anchors():
+    band = replace(
+        _valid_band(),
+        axis="mixed",
+        baseline=replace(_valid_band().baseline, axis="mixed"),
+        empirical_anchor=EmpiricalAnchorRef(
+            status="landed",
+            anchors=(_exact_anchor("contest_cuda"),),
+        ),
+    )
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_paired_axes_missing" in verdict.blockers
+
+
+def test_mixed_landed_band_accepts_paired_cpu_cuda_anchors():
+    base = _valid_band()
+    band = replace(
+        base,
+        axis="mixed",
+        baseline=replace(base.baseline, axis="mixed"),
+        empirical_anchor=EmpiricalAnchorRef(
+            status="landed",
+            anchors=(_exact_anchor("contest_cpu"), _exact_anchor("contest_cuda")),
+        ),
+    )
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.blockers == ()
+    assert verdict.valid_for_rank_reward is True
+
+
+def test_hyphenated_contest_cuda_axis_is_not_exact_eval_authority():
+    band = replace(
+        _valid_band(),
+        axis="contest-cuda",
+        baseline=replace(_valid_band().baseline, axis="contest-cuda"),
+        empirical_anchor=EmpiricalAnchorRef(
+            status="landed",
+            anchors=(_exact_anchor("contest-cuda"),),
+        ),
+    )
+
+    verdict = validate_prediction_band(
+        band,
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_axis_not_exact_eval" in verdict.blockers
+
+
 def test_unknown_research_basis_blocks_rank_reward():
     band = _valid_band()
     payload = {
@@ -243,7 +314,7 @@ def test_unknown_research_basis_blocks_rank_reward():
         subject_id="z3_balle_hyperprior_bolton",
         low=-0.010,
         high=-0.001,
-        axis="contest-cuda",
+        axis="contest_cuda",
     )
     assert verdict.valid_for_rank_reward is False
     assert "prediction_band_unknown_research_basis" in verdict.blockers
@@ -264,7 +335,7 @@ def test_prediction_band_accepts_legacy_research_basis_aliases():
         subject_id="z3_balle_hyperprior_bolton",
         low=-0.010,
         high=-0.001,
-        axis="contest-cuda",
+        axis="contest_cuda",
     )
     assert "prediction_band_unknown_research_basis" not in verdict.blockers
 
@@ -277,7 +348,7 @@ def test_score_claim_inside_prediction_band_fails_closed():
         subject_id="z3_balle_hyperprior_bolton",
         low=-0.010,
         high=-0.001,
-        axis="contest-cuda",
+        axis="contest_cuda",
     )
     assert verdict.valid_for_dispatch_planning is False
     assert "prediction_band_score_claim_forbidden" in verdict.blockers

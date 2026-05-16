@@ -114,6 +114,40 @@ def test_l5_v2_probe_selects_best_paired_exact_candidate(tmp_path: Path) -> None
     assert verdict["blockers"] == []
 
 
+def test_l5_v2_probe_requires_eligible_evidence_for_every_candidate(
+    tmp_path: Path,
+) -> None:
+    blocked_c1 = dataclasses.replace(
+        _eligible(tmp_path, "c1_world_model_foveation", -0.010),
+        axis_evidence=(),
+    )
+    blocked_z5 = dataclasses.replace(
+        _eligible(tmp_path, "z5_predictive_coding_world_model", -0.020),
+        predicate_passed=False,
+    )
+
+    verdict = evaluate_l5_v2_probe(
+        (
+            blocked_c1,
+            blocked_z5,
+            _eligible(tmp_path, "time_traveler_l5_autonomy", -0.030),
+        ),
+        repo_root=tmp_path,
+    )
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert verdict["selected_candidate_id"] == "time_traveler_l5_autonomy"
+    assert (
+        "l5_v2_probe_required_candidate_ineligible:c1_world_model_foveation"
+        in verdict["blockers"]
+    )
+    assert (
+        "l5_v2_probe_required_candidate_ineligible:z5_predictive_coding_world_model"
+        in verdict["blockers"]
+    )
+    assert "l5_v2_probe_candidate_coverage_incomplete" not in verdict["blockers"]
+
+
 def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations(tmp_path: Path) -> None:
     proxy = dataclasses.replace(
         _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),

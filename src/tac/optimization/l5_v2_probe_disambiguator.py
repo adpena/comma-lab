@@ -14,11 +14,12 @@ import dataclasses
 import hashlib
 import json
 import math
-import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
+
+from tac.exact_eval_custody import is_sha256_hex, validate_exact_eval_evidence
 
 L5V2_PROBE_SCHEMA = "tac_l5_v2_probe_disambiguator_v1"
 L5V2_PROBE_TOOL_PATH = "tools/probe_l5_v2_staircase_disambiguator.py"
@@ -29,9 +30,6 @@ L5V2_CANDIDATES: tuple[str, ...] = (
 )
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 REQUIRED_EXACT_AXES: tuple[ContestAxis, ...] = ("contest_cpu", "contest_cuda")
-_SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
-_SCORE_ARCHIVE_BYTES_DENOMINATOR = 37_545_489
-_SCORE_FORMULA_TOLERANCE = 1e-9
 
 
 @dataclass(frozen=True)
@@ -121,27 +119,6 @@ def _missing_required_axes(observation: L5V2ProbeObservation) -> tuple[str, ...]
     return tuple(axis for axis in REQUIRED_EXACT_AXES if axis not in axes)
 
 
-def _is_sha256_hex(value: str) -> bool:
-    return bool(_SHA256_HEX_RE.fullmatch(value.strip()))
-
-
-def _finite_float(value: object) -> float | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int | float):
-        out = float(value)
-        return out if math.isfinite(out) else None
-    return None
-
-
-def _positive_int(value: object) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, int) and value > 0:
-        return value
-    return None
-
-
 def _is_transient_artifact_path(path: str) -> bool:
     normalized = path.removeprefix("file:").strip()
     return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
@@ -190,55 +167,37 @@ def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...
             blockers.append(f"l5_v2_probe_axis_evidence_missing:{axis}")
             continue
 
-        archive_sha = str(evidence.get("archive_sha256") or "").strip().lower()
-        runtime_sha = str(evidence.get("runtime_tree_sha256") or "").strip().lower()
-        if not _is_sha256_hex(archive_sha):
-            blockers.append(f"l5_v2_probe_axis_archive_sha_invalid:{axis}")
-        elif archive_sha != observation.archive_sha256.strip().lower():
-            blockers.append(f"l5_v2_probe_axis_archive_sha_mismatch:{axis}")
-        if not _is_sha256_hex(runtime_sha):
-            blockers.append(f"l5_v2_probe_axis_runtime_tree_sha_invalid:{axis}")
-        elif runtime_sha != observation.runtime_tree_sha256.strip().lower():
-            blockers.append(f"l5_v2_probe_axis_runtime_tree_sha_mismatch:{axis}")
-
-        n_samples = _positive_int(evidence.get("n_samples"))
-        archive_bytes = _positive_int(evidence.get("archive_bytes"))
-        seg_dist = _finite_float(evidence.get("seg_dist"))
-        pose_dist = _finite_float(evidence.get("pose_dist"))
-        score = _finite_float(evidence.get("score"))
-        if n_samples is None:
-            blockers.append(f"l5_v2_probe_axis_n_samples_missing:{axis}")
-        if archive_bytes is None:
-            blockers.append(f"l5_v2_probe_axis_archive_bytes_missing:{axis}")
-        if seg_dist is None or seg_dist < 0.0:
-            blockers.append(f"l5_v2_probe_axis_seg_dist_missing:{axis}")
-        if pose_dist is None or pose_dist < 0.0:
-            blockers.append(f"l5_v2_probe_axis_pose_dist_missing:{axis}")
-        if score is None:
-            blockers.append(f"l5_v2_probe_axis_score_missing:{axis}")
-        if not str(evidence.get("hardware") or "").strip():
-            blockers.append(f"l5_v2_probe_axis_hardware_missing:{axis}")
-        if not str(evidence.get("inflate_device") or "").strip():
-            blockers.append(f"l5_v2_probe_axis_inflate_device_missing:{axis}")
-        if not str(evidence.get("eval_device") or "").strip():
-            blockers.append(f"l5_v2_probe_axis_eval_device_missing:{axis}")
-        if not str(evidence.get("auth_eval_command") or "").strip():
-            blockers.append(f"l5_v2_probe_axis_auth_eval_command_missing:{axis}")
-        if not str(evidence.get("log_path") or "").strip():
-            blockers.append(f"l5_v2_probe_axis_log_path_missing:{axis}")
-        if (
-            archive_bytes is not None
-            and seg_dist is not None
-            and pose_dist is not None
-            and score is not None
-        ):
-            recomputed = (
-                100.0 * seg_dist
-                + math.sqrt(10.0 * pose_dist)
-                + 25.0 * archive_bytes / _SCORE_ARCHIVE_BYTES_DENOMINATOR
-            )
-            if abs(score - recomputed) > _SCORE_FORMULA_TOLERANCE:
-                blockers.append(f"l5_v2_probe_axis_score_formula_mismatch:{axis}")
+        validation = validate_exact_eval_evidence(
+            evidence,
+            expected_axis=axis,
+            expected_archive_sha256=observation.archive_sha256,
+            expected_runtime_tree_sha256=observation.runtime_tree_sha256,
+            require_hardware=True,
+            require_auth_eval_command=True,
+            require_log_path=True,
+            require_devices=True,
+        )
+        blocker_map = {
+            "archive_sha_invalid": "l5_v2_probe_axis_archive_sha_invalid",
+            "archive_sha_mismatch": "l5_v2_probe_axis_archive_sha_mismatch",
+            "runtime_tree_sha_invalid": "l5_v2_probe_axis_runtime_tree_sha_invalid",
+            "runtime_tree_sha_mismatch": "l5_v2_probe_axis_runtime_tree_sha_mismatch",
+            "n_samples_missing": "l5_v2_probe_axis_n_samples_missing",
+            "archive_bytes_missing": "l5_v2_probe_axis_archive_bytes_missing",
+            "seg_dist_missing": "l5_v2_probe_axis_seg_dist_missing",
+            "pose_dist_missing": "l5_v2_probe_axis_pose_dist_missing",
+            "score_missing": "l5_v2_probe_axis_score_missing",
+            "hardware_missing": "l5_v2_probe_axis_hardware_missing",
+            "inflate_device_missing": "l5_v2_probe_axis_inflate_device_missing",
+            "eval_device_missing": "l5_v2_probe_axis_eval_device_missing",
+            "auth_eval_command_missing": "l5_v2_probe_axis_auth_eval_command_missing",
+            "log_path_missing": "l5_v2_probe_axis_log_path_missing",
+            "score_formula_mismatch": "l5_v2_probe_axis_score_formula_mismatch",
+        }
+        for blocker in validation.blockers:
+            public_blocker = blocker_map.get(blocker)
+            if public_blocker is not None:
+                blockers.append(f"{public_blocker}:{axis}")
     return tuple(blockers)
 
 
@@ -267,7 +226,7 @@ def _observation_blockers(
             blockers.append("l5_v2_probe_artifact_path_outside_repo")
         elif resolved_artifact_path is not None and not resolved_artifact_path.is_file():
             blockers.append("l5_v2_probe_artifact_file_missing")
-    if not _is_sha256_hex(observation.artifact_sha256):
+    if not is_sha256_hex(observation.artifact_sha256):
         blockers.append("l5_v2_probe_artifact_sha_invalid")
     elif (
         resolved_artifact_path is not None
@@ -287,9 +246,9 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_byte_closed_archive_missing")
     if not observation.sideinfo_consumed:
         blockers.append("l5_v2_probe_sideinfo_consumption_missing")
-    if not _is_sha256_hex(observation.archive_sha256):
+    if not is_sha256_hex(observation.archive_sha256):
         blockers.append("l5_v2_probe_archive_sha_invalid")
-    if not _is_sha256_hex(observation.runtime_tree_sha256):
+    if not is_sha256_hex(observation.runtime_tree_sha256):
         blockers.append("l5_v2_probe_runtime_tree_sha_invalid")
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
@@ -358,6 +317,7 @@ def evaluate_l5_v2_probe(
     evaluated: list[dict[str, Any]] = []
     eligible: list[L5V2ProbeObservation] = []
     global_blockers: list[str] = []
+    eligible_candidate_ids: set[str] = set()
 
     if not rows:
         global_blockers.append("l5_v2_probe_observations_missing")
@@ -379,6 +339,15 @@ def evaluate_l5_v2_probe(
         evaluated.append(row_dict)
         if not blockers:
             eligible.append(row)
+            eligible_candidate_ids.add(row.candidate_id)
+
+    ineligible_required_candidates = [
+        candidate_id
+        for candidate_id in L5V2_CANDIDATES
+        if candidate_id in seen and candidate_id not in eligible_candidate_ids
+    ]
+    for candidate_id in ineligible_required_candidates:
+        global_blockers.append(f"l5_v2_probe_required_candidate_ineligible:{candidate_id}")
 
     selected = min(
         eligible,

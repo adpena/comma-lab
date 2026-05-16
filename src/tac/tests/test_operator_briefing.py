@@ -610,6 +610,45 @@ def test_dispatch_readiness_blocks_when_every_exact_packet_is_terminal(monkeypat
     assert "Phase 1 (pre-dispatch Pareto):              READY" not in text
 
 
+def test_exact_eval_packet_ready_for_submit_requires_all_static_and_env_gates(
+    tmp_path,
+    monkeypatch,
+):
+    mod = _load_briefing_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "DISPATCH_CLAIMS", tmp_path / "missing_claims.md")
+    (tmp_path / "packet.json").write_text(
+        json.dumps(
+            {
+                "ready_for_submit": True,
+                "preflight_ready": False,
+                "static_blockers": ["static gate not run"],
+                "compliance_ok": False,
+                "payload_diff_ready": True,
+                "dry_run_ready": True,
+                "missing_env": ["LIGHTNING_API_KEY"],
+                "commands": {"submit": "do-not-copy"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    packet = mod._load_exact_eval_packet(
+        {
+            "lane_id": "static_env_fixture",
+            "name": "static/env fixture",
+            "packet_path": "packet.json",
+        }
+    )
+
+    assert packet["ready_for_submit"] is False
+    assert packet["dispatch_action"] == "blocked_static_or_env_gates"
+    assert "static_preflight_not_ready" in packet["submit_gate_blockers"]
+    assert "static_compliance_not_ok" in packet["submit_gate_blockers"]
+    assert "missing_submit_environment" in packet["submit_gate_blockers"]
+    assert packet["missing_env"] == ["LIGHTNING_API_KEY"]
+
+
 def test_dispatch_readiness_does_not_mark_predicted_phase7_rollup_ready(
     tmp_path,
     monkeypatch,

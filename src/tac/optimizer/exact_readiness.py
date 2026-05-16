@@ -547,7 +547,10 @@ def terminal_claim_result_conflicts(
         claim_runtime_shas = _terminal_claim_runtime_tree_shas(notes)
         if candidate_runtime_sha is not None and claim_runtime_shas:
             if candidate_runtime_sha not in claim_runtime_shas:
-                if block_runtime_mismatch_for_same_archive:
+                if (
+                    block_runtime_mismatch_for_same_archive
+                    or score_affecting_runtime_changed is not True
+                ):
                     blockers.append(
                         "same_lane_terminal_runtime_mismatch_for_same_archive:"
                         f"{candidate_runtime_sha}:terminal_runtime="
