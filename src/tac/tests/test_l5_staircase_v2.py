@@ -63,6 +63,7 @@ def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
             "axis": axis,
             "archive_sha256": _sha(11),
             "runtime_tree_sha256": _sha(12),
+            "runtime_content_tree_sha256": _sha(13),
             "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
             "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
             "component_deltas": {
@@ -437,6 +438,13 @@ def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> 
     assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in payload[
         "blockers"
     ]
+
+
+def test_l5_v2_packetir_matrix_sha_pin_matches_committed_artifact() -> None:
+    matrix_path = Path(l5_v2.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH)
+
+    assert matrix_path.is_file()
+    assert _file_sha256(matrix_path) == PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
@@ -918,6 +926,58 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
     assert (
         "l5_v2_gate_artifact_semantics_invalid:"
         "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda:seg_dist_delta"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_allows_axis_specific_runtime_trees(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "paired_cpu_cuda_axis_plan"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["paired_axis_plan"]
+    assert isinstance(rows, list)
+    for row in rows:
+        if row["axis"] == "contest_cpu":
+            row["runtime_tree_sha256"] = _sha(31)
+        else:
+            row["runtime_tree_sha256"] = _sha(32)
+        row["runtime_content_tree_sha256"] = _sha(33)
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:runtime_tree_sha256"
+        not in readiness["blockers"]
+    )
+    assert readiness["all_gate_evidence_valid"] is True
+
+
+def test_l5_v2_dispatch_readiness_rejects_runtime_content_tree_mismatch(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "paired_cpu_cuda_axis_plan"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["paired_axis_plan"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    cuda_row["runtime_content_tree_sha256"] = _sha(44)
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:runtime_content_tree_sha256"
         in readiness["blockers"]
     )
 

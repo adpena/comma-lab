@@ -1135,21 +1135,31 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
         for target in matrix.get("next_exact_eval_targets", [])
         if isinstance(target, dict)
     ]
-    summarized_targets = [
+    normalized_targets = [
         {
             "candidate_id": target.get("candidate_id"),
+            "missing_axes": target.get("missing_axes"),
             "missing_axis": target.get("missing_axis"),
             "recommended_provider": target.get("recommended_provider"),
             "lane_id": target.get("lane_id"),
             "pair_group_id": target.get("pair_group_id"),
+            "paired_dispatch_tool": target.get("paired_dispatch_tool"),
+            "expected_runtime_tree_sha256_policy": target.get(
+                "expected_runtime_tree_sha256_policy"
+            ),
+            "skip_axis_if_promotable_anchor_exists": target.get(
+                "skip_axis_if_promotable_anchor_exists"
+            ),
+            "command_template": target.get("command_template"),
             "archive_path": target.get("archive_path"),
             "dispatch_status": target.get("dispatch_status"),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-        for target in targets[:5]
+        for target in targets
     ]
+    summarized_targets = normalized_targets[:5]
     matrix_blockers = [
         str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
     ]
@@ -1175,6 +1185,7 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
         "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
         "packetir_status_counts": status_counts,
         "next_exact_eval_target_count": target_count,
+        "next_exact_eval_targets": normalized_targets,
         "next_exact_eval_targets_sample": summarized_targets,
         "canonical_sideinfo_evidence_present": sideinfo_evidence is not None,
         "l5_ready_for_gate_probe_dispatch": bool(

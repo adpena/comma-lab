@@ -56,7 +56,7 @@ PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
     ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
 )
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = (
-    "1e5345f0d290abb76089d1ececa3f367f3310e0067a3a644f5a58c06cdee137c"
+    "78b25a9ff6d7da16a67bd21b9d618257b9ae18a867653e7a6c9d54b0b40de678"
 )
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
@@ -908,23 +908,34 @@ def _paired_row_identity_blockers(
     archive_shas = {
         str(row.get("archive_sha256") or "").strip().lower() for row in rows.values()
     }
-    runtime_shas = {
-        str(row.get("runtime_tree_sha256") or "").strip().lower()
+    runtime_shas_by_axis = {
+        axis: str(row.get("runtime_tree_sha256") or "").strip().lower()
+        for axis, row in rows.items()
+    }
+    runtime_content_shas = {
+        str(row.get("runtime_content_tree_sha256") or "").strip().lower()
         for row in rows.values()
     }
     archive_sha = next(iter(archive_shas)) if len(archive_shas) == 1 else ""
-    runtime_sha = next(iter(runtime_shas)) if len(runtime_shas) == 1 else ""
     if len(archive_shas) != 1 or not _SHA256_HEX_RE.fullmatch(archive_sha):
         blockers.append(
             f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:{section}:archive_sha256"
         )
         archive_sha = ""
-    if len(runtime_shas) != 1 or not _SHA256_HEX_RE.fullmatch(runtime_sha):
+    for axis, runtime_sha in runtime_shas_by_axis.items():
+        if not _SHA256_HEX_RE.fullmatch(runtime_sha):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:{section}:{axis}:runtime_tree_sha256"
+            )
+    if (
+        len(runtime_content_shas) != 1
+        or not _SHA256_HEX_RE.fullmatch(next(iter(runtime_content_shas), ""))
+    ):
         blockers.append(
             "l5_v2_gate_artifact_semantics_invalid:"
-            f"{gate_id}:{section}:runtime_tree_sha256"
+            f"{gate_id}:{section}:runtime_content_tree_sha256"
         )
-        runtime_sha = ""
 
     for axis, row in rows.items():
         inflate_device = str(row.get("inflate_device") or "").lower()
@@ -1017,7 +1028,9 @@ def _paired_row_identity_blockers(
                     row,
                     expected_axis=axis,
                     expected_archive_sha256=archive_sha or None,
-                    expected_runtime_tree_sha256=runtime_sha or None,
+                    expected_runtime_tree_sha256=(
+                        runtime_shas_by_axis.get(axis) or None
+                    ),
                     require_artifact_path=True,
                     require_hardware=True,
                     require_auth_eval_command=True,

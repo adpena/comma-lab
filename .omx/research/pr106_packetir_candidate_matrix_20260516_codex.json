@@ -4,535 +4,617 @@
     "contest_cuda": "kept separate from contest_cpu; no conversion"
   },
   "candidate_count": 16,
-  "next_exact_eval_target_count": 17,
+  "next_exact_eval_target_count": 13,
   "next_exact_eval_targets": [
     {
       "archive_bytes": 186822,
       "archive_path": "submissions/pr106_latent_sidecar_r2/archive.zip",
       "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
       "axis_blockers": [
-        "exact_eval_score_formula_mismatch"
+        "contest_cpu:exact_eval_score_formula_mismatch",
+        "contest_cuda:exact_eval_score_formula_mismatch"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_score_formula_mismatch"
+        ],
+        "contest_cuda": [
+          "exact_eval_score_formula_mismatch"
+        ]
+      },
       "candidate_id": "format_0x01_r2_release",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive submissions/pr106_latent_sidecar_r2/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x01_r2_release_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x01_r2_release_contest_cpu --instance-job-id pr106_packetir_format_0x01_r2_release_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213 --submission-dir submissions/pr106_latent_sidecar_r2 --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive submissions/pr106_latent_sidecar_r2/archive.zip --label pr106_packetir_format_0x01_r2_release --run-id pr106_packetir_format_0x01_r2_release_<UTC> --pair-group-id pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213 --lane-id-base pr106_packetir_format_0x01_r2_release --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2 --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive submissions/pr106_latent_sidecar_r2/archive.zip --label pr106_packetir_format_0x01_r2_release --run-id pr106_packetir_format_0x01_r2_release_<UTC> --pair-group-id pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213 --lane-id-base pr106_packetir_format_0x01_r2_release --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2 --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x01",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x01_r2_release_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x01_r2_release_contest_cpu",
-      "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x01_r2_release_contest_cpu_<UTC>",
+      "instance_job_id_template": "pr106_packetir_format_0x01_r2_release_<UTC>",
+      "lane_id": "pr106_packetir_format_0x01_r2_release",
+      "lane_id_base": "pr106_packetir_format_0x01_r2_release",
+      "missing_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "missing_axis": "contest_cpu,contest_cuda",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x01_r2_release_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x01_r2_release_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2",
       "runtime_inflate_py_sha256": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db",
       "runtime_source_tree_sha256": "f12c3a81a5a52c39d48d7528f1fab926acccab0ce1b86450978c6ae6e4bab357",
-      "score_claim": false
-    },
-    {
-      "archive_bytes": 186822,
-      "archive_path": "submissions/pr106_latent_sidecar_r2/archive.zip",
-      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
-      "axis_blockers": [
-        "exact_eval_score_formula_mismatch"
-      ],
-      "candidate_id": "format_0x01_r2_release",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive submissions/pr106_latent_sidecar_r2/archive.zip --output-dir experiments/results/modal_auth_eval/pr106_packetir_format_0x01_r2_release_contest_cuda_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x01_r2_release_contest_cuda --instance-job-id pr106_packetir_format_0x01_r2_release_contest_cuda_<UTC> --pair-group-id pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213 --submission-dir submissions/pr106_latent_sidecar_r2 --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256> --gpu T4",
-      "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
-      "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
-      "format_id": "0x01",
-      "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x01_r2_release_contest_cuda_<UTC>",
-      "lane_id": "pr106_packetir_format_0x01_r2_release_contest_cuda",
-      "missing_axis": "contest_cuda",
-      "modal_entrypoint": "experiments/modal_auth_eval.py",
-      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x01_r2_release_contest_cuda_<UTC>",
-      "pair_group_id": "pair_pr106_packetir_format_0x01_r2_release_7f926bc3e213",
-      "promotion_eligible": false,
-      "provider_detach_required": true,
-      "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_t4_cuda",
-      "runtime_content_tree_sha256": "",
-      "runtime_dir": "submissions/pr106_latent_sidecar_r2",
-      "runtime_inflate_py_sha256": "093d20785ff29759ac835f01efc3caa2210d31b11b5b3874256be774bc22a6db",
-      "runtime_source_tree_sha256": "f12c3a81a5a52c39d48d7528f1fab926acccab0ce1b86450978c6ae6e4bab357",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186780,
       "archive_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip",
       "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
       "axis_blockers": [
-        "exact_eval_score_formula_mismatch"
+        "contest_cpu:exact_eval_score_formula_mismatch",
+        "contest_cuda:exact_eval_score_formula_mismatch"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_score_formula_mismatch"
+        ],
+        "contest_cuda": [
+          "exact_eval_score_formula_mismatch"
+        ]
+      },
       "candidate_id": "format_0x02_pr101_grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x02_pr101_grammar_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x02_pr101_grammar_contest_cpu --instance-job-id pr106_packetir_format_0x02_pr101_grammar_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip --label pr106_packetir_format_0x02_pr101_grammar --run-id pr106_packetir_format_0x02_pr101_grammar_<UTC> --pair-group-id pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b --lane-id-base pr106_packetir_format_0x02_pr101_grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip --label pr106_packetir_format_0x02_pr101_grammar --run-id pr106_packetir_format_0x02_pr101_grammar_<UTC> --pair-group-id pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b --lane-id-base pr106_packetir_format_0x02_pr101_grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x02",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x02_pr101_grammar_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x02_pr101_grammar_contest_cpu",
-      "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x02_pr101_grammar_contest_cpu_<UTC>",
+      "instance_job_id_template": "pr106_packetir_format_0x02_pr101_grammar_<UTC>",
+      "lane_id": "pr106_packetir_format_0x02_pr101_grammar",
+      "lane_id_base": "pr106_packetir_format_0x02_pr101_grammar",
+      "missing_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "missing_axis": "contest_cpu,contest_cuda",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x02_pr101_grammar_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x02_pr101_grammar_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f",
       "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
-      "score_claim": false
-    },
-    {
-      "archive_bytes": 186780,
-      "archive_path": "submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip",
-      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
-      "axis_blockers": [
-        "exact_eval_score_formula_mismatch"
-      ],
-      "candidate_id": "format_0x02_pr101_grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive submissions/pr106_latent_sidecar_r2_pr101_grammar/archive.zip --output-dir experiments/results/modal_auth_eval/pr106_packetir_format_0x02_pr101_grammar_contest_cuda_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x02_pr101_grammar_contest_cuda --instance-job-id pr106_packetir_format_0x02_pr101_grammar_contest_cuda_<UTC> --pair-group-id pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256> --gpu T4",
-      "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
-      "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
-      "format_id": "0x02",
-      "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x02_pr101_grammar_contest_cuda_<UTC>",
-      "lane_id": "pr106_packetir_format_0x02_pr101_grammar_contest_cuda",
-      "missing_axis": "contest_cuda",
-      "modal_entrypoint": "experiments/modal_auth_eval.py",
-      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x02_pr101_grammar_contest_cuda_<UTC>",
-      "pair_group_id": "pair_pr106_packetir_format_0x02_pr101_grammar_c48631e11a9b",
-      "promotion_eligible": false,
-      "provider_detach_required": true,
-      "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_t4_cuda",
-      "runtime_content_tree_sha256": "",
-      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
-      "runtime_inflate_py_sha256": "5fa58d34dbf195e960d9a3db6370bf238c1e4e459de6cf3f11487b0a1f4b272f",
-      "runtime_source_tree_sha256": "34712ec49c6045f6611fc891c148643825d45b6131ec79c519d6fef7b409786f",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186776,
       "archive_path": "experiments/results/pr106_r2_rank_elided_format04_candidate_20260514_codex/pr106_sidecar_rank_elided_format04_candidate.zip",
       "archive_sha256": "bf83c2ffc559dd42eec131e283bf106b789c0debfe7c3323e10ce1b5d8aa9a70",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x04_rank_elided",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_r2_rank_elided_format04_candidate_20260514_codex/pr106_sidecar_rank_elided_format04_candidate.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x04_rank_elided_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x04_rank_elided_contest_cpu --instance-job-id pr106_packetir_format_0x04_rank_elided_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x04_rank_elided_bf83c2ffc559 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_r2_rank_elided_format04_candidate_20260514_codex/pr106_sidecar_rank_elided_format04_candidate.zip --label pr106_packetir_format_0x04_rank_elided --run-id pr106_packetir_format_0x04_rank_elided_<UTC> --pair-group-id pair_pr106_packetir_format_0x04_rank_elided_bf83c2ffc559 --lane-id-base pr106_packetir_format_0x04_rank_elided --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_r2_rank_elided_format04_candidate_20260514_codex/pr106_sidecar_rank_elided_format04_candidate.zip --label pr106_packetir_format_0x04_rank_elided --run-id pr106_packetir_format_0x04_rank_elided_<UTC> --pair-group-id pair_pr106_packetir_format_0x04_rank_elided_bf83c2ffc559 --lane-id-base pr106_packetir_format_0x04_rank_elided --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x04",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x04_rank_elided_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x04_rank_elided_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x04_rank_elided_<UTC>",
+      "lane_id": "pr106_packetir_format_0x04_rank_elided",
+      "lane_id_base": "pr106_packetir_format_0x04_rank_elided",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x04_rank_elided_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x04_rank_elided_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x04_rank_elided_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x04_rank_elided_bf83c2ffc559",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "3896775b0328f2b2e15004941028a4f53b3aba6d217caad37fc70f5b97954d72",
       "runtime_source_tree_sha256": "11d93d9e4cbff3dd5ef10bc0a6daa736771dc44431b4c006845667c79a7e0498",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186771,
       "archive_path": "experiments/results/pr106_fixed_meta_rank_elided_20260514_codex/archive.zip",
       "archive_sha256": "c9d117fd6e9b5ef3fe7c1165d724c572560bfbc7f3b4cb8cc485b9bb4c612af5",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x05_fixed_meta",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_fixed_meta_rank_elided_20260514_codex/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_fixed_meta_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x05_fixed_meta_contest_cpu --instance-job-id pr106_packetir_format_0x05_fixed_meta_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_fixed_meta_c9d117fd6e9b --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_fixed_meta_rank_elided_20260514_codex/archive.zip --label pr106_packetir_format_0x05_fixed_meta --run-id pr106_packetir_format_0x05_fixed_meta_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_fixed_meta_c9d117fd6e9b --lane-id-base pr106_packetir_format_0x05_fixed_meta --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_fixed_meta_rank_elided_20260514_codex/archive.zip --label pr106_packetir_format_0x05_fixed_meta --run-id pr106_packetir_format_0x05_fixed_meta_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_fixed_meta_c9d117fd6e9b --lane-id-base pr106_packetir_format_0x05_fixed_meta --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x05",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x05_fixed_meta_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x05_fixed_meta_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x05_fixed_meta_<UTC>",
+      "lane_id": "pr106_packetir_format_0x05_fixed_meta",
+      "lane_id_base": "pr106_packetir_format_0x05_fixed_meta",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_fixed_meta_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x05_fixed_meta_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_fixed_meta_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x05_fixed_meta_c9d117fd6e9b",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "52a8b14088b046975265735b4be217e762899953aee4609643c9d83c8b04c925",
       "runtime_source_tree_sha256": "b779871e0bc528185e84f7972a4166a1689af550a88ee70fd26ca4c0553e1f71",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186386,
       "archive_path": "experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/archive.zip",
       "archive_sha256": "9a8e7c4e09572586bac0c1ae425400267ae65b70c918a1c9d13a4ddb08f05adc",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x05_hdm8_fixed_meta",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu --instance-job-id pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_hdm8_fixed_meta_9a8e7c4e0957 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/archive.zip --label pr106_packetir_format_0x05_hdm8_fixed_meta --run-id pr106_packetir_format_0x05_hdm8_fixed_meta_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_hdm8_fixed_meta_9a8e7c4e0957 --lane-id-base pr106_packetir_format_0x05_hdm8_fixed_meta --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_fixed_meta_rank_elided_20260514_codex/archive.zip --label pr106_packetir_format_0x05_hdm8_fixed_meta --run-id pr106_packetir_format_0x05_hdm8_fixed_meta_<UTC> --pair-group-id pair_pr106_packetir_format_0x05_hdm8_fixed_meta_9a8e7c4e0957 --lane-id-base pr106_packetir_format_0x05_hdm8_fixed_meta --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x05",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x05_hdm8_fixed_meta_<UTC>",
+      "lane_id": "pr106_packetir_format_0x05_hdm8_fixed_meta",
+      "lane_id_base": "pr106_packetir_format_0x05_hdm8_fixed_meta",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_hdm8_fixed_meta_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x05_hdm8_fixed_meta_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x05_hdm8_fixed_meta_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x05_hdm8_fixed_meta_9a8e7c4e0957",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "52a8b14088b046975265735b4be217e762899953aee4609643c9d83c8b04c925",
       "runtime_source_tree_sha256": "b779871e0bc528185e84f7972a4166a1689af550a88ee70fd26ca4c0553e1f71",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186382,
       "archive_path": "experiments/results/pr106_hdm8_implicit_len_fixed_meta_20260515_codex/emitted_candidates/pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06.archive.zip",
       "archive_sha256": "44eb228ab2ae58f267d91c53db9119db3beb6a6c8488c7c903d9bb78e8798844",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x06_implicit_len",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm8_implicit_len_fixed_meta_20260515_codex/emitted_candidates/pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x06_implicit_len_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x06_implicit_len_contest_cpu --instance-job-id pr106_packetir_format_0x06_implicit_len_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x06_implicit_len_44eb228ab2ae --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_implicit_len_fixed_meta_20260515_codex/emitted_candidates/pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06.archive.zip --label pr106_packetir_format_0x06_implicit_len --run-id pr106_packetir_format_0x06_implicit_len_<UTC> --pair-group-id pair_pr106_packetir_format_0x06_implicit_len_44eb228ab2ae --lane-id-base pr106_packetir_format_0x06_implicit_len --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_implicit_len_fixed_meta_20260515_codex/emitted_candidates/pr101_implicit_len_fixed_meta_rank_elided_sidecar_format_0x06.archive.zip --label pr106_packetir_format_0x06_implicit_len --run-id pr106_packetir_format_0x06_implicit_len_<UTC> --pair-group-id pair_pr106_packetir_format_0x06_implicit_len_44eb228ab2ae --lane-id-base pr106_packetir_format_0x06_implicit_len --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x06",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x06_implicit_len_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x06_implicit_len_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x06_implicit_len_<UTC>",
+      "lane_id": "pr106_packetir_format_0x06_implicit_len",
+      "lane_id_base": "pr106_packetir_format_0x06_implicit_len",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x06_implicit_len_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x06_implicit_len_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x06_implicit_len_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x06_implicit_len_44eb228ab2ae",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "36b79f766f8bf3919d31708c8fa1c621b62cdc231c7f562ec7728b1a126190aa",
       "runtime_source_tree_sha256": "7cfbc807432b0e55d7e7462fe6f6020c852dd3b4bfd045db052bb07932758cf0",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186380,
       "archive_path": "experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.archive.zip",
       "archive_sha256": "d09550244c8f12aca9bb958f9dfddeca6ec559e8c1b726fc639ca61c49198258",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x07_headerless",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x07_headerless_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x07_headerless_contest_cpu --instance-job-id pr106_packetir_format_0x07_headerless_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x07_headerless_d09550244c8f --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.archive.zip --label pr106_packetir_format_0x07_headerless --run-id pr106_packetir_format_0x07_headerless_<UTC> --pair-group-id pair_pr106_packetir_format_0x07_headerless_d09550244c8f --lane-id-base pr106_packetir_format_0x07_headerless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_headerless_fmt07_20260515_codex/emitted_candidates/pr101_headerless_implicit_len_fixed_meta_rank_elided_sidecar_format_0x07.archive.zip --label pr106_packetir_format_0x07_headerless --run-id pr106_packetir_format_0x07_headerless_<UTC> --pair-group-id pair_pr106_packetir_format_0x07_headerless_d09550244c8f --lane-id-base pr106_packetir_format_0x07_headerless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x07",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x07_headerless_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x07_headerless_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x07_headerless_<UTC>",
+      "lane_id": "pr106_packetir_format_0x07_headerless",
+      "lane_id_base": "pr106_packetir_format_0x07_headerless",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x07_headerless_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x07_headerless_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x07_headerless_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x07_headerless_d09550244c8f",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "323b3f8893f90a9c4de7e09518a933d18bb19283ded1142e9b78960047d78c4f",
       "runtime_source_tree_sha256": "a229d77c0c1101c8113bce0994c80bf3870285b86f6c12442870dd492de52fc7",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186376,
       "archive_path": "experiments/results/pr106_hdm8_inner_headerless_fmt08_20260515_codex/emitted_candidates/pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08.archive.zip",
       "archive_sha256": "20b91d7283dbb63f3846a019dba4909adc8849e73c8d5669345de3be0a8c36f9",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x08_inner_headerless",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm8_inner_headerless_fmt08_20260515_codex/emitted_candidates/pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x08_inner_headerless_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x08_inner_headerless_contest_cpu --instance-job-id pr106_packetir_format_0x08_inner_headerless_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x08_inner_headerless_20b91d7283db --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_inner_headerless_fmt08_20260515_codex/emitted_candidates/pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08.archive.zip --label pr106_packetir_format_0x08_inner_headerless --run-id pr106_packetir_format_0x08_inner_headerless_<UTC> --pair-group-id pair_pr106_packetir_format_0x08_inner_headerless_20b91d7283db --lane-id-base pr106_packetir_format_0x08_inner_headerless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm8_inner_headerless_fmt08_20260515_codex/emitted_candidates/pr101_hdm8_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x08.archive.zip --label pr106_packetir_format_0x08_inner_headerless --run-id pr106_packetir_format_0x08_inner_headerless_<UTC> --pair-group-id pair_pr106_packetir_format_0x08_inner_headerless_20b91d7283db --lane-id-base pr106_packetir_format_0x08_inner_headerless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x08",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x08_inner_headerless_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x08_inner_headerless_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x08_inner_headerless_<UTC>",
+      "lane_id": "pr106_packetir_format_0x08_inner_headerless",
+      "lane_id_base": "pr106_packetir_format_0x08_inner_headerless",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x08_inner_headerless_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x08_inner_headerless_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x08_inner_headerless_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x08_inner_headerless_20b91d7283db",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "ba21b2be70250ba4859b231a51e55b393965caa78d00e7f86956eaddc21d9b07",
       "runtime_source_tree_sha256": "4e8e289226eb487150f4753389a89626ab4d3c5915044ceeb121b2da14862c17",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186352,
       "archive_path": "experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip",
       "archive_sha256": "09bcd867c2778d38d5ac04b648d44cb3bdfcfd3e3db402beb8886826cced50e9",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x09_hdm9",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x09_hdm9_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x09_hdm9_contest_cpu --instance-job-id pr106_packetir_format_0x09_hdm9_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x09_hdm9_09bcd867c277 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip --label pr106_packetir_format_0x09_hdm9 --run-id pr106_packetir_format_0x09_hdm9_<UTC> --pair-group-id pair_pr106_packetir_format_0x09_hdm9_09bcd867c277 --lane-id-base pr106_packetir_format_0x09_hdm9 --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm9_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm2_inner_headerless_fixed_meta_rank_elided_sidecar_format_0x09.archive.zip --label pr106_packetir_format_0x09_hdm9 --run-id pr106_packetir_format_0x09_hdm9_<UTC> --pair-group-id pair_pr106_packetir_format_0x09_hdm9_09bcd867c277 --lane-id-base pr106_packetir_format_0x09_hdm9 --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x09",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x09_hdm9_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x09_hdm9_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x09_hdm9_<UTC>",
+      "lane_id": "pr106_packetir_format_0x09_hdm9",
+      "lane_id_base": "pr106_packetir_format_0x09_hdm9",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x09_hdm9_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x09_hdm9_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x09_hdm9_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x09_hdm9_09bcd867c277",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "4a5391dc5a8c66ba4b8d8252e1053472d285d84363c6e5042c2890ef3289dd24",
       "runtime_source_tree_sha256": "a3ef213c90979a6a58bbe66e712608422e9dd0296d7a128347840bc30eed10cd",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186349,
       "archive_path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_inner_headerless_fixed_meta_noop_rank_elided_sidecar_format_0x0a.archive.zip",
       "archive_sha256": "186a3d59f2038be61bfda7aa97cdc7abcf970ce4f2d20cd84d42386e894d2ce7",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x0a_hlm3",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_inner_headerless_fixed_meta_noop_rank_elided_sidecar_format_0x0a.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0a_hlm3_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x0a_hlm3_contest_cpu --instance-job-id pr106_packetir_format_0x0a_hlm3_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x0a_hlm3_186a3d59f203 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_inner_headerless_fixed_meta_noop_rank_elided_sidecar_format_0x0a.archive.zip --label pr106_packetir_format_0x0a_hlm3 --run-id pr106_packetir_format_0x0a_hlm3_<UTC> --pair-group-id pair_pr106_packetir_format_0x0a_hlm3_186a3d59f203 --lane-id-base pr106_packetir_format_0x0a_hlm3 --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_inner_headerless_fixed_meta_noop_rank_elided_sidecar_format_0x0a.archive.zip --label pr106_packetir_format_0x0a_hlm3 --run-id pr106_packetir_format_0x0a_hlm3_<UTC> --pair-group-id pair_pr106_packetir_format_0x0a_hlm3_186a3d59f203 --lane-id-base pr106_packetir_format_0x0a_hlm3 --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x0A",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x0a_hlm3_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x0a_hlm3_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x0a_hlm3_<UTC>",
+      "lane_id": "pr106_packetir_format_0x0a_hlm3",
+      "lane_id_base": "pr106_packetir_format_0x0a_hlm3",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0a_hlm3_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x0a_hlm3_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0a_hlm3_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x0a_hlm3_186a3d59f203",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "27e773641e836ea2e62ea8618028de2f89c6fd0cafa3eea5c5887f8c2c2b6f1e",
       "runtime_source_tree_sha256": "6661df7f8a7cd8498b39970eddd9810c007193ac6a4afe43ba6dc076e96ea4c6",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186341,
       "archive_path": "experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip",
       "archive_sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "format_0x0b_magicless",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0b_magicless_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_format_0x0b_magicless_contest_cpu --instance-job-id pr106_packetir_format_0x0b_magicless_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_format_0x0b_magicless_5c9ef623a089 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip --label pr106_packetir_format_0x0b_magicless --run-id pr106_packetir_format_0x0b_magicless_<UTC> --pair-group-id pair_pr106_packetir_format_0x0b_magicless_5c9ef623a089 --lane-id-base pr106_packetir_format_0x0b_magicless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_hdm10_hlm3_packetir_recode_20260515_codex/candidates/pr101_hdm9_hlm3_magicless_fixed_meta_noop_rank_elided_sidecar_format_0x0b.archive.zip --label pr106_packetir_format_0x0b_magicless --run-id pr106_packetir_format_0x0b_magicless_<UTC> --pair-group-id pair_pr106_packetir_format_0x0b_magicless_5c9ef623a089 --lane-id-base pr106_packetir_format_0x0b_magicless --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [
         "contest_cuda"
       ],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x0B",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_format_0x0b_magicless_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_format_0x0b_magicless_contest_cpu",
+      "instance_job_id_template": "pr106_packetir_format_0x0b_magicless_<UTC>",
+      "lane_id": "pr106_packetir_format_0x0b_magicless",
+      "lane_id_base": "pr106_packetir_format_0x0b_magicless",
+      "missing_axes": [
+        "contest_cpu"
+      ],
       "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0b_magicless_contest_cpu_<UTC>",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_format_0x0b_magicless_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_format_0x0b_magicless_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_format_0x0b_magicless_5c9ef623a089",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "edc78378fe75015b1b781c952b7f1f158c5600b12ca60a1165c37db943ccf1ea",
       "runtime_source_tree_sha256": "8ddce462a0d300f29ff9dddca8683cbe08bf97fc7959c296e06647ef12d4249b",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186258,
       "archive_path": "experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip",
       "archive_sha256": "ff90ed06afaa164b8fa838bfb2d4e21e520e4e6e605caf91876522bf0de922e5",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed",
+        "contest_cuda:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ],
+        "contest_cuda": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "prefix_top_1_pr101grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_1_pr101grammar_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_prefix_top_1_pr101grammar_contest_cpu --instance-job-id pr106_packetir_prefix_top_1_pr101grammar_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip --label pr106_packetir_prefix_top_1_pr101grammar --run-id pr106_packetir_prefix_top_1_pr101grammar_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa --lane-id-base pr106_packetir_prefix_top_1_pr101grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip --label pr106_packetir_prefix_top_1_pr101grammar --run-id pr106_packetir_prefix_top_1_pr101grammar_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa --lane-id-base pr106_packetir_prefix_top_1_pr101grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x02",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_prefix_top_1_pr101grammar_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_prefix_top_1_pr101grammar_contest_cpu",
-      "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_1_pr101grammar_contest_cpu_<UTC>",
+      "instance_job_id_template": "pr106_packetir_prefix_top_1_pr101grammar_<UTC>",
+      "lane_id": "pr106_packetir_prefix_top_1_pr101grammar",
+      "lane_id_base": "pr106_packetir_prefix_top_1_pr101grammar",
+      "missing_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "missing_axis": "contest_cpu,contest_cuda",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_prefix_top_1_pr101grammar_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_1_pr101grammar_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "5e66742426af649623c6dce7144914b8fc5993183ce053e58fe6646e8b81e48c",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "04557c94fb67dfce59cd4684c38e30c22ed715fb6711e82ca01b39c6b559f0fc",
       "runtime_source_tree_sha256": "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2c1ca0cb3e666fc5c4bc",
-      "score_claim": false
-    },
-    {
-      "archive_bytes": 186258,
-      "archive_path": "experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip",
-      "archive_sha256": "ff90ed06afaa164b8fa838bfb2d4e21e520e4e6e605caf91876522bf0de922e5",
-      "axis_blockers": [
-        "exact_eval_artifact_not_listed"
-      ],
-      "candidate_id": "prefix_top_1_pr101grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_1/archive.zip --output-dir experiments/results/modal_auth_eval/pr106_packetir_prefix_top_1_pr101grammar_contest_cuda_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_prefix_top_1_pr101grammar_contest_cuda --instance-job-id pr106_packetir_prefix_top_1_pr101grammar_contest_cuda_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256> --gpu T4",
-      "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
-      "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
-      "format_id": "0x02",
-      "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_prefix_top_1_pr101grammar_contest_cuda_<UTC>",
-      "lane_id": "pr106_packetir_prefix_top_1_pr101grammar_contest_cuda",
-      "missing_axis": "contest_cuda",
-      "modal_entrypoint": "experiments/modal_auth_eval.py",
-      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_prefix_top_1_pr101grammar_contest_cuda_<UTC>",
-      "pair_group_id": "pair_pr106_packetir_prefix_top_1_pr101grammar_ff90ed06afaa",
-      "promotion_eligible": false,
-      "provider_detach_required": true,
-      "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_t4_cuda",
-      "runtime_content_tree_sha256": "5e66742426af649623c6dce7144914b8fc5993183ce053e58fe6646e8b81e48c",
-      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
-      "runtime_inflate_py_sha256": "04557c94fb67dfce59cd4684c38e30c22ed715fb6711e82ca01b39c6b559f0fc",
-      "runtime_source_tree_sha256": "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2c1ca0cb3e666fc5c4bc",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     },
     {
       "archive_bytes": 186263,
       "archive_path": "experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip",
       "archive_sha256": "63df794c0f06136c46415155fc9638bbc83950a793cf81b31171a6970b466ccd",
       "axis_blockers": [
-        "exact_eval_artifact_not_listed"
+        "contest_cpu:exact_eval_artifact_not_listed",
+        "contest_cuda:exact_eval_artifact_not_listed"
       ],
+      "axis_blockers_by_axis": {
+        "contest_cpu": [
+          "exact_eval_artifact_not_listed"
+        ],
+        "contest_cuda": [
+          "exact_eval_artifact_not_listed"
+        ]
+      },
       "candidate_id": "prefix_top_4_pr101grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval_cpu.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip --output-dir experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_4_pr101grammar_contest_cpu_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_prefix_top_4_pr101grammar_contest_cpu --instance-job-id pr106_packetir_prefix_top_4_pr101grammar_contest_cpu_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
+      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip --label pr106_packetir_prefix_top_4_pr101grammar --run-id pr106_packetir_prefix_top_4_pr101grammar_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06 --lane-id-base pr106_packetir_prefix_top_4_pr101grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh",
       "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+      "execute_command_template_after_plan_review": "PYTHONPATH=src:upstream:$PWD .venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip --label pr106_packetir_prefix_top_4_pr101grammar --run-id pr106_packetir_prefix_top_4_pr101grammar_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06 --lane-id-base pr106_packetir_prefix_top_4_pr101grammar --output-root experiments/results --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --execute",
+      "execute_flag_required_for_provider_launch": true,
       "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
+      "expected_runtime_tree_sha256_policy": "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256",
       "format_id": "0x02",
       "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_prefix_top_4_pr101grammar_contest_cpu_<UTC>",
-      "lane_id": "pr106_packetir_prefix_top_4_pr101grammar_contest_cpu",
-      "missing_axis": "contest_cpu",
-      "modal_entrypoint": "experiments/modal_auth_eval_cpu.py",
-      "output_dir_template": "experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_4_pr101grammar_contest_cpu_<UTC>",
+      "instance_job_id_template": "pr106_packetir_prefix_top_4_pr101grammar_<UTC>",
+      "lane_id": "pr106_packetir_prefix_top_4_pr101grammar",
+      "lane_id_base": "pr106_packetir_prefix_top_4_pr101grammar",
+      "missing_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "missing_axis": "contest_cpu,contest_cuda",
+      "modal_entrypoint": "tools/dispatch_modal_paired_auth_eval.py",
+      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_prefix_top_4_pr101grammar_<UTC>_cuda; experiments/results/modal_auth_eval_cpu/pr106_packetir_prefix_top_4_pr101grammar_<UTC>_cpu",
       "pair_group_id": "pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06",
+      "paired_dispatch_required": true,
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
       "promotion_eligible": false,
       "provider_detach_required": true,
       "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_linux_x86_64_cpu",
+      "recommended_provider": "modal_paired_cpu_cuda",
       "runtime_content_tree_sha256": "5e66742426af649623c6dce7144914b8fc5993183ce053e58fe6646e8b81e48c",
       "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
       "runtime_inflate_py_sha256": "04557c94fb67dfce59cd4684c38e30c22ed715fb6711e82ca01b39c6b559f0fc",
       "runtime_source_tree_sha256": "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2c1ca0cb3e666fc5c4bc",
-      "score_claim": false
-    },
-    {
-      "archive_bytes": 186263,
-      "archive_path": "experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip",
-      "archive_sha256": "63df794c0f06136c46415155fc9638bbc83950a793cf81b31171a6970b466ccd",
-      "axis_blockers": [
-        "exact_eval_artifact_not_listed"
-      ],
-      "candidate_id": "prefix_top_4_pr101grammar",
-      "command_template": "PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach experiments/modal_auth_eval.py --archive experiments/results/pr106_component_moving_cell_candidates_pr101grammar_20260515_codex/prefix_top_4/archive.zip --output-dir experiments/results/modal_auth_eval/pr106_packetir_prefix_top_4_pr101grammar_contest_cuda_<UTC> --detach --provider-detach-ack --lane-id pr106_packetir_prefix_top_4_pr101grammar_contest_cuda --instance-job-id pr106_packetir_prefix_top_4_pr101grammar_contest_cuda_<UTC> --pair-group-id pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06 --submission-dir submissions/pr106_latent_sidecar_r2_pr101_grammar --inflate-sh inflate.sh --expected-runtime-tree-sha256 <AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256> --gpu T4",
-      "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
-      "existing_valid_axes": [],
-      "expected_runtime_tree_sha256_policy": "compute_axis_specific_modal_uploaded_runtime_tree_sha256",
-      "format_id": "0x02",
-      "inflate_sh": "inflate.sh",
-      "instance_job_id_template": "pr106_packetir_prefix_top_4_pr101grammar_contest_cuda_<UTC>",
-      "lane_id": "pr106_packetir_prefix_top_4_pr101grammar_contest_cuda",
-      "missing_axis": "contest_cuda",
-      "modal_entrypoint": "experiments/modal_auth_eval.py",
-      "output_dir_template": "experiments/results/modal_auth_eval/pr106_packetir_prefix_top_4_pr101grammar_contest_cuda_<UTC>",
-      "pair_group_id": "pair_pr106_packetir_prefix_top_4_pr101grammar_63df794c0f06",
-      "promotion_eligible": false,
-      "provider_detach_required": true,
-      "ready_for_exact_eval_dispatch": false,
-      "recommended_provider": "modal_t4_cuda",
-      "runtime_content_tree_sha256": "5e66742426af649623c6dce7144914b8fc5993183ce053e58fe6646e8b81e48c",
-      "runtime_dir": "submissions/pr106_latent_sidecar_r2_pr101_grammar",
-      "runtime_inflate_py_sha256": "04557c94fb67dfce59cd4684c38e30c22ed715fb6711e82ca01b39c6b559f0fc",
-      "runtime_source_tree_sha256": "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2c1ca0cb3e666fc5c4bc",
-      "score_claim": false
+      "score_claim": false,
+      "skip_axis_if_promotable_anchor_exists": true
     }
   ],
   "promotion_eligible": false,

@@ -34,18 +34,8 @@ PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_MD = (
 
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
-_MODAL_EXACT_EVAL_ENTRYPOINTS = {
-    "contest_cpu": "experiments/modal_auth_eval_cpu.py",
-    "contest_cuda": "experiments/modal_auth_eval.py",
-}
-_MODAL_EXACT_EVAL_OUTPUT_ROOTS = {
-    "contest_cpu": "experiments/results/modal_auth_eval_cpu",
-    "contest_cuda": "experiments/results/modal_auth_eval",
-}
-_MODAL_EXACT_EVAL_PROVIDERS = {
-    "contest_cpu": "modal_linux_x86_64_cpu",
-    "contest_cuda": "modal_t4_cuda",
-}
+_PAIRED_MODAL_DISPATCH_TOOL = "tools/dispatch_modal_paired_auth_eval.py"
+_PAIRED_MODAL_PROVIDER = "modal_paired_cpu_cuda"
 
 
 @dataclass(frozen=True)
@@ -816,50 +806,42 @@ def _stable_pair_group_id(row: Mapping[str, Any]) -> str:
     return f"pair_pr106_packetir_{candidate_id}_{suffix}"
 
 
-def _stable_lane_id(row: Mapping[str, Any], axis: ContestAxis) -> str:
-    return f"pr106_packetir_{row.get('candidate_id')}_{axis}"
+def _stable_lane_id_base(row: Mapping[str, Any]) -> str:
+    return f"pr106_packetir_{row.get('candidate_id')}"
 
 
-def _modal_command_template(
+def _paired_modal_command_template(
     *,
-    axis: ContestAxis,
     archive_path: str,
     runtime_dir: str,
     pair_group_id: str,
-    lane_id: str,
+    lane_id_base: str,
+    execute: bool,
 ) -> str:
-    entrypoint = _MODAL_EXACT_EVAL_ENTRYPOINTS[axis]
-    output_root = _MODAL_EXACT_EVAL_OUTPUT_ROOTS[axis]
-    output_dir = f"{output_root}/{lane_id}_<UTC>"
     parts = [
         "PYTHONPATH=src:upstream:$PWD",
-        ".venv/bin/modal",
-        "run",
-        "--detach",
-        entrypoint,
+        ".venv/bin/python",
+        _PAIRED_MODAL_DISPATCH_TOOL,
         "--archive",
         archive_path,
-        "--output-dir",
-        output_dir,
-        "--detach",
-        "--provider-detach-ack",
-        "--lane-id",
-        lane_id,
-        "--instance-job-id",
-        f"{lane_id}_<UTC>",
+        "--label",
+        lane_id_base,
+        "--run-id",
+        f"{lane_id_base}_<UTC>",
         "--pair-group-id",
         pair_group_id,
+        "--lane-id-base",
+        lane_id_base,
+        "--output-root",
+        "experiments/results",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
     ]
     if runtime_dir:
         parts.extend(["--submission-dir", runtime_dir, "--inflate-sh", "inflate.sh"])
-        parts.extend(
-            [
-                "--expected-runtime-tree-sha256",
-                "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>",
-            ]
-        )
-    if axis == "contest_cuda":
-        parts.extend(["--gpu", "T4"])
+    if execute:
+        parts.append("--execute")
     return " ".join(parts)
 
 
@@ -884,59 +866,80 @@ def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str
         archive_path = str(row.get("archive_path") or "")
         pair_group_id = _stable_pair_group_id(row)
         existing_valid_axes = list(_valid_exact_axes(exact_evidence))
-        for axis in missing_axes:
-            lane_id = _stable_lane_id(row, axis)
-            targets.append(
-                {
-                    "candidate_id": row.get("candidate_id"),
-                    "format_id": row.get("format_id") or row.get("expected_format_id"),
-                    "missing_axis": axis,
-                    "recommended_provider": _MODAL_EXACT_EVAL_PROVIDERS[axis],
-                    "modal_entrypoint": _MODAL_EXACT_EVAL_ENTRYPOINTS[axis],
-                    "archive_path": archive_path,
-                    "archive_sha256": row.get("archive_sha256"),
-                    "archive_bytes": identity.get("archive_bytes"),
-                    "runtime_dir": runtime_dir,
-                    "inflate_sh": "inflate.sh" if runtime_dir else "submissions/robust_current/inflate.sh",
-                    "runtime_source_tree_sha256": runtime.get(
-                        "runtime_source_tree_sha256"
-                    ),
-                    "runtime_content_tree_sha256": runtime.get(
-                        "runtime_content_tree_sha256"
-                    ),
-                    "runtime_inflate_py_sha256": runtime.get(
-                        "runtime_inflate_py_sha256"
-                    ),
-                    "existing_valid_axes": existing_valid_axes,
-                    "axis_blockers": _axis_blockers(
-                        axis=axis,
-                        exact_evidence=exact_evidence,
-                    ),
-                    "pair_group_id": pair_group_id,
-                    "lane_id": lane_id,
-                    "instance_job_id_template": f"{lane_id}_<UTC>",
-                    "output_dir_template": (
-                        f"{_MODAL_EXACT_EVAL_OUTPUT_ROOTS[axis]}/{lane_id}_<UTC>"
-                    ),
-                    "provider_detach_required": True,
-                    "dispatch_status": (
-                        "requires_claim_lane_dispatch_before_provider_launch"
-                    ),
-                    "expected_runtime_tree_sha256_policy": (
-                        "compute_axis_specific_modal_uploaded_runtime_tree_sha256"
-                    ),
-                    "score_claim": False,
-                    "promotion_eligible": False,
-                    "ready_for_exact_eval_dispatch": False,
-                    "command_template": _modal_command_template(
-                        axis=axis,
-                        archive_path=archive_path,
-                        runtime_dir=runtime_dir,
-                        pair_group_id=pair_group_id,
-                        lane_id=lane_id,
-                    ),
-                }
-            )
+        lane_id_base = _stable_lane_id_base(row)
+        axis_blockers = {
+            axis: _axis_blockers(axis=axis, exact_evidence=exact_evidence)
+            for axis in missing_axes
+        }
+        targets.append(
+            {
+                "candidate_id": row.get("candidate_id"),
+                "format_id": row.get("format_id") or row.get("expected_format_id"),
+                "missing_axes": list(missing_axes),
+                "missing_axis": ",".join(missing_axes),
+                "recommended_provider": _PAIRED_MODAL_PROVIDER,
+                "modal_entrypoint": _PAIRED_MODAL_DISPATCH_TOOL,
+                "paired_dispatch_tool": _PAIRED_MODAL_DISPATCH_TOOL,
+                "paired_dispatch_required": True,
+                "archive_path": archive_path,
+                "archive_sha256": row.get("archive_sha256"),
+                "archive_bytes": identity.get("archive_bytes"),
+                "runtime_dir": runtime_dir,
+                "inflate_sh": (
+                    "inflate.sh" if runtime_dir else "submissions/robust_current/inflate.sh"
+                ),
+                "runtime_source_tree_sha256": runtime.get(
+                    "runtime_source_tree_sha256"
+                ),
+                "runtime_content_tree_sha256": runtime.get(
+                    "runtime_content_tree_sha256"
+                ),
+                "runtime_inflate_py_sha256": runtime.get(
+                    "runtime_inflate_py_sha256"
+                ),
+                "existing_valid_axes": existing_valid_axes,
+                "axis_blockers_by_axis": axis_blockers,
+                "axis_blockers": [
+                    f"{axis}:{blocker}"
+                    for axis, blockers in axis_blockers.items()
+                    for blocker in blockers
+                ],
+                "pair_group_id": pair_group_id,
+                "lane_id": lane_id_base,
+                "lane_id_base": lane_id_base,
+                "instance_job_id_template": f"{lane_id_base}_<UTC>",
+                "output_dir_template": (
+                    f"experiments/results/modal_auth_eval/{lane_id_base}_<UTC>_cuda; "
+                    f"experiments/results/modal_auth_eval_cpu/{lane_id_base}_<UTC>_cpu"
+                ),
+                "provider_detach_required": True,
+                "execute_flag_required_for_provider_launch": True,
+                "dispatch_status": (
+                    "requires_claim_lane_dispatch_before_provider_launch"
+                ),
+                "expected_runtime_tree_sha256_policy": (
+                    "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256"
+                ),
+                "skip_axis_if_promotable_anchor_exists": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "command_template": _paired_modal_command_template(
+                    archive_path=archive_path,
+                    runtime_dir=runtime_dir,
+                    pair_group_id=pair_group_id,
+                    lane_id_base=lane_id_base,
+                    execute=False,
+                ),
+                "execute_command_template_after_plan_review": _paired_modal_command_template(
+                    archive_path=archive_path,
+                    runtime_dir=runtime_dir,
+                    pair_group_id=pair_group_id,
+                    lane_id_base=lane_id_base,
+                    execute=True,
+                ),
+            }
+        )
     return targets
 
 

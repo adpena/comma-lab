@@ -81,6 +81,10 @@ def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObse
         predicate_passed=True,
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
+        runtime_tree_sha256_by_axis={
+            "contest_cpu": "b" * 64,
+            "contest_cuda": "b" * 64,
+        },
         axis_evidence=tuple(
             _axis_evidence(axis, repo_root=repo_root, score_delta=delta)
             for axis in ("contest_cpu", "contest_cuda")
@@ -105,6 +109,10 @@ def test_l5_v2_probe_template_is_fail_closed_and_complete() -> None:
         assert row["artifact_sha256"] == ""
         assert row["predicate_id"] == ""
         assert row["predicate_passed"] is False
+        assert row["runtime_tree_sha256_by_axis"] == {
+            "contest_cpu": "",
+            "contest_cuda": "",
+        }
         assert [axis_row["axis"] for axis_row in row["axis_evidence"]] == [
             "contest_cpu",
             "contest_cuda",
@@ -498,6 +506,42 @@ def test_l5_v2_probe_rejects_transient_artifact_and_bad_hashes() -> None:
     assert "l5_v2_probe_artifact_path_transient" in row["blockers"]
     assert "l5_v2_probe_archive_sha_invalid" in row["blockers"]
     assert "l5_v2_probe_runtime_tree_sha_invalid" in row["blockers"]
+
+
+def test_l5_v2_probe_accepts_axis_specific_runtime_trees(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+    cpu_runtime = "1" * 64
+    cuda_runtime = "2" * 64
+    axis_rows = []
+    for row in valid.axis_evidence:
+        mutable = dict(row)
+        mutable["runtime_tree_sha256"] = (
+            cpu_runtime if mutable["axis"] == "contest_cpu" else cuda_runtime
+        )
+        axis_rows.append(mutable)
+    valid = dataclasses.replace(
+        valid,
+        runtime_tree_sha256="",
+        runtime_tree_sha256_by_axis={
+            "contest_cpu": cpu_runtime,
+            "contest_cuda": cuda_runtime,
+        },
+        axis_evidence=tuple(axis_rows),
+    )
+
+    verdict = evaluate_l5_v2_probe((valid,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert "l5_v2_probe_runtime_tree_sha_invalid" not in row["blockers"]
+    assert all(
+        not blocker.startswith("l5_v2_probe_runtime_tree_sha_by_axis_invalid")
+        for blocker in row["blockers"]
+    )
+    assert all(
+        not blocker.startswith("l5_v2_probe_axis_runtime_tree_sha_mismatch")
+        for blocker in row["blockers"]
+    )
+    assert row["eligible_for_architecture_lock"] is True
 
 
 def test_l5_v2_probe_verifies_artifact_files_and_hashes(tmp_path: Path) -> None:

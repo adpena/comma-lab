@@ -61,6 +61,12 @@ def _base_briefing_payload() -> dict[str, object]:
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
+                    "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                    "command_template": (
+                        ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+                        "--archive a.zip --expected-runtime-tree-sha256 auto "
+                        "--skip-axis-if-promotable-anchor-exists"
+                    ),
                     "dispatch_status": (
                         "requires_claim_lane_dispatch_before_provider_launch"
                     ),
@@ -247,6 +253,106 @@ def test_operator_briefing_dispatch_gate_rejects_l5_authority_leak() -> None:
         "l5_v2_frontier_readiness:target_0:dispatch_status_not_claim_gated"
         in failures
     )
+    assert (
+        "l5_v2_frontier_readiness:target_0:paired_dispatch_tool_not_canonical"
+        in failures
+    )
+
+
+def test_operator_briefing_dispatch_gate_rejects_l5_single_axis_modal_leak() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    l5["next_exact_eval_targets_sample"] = [
+        {
+            "lane_id": "pr106_packetir_bad",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "paired_dispatch_tool": "experiments/modal_auth_eval_cpu.py",
+            "command_template": (
+                ".venv/bin/modal run experiments/modal_auth_eval_cpu.py "
+                "--expected-runtime-tree-sha256 "
+                "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
+            ),
+            "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+        }
+    ]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:target_0:paired_dispatch_tool_not_canonical"
+        in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:"
+        "target_0:axis_specific_runtime_tree_placeholder_leak"
+    ) in failures
+    assert (
+        "l5_v2_frontier_readiness:target_0:single_axis_modal_entrypoint_leak"
+        in failures
+    )
+
+
+def test_operator_briefing_dispatch_gate_checks_full_l5_target_list() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    safe = {
+        "lane_id": "pr106_packetir_safe",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+        "command_template": (
+            ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+            "--archive a.zip --expected-runtime-tree-sha256 auto "
+            "--skip-axis-if-promotable-anchor-exists"
+        ),
+        "dispatch_status": "requires_claim_lane_dispatch_before_provider_launch",
+    }
+    unsafe = {
+        **safe,
+        "lane_id": "pr106_packetir_hidden_bad",
+        "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+        "command_template": (
+            ".venv/bin/modal run experiments/modal_auth_eval.py "
+            "--archive a.zip"
+        ),
+    }
+    l5["next_exact_eval_target_count"] = 2
+    l5["next_exact_eval_targets_sample"] = [safe]
+    l5["next_exact_eval_targets"] = [safe, unsafe]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:target_1:single_axis_modal_entrypoint_leak"
+        in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:target_1:paired_dispatch_command_missing:"
+        "tools/dispatch_modal_paired_auth_eval.py"
+    ) in failures
 
 
 def test_operator_briefing_dispatch_gate_rejects_terminal_packet_commands() -> None:

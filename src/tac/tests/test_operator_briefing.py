@@ -134,13 +134,37 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["ready_for_exact_eval_dispatch"] is False
     assert l5["target_rows_are_fail_fast_only"] is True
     assert l5["canonical_sideinfo_evidence_present"] is True
-    assert l5["next_exact_eval_target_count"] == 17
+    assert l5["next_exact_eval_target_count"] == 13
+    assert len(l5["next_exact_eval_targets"]) == 13
+    assert len(l5["next_exact_eval_targets_sample"]) == 5
     assert l5["packetir_status_counts"]["paired_exact_blocked"] == 3
     assert l5["packetir_paired_candidate_count"] == 0
     assert l5["pr106_stack_cell_candidate_count"] == 0
     assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in l5["blockers"]
     assert all(
         row["ready_for_exact_eval_dispatch"] is False
+        for row in l5["next_exact_eval_targets_sample"]
+    )
+    assert all(
+        row["paired_dispatch_tool"] == "tools/dispatch_modal_paired_auth_eval.py"
+        for row in l5["next_exact_eval_targets_sample"]
+    )
+    assert all(
+        "--expected-runtime-tree-sha256 auto" in row["command_template"]
+        for row in l5["next_exact_eval_targets_sample"]
+    )
+    assert all(
+        "--skip-axis-if-promotable-anchor-exists" in row["command_template"]
+        for row in l5["next_exact_eval_targets_sample"]
+    )
+    assert all(
+        "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
+        not in row["command_template"]
+        for row in l5["next_exact_eval_targets_sample"]
+    )
+    assert all(
+        "experiments/modal_auth_eval.py" not in row["command_template"]
+        and "experiments/modal_auth_eval_cpu.py" not in row["command_template"]
         for row in l5["next_exact_eval_targets_sample"]
     )
     assert "provider_readiness" in out

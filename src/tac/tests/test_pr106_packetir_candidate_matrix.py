@@ -37,7 +37,7 @@ def test_pr106_packetir_candidate_matrix_covers_active_candidates() -> None:
         "runtime_consumed_needs_paired_exact_eval": 4,
         "single_axis_exact_measured_needs_pair": 9,
     }
-    assert matrix["next_exact_eval_target_count"] == 17
+    assert matrix["next_exact_eval_target_count"] == 13
     assert matrix["score_claim"] is False
     assert matrix["promotion_eligible"] is False
     assert matrix["ready_for_exact_eval_dispatch"] is False
@@ -112,13 +112,11 @@ def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() ->
     matrix = build_pr106_packetir_candidate_matrix()
 
     r2_targets = _targets_for_id(matrix, "format_0x01_r2_release")
-    assert {target["missing_axis"] for target in r2_targets} == {
-        "contest_cpu",
-        "contest_cuda",
-    }
+    assert len(r2_targets) == 1
+    assert r2_targets[0]["missing_axes"] == ["contest_cpu", "contest_cuda"]
+    assert r2_targets[0]["missing_axis"] == "contest_cpu,contest_cuda"
     assert {target["recommended_provider"] for target in r2_targets} == {
-        "modal_linux_x86_64_cpu",
-        "modal_t4_cuda",
+        "modal_paired_cpu_cuda",
     }
     assert all(
         target["dispatch_status"]
@@ -128,12 +126,42 @@ def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() ->
     assert all("--pair-group-id" in target["command_template"] for target in r2_targets)
     assert all("--submission-dir" in target["command_template"] for target in r2_targets)
     assert all(
-        "--expected-runtime-tree-sha256" in target["command_template"]
+        "tools/dispatch_modal_paired_auth_eval.py" in target["command_template"]
+        for target in r2_targets
+    )
+    assert all(
+        "--expected-runtime-tree-sha256 auto" in target["command_template"]
+        for target in r2_targets
+    )
+    assert all(
+        "--skip-axis-if-promotable-anchor-exists" in target["command_template"]
+        for target in r2_targets
+    )
+    assert all(
+        "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
+        not in target["command_template"]
+        for target in r2_targets
+    )
+    assert all(
+        "experiments/modal_auth_eval.py" not in target["command_template"]
+        and "experiments/modal_auth_eval_cpu.py" not in target["command_template"]
         for target in r2_targets
     )
     assert all(
         target["expected_runtime_tree_sha256_policy"]
-        == "compute_axis_specific_modal_uploaded_runtime_tree_sha256"
+        == "paired_dispatcher_auto_computes_axis_specific_modal_uploaded_runtime_tree_sha256"
+        for target in r2_targets
+    )
+    assert all(target["paired_dispatch_required"] is True for target in r2_targets)
+    assert all(
+        target["execute_flag_required_for_provider_launch"] is True
+        for target in r2_targets
+    )
+    assert all(
+        "--execute" not in target["command_template"] for target in r2_targets
+    )
+    assert all(
+        "--execute" in target["execute_command_template_after_plan_review"]
         for target in r2_targets
     )
     assert all("/Users/" not in target["command_template"] for target in r2_targets)
@@ -141,10 +169,11 @@ def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() ->
     format_04_targets = _targets_for_id(matrix, "format_0x04_rank_elided")
     assert len(format_04_targets) == 1
     target = format_04_targets[0]
-    assert target["missing_axis"] == "contest_cpu"
+    assert target["missing_axes"] == ["contest_cpu"]
     assert target["existing_valid_axes"] == ["contest_cuda"]
-    assert target["modal_entrypoint"] == "experiments/modal_auth_eval_cpu.py"
-    assert "experiments/modal_auth_eval_cpu.py" in target["command_template"]
+    assert target["modal_entrypoint"] == "tools/dispatch_modal_paired_auth_eval.py"
+    assert "tools/dispatch_modal_paired_auth_eval.py" in target["command_template"]
+    assert "experiments/modal_auth_eval_cpu.py" not in target["command_template"]
     assert "--gpu" not in target["command_template"]
 
     format_05_targets = _targets_for_id(matrix, "format_0x05_fixed_meta")
@@ -302,5 +331,5 @@ def test_pr106_packetir_candidate_matrix_markdown_is_nonpromotional() -> None:
     assert "contest_cuda" in markdown
     assert "paired_exact_eval_missing:contest_cpu,contest_cuda" in markdown
     assert "Next exact eval targets" in markdown
-    assert "modal_linux_x86_64_cpu" in markdown
+    assert "modal_paired_cpu_cuda" in markdown
     assert "requires_claim_lane_dispatch_before_provider_launch" in markdown

@@ -22,7 +22,12 @@ The new surface records:
 - Runtime-bound paired PacketIR candidate count.
 - Stack-cell candidate count.
 - `next_exact_eval_target_count`.
-- A sample of fail-fast PR106 exact-eval targets.
+- The full fail-fast PR106 exact-eval target list plus a small human-readable
+  sample.
+- Canonical paired-dispatch command templates that route through
+  `tools/dispatch_modal_paired_auth_eval.py` with
+  `--expected-runtime-tree-sha256 auto` and
+  `--skip-axis-if-promotable-anchor-exists`.
 - Nested L5-v2 and PacketIR blockers, including
   `l5_v2_packetir_no_runtime_bound_paired_exact_candidates`.
 
@@ -43,7 +48,12 @@ All rows explicitly keep:
   - `single_axis_exact_measured_needs_pair`: 9
 - Runtime-bound paired PacketIR candidates: 0.
 - L5-v2 stack-cell candidates: 0.
-- Next exact-eval targets: 17.
+- Next exact-eval targets: 13 paired target units.
+- All next-target templates use the paired Modal dispatcher. They do not carry
+  `<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>` placeholders or direct
+  `experiments/modal_auth_eval*.py` single-axis entrypoints.
+- `tools/all_lanes_preflight.py` validates the full target list, not only the
+  sample shown in the human briefing.
 
 ## Verification
 
@@ -54,14 +64,20 @@ All checks passed.
 .venv/bin/python -m pytest src/tac/tests/test_operator_briefing.py -q
 17 passed in 62.58s
 
-.venv/bin/python -m pytest src/tac/tests/test_all_lanes_operator_briefing_gate.py -q
-15 passed in 0.17s
+PYTHONPATH=src:. .venv/bin/python -m pytest src/tac/tests/test_all_lanes_operator_briefing_gate.py -q
+17 passed in 0.17s
+
+PYTHONPATH=src:. .venv/bin/python -m pytest \
+  src/tac/tests/test_pr106_packetir_candidate_matrix.py \
+  src/tac/tests/test_operator_briefing.py \
+  src/tac/tests/test_all_lanes_operator_briefing_gate.py -q
+41 passed in 67.55s
 
 .venv/bin/python tools/operator_briefing.py --json --top 1
 l5_v2_frontier_readiness.schema = pact.l5_v2_frontier_readiness.v1
 l5_v2_frontier_readiness.score_claim = false
 l5_v2_frontier_readiness.ready_for_exact_eval_dispatch = false
-l5_v2_frontier_readiness.next_exact_eval_target_count = 17
+l5_v2_frontier_readiness.next_exact_eval_target_count = 13
 ```
 
 ## Note

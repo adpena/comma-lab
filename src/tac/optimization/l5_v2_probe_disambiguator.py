@@ -51,6 +51,9 @@ class L5V2ProbeObservation:
     predicate_passed: bool = False
     archive_sha256: str = ""
     runtime_tree_sha256: str = ""
+    runtime_tree_sha256_by_axis: Mapping[str, str] = dataclasses.field(
+        default_factory=dict
+    )
     axis_evidence: tuple[Mapping[str, Any], ...] = ()
     sideinfo_consumed: bool = False
     byte_closed_archive: bool = False
@@ -104,6 +107,14 @@ def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation
         ),
         archive_sha256=str(payload.get("archive_sha256") or ""),
         runtime_tree_sha256=str(payload.get("runtime_tree_sha256") or ""),
+        runtime_tree_sha256_by_axis={
+            str(axis): str(value)
+            for axis, value in (
+                payload.get("runtime_tree_sha256_by_axis") or {}
+            ).items()
+        }
+        if isinstance(payload.get("runtime_tree_sha256_by_axis"), Mapping)
+        else {},
         axis_evidence=_as_tuple_mapping(payload.get("axis_evidence")),
         sideinfo_consumed=_require_literal_json_bool(
             payload.get("sideinfo_consumed", False),
@@ -225,7 +236,10 @@ def _axis_evidence_blockers(
             evidence,
             expected_axis=axis,
             expected_archive_sha256=observation.archive_sha256,
-            expected_runtime_tree_sha256=observation.runtime_tree_sha256,
+            expected_runtime_tree_sha256=(
+                observation.runtime_tree_sha256_by_axis.get(axis)
+                or observation.runtime_tree_sha256
+            ),
             require_artifact_path=True,
             require_hardware=True,
             require_auth_eval_command=True,
@@ -371,7 +385,11 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_sideinfo_consumption_missing")
     if not is_sha256_hex(observation.archive_sha256):
         blockers.append("l5_v2_probe_archive_sha_invalid")
-    if not is_sha256_hex(observation.runtime_tree_sha256):
+    if observation.runtime_tree_sha256_by_axis:
+        for axis in REQUIRED_EXACT_AXES:
+            if not is_sha256_hex(observation.runtime_tree_sha256_by_axis.get(axis)):
+                blockers.append(f"l5_v2_probe_runtime_tree_sha_by_axis_invalid:{axis}")
+    elif not is_sha256_hex(observation.runtime_tree_sha256):
         blockers.append("l5_v2_probe_runtime_tree_sha_invalid")
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
@@ -401,6 +419,9 @@ def build_probe_template() -> dict[str, Any]:
                 "predicate_passed": False,
                 "archive_sha256": "",
                 "runtime_tree_sha256": "",
+                "runtime_tree_sha256_by_axis": dict.fromkeys(
+                    REQUIRED_EXACT_AXES, ""
+                ),
                 "axis_evidence": [
                     {
                         "axis": axis,

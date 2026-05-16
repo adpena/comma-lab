@@ -798,11 +798,25 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             target_count = 0
         if target_count and l5.get("target_rows_are_fail_fast_only") is not True:
             failures.append("l5_v2_frontier_readiness:target_rows_not_fail_fast_only")
+        targets_all = l5.get("next_exact_eval_targets")
         targets_sample = l5.get("next_exact_eval_targets_sample")
-        if target_count and not isinstance(targets_sample, list):
-            failures.append("l5_v2_frontier_readiness:targets_sample_missing")
-        elif isinstance(targets_sample, list):
-            for idx, target in enumerate(targets_sample):
+        if target_count and isinstance(targets_all, list):
+            target_rows = targets_all
+        elif target_count and isinstance(targets_sample, list):
+            target_rows = targets_sample
+        else:
+            target_rows = []
+        if target_count and not target_rows:
+            failures.append("l5_v2_frontier_readiness:targets_missing")
+        if isinstance(targets_sample, list) and len(targets_sample) > target_count:
+            failures.append("l5_v2_frontier_readiness:sample_larger_than_target_count")
+        if target_count and len(target_rows) != target_count:
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                f"target_row_count_mismatch:{len(target_rows)}!={target_count}"
+            )
+        if target_rows:
+            for idx, target in enumerate(target_rows):
                 if not isinstance(target, dict):
                     failures.append(
                         f"l5_v2_frontier_readiness:target_{idx}:not_object"
@@ -826,6 +840,40 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                         "l5_v2_frontier_readiness:"
                         f"target_{idx}:dispatch_status_not_claim_gated"
                     )
+                command_template = str(target.get("command_template") or "")
+                if target_count and target.get("paired_dispatch_tool") != (
+                    "tools/dispatch_modal_paired_auth_eval.py"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"target_{idx}:paired_dispatch_tool_not_canonical"
+                    )
+                if "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>" in command_template:
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"target_{idx}:axis_specific_runtime_tree_placeholder_leak"
+                    )
+                if (
+                    "experiments/modal_auth_eval.py" in command_template
+                    or "experiments/modal_auth_eval_cpu.py" in command_template
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"target_{idx}:single_axis_modal_entrypoint_leak"
+                    )
+                if target_count and command_template:
+                    required_fragments = (
+                        "tools/dispatch_modal_paired_auth_eval.py",
+                        "--expected-runtime-tree-sha256 auto",
+                        "--skip-axis-if-promotable-anchor-exists",
+                    )
+                    for fragment in required_fragments:
+                        if fragment not in command_template:
+                            failures.append(
+                                "l5_v2_frontier_readiness:"
+                                f"target_{idx}:paired_dispatch_command_missing:"
+                                f"{fragment}"
+                            )
     groups = (
         ("supplementary_lanes", "active_supplementary_lanes"),
         ("gated_lanes", "active_gated_lanes"),
