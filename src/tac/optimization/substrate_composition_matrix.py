@@ -174,6 +174,10 @@ class SubstrateRow:
     campaign_priority: str = ""
     lane_class: str = ""
     literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
     dispatch_blockers: tuple[str, ...] = ()
     license_ok: bool = True
     sideinfo_consumed: bool | None = None
@@ -1017,6 +1021,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_1",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="balle_2018",
+            source_supports="Scale-hyperprior side information can improve learned image-compression rate-distortion.",
+            paper_claim_scope="Natural-image learned compression, not frozen-A1 contest latent replacement.",
+            pact_must_prove="Ship byte-closed hyperprior side information and beat matching A1/PR101 baselines on paired contest CPU/CUDA eval.",
+            decode_complexity_evidence="No Z3-specific T4 inflate-cost anchor yet; same-runtime decode timing is required.",
             dispatch_blockers=(
                 "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
                 "phase2_council_required_before_full_dispatch",
@@ -1042,6 +1050,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_2",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Atick-Redlich1990; Tishby-Zaslavsky",
+            source_supports="Efficient-coding and information-bottleneck work support redundancy-reduction objectives.",
+            paper_claim_scope="Theory/analogy for representation objectives, not Pact cooperative-receiver score evidence.",
+            pact_must_prove="Emit a byte-closed cooperative-receiver packet with a source-matched Z3 baseline and paired exact eval.",
+            decode_complexity_evidence="No measured decoder cost yet; runtime packet and timing smoke are required.",
             dispatch_blockers=(
                 "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
                 "requires_z3_contest_anchor_before_dispatch",
@@ -1067,6 +1079,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="across_class_staircase_step_3",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Rao-Ballard1999; predictive-coding; Friston2010",
+            source_supports="Predictive-coding literature supports residual prediction as a computational principle.",
+            paper_claim_scope="Predictive-coding principle, not a contest-video renderer score forecast.",
+            pact_must_prove="Beat identity/capacity-matched predictors under equal bytes, schedule, and exact CPU/CUDA eval.",
+            decode_complexity_evidence="No byte-closed Z5 runtime timing; requires T4 decode smoke before ranking authority.",
             dispatch_blockers=(
                 "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
                 "requires_z4_anchor_before_dispatch",
@@ -1093,6 +1109,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="long_term_campaign_l5",
             lane_class="substrate_engineering substrate_class_shift predictive_receiver",
             literature_anchor="Rao-Ballard1999; DreamerV3; TeNeRV; TeCoNeRV",
+            source_supports="Predictive coding, world models, and temporal INR papers support temporal residual and latent-dynamics hypotheses.",
+            paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
+            pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
+            decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only despite sideinfo flag.",
             dispatch_blockers=(
                 "requires_byte_closed_temporal_sideinfo_consumption_proof",
                 "requires_paired_cpu_cuda_axis_plan_before_promotion",
@@ -1119,6 +1139,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="long_term_campaign_c1",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Ha-Schmidhuber2018; DreamerV3; Atick-Redlich1990; Rao-Ballard1999",
+            source_supports="World-model and efficient/predictive-coding sources support latent dynamics and residual prediction hypotheses.",
+            paper_claim_scope="Architecture inspiration only; no cited paper proves C1 foveation/world-model score deltas on this contest.",
+            pact_must_prove="Pass probe-v2 architecture lock, byte-closed packet export, and paired exact eval against foveation-only and identity controls.",
+            decode_complexity_evidence="No current measured T4 inflate budget for the full C1 runtime.",
             dispatch_blockers=(
                 "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
                 "requires_c1_probe_v2_architecture_lock",
@@ -1144,6 +1168,10 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             campaign_priority="long_term_campaign_c6",
             lane_class="substrate_engineering substrate_class_shift",
             literature_anchor="Tishby-Zaslavsky; Rissanen1978; MacKay2003; MDL-IBPS",
+            source_supports="Information bottleneck and MDL literature support compression/objective framing.",
+            paper_claim_scope="Objective-level support, not evidence that C6 IBPS archive grammar yields the predicted Pact score band.",
+            pact_must_prove="Show parser-consumed IBPS payloads, Tier-C density evidence, and paired contest CPU/CUDA exact eval before promotion.",
+            decode_complexity_evidence="Runtime dependency closure and decode cost must be measured on contest-compliant hardware before rank promotion.",
             dispatch_blockers=(
                 "campaign_row_planning_only_requires_current_operator_recipe_predeploy",
                 "requires_c6_full_anchor_or_operator_authorized_smoke_predeploy",
@@ -1540,6 +1568,10 @@ class ParetoRow:
     campaign_priority: str = ""
     lane_class: str = ""
     literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
     dispatch_blockers: tuple[str, ...] = ()
     license_ok: bool = True
     inflate_dep_count: int = 0
@@ -1681,6 +1713,14 @@ def per_substrate_pareto_rows(
             notes += f"; lane_class={s.lane_class}"
         if s.literature_anchor:
             notes += f"; literature_anchor={s.literature_anchor}"
+        if s.source_supports:
+            notes += f"; source_supports={s.source_supports}"
+        if s.paper_claim_scope:
+            notes += f"; paper_claim_scope={s.paper_claim_scope}"
+        if s.pact_must_prove:
+            notes += f"; pact_must_prove={s.pact_must_prove}"
+        if s.decode_complexity_evidence:
+            notes += f"; decode_complexity_evidence={s.decode_complexity_evidence}"
         notes += (
             f"; license_ok={s.license_ok}"
             f"; inflate_dep_count={len(s.runtime_dep_closure)}"
@@ -1716,6 +1756,10 @@ def per_substrate_pareto_rows(
                 campaign_priority=s.campaign_priority,
                 lane_class=s.lane_class,
                 literature_anchor=s.literature_anchor,
+                source_supports=s.source_supports,
+                paper_claim_scope=s.paper_claim_scope,
+                pact_must_prove=s.pact_must_prove,
+                decode_complexity_evidence=s.decode_complexity_evidence,
                 dispatch_blockers=tuple(blockers),
                 license_ok=s.license_ok,
                 inflate_dep_count=len(s.runtime_dep_closure),

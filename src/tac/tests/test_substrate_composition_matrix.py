@@ -38,7 +38,7 @@ from tac.optimization.substrate_composition_matrix import (
 
 
 def test_inventory_has_expected_count():
-    """55-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 + 2 cooperative + 5 campaign rows.
+    """56-row inventory: 24 legacy + 15 FIX-J + 9 WAVE-A-2 + 2 cooperative + 6 campaign rows.
 
     Legacy 24 = residual basis 5 + pose-axis 3 + self-compression 3 +
     NeRV-family 5 + NeRV/MNeRV/VQVAE 3 + ANR/categorical 2 + magic codec 1 +
@@ -63,13 +63,14 @@ def test_inventory_has_expected_count():
     ``feedback_wave_a_2_taxonomy_inventory_drift_landed_20260512.md``.
 
     Cooperative-receiver wire-in 2026-05-13 added 2 rows: SARC and WZ1.
-    Integration/autopilot Scope D 2026-05-14 added Z3/Z4/Z5/C1/C6 campaign
-    rows so long-burn campaigns remain visible to the canonical ranker.
+    Integration/autopilot Scope D 2026-05-14 added Z3/Z4/Z5/C1/C6 rows;
+    TT5L was registered on 2026-05-16 so the L5 campaign remains visible to
+    the canonical ranker.
     """
     rows = canonical_substrate_inventory()
-    assert len(rows) == 55, (
-        "expected 55 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2 + "
-        f"2 cooperative + 5 campaign), got {len(rows)}"
+    assert len(rows) == 56, (
+        "expected 56 substrate rows (24 legacy + 15 FIX-J + 9 WAVE-A-2 + "
+        f"2 cooperative + 6 campaign), got {len(rows)}"
     )
 
 
@@ -124,6 +125,7 @@ def test_z3_z4_z5_c1_c6_campaign_rows_registered_with_metadata():
         "z3_balle_hyperprior_bolton",
         "z4_cooperative_receiver_loss",
         "z5_predictive_coding_world_model",
+        "time_traveler_l5_autonomy",
         "c1_world_model_foveation",
         "c6_e4_mdl_ibps",
     }
@@ -140,6 +142,21 @@ def test_z3_z4_z5_c1_c6_campaign_rows_registered_with_metadata():
         assert row.campaign_priority
         assert row.lane_class
         assert row.literature_anchor
+        assert row.source_supports
+        assert row.paper_claim_scope
+        assert row.pact_must_prove
+        assert row.decode_complexity_evidence
+
+
+def test_literature_anchors_carry_source_fidelity_scope():
+    """Literature anchors must not become false ranking authority."""
+    anchored = [r for r in canonical_substrate_inventory() if r.literature_anchor]
+    assert anchored
+    for row in anchored:
+        assert row.source_supports, row.substrate_id
+        assert row.paper_claim_scope, row.substrate_id
+        assert row.pact_must_prove, row.substrate_id
+        assert row.decode_complexity_evidence, row.substrate_id
 
 
 def test_substrate_row_predicted_delta_alone_midpoint():
@@ -559,6 +576,11 @@ def test_serialize_pareto_rows_jsonable():
         assert r["score_claim"] is False
         assert "substrate_class" in r
         assert "target_axis" in r
+    z3 = next(r for r in payload if r["substrate_id"] == "z3_balle_hyperprior_bolton")
+    assert z3["source_supports"]
+    assert z3["paper_claim_scope"]
+    assert z3["pact_must_prove"]
+    assert z3["decode_complexity_evidence"]
 
 
 def test_write_matrix_json_refuses_tmp_path(tmp_path):
