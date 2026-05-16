@@ -33,7 +33,7 @@ walker sees them):
 - ``inflate_runtime_loc_budget``: <= 350 LOC substantive (HNeRV parity L4
   substrate-engineering waiver — full renderer including pose dynamics +
   foveation grid + differentiable physics)
-- ``runtime_dep_closure``: torch + brotli only (HNeRV parity L4 <= 2 deps)
+- ``runtime_dep_closure``: torch + brotli + numpy (archive side-info arrays)
 - ``export_format``: TT5L monolithic single-zip-member ``0.bin``
 - ``score_aware_loss``: ``TimeTravelerScoreAwareLoss`` runs eval-roundtrip +
   Atick-Redlich cooperative-receiver + predictive-coding hierarchy

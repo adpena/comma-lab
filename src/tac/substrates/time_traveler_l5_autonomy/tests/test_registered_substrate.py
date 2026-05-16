@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 from tac.optimization.autopilot_dispatch_ranking import rank_dispatches
 from tac.optimization.substrate_composition_matrix import canonical_substrate_inventory
@@ -15,6 +16,12 @@ from tac.substrate_registry import (
 from tac.substrates.time_traveler_l5_autonomy.archive import (
     TT5L_MAGIC,
     TT5L_SECTION_ROLES,
+)
+from tac.substrates.time_traveler_l5_autonomy.archive import (
+    __file__ as archive_module_file,
+)
+from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
+    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
 )
 
 
@@ -38,7 +45,11 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
             contract.hook_autopilot_ranker_class_shift_token
             == "time_traveler_l5_autonomy"
         )
-        assert contract.runtime_dep_closure == ("torch>=2.5,<2.7", "brotli")
+        assert contract.runtime_dep_closure == (
+            "torch>=2.5,<2.7",
+            "brotli",
+            "numpy",
+        )
         assert "av" not in contract.runtime_dep_closure
         assert contract.inflate_runtime_loc_budget >= 327
     finally:
@@ -53,7 +64,7 @@ def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
         row for row in canonical_substrate_inventory()
         if row.substrate_id == "time_traveler_l5_autonomy"
     )
-    assert tt5l.runtime_dep_closure == ("torch", "brotli")
+    assert tt5l.runtime_dep_closure == ("torch", "brotli", "numpy")
     assert "av" not in tt5l.runtime_dep_closure
 
     ranking = rank_dispatches(drop_redundant_dominated=False, max_total=None)
@@ -63,3 +74,17 @@ def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
         for substrate_id in candidate.substrate_ids
     }
     assert "time_traveler_l5_autonomy" in ranked_ids
+
+
+def test_time_traveler_l5_declares_archive_numpy_runtime_dependency() -> None:
+    archive_source = Path(archive_module_file).read_text(encoding="utf-8")
+    assert "import numpy as np" in archive_source
+
+    registered = TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT.runtime_dep_closure
+    assert "numpy" in registered
+
+    tt5l = next(
+        row for row in canonical_substrate_inventory()
+        if row.substrate_id == "time_traveler_l5_autonomy"
+    )
+    assert "numpy" in tt5l.runtime_dep_closure

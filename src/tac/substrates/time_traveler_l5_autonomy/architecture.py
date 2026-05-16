@@ -26,7 +26,7 @@ walker observes them:
 * ``archive_grammar``: monolithic single-file ``0.bin``
 * ``parser_section_manifest``: TT5L header + decoder + side-info + AC state + meta
 * ``inflate_runtime_loc_budget``: <= 200 LOC substrate-engineering waiver
-* ``runtime_dep_closure``: torch + brotli only
+* ``runtime_dep_closure``: torch + brotli + numpy
 * ``export_format``: TT5L
 * ``score_aware_loss``: cooperative-receiver + predictive-coding (Atick-Redlich + Rao-Ballard)
 * ``bolt_on_loc_budget``: lane_class=substrate_engineering

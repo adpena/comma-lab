@@ -1104,7 +1104,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             target_axis=ScoreAxis.MIXED,
             format_id=0xB7,
             magic_bytes="TT5L",
-            runtime_dep_closure=("torch", "brotli"),
+            runtime_dep_closure=("torch", "brotli", "numpy"),
             byte_budget_band=(95_000, 110_000),
             predicted_delta_alone_band=(-0.0500, -0.0200),
             requires_score_aware_training=True,

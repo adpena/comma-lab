@@ -315,6 +315,7 @@ class CandidateRow:
     estimated_dispatch_cost_usd: float
     blockers: list[str] = field(default_factory=list)
     notes: str = ""
+    timing_smoke_command: str = ""
     # Z1 empirical revision wire-in (2026-05-14):
     mdl_density: float | None = None
     lane_class: str | None = None
@@ -550,6 +551,7 @@ class HaltEvent:
     dispatch_packet_sha256: str = ""
     archive_sha256: str = ""
     runtime_tree_sha256: str = ""
+    timing_smoke_command: str = ""
     ready_for_exact_eval_dispatch: bool = False
     decision: OperatorDecision | None = None
     decision_at_utc: str | None = None
@@ -1584,6 +1586,7 @@ def make_dispatch_halt_event(
         dispatch_packet_sha256=candidate.dispatch_packet_sha256,
         archive_sha256=candidate.archive_sha256,
         runtime_tree_sha256=candidate.runtime_tree_sha256,
+        timing_smoke_command=candidate.timing_smoke_command,
         ready_for_exact_eval_dispatch=candidate.ready_for_exact_eval_dispatch,
         autopilot_authorized=autopilot_authorized,
         autopilot_tag=autopilot_tag,
@@ -2063,6 +2066,18 @@ def _require_planning_only_flag(raw: dict[str, Any], key: str, *, context: str) 
         )
 
 
+def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
+    """Return whether a raw planning row may keep nonzero EIG rank reward."""
+
+    verdict = raw.get("prediction_band_verdict")
+    if isinstance(verdict, dict) and "valid_for_rank_reward" in verdict:
+        return bool(verdict.get("valid_for_rank_reward"))
+    notes = str(raw.get("notes", "")).lower()
+    if raw.get("prediction_band") is not None:
+        return False
+    return not ("[prediction" in notes or "[predicted" in notes)
+
+
 def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     """Load CandidateRow objects from a JSONL file (one row per line).
 
@@ -2107,18 +2122,30 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
             lane_class: str | None = (
                 str(lane_class_raw) if lane_class_raw is not None else None
             )
+            blockers = list(raw.get("blockers", []))
+            notes = str(raw.get("notes", ""))
+            expected_information_gain = float(raw["expected_information_gain"])
+            if (
+                expected_information_gain > 0.0
+                and not _prediction_band_allows_rank_reward(raw)
+            ):
+                expected_information_gain = 0.0
+                if "prediction_band_rank_reward_suppressed" not in blockers:
+                    blockers.append("prediction_band_rank_reward_suppressed")
+                notes += "; prediction_band_rank_reward_suppressed"
             rows.append(CandidateRow(
                 candidate_id=raw["candidate_id"],
                 family=raw["family"],
                 predicted_score_delta=float(raw["predicted_score_delta"]),
-                expected_information_gain=float(raw["expected_information_gain"]),
+                expected_information_gain=expected_information_gain,
                 estimated_dispatch_cost_usd=_require_finite_positive_float(
                     raw["estimated_dispatch_cost_usd"],
                     field="estimated_dispatch_cost_usd",
                     context=context,
                 ),
-                blockers=list(raw.get("blockers", [])),
-                notes=str(raw.get("notes", "")),
+                blockers=blockers,
+                notes=notes,
+                timing_smoke_command=str(raw.get("timing_smoke_command", "")),
                 mdl_density=mdl_density,
                 lane_class=lane_class,
                 literature_anchor=str(raw.get("literature_anchor", "")),

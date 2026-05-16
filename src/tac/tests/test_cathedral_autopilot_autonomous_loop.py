@@ -504,6 +504,89 @@ def test_load_candidates_from_jsonl(tmp_path):
     assert rows[1].blockers == ["needs_phase2_anchor"]
 
 
+def test_load_candidates_from_jsonl_suppresses_legacy_prediction_rank_reward(tmp_path):
+    p = tmp_path / "legacy_prediction.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+            "family": "time_traveler_l5_packet",
+            "predicted_score_delta": -0.040,
+            "expected_information_gain": 4.5,
+            "estimated_dispatch_cost_usd": 4.50,
+            "blockers": ["modal_a100_dispatch_smoke_before_full_pending"],
+            "notes": "[prediction; time_traveler band [0.150, 0.170]]",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = loop.load_candidates_from_jsonl(p)
+
+    assert rows[0].expected_information_gain == 0.0
+    assert "prediction_band_rank_reward_suppressed" in rows[0].blockers
+    assert "prediction_band_rank_reward_suppressed" in rows[0].notes
+
+
+def test_load_candidates_from_jsonl_preserves_valid_prediction_band_rank_reward(tmp_path):
+    p = tmp_path / "valid_prediction.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "rank_valid",
+            "family": "exact_anchor_family",
+            "predicted_score_delta": -0.010,
+            "expected_information_gain": 0.7,
+            "estimated_dispatch_cost_usd": 10.0,
+            "notes": "[prediction; structured band custody present]",
+            "prediction_band_verdict": {"valid_for_rank_reward": True},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = loop.load_candidates_from_jsonl(p)
+
+    assert rows[0].expected_information_gain == 0.7
+    assert "prediction_band_rank_reward_suppressed" not in rows[0].blockers
+
+
+def test_load_candidates_from_jsonl_carries_timing_smoke_to_halt_event(tmp_path):
+    p = tmp_path / "timing_smoke.jsonl"
+    command = ".venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --epochs 1"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "timed",
+            "family": "time_traveler_l5_packet",
+            "predicted_score_delta": -0.010,
+            "expected_information_gain": 0.0,
+            "estimated_dispatch_cost_usd": 5.0,
+            "timing_smoke_command": command,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    candidate = loop.load_candidates_from_jsonl(p)[0]
+    event = loop.make_dispatch_halt_event(
+        candidate,
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+    )
+    payload = loop.serialize_report(
+        loop.LoopIterationReport(
+            iteration=1,
+            started_at_utc="1970-01-01T00:00:00Z",
+            ended_at_utc="1970-01-01T00:00:01Z",
+            n_candidates_seen=1,
+            n_candidates_blocked_by_dispatch_claim=0,
+            n_candidates_ranked=1,
+            halt_events=[event],
+        )
+    )
+
+    assert candidate.timing_smoke_command == command
+    assert event.timing_smoke_command == command
+    assert payload["halt_events"][0]["timing_smoke_command"] == command
+
+
 @pytest.mark.parametrize(
     "flag",
     ["score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"],

@@ -35,7 +35,7 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     ),
     parser_section_manifest=dict(TT5L_SECTION_ROLES),
     inflate_runtime_loc_budget=350,
-    runtime_dep_closure=("torch>=2.5,<2.7", "brotli"),
+    runtime_dep_closure=("torch>=2.5,<2.7", "brotli", "numpy"),
     export_format="custom",
     score_aware_loss="custom",
     bolt_on_loc_budget=1290,
