@@ -98,6 +98,11 @@ TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
 )
+TT5L_DYKSTRA_FEASIBILITY_SCHEMA = "dykstra_feasibility_verdict_v1"
+TT5L_DYKSTRA_FEASIBILITY_PREDICATE_ID = "dykstra_score_axis_feasibility_v1"
+TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL = (
+    "tools/check_substrate_dykstra_feasibility.py"
+)
 TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/tt5l_move_level_feasibility.json"
 )
@@ -1246,6 +1251,30 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
                 blockers.append("tt5l_dykstra_feasibility_artifact_not_object")
 
     substrate_id = str(payload.get("substrate_id") or "")
+    schema = str(payload.get("schema") or "")
+    if payload and schema != TT5L_DYKSTRA_FEASIBILITY_SCHEMA:
+        blockers.append("tt5l_dykstra_feasibility_schema_missing_or_stale")
+    predicate_id = str(payload.get("predicate_id") or "")
+    if payload and predicate_id != TT5L_DYKSTRA_FEASIBILITY_PREDICATE_ID:
+        blockers.append("tt5l_dykstra_feasibility_predicate_id_missing_or_stale")
+    generated_by_tool = str(payload.get("generated_by_tool") or "")
+    if payload and generated_by_tool != TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL:
+        blockers.append("tt5l_dykstra_feasibility_generated_by_tool_missing_or_stale")
+    generated_at_utc = str(payload.get("generated_at_utc") or "")
+    if payload and not generated_at_utc:
+        blockers.append("tt5l_dykstra_feasibility_generated_at_utc_missing")
+    command_argv = payload.get("command_argv")
+    if payload and not (
+        isinstance(command_argv, list)
+        and command_argv
+        and all(isinstance(item, str) and item for item in command_argv)
+    ):
+        blockers.append("tt5l_dykstra_feasibility_command_argv_missing")
+    tool_sha256 = str(payload.get("tool_sha256") or "").lower()
+    if payload and not _SHA256_HEX_RE.fullmatch(tool_sha256):
+        blockers.append("tt5l_dykstra_feasibility_tool_sha256_invalid")
+    elif payload and tool_path.is_file() and _sha256_file(tool_path) != tool_sha256:
+        blockers.append("tt5l_dykstra_feasibility_tool_sha256_mismatch")
     if payload and substrate_id not in {TT5L_DYKSTRA_SUBSTRATE_ID, SUBJECT_ID, LANE_ID}:
         blockers.append("tt5l_dykstra_feasibility_substrate_id_mismatch")
     verdict = str(payload.get("verdict") or "")
@@ -1328,6 +1357,14 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "artifact_path": TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH,
         "artifact_exists": artifact_path.is_file(),
         "artifact_valid": valid,
+        "artifact_schema": schema or None,
+        "predicate_id": predicate_id or None,
+        "generated_by_tool": generated_by_tool or None,
+        "generated_at_utc": generated_at_utc or None,
+        "command_argv": list(command_argv)
+        if isinstance(command_argv, list)
+        else None,
+        "tool_sha256": tool_sha256 or None,
         "substrate_id": substrate_id or None,
         "verdict": verdict or None,
         "tested_score_axis_band": list(tested_score_axis_band)
@@ -3156,6 +3193,9 @@ __all__ = [
     "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
     "TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH",
+    "TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL",
+    "TT5L_DYKSTRA_FEASIBILITY_PREDICATE_ID",
+    "TT5L_DYKSTRA_FEASIBILITY_SCHEMA",
     "TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH",
     "TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS",
     "TT5L_DYKSTRA_SCORE_FORMULA",

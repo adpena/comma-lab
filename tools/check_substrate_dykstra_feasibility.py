@@ -53,6 +53,8 @@ cannot drift.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import hashlib
 import json
 import math
 import sys
@@ -68,6 +70,9 @@ CONTEST_SEG_MULTIPLIER: float = 100.0
 CONTEST_SCORE_FORMULA: str = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
 )
+DYKSTRA_FEASIBILITY_SCHEMA: str = "dykstra_feasibility_verdict_v1"
+DYKSTRA_FEASIBILITY_PREDICATE_ID: str = "dykstra_score_axis_feasibility_v1"
+GENERATED_BY_TOOL: str = "tools/check_substrate_dykstra_feasibility.py"
 BASE_CONSTRAINT_SET_IDS: tuple[str, ...] = (
     "contest_rate_budget",
     "contest_seg_dist_budget",
@@ -473,6 +478,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv_for_payload = list(sys.argv[1:] if argv is None else argv)
     args = _parse_args(argv)
     try:
         constraint_ids = tuple(args.constraint_set_id or ())
@@ -496,6 +502,14 @@ def main(argv: list[str] | None = None) -> int:
     payload = asdict(verdict)
     # asdict turns the tuple into a list — keep it as a list in JSON.
     payload["tested_score_axis_band"] = list(payload["tested_score_axis_band"])
+    payload.update({
+        "schema": DYKSTRA_FEASIBILITY_SCHEMA,
+        "predicate_id": DYKSTRA_FEASIBILITY_PREDICATE_ID,
+        "generated_by_tool": GENERATED_BY_TOOL,
+        "generated_at_utc": dt.datetime.now(dt.UTC).isoformat(),
+        "command_argv": [GENERATED_BY_TOOL, *argv_for_payload],
+        "tool_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+    })
     if args.output_json is not None:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")

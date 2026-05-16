@@ -584,6 +584,17 @@ def _write_tt5l_dykstra_artifact(
     artifact_path.write_text(
         json.dumps(
             {
+                "schema": l5_v2.TT5L_DYKSTRA_FEASIBILITY_SCHEMA,
+                "predicate_id": l5_v2.TT5L_DYKSTRA_FEASIBILITY_PREDICATE_ID,
+                "generated_by_tool": (
+                    l5_v2.TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL
+                ),
+                "generated_at_utc": "2026-05-16T00:00:00+00:00",
+                "command_argv": [
+                    l5_v2.TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL,
+                    "--tt5l-five-move-polytope",
+                ],
+                "tool_sha256": _file_sha256(tool_path),
                 "substrate_id": l5_v2.TT5L_DYKSTRA_SUBSTRATE_ID,
                 "verdict": "FEASIBLE",
                 "tested_score_axis_band": [0.150, 0.170],
@@ -884,12 +895,53 @@ def test_l5_v2_tt5l_dykstra_artifact_unblocks_sideinfo_next_action(
         tt5l["dykstra_feasibility_status"]["input_band_role"]
         == "planning_band_not_score_or_rank_authority"
     )
+    assert tt5l["dykstra_feasibility_status"]["predicate_id"] == (
+        l5_v2.TT5L_DYKSTRA_FEASIBILITY_PREDICATE_ID
+    )
+    assert tt5l["dykstra_feasibility_status"]["generated_by_tool"] == (
+        l5_v2.TT5L_DYKSTRA_FEASIBILITY_GENERATED_BY_TOOL
+    )
+    assert tt5l["dykstra_feasibility_status"]["tool_sha256"] == _file_sha256(
+        tmp_path / l5_v2.TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH
+    )
     assert tt5l["sideinfo_gate_evidence_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
     )
     assert "tt5l_dykstra_feasibility_artifact_missing" not in tt5l["blockers"]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_requires_tool_provenance(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    for field in (
+        "schema",
+        "predicate_id",
+        "generated_by_tool",
+        "generated_at_utc",
+        "command_argv",
+        "tool_sha256",
+    ):
+        payload.pop(field)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_schema_missing_or_stale" in tt5l["blockers"]
+    assert "tt5l_dykstra_feasibility_predicate_id_missing_or_stale" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_generated_by_tool_missing_or_stale" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_generated_at_utc_missing" in tt5l["blockers"]
+    assert "tt5l_dykstra_feasibility_command_argv_missing" in tt5l["blockers"]
+    assert "tt5l_dykstra_feasibility_tool_sha256_invalid" in tt5l["blockers"]
 
 
 def test_l5_v2_score_axis_dykstra_does_not_unlock_without_move_level_proof(

@@ -10,6 +10,7 @@ ranker + design memo §predicted-band sections.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -209,6 +210,12 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
     assert out_path.exists()
     data = json.loads(out_path.read_text())
     assert data["verdict"] == "FEASIBLE"
+    assert data["schema"] == "dykstra_feasibility_verdict_v1"
+    assert data["predicate_id"] == "dykstra_score_axis_feasibility_v1"
+    assert data["generated_by_tool"] == "tools/check_substrate_dykstra_feasibility.py"
+    assert data["generated_at_utc"]
+    assert data["command_argv"][0] == "tools/check_substrate_dykstra_feasibility.py"
+    assert data["tool_sha256"] == hashlib.sha256(tool.read_bytes()).hexdigest()
     assert data["substrate_id"] == "test_cli_feasible"
     assert "predicted_band" not in data
     assert data["tested_score_axis_band"] == [0.15, 0.2]
