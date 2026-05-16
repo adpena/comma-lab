@@ -240,3 +240,30 @@ Current readiness after refresh: Dykstra score-axis sanity is valid, move-level
 feasibility is still missing, and the next TT5L action remains
 `materialize_tt5l_move_level_feasibility_proof`. No score claim, promotion
 claim, rank authority, or dispatch authority is implied by this note.
+
+### Horizon-class classification (Catalog #309 / Pattern F)
+
+**horizon_class: frontier_pursuit**
+
+Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive 2026-05-16: substrate predicted CPU band of `[0.120, 0.180]` classifies as **FRONTIER-PURSUIT** per the canonical 3-band taxonomy (PLATEAU-ADJACENT [0.180, 0.200] / FRONTIER-PURSUIT [0.120, 0.180] / ASYMPTOTIC-PURSUIT [0.050, 0.120]).
+
+Empirical anchor: the predicted band [0.113-0.170] (per body) targets sub-plateau scores; frontier-pursuit classification reflects the substrate's design intent to escape the 0.196-0.199 plateau cluster.
+
+Per CLAUDE.md "Forbidden premature KILL" + Catalog #296 Dykstra-feasibility + the cargo-cult unwind in the body: the predicted band is REVISED to `NULL pending Dykstra-feasibility check + Tier C empirical anchor reconciliation` per the body's §predicted-band unwind. The FRONTIER-PURSUIT horizon_class designation reflects substrate-design intent; actualization requires the empirical anchor + Dykstra-feasibility + Z1-within-class-haircut reconciliation per the body's reactivation criteria.
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+This substrate IS ego-motion-conditioned. Per Z6/Z7/Z8 design memo Pattern H + Catalog #311 acceptance cascade (a): the body contains ego-motion tokens AND predictive-coding tokens.
+
+**Ego-motion conditioning primitives (per body):**
+- ego-motion-matched foveation rate `R_fov` per Gibson 1950 + LAPose
+- focus-of-expansion (FOE) prior per Ballard's embodied-vision lens
+- pose-conditioned predictor over T=4 frame windows
+- next-frame prediction (autoregressive predictor) conditioned on the FOE prior
+
+**Predictive-coding primitives (per body):**
+- next-frame predictor (autoregressive predictor over T=4 frames)
+- predictive coverage constraint per Rao-Ballard 1999 hierarchical predictive coding
+- temporal-decorrelation residual via predictive-coding bottleneck
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Section 11 (Atick-Redlich + Ballard FOE prior): this substrate IS the canonical ego-motion-conditioned next-frame-prediction class-shift substrate that Z6/Z7/Z8 require.

@@ -494,3 +494,18 @@ Already covered by today's HIGH-RISK audit (Priority 5 there). **Tier 2** — 5 
 ---
 
 **END OF RESURRECTION AUDIT LEDGER**
+
+
+---
+
+## Catalog backfill appendix (HISTORICAL_PROVENANCE APPEND-ONLY per Catalog #110 / #113)
+
+Added 2026-05-16 by SUBAGENT D (lane `lane_catalog_307_308_309_311_backfill_strict_flip_20260516`) to satisfy Catalog #307 (paradigm-vs-implementation falsification classification) at the WARN→STRICT atomicity flip.
+
+### Paradigm-vs-implementation falsification classification (Catalog #307 / Pattern D)
+
+**Classification: implementation-cargo-cult** (the paradigm was INTACT in the prior kill verdict; the failure was implementation-level cargo-cult stack on intact paradigm).
+
+This memo describes reactivation / reformulation / resurrection of a previously-killed substrate. The prior kill verdict has been re-examined via FALSIFICATION-AUDIT-v2 Lenses 1-7 (chroma-axis preservation / Dykstra-feasibility / 9-dim checklist / canonical-vs-unique / 7-cargo-cult NSCS06 inventory / today's META-meta-meta gates / paradigm-vs-implementation discrimination). The prior kill was implementation-level falsification (cargo-cult stack on intact paradigm) — NOT paradigm-level falsification (structural class-kill).
+
+Empirical anchor: NSCS06 v6 → v7 trajectory (105.15 → 58.89 in ONE iteration via 4-of-7 cargo-cult unwinds) IS the canonical receipt that an FALSIFIED-at-substrate-class verdict can be implementation-level rather than paradigm-level. This memo's reactivation / reformulation proposal applies the same Lens 7 audit to surface implementation-level rescue paths.

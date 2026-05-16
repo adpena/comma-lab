@@ -198,3 +198,23 @@ The intersection of these 4 polytopes is a SUBSET of the Z3+A1 polytope per Boyd
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+### Horizon-class classification (Catalog #309 / Pattern F)
+
+**horizon_class: plateau_adjacent**
+
+Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive 2026-05-16: substrate predicted CPU band of `[0.180, 0.200]` classifies as **PLATEAU-ADJACENT** per the canonical 3-band taxonomy (PLATEAU-ADJACENT [0.180, 0.200] / FRONTIER-PURSUIT [0.120, 0.180] / ASYMPTOTIC-PURSUIT [0.050, 0.120]).
+
+Empirical anchor: the 0.196-0.199 cluster IS the canonical plateau (A1 0.19286 / PR101 0.193 / PR103 0.195 / PR102 0.195 / Z3 v2 0.19778 — all within ±0.005 of 0.196). This memo's substrate is structurally analogous to the existing cluster; the cargo-cult unwind landing in the body is the operator-facing audit-surface that surfaces the within-cluster trap risk.
+
+Per CLAUDE.md "Forbidden premature KILL" + the plateau-trap warning: PLATEAU-ADJACENT classification does NOT kill the substrate; it surfaces the long-run risk that accumulating plateau-adjacent substrates without asymptotic-pursuit alternatives is the long-run failure mode. The reactivation criteria in the body remain valid pending the empirical anchor (per Catalog #229 premise verification + Catalog #296 Dykstra-feasibility).
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope -->
+
+This memo references Atick-Redlich / cooperative-receiver framing as cross-reference / related-work / sister-substrate context — NOT as this substrate's architectural core. The substrate proposed by this memo is structurally distinct from Z6/Z7/Z8 (which DO require ego-motion-conditioned next-frame prediction as architectural core per Pattern H + Z6/Z7/Z8 design memo Section 11).
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Pattern H + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
+
+Cross-references to cooperative-receiver / Atick-Redlich in this memo serve as theoretical-anchor / related-work / sister-substrate-comparison only; they do NOT make this substrate a predictive-coding substrate in the Pattern H sense.

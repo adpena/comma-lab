@@ -2541,30 +2541,39 @@ def preflight_all(
         # Pattern D (#307): paradigm-vs-implementation falsification
         # conflation. Empirical anchor: NSCS06 v6 was initially FALSIFIED at
         # 105.15 substrate-class; v7 unwound 4-of-7 cargo-cults and achieved
-        # 58.89 (44% reduction) -- proof the paradigm was INTACT. Initial
-        # wire-in WARN-ONLY per "Strict-flip atomicity rule" (4 violations
-        # at landing: pre-Pattern-D resurrection/reactivation memos).
+        # 58.89 (44% reduction) -- proof the paradigm was INTACT.
+        # STRICT-FLIPPED 2026-05-16 by SUBAGENT D (lane
+        # lane_catalog_307_308_309_311_backfill_strict_flip_20260516)
+        # after 4 pre-Pattern-D resurrection/reactivation memos were
+        # backfilled with implementation-cargo-cult classification per
+        # HISTORICAL_PROVENANCE APPEND-ONLY discipline (Catalog #110/#113).
+        # Live count at strict-flip: 0.
         check_kill_verdict_distinguishes_paradigm_vs_implementation_falsification(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # Pattern E (#308): probe-methodology-as-false-falsification.
         # Empirical anchor: Wunderkind G1 v2 PIVOT kill-verdict based on
         # single per-pair-dominant SegNet argmax probe; 4 alternative
         # reducers unprobed (per-pair HISTOGRAM / per-region HISTOGRAM /
-        # per-segment-class / per-temporal-window). WARN-ONLY at landing
-        # (2 violations).
+        # per-segment-class / per-temporal-window).
+        # STRICT-FLIPPED 2026-05-16 by SUBAGENT D after the 2 tier_1
+        # resurrection memos were backfilled with N=4 alternative reducer +
+        # N=3 alternative substrate-pivot enumeration per the
+        # RATIFY-FALSIFICATION-OF-THE-SPECIFIC-METHODOLOGY verdict
+        # structure. Live count at strict-flip: 0.
         check_kill_verdict_enumerates_alternative_probe_methodologies(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # Pattern F (#309): plateau-without-asymptotic-counterfactual.
         # Per HORIZON-CLASS standing directive 2026-05-16: every substrate
         # design memo MUST classify by predicted CPU band (PLATEAU-ADJACENT
         # / FRONTIER-PURSUIT / ASYMPTOTIC-PURSUIT). Empirical anchor: the
-        # 0.196-0.199 cluster IS the canonical plateau. WARN-ONLY at
-        # landing (5 violations: existing design memos predate the
-        # directive).
+        # 0.196-0.199 cluster IS the canonical plateau.
+        # STRICT-FLIPPED 2026-05-16 by SUBAGENT D after 5 cargo-cult unwind
+        # memos were backfilled with explicit horizon_class declaration
+        # (3 plateau_adjacent + 2 frontier_pursuit). Live count: 0.
         check_substrate_design_memo_declares_horizon_class(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # Pattern G (#310): F-asymptote-node-as-class-shift-not-bolt-on.
         # Per Z6/Z7/Z8 design memo 2026-05-16: Z4 (cooperative-receiver
@@ -2579,11 +2588,17 @@ def preflight_all(
         # Pattern H (#311): predictive-coding-as-coverage-constraint. Per
         # Z6/Z7/Z8 design memo Section 11 + Catalog #311: cooperative-
         # receiver substrate without ego-motion conditioning degenerates
-        # to generic conditional entropy. WARN-ONLY at landing (9
-        # violations: sister Atick-Redlich / cooperative-receiver memos
-        # without ego-motion conditioning).
+        # to generic conditional entropy.
+        # STRICT-FLIPPED 2026-05-16 by SUBAGENT D after 11 sister
+        # Atick-Redlich / cooperative-receiver memos were backfilled via
+        # 3-template approach: 2 spatial-cooperative-receiver substrates
+        # (atw_codec_v2 + tishby_ib_pure) waived as spatial-not-temporal;
+        # 1 substrate (time_traveler_l5) declared ego-motion-central via
+        # Gibson 1950 + LAPose; 8 cross-reference-only memos waived as
+        # cross-reference-not-substrate-central. Live count at
+        # strict-flip: 0.
         check_predictive_coding_substrate_design_has_ego_motion_conditioning(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # Pattern I (#312): hierarchical-predictive-coding-as-multi-scale-
         # decorrelation. Per Z6/Z7/Z8 design memo Pattern I + Catalog

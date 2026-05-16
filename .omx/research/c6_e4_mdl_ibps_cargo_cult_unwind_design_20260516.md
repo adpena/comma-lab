@@ -189,3 +189,13 @@ The intersection of these 4 polytopes defines the achievable Pareto frontier; th
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+### Horizon-class classification (Catalog #309 / Pattern F)
+
+**horizon_class: frontier_pursuit**
+
+Per FALSIFICATION-AUDIT-v2 Pattern F + HORIZON-CLASS standing directive 2026-05-16: substrate predicted CPU band of `[0.120, 0.180]` classifies as **FRONTIER-PURSUIT** per the canonical 3-band taxonomy (PLATEAU-ADJACENT [0.180, 0.200] / FRONTIER-PURSUIT [0.120, 0.180] / ASYMPTOTIC-PURSUIT [0.050, 0.120]).
+
+Empirical anchor: the predicted band [0.113-0.170] (per body) targets sub-plateau scores; frontier-pursuit classification reflects the substrate's design intent to escape the 0.196-0.199 plateau cluster.
+
+Per CLAUDE.md "Forbidden premature KILL" + Catalog #296 Dykstra-feasibility + the cargo-cult unwind in the body: the predicted band is REVISED to `NULL pending Dykstra-feasibility check + Tier C empirical anchor reconciliation` per the body's §predicted-band unwind. The FRONTIER-PURSUIT horizon_class designation reflects substrate-design intent; actualization requires the empirical anchor + Dykstra-feasibility + Z1-within-class-haircut reconciliation per the body's reactivation criteria.

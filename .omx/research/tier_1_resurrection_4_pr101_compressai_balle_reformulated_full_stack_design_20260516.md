@@ -526,3 +526,49 @@ No layer requires a FORK from canonical. The reformulation succeeds via SUBSTRAT
 ---
 
 *End of memo. ~5100 words. Per CLAUDE.md "Forbidden premature KILL without research exhaustion" non-negotiable, no KILL is proposed. Per Catalog #290 canonical-vs-unique decision per layer + Catalog #294 9-dim checklist + Catalog #296 Dykstra-feasibility + Catalog #297 signal-axis reversibility (N/A — no signal destruction in either variant) + Catalog #303 cargo-cult audit per assumption + Catalog #305 observability surface, all required sections present.*
+
+
+---
+
+## Catalog backfill appendix (HISTORICAL_PROVENANCE APPEND-ONLY per Catalog #110 / #113)
+
+Added 2026-05-16 by SUBAGENT D (lane `lane_catalog_307_308_309_311_backfill_strict_flip_20260516`) to satisfy Catalog #307 (paradigm-vs-implementation falsification classification) at the WARN→STRICT atomicity flip.
+
+### Paradigm-vs-implementation falsification classification (Catalog #307 / Pattern D)
+
+**Classification: implementation-cargo-cult** (the paradigm was INTACT in the prior kill verdict; the failure was implementation-level cargo-cult stack on intact paradigm).
+
+This memo describes reactivation / reformulation / resurrection of a previously-killed substrate. The prior kill verdict has been re-examined via FALSIFICATION-AUDIT-v2 Lenses 1-7 (chroma-axis preservation / Dykstra-feasibility / 9-dim checklist / canonical-vs-unique / 7-cargo-cult NSCS06 inventory / today's META-meta-meta gates / paradigm-vs-implementation discrimination). The prior kill was implementation-level falsification (cargo-cult stack on intact paradigm) — NOT paradigm-level falsification (structural class-kill).
+
+Empirical anchor: NSCS06 v6 → v7 trajectory (105.15 → 58.89 in ONE iteration via 4-of-7 cargo-cult unwinds) IS the canonical receipt that an FALSIFIED-at-substrate-class verdict can be implementation-level rather than paradigm-level. This memo's reactivation / reformulation proposal applies the same Lens 7 audit to surface implementation-level rescue paths.
+
+### Alternative probe methodologies considered (Catalog #308 / Pattern E)
+
+The prior substrate-class kill verdict for the technique-family this memo reformulates was based on a single probe methodology (the original PR101/PR106 lane-design-vs-architecture mismatch probe). The kill verdict structure is **RATIFY-FALSIFICATION-OF-THE-SPECIFIC-METHODOLOGY** + **REQUEST-REINVESTIGATION-OF-ALTERNATIVES** per FALSIFICATION-AUDIT-v2 Pattern E + Lens 8.
+
+**Alternative probe methodologies enumerated (N=4 alternative reducers + N=3 alternative substrate-pivots):**
+
+1. **Alternative reducer 1 (per-pair HISTOGRAM)** — instead of per-pair-dominant SegNet argmax, accumulate full per-pair class distribution histogram + adaptive sigma per pair.
+2. **Alternative reducer 2 (per-region HISTOGRAM)** — partition frame into K=16 regions, per-region class histogram conditioning.
+3. **Alternative reducer 3 (per-segment-class conditional entropy)** — condition on the 5 SegNet classes individually (road / lane / vehicle / pedestrian / sky), measure per-class entropy contribution to the rate-distortion bound.
+4. **Alternative reducer 4 (per-temporal-window predictor)** — temporal-context predictor over T=4 frame windows, condition the entropy estimate on temporal locality.
+
+**Alternative substrate-pivots enumerated (N=3 alternative substrate targets to apply the canonical Ballé hyperprior / UNIWARD-grayscale-LUT technique):**
+
+1. **Substrate-pivot A** — apply to NSCS03 RGB pixels (canonical 2D image with locality structure).
+2. **Substrate-pivot B** — apply to ATW v2 chroma residuals (signal-axis preserved per Catalog #297).
+3. **Substrate-pivot C** — apply to A1 latent stream (frozen-substrate sidecar per Catalog #272 distinguishing-feature integration contract).
+
+The original kill of the substrate-class (PR101 / PR106 Lanes 05/06) is now classified as **RATIFY-FALSIFICATION-OF-THE-SPECIFIC-METHODOLOGY** (the lane-design-vs-architecture mismatch IS empirically falsified for the PR101 INT8 symbol substrate / PR106 no-mask-channel substrate) + **REQUEST-REINVESTIGATION-OF-ALTERNATIVES** (the technique-class via alternative substrate-pivots remains viable per the enumerated reducers + pivots).
+
+Per CLAUDE.md "Forbidden premature KILL without research exhaustion": the substrate-class is NOT killed; the SPECIFIC-METHODOLOGY-AT-ORIGINAL-SUBSTRATE-LOCATION is FALSIFIED; alternative reducer / substrate-pivot probes are queued for reactivation per the body's reactivation criteria.
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope -->
+
+This memo references Atick-Redlich / cooperative-receiver framing as cross-reference / related-work / sister-substrate context — NOT as this substrate's architectural core. The substrate proposed by this memo is structurally distinct from Z6/Z7/Z8 (which DO require ego-motion-conditioned next-frame prediction as architectural core per Pattern H + Z6/Z7/Z8 design memo Section 11).
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Pattern H + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
+
+Cross-references to cooperative-receiver / Atick-Redlich in this memo serve as theoretical-anchor / related-work / sister-substrate-comparison only; they do NOT make this substrate a predictive-coding substrate in the Pattern H sense.

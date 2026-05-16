@@ -1011,3 +1011,13 @@ Per the design memo §22 op-routables #1 + #3 (Phase 1 + Phase 2 of SUBAGENT E t
 - Maturity: L0 SKETCH → L1 SCAFFOLD (gates `impl_complete` + `strict_preflight` + `memory_entry` planned post-commit)
 - Status: research_only=true + dispatch_enabled=false
 - Catalog #270 dispatch optimization protocol: **PASS** (Tier 1/2/3 all 5+8+5=18 signals pass)
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:spatial-cooperative-receiver-substrate-not-temporal-prediction-substrate-the-canonical-atick-redlich-cooperative-receiver-theorem-applies-to-spatial-mutual-information-i-x-y-not-just-temporal-next-frame-prediction-per-tishby-zaslavsky-framework -->
+
+This memo's substrate uses the cooperative-receiver framework in its **spatial coverage** form (Atick-Redlich 1990 retinal mutual-information `I(stimulus; receptor_response)`) NOT in its temporal next-frame-prediction form. The Z6/Z7/Z8 design memo Pattern H rightly identifies ego-motion-conditioned next-frame prediction as the canonical temporal application; this substrate is the canonical spatial application.
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:spatial-cooperative-receiver-substrate-not-temporal-prediction-substrate-the-canonical-atick-redlich-cooperative-receiver-theorem-applies-to-spatial-mutual-information-i-x-y-not-just-temporal-next-frame-prediction-per-tishby-zaslavsky-framework` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
+
+The spatial-vs-temporal distinction within the Atick-Redlich framework: the canonical 1990 paper IS about spatial receptive-field development (retinal ganglion cells maximize `I(stimulus; receptor_response)` across the spatial field), not temporal prediction. The Z6/Z7/Z8 Pattern H gate enforces the temporal/predictive variant; this substrate applies the spatial/coverage variant.

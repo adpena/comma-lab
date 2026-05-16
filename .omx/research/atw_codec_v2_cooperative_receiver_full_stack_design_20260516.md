@@ -815,3 +815,13 @@ All 6 hooks active per Catalog #125; none N/A.
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+### Ego-motion conditioning declaration (Catalog #311 / Pattern H)
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:spatial-cooperative-receiver-substrate-not-temporal-prediction-substrate-the-canonical-atick-redlich-cooperative-receiver-theorem-applies-to-spatial-mutual-information-i-x-y-not-just-temporal-next-frame-prediction-per-tishby-zaslavsky-framework -->
+
+This memo's substrate uses the cooperative-receiver framework in its **spatial coverage** form (Atick-Redlich 1990 retinal mutual-information `I(stimulus; receptor_response)`) NOT in its temporal next-frame-prediction form. The Z6/Z7/Z8 design memo Pattern H rightly identifies ego-motion-conditioned next-frame prediction as the canonical temporal application; this substrate is the canonical spatial application.
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:spatial-cooperative-receiver-substrate-not-temporal-prediction-substrate-the-canonical-atick-redlich-cooperative-receiver-theorem-applies-to-spatial-mutual-information-i-x-y-not-just-temporal-next-frame-prediction-per-tishby-zaslavsky-framework` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
+
+The spatial-vs-temporal distinction within the Atick-Redlich framework: the canonical 1990 paper IS about spatial receptive-field development (retinal ganglion cells maximize `I(stimulus; receptor_response)` across the spatial field), not temporal prediction. The Z6/Z7/Z8 Pattern H gate enforces the temporal/predictive variant; this substrate applies the spatial/coverage variant.
