@@ -80,8 +80,8 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           lane_id: str | None = None,
           target_modes: list[str] | None = None,
           dispatch_packet_sha256: str | None = None,
-          archive_sha256: str = "",
-          runtime_tree_sha256: str = "") -> loop.CandidateRow:
+          archive_sha256: str | None = None,
+          runtime_tree_sha256: str | None = None) -> loop.CandidateRow:
     return loop.CandidateRow(
         candidate_id=cid,
         family=family,
@@ -101,8 +101,10 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
             if dispatch_packet_sha256 is not None
             else _sha("a")
         ),
-        archive_sha256=archive_sha256,
-        runtime_tree_sha256=runtime_tree_sha256,
+        archive_sha256=archive_sha256 if archive_sha256 is not None else _sha("b"),
+        runtime_tree_sha256=(
+            runtime_tree_sha256 if runtime_tree_sha256 is not None else _sha("c")
+        ),
     )
 
 
@@ -975,7 +977,19 @@ def test_can_authorize_refuses_malformed_dispatch_packet_hash(tmp_path):
     ok, reason = cfg.can_authorize(c)
     assert ok is False
     assert "dispatch_packet_sha256_malformed" in reason
-    assert "dispatch_packet_or_archive_runtime_hash_required" in reason
+
+
+def test_can_authorize_refuses_contest_exact_hash_only_without_archive_runtime(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256=_sha("a"),
+        archive_sha256="",
+        runtime_tree_sha256="",
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "contest_exact_eval_requires_archive_and_runtime_hash" in reason
 
 
 def test_can_authorize_refuses_placeholder_dispatch_packet_hash_even_with_pair(tmp_path):
@@ -1031,7 +1045,7 @@ def test_can_authorize_refuses_placeholder_archive_runtime_hash_pair(tmp_path):
     assert ok is False
     assert "archive_sha256_malformed" in reason
     assert "runtime_tree_sha256_malformed" in reason
-    assert "dispatch_packet_or_archive_runtime_hash_required" in reason
+    assert "contest_exact_eval_requires_archive_and_runtime_hash" in reason
 
 
 def test_can_authorize_approves_within_caps(tmp_path):
@@ -1338,6 +1352,8 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
             "estimated_dispatch_cost_usd": 2.0,
             "dispatch_packet_ready": True,
             "dispatch_packet_sha256": _sha("d"),
+            "archive_sha256": _sha("e"),
+            "runtime_tree_sha256": _sha("f"),
             "lane_id": "lane_test_auth_mode_uniq_abc123",
             "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
         }) + "\n",

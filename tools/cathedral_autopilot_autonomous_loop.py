@@ -405,7 +405,8 @@ class CandidateRow:
             blockers.append("dispatch_packet_ready_false")
         if not self.lane_id.strip():
             blockers.append("lane_id_required_for_dispatch_packet")
-        if AUTOPILOT_CONTEST_TARGET_MODE not in set(self.target_modes):
+        contest_exact_target = AUTOPILOT_CONTEST_TARGET_MODE in set(self.target_modes)
+        if not contest_exact_target:
             blockers.append("contest_exact_eval_target_mode_required")
         has_dispatch_packet_hash = _is_sha256_hex(self.dispatch_packet_sha256)
         has_archive_hash = _is_sha256_hex(self.archive_sha256)
@@ -417,7 +418,9 @@ class CandidateRow:
             blockers.append("archive_sha256_malformed")
         if self.runtime_tree_sha256.strip() and not has_runtime_hash:
             blockers.append("runtime_tree_sha256_malformed")
-        if not (has_dispatch_packet_hash or has_exact_packet_hashes):
+        if contest_exact_target and not has_exact_packet_hashes:
+            blockers.append("contest_exact_eval_requires_archive_and_runtime_hash")
+        elif not (has_dispatch_packet_hash or has_exact_packet_hashes):
             blockers.append("dispatch_packet_or_archive_runtime_hash_required")
         if self.ready_for_exact_eval_dispatch and not has_exact_packet_hashes:
             blockers.append(
