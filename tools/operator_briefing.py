@@ -1739,10 +1739,12 @@ def _format_l5_v2_frontier_readiness() -> str:
             lines.append(
                 "    - "
                 f"{candidate.get('candidate_id')} -> "
-                f"{candidate.get('recommended_next_action_id')} "
+                f"{candidate.get('effective_recommended_next_action_id') or candidate.get('recommended_next_action_id')} "
+                f"[{candidate.get('recommended_next_action_status', 'pending')}] "
                 f"(l1_present={candidate.get('l1_scaffold_present')}, "
                 f"artifacts_all_present="
-                f"{candidate.get('expected_first_artifacts_all_present')})"
+                f"{candidate.get('expected_first_artifacts_all_present')}, "
+                f"l1_blockers={candidate.get('l1_build_blockers', [])})"
             )
     else:
         lines.append("    - none")

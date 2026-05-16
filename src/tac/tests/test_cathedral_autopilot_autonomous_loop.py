@@ -1408,6 +1408,12 @@ def test_main_surfaces_compressive_sensing_lattice_diagnostic(tmp_path, capsys):
     assert lattice["diagnostic"]["K"] == 2
     assert lattice["diagnostic"]["N"] == 6
     assert "recovery_regime" in lattice["diagnostic"]
+    assert lattice["dispatch_blocker"].startswith(
+        "compressive_sensing_lattice_recovery_regime_"
+    )
+    blocker = lattice["dispatch_blocker"]
+    halt_blockers = payload["reports"][0]["halt_events"][0]["blockers"]
+    assert blocker in halt_blockers
 
 
 def test_main_returns_2_on_missing_file(tmp_path, capsys):

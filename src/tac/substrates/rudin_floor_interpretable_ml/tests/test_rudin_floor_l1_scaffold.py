@@ -501,6 +501,10 @@ def test_remote_driver_requires_and_closes_dispatch_claim() -> None:
     """Remote driver must not run without a lane-claim lifecycle."""
     src = DRIVER_PATH.read_text(encoding="utf-8")
     assert "DISPATCH_INSTANCE_JOB_ID is required" in src
+    assert "verify_active_dispatch_claim()" in src
+    assert "claim_lane_dispatch.py\" summary" in src
+    assert "--live-only" in src
     assert "append_terminal_claim()" in src
     assert "claim_lane_dispatch.py" in src
+    assert "CLAIM_VERIFIED=1" in src
     assert "trap cleanup EXIT" in src

@@ -922,7 +922,11 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     rows = {row["candidate_id"]: row for row in payload["candidates"]}
     z6 = rows["z6_z7_z8_predictive_coding_world_models"]
     assert z6["recommended_next_action_id"] == "build_z6_l1_scaffold_first"
-    assert z6["ready_for_recommended_next_action"] is True
+    assert z6["ready_for_recommended_next_action"] is False
+    assert z6["recommended_next_action_status"] == "completed_or_superseded"
+    assert z6["effective_recommended_next_action_id"] == (
+        "completed_or_superseded:build_z6_l1_scaffold_first"
+    )
     assert z6["ready_for_l1_build"] is False
     assert z6["l1_scaffold_present"] is True
     assert z6["recommended_next_action_completed_or_superseded"] is True
@@ -943,7 +947,8 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert "requires_z6_l1_scaffold_before_paid_dispatch" in z6["blockers"]
 
     rudin = rows["rudin_floor_interpretable_ml_substrate"]
-    assert rudin["ready_for_recommended_next_action"] is True
+    assert rudin["ready_for_recommended_next_action"] is False
+    assert rudin["recommended_next_action_status"] == "completed_or_superseded"
     assert rudin["ready_for_l1_build"] is False
     assert rudin["l1_scaffold_present"] is True
     assert "rudin_floor_interpretable_ml" in "\n".join(
@@ -954,7 +959,8 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     ]
 
     tishby = rows["tishby_ib_pure_substrate"]
-    assert tishby["ready_for_recommended_next_action"] is True
+    assert tishby["ready_for_recommended_next_action"] is False
+    assert tishby["recommended_next_action_status"] == "completed_or_superseded"
     assert tishby["ready_for_l1_build"] is False
     assert tishby["l1_scaffold_present"] is True
     assert "tishby_ib_pure" in "\n".join(tishby["expected_first_artifacts"])

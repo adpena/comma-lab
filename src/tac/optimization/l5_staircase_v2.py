@@ -426,6 +426,19 @@ def l5_v2_asymptotic_pursuit_candidates(
                 l1_build_blockers.append(
                     f"requires_pre_l1_gate:{candidate.recommended_next_action_id}"
                 )
+        effective_next_action_id = candidate.recommended_next_action_id
+        effective_next_action = candidate.recommended_next_action
+        recommended_next_action_status = "pending"
+        if l1_scaffold_present:
+            recommended_next_action_status = "completed_or_superseded"
+            effective_next_action_id = (
+                f"completed_or_superseded:{candidate.recommended_next_action_id}"
+            )
+            effective_next_action = (
+                "The originally recommended L1 action is complete or superseded; "
+                "advance using l1_build_blockers/dependency_blockers rather than "
+                "rebuilding the same scaffold."
+            )
         aggregate_blockers.extend(blockers)
         rows.append(
             {
@@ -447,8 +460,11 @@ def l5_v2_asymptotic_pursuit_candidates(
                 "ready_for_exact_eval_dispatch": False,
                 "ready_for_paid_dispatch": False,
                 "ready_for_recommended_next_action": (
-                    ledger_present and lane_registry_registered
+                    ledger_present and lane_registry_registered and not l1_scaffold_present
                 ),
+                "recommended_next_action_status": recommended_next_action_status,
+                "effective_recommended_next_action_id": effective_next_action_id,
+                "effective_recommended_next_action": effective_next_action,
                 "ready_for_l1_build": ready_for_l1_build,
                 "ready_for_l1_build_semantics": (
                     "l1_scaffold_present_next_action_completed"

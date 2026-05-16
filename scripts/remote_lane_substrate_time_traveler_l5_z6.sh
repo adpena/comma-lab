@@ -67,7 +67,7 @@ PROVENANCE="$LOG_DIR/provenance.json"
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 Z6_VIDEO_PATH="${Z6_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 Z6_OUTPUT_DIR="${Z6_OUTPUT_DIR:-$OUTPUT_DIR}"
-Z6_EPOCHS="${Z6_EPOCHS:-3}"
+Z6_EPOCHS="${Z6_EPOCHS:-300}"
 Z6_BATCH_SIZE="${Z6_BATCH_SIZE:-4}"
 Z6_LR="${Z6_LR:-5e-4}"
 Z6_LAMBDA_RESIDUAL_ENTROPY="${Z6_LAMBDA_RESIDUAL_ENTROPY:-1.0}"
@@ -106,6 +106,45 @@ if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
 
+verify_active_dispatch_claim() {
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "FATAL: claim helper missing; cannot verify active dispatch claim"
+        exit 26
+    fi
+    local claim_summary_json="$LOG_DIR/dispatch_claim_summary.json"
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --live-only \
+        --format json \
+        > "$claim_summary_json" || {
+        log "FATAL: claim summary failed; refusing remote driver startup"
+        exit 26
+    }
+    "$CLAIM_PYTHON" - "$claim_summary_json" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY' || {
+import json
+import sys
+from pathlib import Path
+
+summary_path = Path(sys.argv[1])
+lane_id = sys.argv[2]
+job_id = sys.argv[3]
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(
+    f"no active dispatch claim for lane_id={lane_id} instance_job_id={job_id}",
+    file=sys.stderr,
+)
+raise SystemExit(1)
+PY
+        log "FATAL: no active dispatch claim for lane=$LANE_ID instance/job=$DISPATCH_INSTANCE_JOB_ID"
+        exit 27
+    }
+    CLAIM_VERIFIED=1
+    log "Stage 0 DONE: active dispatch claim verified"
+}
+
 append_terminal_claim() {
     local rc="$1"
     if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
@@ -143,6 +182,7 @@ cleanup() {
     exit "$rc"
 }
 trap cleanup EXIT
+verify_active_dispatch_claim
 
 # Stage 1: bootstrap remote runtime deps via canonical sourced helper.
 # Per Catalog #163 prepend REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 so the

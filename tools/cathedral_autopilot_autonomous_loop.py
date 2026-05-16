@@ -3982,6 +3982,7 @@ def main(argv: list[str] | None = None) -> int:
             return load_candidates_from_jsonl(args.candidates_jsonl)
 
     lattice_diagnostic: dict[str, Any] | None = None
+    lattice_dispatch_blocker = ""
     if args.use_compressive_sensing_lattice:
         try:
             lattice_candidates = _source()
@@ -3991,9 +3992,27 @@ def main(argv: list[str] | None = None) -> int:
                 expected_sparsity=args.lattice_expected_sparsity,
                 safety_margin=args.lattice_safety_margin,
             )
+            recovery_regime = str(
+                lattice_diagnostic.get("recovery_regime", "unknown")
+            )
+            if recovery_regime != "EXACT":
+                lattice_dispatch_blocker = (
+                    "compressive_sensing_lattice_recovery_regime_"
+                    f"{recovery_regime}_operator_review_required"
+                )
         except (ValueError, FileNotFoundError) as exc:
             print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
             return 2
+
+    if lattice_dispatch_blocker:
+        base_source = _source
+
+        def _source() -> list[CandidateRow]:
+            candidates = base_source()
+            for candidate in candidates:
+                if lattice_dispatch_blocker not in candidate.blockers:
+                    candidate.blockers.append(lattice_dispatch_blocker)
+            return candidates
 
     try:
         reports = run_continuous_loop(
@@ -4080,6 +4099,7 @@ def main(argv: list[str] | None = None) -> int:
                 "n_anchors": args.lattice_anchor_count,
                 "expected_sparsity": args.lattice_expected_sparsity,
                 "safety_margin": args.lattice_safety_margin,
+                "dispatch_blocker": lattice_dispatch_blocker or None,
                 "diagnostic": lattice_diagnostic,
             }
             if args.use_compressive_sensing_lattice

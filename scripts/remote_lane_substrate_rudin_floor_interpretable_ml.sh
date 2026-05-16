@@ -81,6 +81,45 @@ if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
 
+verify_active_dispatch_claim() {
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "FATAL: claim helper missing; cannot verify active dispatch claim"
+        exit 26
+    fi
+    local claim_summary_json="$LOG_DIR/dispatch_claim_summary.json"
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --live-only \
+        --format json \
+        > "$claim_summary_json" || {
+        log "FATAL: claim summary failed; refusing remote driver startup"
+        exit 26
+    }
+    "$CLAIM_PYTHON" - "$claim_summary_json" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY' || {
+import json
+import sys
+from pathlib import Path
+
+summary_path = Path(sys.argv[1])
+lane_id = sys.argv[2]
+job_id = sys.argv[3]
+payload = json.loads(summary_path.read_text(encoding="utf-8"))
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(
+    f"no active dispatch claim for lane_id={lane_id} instance_job_id={job_id}",
+    file=sys.stderr,
+)
+raise SystemExit(1)
+PY
+        log "FATAL: no active dispatch claim for lane=$LANE_ID instance/job=$DISPATCH_INSTANCE_JOB_ID"
+        exit 27
+    }
+    CLAIM_VERIFIED=1
+    log "Stage 0 DONE: active dispatch claim verified"
+}
+
 append_terminal_claim() {
     local rc="$1"
     if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
@@ -117,8 +156,8 @@ cleanup() {
     append_terminal_claim "$rc"
     exit "$rc"
 }
-CLAIM_VERIFIED=1
 trap cleanup EXIT
+verify_active_dispatch_claim
 
 # Stage 1: canonical bootstrap (delegated to scripts/remote_archive_only_eval.sh).
 # REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 sentinel per Catalog #163 prevents the

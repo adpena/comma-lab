@@ -167,6 +167,34 @@ Observed final evidence:
   design-memo findings after the ego-motion-plus-predictive-token tightening.
 - `git diff --check` passed.
 
+Adversarial reviewer follow-up (same turn) found four issues before commit:
+
+- Z6/Rudin wrappers required a job id but did not verify a live active claim.
+  Fixed by calling `tools/claim_lane_dispatch.py summary --live-only --format
+  json` and refusing startup unless `(lane_id, instance_job_id)` is active.
+- Z6 wrapper defaulted `Z6_EPOCHS` to 3, which protected smoke but would
+  under-train a future full run. Fixed by restoring wrapper default 300 and
+  relying on trainer-side `_smoke_effective_epochs()` to cap `--smoke`.
+- Cathedral lattice diagnostic was output-only. Fixed by adding a candidate
+  blocker whenever `recovery_regime != EXACT`, preventing operator-authorized
+  self-dispatch against an unreliable lattice posterior.
+- L5 v2 readiness still displayed stale L1 scaffold next-action IDs after L1
+  scaffolds landed. Fixed by marking effective next actions
+  `completed_or_superseded:*` and setting
+  `ready_for_recommended_next_action=false` when the L1 artifact set exists.
+
+Post-fix focused suite passed: `248 passed in 18.58s`, targeted Ruff passed,
+`bash -n` passed on all three touched remote scripts, and py_compile passed on
+the changed executable Python surfaces.
+
+Post-fix repo gates also passed: `tac.preflight --no-codebase`, lane maturity
+validation (`773 lane(s) validated cleanly`), Z6 smoke (`requested_epochs=300`,
+`epochs=3`, `smoke_epoch_cap=3`), Tishby diagnostic smoke (`score_claim=false`,
+`research_only=true`, `score_axis=diagnostic_cpu`, `roundtrip_ok=true`),
+Cathedral lattice smoke with the FAILED-regime dispatch blocker surfaced, and
+operator briefing JSON with all three L5 v2 sample next actions marked
+`completed_or_superseded:*`.
+
 ## Frontier relevance
 
 This does not create a score claim. It prevents the Tishby IB-pure L5 scaffold
