@@ -7,7 +7,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
+import torch
 
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
@@ -31,6 +33,7 @@ from tac.packet_compiler import (
     prove_pr106_sidecar_runtime_decode_consumption,
     read_single_stored_member_archive,
     runtime_framing_meta_consumption_probe,
+    runtime_full_frame_streaming_digest,
     runtime_sidecar_correction_digest,
 )
 
@@ -48,6 +51,11 @@ PR106_R2_PR101_RUNTIME_TREE_SHA = "373f19a1a892cf21c432d4949312cc788f4d4d23c02f2
 PR106_HDM8_FORMAT07_ARCHIVE = (
     REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
 )
+PR106_FORMAT0D_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip"
+)
+PR106_FORMAT0D_SHA = "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4"
 RUNTIME_CONSUMPTION_TOOL = REPO_ROOT / "tools" / "prove_pr106_sidecar_runtime_consumption.py"
 
 
@@ -864,6 +872,154 @@ def test_pr106_pr101_runtime_consumption_proves_hdm9_hlm3_magicless_exact_radix_
     assert manifest["inner_pr106_payload_sha256_unchanged"] is True
     assert manifest["contest_axis_claim"] is False
     assert manifest["score_claim"] is False
+
+
+def test_pr106_runtime_consumption_proves_format0d_stacked_sidecars() -> None:
+    manifest = prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=PR106_FORMAT0D_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        expected_archive_sha256=PR106_FORMAT0D_SHA,
+    )
+
+    assert manifest["format_id"] == "0x0D"
+    assert manifest["archive_member_name"] == "x"
+    assert manifest["blockers"] == []
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is True
+    assert manifest["runtime_sidecar_apply_consumption_claim"] is True
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is True
+    consumed_sections = manifest["runtime_consumed_score_affecting_sections"]
+    assert consumed_sections == {
+        "pr106_payload": True,
+        "base_format0c_sidecar_payload": True,
+        "extra_pr101_ranked_no_op_payload": True,
+        "extra_framing_meta": True,
+    }
+    assert manifest["runtime_apply_order"] == [
+        "base_format0c_corrections",
+        "extra_pr101_ranked_no_op_corrections",
+    ]
+    identities = manifest["runtime_consumed_score_affecting_section_identities"]
+    assert isinstance(identities, list)
+    assert [item["name"] for item in identities] == [
+        "pr106_payload",
+        "base_format0c_sidecar_payload",
+        "extra_pr101_ranked_no_op_payload",
+        "extra_framing_meta",
+    ]
+    source_sections = {
+        row["name"]: row for row in manifest["source_packet_ir_consumed_byte_proof"]["sections"]
+    }
+    for identity in identities:
+        source_section = source_sections[identity["name"]]
+        assert identity["sha256"] == source_section["sha256"]
+        assert identity["bytes"] == source_section["bytes"]
+        assert identity["consumed"] is True
+    source_digest = manifest["source_runtime_correction_digest"]
+    mutated_digest = manifest["mutated_runtime_correction_digest"]
+    assert isinstance(source_digest, dict)
+    assert isinstance(mutated_digest, dict)
+    assert source_digest["n_passes"] == mutated_digest["n_passes"] == 2
+    source_passes = source_digest["correction_passes"]
+    assert isinstance(source_passes, list)
+    assert [item["section_name"] for item in source_passes] == [
+        "base_format0c_sidecar_payload",
+        "extra_pr101_ranked_no_op_payload",
+    ]
+    probe = manifest["runtime_framing_meta_consumption_probe"]
+    assert isinstance(probe, dict)
+    assert probe["section"] == "extra_framing_meta"
+    assert probe["runtime_consumption_claim"] is True
+    assert manifest["mutation"]["section_name"] == "extra_pr101_ranked_no_op_payload"
+    assert manifest["sidecar_payload_sha256_changed"] is False
+    assert manifest["extra_sidecar_payload_sha256_changed"] is True
+    assert manifest["extra_framing_meta_sha256_changed"] is False
+    assert manifest["contest_axis_claim"] is False
+    assert manifest["score_claim"] is False
+
+
+class _ReturningSidecarDecoder(torch.nn.Module):
+    def __init__(
+        self,
+        *,
+        latent_dim: int,
+        base_channels: int,
+        eval_size: tuple[int, int],
+    ) -> None:
+        super().__init__()
+        self.eval_size = eval_size
+        self.latent_dim = latent_dim
+        self.base_channels = base_channels
+
+    def forward(self, latents: torch.Tensor) -> torch.Tensor:
+        eval_h, eval_w = self.eval_size
+        value = latents[:, :1].reshape(latents.shape[0], 1, 1, 1, 1)
+        return value.expand(latents.shape[0], 2, 3, eval_h, eval_w)
+
+
+class _ReturningSidecarRuntime:
+    torch = torch
+    F = torch.nn.functional
+    HNeRVDecoder = _ReturningSidecarDecoder
+    CAMERA_H = 2
+    CAMERA_W = 2
+    DEFAULT_BATCH_PAIRS = 1
+
+    def __init__(self) -> None:
+        self.corrections_called = False
+
+    def parse_sidecar_archive(self, payload: bytes) -> tuple[bytes, bytes]:
+        return b"inner-pr106", payload
+
+    def decode_sidecar_corrections(self, blob: bytes) -> tuple[np.ndarray, np.ndarray]:
+        assert isinstance(blob, bytes)
+        return np.array([0], dtype=np.uint8), np.array([1], dtype=np.int8)
+
+    def parse_packed_archive(
+        self,
+        payload: bytes,
+    ) -> tuple[dict[str, torch.Tensor], torch.Tensor, dict[str, object]]:
+        assert isinstance(payload, bytes)
+        return (
+            {},
+            torch.zeros((1, 1), dtype=torch.float32),
+            {
+                "latent_dim": 1,
+                "base_channels": 1,
+                "eval_size": (2, 2),
+                "n_pairs": 1,
+            },
+        )
+
+    def apply_sidecar_corrections(
+        self,
+        latents: torch.Tensor,
+        dim_arr: np.ndarray,
+        delta_q_arr: np.ndarray,
+    ) -> torch.Tensor:
+        self.corrections_called = True
+        assert int(dim_arr[0]) == 0
+        corrected = latents.clone()
+        corrected[:, 0] += float(delta_q_arr[0])
+        return corrected
+
+
+def test_pr106_streaming_digest_consumes_returned_sidecar_latents() -> None:
+    runtime = _ReturningSidecarRuntime()
+
+    digest = runtime_full_frame_streaming_digest(
+        runtime,
+        b"fake-sidecar",
+        device="cpu",
+        batch_pairs=1,
+        max_pairs=1,
+    )
+
+    assert runtime.corrections_called is True
+    assert digest["source_latents_sha256"] != digest["corrected_latents_sha256"]
+    assert digest["latents_changed_by_sidecar"] is True
+    assert digest["total_frames"] == 2
+    assert digest["total_bytes"] == 24
+    assert digest["score_claim"] is False
 
 
 def test_pr106_same_runtime_streaming_prefix_parity_is_nonpromotable() -> None:

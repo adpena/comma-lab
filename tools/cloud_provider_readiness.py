@@ -16,10 +16,9 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = REPO_ROOT / "src"
@@ -161,6 +160,24 @@ def _provider(
     )
 
 
+def exact_cuda_destination_providers(*, exclude: Iterable[str] = ()) -> tuple[str, ...]:
+    excluded = set(exclude)
+    return tuple(
+        name
+        for name, contract in provider_contracts().items()
+        if name not in excluded
+        and contract.exact_cuda_eval_supported
+        and contract.execution_flag is not None
+    )
+
+
+def exact_cuda_destination_text(*, exclude: Iterable[str] = ()) -> str:
+    providers = exact_cuda_destination_providers(exclude=exclude)
+    if not providers:
+        return "none currently listed by provider contracts"
+    return ", ".join(providers)
+
+
 def probe_modal(*, runner: Runner = run_command, timeout_s: int = 15) -> ProviderReadiness:
     command = find_cli_command("modal")
     if command is None:
@@ -173,7 +190,7 @@ def probe_modal(*, runner: Runner = run_command, timeout_s: int = 15) -> Provide
             blockers=["modal_cli_missing"],
             next_actions=["Install Modal CLI in .venv or make modal available on PATH."],
         )
-    result = runner(command + ["--version"], timeout_s)
+    result = runner([*command, "--version"], timeout_s)
     ok = result.returncode == 0
     return _provider(
         provider="modal",
@@ -220,7 +237,7 @@ def probe_kaggle(
             blockers=["kaggle_credentials_missing"],
             next_actions=["Create ~/.kaggle/kaggle.json before pushing private GPU kernels."],
         )
-    result = runner(command + ["kernels", "status", kernel_ref], timeout_s)
+    result = runner([*command, "kernels", "status", kernel_ref], timeout_s)
     ok = result.returncode == 0
     return _provider(
         provider="kaggle",
@@ -233,7 +250,8 @@ def probe_kaggle(
         next_actions=[
             "Use Kaggle for Optuna/CMA-ES/proxy curves only.",
             "Write score_claim=false and ready_for_exact_eval_dispatch=false into Kaggle outputs.",
-            "Promote any winning config to Modal/GCP/AWS/Azure exact CUDA before score claims.",
+            "Promote any winning config to a contract-supported exact-CUDA provider "
+            f"({exact_cuda_destination_text()}) before score claims.",
         ] if ok else ["Run `uv run --with kaggle kaggle kernels list --mine` and fix API access."],
     )
 
@@ -242,8 +260,8 @@ def probe_lightning(*, runner: Runner = run_command, timeout_s: int = 20) -> Pro
     python = _venv_bin("python")
     command = [str(python if python.exists() else Path(sys.executable))]
     result = runner(
-        command
-        + [
+        [
+            *command,
             "-c",
             (
                 "import importlib.metadata as m; "
@@ -302,7 +320,10 @@ def probe_vastai(*, runner: Runner = run_command, timeout_s: int = 30) -> Provid
             next_actions=["Run `vastai set api-key <key>` before any Vast.ai launch."],
         )
     query = "gpu_name=RTX_4090 num_gpus=1 disk_space>60 rentable=True"
-    result = runner(command + ["search", "offers", query, "--order", "dph_total", "--limit", "1", "--raw"], timeout_s)
+    result = runner(
+        [*command, "search", "offers", query, "--order", "dph_total", "--limit", "1", "--raw"],
+        timeout_s,
+    )
     ok = result.returncode == 0
     return _provider(
         provider="vastai",
@@ -315,7 +336,9 @@ def probe_vastai(*, runner: Runner = run_command, timeout_s: int = 30) -> Provid
         next_actions=[
             "Use scripts/launch_lane_on_vastai.py only after a non-conflicting lane claim.",
             "Require NVDEC/CUDA probe, heartbeat, and artifact custody before score promotion.",
-            "Prefer Modal/Azure/GCP/AWS if Vast.ai offer or network readiness is unstable.",
+            "If Vast.ai offer or network readiness is unstable, use another "
+            "contract-supported exact-CUDA provider "
+            f"({exact_cuda_destination_text(exclude={'vastai'})}).",
         ] if ok else ["Check Vast.ai API/network access and retry the read-only offer query."],
     )
 
@@ -332,7 +355,7 @@ def probe_aws(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderR
             blockers=["aws_cli_missing"],
             next_actions=["Install AWS CLI."],
         )
-    result = runner(command + ["sts", "get-caller-identity", "--output", "json"], timeout_s)
+    result = runner([*command, "sts", "get-caller-identity", "--output", "json"], timeout_s)
     text = f"{result.stdout}\n{result.stderr}".lower()
     if result.returncode == 0:
         return _provider(
@@ -346,7 +369,8 @@ def probe_aws(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderR
             next_actions=[
                 "Run AWS Free Tier and budget checks.",
                 "Check G4/G5 GPU quota in target region.",
-                "Only then claim and launch EC2 GPU jobs.",
+                "Keep AWS scaffold-only for exact-CUDA destinations until its provider contract "
+                "sets exact_cuda_eval_supported=true and execution_flag.",
             ],
         )
     blockers = ["aws_auth_failed"]
@@ -434,7 +458,8 @@ def probe_gcp(*, runner: Runner = run_command, timeout_s: int = 20) -> ProviderR
         blockers=["gpu_quota_not_checked", "no_dispatch_claim"],
         next_actions=[
             "Query Compute Engine GPU quota for target regions.",
-            "Claim lane before creating any VM or batch job.",
+            "Keep GCP scaffold-only for exact-CUDA destinations until its provider contract "
+            "sets exact_cuda_eval_supported=true and execution_flag.",
         ],
     )
 
@@ -462,7 +487,9 @@ def probe_azure(*, runner: Runner = run_command, timeout_s: int = 20) -> Provide
             blockers=["gpu_quota_not_checked", "budget_not_checked", "no_dispatch_claim"],
             next_actions=[
                 "Check credits/subscription budget and NC-series regional quota.",
-                "Use scripts/launch_lane_azure.py dry-run before any --no-dry-run launch.",
+                "Use scripts/launch_lane_azure.py dry-run only; --no-dry-run is refused "
+                "until Azure's provider contract sets exact_cuda_eval_supported=true "
+                "and execution_flag.",
             ],
         )
     return _provider(

@@ -7,7 +7,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-
 MODULE_PATH = Path(__file__).resolve().parents[1] / "tools" / "cloud_provider_readiness.py"
 
 
@@ -27,10 +26,11 @@ class CloudProviderReadinessTests(unittest.TestCase):
         def fake_which(name: str) -> str | None:
             return "/usr/bin/uv" if name == "uv" else None
 
-        self.assertEqual(
-            mod.find_cli_command("kaggle", uv_package="kaggle", which=fake_which),
-            ["uv", "run", "--with", "kaggle", "kaggle"],
-        )
+        with mock.patch.object(mod, "_venv_bin", return_value=Path("/missing/kaggle")):
+            self.assertEqual(
+                mod.find_cli_command("kaggle", uv_package="kaggle", which=fake_which),
+                ["uv", "run", "--with", "kaggle", "kaggle"],
+            )
 
     def test_redact_removes_home_email_and_aws_account(self) -> None:
         mod = load_module()
@@ -56,14 +56,38 @@ class CloudProviderReadinessTests(unittest.TestCase):
             fake_home = Path(tmpdir)
             (fake_home / ".kaggle").mkdir()
             (fake_home / ".kaggle" / "kaggle.json").write_text('{"username":"alice","key":"x"}')
-            with mock.patch.object(mod.Path, "home", return_value=fake_home):
-                with mock.patch.object(mod.shutil, "which", side_effect=lambda name: "/usr/bin/uv" if name == "uv" else None):
-                    payload = mod.probe_kaggle(runner=fake_runner)
+            with (
+                mock.patch.object(mod.Path, "home", return_value=fake_home),
+                mock.patch.object(
+                    mod.shutil,
+                    "which",
+                    side_effect=lambda name: "/usr/bin/uv" if name == "uv" else None,
+                ),
+            ):
+                payload = mod.probe_kaggle(runner=fake_runner)
 
         self.assertEqual(payload.status, "ready_proxy")
         self.assertTrue(payload.proxy_only)
         self.assertFalse(payload.exact_cuda_evidence_allowed)
         self.assertIn("score_claim=false", " ".join(payload.next_actions))
+        joined_actions = " ".join(payload.next_actions).lower()
+        self.assertIn("modal", joined_actions)
+        self.assertIn("lightning", joined_actions)
+        self.assertIn("vastai", joined_actions)
+        self.assertNotIn("aws", joined_actions)
+        self.assertNotIn("azure", joined_actions)
+        self.assertNotIn("gcp", joined_actions)
+
+    def test_exact_cuda_destinations_come_from_provider_contracts(self) -> None:
+        mod = load_module()
+
+        destinations = mod.exact_cuda_destination_providers()
+
+        self.assertEqual(destinations, ("modal", "lightning", "vastai"))
+        self.assertEqual(
+            mod.exact_cuda_destination_providers(exclude={"vastai"}),
+            ("modal", "lightning"),
+        )
 
     def test_probe_modal_cli_ready_still_requires_billing_and_cuda_probe(self) -> None:
         mod = load_module()
@@ -101,14 +125,22 @@ class CloudProviderReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             fake_home = Path(tmpdir)
             (fake_home / ".vast_api_key").write_text("secret\n")
-            with mock.patch.object(mod.Path, "home", return_value=fake_home):
-                with mock.patch.object(mod.shutil, "which", return_value="/usr/bin/vastai"):
-                    payload = mod.probe_vastai(runner=fake_runner)
+            with (
+                mock.patch.object(mod.Path, "home", return_value=fake_home),
+                mock.patch.object(mod.shutil, "which", return_value="/usr/bin/vastai"),
+            ):
+                payload = mod.probe_vastai(runner=fake_runner)
 
         self.assertEqual(payload.status, "ready_offer_query_claim_heartbeat_next")
         self.assertFalse(payload.exact_cuda_evidence_allowed)
         self.assertIn("no_dispatch_claim", payload.blockers)
         self.assertIn("heartbeat_not_checked", payload.blockers)
+        joined_actions = " ".join(payload.next_actions).lower()
+        self.assertIn("modal", joined_actions)
+        self.assertIn("lightning", joined_actions)
+        self.assertNotIn("aws", joined_actions)
+        self.assertNotIn("azure", joined_actions)
+        self.assertNotIn("gcp", joined_actions)
 
     def test_collect_readiness_uses_provider_contract_order(self) -> None:
         mod = load_module()
@@ -172,6 +204,26 @@ class CloudProviderReadinessTests(unittest.TestCase):
         self.assertIn("gcp_billing_not_enabled_or_not_readable", payload.blockers)
         self.assertFalse(payload.exact_cuda_evidence_allowed)
         self.assertGreaterEqual(len(seen), 3)
+
+    def test_probe_azure_ready_remains_scaffold_only_for_non_dry_run(self) -> None:
+        mod = load_module()
+
+        def fake_runner(command: list[str], _timeout: int):
+            return mod.CommandResult(
+                command=command,
+                returncode=0,
+                stdout='{"id":"sub-id","name":"demo"}\n',
+            )
+
+        with mock.patch.object(mod.shutil, "which", return_value="/usr/bin/az"):
+            payload = mod.probe_azure(runner=fake_runner)
+
+        self.assertEqual(payload.status, "ready_identity_check_budget_quota_next")
+        self.assertFalse(payload.exact_cuda_evidence_allowed)
+        joined_actions = " ".join(payload.next_actions)
+        self.assertIn("dry-run only", joined_actions)
+        self.assertIn("exact_cuda_eval_supported=true", joined_actions)
+        self.assertIn("execution_flag", joined_actions)
 
 
 if __name__ == "__main__":

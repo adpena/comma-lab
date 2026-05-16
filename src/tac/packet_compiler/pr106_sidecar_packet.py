@@ -2960,6 +2960,54 @@ def mutate_pr106_sidecar_semantic_correction(
             new_delta_index=new_delta_index,
         )
 
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        if packet.framing_meta is not None:
+            raise ValueError("format_id=0x0D must not carry base framing_meta")
+        if packet.extra_framing_meta is None:
+            raise ValueError("format_id=0x0D requires extra_framing_meta")
+        dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
+            packet.extra_sidecar_payload,
+            packet.extra_framing_meta,
+            schema=schema,
+        )
+        idx = (
+            _first_corrected_pair(dims, no_op_dim=schema.no_op_sentinel)
+            if pair_index is None
+            else int(pair_index)
+        )
+        if not (0 <= idx < dims.size):
+            raise ValueError(f"pair_index out of range: {idx} not in [0, {dims.size})")
+        if int(dims[idx]) == schema.no_op_sentinel:
+            raise ValueError(f"pair_index {idx} is a no-op correction")
+        old_delta_index = int(delta_indices[idx])
+        new_delta_index = (old_delta_index + 1) % len(schema.deltas)
+        mutated_delta_indices = delta_indices.copy()
+        mutated_delta_indices[idx] = new_delta_index
+        mutated_extra_payload = encode_ranked_no_op_sidecar(
+            dims=dims,
+            delta_indices=mutated_delta_indices,
+            schema=schema,
+        )
+        mutated_packet = PR106SidecarPacket(
+            format_id=packet.format_id,
+            pr106_bytes=packet.pr106_bytes,
+            sidecar_payload=packet.sidecar_payload,
+            framing_meta=None,
+            extra_sidecar_payload=mutated_extra_payload,
+            extra_framing_meta=packet.extra_framing_meta,
+        )
+        return mutated_packet, PR106SidecarMutation(
+            section_name="extra_pr101_ranked_no_op_payload",
+            pair_index=idx,
+            format_id=packet.format_id,
+            old_dim=int(dims[idx]),
+            new_dim=int(dims[idx]),
+            old_delta_q=int(schema.deltas[old_delta_index]),
+            new_delta_q=int(schema.deltas[new_delta_index]),
+            old_delta_index=old_delta_index,
+            new_delta_index=new_delta_index,
+        )
+
     raise ValueError(f"unsupported PR106 sidecar format_id=0x{packet.format_id:02X}")
 
 
@@ -4347,6 +4395,17 @@ def pr106_sidecar_mutation_manifest(
         == sha256_hex(mutated_packet.pr106_bytes),
         "sidecar_payload_sha256_changed": sha256_hex(source_packet.sidecar_payload)
         != sha256_hex(mutated_packet.sidecar_payload),
+        "extra_sidecar_payload_sha256_changed": sha256_hex(
+            source_packet.extra_sidecar_payload
+        )
+        != sha256_hex(mutated_packet.extra_sidecar_payload),
+        "extra_framing_meta_sha256_changed": (
+            None
+            if source_packet.extra_framing_meta is None
+            and mutated_packet.extra_framing_meta is None
+            else sha256_hex(source_packet.extra_framing_meta or b"")
+            != sha256_hex(mutated_packet.extra_framing_meta or b"")
+        ),
         "source_packet_ir_consumed_byte_proof": source_proof,
         "mutated_packet_ir_consumed_byte_proof": mutated_proof,
         "parser_consumed_byte_accounting_passed": (

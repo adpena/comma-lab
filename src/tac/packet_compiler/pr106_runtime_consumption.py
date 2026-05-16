@@ -24,6 +24,7 @@ from typing import Any
 
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_SIDECAR_FORMAT_BROTLI,
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
@@ -182,17 +183,39 @@ def _tensor_sha256(tensor: Any) -> str:
     return sha256_hex(tensor.detach().cpu().contiguous().numpy().tobytes())
 
 
-def _decode_runtime_sidecar_payload(
+def _apply_runtime_sidecar_corrections(
+    runtime_module: ModuleType,
+    latents: Any,
+    dim_arr: Any,
+    delta_q_arr: Any,
+) -> Any:
+    """Apply runtime corrections while honoring in-place and returned tensors."""
+
+    corrected = runtime_module.apply_sidecar_corrections(
+        latents,
+        dim_arr,
+        delta_q_arr,
+    )
+    return latents if corrected is None else corrected
+
+
+def _decode_runtime_sidecar_correction_passes(
     runtime_module: ModuleType,
     member_payload: bytes,
-) -> tuple[int, bytes, Any, Any]:
+) -> tuple[int, bytes, list[dict[str, Any]]]:
     """Decode a PR106 sidecar packet through the selected runtime parser."""
 
     parsed = runtime_module.parse_sidecar_archive(member_payload)
     if isinstance(parsed, tuple) and len(parsed) == 2:
         pr106_bytes, sidecar_blob = parsed
         dim_arr, delta_q_arr = runtime_module.decode_sidecar_corrections(sidecar_blob)
-        return PR106_SIDECAR_FORMAT_BROTLI, pr106_bytes, dim_arr, delta_q_arr
+        return PR106_SIDECAR_FORMAT_BROTLI, pr106_bytes, [
+            {
+                "section_name": "sidecar_payload",
+                "dim_arr": dim_arr,
+                "delta_q_arr": delta_q_arr,
+            }
+        ]
     if isinstance(parsed, tuple) and len(parsed) == 4:
         format_id, pr106_bytes, sidecar_blob, framing_meta = parsed
         if format_id == PR106_SIDECAR_FORMAT_BROTLI:
@@ -232,13 +255,98 @@ def _decode_runtime_sidecar_payload(
                     sidecar_blob
                 )
             )
+        elif format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+            (
+                base_dim_arr,
+                base_delta_q_arr,
+                extra_dim_arr,
+                extra_delta_q_arr,
+            ) = runtime_module.decode_format0d_sidecar(sidecar_blob)
+            return int(format_id), pr106_bytes, [
+                {
+                    "section_name": "base_format0c_sidecar_payload",
+                    "dim_arr": base_dim_arr,
+                    "delta_q_arr": base_delta_q_arr,
+                },
+                {
+                    "section_name": "extra_pr101_ranked_no_op_payload",
+                    "dim_arr": extra_dim_arr,
+                    "delta_q_arr": extra_delta_q_arr,
+                },
+            ]
         else:
             raise ValueError(f"runtime returned unsupported format_id=0x{format_id:02X}")
-        return int(format_id), pr106_bytes, dim_arr, delta_q_arr
+        return int(format_id), pr106_bytes, [
+            {
+                "section_name": "sidecar_payload",
+                "dim_arr": dim_arr,
+                "delta_q_arr": delta_q_arr,
+            }
+        ]
     raise TypeError(
         "runtime parse_sidecar_archive returned unexpected shape: "
         f"{type(parsed)!r} {parsed!r}"
     )
+
+
+def _decode_runtime_sidecar_payload(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+) -> tuple[int, bytes, Any, Any]:
+    """Decode a single-pass PR106 sidecar packet through the runtime parser."""
+
+    format_id, pr106_bytes, correction_passes = _decode_runtime_sidecar_correction_passes(
+        runtime_module,
+        member_payload,
+    )
+    if len(correction_passes) != 1:
+        raise ValueError(
+            f"format_id=0x{format_id:02X} has {len(correction_passes)} correction passes"
+        )
+    correction = correction_passes[0]
+    return format_id, pr106_bytes, correction["dim_arr"], correction["delta_q_arr"]
+
+
+def _correction_pass_manifest(correction: dict[str, Any]) -> dict[str, object]:
+    dim_bytes = _array_bytes(correction["dim_arr"], "uint8")
+    delta_bytes = _array_bytes(correction["delta_q_arr"], "int8")
+    return {
+        "section_name": str(correction["section_name"]),
+        "n_pairs": len(correction["dim_arr"]),
+        "n_corrections": sum(
+            1 for value in correction["dim_arr"].tolist() if int(value) != 255
+        ),
+        "dim_sha256": sha256_hex(dim_bytes),
+        "delta_q_sha256": sha256_hex(delta_bytes),
+        "combined_sha256": sha256_hex(dim_bytes + delta_bytes),
+    }
+
+
+def _runtime_section_identity_rows(
+    packet_ir_consumed_byte_proof: dict[str, object],
+    consumed_sections: dict[str, object],
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    proof_sections = packet_ir_consumed_byte_proof.get("sections", [])
+    if not isinstance(proof_sections, list):
+        return rows
+    for section in proof_sections:
+        if not isinstance(section, dict):
+            continue
+        name = str(section.get("name", ""))
+        if consumed_sections.get(name) is not True:
+            continue
+        rows.append(
+            {
+                "name": name,
+                "sha256": section.get("sha256"),
+                "bytes": section.get("bytes", section.get("byte_count")),
+                "offset": section.get("offset", section.get("offset_start")),
+                "consumed": True,
+                "score_affecting": section.get("score_affecting") is True,
+            }
+        )
+    return rows
 
 
 def runtime_sidecar_correction_digest(
@@ -247,24 +355,41 @@ def runtime_sidecar_correction_digest(
 ) -> dict[str, object]:
     """Return a stable digest of corrections visible to runtime ``inflate.py``."""
 
-    format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
+    format_id, pr106_bytes, correction_passes = _decode_runtime_sidecar_correction_passes(
         runtime_module,
         member_payload,
     )
-    dim_bytes = _array_bytes(dim_arr, "uint8")
-    delta_bytes = _array_bytes(delta_q_arr, "int8")
+    dim_bytes = b"".join(
+        _array_bytes(correction["dim_arr"], "uint8") for correction in correction_passes
+    )
+    delta_bytes = b"".join(
+        _array_bytes(correction["delta_q_arr"], "int8")
+        for correction in correction_passes
+    )
     _, latents, _ = runtime_module.parse_packed_archive(pr106_bytes)
     source_latents_sha256 = _tensor_sha256(latents)
-    corrected_latents = runtime_module.apply_sidecar_corrections(
-        latents.clone(),
-        dim_arr,
-        delta_q_arr,
-    )
+    corrected_latents = latents.clone()
+    for correction in correction_passes:
+        corrected_latents = _apply_runtime_sidecar_corrections(
+            runtime_module,
+            corrected_latents,
+            correction["dim_arr"],
+            correction["delta_q_arr"],
+        )
     corrected_latents_sha256 = _tensor_sha256(corrected_latents)
     return {
         "format_id": f"0x{int(format_id):02X}",
-        "n_pairs": len(dim_arr),
-        "n_corrections": sum(1 for value in dim_arr.tolist() if int(value) != 255),
+        "n_passes": len(correction_passes),
+        "correction_passes": [
+            _correction_pass_manifest(correction) for correction in correction_passes
+        ],
+        "n_pairs": len(correction_passes[0]["dim_arr"]),
+        "n_corrections": sum(
+            int(pass_manifest["n_corrections"])
+            for pass_manifest in (
+                _correction_pass_manifest(correction) for correction in correction_passes
+            )
+        ),
         "dim_sha256": sha256_hex(dim_bytes),
         "delta_q_sha256": sha256_hex(delta_bytes),
         "combined_sha256": sha256_hex(dim_bytes + delta_bytes),
@@ -279,9 +404,61 @@ def runtime_framing_meta_consumption_probe(
     member_payload: bytes,
     baseline_digest: dict[str, object],
 ) -> dict[str, object]:
-    """Probe whether format-0x02 framing metadata is runtime-visible."""
+    """Probe whether sidecar framing metadata is runtime-visible."""
 
     packet = parse_pr106_sidecar_packet(member_payload)
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        if packet.extra_framing_meta is None:
+            return {
+                "section": "extra_framing_meta",
+                "format_id": f"0x{packet.format_id:02X}",
+                "applicable": True,
+                "runtime_consumption_claim": False,
+                "observation": "format_id_0x0D_missing_extra_framing_meta",
+            }
+
+        proof = pr106_sidecar_consumed_byte_proof(packet)
+        meta_section = next(
+            section
+            for section in proof["sections"]
+            if section["name"] == "extra_framing_meta"
+        )
+        mutated_payload = bytearray(member_payload)
+        mutated_payload[int(meta_section["offset"])] ^= 0x01
+        try:
+            mutated_digest = runtime_sidecar_correction_digest(
+                runtime_module,
+                bytes(mutated_payload),
+            )
+        except Exception as exc:
+            return {
+                "section": "extra_framing_meta",
+                "format_id": f"0x{packet.format_id:02X}",
+                "applicable": True,
+                "runtime_consumption_claim": True,
+                "observation": "runtime_rejected_mutated_extra_framing_meta",
+                "exception_type": type(exc).__name__,
+                "exception_message": str(exc),
+            }
+        changed = (
+            baseline_digest.get("combined_sha256")
+            != mutated_digest.get("combined_sha256")
+            or baseline_digest.get("corrected_latents_sha256")
+            != mutated_digest.get("corrected_latents_sha256")
+        )
+        return {
+            "section": "extra_framing_meta",
+            "format_id": f"0x{packet.format_id:02X}",
+            "applicable": True,
+            "runtime_consumption_claim": changed,
+            "observation": (
+                "runtime_digest_changed"
+                if changed
+                else "runtime_digest_unchanged"
+            ),
+            "mutated_runtime_correction_digest": mutated_digest,
+        }
+
     if packet.format_id != PR106_SIDECAR_FORMAT_PR101_GRAMMAR:
         return {
             "section": "framing_meta",
@@ -362,7 +539,7 @@ def runtime_full_frame_streaming_digest(
     if batch_pairs is not None and batch_pairs <= 0:
         raise ValueError(f"batch_pairs must be positive when set; got {batch_pairs}")
 
-    format_id, pr106_bytes, dim_arr, delta_q_arr = _decode_runtime_sidecar_payload(
+    format_id, pr106_bytes, correction_passes = _decode_runtime_sidecar_correction_passes(
         runtime_module,
         member_payload,
     )
@@ -370,7 +547,15 @@ def runtime_full_frame_streaming_digest(
         raise RuntimeError("device='cuda' requested but CUDA is unavailable")
 
     decoder_sd, latents, meta = runtime_module.parse_packed_archive(pr106_bytes)
-    runtime_module.apply_sidecar_corrections(latents, dim_arr, delta_q_arr)
+    source_latents_sha256 = _tensor_sha256(latents)
+    for correction in correction_passes:
+        latents = _apply_runtime_sidecar_corrections(
+            runtime_module,
+            latents,
+            correction["dim_arr"],
+            correction["delta_q_arr"],
+        )
+    corrected_latents_sha256 = _tensor_sha256(latents)
     torch_device = runtime_module.torch.device(device)
     decoder = runtime_module.HNeRVDecoder(
         latent_dim=meta["latent_dim"],
@@ -421,6 +606,10 @@ def runtime_full_frame_streaming_digest(
     return {
         "schema": "pr106_runtime_full_frame_streaming_digest_v1",
         "format_id": f"0x{int(format_id):02X}",
+        "n_passes": len(correction_passes),
+        "correction_passes": [
+            _correction_pass_manifest(correction) for correction in correction_passes
+        ],
         "device": device,
         "batch_pairs": pair_batch,
         "max_pairs": max_pairs,
@@ -430,6 +619,10 @@ def runtime_full_frame_streaming_digest(
         "total_bytes": total_bytes,
         "eval_size": [int(eval_h), int(eval_w)],
         "camera_size": [camera_h, camera_w],
+        "source_latents_sha256": source_latents_sha256,
+        "corrected_latents_sha256": corrected_latents_sha256,
+        "latents_changed_by_sidecar": source_latents_sha256
+        != corrected_latents_sha256,
         "full_frame_digest": full_frame,
         "streaming_raw_sha256": sha.hexdigest(),
         "elapsed_seconds": time.monotonic() - start,
@@ -694,8 +887,50 @@ def prove_pr106_sidecar_runtime_decode_consumption(
         and framing_meta_claim is not True
     ):
         blockers.append("runtime_framing_meta_consumption_not_proven")
+    if (
+        source_packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        and framing_meta_claim is not True
+    ):
+        blockers.append("runtime_extra_framing_meta_consumption_not_proven")
     decode_claim = semantic_changed and packet_accounting_passed
     apply_claim = decode_claim and corrected_latents_changed
+    runtime_consumed_sections = (
+        {
+            "pr106_payload": True,
+            "sidecar_payload": decode_claim,
+            "framing_meta": framing_meta_claim,
+        }
+        if source_packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        else {
+            "pr106_payload": True,
+            "base_format0c_sidecar_payload": decode_claim,
+            "extra_pr101_ranked_no_op_payload": decode_claim,
+            "extra_framing_meta": framing_meta_claim,
+        }
+    )
+    runtime_section_identities = _runtime_section_identity_rows(
+        source_proof,
+        runtime_consumed_sections,
+    )
+    runtime_apply_order = (
+        [
+            "base_format0c_corrections",
+            "extra_pr101_ranked_no_op_corrections",
+        ]
+        if source_packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        else None
+    )
+    runtime_all_sections_consumed = (
+        decode_claim
+        and (
+            source_packet.format_id
+            not in (
+                PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+                PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+            )
+            or framing_meta_claim is True
+        )
+    )
     manifest = pr106_sidecar_mutation_manifest(
         source_packet,
         mutated_packet,
@@ -723,18 +958,12 @@ def prove_pr106_sidecar_runtime_decode_consumption(
             "mutated_packet_ir_consumed_byte_proof": mutated_proof,
             "packet_ir_consumed_byte_accounting_passed": packet_accounting_passed,
             "runtime_framing_meta_consumption_probe": framing_meta_probe,
-            "runtime_consumed_score_affecting_sections": {
-                "pr106_payload": True,
-                "sidecar_payload": decode_claim,
-                "framing_meta": framing_meta_claim,
-            },
-            "runtime_all_score_affecting_sections_consumed": (
-                decode_claim
-                and (
-                    source_packet.format_id != PR106_SIDECAR_FORMAT_PR101_GRAMMAR
-                    or framing_meta_claim is True
-                )
+            "runtime_consumed_score_affecting_sections": runtime_consumed_sections,
+            "runtime_consumed_score_affecting_section_identities": (
+                runtime_section_identities
             ),
+            "runtime_apply_order": runtime_apply_order,
+            "runtime_all_score_affecting_sections_consumed": runtime_all_sections_consumed,
             "runtime_sidecar_decode_consumption_claim": decode_claim,
             "runtime_sidecar_apply_consumption_claim": apply_claim,
             "full_frame_inflate_output_parity_claim": False,

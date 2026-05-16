@@ -21,6 +21,10 @@ RUNTIME_INFLATE_PY_SHA = "d" * 64
 RUNTIME_CONTENT_TREE_SHA = "e" * 64
 INNER_PR106_PAYLOAD_SHA = "f" * 64
 HEADERLESS_SECTION_SHA = "a" * 64
+FORMAT0D_PR106_SHA = "1" * 64
+FORMAT0D_BASE_SHA = "2" * 64
+FORMAT0D_EXTRA_SHA = "3" * 64
+FORMAT0D_EXTRA_META_SHA = "4" * 64
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CLOSURE_TOOL = _REPO_ROOT / "tools" / "build_pr106_r2_packetir_exact_closure.py"
 
@@ -599,6 +603,97 @@ def test_packetir_exact_closure_accepts_format0c_exact_radix_magicless_alias(
     assert all(check["passed"] for check in closure["checks"])
 
 
+def test_packetir_exact_closure_accepts_format0d_base_then_extra_runtime_closure(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format0d_shape(archive)
+    runtime_consumption = _runtime_consumption_format0d(archive)
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0d",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "exact_measured_improves_packetir_source_cuda"
+    assert closure["blockers"] == []
+    proof = closure["packetir"]["runtime_consumption_proof"]
+    assert proof["valid"] is True
+    assert proof["score_affecting_section_match_mode"] == (
+        "format_0x0d_base_then_extra_runtime_closure"
+    )
+    identity = proof["score_affecting_section_match_evidence"][
+        "format0d_closure_identity"
+    ]
+    assert identity["runtime_apply_order_valid"] is True
+    assert identity["candidate_base_extra_section_ordered"] is True
+    assert all(row["identity_valid"] for row in identity["sections"].values())
+    assert all(check["passed"] for check in closure["checks"])
+
+
+def test_packetir_exact_closure_rejects_format0d_without_runtime_extra_identity(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format0d_shape(archive)
+    runtime_consumption = _runtime_consumption_format0d(archive)
+    runtime_consumption["runtime_consumed_score_affecting_section_identities"] = [
+        row
+        for row in runtime_consumption[
+            "runtime_consumed_score_affecting_section_identities"
+        ]
+        if row["name"] != "extra_pr101_ranked_no_op_payload"
+    ]
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0d_missing_extra_runtime_identity",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    proof = closure["packetir"]["runtime_consumption_proof"]
+    assert proof["valid"] is False
+    assert proof["expected_score_affecting_sections"] == [
+        "base_format0c_sidecar_payload",
+        "extra_framing_meta",
+        "extra_pr101_ranked_no_op_payload",
+        "pr106_payload",
+    ]
+    assert proof["actual_score_affecting_sections"] == [
+        "base_format0c_sidecar_payload",
+        "extra_framing_meta",
+        "extra_pr101_ranked_no_op_payload",
+        "pr106_payload",
+    ]
+    identity = proof["score_affecting_section_match_evidence"][
+        "format0d_closure_identity"
+    ]
+    extra = identity["sections"]["extra_pr101_ranked_no_op_payload"]
+    assert extra["candidate_section_found"] is True
+    assert extra["runtime_section_found"] is False
+    assert extra["identity_valid"] is False
+
+
 @pytest.mark.parametrize("inner_unchanged", [False, None])
 def test_packetir_exact_closure_rejects_format0b_alias_without_inner_identity(
     tmp_path: Path,
@@ -828,6 +923,24 @@ def _candidate_result_format06_shape(archive: Path) -> dict:
     }
 
 
+def _candidate_result_format0d_shape(archive: Path) -> dict:
+    result = _candidate_result(archive)
+    result["packet_ir_consumed_byte_proof"] = {
+        "all_payload_bytes_accounted": True,
+        "runtime_consumption_claim": False,
+        "unconsumed_trailing_bytes": 0,
+        "proof_scope": "packet_ir_parser_accounting_not_runtime_inflate_consumption",
+        "score_affecting_section_names": [
+            "pr106_payload",
+            "base_format0c_sidecar_payload",
+            "extra_pr101_ranked_no_op_payload",
+            "extra_framing_meta",
+        ],
+        "sections": _format0d_section_rows(),
+    }
+    return result
+
+
 def _load_closure_tool():
     spec = importlib.util.spec_from_file_location("build_pr106_r2_packetir_exact_closure", _CLOSURE_TOOL)
     assert spec is not None
@@ -965,6 +1078,78 @@ def _runtime_consumption(archive: Path) -> dict:
         "score_claim": False,
         "contest_axis_claim": False,
         "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _runtime_consumption_format0d(archive: Path) -> dict:
+    runtime = _runtime_consumption(archive)
+    runtime["format_id"] = "0x0D"
+    runtime["runtime_apply_order"] = [
+        "base_format0c_corrections",
+        "extra_pr101_ranked_no_op_corrections",
+    ]
+    runtime["runtime_consumed_score_affecting_sections"] = {
+        "pr106_payload": True,
+        "base_format0c_sidecar_payload": True,
+        "extra_pr101_ranked_no_op_payload": True,
+        "extra_framing_meta": True,
+    }
+    runtime["runtime_consumed_score_affecting_section_identities"] = [
+        {
+            "name": row["name"],
+            "sha256": row["sha256"],
+            "bytes": row["bytes"],
+            "consumed": True,
+        }
+        for row in _format0d_section_rows()
+    ]
+    return runtime
+
+
+def _format0d_section_rows() -> list[dict]:
+    return [
+        _format0d_section_row(
+            "pr106_payload",
+            offset=6,
+            length=64,
+            sha256=FORMAT0D_PR106_SHA,
+        ),
+        _format0d_section_row(
+            "base_format0c_sidecar_payload",
+            offset=70,
+            length=32,
+            sha256=FORMAT0D_BASE_SHA,
+        ),
+        _format0d_section_row(
+            "extra_pr101_ranked_no_op_payload",
+            offset=104,
+            length=16,
+            sha256=FORMAT0D_EXTRA_SHA,
+        ),
+        _format0d_section_row(
+            "extra_framing_meta",
+            offset=120,
+            length=6,
+            sha256=FORMAT0D_EXTRA_META_SHA,
+        ),
+    ]
+
+
+def _format0d_section_row(
+    name: str,
+    *,
+    offset: int,
+    length: int,
+    sha256: str,
+) -> dict:
+    return {
+        "name": name,
+        "offset": offset,
+        "offset_start": offset,
+        "bytes": length,
+        "byte_count": length,
+        "sha256": sha256,
+        "score_affecting": True,
     }
 
 

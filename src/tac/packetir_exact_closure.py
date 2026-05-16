@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,16 @@ from tac.repo_io import repo_relative, sha256_file
 SCHEMA = "packetir_exact_eval_closure_v1"
 TOOL_NAME = "tac.packetir_exact_closure"
 SCORE_TOLERANCE = 1e-9
+FORMAT0D_SCORE_AFFECTING_SECTIONS = (
+    "pr106_payload",
+    "base_format0c_sidecar_payload",
+    "extra_pr101_ranked_no_op_payload",
+    "extra_framing_meta",
+)
+FORMAT0D_RUNTIME_APPLY_ORDER = (
+    "base_format0c_corrections",
+    "extra_pr101_ranked_no_op_corrections",
+)
 
 
 class PacketIRExactClosureError(ValueError):
@@ -625,11 +636,7 @@ def _runtime_consumption_summary(
         if file.get("path") and _first_str(file.get("sha256"))
     }
     expected_sections = set(expected_score_affecting_sections)
-    actual_sections = {
-        str(key)
-        for key, value in consumed_sections.items()
-        if value is True
-    }
+    actual_sections = _runtime_consumed_section_names(consumed_sections)
     section_match = _runtime_score_affecting_sections_match(
         expected_sections=expected_sections,
         actual_sections=actual_sections,
@@ -717,13 +724,44 @@ def _runtime_score_affecting_sections_match(
     """Return whether runtime proof consumption covers PacketIR sections.
 
     Most PacketIR recodes preserve the same section names through runtime
-    decode. Formats 0x08, 0x09, 0x0A, 0x0B, and 0x0C deliberately elide the PR106
-    inner header from fixed HDM8/HLM2, HDM9/HLM2, or HDM9/HLM3 payloads; 0x0B
-    and 0x0C also elide fixed HDM9/HLM3 section magics. The runtime reconstructs
-    those constants and consumes the reconstructed generic ``pr106_payload``.
-    Accept that alias only when the proof binds the fixed format and records
-    unchanged inner PR106 semantics.
+    decode. Format 0x0D is multi-pass and must bind the base 0x0C stream, the
+    extra PR101 stream, the extra framing metadata, and the runtime's base-then-
+    extra apply order. Formats 0x08, 0x09, 0x0A, 0x0B, and 0x0C deliberately
+    elide the PR106 inner header from fixed HDM8/HLM2, HDM9/HLM2, or HDM9/HLM3
+    payloads; 0x0B and 0x0C also elide fixed HDM9/HLM3 section magics. The
+    runtime reconstructs those constants and consumes the reconstructed generic
+    ``pr106_payload``. Accept that alias only when the proof binds the fixed
+    format and records unchanged inner PR106 semantics.
     """
+
+    if _format_id_text(proof.get("format_id")) == "0x0D":
+        identity = _format0d_closure_identity(
+            proof,
+            candidate_consumed_byte_proof=candidate_consumed_byte_proof,
+        )
+        if (
+            expected_sections == set(FORMAT0D_SCORE_AFFECTING_SECTIONS)
+            and actual_sections == expected_sections
+            and identity["valid"] is True
+        ):
+            return {
+                "matched": True,
+                "mode": "format_0x0d_base_then_extra_runtime_closure",
+                "evidence": {
+                    "format0d_expected_sections": list(
+                        FORMAT0D_SCORE_AFFECTING_SECTIONS
+                    ),
+                    "format0d_closure_identity": identity,
+                },
+            }
+        return {
+            "matched": False,
+            "mode": "mismatch",
+            "evidence": {
+                "format0d_expected_sections": list(FORMAT0D_SCORE_AFFECTING_SECTIONS),
+                "format0d_closure_identity": identity,
+            },
+        }
 
     if actual_sections == expected_sections:
         return {
@@ -754,7 +792,7 @@ def _runtime_score_affecting_sections_match(
             "format_0x0c_hdm9_hlm3_magicless_exact_radix_reconstructed_pr106_payload_alias",
         ),
     }
-    alias = headerless_aliases.get(str(proof.get("format_id")))
+    alias = headerless_aliases.get(_format_id_text(proof.get("format_id")))
     if alias is not None:
         expected_headerless_section, mode = alias
         identity = _headerless_alias_identity(
@@ -797,6 +835,225 @@ def _runtime_score_affecting_sections_match(
         "mode": "mismatch",
         "evidence": {},
     }
+
+
+def _format0d_closure_identity(
+    proof: Mapping[str, Any],
+    *,
+    candidate_consumed_byte_proof: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate Format0D runtime closure against PacketIR section identities."""
+
+    consumed_sections = _as_mapping(proof.get("runtime_consumed_score_affecting_sections"))
+    runtime_apply_order = _format0d_runtime_apply_order(proof)
+    section_evidence: dict[str, dict[str, Any]] = {}
+    for section_name in FORMAT0D_SCORE_AFFECTING_SECTIONS:
+        candidate_section = _candidate_consumed_section_identity(
+            candidate_consumed_byte_proof,
+            expected_section=section_name,
+        )
+        runtime_section = _runtime_consumed_section_identity(
+            proof,
+            consumed_sections=consumed_sections,
+            expected_section=section_name,
+        )
+        sha_match = (
+            isinstance(candidate_section["sha256"], str)
+            and candidate_section["sha256"] == runtime_section["sha256"]
+        )
+        length_match = (
+            candidate_section["length"] is not None
+            and candidate_section["length"] == runtime_section["length"]
+        )
+        section_evidence[section_name] = {
+            "candidate_section_found": candidate_section["found"],
+            "candidate_section_sha256": candidate_section["sha256"],
+            "candidate_section_length": candidate_section["length"],
+            "candidate_section_offset": candidate_section["offset"],
+            "candidate_section_score_affecting": candidate_section["score_affecting"],
+            "runtime_section_found": runtime_section["found"],
+            "runtime_section_consumed": runtime_section["consumed"],
+            "runtime_section_sha256": runtime_section["sha256"],
+            "runtime_section_length": runtime_section["length"],
+            "sha256_matches": sha_match,
+            "length_matches": length_match,
+            "identity_valid": (
+                candidate_section["found"] is True
+                and candidate_section["score_affecting"] is True
+                and runtime_section["found"] is True
+                and runtime_section["consumed"] is True
+                and sha_match
+                and length_match
+            ),
+        }
+
+    ordered_sections = (
+        "base_format0c_sidecar_payload",
+        "extra_pr101_ranked_no_op_payload",
+        "extra_framing_meta",
+    )
+    ordered_offsets = [
+        section_evidence[name]["candidate_section_offset"]
+        for name in ordered_sections
+    ]
+    candidate_base_extra_ordered = all(
+        isinstance(offset, int) for offset in ordered_offsets
+    ) and all(
+        int(left) < int(right)
+        for left, right in pairwise(ordered_offsets)
+    )
+    runtime_apply_order_valid = runtime_apply_order == list(FORMAT0D_RUNTIME_APPLY_ORDER)
+    valid = (
+        _format_id_text(proof.get("format_id")) == "0x0D"
+        and runtime_apply_order_valid
+        and candidate_base_extra_ordered
+        and all(row["identity_valid"] is True for row in section_evidence.values())
+    )
+    return {
+        "valid": valid,
+        "format_id": _format_id_text(proof.get("format_id")),
+        "runtime_apply_order": runtime_apply_order,
+        "runtime_apply_order_valid": runtime_apply_order_valid,
+        "candidate_base_extra_section_ordered": candidate_base_extra_ordered,
+        "sections": section_evidence,
+    }
+
+
+def _format0d_runtime_apply_order(proof: Mapping[str, Any]) -> list[str]:
+    candidates = (
+        proof.get("runtime_apply_order"),
+        proof.get("format0d_runtime_apply_order"),
+        _as_mapping(proof.get("format0d_layout")).get("runtime_apply_order"),
+        _as_mapping(proof.get("runtime_format0d")).get("runtime_apply_order"),
+        _as_mapping(_as_mapping(proof.get("candidate_manifest")).get("format0d_layout")).get(
+            "runtime_apply_order"
+        ),
+        _as_mapping(
+            _as_mapping(proof.get("source_packet_manifest")).get("format0d_layout")
+        ).get("runtime_apply_order"),
+        _as_mapping(
+            _as_mapping(proof.get("candidate_packet_manifest")).get("format0d_layout")
+        ).get("runtime_apply_order"),
+        _as_mapping(proof.get("semantic_materialization")).get("runtime_apply_order"),
+    )
+    for candidate in candidates:
+        if isinstance(candidate, Sequence) and not isinstance(candidate, str):
+            return [str(item) for item in candidate]
+    return []
+
+
+def _runtime_consumed_section_names(consumed_sections: Mapping[str, Any]) -> set[str]:
+    names: set[str] = set()
+    for key, value in consumed_sections.items():
+        if value is True or (
+            isinstance(value, Mapping) and _runtime_section_consumed(value) is True
+        ):
+            names.add(str(key))
+    return names
+
+
+def _runtime_consumed_section_identity(
+    proof: Mapping[str, Any],
+    *,
+    consumed_sections: Mapping[str, Any],
+    expected_section: str,
+) -> dict[str, Any]:
+    direct = consumed_sections.get(expected_section)
+    if isinstance(direct, Mapping):
+        return _runtime_section_identity_from_row(
+            expected_section,
+            direct,
+            default_consumed=_runtime_section_consumed(direct),
+        )
+    for row in _iter_runtime_section_identity_rows(proof):
+        if row.get("name") != expected_section:
+            continue
+        return _runtime_section_identity_from_row(
+            expected_section,
+            row,
+            default_consumed=direct is True,
+        )
+    return {
+        "found": False,
+        "consumed": direct is True,
+        "sha256": None,
+        "length": None,
+    }
+
+
+def _iter_runtime_section_identity_rows(proof: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for key in (
+        "runtime_consumed_score_affecting_section_identities",
+        "runtime_consumed_score_affecting_sections_identity",
+        "runtime_consumed_section_identities",
+        "runtime_score_affecting_section_identities",
+        "runtime_section_identities",
+        "runtime_consumed_sections",
+    ):
+        container = proof.get(key)
+        if isinstance(container, Mapping):
+            for section_name, value in container.items():
+                if isinstance(value, Mapping):
+                    row = dict(value)
+                    row.setdefault("name", section_name)
+                    rows.append(row)
+        elif isinstance(container, Sequence) and not isinstance(container, str):
+            for value in container:
+                if isinstance(value, Mapping):
+                    rows.append(dict(value))
+    return rows
+
+
+def _runtime_section_identity_from_row(
+    expected_section: str,
+    row: Mapping[str, Any],
+    *,
+    default_consumed: bool,
+) -> dict[str, Any]:
+    return {
+        "found": True,
+        "consumed": _runtime_section_consumed(row) or default_consumed,
+        "sha256": _first_str(
+            row.get("sha256"),
+            row.get("payload_sha256"),
+            row.get("section_sha256"),
+            row.get("runtime_sha256"),
+        ),
+        "length": _first_int(
+            row.get("bytes"),
+            row.get("byte_count"),
+            row.get("length"),
+            row.get("runtime_bytes"),
+        ),
+        "name": row.get("name", expected_section),
+    }
+
+
+def _runtime_section_consumed(row: Mapping[str, Any]) -> bool:
+    return any(
+        row.get(key) is True
+        for key in (
+            "consumed",
+            "runtime_consumed",
+            "runtime_consumption_claim",
+            "decode_consumed",
+            "apply_consumed",
+            "consumption_claim",
+        )
+    )
+
+
+def _format_id_text(value: Any) -> str:
+    if isinstance(value, int):
+        return f"0x{value:02X}"
+    text = str(value)
+    if text.lower().startswith("0x"):
+        try:
+            return f"0x{int(text, 16):02X}"
+        except ValueError:
+            return text
+    return text
 
 
 def _headerless_alias_identity(

@@ -24,17 +24,16 @@ Exit codes:
     2 = invalid args / pre-flight failure (no az login, missing CLI, etc)
     3 = remote launch state unknown; verify VM manually, no blind retry
 
-This script DOES NOT spawn any VMs unless the user explicitly invokes it
-with --no-dry-run; the default is dry-run for parity with the
+This script refuses real VM execution while the canonical Azure provider
+contract is scaffold-only. The default remains dry-run for parity with the
 "infrastructure first, dispatches when needed" mandate.
 """
 from __future__ import annotations
 
 import argparse
-import json
-import os
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,9 +41,10 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.deploy.azure import azure_dispatch as azd  # noqa: E402
+from tac.deploy.provider_contracts import provider_contracts  # noqa: E402
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -74,9 +74,26 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--retry-delay", type=int, default=15,
                    help="Seconds between retries (default 15).")
     p.add_argument("--no-dry-run", action="store_true",
-                   help="Actually spawn the VM. Default is dry-run "
-                        "(prints planned `az vm create` and exits 0).")
-    return p.parse_args()
+                   help="Request real VM execution. Refused while the Azure "
+                        "provider contract is scaffold-only; default is dry-run.")
+    return p.parse_args(argv)
+
+
+def _azure_non_dry_run_refusal() -> str | None:
+    contract = provider_contracts().get("azure")
+    if contract is None:
+        return "provider contract missing for azure"
+
+    blockers: list[str] = []
+    if contract.execution_flag is None:
+        blockers.append("execution_flag=None")
+    if not contract.exact_cuda_eval_supported:
+        blockers.append("exact_cuda_eval_supported=False")
+    if contract.scaffold_only:
+        blockers.append("status=scaffold")
+    if not blockers:
+        return None
+    return "; ".join(blockers)
 
 
 def _attempt_dispatch(args: argparse.Namespace, attempt: int) -> tuple[str, str | None, str]:
@@ -140,12 +157,24 @@ def _attempt_dispatch(args: argparse.Namespace, attempt: int) -> tuple[str, str 
     return "success", handle.vm_name, "\n".join(log)
 
 
-def main() -> int:
-    args = _parse_args()
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parse_args(argv)
 
     if not (REPO_ROOT / args.lane_script).exists():
         print(f"FATAL: lane script missing: {args.lane_script}", file=sys.stderr)
         return 2
+
+    if args.no_dry_run:
+        refusal = _azure_non_dry_run_refusal()
+        if refusal is not None:
+            print(
+                "FATAL: Azure --no-dry-run refused by provider contract: "
+                f"{refusal}. Azure remains dry-run/scaffold-only until the "
+                "canonical contract advertises an execution flag and exact "
+                "CUDA eval support.",
+                file=sys.stderr,
+            )
+            return 2
 
     # Pre-flight Azure login check (fail-loud, never silent)
     if args.no_dry_run:
