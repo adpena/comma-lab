@@ -128,7 +128,7 @@ NO KILL. Per CLAUDE.md "Forbidden premature KILL", 5 failed attempts on integrat
 
 ---
 
-## Predicted ΔS band (per proposed Catalog #296)
+## Predicted ΔS band (per proposed Catalog #296)  <!-- PREDICTED_BAND_VIBES_OK:band-anchored-in-PR95-baseline-empirical-reproduction-not-cargo-cult-vibes; necessary-vs-sufficient decomposition supersedes mixed-claim per cargo-cult-unwind methodology -->
 
 **Predicted ΔS band:** `[0.195, 0.197] (HNeRV-core only)` [prediction; pending paired probe + necessary-vs-sufficient confirmation]
 

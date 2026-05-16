@@ -2391,14 +2391,14 @@ def preflight_all(
         # similar cargo-cult-prediction risk. Per CLAUDE.md "Meta-
         # Lagrangian/Pareto solver - NON-NEGOTIABLE" + "Council conduct"
         # (Dykstra co-leads quintet pact). Sister of Catalog #290 / #229
-        # / #292 / #294. Initial wire-in is WARN-ONLY per CLAUDE.md
-        # "Strict-flip atomicity rule" - live count at landing is small
-        # (≤5) per audit; sister-subagent backfill wave is the follow-on
-        # op-routable; strict-flip planned alongside that wave's final
-        # commit. Memory:
-        # feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md.
+        # / #292 / #294. STRICT-FLIPPED 2026-05-16 per PERMANENT-FIX-
+        # AND-SELF-PROTECT-ALL wave (live count 0 verified at flip via
+        # waiver on sane_hnerv_cargo_cult_unwind_design_20260516.md).
+        # Memory:
+        # feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md
+        # + feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
         check_substrate_predicted_band_has_dykstra_feasibility_check(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #297 - SUBSTRATE SIGNAL-AXIS DESTRUCTION HAS
         # REVERSIBILITY PROBE. Empirical anchors: NSCS06 Y=R=G=B chroma
@@ -2424,48 +2424,95 @@ def preflight_all(
         # posterior anchor within the 30-day window UNLESS opted out
         # via research_only / lane_class=substrate_engineering /
         # archived / `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>`
-        # waiver. Initial wire-in is WARN-ONLY per "Strict-flip
-        # atomicity rule" because the operator-routed backfill sweep
-        # of existing stale L1 lanes is itself the strict-flip atomic.
-        # Strict-flip planned once the sweep drives count to 0. Sister
-        # of Catalog #220 / #272 / #233. Memory:
-        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md.
+        # waiver. STRICT-FLIPPED 2026-05-16 per PERMANENT-FIX-AND-SELF-
+        # PROTECT-ALL wave (live count 0 verified at flip; cutoff filter
+        # exempts pre-cutoff stale lanes). Sister of Catalog #220 /
+        # #272 / #233. Memory:
+        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md
+        # + feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
         check_substrate_lane_l1_scaffold_not_stale_dispatch(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
         # the #400 quota without a `# CATALOG_QUOTA_EXCEEDED_OK:
-        # <rationale>` waiver in the first 200 lines. The 12-month
-        # projection at current cadence (~5-10 new gates/week) puts
-        # catalog # at 500-700 by 2027-05-16; the #400 quota is the
-        # operator-visible "stop and consolidate" brake. Initial
-        # wire-in is WARN-ONLY because the current registered catalog
-        # max is ~299 so the quota is not yet binding. Strict-flip
-        # planned when catalog # approaches 400. Sister of Catalog
-        # #118 / #159 / #176 / #185 / #186. Memory:
-        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md.
+        # <rationale>` waiver in the first 200 lines. STRICT-FLIPPED
+        # 2026-05-16 per PERMANENT-FIX-AND-SELF-PROTECT-ALL wave (live
+        # count 0 verified at flip; current registered catalog max is
+        # ~304 so the quota is not yet binding but the structural
+        # protection is now active). Sister of Catalog #118 / #159 /
+        # #176 / #185 / #186. Memory:
+        # feedback_premortem_consolidation_wave_5_items_landed_20260516.md
+        # + feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
         check_catalog_quota_under_400(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #300 - COUNCIL-HIERARCHY-V2 FRONTMATTER.
         # Per CLAUDE.md "Council hierarchy: 4-tier protocol" non-negotiable
         # + COUNCIL-HIERARCHY-V2 landing 2026-05-16. Sister of Catalog #292
         # at the FRONTMATTER surface where #292 enforces body-level
-        # assumption surfacing. Every council deliberation memo dated >=
-        # 2026-05-16 MUST declare the v2 4-tier frontmatter (council_tier
-        # + council_attendees + council_quorum_met + council_verdict +
-        # council_dissent + council_decisions_recorded; T2+ additionally
-        # requires council_assumption_adversary_verdict). Without the
-        # tier declaration, downstream consumers (continual-learning
-        # posterior, Rashomon ensemble, cadence audit tool) cannot route
-        # the deliberation through the correct sub-flow. WARN-ONLY at
-        # landing per "Strict-flip atomicity rule"; strict-flip planned
-        # after 5 deliberations land in v2 format. Memory:
-        # feedback_council_hierarchy_v2_landed_20260516.md.
+        # assumption surfacing. STRICT-FLIPPED 2026-05-16 per PERMANENT-
+        # FIX-AND-SELF-PROTECT-ALL wave (live count 0 verified at flip;
+        # cutoff filter exempts pre-2026-05-16 council memos). Sister of
+        # Catalog #292. Memory:
+        # feedback_council_hierarchy_v2_landed_20260516.md +
+        # feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
         check_council_deliberation_declares_tier_in_frontmatter(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #301 - KILL/FALSIFIED MEMO SUBSTRATE-CLASS
+        # COMPATIBILITY EVIDENCE. Per CLAUDE.md "KILL/FALSIFIED memory
+        # verdicts" non-negotiable + "Forbidden premature KILL without
+        # research exhaustion" FORBIDDEN pattern + resurrection audit
+        # (commit d0c347f1f) Pattern B = Substrate-mismatch-as-class-kill
+        # attribution. STRICT-from-byte-one per CLAUDE.md "Strict-flip
+        # atomicity rule" (live count at landing: 0; pre-cutoff legacy
+        # memos exempt). Sister of Catalog #220 / #233 / #298. Memory:
+        # feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
+        check_kill_memos_have_substrate_compatibility_evidence(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #302 - SISTER-SUBAGENT SCOPE OVERLAP via
+        # CHECKPOINT JSONL. META-meta protection against the 2026-05-16
+        # near-miss where 2 parallel subagents had overlapping
+        # files_touched in their active subagent_progress.jsonl
+        # checkpoints. Per CLAUDE.md "Subagent coherence-by-default"
+        # non-negotiable + Catalog #230 (commit-message surface).
+        # Catalog #302 closes the edit-time-checkpoint surface.
+        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
+        # atomicity rule" — live count at landing: 0; strict-flip
+        # pending one full session-cycle observation. Sister of #117 /
+        # #157 / #174 / #206 / #230 / #248. Memory:
+        # feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
+        check_sister_subagent_scope_overlap_via_checkpoint_jsonl(
             strict=False, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #303 - SUBSTRATE DESIGN MEMO CARGO-CULT
+        # AUDIT SECTION. Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD
+        # operating mode" + "META-ASSUMPTION ADVERSARIAL REVIEW" non-
+        # negotiables + the NSCS06 v7 cargo-cult-unwind methodology
+        # (105.15 -> 58.89 in ONE iteration). Initial wire-in is WARN-
+        # ONLY per "Strict-flip atomicity rule" — live count at landing:
+        # 5 (existing cargo-cult-unwind design memos predate this
+        # gate's section-header requirement). Strict-flip pending
+        # sister-subagent backfill wave. Sister of Catalog #290 / #294
+        # / #296 / #297. Memory:
+        # feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
+        check_substrate_design_memo_has_cargo_cult_audit_section(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #304 - SUBSTRATE CODEC NO CLOSED-FORM CDF
+        # WITHOUT EMPIRICAL BIT-SPEND PROOF. Per CLAUDE.md "Bit-level
+        # deconstruction and entropy discipline" + NSCS06 v6
+        # falsification symposium cargo-cult #1 enumeration. Empirical
+        # anchor: NSCS06 v6 rate=1.96 closed-form prediction with ZERO
+        # bytes materialized. STRICT-from-byte-one per CLAUDE.md
+        # "Strict-flip atomicity rule" (live count at landing: 0).
+        # Sister of Catalog #105 / #139 / #220 / #272. Memory:
+        # feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md.
+        check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof(
+            strict=True, verbose=verbose,
         )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
@@ -64620,6 +64667,816 @@ def check_council_deliberation_declares_tier_in_frontmatter(
             "fixed AND self-protected against'. Catalog #300 (COUNCIL-"
             "HIERARCHY-V2; sister of Catalog #291 + #292 + #229 + #290 + "
             "#185).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #301 - check_kill_memos_have_substrate_compatibility_evidence
+#
+# PERMANENT-FIX-AND-SELF-PROTECT-ALL 2026-05-16 self-protection per operator
+# NON-NEGOTIABLE *"must permanently fix and self protect against all"* + the
+# resurrection audit memo `.omx/research/resurrection_audit_20260516.md`
+# (commit d0c347f1f). Pattern B = Substrate-mismatch-as-class-kill attribution:
+# kill memos that attribute "TECHNIQUE FALSIFIED" / "TECHNIQUE KILLED" when
+# the actual root cause was substrate-class incompatibility (e.g., the
+# technique was tested against an incompatible archive grammar, not its
+# native substrate). PR101 CompressAI / PR106 Lanes #05+#06 / PR107
+# lossy_coarsening anchors documented in the resurrection audit.
+#
+# Per CLAUDE.md "KILL/FALSIFIED memory verdicts - NON-NEGOTIABLE,
+# HIGHEST EMPHASIS" + "Forbidden premature KILL without research
+# exhaustion (the kill-too-fast trap)" FORBIDDEN pattern. Default
+# verdict for one-config failure is DEFERRED-pending-research, NOT
+# KILLED. KILL/FALSIFIED memos MUST carry evidence of substrate-class
+# compatibility checking so the kill is not silently a substrate-
+# mismatch attribution error.
+#
+# Refuses repo-local `.omx/research/*killed*.md` + `.omx/research/*falsified*.md`
+# files dated >= 2026-05-16 (cutoff exempts pre-audit legacy verdicts pending
+# the operator-routed resurrection sweep) AND `.omx/research/*deferred*.md`
+# memos containing "TECHNIQUE FALSIFIED" / "TECHNIQUE KILLED" claims that
+# lack ANY of:
+#   (a) Compatible-substrate-tested token: "verified against compatible
+#       substrate", "tested against compatible substrate",
+#       "archive_grammar_compatible", "class_preserved",
+#       "compatible_substrate_verified".
+#   (b) Substrate-mismatch-considered token: "substrate mismatch ruled out",
+#       "substrate-mismatch ruled out", "substrate compatibility verified",
+#       "substrate class verified", "resurrection_audit_classified".
+#   (c) Same-line waiver `# SUBSTRATE_MISMATCH_ATTRIBUTION_OK:<rationale>`
+#       on the FALSIFIED/KILLED claim line (placeholder rejected).
+#
+# Sister of: Catalog #220 (substrate L1 scaffold operational mechanism)
+# + Catalog #233 (L1-to-L2 promotion canonical 4-gate) + Catalog #298
+# (substrate retirement discipline 30-day). Catalog #233 covers
+# promotion-time substrate-class evidence; #301 covers retirement-time
+# substrate-class evidence. Together they close the substrate-class-
+# attribution surface bidirectionally.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" because the resurrection audit (commit d0c347f1f) catalogs 4-6
+# legacy kill memos still needing substrate-compatibility backfill;
+# strict-flip planned after operator-routed sweep clears the backlog.
+# ============================================================================
+
+
+_CHECK_301_CUTOFF_DATE_SUFFIX_INT = 20260516
+_CHECK_301_WAIVER_TOKEN = "SUBSTRATE_MISMATCH_ATTRIBUTION_OK:"
+_CHECK_301_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+_CHECK_301_KILL_CLAIM_PATTERNS = (
+    re.compile(r"\btechnique\s+falsified\b", re.IGNORECASE),
+    re.compile(r"\btechnique\s+killed\b", re.IGNORECASE),
+    re.compile(r"\btechnique\s+is\s+falsified\b", re.IGNORECASE),
+    re.compile(r"\btechnique\s+is\s+killed\b", re.IGNORECASE),
+    re.compile(r"\bmethod\s+falsified\b", re.IGNORECASE),
+    re.compile(r"\bmethod\s+killed\b", re.IGNORECASE),
+)
+
+_CHECK_301_COMPATIBILITY_TOKENS = (
+    "verified against compatible substrate",
+    "tested against compatible substrate",
+    "archive_grammar_compatible",
+    "class_preserved",
+    "class preserved",
+    "compatible_substrate_verified",
+    "compatible substrate verified",
+    "substrate mismatch ruled out",
+    "substrate-mismatch ruled out",
+    "substrate compatibility verified",
+    "substrate-compatibility verified",
+    "substrate class verified",
+    "substrate-class verified",
+    "resurrection_audit_classified",
+    "resurrection audit classified",
+)
+
+_CHECK_301_FILENAME_RE = re.compile(
+    r"^.*(killed|falsified|deferred).*?(\d{8})\.md$",
+    re.IGNORECASE,
+)
+
+
+def _check_301_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries the canonical same-line waiver."""
+    if _CHECK_301_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_301_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_301_WAIVER_TOKEN):].strip()
+    if tail.endswith("-->"):
+        tail = tail[:-3].rstrip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_301_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    if len(tail) < 4:
+        return False
+    return True
+
+
+def _check_301_body_has_compatibility_token(body_lower: str) -> bool:
+    for tok in _CHECK_301_COMPATIBILITY_TOKENS:
+        if tok in body_lower:
+            return True
+    return False
+
+
+def check_kill_memos_have_substrate_compatibility_evidence(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #301 — refuse KILL/FALSIFIED memos lacking substrate-
+    compatibility evidence.
+
+    Per CLAUDE.md "KILL/FALSIFIED memory verdicts" non-negotiable +
+    "Forbidden premature KILL without research exhaustion" FORBIDDEN
+    pattern. KILL conversion requires evidence the technique was tested
+    against a compatible substrate, not silently against an incompatible
+    archive grammar. Sister of Catalog #220 + #233 + #298.
+
+    Memory: ``feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md``.
+    Lane: ``lane_permanent_fix_self_protect_all_20260516``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    research_root = root / ".omx" / "research"
+    if not research_root.is_dir():
+        return []
+
+    violations: list[str] = []
+    try:
+        candidates = sorted(research_root.iterdir())
+    except OSError:
+        return []
+
+    for entry in candidates:
+        if not entry.is_file() or not entry.name.endswith(".md"):
+            continue
+        m = _CHECK_301_FILENAME_RE.match(entry.name)
+        if not m:
+            continue
+        try:
+            date_int = int(m.group(2))
+        except (TypeError, ValueError):
+            continue
+        if date_int < _CHECK_301_CUTOFF_DATE_SUFFIX_INT:
+            continue  # pre-cutoff legacy memos exempt
+        try:
+            text = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        body_lower = text.lower()
+        # Find KILL/FALSIFIED claim
+        text_lines = text.splitlines()
+        for i, line in enumerate(text_lines, start=1):
+            claim_hit = None
+            for pat in _CHECK_301_KILL_CLAIM_PATTERNS:
+                if pat.search(line):
+                    claim_hit = pat.pattern
+                    break
+            if not claim_hit:
+                continue
+            if _check_301_line_has_waiver(line):
+                # waiver on the claim line short-circuits this file's violations
+                claim_hit = None
+                break
+            # claim found without same-line waiver — check body for compatibility token
+            if _check_301_body_has_compatibility_token(body_lower):
+                claim_hit = None
+                break
+            try:
+                rel = entry.relative_to(root)
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}:{i}: KILL/FALSIFIED memo dated {date_int} contains "
+                f"technique-kill/falsified claim but lacks substrate-class "
+                f"compatibility evidence. Add ANY of: (a) compatible-substrate-"
+                f"tested token (verified against compatible substrate / "
+                f"archive_grammar_compatible / class_preserved / "
+                f"compatible_substrate_verified), (b) substrate-mismatch-"
+                f"considered token (substrate mismatch ruled out / "
+                f"resurrection_audit_classified), OR (c) same-line waiver "
+                f"`# SUBSTRATE_MISMATCH_ATTRIBUTION_OK:<rationale>` on the "
+                f"FALSIFIED/KILLED claim line. Per CLAUDE.md \"KILL/FALSIFIED "
+                f"memory verdicts\" non-negotiable + \"Forbidden premature "
+                f"KILL without research exhaustion\" FORBIDDEN pattern + the "
+                f"resurrection audit (commit d0c347f1f) Pattern B = "
+                f"Substrate-mismatch-as-class-kill attribution. Catalog "
+                f"#301 (sister of #220 / #233 / #298)."
+            )
+            break  # one violation per file is sufficient
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_kill_memos_have_substrate_compatibility_evidence] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_kill_memos_have_substrate_compatibility_evidence] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_kill_memos_have_substrate_compatibility_evidence found "
+            f"{len(violations)} KILL/FALSIFIED memo(s) lacking substrate-"
+            "class compatibility evidence. Per CLAUDE.md \"KILL/FALSIFIED "
+            "memory verdicts\" non-negotiable + \"Forbidden premature KILL "
+            "without research exhaustion\" FORBIDDEN pattern + resurrection "
+            "audit commit d0c347f1f Pattern B. Catalog #301 (sister of "
+            "#220 / #233 / #298).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #302 - check_sister_subagent_scope_overlap_via_checkpoint_jsonl
+#
+# PERMANENT-FIX-AND-SELF-PROTECT-ALL 2026-05-16 META-meta self-protection
+# per operator NON-NEGOTIABLE + my own near-miss 30 min before landing
+# (sister `a8970e367aaa5df99` killed before edit-time collision;
+# `a50a92694ac22c9f5` was in flight on same CLAUDE.md + src/tac/preflight.py
+# scope). Bug class: parent agent dispatches a new subagent whose declared
+# `files_touched` overlaps with the `files_touched` of an in-flight subagent
+# whose checkpoint is `status: in_progress` and was written within the last
+# 60 minutes. Without structural detection, this relies on manual TaskStop
+# after-the-fact, which is what produced the near-miss.
+#
+# Per CLAUDE.md "Subagent coherence-by-default" non-negotiable + Catalog
+# #230 (bulk-rewrite-respects-sister-subagent-ownership-map) — Catalog
+# #230 covers the COMMIT-MESSAGE surface; Catalog #302 covers the
+# IN-FLIGHT-CHECKPOINT surface (a tighter window).
+#
+# Scans `.omx/state/subagent_progress.jsonl` for in-flight subagent rows
+# (status=in_progress, written within last 60 minutes) and refuses any
+# state where 2+ DIFFERENT subagent IDs share at least 1 file in
+# `files_touched`. Default-exempts files that are commonly multi-subagent
+# (`.omx/state/modal_call_id_ledger.jsonl`, `.omx/state/active_lane_dispatch_claims.md`,
+# `MEMORY.md`, etc.). Same-line waiver on the LAST subagent's `notes`
+# field: `# SISTER_SUBAGENT_SCOPE_OVERLAP_OK:<rationale>` (placeholder
+# rejected so the gate's own example cannot self-waive).
+#
+# Sister of: Catalog #117 (subagent commit serializer must be used) +
+# Catalog #157 (commit-swap pre-pre-lock hash) + Catalog #174
+# (--expected-content-sha256 mandatory) + Catalog #206 (subagent
+# crash-resume discipline) + Catalog #230 (bulk-rewrite ownership map).
+# Together they extinct the multi-subagent edit/commit collision class
+# at SIX surfaces: edit-time-checkpoint (#302) + edit-time-bulk-op
+# (#230) + commit-time-pre-pre-lock (#157) + commit-time-staged (#216)
+# + commit-time-lock-arbitration (#117) + post-resolution-residual-
+# marker (#248).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# — live count at landing: 0 (no in-flight subagent collisions; sister
+# wave just landed clean). Strict-flip pending one full session-cycle
+# observation that the gate stays clean.
+# ============================================================================
+
+
+_CHECK_302_WAIVER_TOKEN = "SISTER_SUBAGENT_SCOPE_OVERLAP_OK:"
+_CHECK_302_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+_CHECK_302_IN_FLIGHT_WINDOW_SECONDS = 60 * 60  # 60 minutes
+
+# Files exempt from collision detection (commonly multi-subagent state).
+_CHECK_302_EXEMPT_FILES = frozenset({
+    ".omx/state/modal_call_id_ledger.jsonl",
+    ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/state/commit-serializer.log",
+    ".omx/state/catalog-claim.log",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/state/lane_registry.json",
+    ".omx/state/lane_maturity_audit.log",
+    ".omx/state/continual_learning_posterior.jsonl",
+    ".omx/state/cost_band_posterior.jsonl",
+    "MEMORY.md",
+})
+
+
+def _check_302_parse_iso_utc(ts: str):
+    """Parse an ISO-UTC timestamp; return datetime or None on parse failure."""
+    try:
+        if ts.endswith("Z"):
+            ts = ts[:-1] + "+00:00"
+        return _dt.datetime.fromisoformat(ts)
+    except (TypeError, ValueError):
+        return None
+
+
+def _check_302_line_has_waiver(notes: str) -> bool:
+    if not isinstance(notes, str):
+        return False
+    if _CHECK_302_WAIVER_TOKEN not in notes:
+        return False
+    idx = notes.find(_CHECK_302_WAIVER_TOKEN)
+    tail = notes[idx + len(_CHECK_302_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_302_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    return len(tail) >= 4
+
+
+def check_sister_subagent_scope_overlap_via_checkpoint_jsonl(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+    now_utc=None,
+) -> list[str]:
+    """Catalog #302 — refuse repo state with 2+ in-flight subagents whose
+    declared `files_touched` overlap.
+
+    Per CLAUDE.md "Subagent coherence-by-default" non-negotiable + sister
+    Catalog #230 (bulk-rewrite ownership map; commit-message surface).
+    Catalog #302 closes the edit-time-checkpoint surface that #230 does
+    not cover.
+
+    Memory: ``feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md``.
+    Lane: ``lane_permanent_fix_self_protect_all_20260516``.
+    """
+    import json as _json
+
+    root = Path(repo_root or REPO_ROOT)
+    jsonl_path = root / ".omx" / "state" / "subagent_progress.jsonl"
+    if not jsonl_path.is_file():
+        return []
+
+    if now_utc is None:
+        now_utc = _dt.datetime.now(_dt.timezone.utc)
+
+    # Read all entries; keep only the LATEST row per subagent_id.
+    latest_per_subagent: dict[str, dict] = {}
+    try:
+        with jsonl_path.open("r", encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    row = _json.loads(raw)
+                except (ValueError, _json.JSONDecodeError):
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                sid = row.get("subagent_id")
+                if not isinstance(sid, str) or not sid:
+                    continue
+                latest_per_subagent[sid] = row
+    except OSError:
+        return []
+
+    # Filter to in-flight subagents within the 60-min window.
+    in_flight: list[dict] = []
+    for sid, row in latest_per_subagent.items():
+        status = row.get("status")
+        if status != "in_progress":
+            continue
+        written_at = row.get("written_at_utc")
+        if not isinstance(written_at, str):
+            continue
+        ts = _check_302_parse_iso_utc(written_at)
+        if ts is None:
+            continue
+        try:
+            delta = (now_utc - ts).total_seconds()
+        except (TypeError, ValueError):
+            continue
+        if delta < 0 or delta > _CHECK_302_IN_FLIGHT_WINDOW_SECONDS:
+            continue
+        in_flight.append(row)
+
+    if len(in_flight) < 2:
+        return []
+
+    # Detect file overlap pairwise.
+    violations: list[str] = []
+    for i in range(len(in_flight)):
+        for j in range(i + 1, len(in_flight)):
+            a = in_flight[i]
+            b = in_flight[j]
+            a_files = a.get("files_touched") or []
+            b_files = b.get("files_touched") or []
+            if not isinstance(a_files, list) or not isinstance(b_files, list):
+                continue
+            a_set = {f for f in a_files if isinstance(f, str) and f not in _CHECK_302_EXEMPT_FILES}
+            b_set = {f for f in b_files if isinstance(f, str) and f not in _CHECK_302_EXEMPT_FILES}
+            overlap = a_set & b_set
+            if not overlap:
+                continue
+            # Check waiver on either subagent's notes
+            if _check_302_line_has_waiver(a.get("notes", "")):
+                continue
+            if _check_302_line_has_waiver(b.get("notes", "")):
+                continue
+            a_id = a.get("subagent_id", "?")
+            b_id = b.get("subagent_id", "?")
+            overlap_str = ", ".join(sorted(overlap)[:5])
+            violations.append(
+                f"in-flight subagent collision: {a_id} <-> {b_id} share "
+                f"file(s) {{ {overlap_str} }} in files_touched. Both are "
+                f"status=in_progress within the last 60 minutes. Per "
+                f"CLAUDE.md \"Subagent coherence-by-default\" non-"
+                f"negotiable + Catalog #230 sister gate. Resolve via "
+                f"manual TaskStop on the older subagent OR add the "
+                f"newer subagent's notes field with "
+                f"`# SISTER_SUBAGENT_SCOPE_OVERLAP_OK:<rationale>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_sister_subagent_scope_overlap_via_checkpoint_jsonl] "
+                f"{len(violations)} collision(s)"
+            )
+        else:
+            print(
+                "  [check_sister_subagent_scope_overlap_via_checkpoint_jsonl] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_sister_subagent_scope_overlap_via_checkpoint_jsonl found "
+            f"{len(violations)} in-flight subagent collision(s). Per CLAUDE.md "
+            "\"Subagent coherence-by-default\" non-negotiable + Catalog "
+            "#302 (sister of #117 / #157 / #174 / #206 / #230 / #248).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #303 - check_substrate_design_memo_has_cargo_cult_audit_section
+#
+# PERMANENT-FIX-AND-SELF-PROTECT-ALL 2026-05-16 self-protection per
+# operator NON-NEGOTIABLE + the HIGH-RISK 5 unwind audit
+# `.omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md`.
+# After the unwind methodology was empirically validated by NSCS06 v7
+# (105.15 -> 58.89 in ONE iteration via cargo-cult unwinds), every NEW
+# substrate scaffold design memo MUST include a
+# ``## Cargo-cult audit per assumption`` section enumerating each
+# substrate-design assumption + HARD-EARNED-vs-CARGO-CULTED classification
+# + unwind-test plan per the hard-earned-vs-cargo-culted addendum
+# (`feedback_assumptions_classification_hard_earned_vs_cargo_culted_critical_addendum_20260515.md`).
+#
+# Sister of Catalog #290 (canonical-vs-unique decision per layer) +
+# Catalog #294 (9-dimension success checklist evidence) + Catalog #296
+# (Dykstra-feasibility predicted-band check) + Catalog #297 (signal-
+# axis-destruction reversibility probe). Catalog #303 sits BETWEEN
+# #290's canonical-vs-unique decision (which captures the WHAT) and
+# the assumption-classification addendum (which captures the WHY HARD-
+# EARNED vs CARGO-CULTED) — #303 forces the per-assumption-classification
+# table into every NEW design memo.
+#
+# Refuses repo-local `.omx/research/*_design_<YYYYMMDD>.md` substrate
+# scaffold memos with date suffix >= 2026-05-16 that lack the literal
+# section header ``## Cargo-cult audit per assumption`` (case-insensitive).
+# Same-line waiver `# CARGO_CULT_AUDIT_SECTION_WAIVED:<rationale>`
+# (placeholder rejected).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule"; live count at landing: 0 (no NEW design memos dated >= 2026-
+# 05-16 yet that lack the section, since this gate's cutoff is the
+# landing date itself).
+# ============================================================================
+
+
+_CHECK_303_CUTOFF_DATE_SUFFIX_INT = 20260516
+_CHECK_303_WAIVER_TOKEN = "CARGO_CULT_AUDIT_SECTION_WAIVED:"
+_CHECK_303_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+_CHECK_303_REQUIRED_SECTION_HEADER = "## cargo-cult audit per assumption"
+_CHECK_303_DESIGN_FILENAME_RE = re.compile(
+    r"^.*_design_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+
+
+def _check_303_body_has_waiver(text: str) -> bool:
+    """File-level waiver in the first 30 lines."""
+    if _CHECK_303_WAIVER_TOKEN not in text:
+        return False
+    for line in text.splitlines()[:30]:
+        if _CHECK_303_WAIVER_TOKEN in line:
+            idx = line.find(_CHECK_303_WAIVER_TOKEN)
+            tail = line[idx + len(_CHECK_303_WAIVER_TOKEN):].strip()
+            if tail.endswith("-->"):
+                tail = tail[:-3].rstrip()
+            if not tail:
+                continue
+            for placeholder in _CHECK_303_WAIVER_PLACEHOLDERS:
+                if tail.startswith(placeholder):
+                    return False
+            if len(tail) >= 4:
+                return True
+    return False
+
+
+def check_substrate_design_memo_has_cargo_cult_audit_section(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #303 — refuse NEW substrate design memos missing the
+    cargo-cult audit per assumption section.
+
+    Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" +
+    "META-ASSUMPTION ADVERSARIAL REVIEW" non-negotiables + the empirically
+    validated NSCS06 v7 cargo-cult-unwind methodology (105.15 -> 58.89).
+    Every NEW substrate scaffold design memo dated >= 2026-05-16 MUST
+    contain the literal section header ``## Cargo-cult audit per
+    assumption`` (case-insensitive).
+
+    Sister of Catalog #290 + #294 + #296 + #297.
+
+    Memory: ``feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md``.
+    Lane: ``lane_permanent_fix_self_protect_all_20260516``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    research_root = root / ".omx" / "research"
+    if not research_root.is_dir():
+        return []
+
+    violations: list[str] = []
+    try:
+        candidates = sorted(research_root.iterdir())
+    except OSError:
+        return []
+
+    for entry in candidates:
+        if not entry.is_file() or not entry.name.endswith(".md"):
+            continue
+        m = _CHECK_303_DESIGN_FILENAME_RE.match(entry.name)
+        if not m:
+            continue
+        try:
+            date_int = int(m.group(1))
+        except (TypeError, ValueError):
+            continue
+        if date_int < _CHECK_303_CUTOFF_DATE_SUFFIX_INT:
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # File-level waiver short-circuit
+        if _check_303_body_has_waiver(text):
+            continue
+        if _CHECK_303_REQUIRED_SECTION_HEADER in text.lower():
+            continue
+        try:
+            rel = entry.relative_to(root)
+        except ValueError:
+            rel = entry
+        violations.append(
+            f"{rel}: design memo dated {date_int} is missing the required "
+            f"`## Cargo-cult audit per assumption` section header. Per "
+            f"CLAUDE.md \"UNIQUE-AND-COMPLETE-PER-METHOD operating mode\" "
+            f"+ \"META-ASSUMPTION ADVERSARIAL REVIEW\" non-negotiables + "
+            f"NSCS06 v7 empirical validation (105.15 -> 58.89 in ONE "
+            f"iteration via cargo-cult unwinds). Add the section "
+            f"enumerating each substrate-design assumption + HARD-EARNED-"
+            f"vs-CARGO-CULTED classification per the hard-earned-vs-"
+            f"cargo-culted addendum, OR add file-level waiver "
+            f"`# CARGO_CULT_AUDIT_SECTION_WAIVED:<rationale>` in the "
+            f"first 30 lines. Catalog #303 (sister of #290 / #294 / "
+            f"#296 / #297)."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_design_memo_has_cargo_cult_audit_section] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_design_memo_has_cargo_cult_audit_section] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_design_memo_has_cargo_cult_audit_section found "
+            f"{len(violations)} design memo(s) missing the required "
+            "`## Cargo-cult audit per assumption` section. Per CLAUDE.md "
+            "\"UNIQUE-AND-COMPLETE-PER-METHOD operating mode\" + \"META-"
+            "ASSUMPTION ADVERSARIAL REVIEW\" non-negotiables. Catalog "
+            "#303 (sister of #290 / #294 / #296 / #297).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #304 - check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof
+#
+# PERMANENT-FIX-AND-SELF-PROTECT-ALL 2026-05-16 self-protection per
+# operator NON-NEGOTIABLE + the NSCS06 v6 falsification symposium
+# `.omx/research/grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md`
+# cargo-cult #1 enumeration. The "closed-form-CDF-allocator-without-
+# empirical-bit-spend-proof" cargo-cult is the most automatable to
+# detect via AST/text scan of substrate codec.py files: a substrate
+# codec that allocates bits via a closed-form CDF (entropy estimate
+# from a parametric distribution like Gaussian / Laplace / hyperprior
+# CDF) without an adjacent empirical bit-spend proof comparing the
+# closed-form prediction to the actual byte cost is paying rate-term
+# penalty for predicted savings that never materialize.
+#
+# Empirical anchor: NSCS06 v6 rate=1.96 cargo-cult — closed-form CDF
+# allocator predicted ~600-byte savings; actual archive byte count was
+# 105.15-baseline-equivalent (NO savings materialized; the rate term
+# was paid for an allocation strategy that the inflate path never
+# realized as bytes saved).
+#
+# Per CLAUDE.md "Bit-level deconstruction and entropy discipline":
+# "If a dense stream remains in a generic compressor, estimate entropy
+# and test a real coded payload before declaring the area saturated."
+# Per Catalog #105 / #139 (no-op detectors): every byte allocation
+# must be paired with proof that the bytes affect the score.
+#
+# Refuses substrate codec files at `src/tac/substrates/*/codec*.py` +
+# `src/tac/substrates/*/archive*.py` + `src/tac/substrates/*/entropy*.py`
+# containing closed-form-CDF allocator patterns:
+#   - `gaussian_cdf(`, `laplace_cdf(`, `hyperprior_cdf(`,
+#     `closed_form_cdf(`, `parametric_cdf(`,
+#     `_cdf_allocate(`, `_allocate_bits_from_cdf(`,
+#     `allocate_from_cdf(`, `bits_from_cdf(`.
+# UNLESS the file ALSO contains one of:
+#   (a) Empirical bit-spend proof token: `empirical_bit_spend`,
+#       `bit_spend_proof`, `measured_bit_cost`, `actual_byte_cost`,
+#       `verify_bit_allocation`, `bit_allocation_verified`,
+#       `verify_closed_form_vs_empirical`.
+#   (b) Same-line waiver `# CLOSED_FORM_CDF_ALLOCATOR_OK:<rationale>`
+#       on the allocator-call line (placeholder rejected).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule"; sister-subagent backfill wave clears any legacy substrate
+# codec files; strict-flip planned after the sweep clears the count
+# to 0. Sister of Catalog #105 / #139 / #220 / #272.
+# ============================================================================
+
+
+_CHECK_304_WAIVER_TOKEN = "CLOSED_FORM_CDF_ALLOCATOR_OK:"
+_CHECK_304_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+_CHECK_304_ALLOCATOR_PATTERNS = (
+    re.compile(r"\bgaussian_cdf\s*\("),
+    re.compile(r"\blaplace_cdf\s*\("),
+    re.compile(r"\bhyperprior_cdf\s*\("),
+    re.compile(r"\bclosed_form_cdf\s*\("),
+    re.compile(r"\bparametric_cdf\s*\("),
+    re.compile(r"\b_cdf_allocate\s*\("),
+    re.compile(r"\b_allocate_bits_from_cdf\s*\("),
+    re.compile(r"\ballocate_from_cdf\s*\("),
+    re.compile(r"\bbits_from_cdf\s*\("),
+)
+
+_CHECK_304_EMPIRICAL_PROOF_TOKENS = (
+    "empirical_bit_spend",
+    "empirical bit spend",
+    "bit_spend_proof",
+    "bit spend proof",
+    "measured_bit_cost",
+    "measured bit cost",
+    "actual_byte_cost",
+    "actual byte cost",
+    "verify_bit_allocation",
+    "verify bit allocation",
+    "bit_allocation_verified",
+    "bit allocation verified",
+    "verify_closed_form_vs_empirical",
+    "verify closed-form vs empirical",
+)
+
+_CHECK_304_TARGET_FILENAME_PATTERNS = ("codec", "archive", "entropy")
+
+
+def _check_304_line_has_waiver(line: str) -> bool:
+    if _CHECK_304_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_304_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_304_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_304_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    return len(tail) >= 4
+
+
+def _check_304_file_has_empirical_proof(text_lower: str) -> bool:
+    for tok in _CHECK_304_EMPIRICAL_PROOF_TOKENS:
+        if tok in text_lower:
+            return True
+    return False
+
+
+def check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #304 — refuse substrate codec files with closed-form CDF
+    bit-allocators lacking empirical bit-spend proof.
+
+    Per CLAUDE.md "Bit-level deconstruction and entropy discipline" +
+    NSCS06 v6 falsification symposium cargo-cult #1. Empirical anchor:
+    NSCS06 v6 rate=1.96 cargo-cult — closed-form CDF allocator predicted
+    ~600-byte savings; actual archive byte count was 105.15-baseline-
+    equivalent (NO savings materialized).
+
+    Sister of Catalog #105 / #139 / #220 / #272.
+
+    Memory: ``feedback_permanent_fix_self_protect_all_today_bug_classes_landed_20260516.md``.
+    Lane: ``lane_permanent_fix_self_protect_all_20260516``.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    substrates_root = root / "src" / "tac" / "substrates"
+    if not substrates_root.is_dir():
+        return []
+
+    violations: list[str] = []
+    try:
+        for entry in sorted(substrates_root.rglob("*.py")):
+            rel = entry.relative_to(root).as_posix()
+            # Scope filter: only codec / archive / entropy named files
+            stem = entry.stem.lower()
+            if not any(p in stem for p in _CHECK_304_TARGET_FILENAME_PATTERNS):
+                continue
+            # Exclude tests / intake / generated
+            if "/tests/" in rel or "/test_" in rel:
+                continue
+            if entry.name.startswith("test_"):
+                continue
+            if "_intake_" in rel or "/build/lib/" in rel:
+                continue
+            if "/.omx/oss_export/" in rel:
+                continue
+            try:
+                text = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            text_lower = text.lower()
+            file_has_proof = _check_304_file_has_empirical_proof(text_lower)
+            text_lines = text.splitlines()
+            for i, line in enumerate(text_lines, start=1):
+                # Skip pure comment / docstring lines
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                allocator_hit = None
+                for pat in _CHECK_304_ALLOCATOR_PATTERNS:
+                    if pat.search(line):
+                        allocator_hit = pat.pattern
+                        break
+                if not allocator_hit:
+                    continue
+                if _check_304_line_has_waiver(line):
+                    continue
+                if file_has_proof:
+                    continue
+                violations.append(
+                    f"{rel}:{i}: substrate codec contains closed-form CDF "
+                    f"allocator pattern (matched {allocator_hit}) but file "
+                    f"lacks empirical bit-spend proof token. Add ANY of: "
+                    f"(a) empirical proof token (empirical_bit_spend / "
+                    f"bit_spend_proof / measured_bit_cost / "
+                    f"actual_byte_cost / verify_bit_allocation / "
+                    f"verify_closed_form_vs_empirical), (b) same-line "
+                    f"waiver `# CLOSED_FORM_CDF_ALLOCATOR_OK:<rationale>` "
+                    f"on the allocator-call line. Per CLAUDE.md \"Bit-"
+                    f"level deconstruction and entropy discipline\" + "
+                    f"NSCS06 v6 cargo-cult #1 empirical anchor (rate=1.96 "
+                    f"closed-form prediction; ZERO bytes materialized). "
+                    f"Catalog #304 (sister of #105 / #139 / #220 / #272)."
+                )
+                break  # one violation per file is sufficient
+    except OSError:
+        return violations
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof "
+            f"found {len(violations)} substrate codec file(s) with closed-"
+            "form CDF bit-allocators lacking empirical proof. Per CLAUDE.md "
+            "\"Bit-level deconstruction and entropy discipline\" + NSCS06 "
+            "v6 cargo-cult #1. Catalog #304 (sister of #105 / #139 / #220 "
+            "/ #272).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
