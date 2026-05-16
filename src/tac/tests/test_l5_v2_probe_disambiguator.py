@@ -21,6 +21,10 @@ def _eligible(candidate_id: str, delta: float) -> L5V2ProbeObservation:
         predicted_or_measured_delta=delta,
         evidence_grade="contest_cpu_cuda_paired_exact",
         exact_axes=("contest_cpu", "contest_cuda"),
+        artifact_path=f"experiments/results/l5_v2_probe/{candidate_id}.json",
+        artifact_sha256="c" * 64,
+        predicate_id=f"l5_v2_probe_{candidate_id}_predicate",
+        predicate_passed=True,
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
         sideinfo_consumed=True,
@@ -38,6 +42,11 @@ def test_l5_v2_probe_template_is_fail_closed_and_complete() -> None:
     assert [row["candidate_id"] for row in template["observations"]] == list(
         L5V2_CANDIDATES
     )
+    for row in template["observations"]:
+        assert row["artifact_path"] == ""
+        assert row["artifact_sha256"] == ""
+        assert row["predicate_id"] == ""
+        assert row["predicate_passed"] is False
 
 
 def test_l5_v2_probe_fails_closed_without_observations() -> None:
@@ -72,6 +81,10 @@ def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations() -> None:
         predicted_or_measured_delta=-0.050,
         evidence_grade="macos_cpu_advisory",
         exact_axes=("contest_cpu",),
+        artifact_path="experiments/results/l5_v2_probe/tt5l.json",
+        artifact_sha256="c" * 64,
+        predicate_id="tt5l_probe_predicate",
+        predicate_passed=True,
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
         sideinfo_consumed=False,
@@ -85,6 +98,53 @@ def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations() -> None:
     assert "l5_v2_probe_paired_exact_axes_missing" in row["blockers"]
     assert "l5_v2_probe_sideinfo_consumption_missing" in row["blockers"]
     assert "l5_v2_probe_contest_evidence_grade_missing" in row["blockers"]
+
+
+def test_l5_v2_probe_blocks_observations_without_artifact_predicate_custody() -> None:
+    missing_custody = L5V2ProbeObservation(
+        candidate_id="time_traveler_l5_autonomy",
+        predicted_or_measured_delta=-0.050,
+        evidence_grade="contest_cpu_cuda_paired_exact",
+        exact_axes=("contest_cpu", "contest_cuda"),
+        archive_sha256="a" * 64,
+        runtime_tree_sha256="b" * 64,
+        sideinfo_consumed=True,
+        byte_closed_archive=True,
+    )
+
+    verdict = evaluate_l5_v2_probe((missing_custody,))
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_artifact_path_missing" in row["blockers"]
+    assert "l5_v2_probe_artifact_sha_invalid" in row["blockers"]
+    assert "l5_v2_probe_predicate_id_missing" in row["blockers"]
+    assert "l5_v2_probe_predicate_failed" in row["blockers"]
+
+
+def test_l5_v2_probe_rejects_transient_artifact_and_bad_hashes() -> None:
+    bad = L5V2ProbeObservation(
+        candidate_id="time_traveler_l5_autonomy",
+        predicted_or_measured_delta=-0.050,
+        evidence_grade="contest_cpu_cuda_paired_exact",
+        exact_axes=("contest_cpu", "contest_cuda"),
+        artifact_path="/tmp/l5v2_probe.json",
+        artifact_sha256="c" * 64,
+        predicate_id="tt5l_probe_predicate",
+        predicate_passed=True,
+        archive_sha256="not-sha",
+        runtime_tree_sha256="also-not-sha",
+        sideinfo_consumed=True,
+        byte_closed_archive=True,
+    )
+
+    verdict = evaluate_l5_v2_probe((bad,))
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_artifact_path_transient" in row["blockers"]
+    assert "l5_v2_probe_archive_sha_invalid" in row["blockers"]
+    assert "l5_v2_probe_runtime_tree_sha_invalid" in row["blockers"]
 
 
 def test_l5_v2_probe_cli_emits_template() -> None:

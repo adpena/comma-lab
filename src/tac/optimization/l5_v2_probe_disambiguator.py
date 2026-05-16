@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import math
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,7 @@ L5V2_CANDIDATES: tuple[str, ...] = (
 )
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 REQUIRED_EXACT_AXES: tuple[ContestAxis, ...] = ("contest_cpu", "contest_cuda")
+_SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,10 @@ class L5V2ProbeObservation:
     predicted_or_measured_delta: float
     evidence_grade: str
     exact_axes: tuple[str, ...] = ()
+    artifact_path: str = ""
+    artifact_sha256: str = ""
+    predicate_id: str = ""
+    predicate_passed: bool = False
     archive_sha256: str = ""
     runtime_tree_sha256: str = ""
     sideinfo_consumed: bool = False
@@ -68,6 +74,10 @@ def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation
         predicted_or_measured_delta=delta,
         evidence_grade=str(payload.get("evidence_grade") or ""),
         exact_axes=_as_tuple_str(payload.get("exact_axes")),
+        artifact_path=str(payload.get("artifact_path") or ""),
+        artifact_sha256=str(payload.get("artifact_sha256") or ""),
+        predicate_id=str(payload.get("predicate_id") or ""),
+        predicate_passed=bool(payload.get("predicate_passed", False)),
         archive_sha256=str(payload.get("archive_sha256") or ""),
         runtime_tree_sha256=str(payload.get("runtime_tree_sha256") or ""),
         sideinfo_consumed=bool(payload.get("sideinfo_consumed", False)),
@@ -100,22 +110,41 @@ def _missing_required_axes(observation: L5V2ProbeObservation) -> tuple[str, ...]
     return tuple(axis for axis in REQUIRED_EXACT_AXES if axis not in axes)
 
 
+def _is_sha256_hex(value: str) -> bool:
+    return bool(_SHA256_HEX_RE.fullmatch(value.strip()))
+
+
+def _is_transient_artifact_path(path: str) -> bool:
+    normalized = path.removeprefix("file:").strip()
+    return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
+
+
 def _observation_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
     blockers: list[str] = []
     if observation.candidate_id not in L5V2_CANDIDATES:
         blockers.append("l5_v2_probe_unknown_candidate")
     if not math.isfinite(observation.predicted_or_measured_delta):
         blockers.append("l5_v2_probe_delta_non_finite")
+    if not observation.artifact_path.strip():
+        blockers.append("l5_v2_probe_artifact_path_missing")
+    elif _is_transient_artifact_path(observation.artifact_path):
+        blockers.append("l5_v2_probe_artifact_path_transient")
+    if not _is_sha256_hex(observation.artifact_sha256):
+        blockers.append("l5_v2_probe_artifact_sha_invalid")
+    if not observation.predicate_id.strip():
+        blockers.append("l5_v2_probe_predicate_id_missing")
+    if not observation.predicate_passed:
+        blockers.append("l5_v2_probe_predicate_failed")
     if _missing_required_axes(observation):
         blockers.append("l5_v2_probe_paired_exact_axes_missing")
     if not observation.byte_closed_archive:
         blockers.append("l5_v2_probe_byte_closed_archive_missing")
     if not observation.sideinfo_consumed:
         blockers.append("l5_v2_probe_sideinfo_consumption_missing")
-    if not observation.archive_sha256.strip():
-        blockers.append("l5_v2_probe_archive_sha_missing")
-    if not observation.runtime_tree_sha256.strip():
-        blockers.append("l5_v2_probe_runtime_tree_sha_missing")
+    if not _is_sha256_hex(observation.archive_sha256):
+        blockers.append("l5_v2_probe_archive_sha_invalid")
+    if not _is_sha256_hex(observation.runtime_tree_sha256):
+        blockers.append("l5_v2_probe_runtime_tree_sha_invalid")
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
     return tuple(dict.fromkeys(blockers))
@@ -135,6 +164,10 @@ def build_probe_template() -> dict[str, Any]:
                 "predicted_or_measured_delta": 0.0,
                 "evidence_grade": "contest_cpu_and_cuda_required",
                 "exact_axes": list(REQUIRED_EXACT_AXES),
+                "artifact_path": "",
+                "artifact_sha256": "",
+                "predicate_id": "",
+                "predicate_passed": False,
                 "archive_sha256": "",
                 "runtime_tree_sha256": "",
                 "sideinfo_consumed": False,
