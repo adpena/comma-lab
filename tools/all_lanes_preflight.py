@@ -777,6 +777,55 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                 failures.append(
                     f"non_dispatchable_readiness_artifacts:{kind}:score_claim_not_false"
                 )
+    l5 = payload.get("l5_v2_frontier_readiness")
+    if not isinstance(l5, dict):
+        failures.append("l5_v2_frontier_readiness_missing_or_not_object")
+    else:
+        if l5.get("schema") != "pact.l5_v2_frontier_readiness.v1":
+            failures.append("l5_v2_frontier_readiness:bad_schema")
+        for flag in (
+            "score_claim",
+            "promotion_eligible",
+            "rank_or_kill_eligible",
+            "ready_for_exact_eval_dispatch",
+        ):
+            if l5.get(flag) is not False:
+                failures.append(f"l5_v2_frontier_readiness:{flag}_not_false")
+        try:
+            target_count = int(l5.get("next_exact_eval_target_count") or 0)
+        except (TypeError, ValueError):
+            failures.append("l5_v2_frontier_readiness:target_count_not_integer")
+            target_count = 0
+        if target_count and l5.get("target_rows_are_fail_fast_only") is not True:
+            failures.append("l5_v2_frontier_readiness:target_rows_not_fail_fast_only")
+        targets_sample = l5.get("next_exact_eval_targets_sample")
+        if target_count and not isinstance(targets_sample, list):
+            failures.append("l5_v2_frontier_readiness:targets_sample_missing")
+        elif isinstance(targets_sample, list):
+            for idx, target in enumerate(targets_sample):
+                if not isinstance(target, dict):
+                    failures.append(
+                        f"l5_v2_frontier_readiness:target_{idx}:not_object"
+                    )
+                    continue
+                for flag in (
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if target.get(flag) is not False:
+                        failures.append(
+                            f"l5_v2_frontier_readiness:target_{idx}:{flag}_not_false"
+                        )
+                if (
+                    target_count
+                    and target.get("dispatch_status")
+                    != "requires_claim_lane_dispatch_before_provider_launch"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"target_{idx}:dispatch_status_not_claim_gated"
+                    )
     groups = (
         ("supplementary_lanes", "active_supplementary_lanes"),
         ("gated_lanes", "active_gated_lanes"),

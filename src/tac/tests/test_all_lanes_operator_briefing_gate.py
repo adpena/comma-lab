@@ -47,6 +47,26 @@ def _base_briefing_payload() -> dict[str, object]:
                 "score_claim": False,
             }
         ],
+        "l5_v2_frontier_readiness": {
+            "schema": "pact.l5_v2_frontier_readiness.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "target_rows_are_fail_fast_only": True,
+            "next_exact_eval_target_count": 1,
+            "next_exact_eval_targets_sample": [
+                {
+                    "lane_id": "pr106_packetir_fixture_contest_cpu",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "dispatch_status": (
+                        "requires_claim_lane_dispatch_before_provider_launch"
+                    ),
+                }
+            ],
+        },
     }
 
 
@@ -187,6 +207,46 @@ def test_operator_briefing_dispatch_gate_rejects_missing_structured_readiness() 
     failures = module._operator_briefing_dispatch_failures(payload)
 
     assert "dispatch_readiness:phase_1_ready_while_all_exact_packets_blocked" in failures
+
+
+def test_operator_briefing_dispatch_gate_rejects_l5_authority_leak() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    l5["ready_for_exact_eval_dispatch"] = True
+    l5["target_rows_are_fail_fast_only"] = False
+    l5["next_exact_eval_targets_sample"] = [
+        {
+            "lane_id": "pr106_packetir_bad",
+            "score_claim": True,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": True,
+            "dispatch_status": "ready",
+        }
+    ]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert "l5_v2_frontier_readiness:ready_for_exact_eval_dispatch_not_false" in failures
+    assert "l5_v2_frontier_readiness:target_rows_not_fail_fast_only" in failures
+    assert "l5_v2_frontier_readiness:target_0:score_claim_not_false" in failures
+    assert (
+        "l5_v2_frontier_readiness:target_0:ready_for_exact_eval_dispatch_not_false"
+        in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:target_0:dispatch_status_not_claim_gated"
+        in failures
+    )
 
 
 def test_operator_briefing_dispatch_gate_rejects_terminal_packet_commands() -> None:
