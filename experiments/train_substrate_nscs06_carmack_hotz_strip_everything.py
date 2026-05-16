@@ -192,6 +192,23 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--grayscale-downsample", type=int, default=4)
     p.add_argument("--max-pairs", type=int, default=N_PAIRS_FULL)
     p.add_argument("--pose-quant-scale", type=float, default=10.0)
+    # OOM fix per Catalog #218 sister pattern (D4 mini-batch reconstruct).
+    # NSCS06 100ep Modal T4 smoke fc-01KRQDTA70GEXSZ2CEEYGWQNSR crashed at
+    # SegNet conv_pw with 10.55 GiB activation alloc when scoring all 600
+    # pairs at full resolution on T4 14.56 GiB. Default chunk_size=8 keeps
+    # peak SegNet activation under ~150 MB which leaves comfortable headroom
+    # below the T4 capacity ceiling (and also keeps the canary at T4 cost
+    # band per Catalog #215). PoseNet preprocess emits (B, T*6, H/2, W/2) so
+    # the same chunk size is conservative for both scorers.
+    p.add_argument(
+        "--scorer-chunk-size",
+        type=int,
+        default=8,
+        help=(
+            "Mini-batch size for compress-side SegNet + PoseNet forward "
+            "passes; mirrors D4's pair_indices kwarg pattern (Catalog #218)."
+        ),
+    )
     return p
 
 
@@ -461,15 +478,38 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage(f"palette_built_size_{palette.size}")
 
         # 5. SegNet argmax at low-res (per-cell class labels)
+        # OOM FIX (Catalog #218 sister): the previous single forward over all
+        # 600 pairs allocated ~10.55 GiB inside timm EfficientNet-B2 conv_pw
+        # on T4 (14.56 GiB capacity), crashing fc-01KRQDTA70GEXSZ2CEEYGWQNSR
+        # at $0.019 / 114s before any archive bytes were emitted. We mirror
+        # D4's mini-batch reconstruct pattern: iterate the SegNet forward in
+        # chunks of args.scorer_chunk_size (default 8) so peak activation
+        # memory scales with chunk_size, not n_pairs. The argmax + cpu
+        # accumulation is byte-identical to the previous full-batch path
+        # (deterministic; no dropout; eval mode) so the resulting class map
+        # is unchanged versus the pre-fix output for any chunk_size >= 1.
         with torch.no_grad():
-            # SegNet expects (B, T=1, C, H, W); we pass per-pair LAST frame as
-            # (B, 3, H, W) via the canonical scorer.preprocess_input.
-            odd_torch = pair_tensor[:, 0].to(device).float() / 1.0  # (N, 3, H, W)
-            # (N, T=1, C, H, W) for the scorer's expected layout
-            odd_btchw = odd_torch.unsqueeze(1)
-            seg_logits = segnet(segnet.preprocess_input(odd_btchw))
-            # seg_logits: (N, 5, H, W) at 384x512 — argmax + downsample.
-            cls_full = torch.argmax(seg_logits, dim=1).to(torch.uint8).cpu().numpy()
+            cls_full_chunks: list[np.ndarray] = []
+            chunk = max(1, int(args.scorer_chunk_size))
+            for start in range(0, n_pairs, chunk):
+                stop = min(start + chunk, n_pairs)
+                # SegNet expects (B, T=1, C, H, W); we pass per-pair LAST frame as
+                # (B, 3, H, W) via the canonical scorer.preprocess_input.
+                odd_chunk = (
+                    pair_tensor[start:stop, 0].to(device).float()
+                )  # (chunk, 3, H, W)
+                # (chunk, T=1, C, H, W) for the scorer's expected layout
+                odd_btchw = odd_chunk.unsqueeze(1)
+                seg_logits = segnet(segnet.preprocess_input(odd_btchw))
+                # seg_logits: (chunk, 5, H, W) at 384x512 — argmax to uint8.
+                cls_chunk = (
+                    torch.argmax(seg_logits, dim=1).to(torch.uint8).cpu().numpy()
+                )
+                cls_full_chunks.append(cls_chunk)
+                # Release the per-chunk activation buffers before the next
+                # iteration so peak VRAM stays bounded.
+                del odd_chunk, odd_btchw, seg_logits, cls_chunk
+            cls_full = np.concatenate(cls_full_chunks, axis=0)
         # Downsample class map by majority-vote in each block — simple stride
         # subsample is acceptable for the L1 SCAFFOLD path.
         cls_lowres = cls_full[
@@ -477,7 +517,9 @@ def _full_main(args: argparse.Namespace) -> int:
             :: args.grayscale_downsample,
             :: args.grayscale_downsample,
         ][:, :h_g, :w_g].astype(np.uint8)
-        _stage("segnet_argmax_lowres")
+        _stage(
+            f"segnet_argmax_lowres_chunked_size_{int(args.scorer_chunk_size)}"
+        )
 
         # 6. Build class-conditional CDF (the closed-form allocator's heart)
         cdf = build_class_conditional_cdf(
@@ -492,15 +534,41 @@ def _full_main(args: argparse.Namespace) -> int:
         _stage(f"grayscale_arith_encoded_bytes_{len(arith_bytes)}")
 
         # 8. PoseNet at compress-side -> per-pair 6-dim deltas
+        # OOM FIX (Catalog #218 sister): mirror the SegNet chunked pattern
+        # above. PoseNet preprocess emits (B, T*6, H/2, W/2) and the FastViT
+        # backbone allocates similar O(B) activation memory to SegNet's
+        # EfficientNet-B2, so the same chunk size keeps peak VRAM bounded.
+        # We also correct the prior dict-vs-tensor indexing bug: upstream
+        # PoseNet.forward returns the Hydra dict {head_name: tensor}, so the
+        # canonical first-6-dim slice is out["pose"][..., :POSE_DIMS] per
+        # CLAUDE.md "Exact scorer architectures" and the canonical pattern at
+        # src/tac/research/*.py (e.g. run_saliency_sweep.py:56).
         with torch.no_grad():
-            pose_input = pair_tensor.to(device).float()  # (N, 2, 3, H, W)
-            pose_logits = posenet(posenet.preprocess_input(pose_input))
-            # First 6 dims per CLAUDE.md "Exact scorer architectures"
-            pose = pose_logits[:, :POSE_DIMS].cpu().numpy().astype(np.float32)
+            pose_chunks: list[np.ndarray] = []
+            chunk = max(1, int(args.scorer_chunk_size))
+            for start in range(0, n_pairs, chunk):
+                stop = min(start + chunk, n_pairs)
+                pose_input = (
+                    pair_tensor[start:stop].to(device).float()
+                )  # (chunk, 2, 3, H, W)
+                pose_out = posenet(posenet.preprocess_input(pose_input))
+                # Hydra dict: {"pose": (chunk, 12), ...}; take first POSE_DIMS.
+                pose_chunk = (
+                    pose_out["pose"][..., :POSE_DIMS]
+                    .detach()
+                    .to(torch.float32)
+                    .cpu()
+                    .numpy()
+                )
+                pose_chunks.append(pose_chunk)
+                del pose_input, pose_out, pose_chunk
+            pose = np.concatenate(pose_chunks, axis=0).astype(np.float32)
         pose_bytes, pose_zero = quantize_pose_deltas(
             pose, scale=args.pose_quant_scale
         )
-        _stage(f"pose_quantized_bytes_{len(pose_bytes)}")
+        _stage(
+            f"pose_quantized_bytes_{len(pose_bytes)}_chunk_{int(args.scorer_chunk_size)}"
+        )
 
         # 9. Pack CH06 archive
         meta = {
