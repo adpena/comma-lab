@@ -80,6 +80,9 @@ PR106_LATENT_N_PAIRS = 600
 PR106_LATENT_N_DIMS = 28
 PR106_DEFAULT_MEMBER_NAME = "0.bin"
 PR106_ALLOWED_SINGLE_MEMBER_NAMES = (PR106_DEFAULT_MEMBER_NAME, "x")
+PR106_PACKET_IR_SECTION_HASH_DOMAIN = (
+    "pr106_sidecar_packet_ir_emitted_member_payload_section_bytes_v1"
+)
 PR106_NO_OP_DIM = 255
 PR106_PR101_FIXED_META_NOOP_COUNT = 0
 PR106_PR101_FIXED_META_DIM_BYTES = 375
@@ -3330,6 +3333,8 @@ def _consumed_section_row(
         "end_offset": offset + len(payload),
         "offset_end_exclusive": offset + len(payload),
         "sha256": sha256_hex(payload),
+        "hash_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
+        "sha256_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
         "score_affecting": score_affecting,
     }
 

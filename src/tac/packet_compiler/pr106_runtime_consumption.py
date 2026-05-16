@@ -340,10 +340,16 @@ def _runtime_section_identity_rows(
             {
                 "name": name,
                 "sha256": section.get("sha256"),
+                "hash_domain": section.get("hash_domain"),
+                "sha256_domain": section.get("sha256_domain"),
                 "bytes": section.get("bytes", section.get("byte_count")),
                 "offset": section.get("offset", section.get("offset_start")),
                 "consumed": True,
                 "score_affecting": section.get("score_affecting") is True,
+                "identity_source": (
+                    "packet_ir_consumed_byte_proof_filtered_by_runtime_probe"
+                ),
+                "runtime_consumption_evidence": "runtime_section_mutation_probe",
             }
         )
     return rows

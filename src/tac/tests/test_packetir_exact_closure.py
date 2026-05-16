@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.packet_compiler import PR106_PACKET_IR_SECTION_HASH_DOMAIN
 from tac.packetir_exact_closure import build_packetir_exact_closure
 
 SHA_SOURCE = "b" * 64
@@ -818,6 +819,82 @@ def test_packetir_exact_closure_rejects_format0d_runtime_offset_mismatch(
     assert extra["identity_valid"] is False
 
 
+def test_packetir_exact_closure_rejects_format0d_runtime_hash_domain_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format0d_shape(archive)
+    runtime_consumption = _runtime_consumption_format0d(archive)
+    for row in runtime_consumption["runtime_consumed_score_affecting_section_identities"]:
+        if row["name"] == "extra_pr101_ranked_no_op_payload":
+            row["hash_domain"] = "runtime_correction_digest_bytes_v1"
+            row["sha256_domain"] = row["hash_domain"]
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0d_hash_domain_mismatch",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    identity = closure["packetir"]["runtime_consumption_proof"][
+        "score_affecting_section_match_evidence"
+    ]["format0d_closure_identity"]
+    extra = identity["sections"]["extra_pr101_ranked_no_op_payload"]
+    assert extra["sha256_matches"] is True
+    assert extra["hash_domain_matches"] is False
+    assert extra["runtime_hash_domain_valid"] is False
+    assert extra["identity_valid"] is False
+
+
+def test_packetir_exact_closure_rejects_format0d_candidate_hash_domain_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format0d_shape(archive)
+    for row in candidate_result["packet_ir_consumed_byte_proof"]["sections"]:
+        if row["name"] == "base_format0c_sidecar_payload":
+            row["hash_domain"] = "whole_member_payload_bytes_v1"
+            row["sha256_domain"] = row["hash_domain"]
+    runtime_consumption = _runtime_consumption_format0d(archive)
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0d_candidate_hash_domain_mismatch",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    identity = closure["packetir"]["runtime_consumption_proof"][
+        "score_affecting_section_match_evidence"
+    ]["format0d_closure_identity"]
+    base = identity["sections"]["base_format0c_sidecar_payload"]
+    assert base["sha256_matches"] is True
+    assert base["hash_domain_matches"] is False
+    assert base["candidate_hash_domain_valid"] is False
+    assert base["identity_valid"] is False
+
+
 @pytest.mark.parametrize("inner_unchanged", [False, None])
 def test_packetir_exact_closure_rejects_format0b_alias_without_inner_identity(
     tmp_path: Path,
@@ -967,6 +1044,61 @@ def test_packetir_exact_closure_rejects_headerless_alias_candidate_section_sha_m
     assert identity["candidate_section_bound_to_consumed_byte_proof"] is False
 
 
+def test_packetir_exact_closure_rejects_headerless_alias_candidate_hash_domain_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result(archive)
+    candidate_result["packet_ir_consumed_byte_proof"][
+        "score_affecting_section_names"
+    ] = [
+        "pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+        "sidecar_payload",
+    ]
+    _bind_headerless_consumed_section(
+        candidate_result,
+        section_name="pr106_hdm9_hlm3_payload_without_inner_header_or_section_magic",
+    )
+    candidate_result["packet_ir_consumed_byte_proof"]["sections"][0][
+        "hash_domain"
+    ] = "whole_member_payload_bytes_v1"
+    candidate_result["packet_ir_consumed_byte_proof"]["sections"][0][
+        "sha256_domain"
+    ] = "whole_member_payload_bytes_v1"
+    runtime_consumption = _runtime_consumption(archive)
+    runtime_consumption["format_id"] = "0x0B"
+    runtime_consumption["inner_pr106_payload_sha256_unchanged"] = True
+    _add_headerless_alias_identity(runtime_consumption)
+    runtime_consumption["runtime_consumed_score_affecting_sections"] = {
+        "pr106_payload": True,
+        "sidecar_payload": True,
+        "framing_meta": None,
+    }
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0b_candidate_hash_domain_mismatch",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    identity = closure["packetir"]["runtime_consumption_proof"][
+        "score_affecting_section_match_evidence"
+    ]["headerless_alias_identity"]
+    assert identity["candidate_hash_domain_valid"] is False
+    assert identity["candidate_section_bound_to_consumed_byte_proof"] is False
+
+
 def _add_headerless_alias_identity(proof: dict) -> None:
     proof["source_inner_pr106_payload_sha256"] = INNER_PR106_PAYLOAD_SHA
     proof["runtime_inner_pr106_payload_sha256"] = INNER_PR106_PAYLOAD_SHA
@@ -993,6 +1125,8 @@ def _bind_headerless_consumed_section(
             "bytes": length,
             "byte_count": length,
             "sha256": sha256,
+            "hash_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
+            "sha256_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
             "score_affecting": score_affecting,
         }
     ]
@@ -1225,6 +1359,8 @@ def _runtime_consumption_format0d(archive: Path) -> dict:
         {
             "name": row["name"],
             "sha256": row["sha256"],
+            "hash_domain": row["hash_domain"],
+            "sha256_domain": row["sha256_domain"],
             "bytes": row["bytes"],
             "offset": row["offset"],
             "offset_start": row["offset_start"],
@@ -1278,6 +1414,8 @@ def _format0d_section_row(
         "bytes": length,
         "byte_count": length,
         "sha256": sha256,
+        "hash_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
+        "sha256_domain": PR106_PACKET_IR_SECTION_HASH_DOMAIN,
         "score_affecting": True,
     }
 

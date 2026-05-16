@@ -13,6 +13,7 @@ import torch
 
 import tac.packet_compiler.pr106_runtime_consumption as runtime_consumption_mod
 from tac.packet_compiler import (
+    PR106_PACKET_IR_SECTION_HASH_DOMAIN,
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM9_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
@@ -913,6 +914,14 @@ def test_pr106_runtime_consumption_proves_format0d_stacked_sidecars() -> None:
     for identity in identities:
         source_section = source_sections[identity["name"]]
         assert identity["sha256"] == source_section["sha256"]
+        assert identity["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
+        assert source_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
+        assert identity["identity_source"] == (
+            "packet_ir_consumed_byte_proof_filtered_by_runtime_probe"
+        )
+        assert identity["runtime_consumption_evidence"] == (
+            "runtime_section_mutation_probe"
+        )
         assert identity["bytes"] == source_section["bytes"]
         assert identity["consumed"] is True
     source_digest = manifest["source_runtime_correction_digest"]

@@ -22,6 +22,7 @@ from tac.auth_eval_result import (
     recompute_contest_score_from_payload,
 )
 from tac.exact_eval_custody import CONTEST_EXACT_SAMPLE_COUNT
+from tac.packet_compiler.pr106_sidecar_packet import PR106_PACKET_IR_SECTION_HASH_DOMAIN
 from tac.repo_io import repo_relative, sha256_file
 
 SCHEMA = "packetir_exact_eval_closure_v1"
@@ -953,18 +954,33 @@ def _format0d_closure_identity(
             candidate_section["offset"] is not None
             and candidate_section["offset"] == runtime_section["offset"]
         )
+        candidate_hash_domain_valid = (
+            candidate_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
+        )
+        runtime_hash_domain_valid = (
+            runtime_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
+        )
         section_evidence[section_name] = {
             "candidate_section_found": candidate_section["found"],
             "candidate_section_sha256": candidate_section["sha256"],
+            "candidate_section_hash_domain": candidate_section["hash_domain"],
             "candidate_section_length": candidate_section["length"],
             "candidate_section_offset": candidate_section["offset"],
             "candidate_section_score_affecting": candidate_section["score_affecting"],
             "runtime_section_found": runtime_section["found"],
             "runtime_section_consumed": runtime_section["consumed"],
             "runtime_section_sha256": runtime_section["sha256"],
+            "runtime_section_hash_domain": runtime_section["hash_domain"],
             "runtime_section_length": runtime_section["length"],
             "runtime_section_offset": runtime_section["offset"],
             "sha256_matches": sha_match,
+            "hash_domain_matches": (
+                candidate_hash_domain_valid
+                and runtime_hash_domain_valid
+                and candidate_section["hash_domain"] == runtime_section["hash_domain"]
+            ),
+            "candidate_hash_domain_valid": candidate_hash_domain_valid,
+            "runtime_hash_domain_valid": runtime_hash_domain_valid,
             "length_matches": length_match,
             "offset_matches": offset_match,
             "identity_valid": (
@@ -973,6 +989,8 @@ def _format0d_closure_identity(
                 and runtime_section["found"] is True
                 and runtime_section["consumed"] is True
                 and sha_match
+                and candidate_hash_domain_valid
+                and runtime_hash_domain_valid
                 and length_match
                 and offset_match
             ),
@@ -1070,6 +1088,7 @@ def _runtime_consumed_section_identity(
         "sha256": None,
         "length": None,
         "offset": None,
+        "hash_domain": None,
     }
 
 
@@ -1112,6 +1131,7 @@ def _runtime_section_identity_from_row(
             row.get("section_sha256"),
             row.get("runtime_sha256"),
         ),
+        "hash_domain": _section_hash_domain(row),
         "length": _first_int(
             row.get("bytes"),
             row.get("byte_count"),
@@ -1126,6 +1146,15 @@ def _runtime_section_identity_from_row(
         ),
         "name": row.get("name", expected_section),
     }
+
+
+def _section_hash_domain(row: Mapping[str, Any]) -> str | None:
+    return _first_str(
+        row.get("hash_domain"),
+        row.get("sha256_domain"),
+        row.get("section_hash_domain"),
+        row.get("payload_hash_domain"),
+    )
 
 
 def _runtime_section_consumed(row: Mapping[str, Any]) -> bool:
@@ -1197,6 +1226,7 @@ def _headerless_alias_identity(
     candidate_section_bound = (
         consumed_section["found"] is True
         and consumed_section["score_affecting"] is True
+        and consumed_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
         and isinstance(candidate_section_sha, str)
         and consumed_section["sha256"] == candidate_section_sha
         and candidate_section_offset is not None
@@ -1213,6 +1243,7 @@ def _headerless_alias_identity(
         and candidate_section_offset >= 0
         and candidate_section_length is not None
         and candidate_section_length > 0
+        and consumed_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
         and candidate_section_bound is True
     )
     return {
@@ -1225,6 +1256,10 @@ def _headerless_alias_identity(
         "candidate_consumed_section_name": expected_section,
         "candidate_consumed_section_found": consumed_section["found"],
         "candidate_consumed_section_sha256": consumed_section["sha256"],
+        "candidate_consumed_section_hash_domain": consumed_section["hash_domain"],
+        "candidate_hash_domain_valid": (
+            consumed_section["hash_domain"] == PR106_PACKET_IR_SECTION_HASH_DOMAIN
+        ),
         "candidate_consumed_section_offset": consumed_section["offset"],
         "candidate_consumed_section_length": consumed_section["length"],
         "candidate_consumed_section_score_affecting": consumed_section[
@@ -1250,6 +1285,7 @@ def _candidate_consumed_section_identity(
                 row.get("payload_sha256"),
                 row.get("section_sha256"),
             ),
+            "hash_domain": _section_hash_domain(row),
             "offset": _first_int(
                 row.get("offset"),
                 row.get("offset_start"),
@@ -1265,6 +1301,7 @@ def _candidate_consumed_section_identity(
     return {
         "found": False,
         "sha256": None,
+        "hash_domain": None,
         "offset": None,
         "length": None,
         "score_affecting": None,
