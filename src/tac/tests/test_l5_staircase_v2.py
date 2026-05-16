@@ -957,8 +957,63 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
     assert "tt5l_dykstra_feasibility_five_move_constraints_missing" in tt5l[
         "blockers"
     ]
+    assert "tt5l_dykstra_feasibility_constraint_set_ids_not_exact" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_constraint_set_count_mismatch" in tt5l[
+        "blockers"
+    ]
     assert "tt5l_dykstra_feasibility_scope_missing_or_stale" in tt5l["blockers"]
     assert "tt5l_dykstra_feasibility_verdict_authority_scope_missing_or_stale" in tt5l[
+        "blockers"
+    ]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_rejects_extra_constraint_ids(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload["constraint_set_ids"] = [
+        *payload["constraint_set_ids"],
+        "cargo_cult_sixth_move",
+    ]
+    payload["constraint_set_count"] = len(payload["constraint_set_ids"])
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_five_move_constraints_missing" not in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_constraint_set_ids_not_exact" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_constraint_set_count_mismatch" in tt5l[
+        "blockers"
+    ]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_rejects_wrong_constraint_count(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload["constraint_set_count"] = len(
+        l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+    ) + 1
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_constraint_set_ids_not_exact" not in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_constraint_set_count_mismatch" in tt5l[
         "blockers"
     ]
 

@@ -1297,6 +1297,14 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         constraint_ids = set()
     if payload and not TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS.issubset(constraint_ids):
         blockers.append("tt5l_dykstra_feasibility_five_move_constraints_missing")
+    if payload and constraint_ids != TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS:
+        blockers.append("tt5l_dykstra_feasibility_constraint_set_ids_not_exact")
+    constraint_set_count = _non_bool_int(payload.get("constraint_set_count"))
+    if (
+        payload
+        and constraint_set_count != len(TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS)
+    ):
+        blockers.append("tt5l_dykstra_feasibility_constraint_set_count_mismatch")
     for field in (
         "score_claim",
         "promotion_eligible",
@@ -1330,6 +1338,7 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "verdict_authority_scope": verdict_authority_scope or None,
         "move_level_constraint_proof": move_level_constraint_proof,
         "constraint_set_ids": sorted(constraint_ids),
+        "constraint_set_count": constraint_set_count,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
