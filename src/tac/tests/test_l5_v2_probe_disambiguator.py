@@ -22,6 +22,26 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _axis_evidence(axis: str) -> dict[str, object]:
+    archive_bytes = 1
+    score = 25.0 * archive_bytes / 37_545_489
+    return {
+        "axis": axis,
+        "archive_sha256": "a" * 64,
+        "runtime_tree_sha256": "b" * 64,
+        "score": score,
+        "seg_dist": 0.0,
+        "pose_dist": 0.0,
+        "archive_bytes": archive_bytes,
+        "n_samples": 1200,
+        "hardware": "gha-linux-x86_64" if axis == "contest_cpu" else "modal-t4",
+        "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
+        "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
+        "auth_eval_command": f"contest_auth_eval --axis {axis}",
+        "log_path": f"experiments/results/l5_v2_probe/{axis}.log",
+    }
+
+
 def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObservation:
     artifact_path = repo_root / "experiments" / "results" / "l5_v2_probe" / f"{candidate_id}.json"
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
@@ -40,6 +60,7 @@ def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObse
         predicate_passed=True,
         archive_sha256="a" * 64,
         runtime_tree_sha256="b" * 64,
+        axis_evidence=tuple(_axis_evidence(axis) for axis in ("contest_cpu", "contest_cuda")),
         sideinfo_consumed=True,
         byte_closed_archive=True,
     )
@@ -60,6 +81,10 @@ def test_l5_v2_probe_template_is_fail_closed_and_complete() -> None:
         assert row["artifact_sha256"] == ""
         assert row["predicate_id"] == ""
         assert row["predicate_passed"] is False
+        assert [axis_row["axis"] for axis_row in row["axis_evidence"]] == [
+            "contest_cpu",
+            "contest_cuda",
+        ]
 
 
 def test_l5_v2_probe_fails_closed_without_observations() -> None:
@@ -104,6 +129,40 @@ def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations(tmp_path: Path) -> 
     assert "l5_v2_probe_paired_exact_axes_missing" in row["blockers"]
     assert "l5_v2_probe_sideinfo_consumption_missing" in row["blockers"]
     assert "l5_v2_probe_contest_evidence_grade_missing" in row["blockers"]
+
+
+def test_l5_v2_probe_blocks_string_only_paired_axes(tmp_path: Path) -> None:
+    string_only = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
+        axis_evidence=(),
+    )
+
+    verdict = evaluate_l5_v2_probe((string_only,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_evidence_missing:contest_cpu" in row["blockers"]
+    assert "l5_v2_probe_axis_evidence_missing:contest_cuda" in row["blockers"]
+
+
+def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
+    tmp_path: Path,
+) -> None:
+    bad_axis_evidence = dict(_axis_evidence("contest_cuda"))
+    bad_axis_evidence["score"] = 0.123
+    malformed = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050),
+        axis_evidence=(
+            _axis_evidence("contest_cpu"),
+            bad_axis_evidence,
+        ),
+    )
+
+    verdict = evaluate_l5_v2_probe((malformed,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_score_formula_mismatch:contest_cuda" in row["blockers"]
 
 
 def test_l5_v2_probe_blocks_observations_without_artifact_predicate_custody() -> None:

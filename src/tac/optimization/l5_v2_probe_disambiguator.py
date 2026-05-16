@@ -30,6 +30,8 @@ L5V2_CANDIDATES: tuple[str, ...] = (
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 REQUIRED_EXACT_AXES: tuple[ContestAxis, ...] = ("contest_cpu", "contest_cuda")
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_SCORE_ARCHIVE_BYTES_DENOMINATOR = 37_545_489
+_SCORE_FORMULA_TOLERANCE = 1e-9
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class L5V2ProbeObservation:
     predicate_passed: bool = False
     archive_sha256: str = ""
     runtime_tree_sha256: str = ""
+    axis_evidence: tuple[Mapping[str, Any], ...] = ()
     sideinfo_consumed: bool = False
     byte_closed_archive: bool = False
     notes: str = ""
@@ -65,6 +68,12 @@ def _as_tuple_str(value: object) -> tuple[str, ...]:
     return ()
 
 
+def _as_tuple_mapping(value: object) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(value, Iterable) or isinstance(value, str | bytes):
+        return ()
+    return tuple(item for item in value if isinstance(item, Mapping))
+
+
 def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation:
     """Parse a JSON-style observation mapping."""
 
@@ -81,6 +90,7 @@ def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation
         predicate_passed=bool(payload.get("predicate_passed", False)),
         archive_sha256=str(payload.get("archive_sha256") or ""),
         runtime_tree_sha256=str(payload.get("runtime_tree_sha256") or ""),
+        axis_evidence=_as_tuple_mapping(payload.get("axis_evidence")),
         sideinfo_consumed=bool(payload.get("sideinfo_consumed", False)),
         byte_closed_archive=bool(payload.get("byte_closed_archive", False)),
         notes=str(payload.get("notes") or ""),
@@ -115,6 +125,23 @@ def _is_sha256_hex(value: str) -> bool:
     return bool(_SHA256_HEX_RE.fullmatch(value.strip()))
 
 
+def _finite_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        out = float(value)
+        return out if math.isfinite(out) else None
+    return None
+
+
+def _positive_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
 def _is_transient_artifact_path(path: str) -> bool:
     normalized = path.removeprefix("file:").strip()
     return normalized.startswith(("/tmp/", "/private/tmp/", "/var/tmp/"))
@@ -147,6 +174,72 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _axis_evidence_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
+    blockers: list[str] = []
+    by_axis: dict[str, Mapping[str, Any]] = {}
+    for item in observation.axis_evidence:
+        axis = str(item.get("axis") or "")
+        if axis.strip():
+            by_axis[axis] = item
+
+    for axis in REQUIRED_EXACT_AXES:
+        evidence = by_axis.get(axis)
+        if evidence is None:
+            blockers.append(f"l5_v2_probe_axis_evidence_missing:{axis}")
+            continue
+
+        archive_sha = str(evidence.get("archive_sha256") or "").strip().lower()
+        runtime_sha = str(evidence.get("runtime_tree_sha256") or "").strip().lower()
+        if not _is_sha256_hex(archive_sha):
+            blockers.append(f"l5_v2_probe_axis_archive_sha_invalid:{axis}")
+        elif archive_sha != observation.archive_sha256.strip().lower():
+            blockers.append(f"l5_v2_probe_axis_archive_sha_mismatch:{axis}")
+        if not _is_sha256_hex(runtime_sha):
+            blockers.append(f"l5_v2_probe_axis_runtime_tree_sha_invalid:{axis}")
+        elif runtime_sha != observation.runtime_tree_sha256.strip().lower():
+            blockers.append(f"l5_v2_probe_axis_runtime_tree_sha_mismatch:{axis}")
+
+        n_samples = _positive_int(evidence.get("n_samples"))
+        archive_bytes = _positive_int(evidence.get("archive_bytes"))
+        seg_dist = _finite_float(evidence.get("seg_dist"))
+        pose_dist = _finite_float(evidence.get("pose_dist"))
+        score = _finite_float(evidence.get("score"))
+        if n_samples is None:
+            blockers.append(f"l5_v2_probe_axis_n_samples_missing:{axis}")
+        if archive_bytes is None:
+            blockers.append(f"l5_v2_probe_axis_archive_bytes_missing:{axis}")
+        if seg_dist is None or seg_dist < 0.0:
+            blockers.append(f"l5_v2_probe_axis_seg_dist_missing:{axis}")
+        if pose_dist is None or pose_dist < 0.0:
+            blockers.append(f"l5_v2_probe_axis_pose_dist_missing:{axis}")
+        if score is None:
+            blockers.append(f"l5_v2_probe_axis_score_missing:{axis}")
+        if not str(evidence.get("hardware") or "").strip():
+            blockers.append(f"l5_v2_probe_axis_hardware_missing:{axis}")
+        if not str(evidence.get("inflate_device") or "").strip():
+            blockers.append(f"l5_v2_probe_axis_inflate_device_missing:{axis}")
+        if not str(evidence.get("eval_device") or "").strip():
+            blockers.append(f"l5_v2_probe_axis_eval_device_missing:{axis}")
+        if not str(evidence.get("auth_eval_command") or "").strip():
+            blockers.append(f"l5_v2_probe_axis_auth_eval_command_missing:{axis}")
+        if not str(evidence.get("log_path") or "").strip():
+            blockers.append(f"l5_v2_probe_axis_log_path_missing:{axis}")
+        if (
+            archive_bytes is not None
+            and seg_dist is not None
+            and pose_dist is not None
+            and score is not None
+        ):
+            recomputed = (
+                100.0 * seg_dist
+                + math.sqrt(10.0 * pose_dist)
+                + 25.0 * archive_bytes / _SCORE_ARCHIVE_BYTES_DENOMINATOR
+            )
+            if abs(score - recomputed) > _SCORE_FORMULA_TOLERANCE:
+                blockers.append(f"l5_v2_probe_axis_score_formula_mismatch:{axis}")
+    return tuple(blockers)
 
 
 def _observation_blockers(
@@ -200,6 +293,7 @@ def _observation_blockers(
         blockers.append("l5_v2_probe_runtime_tree_sha_invalid")
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
+    blockers.extend(_axis_evidence_blockers(observation))
     return tuple(dict.fromkeys(blockers))
 
 
@@ -223,6 +317,24 @@ def build_probe_template() -> dict[str, Any]:
                 "predicate_passed": False,
                 "archive_sha256": "",
                 "runtime_tree_sha256": "",
+                "axis_evidence": [
+                    {
+                        "axis": axis,
+                        "archive_sha256": "",
+                        "runtime_tree_sha256": "",
+                        "score": None,
+                        "seg_dist": None,
+                        "pose_dist": None,
+                        "archive_bytes": None,
+                        "n_samples": None,
+                        "hardware": "",
+                        "inflate_device": "",
+                        "eval_device": "",
+                        "auth_eval_command": "",
+                        "log_path": "",
+                    }
+                    for axis in REQUIRED_EXACT_AXES
+                ],
                 "sideinfo_consumed": False,
                 "byte_closed_archive": False,
                 "notes": "fill from paired exact probe artifacts",
