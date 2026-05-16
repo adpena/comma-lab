@@ -920,6 +920,13 @@ def build_parser() -> argparse.ArgumentParser:
     summary_p.add_argument("--ttl-hours", type=float, default=24.0)
     summary_p.add_argument("--now-utc", default="")
     summary_p.add_argument("--format", choices=["text", "json"], default="text")
+    summary_p.add_argument(
+        "--json",
+        action="store_const",
+        const="json",
+        dest="format",
+        help="Compatibility alias for --format json.",
+    )
     summary_p.set_defaults(func=_summary)
     prune_p = sub.add_parser(
         "prune",
@@ -949,6 +956,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the prune plan without rewriting the ledger or archives",
     )
     prune_p.add_argument("--format", choices=["text", "json"], default="text")
+    prune_p.add_argument(
+        "--json",
+        action="store_const",
+        const="json",
+        dest="format",
+        help="Compatibility alias for --format json.",
+    )
     prune_p.set_defaults(func=_prune)
     return parser
 

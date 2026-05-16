@@ -210,6 +210,35 @@ def test_prune_dry_run_makes_no_changes(cld_mod, fake_ledger, tmp_path):
     assert not archive_dir.exists() or not list(archive_dir.iterdir())
 
 
+def test_prune_accepts_json_alias(cld_mod, fake_ledger, tmp_path, capsys):
+    """Operator-facing prune supports --json as --format json shorthand."""
+
+    archive_dir = tmp_path / "archive"
+    rc = cld_mod.main(
+        [
+            "prune",
+            "--claims-path",
+            str(fake_ledger),
+            "--archive-dir",
+            str(archive_dir),
+            "--terminal-age-days",
+            "7",
+            "--now-utc",
+            "2026-05-12T11:00:00Z",
+            "--dry-run",
+            "--json",
+        ]
+    )
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["dry_run"] is True
+    assert summary["rows_pruned"] == 3
+    assert summary["months_archived"] == ["2026-04"]
+    assert summary["archive_files"]["2026-04"]["path"].endswith("dispatch_claims_2026-04.md")
+    assert summary["archive_files"]["2026-04"]["rows_appended"] == 3
+    assert "lane_old_terminal_a" in fake_ledger.read_text()  # FAKE_LANE_OK: claim-prune unit-test fixture
+
+
 def test_prune_applies_archives_and_rewrites_ledger(cld_mod, fake_ledger, tmp_path):
     archive_dir = tmp_path / "archive"
     rc = cld_mod.main(
@@ -291,7 +320,7 @@ def test_prune_archive_append_only(cld_mod, fake_ledger, tmp_path):
         ]
     )
     arch = archive_dir / "dispatch_claims_2026-04.md"
-    first_text = arch.read_text()
+    assert "lane_old_terminal_a" in arch.read_text()  # FAKE_LANE_OK: claim-prune unit-test fixture
     # Inject another old-terminal row into the live ledger and re-prune.
     ledger_text = fake_ledger.read_text()
     new_row = (

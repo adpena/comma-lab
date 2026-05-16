@@ -406,3 +406,23 @@ def test_summary_text_lists_active_without_mutating_claims(claims_path, capsys):
     assert "CLAIM_SUMMARY active=1" in out
     assert "invalid_lane_id=0" in out
     assert "ACTIVE lane_id=L job=j1 platform=gha status=active_dispatching agent=agent" in out
+
+
+def test_summary_accepts_json_alias(claims_path, capsys):
+    """Operator-facing summary supports --json as --format json shorthand."""
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "alias_lane", "--platform", "modal", "--instance-job-id", "j1",
+        "--agent", "agent", "--status", "active_dispatching",
+        "--now-utc", "2026-05-08T10:00:00Z",
+    ])
+    capsys.readouterr()
+    rc = cld.main([
+        "summary", "--claims-path", str(claims_path),
+        "--now-utc", "2026-05-08T11:00:00Z",
+        "--json",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["active_count"] == 1
+    assert payload["active"][0]["lane_id"] == "alias_lane"
