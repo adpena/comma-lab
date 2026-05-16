@@ -2326,6 +2326,15 @@ def preflight_all(
         check_grand_council_deliberation_has_explicit_assumption_statements(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #293 - Cathedral/autopilot literature-anchor
+        # source-scope gate. Planning rows may cite papers only if they also
+        # preserve what the source actually supports, what Pact must prove
+        # empirically, and decode-complexity evidence. STRICT @ 0 because the
+        # Cathedral inventory source-scope hardening landed first and live
+        # canonical rows are clean.
+        check_cathedral_literature_anchors_have_source_scope(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -61898,6 +61907,163 @@ def check_grand_council_deliberation_has_explicit_assumption_statements(
             "protected against'. Catalog #292 (OR2-GRAND-COUNCIL-PER-ROUND-"
             "ASSUMPTION-STATEMENT-DISCIPLINE; sister of Catalog #185 + #229 + "
             "#290 + #291).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #293 - check_cathedral_literature_anchors_have_source_scope
+#
+# Cathedral/autopilot source-fidelity self-protection 2026-05-16. Sister of the
+# Cathedral literature-anchor scope hardening that added explicit
+# ``source_supports`` / ``paper_claim_scope`` / ``pact_must_prove`` /
+# ``decode_complexity_evidence`` fields to the substrate composition matrix.
+#
+# Bug class: a Cathedral row can carry a persuasive ``literature_anchor`` and a
+# predicted score band while silently dropping the boundary between (a) what the
+# cited paper actually supports and (b) what Pact still must prove on byte-closed
+# contest archives. That turns source citations into false authority and can
+# steer the autopilot toward unsupported score-lowering claims. The guard keeps
+# literature anchors as hypothesis provenance, not promotion evidence.
+#
+# STRICT-from-byte-one: live count is 0 because the source-scope fields landed
+# before this gate. Future anchored rows must carry the complete scope contract
+# in both the canonical inventory and serialized Pareto rows.
+# ============================================================================
+
+_CHECK_293_REQUIRED_SCOPE_FIELDS: tuple[str, ...] = (
+    "source_supports",
+    "paper_claim_scope",
+    "pact_must_prove",
+    "decode_complexity_evidence",
+)
+
+_CHECK_293_EMPTY_SCOPE_MARKERS = frozenset(
+    (
+        "",
+        "none",
+        "null",
+        "n/a",
+        "na",
+        "tbd",
+        "todo",
+        "unknown",
+        "<source>",
+        "<evidence>",
+        "<rationale>",
+        "<reason>",
+    )
+)
+
+
+def _check_293_row_get(row: object, field: str) -> object:
+    if isinstance(row, dict):
+        return row.get(field)
+    return getattr(row, field, None)
+
+
+def _check_293_non_placeholder_text(value: object) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip()
+    if not text:
+        return False
+    return text.lower() not in _CHECK_293_EMPTY_SCOPE_MARKERS
+
+
+def _check_293_source_scope_violations(
+    *,
+    substrate_rows: Iterable[object],
+    pareto_rows: Iterable[object],
+) -> list[str]:
+    """Return rows whose literature anchor lacks source-fidelity scope fields."""
+
+    violations: list[str] = []
+    for surface, rows in (
+        ("canonical_substrate_inventory", substrate_rows),
+        ("serialized_pareto_rows", pareto_rows),
+    ):
+        for row in rows:
+            anchor = _check_293_row_get(row, "literature_anchor")
+            if not _check_293_non_placeholder_text(anchor):
+                continue
+            substrate_id = _check_293_row_get(row, "substrate_id")
+            row_id = str(substrate_id).strip() if substrate_id is not None else "?"
+            missing = [
+                field
+                for field in _CHECK_293_REQUIRED_SCOPE_FIELDS
+                if not _check_293_non_placeholder_text(_check_293_row_get(row, field))
+            ]
+            if not missing:
+                continue
+            violations.append(
+                f"{surface} row {row_id!r} carries literature_anchor={str(anchor)!r} "
+                f"but lacks non-placeholder source-scope field(s): {', '.join(missing)}. "
+                "Every Cathedral/autopilot literature anchor must state what the source "
+                "supports, the paper-claim scope, what Pact must prove empirically, and "
+                "decode-complexity evidence before the row can influence planning."
+            )
+    return violations
+
+
+def check_cathedral_literature_anchors_have_source_scope(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #293 — require source-fidelity scope on literature-anchored
+    Cathedral/autopilot rows.
+
+    The guard checks both:
+
+    - the canonical substrate inventory rows; and
+    - the serialized Pareto rows consumed by autopilot/reporting surfaces.
+
+    This keeps paper citations from being used as false score authority. A
+    literature anchor is allowed only when the row also records what the source
+    supports, the source's claim scope, what Pact still must prove empirically,
+    and decode-complexity evidence.
+    """
+
+    _ = repo_root  # Signature kept consistent with other preflight gates.
+    try:
+        from tac.optimization.substrate_composition_matrix import (
+            canonical_substrate_inventory,
+            per_substrate_pareto_rows,
+            serialize_pareto_rows,
+        )
+
+        substrate_rows = canonical_substrate_inventory()
+        pareto_rows = serialize_pareto_rows(per_substrate_pareto_rows())
+    except Exception as exc:
+        violations = [
+            "could not build Cathedral substrate composition rows for literature "
+            f"source-scope validation: {type(exc).__name__}: {exc}"
+        ]
+    else:
+        violations = _check_293_source_scope_violations(
+            substrate_rows=substrate_rows,
+            pareto_rows=pareto_rows,
+        )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_cathedral_literature_anchors_have_source_scope] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_cathedral_literature_anchors_have_source_scope] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_cathedral_literature_anchors_have_source_scope found "
+            f"{len(violations)} Cathedral/autopilot literature-anchor source-scope "
+            "violation(s). Per CLAUDE.md source-fidelity and paper-readiness "
+            "discipline, literature anchors are hypothesis provenance, not score "
+            "authority. Catalog #293 (sister of Catalog #291/#292 and the "
+            "Cathedral literature-anchor scope hardening).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
