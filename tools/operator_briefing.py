@@ -1306,12 +1306,27 @@ def _l5_v2_frontier_readiness(
     next_non_pr106_l5_action = tt5l_campaign.get("next_non_pr106_l5_action")
     if not isinstance(next_non_pr106_l5_action, dict):
         next_non_pr106_l5_action = {}
+    measurement_schedule_tool_path = str(
+        tt5l_campaign.get("measurement_schedule_tool_path") or ""
+    )
+    measurement_schedule_artifact_path = str(
+        tt5l_campaign.get("measurement_schedule_artifact_path") or ""
+    )
+    measurement_schedule_report_path = str(
+        tt5l_campaign.get("measurement_schedule_report_path") or ""
+    )
     return {
         "schema": "pact.l5_v2_frontier_readiness.v1",
         "subject_id": "time_traveler_l5_autonomy",
         "primary_staircase": "tt5l_first_non_pr106_l5_v2",
         "tt5l_campaign_readiness": tt5l_campaign,
         "next_non_pr106_l5_action": next_non_pr106_l5_action,
+        "measurement_schedule_tool_path": measurement_schedule_tool_path,
+        "measurement_schedule_artifact_path": measurement_schedule_artifact_path,
+        "measurement_schedule_report_path": measurement_schedule_report_path,
+        "measurement_schedule_score_claim": False,
+        "measurement_schedule_promotion_eligible": False,
+        "measurement_schedule_ready_for_exact_eval_dispatch": False,
         "tt5l_first_anchor_timing_smoke_allowed": bool(
             tt5l_campaign.get("first_anchor_timing_smoke_allowed")
         ),
@@ -1420,6 +1435,8 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",
         f"  L5 score/rank dispatch ready:   {payload['l5_ready_for_score_or_rank_dispatch']}",
         f"  exact dispatch authority:        {payload['ready_for_exact_eval_dispatch']}",
+        f"  measurement schedule:           {payload['measurement_schedule_artifact_path']}",
+        f"  measurement schedule tool:      {payload['measurement_schedule_tool_path']}",
         f"  optional PacketIR matrix:        {payload['packetir_matrix_path']}",
         f"  PacketIR candidates:             {payload['packetir_candidate_count']}",
         f"  PacketIR status counts:          {payload['packetir_status_counts']}",

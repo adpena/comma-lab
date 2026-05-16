@@ -788,6 +788,9 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             "promotion_eligible",
             "rank_or_kill_eligible",
             "ready_for_exact_eval_dispatch",
+            "measurement_schedule_score_claim",
+            "measurement_schedule_promotion_eligible",
+            "measurement_schedule_ready_for_exact_eval_dispatch",
         ):
             if l5.get(flag) is not False:
                 failures.append(f"l5_v2_frontier_readiness:{flag}_not_false")
@@ -886,7 +889,7 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                     failures.append(
                         "l5_v2_frontier_readiness:tt5l_next_action_mentions_pr106"
                     )
-                if not dykstra_valid and action_id != "run_tt5l_dykstra_feasibility_polytope":
+                if not dykstra_valid and action_id != "run_tt5l_dykstra_score_axis_sanity":
                     failures.append(
                         "l5_v2_frontier_readiness:"
                         "tt5l_missing_dykstra_not_first_action"

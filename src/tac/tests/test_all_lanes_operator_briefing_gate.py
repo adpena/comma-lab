@@ -53,6 +53,9 @@ def _base_briefing_payload() -> dict[str, object]:
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "measurement_schedule_score_claim": False,
+            "measurement_schedule_promotion_eligible": False,
+            "measurement_schedule_ready_for_exact_eval_dispatch": False,
             "tt5l_campaign_readiness": {
                 "schema": "l5_v2_tt5l_campaign_readiness_v1",
                 "non_pr106_staircase_priority": True,
@@ -72,7 +75,7 @@ def _base_briefing_payload() -> dict[str, object]:
                 "sideinfo_gate_evidence_valid": False,
                 "first_anchor_timing_smoke_allowed": False,
                 "next_non_pr106_l5_action": {
-                    "action_id": "run_tt5l_dykstra_feasibility_polytope",
+                    "action_id": "run_tt5l_dykstra_score_axis_sanity",
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,

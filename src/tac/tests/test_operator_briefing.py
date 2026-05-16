@@ -134,6 +134,15 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["promotion_eligible"] is False
     assert l5["rank_or_kill_eligible"] is False
     assert l5["ready_for_exact_eval_dispatch"] is False
+    assert l5["measurement_schedule_score_claim"] is False
+    assert l5["measurement_schedule_promotion_eligible"] is False
+    assert l5["measurement_schedule_ready_for_exact_eval_dispatch"] is False
+    assert l5["measurement_schedule_tool_path"].endswith(
+        "tools/build_l5_v2_lattice_measurement_schedule.py"
+    )
+    assert l5["measurement_schedule_artifact_path"].endswith(
+        ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json"
+    )
     assert l5["target_rows_are_fail_fast_only"] is True
     assert l5["canonical_sideinfo_evidence_present"] is False
     assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
