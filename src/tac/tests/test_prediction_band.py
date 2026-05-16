@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from tac.optimization.prediction_band import (
     BandSource,
     BaselineRef,
@@ -74,6 +76,72 @@ def test_valid_prediction_band_can_influence_rank_reward():
     assert verdict.valid_for_rank_reward is True
     assert verdict.valid_for_dispatch_planning is True
     assert verdict.valid_for_promotion is False
+
+
+def test_baseline_axis_mismatch_blocks_rank_reward():
+    band = _valid_band()
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            baseline=replace(band.baseline, axis="macOS-CPU advisory"),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_baseline_axis_mismatch" in verdict.blockers
+
+
+def test_landed_anchor_axis_mismatch_blocks_rank_reward():
+    band = _valid_band()
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            empirical_anchor=EmpiricalAnchorRef(
+                status="landed",
+                anchors=({
+                    "axis": "macOS-CPU advisory",
+                    "archive_sha256": _sha("c"),
+                    "runtime_tree_sha256": _sha("d"),
+                    "score": 0.1987,
+                    "artifact_path": "experiments/results/z3/anchor.json",
+                },),
+            ),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_axis_mismatch" in verdict.blockers
+
+
+def test_landed_anchor_missing_custody_blocks_rank_reward():
+    band = _valid_band()
+    verdict = validate_prediction_band(
+        replace(
+            band,
+            empirical_anchor=EmpiricalAnchorRef(
+                status="landed",
+                anchors=({
+                    "axis": "contest-cuda",
+                    "score": "0.1987",
+                    "artifact_path": "",
+                },),
+            ),
+        ),
+        expected_subject_id="z3_balle_hyperprior_bolton",
+        expected_low=-0.010,
+        expected_high=-0.001,
+    )
+
+    assert verdict.valid_for_rank_reward is False
+    assert "prediction_band_empirical_anchor_score_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_custody_missing" in verdict.blockers
+    assert "prediction_band_empirical_anchor_artifact_missing" in verdict.blockers
 
 
 def test_missing_nonzero_prediction_band_becomes_rank_blocker():

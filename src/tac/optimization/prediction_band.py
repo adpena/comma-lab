@@ -248,6 +248,8 @@ def validate_prediction_band(
         blockers.append("prediction_band_baseline_missing")
     elif not math.isfinite(baseline.score):
         blockers.append("prediction_band_baseline_score_non_finite")
+    if band.axis.strip() and baseline.axis.strip() and baseline.axis != band.axis:
+        blockers.append("prediction_band_baseline_axis_mismatch")
     if not is_sha256_hex(baseline.archive_sha256) or not is_sha256_hex(
         baseline.runtime_tree_sha256
     ):
@@ -303,6 +305,38 @@ def validate_prediction_band(
         blockers.append("prediction_band_empirical_anchor_superseded")
     elif empirical.status == "landed" and not empirical.anchors:
         blockers.append("prediction_band_empirical_anchor_missing")
+    elif empirical.status == "landed":
+        for anchor_idx, anchor in enumerate(empirical.anchors):
+            anchor_axis = str(anchor.get("axis") or "")
+            if not anchor_axis.strip():
+                blockers.append("prediction_band_empirical_anchor_axis_missing")
+                annotations.append(f"empirical_anchor_axis_missing_index={anchor_idx}")
+            elif band.axis.strip() and anchor_axis != band.axis:
+                blockers.append("prediction_band_empirical_anchor_axis_mismatch")
+                annotations.append(
+                    f"empirical_anchor_axis_mismatch_index={anchor_idx}:"
+                    f"{anchor_axis!r}!={band.axis!r}"
+                )
+            score = anchor.get("score")
+            if (
+                isinstance(score, bool)
+                or not isinstance(score, int | float)
+                or not math.isfinite(float(score))
+            ):
+                blockers.append("prediction_band_empirical_anchor_score_missing")
+                annotations.append(f"empirical_anchor_score_missing_index={anchor_idx}")
+            if not is_sha256_hex(anchor.get("archive_sha256")) or not is_sha256_hex(
+                anchor.get("runtime_tree_sha256")
+            ):
+                blockers.append("prediction_band_empirical_anchor_custody_missing")
+                annotations.append(
+                    f"empirical_anchor_custody_missing_index={anchor_idx}"
+                )
+            if not str(anchor.get("artifact_path") or "").strip():
+                blockers.append("prediction_band_empirical_anchor_artifact_missing")
+                annotations.append(
+                    f"empirical_anchor_artifact_missing_index={anchor_idx}"
+                )
 
     valid_for_rank_reward = not blockers
     valid_for_dispatch_planning = "prediction_band_score_claim_forbidden" not in blockers
