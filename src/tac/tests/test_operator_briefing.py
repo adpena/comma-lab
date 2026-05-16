@@ -8,6 +8,7 @@ This file just guards against the orchestrator's subprocess wiring breaking
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -135,10 +136,23 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["target_rows_are_fail_fast_only"] is True
     assert l5["canonical_sideinfo_evidence_present"] is True
     assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
-    assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
-    assert l5["next_exact_eval_target_count"] == 11
-    assert len(l5["next_exact_eval_targets"]) == 11
-    assert len(l5["next_exact_eval_targets_sample"]) == 5
+    active_claim_count = int(out["dispatch_claim_summary"].get("active_count") or 0)
+    assert l5["active_dispatch_claim_count"] == active_claim_count
+    assert l5["dispatch_claim_gate_blocked"] == (active_claim_count > 0)
+    if active_claim_count:
+        assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
+        assert l5["next_exact_eval_target_count"] == 0
+        assert l5["next_exact_eval_targets"] == []
+        assert l5["next_exact_eval_targets_sample"] == []
+        assert (
+            f"blocked_active_dispatch_claims_present:{active_claim_count}"
+            in l5["blockers"]
+        )
+    else:
+        assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
+        assert l5["next_exact_eval_target_count"] == 11
+        assert len(l5["next_exact_eval_targets"]) == 11
+        assert len(l5["next_exact_eval_targets_sample"]) == 5
     assert l5["packetir_status_counts"]["paired_exact_blocked"] == 3
     assert l5["packetir_status_counts"]["paired_exact_measured"] == 2
     assert l5["packetir_paired_candidate_count"] == 2
@@ -146,32 +160,33 @@ def test_briefing_json_composite_has_all_three_keys():
     assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" not in l5[
         "blockers"
     ]
-    assert all(
-        row["ready_for_exact_eval_dispatch"] is False
-        for row in l5["next_exact_eval_targets_sample"]
-    )
-    assert all(
-        row["paired_dispatch_tool"] == "tools/dispatch_modal_paired_auth_eval.py"
-        for row in l5["next_exact_eval_targets_sample"]
-    )
-    assert all(
-        "--expected-runtime-tree-sha256 auto" in row["command_template"]
-        for row in l5["next_exact_eval_targets_sample"]
-    )
-    assert all(
-        "--skip-axis-if-promotable-anchor-exists" in row["command_template"]
-        for row in l5["next_exact_eval_targets_sample"]
-    )
-    assert all(
-        "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
-        not in row["command_template"]
-        for row in l5["next_exact_eval_targets_sample"]
-    )
-    assert all(
-        "experiments/modal_auth_eval.py" not in row["command_template"]
-        and "experiments/modal_auth_eval_cpu.py" not in row["command_template"]
-        for row in l5["next_exact_eval_targets_sample"]
-    )
+    if l5["next_exact_eval_targets_sample"]:
+        assert all(
+            row["ready_for_exact_eval_dispatch"] is False
+            for row in l5["next_exact_eval_targets_sample"]
+        )
+        assert all(
+            row["paired_dispatch_tool"] == "tools/dispatch_modal_paired_auth_eval.py"
+            for row in l5["next_exact_eval_targets_sample"]
+        )
+        assert all(
+            "--expected-runtime-tree-sha256 auto" in row["command_template"]
+            for row in l5["next_exact_eval_targets_sample"]
+        )
+        assert all(
+            "--skip-axis-if-promotable-anchor-exists" in row["command_template"]
+            for row in l5["next_exact_eval_targets_sample"]
+        )
+        assert all(
+            "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>"
+            not in row["command_template"]
+            for row in l5["next_exact_eval_targets_sample"]
+        )
+        assert all(
+            "experiments/modal_auth_eval.py" not in row["command_template"]
+            and "experiments/modal_auth_eval_cpu.py" not in row["command_template"]
+            for row in l5["next_exact_eval_targets_sample"]
+        )
     assert "provider_readiness" in out
     assert out["provider_readiness"].get("score_claim") is False
     assert "pareto" in out
@@ -467,10 +482,70 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_matrix_sha_mismatch(
         "pr106_stack_cell_candidates": {"candidate_count": 0},
     }
 
-    l5 = mod._l5_v2_frontier_readiness()
+    l5 = mod._l5_v2_frontier_readiness(dispatch_claim_summary={"active_count": 0})
 
     assert "l5_v2_packetir_matrix_artifact_sha_mismatch" in l5["blockers"]
     assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
+    assert l5["next_exact_eval_target_count"] == 0
+    assert l5["next_exact_eval_targets"] == []
+
+
+def test_l5_v2_briefing_suppresses_packetir_targets_on_active_claims(
+    tmp_path: Path,
+) -> None:
+    mod = _load_briefing_module()
+    matrix_path = tmp_path / ".omx" / "research" / "matrix.json"
+    matrix_path.parent.mkdir(parents=True)
+    matrix_text = (
+        json.dumps(
+            {
+                "candidate_count": 1,
+                "next_exact_eval_target_count": 1,
+                "next_exact_eval_targets": [
+                    {
+                        "candidate_id": "format_0x0c_exact_radix",
+                        "lane_id": "pr106_packetir_format_0x0c_exact_radix_contest_cpu",
+                        "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                        "command_template": (
+                            ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+                            "--expected-runtime-tree-sha256 auto "
+                            "--skip-axis-if-promotable-anchor-exists"
+                        ),
+                        "dispatch_status": (
+                            "requires_claim_lane_dispatch_before_provider_launch"
+                        ),
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    matrix_path.write_text(matrix_text, encoding="utf-8")
+    mod.REPO_ROOT = tmp_path
+    mod.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = ".omx/research/matrix.json"
+    mod.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = hashlib.sha256(
+        matrix_text.encode("utf-8")
+    ).hexdigest()
+    mod.l5_v2_canonical_sideinfo_gate_evidence = lambda: None
+    mod.l5_v2_dispatch_readiness = lambda gate_evidence=None: {
+        "blockers": [],
+        "ready_for_gate_probe_dispatch": False,
+        "ready_for_score_or_rank_dispatch": False,
+        "ready_for_dispatch": False,
+        "packetir_stack_evidence": {"paired_candidate_count": 0},
+        "pr106_stack_cell_candidates": {"candidate_count": 0},
+    }
+
+    l5 = mod._l5_v2_frontier_readiness(dispatch_claim_summary={"active_count": 2})
+
+    assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
+    assert l5["active_dispatch_claim_count"] == 2
+    assert l5["dispatch_claim_gate_blocked"] is True
+    assert "blocked_active_dispatch_claims_present:2" in l5["blockers"]
     assert l5["next_exact_eval_target_count"] == 0
     assert l5["next_exact_eval_targets"] == []
 

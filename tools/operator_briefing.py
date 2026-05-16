@@ -872,6 +872,13 @@ def _dispatch_claim_summary() -> dict[str, object]:
     return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json", "--live-only"])
 
 
+def _active_dispatch_claim_count(summary: dict[str, object]) -> int:
+    try:
+        return max(0, int(summary.get("active_count") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _dispatch_claim_historical_summary() -> dict[str, object]:
     """Return all-history claim hygiene without using it as a live dispatch blocker."""
     return _run_json(CLAIM_DISPATCH, ["summary", "--format", "json"])
@@ -1144,7 +1151,9 @@ def _load_l5_v2_packetir_matrix() -> dict[str, object]:
     }
 
 
-def _l5_v2_frontier_readiness() -> dict[str, object]:
+def _l5_v2_frontier_readiness(
+    dispatch_claim_summary: dict[str, object] | None = None,
+) -> dict[str, object]:
     """Read-only L5-v2/PR106 frontier status for operator briefing.
 
     This is intentionally a visibility surface, not a dispatch actuator. The
@@ -1160,10 +1169,21 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
     matrix_blockers = [
         str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
     ]
+    if dispatch_claim_summary is None:
+        dispatch_claim_summary = _dispatch_claim_summary()
+    active_dispatch_claim_count = _active_dispatch_claim_count(dispatch_claim_summary)
+    dispatch_blockers = list(matrix_blockers)
+    if active_dispatch_claim_count:
+        dispatch_blockers.append(
+            f"blocked_active_dispatch_claims_present:{active_dispatch_claim_count}"
+        )
     matrix_fresh = not matrix_blockers
+    dispatch_targets_allowed = matrix_fresh and active_dispatch_claim_count == 0
     targets = [
         target
-        for target in (matrix.get("next_exact_eval_targets", []) if matrix_fresh else [])
+        for target in (
+            matrix.get("next_exact_eval_targets", []) if dispatch_targets_allowed else []
+        )
         if isinstance(target, dict)
     ]
     normalized_targets = [
@@ -1200,7 +1220,7 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
                 for blocker in section_payload.get("blockers", [])
                 if str(blocker)
             )
-    blockers.extend(matrix_blockers)
+    blockers.extend(dispatch_blockers)
     target_count = len(normalized_targets)
     status_counts = matrix.get("status_counts") if isinstance(matrix, dict) else {}
     if not isinstance(status_counts, dict):
@@ -1212,7 +1232,9 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
         "packetir_matrix_exists": matrix.get("exists") is True,
         "packetir_matrix_artifact_sha256": matrix.get("artifact_sha256", ""),
         "packetir_matrix_expected_sha256": matrix.get("expected_artifact_sha256", ""),
-        "packetir_matrix_dispatch_targets_suppressed": bool(matrix_blockers),
+        "packetir_matrix_dispatch_targets_suppressed": bool(dispatch_blockers),
+        "active_dispatch_claim_count": active_dispatch_claim_count,
+        "dispatch_claim_gate_blocked": active_dispatch_claim_count > 0,
         "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
         "packetir_status_counts": status_counts,
         "next_exact_eval_target_count": target_count,
@@ -1856,16 +1878,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.json:
+        dispatch_claim_summary = _dispatch_claim_summary()
         out = {
             "target_score": args.target_score,
-            "dispatch_claim_summary": _dispatch_claim_summary(),
+            "dispatch_claim_summary": dispatch_claim_summary,
             "dispatch_claim_historical_summary": _dispatch_claim_historical_summary(),
             "dispatch_readiness": _dispatch_readiness(),
             "xray_tools": _xray_toolkit_rows(),
             "cooperative_receiver_solver_integration": (
                 _cooperative_receiver_solver_integration()
             ),
-            "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(),
+            "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
+                dispatch_claim_summary=dispatch_claim_summary
+            ),
         }
         if not args.skip_provider_readiness:
             out["provider_readiness"] = _provider_readiness(refresh=args.refresh_provider_readiness)
