@@ -198,9 +198,11 @@ def build_l5_v2_paired_measurement_dispatch_plan(
             top_blockers.append(f"l5_v2_active_measurement_missing:{measurement_id}")
             continue
 
-        required_axes = _as_text_list(row.get("required_axes")) or list(
-            _REQUIRED_EXACT_AXES
-        )
+        required_axes = _as_text_list(row.get("required_axes"))
+        if not required_axes:
+            top_blockers.append(
+                f"l5_v2_measurement_required_axes_missing:{measurement_id}"
+            )
         missing_axes = [axis for axis in _REQUIRED_EXACT_AXES if axis not in required_axes]
         unknown_axes = [axis for axis in required_axes if axis not in _REQUIRED_EXACT_AXES]
         if missing_axes:

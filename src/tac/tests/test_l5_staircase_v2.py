@@ -94,7 +94,9 @@ def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
                 row["pose_dist"] = 0.0
                 row["archive_bytes"] = archive_bytes
                 row["n_samples"] = 600
-                row["hardware"] = "cpu" if axis == "contest_cpu" else "modal-t4"
+                row["hardware"] = (
+                    "linux-x86_64" if axis == "contest_cpu" else "modal-t4"
+                )
                 row["auth_eval_command"] = f"contest_auth_eval --axis {axis}"
                 row["artifact_path"] = (
                     "experiments/results/time_traveler_l5_v2/"
@@ -162,6 +164,24 @@ def _probe_observation_payload(
             + "\n",
             encoding="utf-8",
         )
+        raw_output_aggregate_sha = _sha(400 + seed * 10 + len(axis))
+        manifest_path = (
+            "experiments/results/time_traveler_l5_v2/"
+            f"{candidate_id}_{axis}_inflated_outputs_manifest.json"
+        )
+        manifest_file = repo_root / manifest_path
+        manifest_file.write_text(
+            json.dumps(
+                {
+                    "schema": "contest_auth_eval_inflated_output_manifest_v1",
+                    "aggregate_sha256": raw_output_aggregate_sha,
+                    "raw_file_count": 1,
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         axis_evidence.append(
             {
                 "axis": axis,
@@ -181,6 +201,9 @@ def _probe_observation_payload(
                 ),
                 "log_path": log_path,
                 "artifact_path": axis_artifact_path,
+                "inflated_outputs_manifest_path": manifest_path,
+                "inflated_outputs_manifest_sha256": _file_sha256(manifest_file),
+                "raw_output_aggregate_sha256": raw_output_aggregate_sha,
                 "score_delta": delta,
             }
         )

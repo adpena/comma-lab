@@ -124,6 +124,23 @@ def test_l5_v2_dispatch_plan_fails_closed_on_bad_schedule_schema() -> None:
     assert plan["ready_for_exact_eval_dispatch"] is False
 
 
+def test_l5_v2_dispatch_plan_blocks_missing_required_axes() -> None:
+    schedule = build_l5_v2_lattice_measurement_schedule()
+    schedule["measurements"][0].pop("required_axes")
+
+    plan = build_l5_v2_paired_measurement_dispatch_plan(schedule=schedule)
+
+    measurement_id = schedule["measurements"][0]["measurement_id"]
+    assert f"l5_v2_measurement_required_axes_missing:{measurement_id}" in plan[
+        "blockers"
+    ]
+    missing_axes_blocker = (
+        f"l5_v2_measurement_missing_required_axes:{measurement_id}:"
+        "contest_cpu,contest_cuda"
+    )
+    assert missing_axes_blocker in plan["blockers"]
+
+
 def test_l5_v2_dispatch_plan_json_and_markdown_are_durable() -> None:
     plan = build_l5_v2_paired_measurement_dispatch_plan(
         schedule=build_l5_v2_lattice_measurement_schedule()

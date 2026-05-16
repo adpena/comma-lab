@@ -24,6 +24,7 @@ SCORE_FORMULA_TOLERANCE = 1e-9
 CONTEST_EXACT_AXES = frozenset({"contest_cpu", "contest_cuda"})
 CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
 CPU_DEVICE_TOKENS = frozenset({"cpu", "x86", "x86_64"})
+CONTEST_CPU_REQUIRED_OS_TOKENS = frozenset({"debian", "linux", "ubuntu"})
 CONTEST_CPU_FORBIDDEN_TOKENS = frozenset({
     "aarch64",
     "ane",
@@ -152,8 +153,10 @@ def contains_forbidden_contest_cpu_token(value: str) -> bool:
 def is_contest_cpu_device_text(value: str) -> bool:
     """Return true for Linux/x86 CPU axis text with no CUDA/GPU/macOS leakage."""
 
-    return _contains_token(value, CPU_DEVICE_TOKENS) and not contains_forbidden_contest_cpu_token(
-        value
+    return (
+        _contains_token(value, CPU_DEVICE_TOKENS)
+        and _contains_any_token(value, CONTEST_CPU_REQUIRED_OS_TOKENS)
+        and not contains_forbidden_contest_cpu_token(value)
     )
 
 

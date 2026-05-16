@@ -18,9 +18,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 from tac.exact_eval_custody import (
+    CPU_DEVICE_TOKENS,
     CUDA_DEVICE_TOKENS,
+    contains_forbidden_contest_cpu_token,
     contains_non_negated_device_token,
-    is_contest_cpu_device_text,
     validate_exact_eval_evidence,
 )
 from tac.optimization.l5_v2_measurement_schedule import (
@@ -2835,12 +2836,18 @@ def _paired_row_identity_blockers(
         inflate_device = str(row.get("inflate_device") or "").lower()
         eval_device = str(row.get("eval_device") or "").lower()
         if axis == "contest_cpu":
-            if not is_contest_cpu_device_text(inflate_device):
+            if not contains_non_negated_device_token(
+                inflate_device,
+                CPU_DEVICE_TOKENS,
+            ) or contains_forbidden_contest_cpu_token(inflate_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_inflate_device"
                 )
-            if not is_contest_cpu_device_text(eval_device):
+            if not contains_non_negated_device_token(
+                eval_device,
+                CPU_DEVICE_TOKENS,
+            ) or contains_forbidden_contest_cpu_token(eval_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_eval_device"
