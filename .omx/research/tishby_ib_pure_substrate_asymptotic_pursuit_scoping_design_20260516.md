@@ -934,3 +934,80 @@ All 6 hooks active per Catalog #125; none N/A.
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3. NEW substrate-specific observability extension: `tools/inspect_variational_ib_posterior_geometry.py` (planned) — visualizes the variational posterior `q(t|x)` geometry across (per-pair, per-β) settings.
+
+---
+
+## Appendix A — Empirical anchors from L1 SCAFFOLD landing (SUBAGENT E, 2026-05-16)
+
+Per the design memo §22 op-routables #1 + #3 (Phase 1 + Phase 2 of SUBAGENT E task `lane_tishby_ib_pure_l1_scaffold_substrate_build_plus_probes_20260516`). The L1 SCAFFOLD landing executes the two pre-dispatch gates whose verdicts disambiguate the substrate's Phase 2 council lift eligibility.
+
+### A.1 D4 H(latent|scorer_class) probe — INDEPENDENT verdict
+
+**Execution**: `experiments/results/tishby_ib_pure_d4_probe_20260516T212557Z/d4_driver.py` ran the canonical D4 probe (`tools/probe_latent_conditional_entropy_h_latent_given_scorer_class.py`, commit `d72f50985`) on A1 latents extracted from `submissions/a1/archive.zip` per the substrate's distinguishing-feature hypothesis (Wyner-Ziv side-info conditioning on scorer class).
+
+**Result** (per `.omx/state/h_latent_given_scorer_class_tishby_ib_pure.json` + `experiments/results/tishby_ib_pure_d4_probe_20260516T212557Z/h_latent_given_scorer_class_tishby_ib_pure.json`):
+
+- `verdict`: **INDEPENDENT**
+- `mutual_information_bits`: ~0.006 bits/symbol (below MEANINGFUL threshold 0.5)
+- `h_latent_unconditional_bits_per_symbol`: ~7.04 bits/symbol
+- `h_latent_given_scorer_class_bits_per_symbol`: ~7.03 bits/symbol
+- `wyner_ziv_gain_ceiling_fraction`: ~0.001
+- `num_unique_classes`: 2 (composite-class signature) / 1 (raw majority class)
+
+**Per-pair SegNet class distribution** (per `experiments/results/tishby_ib_pure_d4_probe_20260516T212557Z/per_pair_segnet_class.json`):
+
+- Single majority class (class 2 = "road") dominates ~100% of pairs on dashcam footage
+- Composite (majority * 5 + second_class) signature: 2 distinct values, but ~99.5% concentration on one composite class
+
+**Root cause**: SegNet's argmax output on dashcam footage is dominated by the "road" class across the entire 1200-frame contest video — the empirical class signal on A1-rendered latents is degenerate (single-class-everywhere), so MI is ~0 by construction.
+
+**Per CLAUDE.md "Forbidden premature KILL" + design memo §19.3**: this is **DEFER-pending-research**, NOT KILLED. Reactivation criteria:
+
+1. **Re-run probe with per-pair multi-class signature beyond composite-majority** (e.g. spatial-bin class proportions — divide each frame into a 4×4 grid and compute class-proportions per bin, then PCA to a lower-dim signature). The current majority-class collapse is a SIGNAL extraction problem, not a substrate falsification.
+
+2. **Train Tishby IB-pure with SCORER-CONDITIONAL CDF range coding** to see if the SUBSTRATE'S OWN encoder produces a non-degenerate latent-class distribution. The A1 substrate's latents may simply not exhibit the class-conditional structure the IB Lagrangian would learn de novo — the empirical D4 on A1 is a LOWER BOUND on the substrate's achievable mutual information at the start of training, not the asymptotic post-training distribution.
+
+3. **Operator-approved Phase 2 council deliberation** per design memo §19.2.
+
+### A.2 Variational-IB tractability probe — TRACTABLE verdict
+
+**Execution**: `tools/check_variational_ib_tractability.py` (NEW canonical probe per design memo §22 op-routable #3) ran with default config (300 samples, 8 replicates, latent_dim=16, input_dim=64, output_dim=5, beta=0.01).
+
+**Result** (per `.omx/state/variational_ib_tractability_tishby_ib_pure.json` when persisted):
+
+- `verdict`: **TRACTABLE**
+- `gradient_snr_mean`: ~6.75 (well above tractable threshold 1.0)
+- `gradient_snr_median`: ~14.34
+- `gradient_snr_worst_case`: ~4.98
+- `gradient_norm_mean`: ~0.395
+- `gradient_norm_std`: ~0.059
+- `kl_term_mean`: ~1.66
+- `reconstruction_term_mean`: ~1.63
+
+**Operating-within assumption disclosure** (per Catalog #292 sextet-pact + the assumption-statement discipline in the probe's body):
+
+> *"I am operating within the assumption that the variational IB gradient SNR measured on synthetic Gaussian data with a deterministic linear + small-noise scorer is a useful PROXY for the substrate's actual gradient tractability on contest video + SegNet/PoseNet scorer. The synthetic-data proxy is HARD-EARNED at the bound-derivation level (the IB Lagrangian's reparam-trick gradient is well-defined for any diagonal-Gaussian variational posterior + any decoder) but CARGO-CULTED at the empirical-equivalence level (real-scorer gradient SNR may differ by 2-5x due to scorer-output saturation / chroma-vs-luma sensitivity / PoseNet 12-channel YUV6 nonlinearity)."*
+
+**Path-VIB vs Path-MINE adjudication**: TRACTABLE verdict at SNR ~6.75 (well above 1.0) supports **Path-VIB as the v1 default** per the design memo §4.3 table. Path-MINE remains the v2 fallback if real-scorer tractability check fails on Modal A100 100ep proxy.
+
+**Council-grade verification**: the synthetic-data verdict is HARD-EARNED-at-bound-level only; CARGO-CULTED at empirical-equivalence. The next gate is the design memo §19 STAGE 1 Modal A100 100ep proxy (~$5-10) measuring gradient SNR on the REAL SegNet + PoseNet scorer.
+
+### A.3 Phase 2 council lift gate verdict (V1 4-criterion per §19.1)
+
+| # | Criterion | Status | Result file |
+|---|---|---|---|
+| 1 | D4 probe MEANINGFUL_CONDITIONING (MI ≥ 0.5) | **NOT YET** (current INDEPENDENT MI ~0.006) | `.omx/state/h_latent_given_scorer_class_tishby_ib_pure.json` |
+| 2 | VIB-tractability TRACTABLE (SNR ≥ 1.0) | **PARTIAL** (synthetic-data: TRACTABLE SNR ~6.75; real-scorer Modal A100 100ep proxy pending) | `.omx/state/variational_ib_tractability_tishby_ib_pure.json` |
+| 3 | Dykstra-feasibility non-empty intersection per Catalog #296 | **PENDING** (no Dykstra tool execution yet) | `.omx/state/dykstra_feasibility_tishby_ib_pure.json` (pending) |
+| 4 | Path-VIB vs Path-MINE council adjudication | **PENDING** (Path-VIB recommended pending real-scorer SNR) | `feedback_tishby_ib_pure_path_adjudication_council_<YYYYMMDD>.md` (pending) |
+
+**Phase 2 council lift verdict at L1 SCAFFOLD landing**: **DEFER-pending-research** per CLAUDE.md "Forbidden premature KILL" + design memo §19.3. The substrate L1 SCAFFOLD is LANDED with `research_only=true` + `dispatch_enabled=false` per Catalog #240 cascade.
+
+**Next-step recommendation**: pursue D4 probe Reactivation Criterion #1 (re-run with per-pair multi-class spatial-bin signature). The current INDEPENDENT verdict is a SIGNAL EXTRACTION problem on A1 latents, not a substrate falsification — the substrate's own learned latents under IB Lagrangian optimization may produce a fundamentally different class-conditional distribution.
+
+### A.4 Lane registry pre-registration
+
+- Lane ID: `lane_tishby_ib_pure_l1_scaffold_substrate_build_plus_probes_20260516`
+- Maturity: L0 SKETCH → L1 SCAFFOLD (gates `impl_complete` + `strict_preflight` + `memory_entry` planned post-commit)
+- Status: research_only=true + dispatch_enabled=false
+- Catalog #270 dispatch optimization protocol: **PASS** (Tier 1/2/3 all 5+8+5=18 signals pass)

@@ -178,6 +178,9 @@ from tac.substrates.tishby_ib_pure.archive import (
     parse_tibp1_archive_bytes,
 )
 from tac.substrates.tishby_ib_pure.inflate import inflate_one_video, main_cli
+from tac.substrates.tishby_ib_pure.registered_substrate import (
+    TISHBY_IB_PURE_CONTRACT,
+)
 from tac.substrates.tishby_ib_pure.score_aware_loss import (
     TishbyIBPureLossOutput,
     TishbyIBPureLossWeights,
@@ -217,6 +220,7 @@ __all__ = [
     "TIBP1_MAGIC",
     "TIBP1_SCHEMA_VERSION",
     "TIBP1_SECTION_ROLES",
+    "TISHBY_IB_PURE_CONTRACT",
     "VIB_TRACTABILITY_SNR_MEAN",
     "VIB_TRACTABILITY_VERDICT",
     "TishbyIBPureArchive",

@@ -31914,11 +31914,11 @@
       "id": "lane_tishby_ib_pure_l1_scaffold_substrate_build_plus_probes_20260516",
       "name": "Tishby IB-pure L1 scaffold + variational-IB tractability probe + D4 probe execution",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "L1 SCAFFOLD landed: substrate package src/tac/substrates/tishby_ib_pure/ (__init__/architecture/archive/inflate/score_aware_loss/registered_substrate) + trainer experiments/train_substrate_tishby_ib_pure.py (_full_main NotImplementedError per Catalog #240; _smoke_main passes) + recipe .omx/operator_authorize_recipes/substrate_tishby_ib_pure_modal_a100_dispatch.yaml (research_only=true + dispatch_enabled=false) + driver scripts/remote_lane_substrate_tishby_ib_pure.sh + 14 tests + Catalog #270 PASS. archive_bytes_added=~218 bytes meta-only at L1; runtime_overlay_consumed=false (no_op_detector_planned=true pending Phase 2)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -31933,20 +31933,20 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #270 dispatch optimization protocol verify_dispatch_protocol_complete PASS (Tier 1/2/3 all 18 signals pass); Catalog #220 + #240 + #272 contracts compliant per registered_substrate.py"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "design memo .omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md + Appendix A empirical anchors (D4 INDEPENDENT MI=0.006 + VIB TRACTABLE SNR=6.75) + canonical state JSONs .omx/state/h_latent_given_scorer_class_tishby_ib_pure.json + .omx/state/variational_ib_tractability_tishby_ib_pure.json"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_tishby_ib_pure.sh + recipe .omx/operator_authorize_recipes/substrate_tishby_ib_pure_modal_a100_dispatch.yaml (research_only=true + dispatch_enabled=false; refuses dispatch at L1)"
         }
       },
       "notes": ""
@@ -32041,5 +32041,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T21:37:55Z"
+  "updated_at": "2026-05-16T21:52:54Z"
 }
