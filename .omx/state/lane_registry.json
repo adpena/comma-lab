@@ -30720,7 +30720,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "lane_nscs02_downsampled_renderer_inflate_upsample_20260515 implementation: substrate package (nscs02_downsampled_renderer) + submission tree + trainer + recipe + remote driver + 27 tests passing; archive_bytes_added=~165KB-220KB (5-stage decoder fp16+brotli; smaller than A1 174KB); score_improvement_mechanism_status=OPERATIONAL via inflate-time bicubic upsample (192,256)->(1164,874); runtime_overlay_consumed=true; operational_overlay=true; smoke=GREEN local; research_only=true until _full_main + paired CPU+CUDA auth-eval custody land"
+          "evidence": "lane_nscs02_downsampled_renderer_inflate_upsample_20260515 implementation: substrate package (nscs02_downsampled_renderer) + submission tree + trainer with _full_main 10-stage PR 95-paradigm pipeline implemented 2026-05-15 + recipe (research_only=true pending paired evidence) + remote driver + 28 tests passing; archive_bytes_added=~165KB-220KB (5-stage decoder fp16+brotli; smaller than A1 174KB); score_improvement_mechanism_status=OPERATIONAL via inflate-time bicubic upsample (192,256)->(1164,874); runtime_overlay_consumed=true; operational_overlay=true; canonical-vs-unique decision per layer documented in trainer module docstring (10 layers); HARD-EARNED canonical helpers ADOPTED: patch_upstream_yuv6_globally + load_differentiable_scorers + EMA(0.997) + gate_auth_eval_call + apply_eval_roundtrip_during_training + decode_real_pairs + device_or_die + autocast_aware_forward; UNIQUE per-substrate FORK: compute_nscs02_score_aware_loss (renders 192x256 + upsamples to 384x512 for scorer-distortion proxy) per Catalog #164 same-line waiver"
         },
         "real_archive_empirical": {
           "status": false,
@@ -30747,8 +30747,8 @@
           "evidence": "feedback_nscs02_downsampled_renderer_inflate_upsample_build_landed_20260515.md committed in ~/.claude/projects/-Users-adpena-Projects-pact/memory/; documents canonical-vs-unique decision per layer (10 layers); 27 tests passing; 0 NSCS02-specific violations across 8 critical preflight gates; 6-hook wire-in declared per Catalog #125"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh exists + Catalog #244 NVML hygiene block + heartbeat + bash -n clean; trainer _full_main 10-stage PR 95-paradigm pipeline implemented 2026-05-15 per UNIQUE-AND-COMPLETE-PER-METHOD operating mode (canonical helpers shared where serve, NSCS02 score-aware-loss UNIQUE for downsample-then-upsample); 28 tests passing; recipe lifted full_main_raises_NotImplementedError blocker (now research_only=true pending resizing-chain ablation + paired CPU+CUDA per CLAUDE.md submission-auth-eval non-negotiable)"
         }
       },
       "notes": ""
@@ -30802,7 +30802,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "Files landed: tac.substrates.nscs03_end_to_end_balle_joint_codec package (architecture+archive+score_aware_loss+inflate+__init__) + experiments train_substrate_nscs03 trainer (council-gated _full_main per substrate-engineering exception) + recipe substrate_nscs03_end_to_end_balle_joint_codec_modal_a100_dispatch.yaml (research_only=true) + remote driver + submissions inflate; lane_class=substrate_engineering; research_only=true; archive_bytes_added=substrate_state_dicts_~600KB+per_pair_latents_~25KB; score_improvement_mechanism_status=DEFERRED_pending_phase_2_council; archive_grammar=monolithic_0.bin_NS03_v1; parser_section_manifest=parse_archive_returns_NSCS03Archive; inflate_runtime_loc_budget=200_LOC_waiver; runtime_dep_closure=torch+brotli; export_format=brotli_state_dicts_int16_latents; score_aware_loss=joint_lagrangian_with_diff_rate; bolt_on_loc_budget=substrate_engineering_exception_~1700_LOC; no_op_detector_planned=executable_byte_mutation_smoke_in_tests"
+          "evidence": "FULL trainer wired 2026-05-15 per UNIQUE-AND-COMPLETE-PER-METHOD directive: experiments/train_substrate_nscs03_end_to_end_balle_joint_codec.py::_full_main now implements PR95 paradigm + Ball\u00e9 2018 recipe end-to-end (real-pair decode + yuv6 patch + scorer load + EMA + score-aware Lagrangian with \u03bb_R warmup + AdamW+cosine + EMA-shadow archive build via _extract_module_state_dicts + _encode_latents_for_archive + NS03 monolithic 0.bin via pack_archive + contest-compliant runtime emission via _write_runtime + canonical gate_auth_eval_call Catalog #226 + posterior_update_locked Catalog #128 + cost-band anchor + provenance v1). Recipe stays research_only=true until Phase 2 council adjudicates \u03bb_R sweep + \u03c3-floor calibration; trainer _full_main is dispatchable when council lifts the gate. Tests: 76 pass (53 pre-existing + 23 new test_nscs03_full_main covering canonical-vs-unique decision table + gradient reaches ALL 5 sub-networks + archive helpers + \u03bb_R warmup math + smoke path regression + new --lambda-R-warmup-frac flag). Catalog #187 HNeRV parity guard passed; #226 + #193 + #190 + #180 strict gates 0 NSCS03 violations."
         },
         "real_archive_empirical": {
           "status": false,
@@ -30957,6 +30957,170 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_verify_sensitivity_map_module_20260515",
+      "name": "Verify tac.sensitivity_map module audit finding",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_verify_sensitivity_map_module_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_or1_codex_skill_prompt_update_20260515",
+      "name": "OR1 codex adversarial-review skill prompt: assumption-challenge axis",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "~/.claude/plugins/marketplaces/openai-codex/plugins/codex/prompts/adversarial-review.md (+32 LOC <meta_assumption_review> block + finding_bar extension + final_check verification); ~/.claude/plugins/marketplaces/openai-codex/plugins/codex/commands/adversarial-review.md (+2 LOC core-constraint framing); 4 cache mirrors synced (1.0.3 + 1.0.4 \u00d7 prompts + commands); scripts/apply_codex_adversarial_review_skill_update.sh idempotent re-apply helper"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_or1_codex_review_skill_prompt_assumption_challenge_axis_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "name": "NSCS06 Carmack-Hotz Strip-Everything",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_or2_grand_council_assumption_statement_discipline_20260515",
+      "name": "OR2 Grand Council per-round assumption-statement discipline",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/preflight.py Catalog #292 + 35 tests + CLAUDE.md row + Council conduct amendment"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/preflight.py check_grand_council_deliberation_has_explicit_assumption_statements wired in preflight_all() warn-only initial; live count repo-local = 0"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_or2_grand_council_per_round_assumption_statement_discipline_landed_20260515.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -30966,5 +31130,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-15T23:51:40Z"
+  "updated_at": "2026-05-16T01:51:52Z"
 }
