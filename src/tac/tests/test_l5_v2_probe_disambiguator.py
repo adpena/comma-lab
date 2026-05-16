@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -15,6 +17,7 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2ProbeObservation,
     build_probe_template,
     evaluate_l5_v2_probe,
+    observation_from_mapping,
 )
 
 
@@ -146,6 +149,54 @@ def test_l5_v2_probe_requires_eligible_evidence_for_every_candidate(
         in verdict["blockers"]
     )
     assert "l5_v2_probe_candidate_coverage_incomplete" not in verdict["blockers"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("predicate_passed", "false"),
+        ("sideinfo_consumed", "yes"),
+        ("byte_closed_archive", 1),
+    ],
+)
+def test_l5_v2_probe_mapping_rejects_non_bool_authority_fields(
+    tmp_path: Path,
+    field: str,
+    value: object,
+) -> None:
+    payload = dataclasses.asdict(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.030)
+    )
+    payload[field] = value
+
+    with pytest.raises(ValueError, match=f"{field} must be a literal JSON boolean"):
+        observation_from_mapping(payload)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_blocker"),
+    [
+        ("predicate_passed", "false", "l5_v2_probe_predicate_failed"),
+        ("sideinfo_consumed", "yes", "l5_v2_probe_sideinfo_consumption_missing"),
+        ("byte_closed_archive", 1, "l5_v2_probe_byte_closed_archive_missing"),
+    ],
+)
+def test_l5_v2_probe_evaluation_rejects_non_bool_authority_fields(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    expected_blocker: str,
+) -> None:
+    observation = dataclasses.replace(
+        _eligible(tmp_path, "time_traveler_l5_autonomy", -0.030),
+        **{field: value},
+    )
+
+    verdict = evaluate_l5_v2_probe((observation,), repo_root=tmp_path)
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert expected_blocker in row["blockers"]
 
 
 def test_l5_v2_probe_blocks_proxy_or_unconsumed_observations(tmp_path: Path) -> None:

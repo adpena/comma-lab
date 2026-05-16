@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,11 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
 )
-from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
+from tac.optimization.l5_v2_probe_disambiguator import (
+    L5V2_CANDIDATES,
+    L5V2_PROBE_SCHEMA,
+    L5V2_PROBE_TOOL_PATH,
+)
 from tac.optimization.substrate_composition_matrix import (
     build_composition_matrix,
     per_substrate_pareto_rows,
@@ -32,6 +37,56 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for axis in ("contest_cpu", "contest_cuda"):
+        row: dict[str, object] = {
+            "axis": axis,
+            "archive_sha256": _sha(11),
+            "runtime_tree_sha256": _sha(12),
+            "inflate_device": "cpu" if axis == "contest_cpu" else "cuda",
+            "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
+            "component_deltas": {
+                "seg_dist_delta": 0.0,
+                "pose_dist_delta": 0.0,
+                "score_delta": 0.0,
+            },
+        }
+        if anchor_type is not None:
+            row["anchor_type"] = anchor_type
+        rows.append(row)
+    return rows
+
+
+def _gate_artifact_payload(gate_id: str) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "gate_id": gate_id,
+        "predicate_id": f"l5_v2_{gate_id}_predicate",
+        "passed": True,
+    }
+    if gate_id == "byte_closed_temporal_sideinfo_consumption":
+        payload["byte_mutation_proof"] = {
+            "section": "temporal_sideinfo",
+            "parser_consumed_bytes": True,
+            "output_changed": True,
+            "mutated_byte_offsets": [0, 7],
+            "baseline_inflate_sha256": _sha(21),
+            "mutated_inflate_sha256": _sha(22),
+        }
+    elif gate_id == "c1_z5_tt5l_probe_disambiguator":
+        payload["probe_disambiguator"] = {
+            "schema": L5V2_PROBE_SCHEMA,
+            "tool_path": L5V2_PROBE_TOOL_PATH,
+            "candidate_ids": list(L5V2_CANDIDATES),
+            "paired_exact_axes_required": True,
+        }
+    elif gate_id == "paired_cpu_cuda_axis_plan":
+        payload["paired_axis_plan"] = _axis_rows()
+    elif gate_id == "exact_anchor_or_diagnostic_pair":
+        payload["anchor_pair"] = _axis_rows(anchor_type="exact")
+    return payload
+
+
 def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
     out: dict[str, L5V2GateEvidence] = {}
     artifact_root = repo_root / "experiments" / "results" / "time_traveler_l5_v2"
@@ -39,7 +94,7 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
     for gate in l5_v2_required_gates():
         artifact_path = artifact_root / f"{gate.gate_id}.json"
         artifact_path.write_text(
-            f'{{"gate_id":"{gate.gate_id}","passed":true}}\n',
+            json.dumps(_gate_artifact_payload(gate.gate_id), sort_keys=True) + "\n",
             encoding="utf-8",
         )
         out[gate.gate_id] = L5V2GateEvidence(
@@ -217,6 +272,136 @@ def test_l5_v2_dispatch_readiness_rejects_bad_gate_evidence(
     assert readiness["all_gate_evidence_valid"] is False
     assert readiness["ready_for_dispatch"] is False
     assert f"{expected_blocker}{first_gate_id}" in readiness["blockers"]
+
+
+@pytest.mark.parametrize("value", ["false", "yes", 1])
+def test_l5_v2_dispatch_readiness_rejects_non_bool_gate_claims(
+    value: object,
+) -> None:
+    first_gate_id = l5_v2_required_gates()[0].gate_id
+
+    readiness = l5_v2_dispatch_readiness({first_gate_id: value})
+    gate = next(row for row in readiness["gates"] if row["gate_id"] == first_gate_id)
+
+    assert gate["claimed_satisfied"] is False
+    assert f"l5_v2_gate_claim_non_bool:{first_gate_id}" in readiness["blockers"]
+    assert f"l5_v2_gate_claim_non_bool:{first_gate_id}" in gate["claim_blockers"]
+    assert readiness["ready_for_dispatch"] is False
+
+
+@pytest.mark.parametrize("value", ["false", "yes", 1])
+def test_l5_v2_dispatch_readiness_rejects_non_bool_gate_evidence_predicate(
+    tmp_path: Path,
+    value: object,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    first_gate_id = next(iter(evidence))
+    evidence[first_gate_id]["predicate_passed"] = value
+
+    with pytest.raises(ValueError, match="predicate_passed must be a literal JSON boolean"):
+        l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+
+@pytest.mark.parametrize("value", ["false", "yes", 1])
+def test_l5_v2_dispatch_readiness_rejects_non_bool_gate_artifact_predicate(
+    tmp_path: Path,
+    value: object,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    first_gate_id = next(iter(evidence))
+    artifact_path = tmp_path / str(evidence[first_gate_id]["artifact_path"])
+    artifact_path.write_text(
+        json.dumps({"gate_id": first_gate_id, "passed": value}) + "\n",
+        encoding="utf-8",
+    )
+    evidence[first_gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert readiness["ready_for_gate_probe_dispatch"] is False
+    assert (
+        f"l5_v2_gate_artifact_predicate_non_bool:{first_gate_id}:passed"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_rejects_predicate_only_gate_artifacts(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    for gate_id, row in evidence.items():
+        artifact_path = tmp_path / str(row["artifact_path"])
+        artifact_path.write_text(
+            json.dumps({"gate_id": gate_id, "passed": True}) + "\n",
+            encoding="utf-8",
+        )
+        row["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert readiness["ready_for_gate_probe_dispatch"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "c1_z5_tt5l_probe_disambiguator:probe_disambiguator"
+        in readiness["blockers"]
+    )
+    assert any(
+        str(blocker).startswith(
+            "l5_v2_gate_artifact_semantics_missing:"
+            "paired_cpu_cuda_axis_plan:paired_axis_plan:"
+        )
+        for blocker in readiness["blockers"]
+    )
+    assert any(
+        str(blocker).startswith(
+            "l5_v2_gate_artifact_semantics_missing:"
+            "exact_anchor_or_diagnostic_pair:anchor_pair:"
+        )
+        for blocker in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_rejects_invalid_paired_axis_semantics(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "paired_cpu_cuda_axis_plan"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["paired_axis_plan"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    cuda_row["archive_sha256"] = _sha(99)
+    cuda_row["inflate_device"] = "cpu"
+    cuda_row["component_deltas"] = {"seg_dist_delta": "0"}
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:archive_sha256"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda_inflate_device"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "paired_cpu_cuda_axis_plan:paired_axis_plan:contest_cuda:seg_dist_delta"
+        in readiness["blockers"]
+    )
 
 
 def test_l5_v2_dispatch_readiness_verifies_artifact_files_and_hashes(

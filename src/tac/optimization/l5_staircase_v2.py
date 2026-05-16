@@ -10,13 +10,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
+from tac.optimization.l5_v2_probe_disambiguator import (
+    L5V2_CANDIDATES,
+    L5V2_PROBE_SCHEMA,
+    L5V2_PROBE_TOOL_PATH,
+)
 from tac.optimization.prediction_band import (
     BandSource,
     BaselineRef,
@@ -38,6 +43,7 @@ PREDICTED_DELTA_AXIS = "mixed"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 
 
 @dataclass(frozen=True)
@@ -245,6 +251,14 @@ def l5_v2_prediction_band_payload() -> dict[str, Any]:
     return prediction_band_to_dict(band)
 
 
+def _require_literal_json_bool(value: object, *, field_name: str) -> bool:
+    if value is True:
+        return True
+    if value is False:
+        return False
+    raise ValueError(f"{field_name} must be a literal JSON boolean")
+
+
 def l5_v2_prediction_band_verdict() -> dict[str, Any]:
     """Return the current validation verdict for the L5 v2 prediction band."""
 
@@ -265,8 +279,14 @@ def l5_v2_prediction_band_verdict() -> dict[str, Any]:
         uncertainty=UncertaintyRef(**payload["uncertainty"]),
         supersession=SupersessionRef(**payload["supersession"]),
         empirical_anchor=EmpiricalAnchorRef(**payload["empirical_anchor"]),
-        planning_only=bool(payload["planning_only"]),
-        score_claim=bool(payload["score_claim"]),
+        planning_only=_require_literal_json_bool(
+            payload["planning_only"],
+            field_name="planning_only",
+        ),
+        score_claim=_require_literal_json_bool(
+            payload["score_claim"],
+            field_name="score_claim",
+        ),
     )
     return verdict_to_dict(
         validate_prediction_band(
@@ -307,7 +327,10 @@ def _coerce_gate_evidence(
                 artifact_path=str(value.get("artifact_path", "")),
                 artifact_sha256=str(value.get("artifact_sha256", "")),
                 predicate_id=str(value.get("predicate_id", "")),
-                predicate_passed=bool(value.get("predicate_passed", False)),
+                predicate_passed=_require_literal_json_bool(
+                    value.get("predicate_passed", False),
+                    field_name="predicate_passed",
+                ),
                 evidence_grade=str(value.get("evidence_grade", "")),
             )
         if evidence.gate_id:
@@ -347,6 +370,223 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _finite_json_number(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, int | float)
+        and math.isfinite(float(value))
+    )
+
+
+def _string_items(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value,) if value.strip() else ()
+    if not isinstance(value, Iterable) or isinstance(value, bytes):
+        return ()
+    return tuple(item.strip() for item in value if isinstance(item, str) and item.strip())
+
+
+def _mapping_items(value: object) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(value, Iterable) or isinstance(value, str | bytes):
+        return ()
+    return tuple(item for item in value if isinstance(item, Mapping))
+
+
+def _axis_row_map(value: object) -> dict[str, Mapping[str, Any]]:
+    rows = _mapping_items(value)
+    out: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        axis = str(row.get("axis") or "").strip()
+        if axis in _REQUIRED_EXACT_AXES:
+            out[axis] = row
+    return out
+
+
+def _paired_row_identity_blockers(
+    *,
+    gate_id: str,
+    rows: dict[str, Mapping[str, Any]],
+    section: str,
+    require_anchor_type: bool = False,
+) -> list[str]:
+    blockers: list[str] = []
+    missing_axes = [axis for axis in _REQUIRED_EXACT_AXES if axis not in rows]
+    if missing_axes:
+        blockers.append(
+            f"l5_v2_gate_artifact_semantics_missing:{gate_id}:{section}:"
+            + ",".join(missing_axes)
+        )
+        return blockers
+
+    archive_shas = {
+        str(row.get("archive_sha256") or "").strip().lower() for row in rows.values()
+    }
+    runtime_shas = {
+        str(row.get("runtime_tree_sha256") or "").strip().lower()
+        for row in rows.values()
+    }
+    if len(archive_shas) != 1 or not _SHA256_HEX_RE.fullmatch(next(iter(archive_shas))):
+        blockers.append(
+            f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:{section}:archive_sha256"
+        )
+    if len(runtime_shas) != 1 or not _SHA256_HEX_RE.fullmatch(next(iter(runtime_shas))):
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            f"{gate_id}:{section}:runtime_tree_sha256"
+        )
+
+    for axis, row in rows.items():
+        inflate_device = str(row.get("inflate_device") or "").lower()
+        eval_device = str(row.get("eval_device") or "").lower()
+        if axis == "contest_cpu":
+            if "cpu" not in inflate_device:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:contest_cpu_inflate_device"
+                )
+            if "cpu" not in eval_device:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:contest_cpu_eval_device"
+                )
+        else:
+            if "cuda" not in inflate_device and "gpu" not in inflate_device:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:contest_cuda_inflate_device"
+                )
+            if "cuda" not in eval_device and "gpu" not in eval_device:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    f"{gate_id}:{section}:contest_cuda_eval_device"
+                )
+        deltas = row.get("component_deltas")
+        if not isinstance(deltas, Mapping):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                f"{gate_id}:{section}:{axis}:component_deltas"
+            )
+        else:
+            for field in ("seg_dist_delta", "pose_dist_delta", "score_delta"):
+                if not _finite_json_number(deltas.get(field)):
+                    blockers.append(
+                        "l5_v2_gate_artifact_semantics_invalid:"
+                        f"{gate_id}:{section}:{axis}:{field}"
+                    )
+        if require_anchor_type and row.get("anchor_type") not in {"exact", "diagnostic"}:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:{section}:{axis}:anchor_type"
+            )
+    return blockers
+
+
+def _gate_semantic_blockers(gate_id: str, artifact_payload: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if gate_id == "byte_closed_temporal_sideinfo_consumption":
+        proof = artifact_payload.get("byte_mutation_proof")
+        if not isinstance(proof, Mapping):
+            return [f"l5_v2_gate_artifact_semantics_missing:{gate_id}:byte_mutation_proof"]
+        if proof.get("parser_consumed_bytes") is not True:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:parser_consumed_bytes"
+            )
+        if proof.get("output_changed") is not True:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:output_changed"
+            )
+        if str(proof.get("section") or "").strip() not in {
+            "temporal_sideinfo",
+            "temporal_side_info",
+            "tt5l_temporal_sideinfo",
+        }:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:byte_mutation_proof:section"
+            )
+        offsets = proof.get("mutated_byte_offsets")
+        if (
+            not isinstance(offsets, list)
+            or not offsets
+            or any(
+                isinstance(item, bool) or not isinstance(item, int) or item < 0
+                for item in offsets
+            )
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:mutated_byte_offsets"
+            )
+        baseline_sha = str(proof.get("baseline_inflate_sha256") or "").strip().lower()
+        mutated_sha = str(proof.get("mutated_inflate_sha256") or "").strip().lower()
+        if (
+            not _SHA256_HEX_RE.fullmatch(baseline_sha)
+            or not _SHA256_HEX_RE.fullmatch(mutated_sha)
+            or baseline_sha == mutated_sha
+        ):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:byte_mutation_proof:inflate_sha_pair"
+            )
+        return blockers
+
+    if gate_id == "c1_z5_tt5l_probe_disambiguator":
+        probe = artifact_payload.get("probe_disambiguator")
+        if not isinstance(probe, Mapping):
+            return [f"l5_v2_gate_artifact_semantics_missing:{gate_id}:probe_disambiguator"]
+        if probe.get("schema") != L5V2_PROBE_SCHEMA:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_schema"
+            )
+        if probe.get("tool_path") != L5V2_PROBE_TOOL_PATH:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_tool_path"
+            )
+        candidate_ids = set(_string_items(probe.get("candidate_ids")))
+        missing_candidates = [
+            candidate_id
+            for candidate_id in L5V2_CANDIDATES
+            if candidate_id not in candidate_ids
+        ]
+        if missing_candidates:
+            blockers.append(
+                f"l5_v2_gate_artifact_semantics_missing:{gate_id}:candidates:"
+                + ",".join(missing_candidates)
+            )
+        if probe.get("paired_exact_axes_required") is not True:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                f"{gate_id}:paired_exact_axes_required"
+            )
+        return blockers
+
+    if gate_id == "paired_cpu_cuda_axis_plan":
+        rows = _axis_row_map(
+            artifact_payload.get("paired_axis_plan")
+            or artifact_payload.get("axis_plan")
+        )
+        return _paired_row_identity_blockers(
+            gate_id=gate_id,
+            rows=rows,
+            section="paired_axis_plan",
+        )
+
+    if gate_id == "exact_anchor_or_diagnostic_pair":
+        rows = _axis_row_map(
+            artifact_payload.get("anchor_pair")
+            or artifact_payload.get("diagnostic_pair")
+        )
+        return _paired_row_identity_blockers(
+            gate_id=gate_id,
+            rows=rows,
+            section="anchor_pair",
+            require_anchor_type=True,
+        )
+
+    return blockers
 
 
 def _gate_evidence_blockers(
@@ -406,12 +646,31 @@ def _gate_evidence_blockers(
                             "l5_v2_gate_artifact_predicate_id_mismatch:"
                             f"{gate.gate_id}:{artifact_predicate_id}"
                         )
-                    artifact_passed = artifact_payload.get(
-                        "predicate_passed",
-                        artifact_payload.get("passed"),
-                    )
+                    if "predicate_passed" in artifact_payload:
+                        artifact_passed = artifact_payload["predicate_passed"]
+                        artifact_bool_field = "predicate_passed"
+                    elif "passed" in artifact_payload:
+                        artifact_passed = artifact_payload["passed"]
+                        artifact_bool_field = "passed"
+                    else:
+                        artifact_passed = None
+                        artifact_bool_field = ""
                     if artifact_passed is False:
-                        blockers.append(f"l5_v2_gate_artifact_predicate_failed:{gate.gate_id}")
+                        blockers.append(
+                            f"l5_v2_gate_artifact_predicate_failed:{gate.gate_id}"
+                        )
+                    elif artifact_passed is not True and artifact_bool_field:
+                        blockers.append(
+                            "l5_v2_gate_artifact_predicate_non_bool:"
+                            f"{gate.gate_id}:{artifact_bool_field}"
+                        )
+                    elif artifact_passed is not True:
+                        blockers.append(
+                            f"l5_v2_gate_artifact_predicate_missing:{gate.gate_id}"
+                        )
+                    blockers.extend(
+                        _gate_semantic_blockers(gate.gate_id, artifact_payload)
+                    )
     if not _SHA256_HEX_RE.fullmatch(evidence.artifact_sha256.strip()):
         blockers.append(f"l5_v2_gate_artifact_sha256_invalid:{gate.gate_id}")
     elif (
@@ -424,7 +683,7 @@ def _gate_evidence_blockers(
         blockers.append(f"l5_v2_gate_artifact_sha256_mismatch:{gate.gate_id}")
     if not evidence.predicate_id.strip():
         blockers.append(f"l5_v2_gate_predicate_id_missing:{gate.gate_id}")
-    if not evidence.predicate_passed:
+    if evidence.predicate_passed is not True:
         blockers.append(f"l5_v2_gate_predicate_failed:{gate.gate_id}")
     return blockers
 
@@ -461,8 +720,19 @@ def l5_v2_dispatch_readiness(
             evidence,
             repo_root=resolved_repo_root,
         )
+        gate_claim_blockers: list[str] = []
         evidence_valid = not gate_evidence_blockers
-        claimed_satisfied = bool(satisfied_gate_ids.get(gate.gate_id))
+        if gate.gate_id in satisfied_gate_ids:
+            raw_claimed_satisfied = satisfied_gate_ids[gate.gate_id]
+            if raw_claimed_satisfied is True:
+                claimed_satisfied = True
+            elif raw_claimed_satisfied is False:
+                claimed_satisfied = False
+            else:
+                claimed_satisfied = False
+                gate_claim_blockers.append(f"l5_v2_gate_claim_non_bool:{gate.gate_id}")
+        else:
+            claimed_satisfied = False
         status = "satisfied" if evidence_valid else gate.status
         gate_payload = {
             **gate.__dict__,
@@ -474,23 +744,33 @@ def l5_v2_dispatch_readiness(
             "evidence_valid": evidence_valid,
             "evidence": evidence.__dict__ if evidence is not None else None,
             "evidence_blockers": gate_evidence_blockers,
+            "claim_blockers": gate_claim_blockers,
         }
         gates.append(gate_payload)
         if not evidence_valid:
             blockers.append(gate.blocker)
         evidence_blockers.extend(gate_evidence_blockers)
+        evidence_blockers.extend(gate_claim_blockers)
     all_gate_claims_satisfied = all(gate["evidence_valid"] for gate in gates)
     all_gate_evidence_valid = all(gate["evidence_valid"] for gate in gates)
     prediction_band_verdict = l5_v2_prediction_band_verdict()
-    prediction_band_rank_ready = bool(
-        prediction_band_verdict.get("valid_for_rank_reward")
+    prediction_band_rank_ready_raw = prediction_band_verdict.get(
+        "valid_for_rank_reward"
     )
+    prediction_band_rank_ready = prediction_band_rank_ready_raw is True
     prediction_band_blockers = [
         str(blocker)
         for blocker in prediction_band_verdict.get("blockers", [])
         if str(blocker)
     ]
     score_dispatch_blockers: list[str] = []
+    if (
+        prediction_band_rank_ready_raw is not True
+        and prediction_band_rank_ready_raw is not False
+    ):
+        score_dispatch_blockers.append(
+            "prediction_band_valid_for_rank_reward_non_bool"
+        )
     if not prediction_band_rank_ready:
         score_dispatch_blockers.append("prediction_band_not_dispatch_ready")
         score_dispatch_blockers.extend(
