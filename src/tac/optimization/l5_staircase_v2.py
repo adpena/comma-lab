@@ -1368,6 +1368,10 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     ).is_file()
     dykstra_status = _tt5l_dykstra_feasibility_status(repo_root=repo_root)
     dykstra_valid = dykstra_status["artifact_valid"] is True
+    sideinfo_effect_curve_allowed = dykstra_valid and sideinfo_valid
+    first_anchor_timing_smoke_allowed = (
+        sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid
+    )
 
     blockers = [
         str(blocker)
@@ -1571,7 +1575,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "probe_gate_evidence_valid": probe_valid,
         "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
         "anchor_pair_evidence_valid": anchor_pair_valid,
-        "first_anchor_timing_smoke_allowed": dykstra_valid and sideinfo_valid,
+        "sideinfo_effect_curve_allowed": sideinfo_effect_curve_allowed,
+        "first_anchor_timing_smoke_allowed": first_anchor_timing_smoke_allowed,
         "architecture_lock_allowed": probe_valid and paired_axis_plan_valid,
         "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
         "proof_tool_exists": proof_tool_exists,

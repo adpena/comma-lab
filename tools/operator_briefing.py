@@ -1327,6 +1327,9 @@ def _l5_v2_frontier_readiness(
         "measurement_schedule_score_claim": False,
         "measurement_schedule_promotion_eligible": False,
         "measurement_schedule_ready_for_exact_eval_dispatch": False,
+        "tt5l_sideinfo_effect_curve_allowed": bool(
+            tt5l_campaign.get("sideinfo_effect_curve_allowed")
+        ),
         "tt5l_first_anchor_timing_smoke_allowed": bool(
             tt5l_campaign.get("first_anchor_timing_smoke_allowed")
         ),
@@ -1430,6 +1433,7 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  primary staircase:             {payload['primary_staircase']}",
         "  next non-PR106 L5 action:      "
         f"{next_action.get('action_id', 'missing')}",
+        f"  TT5L side-info curve allowed:   {payload['tt5l_sideinfo_effect_curve_allowed']}",
         f"  TT5L timing smoke allowed:      {payload['tt5l_first_anchor_timing_smoke_allowed']}",
         f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",

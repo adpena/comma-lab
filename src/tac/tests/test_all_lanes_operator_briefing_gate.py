@@ -73,6 +73,9 @@ def _base_briefing_payload() -> dict[str, object]:
                     "blockers": ["tt5l_dykstra_feasibility_artifact_missing"],
                 },
                 "sideinfo_gate_evidence_valid": False,
+                "probe_gate_evidence_valid": False,
+                "paired_axis_plan_evidence_valid": False,
+                "sideinfo_effect_curve_allowed": False,
                 "first_anchor_timing_smoke_allowed": False,
                 "next_non_pr106_l5_action": {
                     "action_id": "run_tt5l_dykstra_score_axis_sanity",
@@ -323,7 +326,7 @@ def test_operator_briefing_dispatch_gate_rejects_l5_missing_tt5l_campaign() -> N
     )
 
 
-def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_dykstra() -> None:
+def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_probe_plan() -> None:
     module = _load_all_lanes_module()
     payload = {
         **_base_briefing_payload(),
@@ -336,6 +339,13 @@ def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_dykstra() -
     }
     l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
     tt5l = dict(l5["tt5l_campaign_readiness"])  # type: ignore[index]
+    tt5l["dykstra_feasibility_artifact_valid"] = True
+    tt5l["dykstra_feasibility_status"] = {
+        **tt5l["dykstra_feasibility_status"],  # type: ignore[arg-type]
+        "artifact_valid": True,
+    }
+    tt5l["sideinfo_gate_evidence_valid"] = True
+    tt5l["sideinfo_effect_curve_allowed"] = True
     tt5l["first_anchor_timing_smoke_allowed"] = True
     tt5l["next_non_pr106_l5_action"] = {
         "action_id": "materialize_tt5l_exact_or_diagnostic_anchor_pair",
@@ -350,11 +360,34 @@ def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_dykstra() -
 
     assert (
         "l5_v2_frontier_readiness:"
-        "tt5l_timing_smoke_without_dykstra_and_sideinfo"
+        "tt5l_timing_smoke_without_dykstra_sideinfo_probe_and_paired_axis_plan"
         in failures
     )
+    assert "l5_v2_frontier_readiness:tt5l_dykstra_status_validity_mismatch" not in failures
+
+
+def test_operator_briefing_dispatch_gate_rejects_sideinfo_curve_without_dykstra() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    tt5l = dict(l5["tt5l_campaign_readiness"])  # type: ignore[index]
+    tt5l["sideinfo_effect_curve_allowed"] = True
+    l5["tt5l_campaign_readiness"] = tt5l
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
     assert (
-        "l5_v2_frontier_readiness:tt5l_missing_dykstra_not_first_action"
+        "l5_v2_frontier_readiness:"
+        "tt5l_sideinfo_effect_curve_without_dykstra_and_sideinfo"
         in failures
     )
 

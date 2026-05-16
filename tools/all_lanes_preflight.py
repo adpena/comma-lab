@@ -837,12 +837,26 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                     )
             dykstra_valid = tt5l.get("dykstra_feasibility_artifact_valid") is True
             sideinfo_valid = tt5l.get("sideinfo_gate_evidence_valid") is True
-            if tt5l.get("first_anchor_timing_smoke_allowed") is True and not (
+            probe_valid = tt5l.get("probe_gate_evidence_valid") is True
+            paired_axis_plan_valid = (
+                tt5l.get("paired_axis_plan_evidence_valid") is True
+            )
+            if tt5l.get("sideinfo_effect_curve_allowed") is True and not (
                 dykstra_valid and sideinfo_valid
             ):
                 failures.append(
                     "l5_v2_frontier_readiness:"
-                    "tt5l_timing_smoke_without_dykstra_and_sideinfo"
+                    "tt5l_sideinfo_effect_curve_without_dykstra_and_sideinfo"
+                )
+            if tt5l.get("first_anchor_timing_smoke_allowed") is True and not (
+                dykstra_valid
+                and sideinfo_valid
+                and probe_valid
+                and paired_axis_plan_valid
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    "tt5l_timing_smoke_without_dykstra_sideinfo_probe_and_paired_axis_plan"
                 )
             dykstra_status = tt5l.get("dykstra_feasibility_status")
             if not isinstance(dykstra_status, dict):

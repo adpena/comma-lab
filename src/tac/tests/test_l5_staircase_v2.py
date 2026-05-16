@@ -1063,20 +1063,25 @@ def test_l5_v2_valid_gates_do_not_unlock_tt5l_timing_without_dykstra(
     )
 
 
-def test_l5_v2_tt5l_timing_requires_dykstra_and_sideinfo_evidence(
+def test_l5_v2_tt5l_sideinfo_effect_curve_requires_dykstra_and_sideinfo_evidence(
     tmp_path: Path,
 ) -> None:
     _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    evidence.pop("paired_cpu_cuda_axis_plan")
+    evidence.pop("exact_anchor_or_diagnostic_pair")
 
     readiness = l5_v2_dispatch_readiness(
-        gate_evidence=_valid_gate_evidence(tmp_path),
+        gate_evidence=evidence,
         repo_root=tmp_path,
     )
     tt5l = readiness["tt5l_campaign_readiness"]
 
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
     assert tt5l["sideinfo_gate_evidence_valid"] is True
-    assert tt5l["first_anchor_timing_smoke_allowed"] is True
+    assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
 
 
 def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
@@ -1262,7 +1267,8 @@ def test_l5_v2_dispatch_readiness_auto_consumes_canonical_sideinfo_artifact(
 
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
     assert tt5l["sideinfo_gate_evidence_valid"] is True
-    assert tt5l["first_anchor_timing_smoke_allowed"] is True
+    assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "emit_c1_z5_tt5l_probe_template"
     )
@@ -1292,6 +1298,27 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
     assert "tools/recover_modal_auth_eval.py" in action["harvest_command_template"]
     assert "completed_paired_axis_plan" in action["terminal_claim_success_template"]
     assert "failed_paired_axis_plan" in action["terminal_claim_failure_template"]
+
+
+def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["sideinfo_gate_evidence_valid"] is True
+    assert tt5l["probe_gate_evidence_valid"] is True
+    assert tt5l["paired_axis_plan_evidence_valid"] is True
+    assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["first_anchor_timing_smoke_allowed"] is True
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_exact_or_diagnostic_anchor_pair"
+    )
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(

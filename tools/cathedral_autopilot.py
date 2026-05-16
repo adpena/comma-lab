@@ -2502,6 +2502,9 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
             "subject_id": L5_V2_SUBJECT_ID,
             "non_pr106_staircase_priority": True,
             "packetir_is_optional_stack_evidence": True,
+            "sideinfo_effect_curve_allowed": bool(
+                tt5l_campaign.get("sideinfo_effect_curve_allowed")
+            ),
             "first_anchor_timing_smoke_allowed": bool(
                 tt5l_campaign.get("first_anchor_timing_smoke_allowed")
             ),
