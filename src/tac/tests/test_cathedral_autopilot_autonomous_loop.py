@@ -1373,6 +1373,43 @@ def test_main_returns_0_on_valid_input(tmp_path, capsys):
     assert payload["iterations_run"] == 1
 
 
+def test_main_surfaces_compressive_sensing_lattice_diagnostic(tmp_path, capsys):
+    cands_path = tmp_path / "cands.jsonl"
+    cands_path.write_text(
+        "\n".join(
+            json.dumps(
+                {
+                    "candidate_id": f"c{i}",
+                    "family": "l5_v2",
+                    "predicted_score_delta": -0.01 * (i + 1),
+                    "expected_information_gain": 0.5,
+                    "estimated_dispatch_cost_usd": 1.0,
+                }
+            )
+            for i in range(6)
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    rc = loop.main([
+        "--candidates-jsonl", str(cands_path),
+        "--iterations", "1",
+        "--claims-path", str(tmp_path / "no_claims.md"),
+        "--use-compressive-sensing-lattice",
+        "--lattice-anchor-count", "2",
+        "--lattice-expected-sparsity", "2",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    lattice = payload["compressive_sensing_lattice"]
+    assert lattice["enabled"] is True
+    assert lattice["score_claim"] is False
+    assert lattice["ready_for_exact_eval_dispatch"] is False
+    assert lattice["diagnostic"]["K"] == 2
+    assert lattice["diagnostic"]["N"] == 6
+    assert "recovery_regime" in lattice["diagnostic"]
+
+
 def test_main_returns_2_on_missing_file(tmp_path, capsys):
     rc = loop.main([
         "--candidates-jsonl", str(tmp_path / "nope.jsonl"),

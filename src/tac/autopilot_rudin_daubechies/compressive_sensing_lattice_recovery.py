@@ -804,8 +804,14 @@ def compute_pairwise_coherence(
             if a.parent_id == b.node_id or b.parent_id == a.node_id:
                 class_boost *= 0.3
             coherence = min(1.0, band_coherence * class_boost)
-            out[(a.node_id, b.node_id)] = coherence
+            out[_coherence_key(a.node_id, b.node_id)] = coherence
     return out
+
+
+def _coherence_key(a: str, b: str) -> tuple[str, str]:
+    """Return the canonical unordered key for pairwise coherence lookup."""
+
+    return tuple(sorted((a, b)))
 
 
 @dataclass
@@ -849,12 +855,20 @@ class CoherenceMinimizingSelector:
             # For each remaining candidate, compute max coherence with
             # already-selected set.
             scores: list[tuple[float, SubstrateLatticeNode]] = []
+            slots_left = self.K - len(selected)
+            quota_deficits = self._quota_deficits(budget, remaining)
+            must_fill_quota = sum(quota_deficits.values()) >= slots_left
             for cand in remaining:
                 if not self._budget_allows(cand, budget):
                     continue
+                if (
+                    must_fill_quota
+                    and cand.frontier_pursuit_class.value not in quota_deficits
+                ):
+                    continue
                 max_coh = 0.0
                 for sel in selected:
-                    pair_key = tuple(sorted([cand.node_id, sel.node_id]))
+                    pair_key = _coherence_key(cand.node_id, sel.node_id)
                     c = coherence.get(pair_key, 0.0)
                     max_coh = max(max_coh, c)
                 scores.append((max_coh, cand))
@@ -863,7 +877,7 @@ class CoherenceMinimizingSelector:
                 for cand in remaining:
                     max_coh = 0.0
                     for sel in selected:
-                        pair_key = tuple(sorted([cand.node_id, sel.node_id]))
+                        pair_key = _coherence_key(cand.node_id, sel.node_id)
                         c = coherence.get(pair_key, 0.0)
                         max_coh = max(max_coh, c)
                     scores.append((max_coh, cand))
@@ -899,6 +913,37 @@ class CoherenceMinimizingSelector:
         if cls == FrontierPursuitClass.DISAMBIGUATOR_PROBE.value:
             return used < math.ceil(self.K * self.disambiguator_budget_max)
         return True  # frontier/asymptotic have only MIN constraints
+
+    def _quota_deficits(
+        self,
+        budget: dict[str, int],
+        remaining: Sequence[SubstrateLatticeNode],
+    ) -> dict[str, int]:
+        """Return minimum-quota deficits that can still be satisfied."""
+
+        deficits: dict[str, int] = {}
+        for cls, min_fraction in (
+            (
+                FrontierPursuitClass.FRONTIER_PURSUIT.value,
+                self.frontier_pursuit_budget_min,
+            ),
+            (
+                FrontierPursuitClass.ASYMPTOTIC_PURSUIT.value,
+                self.asymptotic_budget_min,
+            ),
+        ):
+            desired = math.ceil(self.K * min_fraction)
+            available_remaining = sum(
+                1 for node in remaining if node.frontier_pursuit_class.value == cls
+            )
+            satisfiable_desired = min(
+                desired,
+                budget.get(cls, 0) + available_remaining,
+            )
+            deficit = max(0, satisfiable_desired - budget.get(cls, 0))
+            if deficit:
+                deficits[cls] = deficit
+        return deficits
 
 
 # ──────────────────────────────────────────────────────────────────────────

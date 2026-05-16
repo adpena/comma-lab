@@ -150,6 +150,14 @@ def test_briefing_json_composite_has_all_three_keys():
         row["ready_for_exact_eval_dispatch"] is False
         for row in l5["asymptotic_pursuit_candidate_sample"]
     )
+    assert all(
+        "l1_scaffold_present" in row
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    )
+    assert all(
+        "expected_first_artifact_status" in row
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    )
     assert l5["measurement_schedule_score_claim"] is False
     assert l5["measurement_schedule_promotion_eligible"] is False
     assert l5["measurement_schedule_ready_for_exact_eval_dispatch"] is False

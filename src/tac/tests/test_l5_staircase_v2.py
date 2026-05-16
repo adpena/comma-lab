@@ -923,34 +923,44 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     z6 = rows["z6_z7_z8_predictive_coding_world_models"]
     assert z6["recommended_next_action_id"] == "build_z6_l1_scaffold_first"
     assert z6["ready_for_recommended_next_action"] is True
-    assert z6["ready_for_l1_build"] is True
+    assert z6["ready_for_l1_build"] is False
+    assert z6["l1_scaffold_present"] is True
+    assert z6["recommended_next_action_completed_or_superseded"] is True
     assert z6["local_ledger_present"] is True
     assert z6["lane_registry_registered"] is True
     assert z6["local_ledger_sha256"]
-    assert z6["expected_first_artifacts_all_present"] is False
+    assert z6["expected_first_artifacts_all_present"] is True
     assert z6["ready_for_l1_scaffold_dispatch"] is False
     assert z6["ready_for_l1_build_semantics"] == (
-        "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+        "l1_scaffold_present_next_action_completed"
     )
-    assert "z6_predictive_coding_world_model" in "\n".join(
+    assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
+    assert "l1_scaffold_present_next_action_completed_or_superseded" in z6[
+        "l1_build_blockers"
+    ]
     assert "requires_z6_l1_scaffold_before_paid_dispatch" in z6["blockers"]
 
     rudin = rows["rudin_floor_interpretable_ml_substrate"]
     assert rudin["ready_for_recommended_next_action"] is True
     assert rudin["ready_for_l1_build"] is False
-    assert "requires_pre_l1_gate:ratify_and_build_rudin_k8_l1_scaffold" in rudin[
+    assert rudin["l1_scaffold_present"] is True
+    assert "rudin_floor_interpretable_ml" in "\n".join(
+        rudin["expected_first_artifacts"]
+    )
+    assert "l1_scaffold_present_next_action_completed_or_superseded" in rudin[
         "l1_build_blockers"
     ]
 
     tishby = rows["tishby_ib_pure_substrate"]
     assert tishby["ready_for_recommended_next_action"] is True
     assert tishby["ready_for_l1_build"] is False
-    assert (
-        "requires_pre_l1_gate:"
-        "run_d4_probe_and_build_variational_ib_tractability_tool"
-    ) in tishby["l1_build_blockers"]
+    assert tishby["l1_scaffold_present"] is True
+    assert "tishby_ib_pure" in "\n".join(tishby["expected_first_artifacts"])
+    assert "l1_scaffold_present_next_action_completed_or_superseded" in tishby[
+        "l1_build_blockers"
+    ]
 
     for row in rows.values():
         assert row["horizon_class"] == "asymptotic_pursuit"

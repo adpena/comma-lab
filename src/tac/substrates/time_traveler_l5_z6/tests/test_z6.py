@@ -92,6 +92,16 @@ def test_substrate_contract_decoration_succeeds() -> None:
     assert contract.hook_autopilot_ranker_class_shift_token == "Rao-Ballard"
 
 
+def test_smoke_effective_epochs_caps_default_full_epoch_count() -> None:
+    """Smoke remains a <=3 epoch artifact even though full default is 300."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6_trainer
+
+    assert z6_trainer._smoke_effective_epochs(300) == 3
+    assert z6_trainer._smoke_effective_epochs(3) == 3
+    assert z6_trainer._smoke_effective_epochs(1) == 1
+    assert z6_trainer._smoke_effective_epochs(0) == 1
+
+
 def test_full_main_raises_not_implemented_phase_2_gate() -> None:
     """Catalog #240: _full_main must fail-loud pending Phase 2 council approval."""
     import argparse

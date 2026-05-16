@@ -56,6 +56,7 @@ DISPATCH_INSTANCE_JOB_ID="${RUDIN_FLOOR_DISPATCH_INSTANCE_JOB_ID:-${DISPATCH_INS
 DISPATCH_CLAIMS_PATH="${RUDIN_FLOOR_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_lane_dispatch_claims.md}"
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 HEARTBEAT_PID=""
+CLAIM_VERIFIED=0
 
 log() { echo "[lane-rudin-floor] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -67,6 +68,57 @@ rm -f upstream/videos/._*.mkv 2>/dev/null || true
 
 # Stage 0: dispatch claim verification.
 log "Stage 0: dispatch claim verification (lane=$LANE_ID; instance/job=$DISPATCH_INSTANCE_JOB_ID; platform=$DISPATCH_PLATFORM)"
+if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
+    log "FATAL: RUDIN_FLOOR_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"
+    exit 21
+fi
+
+CLAIM_PYTHON="${PYBIN:-}"
+if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then
+    CLAIM_PYTHON="$WORKSPACE/.venv/bin/python"
+fi
+if [ -z "$CLAIM_PYTHON" ]; then
+    CLAIM_PYTHON="python3"
+fi
+
+append_terminal_claim() {
+    local rc="$1"
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "WARN: claim helper missing; cannot append terminal dispatch claim"
+        return 0
+    fi
+    local status
+    if [ "$rc" -eq 0 ]; then
+        status="completed_rudin_floor_remote_driver"
+    elif [ "${CLAIM_VERIFIED:-0}" != "1" ]; then
+        status="failed_rudin_floor_claim_verification_rc_${rc}"
+    else
+        status="failed_rudin_floor_remote_driver_rc_${rc}"
+    fi
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --force \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "remote_lane_substrate_rudin_floor_interpretable_ml" \
+        --status "$status" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$RUDIN_FLOOR_OUTPUT_DIR smoke=${SMOKE_ONLY:-0} device=$RUDIN_FLOOR_DEVICE" \
+        >> "$LOG_DIR/run.log" 2>&1 || {
+        log "WARN: failed to append terminal dispatch claim status=$status"
+    }
+}
+
+cleanup() {
+    local rc="$?"
+    if [ -n "$HEARTBEAT_PID" ]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    append_terminal_claim "$rc"
+    exit "$rc"
+}
+CLAIM_VERIFIED=1
+trap cleanup EXIT
 
 # Stage 1: canonical bootstrap (delegated to scripts/remote_archive_only_eval.sh).
 # REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 sentinel per Catalog #163 prevents the

@@ -66927,12 +66927,13 @@ def check_f_asymptote_substrate_design_is_class_shift_not_bolt_on(
 # Trigger: body contains Atick-Redlich / cooperative-receiver framing token.
 #
 # Acceptance cascade:
-#   (a) Body contains an ego-motion-conditioning token (one of:
+#   (a) Body contains at least one ego-motion token AND at least one predictive
+#       coding token. Generic next-frame text alone is not enough.
+#       Ego-motion tokens:
 #       ego-motion / ego_motion / ego motion / FOE / focus-of-expansion /
-#       focus of expansion / next-frame prediction / next-frame predictor /
-#       next_frame_prediction / next_frame_predictor / next frame prediction /
-#       autoregressive predictor / autoregressive-predictor / pose-conditioned
-#       prediction / pose conditioned prediction / pose_conditioned_prediction).
+#       focus of expansion / pose-conditioned prediction.
+#       Predictive tokens:
+#       next-frame prediction / next-frame predictor / autoregressive predictor.
 #   (b) Same-line waiver
 #       ``# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:<rationale>``.
 #
@@ -66969,6 +66970,18 @@ _CHECK_311_EGO_MOTION_TOKENS = (
     "focus-of-expansion",
     "focus_of_expansion",
     "focus of expansion",
+    "pose-conditioned prediction",
+    "pose-conditioned predictor",
+    "pose conditioned prediction",
+    "pose conditioned predictor",
+    "pose_conditioned_prediction",
+    "pose_conditioned_predictor",
+    "pose-conditioned autoregressive predictor",
+    "pose conditioned autoregressive predictor",
+    "pose_conditioned_autoregressive_predictor",
+)
+
+_CHECK_311_PREDICTIVE_CODING_TOKENS = (
     "next-frame prediction",
     "next-frame predictor",
     "next_frame_prediction",
@@ -66978,12 +66991,6 @@ _CHECK_311_EGO_MOTION_TOKENS = (
     "autoregressive predictor",
     "autoregressive-predictor",
     "autoregressive_predictor",
-    "pose-conditioned prediction",
-    "pose-conditioned predictor",
-    "pose conditioned prediction",
-    "pose conditioned predictor",
-    "pose_conditioned_prediction",
-    "pose_conditioned_predictor",
 )
 
 
@@ -67027,15 +67034,21 @@ def _check_311_body_has_ego_motion_conditioning(body_lower: str) -> bool:
             continue
         sanitized_lines.append(line)
     sanitized = "\n".join(sanitized_lines)
+    has_ego_motion = False
     for tok in _CHECK_311_EGO_MOTION_TOKENS:
         if tok == "foe":
             # Word-boundary check for FOE (or "foe " or " foe").
             if re.search(r"\bfoe\b", sanitized):
-                return True
+                has_ego_motion = True
+                break
             continue
         if tok in sanitized:
-            return True
-    return False
+            has_ego_motion = True
+            break
+    has_predictive_coding = any(
+        tok in sanitized for tok in _CHECK_311_PREDICTIVE_CODING_TOKENS
+    )
+    return has_ego_motion and has_predictive_coding
 
 
 def _check_311_waiver_present(body: str) -> bool:
@@ -67132,8 +67145,8 @@ def check_predictive_coding_substrate_design_has_ego_motion_conditioning(
             "cooperative-receiver loss as scaffolded was generic I(T;Y) "
             "maximization without ego-motion. Either add an ego-motion-"
             "conditioning token (ego-motion / FOE / focus-of-expansion / "
-            "next-frame prediction / autoregressive predictor / pose-"
-            "conditioned prediction) OR carry a same-line "
+            "pose-conditioned prediction) AND a predictive token "
+            "(next-frame prediction / autoregressive predictor), OR carry a same-line "
             "`# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:<rationale>` "
             "waiver."
         )

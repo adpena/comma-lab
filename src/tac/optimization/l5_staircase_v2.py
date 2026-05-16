@@ -275,11 +275,11 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
             "predictor disambiguator, and smoke-before-full gate."
         ),
         expected_first_artifacts=(
-            "src/tac/substrates/z6_predictive_coding_world_model/",
-            "experiments/train_substrate_z6_predictive_coding_world_model.py",
+            "src/tac/substrates/time_traveler_l5_z6/",
+            "experiments/train_substrate_time_traveler_l5_z6.py",
             (
                 ".omx/operator_authorize_recipes/"
-                "substrate_z6_predictive_coding_modal_t4_dispatch.yaml"
+                "substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml"
             ),
         ),
         dependency_blockers=(
@@ -306,11 +306,11 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
             "archive grammar, pure-Python inflate, and byte-mutation proof."
         ),
         expected_first_artifacts=(
-            "src/tac/substrates/rudin_floor/",
-            "experiments/train_substrate_rudin_floor.py",
+            "src/tac/substrates/rudin_floor_interpretable_ml/",
+            "experiments/train_substrate_rudin_floor_interpretable_ml.py",
             (
                 ".omx/operator_authorize_recipes/"
-                "substrate_rudin_floor_modal_a100_dispatch.yaml"
+                "substrate_rudin_floor_interpretable_ml_modal_t4_dispatch.yaml"
             ),
         ),
         dependency_blockers=(
@@ -341,7 +341,7 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
         expected_first_artifacts=(
             ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
             "tools/check_variational_ib_tractability.py",
-            ".omx/state/variational_ib_tractability_tishby_ib_pure.json",
+            "src/tac/substrates/tishby_ib_pure/",
         ),
         dependency_blockers=(
             "requires_d4_probe_verdict_before_tishby_scaffold",
@@ -401,13 +401,19 @@ def l5_v2_asymptotic_pursuit_candidates(
                 "l5_v2_asymptotic_pursuit_lane_registry_missing:"
                 f"{candidate.candidate_id}:{candidate.lane_id}"
             )
+        l1_scaffold_present = expected_first_artifacts_all_present
         ready_for_l1_build = (
             ledger_present
             and lane_registry_registered
             and candidate.candidate_id in _L5_V2_ASYMPTOTIC_READY_FOR_L1_BUILD_IDS
+            and not l1_scaffold_present
         )
         l1_build_blockers = []
         if not ready_for_l1_build:
+            if l1_scaffold_present:
+                l1_build_blockers.append(
+                    "l1_scaffold_present_next_action_completed_or_superseded"
+                )
             if not ledger_present:
                 l1_build_blockers.append(
                     "requires_l5_v2_asymptotic_pursuit_source_ledger"
@@ -416,9 +422,10 @@ def l5_v2_asymptotic_pursuit_candidates(
                 l1_build_blockers.append(
                     "requires_l5_v2_asymptotic_pursuit_lane_registry_entry"
                 )
-            l1_build_blockers.append(
-                f"requires_pre_l1_gate:{candidate.recommended_next_action_id}"
-            )
+            if not l1_scaffold_present:
+                l1_build_blockers.append(
+                    f"requires_pre_l1_gate:{candidate.recommended_next_action_id}"
+                )
         aggregate_blockers.extend(blockers)
         rows.append(
             {
@@ -444,7 +451,13 @@ def l5_v2_asymptotic_pursuit_candidates(
                 ),
                 "ready_for_l1_build": ready_for_l1_build,
                 "ready_for_l1_build_semantics": (
-                    "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+                    "l1_scaffold_present_next_action_completed"
+                    if l1_scaffold_present
+                    else "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+                ),
+                "l1_scaffold_present": l1_scaffold_present,
+                "recommended_next_action_completed_or_superseded": (
+                    l1_scaffold_present
                 ),
                 "ready_for_l1_scaffold_dispatch": False,
                 "l1_build_blockers": l1_build_blockers,

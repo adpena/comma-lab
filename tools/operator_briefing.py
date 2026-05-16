@@ -1739,7 +1739,10 @@ def _format_l5_v2_frontier_readiness() -> str:
             lines.append(
                 "    - "
                 f"{candidate.get('candidate_id')} -> "
-                f"{candidate.get('recommended_next_action_id')}"
+                f"{candidate.get('recommended_next_action_id')} "
+                f"(l1_present={candidate.get('l1_scaffold_present')}, "
+                f"artifacts_all_present="
+                f"{candidate.get('expected_first_artifacts_all_present')})"
             )
     else:
         lines.append("    - none")

@@ -266,6 +266,13 @@ def test_compute_pairwise_coherence_returns_canonical_ordering():
     assert ("b", "a") not in coh  # canonical ordering only
 
 
+def test_compute_pairwise_coherence_canonical_order_independent_of_input_order():
+    nodes = [_make_node("z"), _make_node("a")]
+    coh = compute_pairwise_coherence(nodes)
+    assert ("a", "z") in coh
+    assert ("z", "a") not in coh
+
+
 def test_compute_pairwise_coherence_same_band_same_class_high():
     a = _make_node("a", low=0.18, high=0.20, cls=FrontierPursuitClass.PLATEAU_ADJACENT)
     b = _make_node("b", low=0.18, high=0.20, cls=FrontierPursuitClass.PLATEAU_ADJACENT)
@@ -285,7 +292,7 @@ def test_compute_pairwise_coherence_parent_child_lowered():
     b = _make_node("child", parent_id="parent", support_level=1, low=0.18, high=0.20)
     coh = compute_pairwise_coherence([a, b])
     # Parent/child get class_boost * 0.3 per tree-structure adjustment.
-    assert coh[("parent", "child")] < 0.5
+    assert coh[("child", "parent")] < 0.5
 
 
 def test_coherence_selector_returns_K_substrates():
@@ -337,6 +344,42 @@ def test_coherence_selector_respects_plateau_budget_cap():
         1 for s in sel if s.frontier_pursuit_class == FrontierPursuitClass.PLATEAU_ADJACENT
     )
     assert plateau_count <= math.ceil(10 * 0.30)
+
+
+def test_coherence_selector_enforces_frontier_and_asymptotic_minimums():
+    nodes_asymptotic = [
+        _make_node(
+            f"a{i}",
+            low=0.05 + i * 0.001,
+            high=0.07 + i * 0.001,
+            cls=FrontierPursuitClass.ASYMPTOTIC_PURSUIT,
+        )
+        for i in range(8)
+    ]
+    nodes_frontier = [
+        _make_node(
+            f"f{i}",
+            low=0.13 + i * 0.001,
+            high=0.16 + i * 0.001,
+            cls=FrontierPursuitClass.FRONTIER_PURSUIT,
+        )
+        for i in range(8)
+    ]
+    selected = CoherenceMinimizingSelector(K=5).select(
+        nodes_asymptotic + nodes_frontier
+    )
+    frontier_count = sum(
+        1
+        for node in selected
+        if node.frontier_pursuit_class == FrontierPursuitClass.FRONTIER_PURSUIT
+    )
+    asymptotic_count = sum(
+        1
+        for node in selected
+        if node.frontier_pursuit_class == FrontierPursuitClass.ASYMPTOTIC_PURSUIT
+    )
+    assert frontier_count >= math.ceil(5 * 0.40)
+    assert asymptotic_count >= math.ceil(5 * 0.20)
 
 
 # ──────────────────────────────────────────────────────────────────────────

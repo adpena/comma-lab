@@ -361,11 +361,23 @@ def _validate_full_cpu_flags(args: argparse.Namespace) -> None:
 # Smoke entry path
 # ---------------------------------------------------------------------------
 
+def _smoke_effective_epochs(requested_epochs: int) -> int:
+    """Return the bounded epoch count for smoke runs.
+
+    Default full-training epochs are intentionally large, but smoke is a
+    training-artifact probe and must stay at <=3 epochs unless the full path is
+    lifted separately.
+    """
+
+    return max(1, min(int(requested_epochs), 3))
+
+
 def _smoke_main(args: argparse.Namespace) -> int:
     """Smoke entry: tiny config, synthetic data, ≤3 epochs, no scorer load."""
     torch.manual_seed(args.seed)
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
+    effective_epochs = _smoke_effective_epochs(args.epochs)
 
     # Tiny smoke config
     num_pairs = 5
@@ -398,7 +410,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     opt = torch.optim.AdamW(substrate.parameters(), lr=args.lr)
     losses = []
-    for epoch in range(max(args.epochs, 3)):
+    for epoch in range(effective_epochs):
         opt.zero_grad()
         idx = torch.arange(num_pairs, device=args.device, dtype=torch.long)
         rgb_0, rgb_1, z_t = substrate.reconstruct_pair(idx)
@@ -440,6 +452,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
         "latent_init_std": cfg.latent_init_std,
         "smoke": True,
+        "requested_epochs": args.epochs,
+        "effective_epochs": effective_epochs,
     }
     archive_bytes = pack_archive(
         enc_sd, dec_sd, pred_sd, latent_init, residuals, ego_motion, meta,
@@ -455,7 +469,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "lane_id": SUBSTRATE_LANE_ID,
         "substrate_tag": SUBSTRATE_TAG,
         "smoke": True,
+        "requested_epochs": args.epochs,
         "epochs": len(losses),
+        "smoke_epoch_cap": 3,
         "final_loss_proxy": final["loss"],
         "final_recon": final.get("recon"),
         "final_residual": final.get("residual"),

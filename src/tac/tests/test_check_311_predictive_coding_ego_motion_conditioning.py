@@ -154,7 +154,8 @@ def test_311_foe_token_accepted(tmp_path: Path) -> None:
     _write(
         _research_dir(tmp_path),
         "x_design_20260516.md",
-        "# X\n\nAtick-Redlich cooperative-receiver bound to FOE (focus-of-expansion) prior.\n",
+        "# X\n\nAtick-Redlich cooperative-receiver bound to FOE "
+        "(focus-of-expansion) prior for next-frame predictor.\n",
     )
     v = check_predictive_coding_substrate_design_has_ego_motion_conditioning(
         repo_root=tmp_path, strict=False, verbose=False,
@@ -162,7 +163,7 @@ def test_311_foe_token_accepted(tmp_path: Path) -> None:
     assert v == []
 
 
-def test_311_next_frame_predictor_accepted(tmp_path: Path) -> None:
+def test_311_next_frame_predictor_without_ego_motion_flagged(tmp_path: Path) -> None:
     _write(
         _research_dir(tmp_path),
         "x_design_20260516.md",
@@ -171,14 +172,30 @@ def test_311_next_frame_predictor_accepted(tmp_path: Path) -> None:
     v = check_predictive_coding_substrate_design_has_ego_motion_conditioning(
         repo_root=tmp_path, strict=False, verbose=False,
     )
-    assert v == []
+    assert len(v) == 1
 
 
-def test_311_autoregressive_predictor_accepted(tmp_path: Path) -> None:
+def test_311_autoregressive_predictor_without_ego_motion_flagged(
+    tmp_path: Path,
+) -> None:
     _write(
         _research_dir(tmp_path),
         "x_design_20260516.md",
         "# X\n\ncooperative-receiver; autoregressive predictor unrolled across pairs.\n",
+    )
+    v = check_predictive_coding_substrate_design_has_ego_motion_conditioning(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert len(v) == 1
+
+
+def test_311_pose_conditioned_autoregressive_predictor_accepted(
+    tmp_path: Path,
+) -> None:
+    _write(
+        _research_dir(tmp_path),
+        "x_design_20260516.md",
+        "# X\n\ncooperative-receiver with pose-conditioned autoregressive predictor.\n",
     )
     v = check_predictive_coding_substrate_design_has_ego_motion_conditioning(
         repo_root=tmp_path, strict=False, verbose=False,

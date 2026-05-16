@@ -3822,11 +3822,43 @@ def main(argv: list[str] | None = None) -> int:
             "never auto-promotes nor auto-kills."
         ),
     )
+    parser.add_argument(
+        "--use-compressive-sensing-lattice",
+        action="store_true",
+        help=(
+            "OPT-IN: emit the substrate-lattice Donoho-Tanner undersampling "
+            "diagnostic for the current candidate pool. This is a visibility "
+            "surface only; it never creates score, promotion, kill, or dispatch "
+            "authority."
+        ),
+    )
+    parser.add_argument(
+        "--lattice-anchor-count",
+        type=int,
+        default=0,
+        help="Number of empirical anchors in the current lattice posterior.",
+    )
+    parser.add_argument(
+        "--lattice-expected-sparsity",
+        type=int,
+        default=5,
+        help="Expected sparse frontier-breaker count for the lattice diagnostic.",
+    )
+    parser.add_argument(
+        "--lattice-safety-margin",
+        type=float,
+        default=0.05,
+        help="Donoho-Tanner safety margin for the lattice diagnostic.",
+    )
     args = parser.parse_args(argv)
 
     try:
         if args.iterations <= 0:
             raise ValueError("--iterations must be > 0")
+        if args.lattice_anchor_count < 0:
+            raise ValueError("--lattice-anchor-count must be >= 0")
+        if args.lattice_expected_sparsity <= 0:
+            raise ValueError("--lattice-expected-sparsity must be > 0")
         # Exactly one candidate source must be supplied. They are mutually exclusive.
         sources_supplied = sum(
             1 for x in (
@@ -3949,6 +3981,20 @@ def main(argv: list[str] | None = None) -> int:
                     )
             return load_candidates_from_jsonl(args.candidates_jsonl)
 
+    lattice_diagnostic: dict[str, Any] | None = None
+    if args.use_compressive_sensing_lattice:
+        try:
+            lattice_candidates = _source()
+            lattice_diagnostic = diagnose_compressive_sensing_lattice_undersampling(
+                lattice_candidates,
+                n_anchors=args.lattice_anchor_count,
+                expected_sparsity=args.lattice_expected_sparsity,
+                safety_margin=args.lattice_safety_margin,
+            )
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
+            return 2
+
     try:
         reports = run_continuous_loop(
             _source,
@@ -3984,6 +4030,9 @@ def main(argv: list[str] | None = None) -> int:
             "race_mode_explicit_opt_in_only",
             "operator_authorized_le_5_dollar_mode_dual_gated",
             source_tag,
+            "compressive_sensing_lattice_diagnostic_visible"
+            if args.use_compressive_sensing_lattice
+            else "compressive_sensing_lattice_diagnostic_not_requested",
         ],
         "iterations_run": len(reports),
         "race_mode": args.race_mode,
@@ -4020,6 +4069,28 @@ def main(argv: list[str] | None = None) -> int:
             }
             if args.probe_disambiguator_json is not None
             else None
+        ),
+        "compressive_sensing_lattice": (
+            {
+                "enabled": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "n_anchors": args.lattice_anchor_count,
+                "expected_sparsity": args.lattice_expected_sparsity,
+                "safety_margin": args.lattice_safety_margin,
+                "diagnostic": lattice_diagnostic,
+            }
+            if args.use_compressive_sensing_lattice
+            else {
+                "enabled": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "diagnostic": None,
+            }
         ),
         "reports": [serialize_report(r) for r in reports],
     }

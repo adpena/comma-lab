@@ -495,3 +495,12 @@ def test_trainer_full_main_raises_not_implemented_error() -> None:
         f"trainer _full_main must raise NotImplementedError citing Catalog #220; "
         f"got stderr={result.stderr[:500]}"
     )
+
+
+def test_remote_driver_requires_and_closes_dispatch_claim() -> None:
+    """Remote driver must not run without a lane-claim lifecycle."""
+    src = DRIVER_PATH.read_text(encoding="utf-8")
+    assert "DISPATCH_INSTANCE_JOB_ID is required" in src
+    assert "append_terminal_claim()" in src
+    assert "claim_lane_dispatch.py" in src
+    assert "trap cleanup EXIT" in src
