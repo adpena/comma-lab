@@ -74,6 +74,17 @@ DEFAULT_CANDIDATES: tuple[CandidateSpec, ...] = (
         role="ib_bottleneck_control_5ep",
     ),
     CandidateSpec(
+        name="ibps1_c6_100ep_a10g_advisory",
+        archive_path=REPO_ROOT
+        / "experiments"
+        / "results"
+        / "lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal"
+        / "harvested_artifacts"
+        / "archive.zip",
+        grammar="ibps1",
+        role="ib_bottleneck_control_100ep_a10g_advisory",
+    ),
+    CandidateSpec(
         name="dp1_smoke",
         archive_path=REPO_ROOT
         / "experiments"
@@ -556,7 +567,7 @@ def _compute_baseline_pose_seg(
 
     try:
         baseline_frames = mdl.decode_to_frames(inner_bytes, grammar, pair_indices, device)
-    except NotImplementedError:
+    except NotImplementedError as err:
         if grammar != "dp1":
             raise
         zero_rows = mdl.run_tier_c(
@@ -573,10 +584,14 @@ def _compute_baseline_pose_seg(
             scorer_batch_size=scorer_batch_size,
         )
         if not zero_rows:
-            raise RuntimeError("dp1 zero-sigma Tier C baseline returned no rows")
+            raise RuntimeError(
+                "dp1 zero-sigma Tier C baseline returned no rows"
+            ) from err
         row = zero_rows[0]
         if row.delta_pose is None or row.delta_seg is None:
-            raise RuntimeError("dp1 zero-sigma Tier C baseline produced null deltas")
+            raise RuntimeError(
+                "dp1 zero-sigma Tier C baseline produced null deltas"
+            ) from err
         return float(row.delta_pose), float(row.delta_seg)
     return mdl._compute_seg_pose_delta(
         distortion_net,

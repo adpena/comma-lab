@@ -41,11 +41,17 @@ def _write_zip(path: Path, member: str = "x", payload: bytes = b"payload") -> Pa
     return path
 
 
-def test_default_candidates_cover_four_way_controls() -> None:
+def test_default_candidates_cover_real_scorer_controls() -> None:
     mod = _load_runner()
     names = {spec.name for spec in mod.DEFAULT_CANDIDATES}
     grammars = {spec.grammar for spec in mod.DEFAULT_CANDIDATES}
-    assert names == {"a1", "pr106_r2", "ibps1_c6_5ep", "dp1_smoke"}
+    assert names == {
+        "a1",
+        "pr106_r2",
+        "ibps1_c6_5ep",
+        "ibps1_c6_100ep_a10g_advisory",
+        "dp1_smoke",
+    }
     assert grammars == {"a1", "pr106_latent_sidecar", "ibps1", "dp1"}
 
 
