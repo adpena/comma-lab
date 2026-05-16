@@ -53,6 +53,32 @@ def _base_briefing_payload() -> dict[str, object]:
             "promotion_eligible": False,
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+            "tt5l_campaign_readiness": {
+                "schema": "l5_v2_tt5l_campaign_readiness_v1",
+                "non_pr106_staircase_priority": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dykstra_feasibility_artifact_valid": False,
+                "dykstra_feasibility_status": {
+                    "schema": "l5_v2_tt5l_dykstra_feasibility_status_v1",
+                    "artifact_valid": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "blockers": ["tt5l_dykstra_feasibility_artifact_missing"],
+                },
+                "sideinfo_gate_evidence_valid": False,
+                "first_anchor_timing_smoke_allowed": False,
+                "next_non_pr106_l5_action": {
+                    "action_id": "run_tt5l_dykstra_feasibility_polytope",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": ["tt5l_dykstra_feasibility_artifact_missing"],
+            },
             "target_rows_are_fail_fast_only": True,
             "next_exact_eval_target_count": 1,
             "next_exact_eval_targets_sample": [
@@ -267,6 +293,98 @@ def test_operator_briefing_dispatch_gate_rejects_l5_authority_leak() -> None:
     )
     assert (
         "l5_v2_frontier_readiness:target_0:paired_dispatch_tool_not_canonical"
+        in failures
+    )
+
+
+def test_operator_briefing_dispatch_gate_rejects_l5_missing_tt5l_campaign() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    l5.pop("tt5l_campaign_readiness")
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:tt5l_campaign_missing_or_not_object"
+        in failures
+    )
+
+
+def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_dykstra() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    tt5l = dict(l5["tt5l_campaign_readiness"])  # type: ignore[index]
+    tt5l["first_anchor_timing_smoke_allowed"] = True
+    tt5l["next_non_pr106_l5_action"] = {
+        "action_id": "materialize_tt5l_exact_or_diagnostic_anchor_pair",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    l5["tt5l_campaign_readiness"] = tt5l
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:"
+        "tt5l_timing_smoke_without_dykstra_and_sideinfo"
+        in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:tt5l_missing_dykstra_not_first_action"
+        in failures
+    )
+
+
+def test_operator_briefing_dispatch_gate_rejects_tt5l_pr106_next_action() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    tt5l = dict(l5["tt5l_campaign_readiness"])  # type: ignore[index]
+    tt5l["next_non_pr106_l5_action"] = {
+        "action_id": "PR106_packetir_local_minimum_retry",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    l5["tt5l_campaign_readiness"] = tt5l
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:tt5l_next_action_mentions_pr106" in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:tt5l_missing_dykstra_not_first_action"
         in failures
     )
 

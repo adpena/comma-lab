@@ -809,6 +809,95 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             failures.append(
                 "l5_v2_frontier_readiness:l5_v2_packetir_matrix_artifact_sha_mismatch"
             )
+        tt5l = l5.get("tt5l_campaign_readiness")
+        if not isinstance(tt5l, dict):
+            failures.append("l5_v2_frontier_readiness:tt5l_campaign_missing_or_not_object")
+        else:
+            if tt5l.get("schema") != "l5_v2_tt5l_campaign_readiness_v1":
+                failures.append("l5_v2_frontier_readiness:tt5l_campaign_bad_schema")
+            if tt5l.get("non_pr106_staircase_priority") is not True:
+                failures.append(
+                    "l5_v2_frontier_readiness:tt5l_non_pr106_priority_not_true"
+                )
+            for flag in (
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+            ):
+                if tt5l.get(flag) is not False:
+                    failures.append(
+                        f"l5_v2_frontier_readiness:tt5l_campaign:{flag}_not_false"
+                    )
+            dykstra_valid = tt5l.get("dykstra_feasibility_artifact_valid") is True
+            sideinfo_valid = tt5l.get("sideinfo_gate_evidence_valid") is True
+            if tt5l.get("first_anchor_timing_smoke_allowed") is True and not (
+                dykstra_valid and sideinfo_valid
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    "tt5l_timing_smoke_without_dykstra_and_sideinfo"
+                )
+            dykstra_status = tt5l.get("dykstra_feasibility_status")
+            if not isinstance(dykstra_status, dict):
+                failures.append(
+                    "l5_v2_frontier_readiness:tt5l_dykstra_status_missing_or_not_object"
+                )
+            else:
+                if dykstra_status.get("schema") != (
+                    "l5_v2_tt5l_dykstra_feasibility_status_v1"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:tt5l_dykstra_status_bad_schema"
+                    )
+                if dykstra_status.get("artifact_valid") is not dykstra_valid:
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        "tt5l_dykstra_status_validity_mismatch"
+                    )
+                for flag in (
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if dykstra_status.get(flag) is not False:
+                        failures.append(
+                            "l5_v2_frontier_readiness:"
+                            f"tt5l_dykstra_status:{flag}_not_false"
+                        )
+            next_action = tt5l.get("next_non_pr106_l5_action")
+            if not isinstance(next_action, dict):
+                failures.append(
+                    "l5_v2_frontier_readiness:tt5l_next_action_missing_or_not_object"
+                )
+            else:
+                for flag in (
+                    "score_claim",
+                    "promotion_eligible",
+                    "ready_for_exact_eval_dispatch",
+                ):
+                    if next_action.get(flag) is not False:
+                        failures.append(
+                            "l5_v2_frontier_readiness:"
+                            f"tt5l_next_action:{flag}_not_false"
+                        )
+                action_id = str(next_action.get("action_id") or "")
+                if "PR106" in action_id or "pr106" in action_id:
+                    failures.append(
+                        "l5_v2_frontier_readiness:tt5l_next_action_mentions_pr106"
+                    )
+                if not dykstra_valid and action_id != "run_tt5l_dykstra_feasibility_polytope":
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        "tt5l_missing_dykstra_not_first_action"
+                    )
+                if dykstra_valid and not sideinfo_valid and action_id != (
+                    "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
+                ):
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        "tt5l_missing_sideinfo_not_next_action"
+                    )
         if l5.get("packetir_matrix_dispatch_targets_suppressed") is True and target_count:
             failures.append(
                 "l5_v2_frontier_readiness:"
