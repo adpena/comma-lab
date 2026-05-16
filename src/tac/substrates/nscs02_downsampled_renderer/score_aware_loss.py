@@ -9,21 +9,22 @@ Per the standing directive
 ``feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md``
 this file FORKS the canonical
 ``tac.substrates.score_aware_common.score_pair_components`` because
-NSCS02's optimal score requires the gradient to flow through BOTH the
-inflate-time upsample (192x256 -> 384x512) AND the scorer-time
-preprocess (which interpolates again to (384, 512) via bilinear).
+NSCS02's optimal score requires the gradient to flow through the
+low-resolution renderer and a scorer-compatible resize chain. The exact
+contest chain is still a probe target because standalone inflate emits camera
+resolution while the training proxy upsamples directly to scorer resolution.
 
 Specifically:
 - Canonical helper assumes the renderer outputs at scorer-native
   (384, 512) and the scorer's preprocess is a no-op when the renderer
   already matches.
-- NSCS02 outputs at (192, 256). The composite gradient path is:
-  loss -> SegNet/PoseNet -> bilinear (scorer preprocess) ->
-  bicubic (inflate upsample) -> renderer.
-- The scorer's preprocess interpolates to (384, 512); when the
-  inflate-side upsample target is also (384, 512), the second
-  bilinear is the IDENTITY function, and the composite gradient
-  reduces to a single bilinear which is gradient-tractable.
+- NSCS02 outputs at (192, 256). The training proxy path is:
+  loss -> SegNet/PoseNet -> scorer preprocess at (384, 512) ->
+  differentiable upsample -> renderer.
+- The standalone submission runtime currently emits camera resolution
+  (874, 1164) before the contest scorer preprocesses back to (384, 512).
+  Bilinear/bicubic and direct-vs-camera-intermediate resize choices therefore
+  need a no-train resizing-chain ablation before any score-band claim.
 
 Wire-in compliance:
 - ``# SCORER_PREPROCESS_HANDLED_OK:nscs02_unique_downsample_upsample_path``

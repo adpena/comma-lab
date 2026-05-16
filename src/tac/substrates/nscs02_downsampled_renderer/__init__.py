@@ -37,12 +37,10 @@ Directory layout (mirrors ATW / A1 substrate convention):
   ``submissions/nscs02_downsampled_renderer/inflate.py`` per HNeRV
   parity discipline lesson 9 (runtime closure).
 
-Catalog #220 operational-mechanism declaration:
-  ``score_improvement_mechanism_status=OPERATIONAL`` —
-  the downsampled-renderer bytes are READ at inflate AND UPSAMPLED
-  to camera resolution before the contest scorer sees them. The
-  per-frame upsample is the operational consumption that converts
-  the smaller archive bytes into score-relevant frame-pixels.
+Catalog #220 mechanism status:
+  ``score_improvement_mechanism_status=RESEARCH_ONLY`` until the resizing-chain
+  ablation proves the downsampled-renderer bytes remain score-relevant under
+  the actual scorer path and paired CPU+CUDA exact eval lands.
 
 Dispatch status:
   ``research_only=true`` until ``experiments/train_substrate_nscs02_downsampled_renderer.py``

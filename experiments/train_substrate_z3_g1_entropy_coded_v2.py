@@ -14,11 +14,14 @@ slots with TWO entropy-coded streams ACTUALLY shipped at the wire-byte level:
     class_prior_cdf:     5*uint16 = 10B raw
     class_index_blob:    constriction-Huffman(class_indices) ~200B
 
-These bytes ARE consumed at inflate time (verified structurally by
+These bytes are consumed by the parser/intermediate Z3G2 reconstruction path (verified structurally by
 ``tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py`` per Catalog #139).
+That verifier is not a full-frame ``inflate.sh`` mutation proof; paired exact
+eval and runtime-output mutation remain required before any promotion.
 
-Predicted ΔS ∈ [-0.005, -0.015] vs A1 0.1928 [contest-CPU 1to1]
-``[prediction; first-principles-bound]``.
+Score movement is unranked at scaffold time. The current implementation is a
+lossy latent transform because sigma affects reconstructed latents at inflate
+time; distortion must be measured by paired exact eval.
 
 Council-binding contract honored:
 
@@ -26,8 +29,9 @@ Council-binding contract honored:
 - Catalog #151: TIER_1_OPERATOR_REQUIRED_FLAGS declared as ast.AnnAssign
   per Catalog #168 AST walker.
 - Catalog #205: select_inflate_device canonical helper.
-- Catalog #220: score_improvement_mechanism_status=OPERATIONAL +
-  runtime_overlay_consumed=True declared via SubstrateContract registration.
+- Catalog #220: score_improvement_mechanism_status=RESEARCH_ONLY +
+  runtime_overlay_consumed=False until full-frame inflate proof and paired
+  exact eval land.
 - Catalog #226: gate_auth_eval_call canonical helper for auth eval routing.
 - Catalog #240: dispatch_enabled requires implementation_complete; the
   smoke path (``_smoke_main``) is COMPLETE; the full path (``_full_main``)
@@ -37,9 +41,10 @@ Council-binding contract honored:
   in design memo §5.
 
 Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
-the v2 substrate IS the production target (not research_only) but full
-training is council-gated until smoke validates the byte-mutation contract
-empirically pre-dispatch.
+the v2 substrate is a research-only scaffold until a real non-smoke
+train/export/auth-eval path lands. The smoke path validates only the
+parser/intermediate byte-consumption contract; it is not dispatch-ranking
+or promotion evidence.
 
 Usage (smoke; CPU; ~3 epochs over a synthetic A1-shaped tensor; verifies
 byte-mutation contract end-to-end):
@@ -89,11 +94,9 @@ from tac.substrates.z3_g1_entropy_coded_v2 import (
     A1_LATENT_DIM,
     A1_N_PAIRS,
     G1_NUM_SCORER_CLASSES,
-    Z3G1EntropyCodedV2Config,
     Z3G2EntropyCodedScorerClassGatingHead,
     build_z3g2_composition_archive_contract,
     build_z3g2_payload_bytes,
-    compute_class_prior_cdf,
     encode_z3g2_section,
     estimate_z3g2_section_overhead_bytes,
     g1_v2_residual_rate_bits_per_sample,
@@ -253,8 +256,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "score_claim_valid": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
-        "result_review_blockers": list(contract.result_review_blockers)
-        + [
+        "result_review_blockers": [
+            *contract.result_review_blockers,
             "smoke_mode_synthetic_latents_not_score_anchor",
             "byte_mutation_smoke_must_pass_per_catalog_139",
         ],
@@ -312,10 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[z3g1-v2] hardware_substrate = {_canon_detect_hardware_substrate(axis='cpu', substrate_tag='z3_g1_entropy_coded_v2')}")
     print(f"[z3g1-v2] contract registered: id={Z3_G1_ENTROPY_CODED_V2_CONTRACT.id}")
     t0 = time.time()
-    if args.smoke:
-        rc = _smoke_main(args)
-    else:
-        rc = _full_main(args)
+    rc = _smoke_main(args) if args.smoke else _full_main(args)
     print(f"[z3g1-v2] elapsed = {time.time() - t0:.2f}s; rc={rc}")
     return rc
 

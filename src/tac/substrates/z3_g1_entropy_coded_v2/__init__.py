@@ -17,10 +17,10 @@ slots with TWO entropy-coded streams shipped at the wire-byte level:
    CDF derived from frequency counts over the 600 pairs. The class prior CDF
    (5 * uint16 counts = 10B) ships alongside the encoded stream.
 
-Predicted ΔS ∈ [-0.005, -0.015] vs A1 0.1928 [contest-CPU 1to1]
-``[prediction; first-principles-bound]``. Rate-axis dominant savings:
-section ~1986B vs A1 latent_blob 15387B ⇒ ~13.4 KB savings ⇒ rate
-contribution -0.0089 (haircut for distillation imperfection).
+Score movement is unranked until full-frame ``inflate.sh`` mutation proof and
+paired CPU+CUDA exact eval exist. The rate-side calculation remains a planning
+hypothesis: section ~1986B vs A1 latent_blob 15387B ⇒ ~13.4 KB savings ⇒ rate
+contribution -0.0089 before any distortion-axis measurement.
 
 Architecture (v2 entropy-coded grammar):
 
@@ -46,25 +46,21 @@ The v2 substitution is contest-legal at the compress-side only:
   class indices + AC-decodes per-pair residual under class-conditional
   Gaussian prior.
 
-Per Catalog #220: score_improvement_mechanism_status=OPERATIONAL +
-runtime_overlay_consumed=True because the entropy-coded bytes ARE
-consumed by the inflate AC decoder. Verified structurally via:
+Per Catalog #220 this remains ``score_improvement_mechanism_status=RESEARCH_ONLY``
+with ``runtime_overlay_consumed=False`` until full-frame ``inflate.sh``
+mutation proof and paired exact eval land. The current evidence is parser /
+intermediate structural consumption:
 
 1. Encoder/decoder roundtrip test (encode known sigma + class indices →
    decode → assert identity).
 2. Byte-mutation smoke per Catalog #139 (tool mutates one byte each in
-   sigma_table_blob and class_index_blob and asserts inflated output
-   CHANGES — extincts the F1 phantom-class).
+   sigma_table_blob and class_index_blob and asserts parser/intermediate
+   tensors change — extincts the F1 phantom-class without claiming full-frame
+   output proof).
 3. Archive grammar parser symmetry (split_z3g2_payload_bytes round-trip).
 
-Per Catalog #240: dispatch_enabled=true requires implementation_complete;
-v2 declares OPERATIONAL + research_only=false in same commit batch via
-SubstrateContract registration.
-
-Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
-v2 IS the production target. Until smoke validates the byte-mutation gate
-empirically, `_full_main` raises NotImplementedError per HNeRV parity L2
-(operator approves smoke before full).
+Per Catalog #240: dispatch_enabled=true requires implementation_complete; v2
+stays research-only while `_full_main` raises NotImplementedError.
 
 NO score claim until paired CUDA + CPU auth eval lands per CLAUDE.md
 "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE".

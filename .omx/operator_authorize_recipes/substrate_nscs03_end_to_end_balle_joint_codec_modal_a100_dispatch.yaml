@@ -51,12 +51,10 @@ cost_band:
 
 predicted_score_target: null
 predicted_delta: |
-  -0.020 to -0.050 vs A1 0.19285 [contest-CPU]
-  [prediction; first-principles-bound from Ballé 2018 5-15% rate savings
-  empirical anchor + cooperative-receiver loss compounding through the
-  end-to-end gradient path]
+  unranked until closure test compares differentiable rate proxy, actual
+  packed bytes, inflate output, and scorer roundtrip on the same archive
 predicted_delta_basis: |
-  .omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS03_END_TO_END_DIFFERENTIABLE_CODEC
+  .omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS03_END_TO_END_DIFFERENTIABLE_CODEC required_probe
 literature_anchor: |
   Ballé, Minnen, Singh, Hwang, Johnston — "Variational Image Compression with
   a Scale Hyperprior" ICLR 2018

@@ -6,10 +6,9 @@ Per ``feedback_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_landed
 
 The gate refuses sessions that have drifted past the recurring META-ASSUMPTION
 ADVERSARIAL REVIEW cadence (every 7 days OR every 50 subagent landings,
-whichever first). It scans the operator memory directory for the most-recent
-``feedback_*meta_assumption*review*.md`` OR
-``feedback_assumptions_challenge_audit_*.md`` file with a canonical body
-token, then enforces both canaries.
+whichever first). By default it scans repo-local `.omx/research` review/audit
+artifacts so clean clones are hermetic; external operator memory scans require
+explicit `memory_dir=...`. Then it enforces both canaries.
 
 Sister of Catalog #229 (premise-verification) + Catalog #185 (LIVE_COUNT
 drift) + Catalog #290 (substrate canonical-vs-unique discipline).
@@ -19,7 +18,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -28,7 +27,6 @@ from tac.preflight import (
     PreflightError,
     check_session_has_recent_meta_assumption_review,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,7 +64,7 @@ def _write_serializer_log(repo_root: Path, events: list[dict]) -> Path:
 
 
 def _now_utc(year: int = 2026, month: int = 5, day: int = 15) -> datetime:
-    return datetime(year, month, day, 23, 0, 0, tzinfo=timezone.utc)
+    return datetime(year, month, day, 23, 0, 0, tzinfo=UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +110,24 @@ def test_291_recent_assumptions_audit_passes(tmp_path: Path) -> None:
     )
     violations = check_session_has_recent_meta_assumption_review(
         memory_dir=memory,
+        serializer_log=tmp_path / "missing.log",
+        repo_root=tmp_path,
+        now_utc=_now_utc(),
+        strict=False,
+        verbose=False,
+    )
+    assert violations == []
+
+
+def test_291_default_scans_repo_research_json(tmp_path: Path) -> None:
+    """Default behavior is OSS-hermetic: repo-local `.omx/research` only."""
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    (research / "assumptions_challenge_audit_shared_assumptions_matrix_20260515.json").write_text(
+        '{"shared_assumptions": [{"id": "SA01"}], "note": "if violated"}\n',
+        encoding="utf-8",
+    )
+    violations = check_session_has_recent_meta_assumption_review(
         serializer_log=tmp_path / "missing.log",
         repo_root=tmp_path,
         now_utc=_now_utc(),
@@ -551,6 +567,7 @@ def test_291_orchestrator_callsite_warn_only_regression_guard() -> None:
     """The orchestrator must call this gate with strict=False (warn-only)
     initially per CLAUDE.md 'Strict-flip atomicity rule'."""
     import inspect
+
     from tac import preflight as pf
     src = inspect.getsource(pf.preflight_all)
     assert "check_session_has_recent_meta_assumption_review(" in src, (
@@ -587,9 +604,11 @@ def test_291_canonical_body_tokens_recognized() -> None:
     """Each canonical body token (case-insensitive) is recognized."""
     from tac.preflight import _CHECK_291_REVIEW_BODY_TOKENS
     expected = {
-        "shared assumption",
-        "shared assumptions",
-        "assumption-violation",
+            "shared assumption",
+            "shared assumptions",
+            "shared_assumption",
+            "shared_assumptions",
+            "assumption-violation",
         "assumption violation",
         "if violated",
         "META-ASSUMPTION",
@@ -661,7 +680,7 @@ def test_291_both_canaries_can_fire(tmp_path: Path) -> None:
     """When BOTH time AND landings exceed thresholds, both violations
     surface."""
     memory = tmp_path / "memory"
-    review_mtime = datetime(2026, 5, 1, tzinfo=timezone.utc).timestamp()
+    review_mtime = datetime(2026, 5, 1, tzinfo=UTC).timestamp()
     _write_review_memo(
         memory,
         "feedback_meta_assumption_review_old_20260501.md",

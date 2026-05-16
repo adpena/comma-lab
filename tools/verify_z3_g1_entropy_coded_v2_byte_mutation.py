@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Byte-mutation smoke verifier for Z3-G1 entropy-coded v2 (Catalog #139).
+"""Parser/intermediate byte-mutation verifier for Z3-G1 entropy-coded v2.
 
 Per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lesson 11
 (no-op detector) + Catalog #139 + the design memo §6: a substrate that ships
-distinguishing bytes MUST PROVE those bytes are CONSUMED by the inflate path
-to produce different inflated outputs. This tool extincts the F1 phantom-class
+distinguishing bytes MUST PROVE those bytes are CONSUMED by the Z3G2 parser and
+intermediate reconstruction path. This tool extincts the F1 phantom-class
 that bit Z3-G1 v1 (empty hyperprior_weights_int8 + w_hat_int8 slots produced
-identical inflated output to Z3 v2 baseline).
+identical packet bytes to Z3 v2 baseline), but it is **not** a full-frame
+``inflate.sh`` proof.
 
 Procedure (per Catalog #272 distinguishing-feature integration contract):
 
@@ -18,8 +19,11 @@ Procedure (per Catalog #272 distinguishing-feature integration contract):
      of that blob.
   3. Run the inflate consumer on baseline + each mutated packet.
   4. Classify each probe:
-     - semantic_output_mutation: the mutated packet decodes cleanly AND the
-       inflated output hash plus at least one output tensor changes.
+     - parser_intermediate_mutation: the mutated packet decodes cleanly AND
+       the parser/intermediate output hash plus at least one reconstructed
+       tensor changes. Legacy artifact keys still include
+       ``semantic_output_mutation`` for backward-compatible parsing, but the
+       evidence scope is parser/intermediate tensors, not full-frame raw output.
      - parser_bound_consumption: the mutated packet is rejected by the parser or
        entropy decoder. This proves a byte boundary is live, but it is
        lower-grade evidence and MUST NOT be overclaimed as semantic output
@@ -28,7 +32,7 @@ Procedure (per Catalog #272 distinguishing-feature integration contract):
      mutation evidence.
 
 Exit codes:
-  0  byte mutations PROVED semantic output mutation for every blob
+  0  byte mutations PROVED parser/intermediate tensor mutation for every blob
   1  semantic output mutation missing for one or more blobs
   2  setup error (bad inputs, missing deps)
 
@@ -236,13 +240,14 @@ def _compare_outputs(
 
     semantic_output_mutation = bool(changed_names) and baseline_hash != mutated_hash
     if semantic_output_mutation:
-        reason = "semantic output tensors changed: " + ", ".join(changed_names)
+        reason = "parser/intermediate tensors changed: " + ", ".join(changed_names)
     elif baseline_hash != mutated_hash:
-        reason = "output hash changed without tensor delta; not semantic proof"
+        reason = "intermediate hash changed without tensor delta; not semantic proof"
     else:
-        reason = "all inflated output tensors identical"
+        reason = "all parser/intermediate tensors identical"
     return {
         "semantic_output_mutation": semantic_output_mutation,
+        "parser_intermediate_mutation": semantic_output_mutation,
         "output_sha256_changed": baseline_hash != mutated_hash,
         "baseline_output_sha256": baseline_hash,
         "mutated_output_sha256": mutated_hash,
@@ -278,6 +283,7 @@ def _probe_blob_mutations(
         "blob_stop": blob_slice.stop,
         "blob_len": blob_len,
         "semantic_output_mutation": False,
+        "parser_intermediate_mutation": False,
         "parser_bound_consumption": False,
         "semantic_proof": None,
         "parser_bound_attempts": [],
@@ -301,6 +307,7 @@ def _probe_blob_mutations(
                 "replacement_byte": int(replacement_byte),
                 "clean_decode": False,
                 "semantic_output_mutation": False,
+                "parser_intermediate_mutation": False,
                 "parser_bound_consumption": False,
                 "output_sha256_changed": False,
                 "status": "not_run",
@@ -317,6 +324,7 @@ def _probe_blob_mutations(
                 if comparison["semantic_output_mutation"]:
                     attempt["status"] = "semantic_output_mutation"
                     result["semantic_output_mutation"] = True
+                    result["parser_intermediate_mutation"] = True
                     if result["semantic_proof"] is None:
                         result["semantic_proof"] = attempt
                 else:
@@ -327,6 +335,7 @@ def _probe_blob_mutations(
                     {
                         "status": "parser_bound_consumption",
                         "parser_bound_consumption": True,
+                        "parser_intermediate_mutation": False,
                         "exception_type": type(exc).__name__,
                         "exception_message": str(exc),
                         "reason": (
@@ -340,7 +349,7 @@ def _probe_blob_mutations(
             result["attempts"].append(attempt)
 
     if result["semantic_output_mutation"]:
-        result["evidence_grade"] = "semantic_output_mutation"
+        result["evidence_grade"] = "parser_intermediate_mutation"
     elif result["parser_bound_consumption"]:
         result["evidence_grade"] = "parser_bound_consumption_only"
     else:
@@ -418,8 +427,8 @@ def main(argv: list[str] | None = None) -> int:
         if result["semantic_output_mutation"]:
             proof = result["semantic_proof"] or {}
             print(
-                f"[PASS] {blob_name} semantic_output_mutation — "
-                f"{proof.get('reason', 'clean decode changed output')}; "
+                f"[PASS] {blob_name} parser_intermediate_mutation — "
+                f"{proof.get('reason', 'clean decode changed intermediate tensors')}; "
                 f"mutated_output_sha256={proof.get('mutated_output_sha256')}"
             )
             if result["parser_bound_consumption"]:
@@ -431,13 +440,13 @@ def main(argv: list[str] | None = None) -> int:
         elif result["parser_bound_consumption"]:
             print(
                 f"[WARN] {blob_name} parser_bound_consumption_only — decoder "
-                "rejected mutated bytes, but no clean semantic output mutation "
+                "rejected mutated bytes, but no clean parser/intermediate mutation "
                 "was observed."
             )
         else:
             print(
                 f"[FAIL] {blob_name} no_observed_effect — clean mutations did not "
-                "change inflated output and no parser-bound rejection was observed."
+                "change parser/intermediate tensors and no parser-bound rejection was observed."
             )
 
     semantic_failures = [
@@ -450,7 +459,9 @@ def main(argv: list[str] | None = None) -> int:
         for item in artifact["blob_results"]
         if item["evidence_grade"] == "parser_bound_consumption_only"
     ]
+    artifact["evidence_scope"] = "parser_intermediate_tensors_not_full_frame_inflate"
     artifact["semantic_output_mutation_all_blobs"] = not semantic_failures
+    artifact["parser_intermediate_mutation_all_blobs"] = not semantic_failures
     artifact["parser_bound_consumption_blobs"] = [
         item["blob_name"]
         for item in artifact["blob_results"]
@@ -466,7 +477,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if semantic_failures:
         print(
-            f"\n[VERDICT] FAIL: semantic_output_mutation missing for "
+            f"\n[VERDICT] FAIL: parser/intermediate mutation missing for "
             f"{len(semantic_failures)}/{len(blob_slices)} distinguishing-feature "
             f"blob(s): {semantic_failures}",
             file=sys.stderr,
@@ -478,16 +489,17 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         print(
-            "Per Catalog #139 + design memo §6: semantic proof requires clean "
-            "decode plus output hash/tensor delta. Parser rejection alone is "
-            "not semantic output mutation.",
+            "Per Catalog #139 + design memo §6: this proof is limited to clean "
+            "decode plus parser/intermediate tensor delta. Parser rejection alone "
+            "is lower-grade consumption evidence, and full-frame inflate remains "
+            "a separate required proof.",
             file=sys.stderr,
         )
         return 1
 
     print(
         f"\n[VERDICT] PASS: all {len(blob_slices)} distinguishing-feature blobs "
-        f"have semantic_output_mutation evidence (clean decode + output "
+        f"have parser/intermediate mutation evidence (clean decode + tensor "
         f"hash/tensor delta). Parser-bound rejections, if present, are "
         f"recorded separately as lower-grade evidence."
     )

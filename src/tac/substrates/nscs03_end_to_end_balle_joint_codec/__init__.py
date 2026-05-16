@@ -21,14 +21,13 @@ joint codec (per assumptions-challenge-audit NSCS03).
 
 This is the canonical Ballé et al. 2018 ICLR architecture, applied as the
 contest substrate. The differentiable rate term `R = -log2(p_y(y_hat)) +
--log2(p_z(z_hat))` is the loss term that closes the train→archive→inflate
-roundtrip drift gap (per CLAUDE.md "eval_roundtrip — non-negotiable" extended
-to entropy).
+-log2(p_z(z_hat))` is the intended pressure tying training to packed bytes.
+The current scaffold has not yet proven proxy-rate/packed-byte/inflate/scorer
+closure, so it must not claim the train-to-archive roundtrip drift is closed.
 
-**Predicted score band**: ``[0.18, 0.21]`` — assumptions-challenge-audit
-NSCS03 ``predicted_delta_S [-0.020, -0.050]`` vs A1 0.19285 [contest-CPU]
-``[prediction; first-principles-bound from Ballé 2018 5-15% rate savings
-empirical anchor + cooperative-receiver loss compounding]``.
+**Score movement**: unranked until a closure test compares differentiable rate
+proxy, actual packed bytes, inflate output, and scorer roundtrip on the same
+candidate archive.
 
 13 HNeRV parity-discipline lessons compliance — design-time declaration:
 

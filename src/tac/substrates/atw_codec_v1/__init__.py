@@ -42,17 +42,16 @@ residuals. Knob-zero ablations recover the four corner regimes:
 These four corners are the **probe-disambiguator** regime sweep (Catalog
 #125 hook #6) that arbitrates {Atick-only, IB-only, WZ-only, classical}.
 
-**Predicted score band**: ``[0.18, 0.21]``
-``[prediction; first-principles-bound from IB+WZ theory]``. Conservative
-per typical 2-3x compression of analytical bounds in practice. Computed
-from rate gain (Wyner-Ziv -0.020 to -0.040) + distortion gain
-(Atick-Redlich -0.005 to -0.010) vs A1 baseline 0.19285 [contest-CPU].
+**Score movement**: unranked until the `H(latent | scorer_class)` probe and
+paired smoke land. The grounded V1 latent-only rate-side bound is only about
+``[-0.0027, -0.005]`` if the unmeasured 30-50% latent-byte-saving hypothesis
+holds; larger score movement is not claimed by the scaffold.
 
 **Composition with existing primitives**: STACKS on Z4-V2 (β-only branch)
 and on A1 substrate (encoder/decoder/latent architecture inherited).
 ATW feasibility region is a SUBSET of Z3+A1 polytope per Boyd's convex-
-feasibility lens — any ATW Pareto-optimal point dominates Z3+Z4 at the
-same operating point.
+feasibility lens; this does not imply dominance without an empirical lower
+score under the same archive/runtime/eval axis.
 
 Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes them)
 -----------------------------------------------------------------------------------

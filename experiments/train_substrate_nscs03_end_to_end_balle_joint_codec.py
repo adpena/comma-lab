@@ -71,6 +71,10 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tac.substrates.nscs03_end_to_end_balle_joint_codec.registered_substrate import (
+    NSCS03_END_TO_END_BALLE_CONTRACT,  # noqa: F401  (forces contract validation)
+)
+
 # ---------------------------------------------------------------------------
 # Module paths + constants
 # ---------------------------------------------------------------------------
@@ -146,7 +150,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "env": "NSCS03_HYPER_LATENT_CHANNELS",
         "rationale": (
             "NSCS03-specific: hyper latent z channels (Ballé 2018 reference 128; "
-            "ours 32). Side-info stream determines the conditional Gaussian σ "
+            "ours 32). Side-info stream determines the conditional Gaussian sigma "
             "for the main latent."
         ),
         "default": "32",
@@ -170,7 +174,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
     "--sigma-floor": {
         "env": "NSCS03_SIGMA_FLOOR",
         "rationale": (
-            "NSCS03-specific: minimum σ for the conditional-Gaussian density "
+            "NSCS03-specific: minimum sigma for the conditional-Gaussian density "
             "on y. Prevents degenerate p_y collapse to delta-function."
         ),
         "default": "1e-4",
@@ -308,8 +312,8 @@ def _full_main(args: argparse.Namespace) -> int:
         "exception. The substrate ships as research_only=true scaffold. The full "
         "trainer (with paired CPU+CUDA auth eval, archive emission, runtime "
         "vendoring, cost-band anchor append, continual-learning posterior "
-        "update) lands once the Phase 2 council adjudicates the λ_R sweep + "
-        "σ-floor calibration. See "
+        "update) lands once the Phase 2 council adjudicates the lambda_R sweep + "
+        "sigma-floor calibration. See "
         ".omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS03 "
         "reactivation_criteria_if_smoke_regresses for the gating empirical "
         "thresholds."

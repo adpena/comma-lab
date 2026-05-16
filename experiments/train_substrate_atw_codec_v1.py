@@ -64,9 +64,11 @@ from tac.substrates.atw_codec_v1 import (
     ATW1_MAGIC,
     ATWCodec,
     ATWCodecConfig,
-    ATWLossWeights,
     pack_archive,
     parse_archive,
+)
+from tac.substrates.atw_codec_v1.registered_substrate import (
+    ATW_CODEC_V1_CONTRACT,  # noqa: F401  (forces package-side contract validation)
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

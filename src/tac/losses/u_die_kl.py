@@ -79,12 +79,11 @@ DEFAULT_KL_TEMPERATURE: float = 2.0
 # Prevents division by zero in flat regions where sum_b |W_b(I)(p)| ~= 0.
 DEFAULT_UNIWARD_EPSILON: float = 1e-3
 
-# DIE-map cache interval. The per-pixel scorer-gradient map is expensive
-# (1 backward pass) but slowly varying because contest scorers are frozen
-# and the predicted image moves smoothly under SGD; we cache for K
-# iterations. K=10 is the canonical default per the symposium #5 row;
-# K=1 forces full per-batch recomputation (slower but more accurate).
-DEFAULT_DIE_CACHE_INTERVAL: int = 10
+# DIE-map cache interval. The per-pixel scorer-gradient map is expensive, but
+# call-sequence caching is only safe when batches are deterministic and
+# predictions move smoothly. Default to exact per-batch recomputation; trainers
+# may opt into K>1 only with pair/video-keyed batching evidence.
+DEFAULT_DIE_CACHE_INTERVAL: int = 1
 
 
 # ---------------------------------------------------------------------------
@@ -465,7 +464,7 @@ class UDIEKLLoss(nn.Module):
             per Quantizr canon).
         uniward_epsilon: UNIWARD wavelet-denominator floor (default 1e-3).
         die_cache_interval: cache the DIE weight map for K iterations
-            (default 10; K=1 forces full per-batch recomputation).
+            (default 1; K>1 requires deterministic pair/video ordering).
     """
 
     # Canonical instance attribute types (helps static analysis + dataclasses

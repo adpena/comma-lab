@@ -42,8 +42,8 @@ Z3_G1_ENTROPY_CODED_V2_CONTRACT = SubstrateContract(
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (3 per Catalog #220)
     archive_bytes_added=None,
-    score_improvement_mechanism_status="OPERATIONAL",
-    runtime_overlay_consumed=True,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
     # 2.4 Recipe schema (8)
     recipe_smoke_only=True,
     recipe_research_only=True,
@@ -74,11 +74,10 @@ Z3_G1_ENTROPY_CODED_V2_CONTRACT = SubstrateContract(
     ),
     hook_not_applicable_rationale={
         "hook_probe_disambiguator": (
-            "single defensible interpretation for the wire grammar: archive "
-            "bytes are consumed by inflate per Catalog #220 OPERATIONAL "
-            "contract. The lane is still research-only because the full "
-            "trainer/export/auth-eval path is council-gated and raises "
-            "NotImplementedError; promotion requires paired CPU+CUDA custody."
+            "single defensible interpretation for the wire grammar at parser/"
+            "intermediate scope. The lane is research-only because full-frame "
+            "inflate.sh mutation proof, the full trainer/export/auth-eval path, "
+            "and paired CPU+CUDA custody are still missing."
         ),
         "hook_continual_learning_anchor_kind": (
             "no empirical score anchor exists yet; posterior update waits for "

@@ -724,8 +724,8 @@ def test_substrate_contract_registers():
     )
     assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.id == "z3_g1_entropy_coded_v2"
     assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.lane_id == "lane_z3_g1_entropy_coded_v2_20260515"
-    assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.score_improvement_mechanism_status == "OPERATIONAL"
-    assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.runtime_overlay_consumed is True
+    assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.score_improvement_mechanism_status == "RESEARCH_ONLY"
+    assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.runtime_overlay_consumed is False
     assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.recipe_research_only is True
     assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.recipe_smoke_only is True
     assert Z3_G1_ENTROPY_CODED_V2_CONTRACT.target_modes == ("research_substrate",)
@@ -827,12 +827,17 @@ def test_byte_mutation_smoke_verifier_separates_parser_bound_from_semantic(tmp_p
     )
     artifact = json.loads(evidence_path.read_text(encoding="utf-8"))
     assert artifact["schema_version"] == "z3_g1_entropy_coded_v2_byte_mutation_v2"
+    assert artifact["evidence_scope"] == "parser_intermediate_tensors_not_full_frame_inflate"
     assert artifact["semantic_output_mutation_all_blobs"] is True
+    assert artifact["parser_intermediate_mutation_all_blobs"] is True
     assert artifact["parser_bound_only_blobs"] == []
     assert artifact["parser_bound_consumption_blobs"]
     for blob_result in artifact["blob_results"]:
         assert blob_result["semantic_output_mutation"] is True
+        assert blob_result["parser_intermediate_mutation"] is True
+        assert blob_result["evidence_grade"] == "parser_intermediate_mutation"
         assert blob_result["semantic_proof"]["clean_decode"] is True
+        assert blob_result["semantic_proof"]["parser_intermediate_mutation"] is True
         assert blob_result["semantic_proof"]["output_sha256_changed"] is True
         assert blob_result["semantic_proof"]["status"] == "semantic_output_mutation"
         for attempt in blob_result["parser_bound_attempts"]:

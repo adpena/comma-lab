@@ -32,13 +32,11 @@ Parser-section manifest (declared at design time per Catalog #124):
 - ``decoder_blob``: bytes 16 .. 16+D
 - ``latent_blob``: bytes 16+D .. 16+D+L
 
-Catalog #220 operational mechanism:
-  ``score_improvement_mechanism_status=OPERATIONAL`` —
-  the encoded weights + latents flow through the inflate runtime
-  AND produce the rendered RGB pixels SegNet/PoseNet score. The
-  byte-mutation smoke (sister of Catalog #139 no-op detector):
-  flipping any byte in either blob produces frame-pixel changes
-  visible to the inflate output.
+Catalog #220 mechanism status:
+  ``score_improvement_mechanism_status=RESEARCH_ONLY`` until the resizing-chain
+  ablation and paired exact eval prove the low-resolution inflate path is
+  score-relevant. The local byte-mutation smoke is parser/runtime evidence,
+  not promotion evidence.
 """
 
 from __future__ import annotations

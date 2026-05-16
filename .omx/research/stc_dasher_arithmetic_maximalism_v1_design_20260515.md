@@ -54,7 +54,7 @@ Per the symposium memo Phase F Composite #6 §"Math":
 - A1 archive has `~178 KB` total bytes.
 - Of those, the symposium identified `~150 KB` of "renderer parameters" (high entropy, high cardinality) suitable for STC, and `~30 KB` of "mask argmax" (low cardinality, sparse) suitable for Dasher.
 - MacKay's lower-bound estimate of the conditional-entropy slack relative to brotli on the renderer-parameter stream is `~0.5%` of total bytes (one MacKay-style "what's the rate cost of the approximation?" derivation).
-- `0.5% × 178 KB / 37,545,489 contest-divisor-bytes × 25 (rate weight) = ΔS ≈ -0.0006` per `0.5%` reclaimed. Stacked across both stream types and tightening `h` from `12` to `16-24` yields the predicted band `[-0.010, -0.030]`.
+- `0.5% × 178 KB / 37,545,489 contest-divisor-bytes × 25 (rate weight) = ΔS ≈ -0.00006` per `0.5%` reclaimed. V1 therefore carries **no score band**: it writes raw syndrome bits and carries the original residual payload, so it is a byte-accounting scaffold only. Any `[-0.010, -0.030]` planning band belongs only to a future syndrome-only Viterbi inverse plus real range/ANS/AC byte stream.
 
 This is a **first-principles prediction**, not a measurement. Per CLAUDE.md "Apples-to-apples evidence discipline" the band MUST be tagged `[prediction; first-principles]` until a contest-CUDA / contest-CPU anchor lands.
 

@@ -61283,9 +61283,10 @@ def check_substrate_design_memo_has_canonical_vs_unique_decision_section(
 # violated, what would change?"; identify highest-EV violations; queue for
 # next dispatch wave.
 #
-# This gate scans the operator memory directory for the most-recent
-# `feedback_*meta_assumption*review*.md` OR
-# `feedback_assumptions_challenge_audit_*.md` file. Refuses any state where
+# This gate scans the repo-local `.omx/research` directory by default for the
+# most-recent META-ASSUMPTION review / assumptions-challenge audit artifact
+# (external operator memory can still be audited by passing memory_dir
+# explicitly). Refuses any state where
 # (a) more than 7 days have elapsed since the most-recent META-ASSUMPTION
 # review OR (b) more than 50 subagent landings (counted from
 # `.omx/state/commit-serializer.log` events with outcome=committed) have
@@ -61316,8 +61317,8 @@ _CHECK_291_MAX_LANDINGS_SINCE_LAST_REVIEW = 50
 
 # Filename patterns matching valid META-ASSUMPTION review memos.
 _CHECK_291_REVIEW_FILENAME_RE = re.compile(
-    r"^feedback_(?:.*meta_assumption.*review.*|"
-    r"assumptions_challenge_audit.*)_(\d{8})\.md$",
+    r"^(?:feedback_)?(?:.*meta_assumption.*review.*|"
+    r".*assumptions_challenge_audit.*).*?(\d{8}).*\.(?:md|json)$",
     re.IGNORECASE,
 )
 
@@ -61327,6 +61328,8 @@ _CHECK_291_REVIEW_FILENAME_RE = re.compile(
 _CHECK_291_REVIEW_BODY_TOKENS: tuple[str, ...] = (
     "shared assumption",
     "shared assumptions",
+    "shared_assumption",
+    "shared_assumptions",
     "assumption-violation",
     "assumption violation",
     "if violated",
@@ -61336,9 +61339,14 @@ _CHECK_291_REVIEW_BODY_TOKENS: tuple[str, ...] = (
 )
 
 
-def _check_291_default_memory_dir() -> Path:
-    """Default memory directory location for the operator (mirrors #290)."""
-    return Path.home() / ".claude" / "projects" / "-Users-adpena-Projects-pact" / "memory"
+def _check_291_default_memory_dir(repo_root: Path | str | None = None) -> Path:
+    """Default to repo-local research artifacts for OSS-hermetic preflight.
+
+    External Claude memory is machine-local state. Pass ``memory_dir=...``
+    explicitly when auditing it, but do not make clean clones depend on it.
+    """
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
 
 
 def _check_291_parse_date_suffix(suffix: str) -> tuple[int, int, int] | None:
@@ -61460,9 +61468,10 @@ def check_session_has_recent_meta_assumption_review(
     was required to surface this; the gate is the structural protection so
     future sessions do not repeat the blindness.
 
-    Acceptance: a recent in-scope review memo exists in the operator
-    memory dir AND (i) its date is within the last 7 days AND (ii) fewer
-    than 50 subagent landings have occurred since its date.
+    Acceptance: a recent in-scope review/audit artifact exists in repo-local
+    `.omx/research` by default, or in an explicitly passed `memory_dir`, AND
+    (i) its date is within the last 7 days AND (ii) fewer than 50 subagent
+    landings have occurred since its mtime.
 
     Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
     because today's ASSUMPTIONS-CHALLENGE-AUDIT is the FIRST instance and
@@ -61477,7 +61486,7 @@ def check_session_has_recent_meta_assumption_review(
     ``feedback_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_landed_20260515.md``.
     """
     if memory_dir is None:
-        memory_target = _check_291_default_memory_dir()
+        memory_target = _check_291_default_memory_dir(repo_root)
     elif isinstance(memory_dir, str):
         memory_target = Path(memory_dir)
     else:

@@ -62,6 +62,23 @@ def test_check_241_decorator_passes(tmp_path: Path) -> None:
     assert out == []
 
 
+def test_check_241_package_side_registered_substrate_import_passes(tmp_path: Path) -> None:
+    target = _make_substrate_trainer(tmp_path, name="pkgside", has_decorator=False)
+    text = target.read_text(encoding="utf-8")
+    target.write_text(
+        text.replace(
+            "def main(argv=None): return 0",
+            "from tac.substrates.pkgside.registered_substrate import CONTRACT\n"
+            "def main(argv=None): return 0",
+        ),
+        encoding="utf-8",
+    )
+    out = check_substrate_uses_register_decorator_or_explicitly_legacy_tagged(
+        repo_root=tmp_path
+    )
+    assert out == []
+
+
 def test_check_241_legacy_waiver_with_real_rationale_passes(tmp_path: Path) -> None:
     _make_substrate_trainer(
         tmp_path,
@@ -185,8 +202,6 @@ def test_check_242_live_repo_zero_violations() -> None:
 def test_check_242_strict_raises_when_registry_corrupted(monkeypatch) -> None:
     """If a corrupted contract were ever registered, the gate raises."""
     from tac.substrate_registry import (
-        SubstrateContract,
-        SubstrateContractError,
         _REGISTERED_SUBSTRATES,
     )
 

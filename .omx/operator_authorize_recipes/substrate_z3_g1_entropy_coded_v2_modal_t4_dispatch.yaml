@@ -8,6 +8,7 @@ dispatch_blockers:
   - full_main_raises_NotImplementedError_until_real_training_export_auth_eval_path_lands
   - remote_driver_missing_or_unverified
   - predicted_cuda_band_unknown_until_same_archive_cuda_anchor_exists
+  - full_frame_inflate_byte_mutation_proof_missing
 smoke_validation_contract: parser_and_synthetic_latent_smoke_v1
 summary: |
   Z3-G1 entropy-coded v2 substrate — operator-approved 2026-05-15
@@ -22,13 +23,14 @@ summary: |
       class_prior_cdf:     5*uint16 = 10B raw
       class_index_blob:    constriction-Huffman(class_indices) ~200B
 
-  These bytes ARE consumed at inflate time (verified structurally by
+  These bytes are parser/intermediate-consumed by the Z3G2 consumer (verified structurally by
   ``tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py`` per Catalog
-  #139; PASSED locally pre-dispatch).
+  #139; PASSED locally pre-dispatch). This is not a full-frame `inflate.sh`
+  mutation proof and must not be promoted as semantic frame-output evidence.
 
-  Predicted ΔS ∈ [-0.005, -0.015] vs A1 0.1928 [contest-CPU 1to1]
-  ``[prediction; first-principles-bound]``. Cost ~$5-10 (paired CPU+CUDA
-  Modal T4 anchor per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA").
+  Score movement is unranked until a full-frame `inflate.sh` mutation proof
+  and paired CPU+CUDA exact eval exist. The byte-side rate calculation remains
+  a planning hypothesis only, not a dispatch-ranking claim.
 
   Per Catalog #240 dispatch_enabled=true requires implementation_complete.
   The current trainer full path is intentionally council-gated and raises
@@ -62,11 +64,11 @@ cost_band:
   gpu_key: T4
 
 predicted_score_target: null
-predicted_contest_cpu_band: [0.178, 0.190]
+predicted_contest_cpu_band: null
 predicted_contest_cuda_band: null
 predicted_band: null
-smoke_score_band: [0.180, 0.200]
-predicted_delta: "-0.005 to -0.015 vs A1 0.1928 [contest-CPU 1to1] [prediction; first-principles-bound]"
+smoke_score_band: null
+predicted_delta: "unranked; current scaffold is a lossy latent transform and requires full-frame mutation plus paired exact eval before score movement can be claimed"
 predicted_delta_basis: |
   v1 was a research-substrate trap: hyperprior_weights_int8 + w_hat_int8
   shipped empty (b"") in the production-safe direct-residual mode, so
@@ -78,8 +80,9 @@ predicted_delta_basis: |
   - v2 section size estimate: 1986B (vs A1 latent_blob 15387B)
   - Bytes saved: ~13.4 KB
   - Rate term reduction: 25 * 13400 / 37545489 ≈ -0.0089 rate-axis
-  - Distortion-axis impact: ~0 (same A1 decoder; per-pair sigma only
-    affects rate side at training time)
+  - Distortion-axis impact: unknown until paired exact eval; the current
+    implementation is a lossy latent transform because sigma affects the
+    reconstructed latent at inflate time.
   - Predicted band [-0.005, -0.015] (haircut for distillation imperfection
     + non-stationary class statistics + sigma table quantization)
 
@@ -109,15 +112,15 @@ risk: |
     statistics. If class membership is uncorrelated with residual entropy,
     delta will be at the LOW end of the predicted band (~0).
   - The byte-mutation smoke per Catalog #139 PASSED LOCALLY on synthetic
-    inputs. Modal dispatch will additionally validate the auth-eval contract
-    on real A1-decoded latents.
+    inputs at the parser/intermediate tensor layer. Full-frame `inflate.sh`
+    byte-mutation and paired auth-eval custody are still required.
   - F1-class regression (v1's empty-slot trap) is structurally extincted
     by the Z3G2 wire grammar (sigma_table_blob_len > 0 enforced at encode
     time; distinguishing_feature_bytes > 0 reported in archive contract).
 
 envelope_status: "FITS $5-10 envelope per Phase B.1 council Tier 2 ($110-170 total)"
 
-remote_driver: scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
+remote_driver: null
 timeout_hours: 1.5
 
 required_input_files:
@@ -127,7 +130,7 @@ required_input_files:
     default_path: upstream/videos/0.mkv
 
 modal:
-  lane_script: scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
+  lane_script: null
   cost_band_trainer: experiments/train_substrate_z3_g1_entropy_coded_v2.py
   cost_band_epochs: 1000
   cost_band_batch_size: 16
@@ -164,7 +167,6 @@ env_overrides:
   LOCAL_CUDA_WORKER: "1"
 
 dependencies:
-  - scripts/remote_lane_substrate_z3_g1_entropy_coded_v2.sh
   - submissions/a1/archive.zip
   - upstream/videos/0.mkv
   - experiments/train_substrate_z3_g1_entropy_coded_v2.py
@@ -182,11 +184,12 @@ notes: |
 
   Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY":
   v2 remains research_only=true because the full trainer/export/auth-eval
-  path is still council-gated. Its bytes are structurally live because:
+  path is still council-gated. Its bytes are structurally live only at
+  parser/intermediate scope because:
   (a) byte-mutation smoke PASSES locally per Catalog #139;
   (b) inflate consumer ACTUALLY processes the bytes (per-pair sigma lookup
       multiplies into latent reconstruction at line ~120 of inflate_consumer.py);
-  (c) SubstrateContract runtime_overlay_consumed=True declared at registration.
+  (c) SubstrateContract remains RESEARCH_ONLY until full-frame proof lands.
 
   Dispatch remains BLOCKED until _full_main stops raising NotImplementedError,
   the remote driver exists and passes strict predeploy, and the archive

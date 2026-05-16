@@ -46,20 +46,18 @@ NSCS01_NULLSPACE_SPLIT_RENDERER_CONTRACT = SubstrateContract(
     bolt_on_loc_budget=350,
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (3 per Catalog #220)
-    # L1 SCAFFOLD: smoke writes a real NSP1 archive; runtime renders both
-    # frames; per Catalog #220 the OPERATIONAL flag requires runtime overlay
-    # consumption — verified by byte-mutation smoke (HEAD0 mutation → frame_0
-    # changes; HEAD1 mutation → frame_1 changes; LATENT mutation → both).
+    # L1 SCAFFOLD: smoke writes a real NSP1 archive, but full training/export
+    # and paired auth-eval custody are still council-gated.
     archive_bytes_added=None,  # full renderer archive; not a sidecar overlay
-    score_improvement_mechanism_status="OPERATIONAL",
-    runtime_overlay_consumed=True,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
     # 2.4 Recipe schema (8)
     # research_only mirrors the target_modes research_substrate classification
     # for the L1 SCAFFOLD landing per Catalog #240 sister-protection. Recipe
     # is smoke-only by construction (cost_band_epochs <= 100 invariant).
     recipe_smoke_only=True,
     recipe_research_only=True,
-    recipe_min_smoke_gpu="A100",
+    recipe_min_smoke_gpu="T4",
     recipe_min_vram_gb=16,
     recipe_pyav_decode_strategy="cpu_thread_async_upload",
     recipe_canary_status="independent_substrate",
@@ -67,7 +65,7 @@ NSCS01_NULLSPACE_SPLIT_RENDERER_CONTRACT = SubstrateContract(
     recipe_canary_dependency=None,
     # 2.5 Cost band & GPU envelope (4)
     cost_band_epochs=100,  # smoke band for the L1 dispatch
-    cost_band_gpu_key="A100",
+    cost_band_gpu_key="T4",
     cost_band_platform_key="modal",
     cost_band_p50_usd=15.00,
     # 2.6 6-hook wire-in (Catalog #125)

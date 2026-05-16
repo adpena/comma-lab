@@ -248,8 +248,9 @@
       "id": "NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE",
       "name": "Render at (192, 256) + inflate-time bilinear upsample to (1164, 874)",
       "violates": ["SA03_segnet_stride_2_stem", "SA05_inflate_at_camera_native", "SA17_rgb_format"],
-      "math_basis": "Both scorers internally interpolate to (384, 512). The (1164, 874) intermediate is lossy compute. SegNet stride-2 stem already discards half resolution. At (192, 256), 16× pixel reduction; if SegNet 5-class argmax + PoseNet 6-dim pose preserved, ZERO d_seg / d_pose cost.",
-      "predicted_delta_S": [-0.010, -0.030],
+      "math_basis": "Hypothesis only until resizing-chain ablation: both scorers internally interpolate to (384, 512), while current standalone inflate upsamples (192, 256) to camera resolution (874, 1164) before scorer preprocessing. SegNet stride-2 may make the lower-resolution path cheap, but bilinear-vs-bicubic and 192→384 vs 192→874/1164→384 are not yet equivalent evidence.",
+      "predicted_delta_S": null,
+      "required_probe": "No-train A1 resizing-chain ablation: direct 192→384, 192→874/1164→384, bilinear/bicubic, exact SegNet/PoseNet component deltas.",
       "cost_estimate_usd": [5, 15],
       "wall_clock_h": [2, 6],
       "composition_with_a1": "STACKS — A1's renderer just outputs at lower res; sidecar still applies",
@@ -260,8 +261,9 @@
       "id": "NSCS03_END_TO_END_DIFFERENTIABLE_CODEC",
       "name": "Joint differentiable train through Ballé-hyperprior + STE entropy",
       "violates": ["SA04_archive_zip", "SA07_compress_inflate_split", "SA09_canonical_loss"],
-      "math_basis": "Rate term `bits = -log2(p_y(y))` differentiable through scale hyperprior per Ballé 2018. STE through quantizer makes archive byte budget a SCALAR LOSS TERM. Quantize→archive→dequant→inflate roundtrip drift VANISHES. Ballé empirical 5-15% rate savings; with cooperative-receiver loss could compound to 15-40%.",
-      "predicted_delta_S": [-0.020, -0.050],
+      "math_basis": "Rate term `bits = -log2(p_y(y))` is differentiable through scale hyperprior per Ballé 2018, but the current scaffold has only synthetic MSE+rate smoke and a council-gated full path. Quantize→archive→dequant→inflate closure and proxy-bytes agreement remain required before this row can rank by predicted score.",
+      "predicted_delta_S": null,
+      "required_probe": "Closure test comparing differentiable rate proxy, actual packed bytes, inflate output, and scorer roundtrip on the same candidate archive.",
       "cost_estimate_usd": [40, 120],
       "wall_clock_h": [12, 36],
       "composition_with_a1": "FRESH SUBSTRATE — joint codec replaces both A1 base + sidecar",
@@ -297,7 +299,7 @@
       "name": "NO neural codec; deterministic byte-level encoder + Quantizr LUT + entropy coder",
       "violates": ["SA09_canonical_loss", "SA10_tier_1_uniform", "SA14_EMA_uniform", "SA15_modal_dispatch"],
       "math_basis": "Per Carmack-Hotz Symposium #5: contest scorer is just 100*seg + sqrt(10*pose) + 25*rate. If SegNet 5-class argmax + PoseNet 6-dim are determined by LARGE-SCALE structure (which they are per FastViT-T12 + EfficientNet-B2 stride-2 stem), then a hand-rolled coder targeting ONLY the structural bytes can win. Ditch the neural priors.",
-      "predicted_delta_S": [-0.05, +0.10],
+      "predicted_delta_S": [-0.05, 0.10],
       "cost_estimate_usd": [5, 20],
       "wall_clock_h": [4, 12],
       "composition_with_a1": "FRESH — replaces neural baseline entirely",
@@ -333,7 +335,7 @@
       "name": "Archive contains scorer ACTIVATIONS + tiny RGB residual; inflate reconstructs frames",
       "violates": ["SA17_rgb_format", "SA06_strict_scorer_rule (partial)", "SA09_canonical_loss"],
       "math_basis": "PoseNet+SegNet activations contain ALL the info contest cares about. Inflate ships scorer-class activations (rate-coded) + RGB-reconstruction-from-activations head (~1KB). Contest re-scores the reconstructed RGB. If reconstruction-from-activations fidelity is high enough, archive pays bytes only for the activations not the RGB.",
-      "predicted_delta_S": [-0.010, +0.10],
+      "predicted_delta_S": [-0.010, 0.10],
       "cost_estimate_usd": [40, 100],
       "wall_clock_h": [24, 72],
       "composition_with_a1": "FRESH",
@@ -345,7 +347,7 @@
       "name": "Pure wavelet codec (Daubechies db4) + arithmetic coder; no neural net at all",
       "violates": ["SA09_canonical_loss", "SA14_EMA", "SA10_tier_1_uniform"],
       "math_basis": "Per Symposium Daubechies-Mallat exchange: wavelet basis is OPTIMAL for natural-image compression at the rate-distortion frontier. JPEG2000 at 0.1bpp compares competitively to neural methods. Comma2k19 video frames are natural; multi-scale wavelet basis with arithmetic coding may match HNeRV-class at a fraction of the byte budget.",
-      "predicted_delta_S": [-0.005, +0.05],
+      "predicted_delta_S": [-0.005, 0.05],
       "cost_estimate_usd": [3, 10],
       "wall_clock_h": [2, 8],
       "composition_with_a1": "FRESH",
@@ -355,7 +357,7 @@
   ],
 
   "stack_of_stacks_composition_matrix": {
-    "description": "NxN matrix of pairwise composition predictions. Cell (i,j) = predicted compose-effect when shift i is stacked with shift j. STRONG_STACK = mutually orthogonal, additive ΔS expected; WEAK_STACK = partial overlap, expected ~50% additive; CONFLICT = same nullspace targeted, expected ~0 marginal; FRESH = both replace base, must pick one.",
+    "description": "NxN matrix of pairwise composition hypotheses. These cells are NOT additive score evidence. STRONG_STACK means the pair is worth a factorial interaction probe; shared scorer-resize, renderer-capacity, and rate-budget resources can couple the deltas.",
     "matrix": [
       ["", "NSCS01", "NSCS02", "NSCS03", "NSCS04", "NSCS05", "NSCS06", "NSCS07", "NSCS08", "NSCS09", "NSCS10"],
       ["NSCS01", "-", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "STRONG_STACK", "FRESH", "STRONG_STACK", "STRONG_STACK", "WEAK_STACK", "FRESH"],
@@ -370,11 +372,11 @@
       ["NSCS10", "FRESH", "STRONG_STACK", "FRESH", "FRESH", "WEAK_STACK", "STRONG_STACK", "WEAK_STACK", "FRESH", "FRESH", "-"]
     ],
     "top_5_stack_combinations_by_strong_stack_count": [
-      {"combo": "NSCS02 + NSCS01 + NSCS07", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.030, -0.080], "rationale": "Downsample (NSCS02) + nullspace split (NSCS01) + per-frame routing (NSCS07) all hit the SegNet-frame[0]-nullspace + low-res-blindspot orthogonally"},
-      {"combo": "NSCS01 + NSCS02 + NSCS08", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.025, -0.080], "rationale": "Long-context training (NSCS08) + downsample (NSCS02) + nullspace split (NSCS01) leave score-component orthogonality intact"},
-      {"combo": "NSCS03 + NSCS02 + NSCS01", "strong_stack_pairs": 3, "predicted_combined_delta_S": [-0.040, -0.090], "rationale": "End-to-end joint codec (NSCS03) + downsample (NSCS02) + nullspace split (NSCS01) lets gradient route bytes optimally"},
-      {"combo": "NSCS05 + NSCS01 + NSCS02 + NSCS07", "strong_stack_pairs": 5, "predicted_combined_delta_S": [-0.025, -0.075], "rationale": "Rate-ladder (NSCS05) over per-pair-routed (NSCS07) over nullspace-split (NSCS01) over downsampled (NSCS02) — multi-axis composition"},
-      {"combo": "NSCS06 + NSCS10 + NSCS02", "strong_stack_pairs": 2, "predicted_combined_delta_S": [-0.005, +0.060], "rationale": "Pure-wavelet (NSCS10) + strip-everything (NSCS06) + downsample (NSCS02) is the radical-Daubechies-Carmack-Hotz axis"}
+      {"combo": "NSCS02 + NSCS01 + NSCS07", "strong_stack_pairs": 3, "predicted_combined_delta_S": null, "interaction_probe_required": true, "rationale": "Downsample (NSCS02) + nullspace split (NSCS01) + per-frame routing (NSCS07) may share SegNet-frame[0]-nullspace + low-res-blindspot resources; use factorial interaction probe before ranking."},
+      {"combo": "NSCS01 + NSCS02 + NSCS08", "strong_stack_pairs": 3, "predicted_combined_delta_S": null, "interaction_probe_required": true, "rationale": "Long-context training (NSCS08) + downsample (NSCS02) + nullspace split (NSCS01) may couple through shared renderer capacity and scorer resize paths."},
+      {"combo": "NSCS03 + NSCS02 + NSCS01", "strong_stack_pairs": 3, "predicted_combined_delta_S": null, "interaction_probe_required": true, "rationale": "End-to-end joint codec (NSCS03) + downsample (NSCS02) + nullspace split (NSCS01) is the highest-EV stack hypothesis, but additive deltas require KKT/factorial validation."},
+      {"combo": "NSCS05 + NSCS01 + NSCS02 + NSCS07", "strong_stack_pairs": 5, "predicted_combined_delta_S": null, "interaction_probe_required": true, "rationale": "Rate-ladder (NSCS05) over per-pair-routed (NSCS07) over nullspace-split (NSCS01) over downsampled (NSCS02) needs shared-resource accounting before priority ranking."},
+      {"combo": "NSCS06 + NSCS10 + NSCS02", "strong_stack_pairs": 2, "predicted_combined_delta_S": null, "interaction_probe_required": true, "rationale": "Pure-wavelet (NSCS10) + strip-everything (NSCS06) + downsample (NSCS02) is a radical axis; no additive score band is claimed."}
     ]
   },
 
@@ -403,12 +405,12 @@
   ],
 
   "wire_in_six_hooks_per_catalog_125": {
-    "sensitivity_map": "ACTIVE — every NSCS includes math_basis tracing to score-formula derivative",
-    "pareto_constraint": "ACTIVE — composition matrix encodes Pareto cells; STRONG/WEAK/CONFLICT cells map to feasibility region",
-    "bit_allocator_hook": "ACTIVE — NSCS05 rate-ladder + NSCS18 mixed-precision are direct bit-allocator candidates",
-    "cathedral_autopilot_dispatch_hook": "ACTIVE — op_routables_for_next_dispatch_wave is the autopilot consumer surface",
+    "sensitivity_map": "DESIGN_ONLY — math_basis text exists, but no CandidateRow/sensitivity artifact is emitted yet",
+    "pareto_constraint": "DESIGN_ONLY — composition matrix is an interaction-probe queue, not a Pareto-feasible ranking input",
+    "bit_allocator_hook": "DESIGN_ONLY — NSCS05 rate-ladder + mixed-precision ideas are candidates, not wired allocator rows",
+    "cathedral_autopilot_dispatch_hook": "DESIGN_ONLY — op_routables_for_next_dispatch_wave must be converted to real CandidateRow/ranking inputs with score_claim=false before any autopilot consumption",
     "continual_learning_posterior_update": "N/A_TEXT_ONLY — research-design memo; no empirical anchor produced; reactivates when first Tier 1 dispatch lands",
-    "probe_disambiguator": "ACTIVE — NSCS06 high-variance + NSCS09 high-variance + NSCS10 medium-variance are explicit probe candidates"
+    "probe_disambiguator": "QUEUED — explicit probe candidates exist, but probe scripts/artifacts must land before ACTIVE"
   },
 
   "sister_subagent_ownership_per_catalog_230": {

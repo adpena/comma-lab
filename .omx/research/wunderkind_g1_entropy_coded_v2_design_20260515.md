@@ -76,10 +76,12 @@ The class indices ship as bytes computed at compress-time (SegNet runs on GT
 frame, FREE per "compress-side scorer use is FREE" non-negotiable). Inflate
 runtime only reads the bytes and runs the AC decoder.
 
-## 2. Predicted ΔS
+## 2. Rate-side planning hypothesis
 
-`[prediction; first-principles-bound]` ΔS ∈ [-0.005, -0.015] vs A1 baseline
-0.1928 [contest-CPU 1to1].
+Score movement is unranked until full-frame `inflate.sh` mutation proof and
+paired CPU+CUDA exact eval exist. The current scaffold is a lossy latent
+transform because sigma affects reconstructed latents at inflate time; the
+rate-side calculation below is a planning hypothesis, not a score claim.
 
 ### 2.1 Bit-savings derivation
 
@@ -100,10 +102,13 @@ runtime only reads the bytes and runs the AC decoder.
 
 ### 2.2 Distortion-axis contribution
 
-Class-conditional Gaussian prior shapes residual statistics during training.
-Distortion-axis contribution is EXPECTED to be near-zero (the same A1
-decoder is used; per-pair sigma only affects the rate side). Predicted
-distortion-axis ΔS ≈ 0; rate-axis dominates predicted band.
+Implementation note after adversarial review: the current scaffold encodes
+class indices with the local entropy path and carries direct int8 residuals;
+inflate multiplies residuals by the decoded sigma table so byte mutation affects
+the reconstructed latent. That is a **lossy latent transform**, not a proven
+rate-only entropy-model improvement. Distortion-axis contribution is therefore
+unknown until paired exact eval; near-zero distortion is a hypothesis, not a
+claim.
 
 ### 2.3 Haircut + uncertainty
 
@@ -166,8 +171,8 @@ Z3_G1_ENTROPY_CODED_V2_CONTRACT = SubstrateContract(
     no_op_detector_planned=True,  # byte-mutation smoke per Catalog #139
     # 2.3 Operational mechanism (3 per Catalog #220)
     archive_bytes_added=None,  # NET SAVINGS not addition (replaces A1 15387B with ~1986B)
-    score_improvement_mechanism_status="OPERATIONAL",  # parser/decoder bytes are consumed
-    runtime_overlay_consumed=True,  # entropy-coded sigma/class bytes feed AC decoder
+    score_improvement_mechanism_status="RESEARCH_ONLY",  # full-frame proof missing
+    runtime_overlay_consumed=False,  # parser/intermediate proof only
     # 2.4 Recipe schema (8)
     recipe_smoke_only=True,
     recipe_research_only=True,
@@ -225,13 +230,13 @@ inflate_consumer_function = [
     "tac.substrates.z3_g1_entropy_coded_v2.inflate_consumer._class_conditional_arithmetic_decode",
 ]
 
-byte_mutation_smoke_passes = "verify via tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py per Catalog #139; mutates distinguishing bytes and records semantic_output_mutation evidence separately from parser_bound_consumption (extincts F1 phantom-class overclaim)"
+byte_mutation_smoke_passes = "verify via tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py per Catalog #139; mutates distinguishing bytes and records parser_intermediate_mutation evidence separately from parser_bound_consumption (extincts F1 phantom-class overclaim without claiming full-frame output proof)"
 ```
 
 ## 6. Reactivation gate
 
 Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog #220:
-v2 declares parser/decoder consumption but stays `research_only=true` and
+v2 declares parser/intermediate consumption but stays `research_only=true` and
 `dispatch_enabled=false` until a real `_full_main`, remote driver,
 byte-closed export, and paired exact-eval custody land. This claim is
 structurally verified by:
@@ -284,7 +289,8 @@ contest-score promotion.
 - `feedback_z3_g1_full_cpu_paired_aborted_codex_f1_empirically_confirmed_landed_20260515.md`
   (the abort + 3 reactivation criteria, all 3 satisfied by this design).
 - `feedback_wunderkind_visionary_scorer_as_cooperative_receiver_paradigm_shift_20260515.md`
-  (Wunderkind G1 SUBSTITUTION-1:1 spec — predicted ΔS [-0.005, -0.015]).
+  (Wunderkind G1 SUBSTITUTION-1:1 spec — rate-side planning hypothesis only
+  until paired exact eval).
 - `feedback_contest_compliance_canonical_constraints_for_wunderkind_and_all_subagents_NON_NEGOTIABLE_20260515.md`
   (contest rule #2 — compress-side scorer use is FREE; preserved).
 - CLAUDE.md Catalog #124 (archive grammar at design time — all 8 fields

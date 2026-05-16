@@ -85,7 +85,11 @@ The three terms attack three orthogonal failure modes of standard MSE training:
 | DIE-weighted | Focuses gradient where the scorer is most sensitive (per-image, adaptive) |
 | KL distill | Replaces hard argmax matching with soft-distribution matching at SegNet boundaries |
 
-Empirically the three should ADD (not multiply) per Boyd convex-combination geometry: no antagonism is expected because they touch DIFFERENT axes of the loss landscape (spatial weighting × gradient direction × output-layer matching).
+Empirically the three are a per-substrate composition hypothesis, not an
+additive guarantee. They touch different loss surfaces (spatial weighting,
+gradient direction, output-layer matching), but shared scorer gradients and
+batching can couple them. Report measured per-substrate results rather than
+summing gains across non-composed submissions.
 
 ---
 
@@ -128,7 +132,9 @@ The helper honors the canonical scorer-preprocess discipline (Catalog #164: `sco
 Per the symposium Phase D #5 row + the cost-band-calibration posterior:
 
 - **Per-substrate**: ΔS ∈ [−0.005, −0.020] when α/β/γ are tuned via 100ep smoke per substrate
-- **Substrate-wide rollout** (15+ active substrates × $30-60 retraining each = $450-$900 envelope): ΔS_aggregate ∈ [−0.05, −0.20] when the best-per-substrate gains compose (per Boyd Tier C composition matrix; not all substrates will land all of their per-substrate gain because of within-class saturation per Catalog #219 / #227, but the bottom-half of the substrate inventory has not been within-class-saturated at landing)
+- **Substrate-wide rollout**: portfolio result TBD. Do not sum per-substrate
+  gains across non-composed submissions; use the best measured candidate per
+  exact-eval axis and record portfolio posterior updates separately.
 - **NOT predicted**: contest-frontier breakthrough. This is a SUBSTRATE-AGNOSTIC bolt-on; it cannot turn a within-class-saturated substrate (e.g., A1 at 99.29% MDL density per Z1 ablation) into a class-shift winner. For class-shift gains see C6 / Z4 / Z5 / time-traveler / DARTS-SuperNet lanes.
 
 ---

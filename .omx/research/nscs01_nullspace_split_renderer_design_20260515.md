@@ -5,7 +5,8 @@
 - **Author**: subagent NSCS01-BUILD-NULLSPACE-SPLIT-RENDERER-20260515
 - **Operator directive**: ASSUMPTIONS-CHALLENGE-AUDIT NSCS01 — exploit SegNet
   last-frame-only assumption (`x[:, -1, ...]` at `upstream/modules.py:108`)
-- **Predicted band**: `ΔS [-0.015, -0.045]` `[mathematical-derivation; first-principles-bound]`
+- **Predicted band**: unranked until `tools/probe_nscs01_head0_arch_disambiguator.py`
+  emits frame-0/frame-1 PoseNet gradient norms and head0 CNN-vs-MLP evidence.
 - **Smoke envelope**: `$15-35 [contest-CUDA] Modal A100 / T4`
 - **Mode**: UNIQUE-AND-COMPLETE-PER-METHOD (per the standing directive)
 
@@ -58,12 +59,10 @@ The split-head exploit:
 * `frame_1_head` — optimized for **both** SegNet (last-frame slice) AND
   PoseNet (frame-1 contribution). Higher-detail / canonical architecture.
 
-Predicted byte savings: `~7-15%` of total renderer params can move from
-frame_0 path to frame_1 path or be deleted entirely. At PR101 frontier
-operating point (`pose_avg ~ 3.4e-5`) the pose marginal sensitivity is
-~2.71x SegNet's per CLAUDE.md "SegNet vs PoseNet importance —
-operating-point dependent" — so the freed bytes have positive marginal
-expected score impact.
+Hypothesized byte savings: `~7-15%` of total renderer params might move from
+frame_0 path to frame_1 path or be deleted entirely, but this is not evidence
+until the probe measures PoseNet frame sensitivity and a short ablation compares
+head0 CNN-vs-MLP variants on the same archive/runtime axis.
 
 ## 3. Architecture (UNIQUE — split path)
 
@@ -200,7 +199,7 @@ NSCS01 is structurally orthogonal to:
 | Bit-allocator hook | `per_head_bit_width_v1` (different bit-widths for HEAD0 / HEAD1) |
 | Cathedral autopilot dispatch hook | `lane_class=substrate_engineering` registered token |
 | Continual-learning posterior update | `paired_axis` anchor on smoke completion |
-| Probe-disambiguator | `head0_arch_disambiguator` — could be (a) coarse small CNN OR (b) MLP over coarse-grid coordinates; ship both interpretations |
+| Probe-disambiguator | `tools/probe_nscs01_head0_arch_disambiguator.py` — records required frame-0/frame-1 PoseNet gradient and head0 CNN-vs-MLP measurements before dispatch ranking |
 
 ## 10. Reactivation criteria (per "KILL/FALSIFIED is LAST RESORT")
 
@@ -223,8 +222,9 @@ per CLAUDE.md "Apples-to-apples evidence discipline". No MPS. No proxy.
 * CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" lessons
   L1-L13 (this substrate honors all 13 inviolable lessons)
 * CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
-  (this substrate is COMPLETE: trainer's `_full_main` will be implemented;
-  for the L1 SCAFFOLD landing the `_full_main` is council-gated per Catalog #220)
+  (this substrate is research-only at L1: trainer's `_full_main` raises
+  `NotImplementedError` until the head0 probe, real-pair training/export path,
+  and paired auth-eval custody land)
 * CLAUDE.md "FORBIDDEN PATTERNS" — none triggered
 * `.omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json`
   (NSC01 entry SA02_segnet_only_last_frame)

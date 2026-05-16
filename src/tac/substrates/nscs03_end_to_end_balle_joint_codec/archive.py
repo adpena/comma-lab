@@ -145,9 +145,12 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     raw = brotli.decompress(blob)
-    sd = torch.load(io.BytesIO(raw), weights_only=False)
+    sd = torch.load(io.BytesIO(raw), weights_only=True)
     if not isinstance(sd, dict):
-        raise ValueError("state_dict blob did not unpickle to a dict")
+        raise ValueError("state_dict blob did not load to a dict")
+    for key, value in sd.items():
+        if not isinstance(key, str) or not isinstance(value, torch.Tensor):
+            raise ValueError("state_dict blob must contain only str -> Tensor entries")
     return sd
 
 

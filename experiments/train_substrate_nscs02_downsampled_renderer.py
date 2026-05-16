@@ -23,18 +23,14 @@ Per Catalog #226 auth_eval is invoked through the canonical
 ``gate_auth_eval_call`` helper at the end of full training (NOT
 hand-rolled subprocess.run).
 
-Per Catalog #220 the substrate's `score_improvement_mechanism_status`
-is OPERATIONAL: the inflate-time bicubic upsample is the score-
-relevant runtime consumption that converts the downsampled-renderer
-bytes into score-relevant frame-pixels.
+Per Catalog #220 the substrate remains research-only until the resizing-chain
+ablation and paired component deltas prove the inflate-time upsample is
+score-relevant under the actual evaluator path.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import math
-import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -53,11 +49,12 @@ from tac.substrates.nscs02_downsampled_renderer.archive import (
     pack_nscs02_archive,
     parse_nscs02_archive,
 )
+from tac.substrates.nscs02_downsampled_renderer.registered_substrate import (
+    NSCS02_DOWNSAMPLED_RENDERER_CONTRACT,  # noqa: F401  (forces contract validation)
+)
 from tac.substrates.nscs02_downsampled_renderer.score_aware_loss import (
     SCORER_HW,
-    compute_nscs02_score_aware_loss,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
@@ -73,7 +70,7 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "rationale": (
             "Path to the contest video `upstream/videos/0.mkv` decoded via "
             "pyav into per-pair frames; required for non-smoke training "
-            "(non-smoke is contest-CUDA target per Catalog #220 OPERATIONAL)"
+            "(non-smoke remains research-only until resizing-chain ablation)"
         ),
         "default": str(DEFAULT_VIDEO_PATH),
         "required_input_file": True,
@@ -245,9 +242,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "param_count": decoder.parameter_count(),
         "archive_bytes": len(archive_bytes),
         "smoke_status": "GREEN",
-        "score_improvement_mechanism_status": "OPERATIONAL",
-        "operational_overlay": True,
-        "runtime_overlay_consumed": True,
+        "score_improvement_mechanism_status": "RESEARCH_ONLY",
+        "operational_overlay": False,
+        "runtime_overlay_consumed": False,
     }
     (output_dir / "smoke_stats.json").write_text(json.dumps(smoke_stats, indent=2))
     print("[nscs02-smoke] DONE")
@@ -259,10 +256,10 @@ def _full_main(args: argparse.Namespace) -> int:
 
     Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
     non-negotiable + Catalog #220 + Catalog #240 the L1 SCAFFOLD landing
-    declares ``score_improvement_mechanism_status=OPERATIONAL`` (the
-    inflate-time upsample is the operational consumption); however the
-    full $5-15 Modal T4 dispatch is council-gated pending the operator's
-    smoke-before-full review per Catalog #167.
+    declares ``score_improvement_mechanism_status=RESEARCH_ONLY`` until the
+    resizing-chain ablation and paired component deltas land. The full $5-15
+    Modal T4 dispatch is council-gated pending operator smoke-before-full
+    review per Catalog #167.
 
     The recipe at
     ``.omx/operator_authorize_recipes/substrate_nscs02_downsampled_renderer_modal_t4_dispatch.yaml``
@@ -276,7 +273,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "recipe at .omx/operator_authorize_recipes/substrate_nscs02_downsampled_"
         "renderer_modal_t4_dispatch.yaml remains research_only=true and "
         "dispatch_enabled=false until full train/export/auth-eval custody lands. "
-        "Predicted ΔS [-0.010, -0.030] vs A1 baseline remains a prediction."
+        "Score movement remains unranked until the resizing-chain ablation lands."
     )
 
 

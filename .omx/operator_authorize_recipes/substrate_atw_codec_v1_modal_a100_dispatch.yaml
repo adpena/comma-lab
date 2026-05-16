@@ -31,15 +31,16 @@ summary: |
   probe-disambiguator regime sweep (Catalog #125 hook #6) that arbitrates
   the four hypotheses.
 
-  Predicted ΔS [-0.025, -0.050] vs A1 baseline 0.19285 [contest-CPU];
-  predicted score band [0.18, 0.21] [prediction; first-principles-bound
-  from IB+WZ theory]. CONSERVATIVE per typical 2-3x compression of
-  analytical bounds.
+  Score movement is unranked until the entropy probe and paired smoke land.
+  The only grounded V1 rate-side bound from the stated latent savings is
+  approximately -0.0027 to -0.005; [0.18, 0.21] remains an exploratory
+  planning envelope, not a dispatch-ranking claim.
 
   STACKS on Z4-V2 (β-only branch is Z4 verbatim) and on A1 substrate
   (encoder/decoder/latent architecture inherited). Per Boyd's convex-
-  feasibility lens, ATW feasibility region is a SUBSET of Z3+A1 polytope —
-  any ATW Pareto-optimal point dominates Z3+Z4 at the same operating point.
+  feasibility lens, ATW feasibility region is a SUBSET of Z3+A1 polytope;
+  this does not imply dominance absent a measured lower-score point on the
+  same archive/runtime/eval axis.
 
 platform: modal
 gpu: "${MODAL_GPU:-A100}"
@@ -69,10 +70,10 @@ cost_band:
   gpu_key: A100
 
 predicted_score_target: null
-predicted_band: [0.18, 0.21]
+predicted_band: null
 smoke_score_band: null  # research-only at landing; no smoke score band claimed
-predicted_delta: "[-0.025, -0.050] vs A1 baseline 0.19285 [contest-CPU] [prediction; first-principles-bound from IB+WZ theory]"
-predicted_delta_basis: ".omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md §1 (3-paper math composition)"
+predicted_delta: "unranked; grounded latent-only rate-side bound is approximately [-0.0027, -0.005] if H(latent | scorer_class) probe confirms 30-50% latent-byte savings"
+predicted_delta_basis: ".omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md §1 (requires H(latent | scorer_class) probe before paid lift)"
 literature_anchor: |
   Atick & Redlich (1990) "Towards a theory of early visual processing"
     Neural Computation 2(3):308-320 (cooperative-receiver theorem);
@@ -113,7 +114,7 @@ risk: |
 
 envelope_status: "research_only_design_time_at_landing; $5-15 envelope upon Phase 2 council approval"
 
-remote_driver: scripts/remote_lane_substrate_atw_codec_v1.sh  # planned at Phase 2 lift
+remote_driver: null  # planned placeholder; dispatch_enabled=false until driver exists
 timeout_hours: 2.0
 
 required_input_files:
@@ -121,7 +122,7 @@ required_input_files:
     default_path: upstream/videos/0.mkv
 
 modal:
-  lane_script: scripts/remote_lane_substrate_atw_codec_v1.sh  # planned at Phase 2 lift
+  lane_script: null  # planned placeholder; dispatch_enabled=false until driver exists
   cost_band_trainer: experiments/train_substrate_atw_codec_v1.py
   cost_band_epochs: 200
   cost_band_batch_size: 4

@@ -11,9 +11,9 @@ function, which copies the substrate package + the canonical
 ``_shared/inflate_runtime.py`` helper into ``submission_dir/src/`` so this
 shim's ``sys.path.insert`` reaches the vendored package.
 
-For local development this submissions/ shim defers to the live src/ tree;
-for contest dispatch the trainer-emitted submission_dir/ shim is the actual
-artifact.
+This checked-in shim is a research/dev surface. A promoted packet must vendor
+``src/`` beside this file; falling back to the repository tree would not be a
+self-contained contest submission.
 """
 from __future__ import annotations
 
@@ -21,14 +21,13 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-# Try vendored src/ first (contest-dispatch layout); fall back to repo src/.
 vendored_src = HERE / "src"
-if vendored_src.is_dir():
-    sys.path.insert(0, str(vendored_src))
-else:
-    repo_src = HERE.parent.parent / "src"
-    if repo_src.is_dir():
-        sys.path.insert(0, str(repo_src))
+if not vendored_src.is_dir():
+    raise RuntimeError(
+        "NSCS01 submission runtime is not packaged: missing vendored src/. "
+        "Use the trainer-emitted submission_dir artifact before any contest run."
+    )
+sys.path.insert(0, str(vendored_src))
 
 from tac.substrates.nscs01_nullspace_split_renderer.inflate import main_cli  # noqa: E402
 

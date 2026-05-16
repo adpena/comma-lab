@@ -63,11 +63,12 @@ them per CLAUDE.md "Contest compliance"; inflate-time predict-from-S happens
 without re-loading scorer weights — the encoder bakes the prediction into the
 tiny `predict(t | scorer_class_prior)` head shipped in the archive).
 
-**Wyner-Ziv gain estimate** for dashcam + scorer: the contest scorer's class
-priors collapse most of the dashcam pixel diversity into ~5 SegNet classes +
-6-dim pose. The conditional entropy `H(latent | scorer_class)` is empirically
-~30-50% lower than unconditioned `H(latent)`. So the ATW codec can save
-30-50% of the per-pair latent rate at fixed scorer-distortion.
+**Wyner-Ziv gain estimate** for dashcam + scorer is currently a hypothesis, not
+a measured artifact. The contest scorer's class priors may collapse useful
+latent diversity into ~5 SegNet classes + 6-dim pose, but the required first
+probe is to measure `H(latent | scorer_class)` on A1/PR101 latents before any
+paid ATW lift. Until that probe lands, ATW must not claim a 30-50% conditional
+entropy reduction.
 
 ### Composition: the ATW Lagrangian
 
@@ -114,7 +115,8 @@ happens at three byte/training surfaces:
    where `z_predicted = predict(t | scorer_class_prior)` is computed at
    compress-time and shipped as a TINY (~1 KB) decoder-hint side-info, and
    `z_residual = z - z_predicted` is what the archive actually carries (Wyner-Ziv).
-   The bit savings come from `z_residual` having ~30-50% lower entropy than `z`.
+   The bit savings require `z_residual` to have lower entropy than `z`; the
+   first required probe measures whether that reduction exists on A1 latents.
 3. **Archive grammar**: ATW1 magic (`b"ATW1"`); meta carries
    `atw_codec_meta` provenance tag with κ_IB/λ_WZ/λ_pixel + literature anchors
    + Wyner-Ziv side-info head sha256 (scorer-class-prior precomputed table).
@@ -130,23 +132,23 @@ via a small lookup — no scorer load at inflate.
 Per symposium line 760 + Tao analytical floor (line 595): IB+WZ theory gives
 a closed-form upper bound on the rate gain. Empirical estimate composed from:
 
-* **Rate gain** (Wyner-Ziv side-info): `-0.020 to -0.040` on the rate-axis
-  (= 25 · (newrate - oldrate) / N_norm). For A1 archive (179 KB),
-  if WZ saves 30% of latent bytes (~14 KB → ~10 KB latents), rate-axis ΔS ≈ -0.0027.
-  If WZ saves 50% (~14 KB → ~7 KB), rate-axis ΔS ≈ -0.005. Per-frame benefit
-  scales with latent fraction; predicted upper bound ~-0.020 if WZ generalizes
-  to encoder/decoder weight prediction too.
+* **Rate gain** (Wyner-Ziv side-info): for A1 archive (179 KB), if WZ saves
+  30% of latent bytes (~14 KB -> ~10 KB latents), rate-axis ΔS ≈ -0.0027. If
+  WZ saves 50% (~14 KB -> ~7 KB), rate-axis ΔS ≈ -0.005. Larger gains require
+  measured extension to encoder/decoder weight prediction and are not claimed
+  by the V1 scaffold.
 * **Distortion gain** (Atick-Redlich): `-0.005 to -0.010` on combined
   100·d_seg + sqrt(10·d_pose), per Z4 council prediction. Already the Z4
   hypothesis; ATW inherits.
-* **Total predicted ΔS vs A1 baseline 0.19285**: `-0.025 to -0.050`, giving
-  predicted band `[0.143, 0.168]`. CONSERVATIVE band per "[prediction;
-  first-principles-bound]" tagging convention: `[0.18, 0.21]` accounts for
-  empirical compression of analytical bounds typically observed (factor ~2-3x).
+* **Total score movement**: unranked until the entropy probe and paired smoke
+  land. The only grounded V1 rate-side bound from stated latent savings is
+  approximately `-0.0027` to `-0.005`; the `[0.18, 0.21]` row is an exploratory
+  planning envelope, not a dispatch-ranking claim.
 
-These predictions are `[prediction; first-principles-bound from IB+WZ theory]`
-per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable. Empirical
-validation via the smoke + paired full-anchor cycle below.
+These are `[hypothesis; requires entropy probe]` per CLAUDE.md
+"Apples-to-apples evidence discipline" non-negotiable. Empirical validation
+starts with `H(latent | scorer_class)` on A1 latents, then smoke + paired
+full-anchor custody.
 
 ### Composition with existing primitives — STACKS on Z4-V2 + A1
 
@@ -161,10 +163,10 @@ in two ways:
    can stack on Z3's hyperprior too (substitution-1:1 per Wunderkind G1).
 
 Pareto polytope intersection: ATW adds two new constraints (κ_IB ≤ ε_IB,
-λ_WZ residual entropy ≤ ε_WZ) that must be intersected with Z3+A1 rate/distortion
-constraints. Per Boyd's convex feasibility lens, the ATW feasibility region
-is a SUBSET of Z3's, so any ATW Pareto-optimal point dominates Z3 + Z4 at
-the same operating point.
+λ_WZ residual entropy ≤ ε_WZ) that must be intersected with Z3+A1
+rate/distortion constraints. A subset feasibility region does not imply
+dominance by itself; dominance requires an empirical point with lower contest
+score under the same archive/runtime/eval axis.
 
 ---
 

@@ -70,11 +70,11 @@ research_only: true (export-first design is present, but the promoted
 canary_status: ``independent_substrate`` (structurally distinct from
   HNeRV-family AND from sister D4 frame-0-derivation)
 
-Predicted score band (NOT a claim):
-- ``ΔS [-0.015, -0.045] [mathematical-derivation; first-principles-bound]``
-  vs A1 0.193 baseline → predicted contest band ``[0.148, 0.178]``.
+Predicted score band: unranked until
+``tools/probe_nscs01_head0_arch_disambiguator.py`` records frame-0/frame-1
+PoseNet sensitivity and head0 CNN-vs-MLP evidence.
 
-Smoke envelope: ``$15-35 [contest-CUDA] Modal A100 / T4``.
+Smoke envelope: TBD after probe; recipe is research-only/dispatch-disabled.
 
 Cross-references
 ----------------

@@ -7,7 +7,7 @@ dispatch_enabled: false
 dispatch_blockers:
   - full_main_raises_NotImplementedError_until_smoke_review_and_export_auth_eval_path_lands
   - remote_driver_missing_or_unverified
-summary: NSCS02 downsampled-renderer + inflate-upsample first-anchor dispatch on Modal T4 (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; HIGHEST EV / LOWEST RISK individual shift; predicted ΔS [-0.010, -0.030] vs A1 baseline at $5-15).
+summary: NSCS02 downsampled-renderer + inflate-upsample research-only scaffold on Modal T4 (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; score movement unranked until resizing-chain ablation and paired smoke evidence land).
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -28,12 +28,13 @@ cost_band:
   estimated_cost_usd_band: [5, 15]
 
 predicted_score_target: null
-predicted_delta: "ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry: ΔS [-0.010, -0.030] on A1 0.192847 baseline → [contest-CPU prediction] [0.162847, 0.182847]"
-predicted_delta_basis: ".omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE"
+predicted_delta: "unranked until no-train A1 resizing-chain ablation compares direct 192->384, 192->874/1164->384, bilinear/bicubic, and paired component deltas"
+predicted_delta_basis: ".omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE required_probe"
 literature_anchor: "Audit math basis: SegNet stride-2 stem (upstream/modules.py:103-109) discards half resolution before scoring; PoseNet preprocess interpolates to (384, 512); rendering at (192, 256) is the SCORE-INVISIBLE downscale floor."
 
 risk: |
-  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 risk classification: LOW.
+  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 risk classification is downgraded to
+  unranked until the resizing-chain ablation lands.
 
   The NSCS02 hypothesis: both contest scorers internally interpolate
   to (384, 512) inside `preprocess_input`. SegNet adds a stride-2
@@ -60,7 +61,7 @@ risk: |
 
 envelope_status: "FITS $20 envelope at p50 fallback (smoke $0.30 + full $5-15)"
 
-remote_driver: scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh
+remote_driver: null
 timeout_hours: 1.5
 
 required_input_files:
@@ -68,7 +69,7 @@ required_input_files:
     default_path: upstream/videos/0.mkv
 
 modal:
-  lane_script: scripts/remote_lane_substrate_nscs02_downsampled_renderer.sh
+  lane_script: null
   cost_band_trainer: experiments/train_substrate_nscs02_downsampled_renderer.py
   cost_band_epochs: 100
   cost_band_batch_size: 8
@@ -108,9 +109,10 @@ sentinel_files:
   - submissions/nscs02_downsampled_renderer/src/model.py
 
 notes: |
-  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 first-anchor dispatch — the
-  HIGHEST EV / LOWEST RISK individual score-lowering shift per the
-  audit's Operator-Routable #3 (TIER 1 NSCS02 cost band $5-15).
+  ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 first-anchor hypothesis. It remains
+  unranked until the resizing-chain ablation and paired component deltas
+  verify that the SegNet/PoseNet preprocessing assumptions survive the actual
+  inflate/eval path.
 
   Per the NEW operating mode UNIQUE-AND-COMPLETE-PER-METHOD (per
   `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md`):
@@ -119,13 +121,10 @@ notes: |
   + export contract bound into ONE coherent ~600 LOC package
   reviewable in 30 seconds, mirroring the PR101 model).
 
-  Catalog #220 OPERATIONAL declaration: `score_improvement_mechanism_status=OPERATIONAL`
-  + `runtime_overlay_consumed=true` + `operational_overlay=true` —
-  the inflate-time bicubic upsample is the score-relevant runtime
-  consumption that converts the smaller archive bytes into score-
-  relevant frame-pixels. Sister of A1's inflate-time upsample
-  (which already exists at 384 -> 874); NSCS02 deepens the
-  downsample to 192 to exploit SegNet's stride-2 invisibility.
+  Catalog #220 declaration is research-only until the resizing-chain ablation
+  proves the inflate-time bicubic upsample is score-relevant under the actual
+  scorer path. Sister of A1's inflate-time upsample (384 -> 874), but NSCS02's
+  deeper 192-resolution hypothesis remains unranked pending evidence.
 
   Catalog #240 (recipe-vs-trainer state consistency): trainer's
   `_full_main` raises `NotImplementedError` pending smoke-before-full

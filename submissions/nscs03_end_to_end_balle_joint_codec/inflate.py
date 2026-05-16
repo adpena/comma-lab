@@ -99,9 +99,12 @@ class _SynthesisTransform(nn.Module):
 
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     raw = brotli.decompress(blob)
-    sd = torch.load(io.BytesIO(raw), weights_only=False)
+    sd = torch.load(io.BytesIO(raw), weights_only=True)
     if not isinstance(sd, dict):
-        raise ValueError("state_dict blob did not unpickle to a dict")
+        raise ValueError("state_dict blob did not load to a dict")
+    for key, value in sd.items():
+        if not isinstance(key, str) or not isinstance(value, torch.Tensor):
+            raise ValueError("state_dict blob must contain only str -> Tensor entries")
     return sd
 
 
@@ -124,13 +127,20 @@ def parse_archive(blob: bytes):
     if version != 1:
         raise ValueError(f"unsupported schema version: {version}")
     p = NS03_HEADER_SIZE
-    ga_blob = blob[p:p + ga_len]; p += ga_len
-    gs_blob = blob[p:p + gs_len]; p += gs_len
-    ha_blob = blob[p:p + ha_len]; p += ha_len
-    hs_blob = blob[p:p + hs_len]; p += hs_len
-    eb_blob = blob[p:p + eb_len]; p += eb_len
-    main_blob = blob[p:p + main_lat_len]; p += main_lat_len
-    hyper_blob = blob[p:p + hyper_lat_len]; p += hyper_lat_len
+    ga_blob = blob[p:p + ga_len]
+    p += ga_len
+    gs_blob = blob[p:p + gs_len]
+    p += gs_len
+    ha_blob = blob[p:p + ha_len]
+    p += ha_len
+    hs_blob = blob[p:p + hs_len]
+    p += hs_len
+    eb_blob = blob[p:p + eb_len]
+    p += eb_len
+    main_blob = blob[p:p + main_lat_len]
+    p += main_lat_len
+    hyper_blob = blob[p:p + hyper_lat_len]
+    p += hyper_lat_len
     meta = json.loads(blob[p:p + meta_len].decode("utf-8"))
     import numpy as np
     q_main = torch.from_numpy(np.frombuffer(main_blob, dtype=np.int16).copy()).view(num_pairs, main_c, main_h, main_w)
@@ -138,7 +148,11 @@ def parse_archive(blob: bytes):
     main = _dequantize(q_main, float(meta["_main_quant_scale"]), float(meta["_main_quant_zero_point"]))
     hyper = _dequantize(q_hyper, float(meta["_hyper_quant_scale"]), float(meta["_hyper_quant_zero_point"]))
     return {
+        "encoder_sd": _deserialize_state_dict(ga_blob),
         "decoder_sd": _deserialize_state_dict(gs_blob),
+        "hyper_analysis_sd": _deserialize_state_dict(ha_blob),
+        "hyper_synthesis_sd": _deserialize_state_dict(hs_blob),
+        "entropy_sd": _deserialize_state_dict(eb_blob),
         "main_latents": main,
         "hyper_latents": hyper,
         "meta": meta,
@@ -154,10 +168,11 @@ def inflate_video(archive_bytes: bytes, dst_raw: Path, *, device: str) -> int:
     gdn_eps = float(cfg_meta.get("gdn_eps", 1e-6))
     output_h = int(cfg_meta["output_height"])
     output_w = int(cfg_meta["output_width"])
-    # Build only the decoder (other state_dicts ride along for completeness;
-    # we discard them at inflate-time per the L4 budget).
+    # Build only the decoder for pixel emission, but all other state_dicts
+    # were deserialized and type-validated by parse_archive above. This is
+    # structural consumption only; NSCS03 remains research-only until the
+    # submission runtime is byte-equivalent to the package runtime.
     g_s = _SynthesisTransform(g_s_channels, out_channels, gdn_eps=gdn_eps).to(device).eval()
-    g_s_sd = {f"net.{k}" if not k.startswith("net.") else k: v for k, v in parsed["decoder_sd"].items()}
     # The state_dict keys are already "net.0.weight" etc. since the trainer
     # called .state_dict() on the _SynthesisTransform module which has self.net.
     incompat = g_s.load_state_dict(parsed["decoder_sd"], strict=False)

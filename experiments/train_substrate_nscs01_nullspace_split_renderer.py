@@ -8,11 +8,11 @@ this trainer ships in two paths:
   random GT (Catalog #114 _smoke_main allowed exception). Builds a real
   archive + runtime to verify the export contract end-to-end. Does NOT
   load scorers.
-* ``_full_main`` — IMPLEMENTED with the canonical decode-real-pairs +
-  scorer-aware training + EMA + auth-eval gate pattern; gated by Phase 2
-  council approval per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
-  RESEARCH-ONLY" so accidental Modal dispatches are refused until the L1
-  smoke + Tier C ablation land.
+* ``_full_main`` — intentionally raises ``NotImplementedError`` until the
+  head0 architecture disambiguator, real-pair training/export path, and
+  paired auth-eval custody are implemented. This keeps the scaffold
+  research-only so accidental Modal dispatches are refused until Phase 2
+  council approval.
 
 Per Catalog #151 the TIER_1_OPERATOR_REQUIRED_FLAGS manifest is declared
 as `ast.AnnAssign` so Catalog #168 AST walker observes it.
@@ -24,10 +24,8 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import shutil
 import sys
-import time
 import zipfile
 from dataclasses import asdict
 from pathlib import Path
@@ -38,17 +36,17 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.substrates._shared.smoke_auth_eval_gate import gate_auth_eval_call
-from tac.substrates._shared.trainer_skeleton import detect_hardware_substrate
+from datetime import UTC
+
 from tac.substrates.nscs01_nullspace_split_renderer import (
     CAMERA_H,
     CAMERA_W,
-    NUM_PAIRS,
     NullspaceSplitConfig,
-    NullspaceSplitLossWeights,
     NullspaceSplitRenderer,
-    NullspaceSplitScoreAwareLoss,
     pack_archive,
+)
+from tac.substrates.nscs01_nullspace_split_renderer.registered_substrate import (
+    NSCS01_NULLSPACE_SPLIT_RENDERER_CONTRACT,  # noqa: F401  (forces contract validation)
 )
 
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
@@ -214,8 +212,8 @@ def _git_head_sha() -> str:
 
 
 def _utc_now_iso() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    from datetime import datetime
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _sha256_bytes(b: bytes) -> str:
@@ -224,6 +222,7 @@ def _sha256_bytes(b: bytes) -> str:
 
 def _pin_seeds(seed: int) -> None:
     import random
+
     import numpy as np
     random.seed(seed)
     np.random.seed(seed)

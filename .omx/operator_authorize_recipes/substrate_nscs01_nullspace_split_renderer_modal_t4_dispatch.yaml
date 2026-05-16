@@ -25,9 +25,9 @@ summary: |
   * frame_1_head: full (~150K params target, 8-bit packed) — trained
     against both SegNet (last-frame) AND PoseNet (frame-1).
 
-  Predicted ΔS [-0.015, -0.045] vs A1 0.193 baseline
-  ``[mathematical-derivation; first-principles-bound]`` from SegNet-derivative
-  invariance under frame_0 perturbation + per-head bit-width split economics.
+  Score movement is unranked until frame-0/frame-1 PoseNet gradient norms and
+  the head0 CNN-vs-MLP probe land. SegNet last-frame nullspace is a hypothesis
+  for the next measured probe, not a dispatch-ranking claim.
 
   Distinction from sister D4 ``substrate_d4_wyner_ziv_frame_0``:
   D4 DERIVES frame[0] from frame[1] via Wyner-Ziv motion + residual.
@@ -41,8 +41,8 @@ summary: |
   L1 SCAFFOLD landing 2026-05-15: trainer's _full_main is council-gated
   (NotImplementedError) per CLAUDE.md "Substrate scaffolds MUST be COMPLETE
   or RESEARCH-ONLY" until the smoke + Tier C ablation land. Smoke-only
-  dispatch is operator-authorized; full dispatch requires Phase 2 council
-  green-up.
+  dispatch remains disabled until the head0 architecture disambiguator and
+  paired-axis plan land; full dispatch requires Phase 2 council green-up.
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -74,10 +74,10 @@ cost_band:
   gpu_key: T4
 
 predicted_score_target: null
-predicted_band: [0.148, 0.178]
-smoke_score_band: [0.05, 0.50]
-predicted_delta: "-0.015 to -0.045 vs A1 0.193 [mathematical-derivation; first-principles-bound]"
-predicted_delta_basis: ".omx/research/nscs01_nullspace_split_renderer_design_20260515.md §2 (mathematical model: SegNet-derivative invariance under frame_0 perturbation; per-head bit-width split economics)"
+predicted_band: null
+smoke_score_band: null
+predicted_delta: "unranked until frame-0/frame-1 PoseNet gradient norms and head0 CNN-vs-MLP probe land"
+predicted_delta_basis: "tools/probe_nscs01_head0_arch_disambiguator.py required before dispatch-ranking evidence"
 literature_anchor: |
   upstream/modules.py:108 SegNet preprocess_input x[:, -1, ...] (the empirical
   premise that this substrate exploits — verified by Catalog #229

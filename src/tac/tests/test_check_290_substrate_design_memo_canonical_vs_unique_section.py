@@ -77,6 +77,22 @@ def test_290_empty_memory_dir_returns_empty(tmp_path: Path) -> None:
     assert violations == []
 
 
+def test_290_default_scans_repo_research_only_not_external_memory(tmp_path: Path) -> None:
+    """Default behavior is clone-stable: only repo-local research is scanned."""
+    _write(
+        tmp_path / ".omx" / "research",
+        "external_like_substrate_design_20260520.md",
+        "# Design\n\nNo required section.\n",
+    )
+    violations = check_substrate_design_memo_has_canonical_vs_unique_decision_section(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+    assert len(violations) == 1
+    assert "external_like_substrate_design_20260520.md" in violations[0]
+
+
 def test_290_pre_cutoff_memo_without_section_exempt(tmp_path: Path) -> None:
     """Pre-2026-05-15 substrate scaffold memos are exempt from the gate."""
     body = _frontmatter() + "Some scaffold content with no canonical-vs-unique section.\n"
