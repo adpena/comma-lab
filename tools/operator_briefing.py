@@ -67,6 +67,11 @@ from tac.optimization.l5_staircase_v2 import (  # noqa: E402
     l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
 )
+from tac.optimization.l5_v2_paired_measurement_dispatch_plan import (  # noqa: E402
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH,
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_SCHEMA,
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_TOOL_PATH,
+)
 from tac.optimizer.exact_readiness import (  # noqa: E402
     ACTIVE_FLOOR_SCORE,
     as_bool,
@@ -1198,6 +1203,136 @@ def _load_l5_v2_section_entropy_matrix() -> dict[str, object]:
     }
 
 
+def _load_l5_v2_paired_measurement_dispatch_plan() -> dict[str, object]:
+    """Load and sanity-check the planning-only L5-v2 paired dispatch plan."""
+
+    path = REPO_ROOT / L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH
+    base: dict[str, object] = {
+        "path": L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH,
+        "tool_path": L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_TOOL_PATH,
+        "exists": False,
+        "artifact_sha256": "",
+        "load_blockers": [],
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "dispatch_attempted": False,
+    }
+    if not path.is_file():
+        return {
+            **base,
+            "load_blockers": ["l5_v2_paired_measurement_dispatch_plan_missing"],
+        }
+    artifact_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            **base,
+            "exists": True,
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": [
+                f"l5_v2_paired_measurement_dispatch_plan_json_invalid:{exc.msg}"
+            ],
+        }
+    if not isinstance(payload, dict):
+        return {
+            **base,
+            "exists": True,
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": [
+                "l5_v2_paired_measurement_dispatch_plan_not_object"
+            ],
+        }
+
+    load_blockers: list[str] = []
+    if payload.get("schema") != L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_SCHEMA:
+        load_blockers.append("l5_v2_paired_measurement_dispatch_plan_schema_mismatch")
+    for key in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "dispatch_attempted",
+    ):
+        if payload.get(key) is not False:
+            load_blockers.append(
+                f"l5_v2_paired_measurement_dispatch_plan_false_authority:{key}"
+            )
+    if payload.get("planning_only") is not True:
+        load_blockers.append(
+            "l5_v2_paired_measurement_dispatch_plan_planning_only_not_true"
+        )
+    if payload.get("paired_dispatch_tool") != "tools/dispatch_modal_paired_auth_eval.py":
+        load_blockers.append(
+            "l5_v2_paired_measurement_dispatch_plan_paired_tool_not_canonical"
+        )
+
+    work_units = payload.get("work_units")
+    if not isinstance(work_units, list):
+        work_units = []
+        load_blockers.append("l5_v2_paired_measurement_dispatch_plan_work_units_missing")
+    for idx, row in enumerate(work_units):
+        if not isinstance(row, dict):
+            load_blockers.append(
+                f"l5_v2_paired_measurement_dispatch_plan_work_unit_not_object:{idx}"
+            )
+            continue
+        command = " ".join(str(part) for part in row.get("dispatch_command", []))
+        measurement_id = row.get("measurement_id")
+        if "tools/dispatch_modal_paired_auth_eval.py" not in command:
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_command_not_paired:"
+                f"{measurement_id}"
+            )
+        if "experiments/modal_auth_eval.py" in command:
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_single_axis_cuda_leak:"
+                f"{measurement_id}"
+            )
+        if "experiments/modal_auth_eval_cpu.py" in command:
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_single_axis_cpu_leak:"
+                f"{measurement_id}"
+            )
+        if row.get("dispatch_command_executable") is not False:
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_executable_template:"
+                f"{measurement_id}"
+            )
+        if row.get("standalone_active_claim_command") is not None:
+            load_blockers.append(
+                "l5_v2_paired_measurement_dispatch_plan_preclaim_leak:"
+                f"{measurement_id}"
+            )
+
+    command_sample = [
+        {
+            "measurement_id": row.get("measurement_id"),
+            "pair_group_id": row.get("pair_group_id"),
+            "dispatch_command_template": row.get("dispatch_command_template"),
+            "dispatch_command_executable": row.get("dispatch_command_executable"),
+            "measurement_blockers_to_close": row.get("measurement_blockers_to_close"),
+            "dispatch_blockers": row.get("dispatch_blockers"),
+        }
+        for row in work_units[:3]
+        if isinstance(row, dict)
+    ]
+    return {
+        **base,
+        **payload,
+        "exists": True,
+        "artifact_sha256": artifact_sha256,
+        "load_blockers": load_blockers,
+        "work_unit_count": int(payload.get("work_unit_count") or 0),
+        "ready_work_unit_count": int(payload.get("ready_work_unit_count") or 0),
+        "command_sample": command_sample,
+    }
+
+
 def _l5_v2_frontier_readiness(
     dispatch_claim_summary: dict[str, object] | None = None,
 ) -> dict[str, object]:
@@ -1215,8 +1350,14 @@ def _l5_v2_frontier_readiness(
     readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
     matrix = _load_l5_v2_packetir_matrix()
     section_entropy_matrix = _load_l5_v2_section_entropy_matrix()
+    paired_measurement_plan = _load_l5_v2_paired_measurement_dispatch_plan()
     matrix_blockers = [
         str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
+    ]
+    paired_measurement_plan_blockers = [
+        str(blocker)
+        for blocker in paired_measurement_plan.get("load_blockers", [])
+        if str(blocker)
     ]
     if dispatch_claim_summary is None:
         dispatch_claim_summary = _dispatch_claim_summary()
@@ -1270,6 +1411,12 @@ def _l5_v2_frontier_readiness(
                 if str(blocker)
             )
     blockers.extend(dispatch_blockers)
+    blockers.extend(paired_measurement_plan_blockers)
+    blockers.extend(
+        str(blocker)
+        for blocker in paired_measurement_plan.get("blockers", [])
+        if str(blocker)
+    )
     target_count = len(normalized_targets)
     status_counts = matrix.get("status_counts") if isinstance(matrix, dict) else {}
     if not isinstance(status_counts, dict):
@@ -1327,6 +1474,33 @@ def _l5_v2_frontier_readiness(
         "measurement_schedule_score_claim": False,
         "measurement_schedule_promotion_eligible": False,
         "measurement_schedule_ready_for_exact_eval_dispatch": False,
+        "paired_measurement_dispatch_plan_tool_path": (
+            paired_measurement_plan.get("tool_path", "")
+        ),
+        "paired_measurement_dispatch_plan_artifact_path": (
+            paired_measurement_plan.get("path", "")
+        ),
+        "paired_measurement_dispatch_plan_exists": (
+            paired_measurement_plan.get("exists") is True
+        ),
+        "paired_measurement_dispatch_plan_artifact_sha256": (
+            paired_measurement_plan.get("artifact_sha256", "")
+        ),
+        "paired_measurement_dispatch_plan_work_unit_count": int(
+            paired_measurement_plan.get("work_unit_count") or 0
+        ),
+        "paired_measurement_dispatch_plan_ready_work_unit_count": int(
+            paired_measurement_plan.get("ready_work_unit_count") or 0
+        ),
+        "paired_measurement_dispatch_plan_command_sample": (
+            paired_measurement_plan.get("command_sample", [])
+        ),
+        "paired_measurement_dispatch_plan_score_claim": False,
+        "paired_measurement_dispatch_plan_score_claim_valid": False,
+        "paired_measurement_dispatch_plan_promotion_eligible": False,
+        "paired_measurement_dispatch_plan_ready_for_exact_eval_dispatch": False,
+        "paired_measurement_dispatch_plan_rank_or_kill_eligible": False,
+        "paired_measurement_dispatch_plan_dispatch_attempted": False,
         "tt5l_sideinfo_effect_curve_allowed": bool(
             tt5l_campaign.get("sideinfo_effect_curve_allowed")
         ),
@@ -1441,6 +1615,12 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  exact dispatch authority:        {payload['ready_for_exact_eval_dispatch']}",
         f"  measurement schedule:           {payload['measurement_schedule_artifact_path']}",
         f"  measurement schedule tool:      {payload['measurement_schedule_tool_path']}",
+        "  paired measurement plan:        "
+        f"{payload['paired_measurement_dispatch_plan_artifact_path']}",
+        "  paired measurement work units:  "
+        f"{payload['paired_measurement_dispatch_plan_work_unit_count']}",
+        "  paired measurement ready units: "
+        f"{payload['paired_measurement_dispatch_plan_ready_work_unit_count']}",
         f"  optional PacketIR matrix:        {payload['packetir_matrix_path']}",
         f"  PacketIR candidates:             {payload['packetir_candidate_count']}",
         f"  PacketIR status counts:          {payload['packetir_status_counts']}",

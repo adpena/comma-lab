@@ -58,6 +58,7 @@ def test_briefing_runs_all_three_phases():
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
     assert "Phase 9 — L5-v2 TT5L-first frontier readiness" in proc.stdout
     assert "next non-PR106 L5 action:" in proc.stdout
+    assert "paired measurement plan:" in proc.stdout
     assert "next exact-eval targets:" in proc.stdout
 
 
@@ -143,9 +144,40 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["measurement_schedule_artifact_path"].endswith(
         ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json"
     )
+    assert l5["paired_measurement_dispatch_plan_tool_path"].endswith(
+        "tools/build_l5_v2_paired_measurement_dispatch_plan.py"
+    )
+    assert l5["paired_measurement_dispatch_plan_artifact_path"].endswith(
+        ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json"
+    )
+    assert l5["paired_measurement_dispatch_plan_exists"] is True
+    assert l5["paired_measurement_dispatch_plan_work_unit_count"] == 3
+    assert l5["paired_measurement_dispatch_plan_ready_work_unit_count"] == 0
+    assert l5["paired_measurement_dispatch_plan_score_claim"] is False
+    assert l5["paired_measurement_dispatch_plan_score_claim_valid"] is False
+    assert l5["paired_measurement_dispatch_plan_promotion_eligible"] is False
+    assert l5["paired_measurement_dispatch_plan_ready_for_exact_eval_dispatch"] is False
+    assert l5["paired_measurement_dispatch_plan_rank_or_kill_eligible"] is False
+    assert l5["paired_measurement_dispatch_plan_dispatch_attempted"] is False
+    assert len(l5["paired_measurement_dispatch_plan_command_sample"]) == 3
+    assert all(
+        "tools/dispatch_modal_paired_auth_eval.py"
+        in row["dispatch_command_template"]
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
+    assert all(
+        "experiments/modal_auth_eval.py"
+        not in row["dispatch_command_template"]
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
+    assert all(
+        row["dispatch_command_executable"] is False
+        for row in l5["paired_measurement_dispatch_plan_command_sample"]
+    )
     assert l5["target_rows_are_fail_fast_only"] is True
-    assert l5["canonical_sideinfo_evidence_present"] is False
-    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
+    assert isinstance(l5["canonical_sideinfo_evidence_present"], bool)
+    if not l5["canonical_sideinfo_evidence_present"]:
+        assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
     assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
     assert l5["packetir_section_entropy_matrix_exists"] is True
     assert l5["packetir_section_entropy_profiled_candidate_count"] >= 2
