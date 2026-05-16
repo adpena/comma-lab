@@ -204,6 +204,14 @@ def _require_candidate_dispatch_cost(candidate: CandidateRow) -> float:
     )
 
 
+def _require_candidate_planning_cost(candidate: CandidateRow) -> float:
+    return _require_finite_nonnegative_float(
+        candidate.estimated_dispatch_cost_usd,
+        field="estimated_dispatch_cost_usd",
+        context=f"candidate {candidate.candidate_id!r}",
+    )
+
+
 def validate_authorized_mode_config(
     auth_mode: OperatorAuthorizedModeConfig | None,
     *,
@@ -375,7 +383,9 @@ class CandidateRow:
     ready_for_exact_eval_dispatch: bool = False
 
     def eig_per_dollar(self) -> float:
-        cost = _require_candidate_dispatch_cost(self)
+        cost = _require_candidate_planning_cost(self)
+        if cost == 0.0:
+            return 0.0
         return self.expected_information_gain / cost
 
     def dispatch_claim_keys(self) -> list[str]:
@@ -1143,7 +1153,7 @@ def rank_candidates(
     Per CLAUDE.md "Forbidden /tmp paths": no temp paths used; pure in-memory.
     """
     for candidate in candidates:
-        _require_candidate_dispatch_cost(candidate)
+        _require_candidate_planning_cost(candidate)
 
     def _effective_delta(c: CandidateRow) -> float:
         if apply_z1_empirical_revision:
@@ -1804,7 +1814,7 @@ def run_one_loop_iteration(
     notes: list[str] = []
     validate_authorized_mode_config(auth_mode, repo_root=REPO_ROOT)
     for candidate in candidates:
-        _require_candidate_dispatch_cost(candidate)
+        _require_candidate_planning_cost(candidate)
 
     # W/I/A I-1: optionally auto-load continual-learning posterior so the
     # loop's rank step applies empirical-anchor reweighting. Tests inject

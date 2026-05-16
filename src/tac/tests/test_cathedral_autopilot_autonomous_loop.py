@@ -155,17 +155,31 @@ def test_rank_unknown_axis_raises():
         loop.rank_candidates([], rank_axis="something_made_up")
 
 
-@pytest.mark.parametrize("bad_cost", [0.0, -1.0, math.nan, math.inf, -math.inf])
+def test_eig_per_dollar_sorts_zero_cost_planning_rows_last():
+    c = _cand(eig=1.0, cost_usd=0.0, blockers=["cost_estimation_required"])
+    assert c.eig_per_dollar() == 0.0
+
+
+@pytest.mark.parametrize("bad_cost", [-1.0, math.nan, math.inf, -math.inf])
 def test_eig_per_dollar_refuses_malformed_cost(bad_cost):
     c = _cand(eig=1.0, cost_usd=bad_cost)
-    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+    with pytest.raises(ValueError, match="finite nonnegative estimated_dispatch_cost_usd"):
         c.eig_per_dollar()
 
 
-@pytest.mark.parametrize("bad_cost", [0.0, -1.0, math.nan, math.inf, -math.inf])
+def test_rank_candidates_keeps_zero_cost_planning_rows_visible():
+    zero = _cand("zero", eig=1.0, cost_usd=0.0, blockers=["cost_estimation_required"])
+    priced = _cand("priced", eig=0.1, cost_usd=1.0)
+
+    ranked = loop.rank_candidates([zero, priced], rank_axis="eig_per_dollar")
+
+    assert [candidate.candidate_id for candidate in ranked] == ["priced", "zero"]
+
+
+@pytest.mark.parametrize("bad_cost", [-1.0, math.nan, math.inf, -math.inf])
 def test_rank_candidates_refuses_malformed_cost_before_sort(bad_cost):
     c = _cand(eig=1.0, cost_usd=bad_cost)
-    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+    with pytest.raises(ValueError, match="finite nonnegative estimated_dispatch_cost_usd"):
         loop.rank_candidates([c], rank_axis="eig_per_dollar")
 
 
@@ -320,6 +334,20 @@ def test_one_iteration_emits_halt_events(tmp_path):
     assert len(rep.halt_events) == 2
     for e in rep.halt_events:
         assert e.requires_approval is True
+
+
+def test_one_iteration_surfaces_zero_cost_blocked_planning_row(tmp_path):
+    cands = [_cand("zero", cost_usd=0.0, blockers=["cost_estimation_required"])]
+
+    rep = loop.run_one_loop_iteration(
+        cands,
+        claims_path=tmp_path / "no_claims.md",
+    )
+
+    assert rep.n_candidates_seen == 1
+    assert rep.n_candidates_ranked == 1
+    assert rep.halt_events[0].candidate_id == "zero"
+    assert "cost_estimation_required" in rep.halt_events[0].blockers
 
 
 def test_one_iteration_blocks_conflicted_candidate(tmp_path):
@@ -1316,7 +1344,7 @@ def test_loop_iteration_refuses_non_finite_caps_before_claim_or_journal(
 def test_loop_iteration_refuses_malformed_cost_before_claim_or_journal(tmp_path):
     cfg = _auth_mode(tmp_path)
     claims_path = tmp_path / "claims.md"
-    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+    with pytest.raises(ValueError, match="finite nonnegative estimated_dispatch_cost_usd"):
         loop.run_one_loop_iteration(
             [_cand("bad_cost", cost_usd=math.nan)],
             claims_path=claims_path,
