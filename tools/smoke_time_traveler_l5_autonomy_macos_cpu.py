@@ -7,7 +7,9 @@ lane ``lane_time_traveler_l5_autonomy_substrate_20260513``. It exercises the
 substrate's full pipeline (trainer → archive build → inflate → auth eval
 ``--device cpu``) on the local macOS host, tags the result
 ``[macOS-CPU advisory]`` per Catalog #192, and compares the observed score
-against the design memo's predicted_band ``[0.150, 0.170]``.
+against the design memo's predicted_band ``[0.150, 0.170]`` as an advisory
+escalation signal only. macOS-CPU output can never falsify or promote the
+architecture.
 
 CLAUDE.md compliance:
   * No GPU dispatch — local macOS-CPU only.
@@ -19,7 +21,8 @@ CLAUDE.md compliance:
     transient eval work-dirs are honored by ``contest_auth_eval.py``.
   * Per CLAUDE.md "macOS-CPU advisory only": evidence_grade is fixed and
     the autopilot ranker (``cathedral_autopilot_autonomous_loop``) is the
-    sanctioned consumer; promotion requires paired GHA Linux x86_64.
+    sanctioned consumer; promotion and family-retirement require paired
+    contest-axis evidence.
 
 Sister-substrate interface contract (per design memo + sister
 ``src/tac/substrates/time_traveler_l5_autonomy/__init__.py``):
@@ -76,10 +79,10 @@ from tac.optimization.macos_cpu_advisory_signal import (  # noqa: E402
 PREDICTED_BAND_LOW: float = 0.150
 PREDICTED_BAND_HIGH: float = 0.170
 
-# Falsification threshold per design memo. Above this, the architecture is
-# falsified (operator decision: defer differentiable-physics; try cheaper
-# variant per the memo's reactivation criteria).
-FALSIFICATION_THRESHOLD: float = 0.190
+# Advisory escalation threshold per design memo. Above this, the architecture
+# needs paired contest-axis recheck; macOS-CPU advisory output cannot falsify a
+# method family.
+ESCALATION_THRESHOLD: float = 0.190
 
 LANE_ID: str = "lane_time_traveler_smoke_harness_20260513"
 SISTER_LANE_ID: str = "lane_time_traveler_l5_autonomy_substrate_20260513"
@@ -94,8 +97,8 @@ class SmokeVerdict:
 
     PASS_IN_BAND = "pass_in_predicted_band"
     PASS_BELOW_BAND = "pass_below_band_better_than_predicted"
-    WARN_ABOVE_BAND = "warn_above_band_within_falsification"
-    FAIL_FALSIFIED = "fail_falsified_above_threshold"
+    WARN_ABOVE_BAND = "warn_above_predicted_band"
+    ESCALATE_ABOVE_THRESHOLD = "escalate_above_threshold_requires_contest_axis_recheck"
     SUBSTRATE_NOT_READY = "substrate_not_ready_stub_only"
     EVAL_HARNESS_ERROR = "eval_harness_error"
     NON_DARWIN = "non_darwin_skip"
@@ -115,16 +118,6 @@ def _sha256_of(path: Path) -> str:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--samples",
-        type=int,
-        default=100,
-        help=(
-            "Frame pairs to evaluate. Default 100 (smoke). The contest's full "
-            "sample count is 600 (non-overlapping seq_len=2). Pass 600 for "
-            "full-sample advisory measurement."
-        ),
-    )
     parser.add_argument(
         "--epochs",
         type=int,
@@ -173,12 +166,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"Upper bound of predicted band (default {PREDICTED_BAND_HIGH}).",
     )
     parser.add_argument(
-        "--falsification-threshold",
+        "--escalation-threshold",
         type=float,
-        default=FALSIFICATION_THRESHOLD,
+        default=ESCALATION_THRESHOLD,
         help=(
-            "Score above this falsifies the architecture (default "
-            f"{FALSIFICATION_THRESHOLD}). Per design memo reactivation criteria."
+            "Advisory score above this requires paired contest-axis recheck "
+            f"(default {ESCALATION_THRESHOLD}). macOS-CPU advisory output "
+            "cannot falsify or promote the architecture."
         ),
     )
     parser.add_argument(
@@ -208,19 +202,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=None,
         help=(
-            "Optional inflate.sh override. Defaults to the sister substrate's "
-            "submissions/time_traveler_l5_autonomy/inflate.sh once it lands; "
-            "falls back to submissions/exact_current/inflate.sh otherwise."
+            "Optional inflate.sh override. When omitted, the harness requires "
+            "the archive-local sister runtime emitted by the TT5L trainer "
+            "(submission_dir/inflate.sh). It never falls back to exact_current."
         ),
     )
     return parser.parse_args(argv)
 
 
 def _resolve_output_dir(args: argparse.Namespace) -> Path:
-    if args.output_dir is not None:
-        out = Path(args.output_dir).resolve()
-    else:
-        out = RESULTS_ROOT / f"{LANE_ID}_{_utc_stamp()}"
+    out = (
+        Path(args.output_dir).resolve()
+        if args.output_dir is not None
+        else RESULTS_ROOT / f"{LANE_ID}_{_utc_stamp()}"
+    )
     out_str = str(out)
     # Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact":
     # refuse /tmp / /var/tmp / /private/tmp.
@@ -336,11 +331,54 @@ def _invoke_sister_trainer_cpu_smoke(
     }
 
 
+def _resolve_inflate_sh_for_archive(
+    archive: Path,
+    *,
+    output_dir: Path,
+    requested: Path | None,
+) -> dict[str, Any]:
+    """Resolve the TT5L runtime for ``archive`` without baseline fallback.
+
+    The smoke harness exists to test the Time-Traveler packet/runtime pair. A
+    fallback to ``submissions/exact_current`` turns a bad TT5L runtime into a
+    misleading baseline eval, so missing runtime is a harness error.
+    """
+    if requested is not None:
+        candidate = requested.resolve()
+        return {
+            "ok": candidate.is_file(),
+            "path": str(candidate),
+            "source": "explicit_override",
+            "reason": None if candidate.is_file() else "explicit_inflate_sh_missing",
+        }
+
+    candidates = [
+        archive.parent / "submission_dir" / "inflate.sh",
+        archive.parent / "inflate.sh",
+        output_dir / "submission_dir" / "inflate.sh",
+        output_dir / "trainer_artifacts" / "submission_dir" / "inflate.sh",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return {
+                "ok": True,
+                "path": str(candidate.resolve()),
+                "source": "archive_local_tt5l_runtime",
+                "searched": [str(p) for p in candidates],
+            }
+    return {
+        "ok": False,
+        "path": None,
+        "source": "missing_archive_local_tt5l_runtime",
+        "searched": [str(p) for p in candidates],
+        "reason": "tt5l_inflate_sh_not_found_no_exact_current_fallback",
+    }
+
+
 def _run_contest_auth_eval_cpu(
     archive: Path,
     *,
     output_dir: Path,
-    samples: int,
     inflate_sh: Path | None,
 ) -> dict[str, Any]:
     """Run ``experiments/contest_auth_eval.py --device cpu`` on the archive.
@@ -361,14 +399,16 @@ def _run_contest_auth_eval_cpu(
             "expected_path": str(auth_eval_py),
         }
 
-    if inflate_sh is None:
-        # Prefer sister substrate's inflate.sh once it lands.
-        candidates = [
-            REPO_ROOT / "submissions" / "time_traveler_l5_autonomy" / "inflate.sh",
-            REPO_ROOT / "submissions" / "time_traveler" / "inflate.sh",
-            REPO_ROOT / "submissions" / "exact_current" / "inflate.sh",
-        ]
-        inflate_sh = next((p for p in candidates if p.is_file()), candidates[-1])
+    runtime = _resolve_inflate_sh_for_archive(
+        archive, output_dir=output_dir, requested=inflate_sh
+    )
+    if not runtime.get("ok"):
+        return {
+            "eval_ok": False,
+            "reason": runtime.get("reason") or "tt5l_runtime_not_found",
+            "inflate_runtime_resolution": runtime,
+        }
+    inflate_sh_path = Path(str(runtime["path"]))
 
     json_out = output_dir / "contest_auth_eval.json"
     cmd = [
@@ -377,7 +417,7 @@ def _run_contest_auth_eval_cpu(
         "--archive",
         str(archive),
         "--inflate-sh",
-        str(inflate_sh),
+        str(inflate_sh_path),
         "--device",
         "cpu",
         "--json-out",
@@ -410,12 +450,12 @@ def _run_contest_auth_eval_cpu(
         }
 
     parsed: dict[str, Any] = {"eval_ok": True, "elapsed_seconds": elapsed}
+    parsed["inflate_runtime_resolution"] = runtime
     if json_out.is_file():
         try:
             parsed.update(json.loads(json_out.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError) as exc:
             parsed["json_parse_error"] = str(exc)
-    parsed.setdefault("samples_evaluated", samples)
     return parsed
 
 
@@ -424,12 +464,12 @@ def _classify_verdict(
     *,
     band_low: float,
     band_high: float,
-    falsification: float,
+    escalation: float,
 ) -> str:
     if score is None:
         return SmokeVerdict.EVAL_HARNESS_ERROR
-    if score >= falsification:
-        return SmokeVerdict.FAIL_FALSIFIED
+    if score >= escalation:
+        return SmokeVerdict.ESCALATE_ABOVE_THRESHOLD
     if score > band_high:
         return SmokeVerdict.WARN_ABOVE_BAND
     if score < band_low:
@@ -443,11 +483,11 @@ def _build_manifest_for_smoke_row(
     archive_bytes: int,
     archive_sha256: str,
     eval_payload: dict[str, Any],
-    samples: int,
     elapsed_seconds: float,
     run_id: str,
 ) -> dict[str, Any]:
     """Build a Catalog #192-compliant macOS-CPU advisory manifest row."""
+    n_samples = eval_payload.get("n_samples")
     observations = [
         {
             "family": "time_traveler_l5_autonomy",
@@ -457,7 +497,7 @@ def _build_manifest_for_smoke_row(
             "score": eval_payload.get("score"),
             "d_seg": eval_payload.get("d_seg"),
             "d_pose": eval_payload.get("d_pose"),
-            "samples_evaluated": samples,
+            "samples_evaluated": n_samples,
             "wall_clock_seconds": elapsed_seconds,
             "source_artifact": str(archive),
         }
@@ -479,7 +519,7 @@ def _emit_summary(
     score: float | None,
     band_low: float,
     band_high: float,
-    falsification: float,
+    escalation: float,
     archive_bytes: int | None,
     manifest_path: Path | None,
     eval_payload: dict[str, Any],
@@ -500,15 +540,16 @@ def _emit_summary(
         "score_macos_cpu": score,
         "predicted_band_low": band_low,
         "predicted_band_high": band_high,
-        "falsification_threshold": falsification,
+        "escalation_threshold": escalation,
         "in_predicted_band": (
             None if score is None
             else (band_low <= score <= band_high)
         ),
-        "above_falsification": (
+        "above_escalation_threshold": (
             None if score is None
-            else score >= falsification
+            else score >= escalation
         ),
+        "samples_evaluated": eval_payload.get("n_samples"),
         "archive_bytes": archive_bytes,
         "stub_interface_used": stub_used,
         "manifest_path": str(manifest_path) if manifest_path else None,
@@ -522,6 +563,7 @@ def _emit_summary(
         },
         "dispatch_blockers": [
             "macos_cpu_advisory_not_score_evidence",
+            "macos_cpu_advisory_cannot_falsify_architecture",
             "not_a_11_contest_compliant_cpu_axis",
             "requires_paired_contest_cpu_gha_linux_x86_64_before_score_claim",
             "requires_paired_contest_cuda_before_dual_axis_submission",
@@ -545,7 +587,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             score=None,
             band_low=args.predicted_band_low,
             band_high=args.predicted_band_high,
-            falsification=args.falsification_threshold,
+            escalation=args.escalation_threshold,
             archive_bytes=None,
             manifest_path=None,
             eval_payload={"reason": "harness_must_run_on_darwin_arm64"},
@@ -563,7 +605,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             score=None,
             band_low=args.predicted_band_low,
             band_high=args.predicted_band_high,
-            falsification=args.falsification_threshold,
+            escalation=args.escalation_threshold,
             archive_bytes=None,
             manifest_path=None,
             eval_payload={"dry_run": True},
@@ -584,7 +626,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
                 score=None,
                 band_low=args.predicted_band_low,
                 band_high=args.predicted_band_high,
-                falsification=args.falsification_threshold,
+                escalation=args.escalation_threshold,
                 archive_bytes=None,
                 manifest_path=None,
                 eval_payload={
@@ -627,7 +669,6 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         eval_payload = _run_contest_auth_eval_cpu(
             archive,
             output_dir=output_dir,
-            samples=args.samples,
             inflate_sh=args.inflate_sh,
         )
 
@@ -653,7 +694,6 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             archive_bytes=archive_bytes,
             archive_sha256=archive_sha256,
             eval_payload=eval_payload,
-            samples=args.samples,
             elapsed_seconds=float(eval_payload.get("elapsed_seconds") or 0.0),
             run_id=run_id,
         )
@@ -670,7 +710,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
             score,
             band_low=args.predicted_band_low,
             band_high=args.predicted_band_high,
-            falsification=args.falsification_threshold,
+            escalation=args.escalation_threshold,
         )
 
     return _emit_summary(
@@ -678,7 +718,7 @@ def run_smoke(args: argparse.Namespace) -> dict[str, Any]:
         score=score,
         band_low=args.predicted_band_low,
         band_high=args.predicted_band_high,
-        falsification=args.falsification_threshold,
+        escalation=args.escalation_threshold,
         archive_bytes=archive_bytes if archive is not None else None,
         manifest_path=manifest_path,
         eval_payload=eval_payload,
@@ -705,17 +745,17 @@ def main(argv: list[str] | None = None) -> int:
     verdict = summary.get("verdict")
     # Exit codes:
     #   0 = PASS_IN_BAND / PASS_BELOW_BAND / dry-run / SUBSTRATE_NOT_READY
-    #   1 = WARN_ABOVE_BAND
-    #   2 = FAIL_FALSIFIED
+    #   1 = WARN_ABOVE_BAND / ESCALATE_ABOVE_THRESHOLD
     #   3 = EVAL_HARNESS_ERROR
     #   4 = NON_DARWIN
     if verdict in (SmokeVerdict.PASS_IN_BAND, SmokeVerdict.PASS_BELOW_BAND,
                    SmokeVerdict.SUBSTRATE_NOT_READY):
         return 0
-    if verdict == SmokeVerdict.WARN_ABOVE_BAND:
+    if verdict in (
+        SmokeVerdict.WARN_ABOVE_BAND,
+        SmokeVerdict.ESCALATE_ABOVE_THRESHOLD,
+    ):
         return 1
-    if verdict == SmokeVerdict.FAIL_FALSIFIED:
-        return 2
     if verdict == SmokeVerdict.EVAL_HARNESS_ERROR:
         return 3
     if verdict == SmokeVerdict.NON_DARWIN:

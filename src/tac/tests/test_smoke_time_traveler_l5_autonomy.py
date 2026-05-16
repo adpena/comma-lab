@@ -7,7 +7,7 @@ serializer" + "Apples-to-apples evidence discipline" + Catalog #192
 harness is the $0-GPU companion runner for sister lane
 ``lane_time_traveler_l5_autonomy_substrate_20260513``. These tests pin:
 
-  1) verdict classification (predicted band / falsification threshold)
+  1) verdict classification (predicted band / advisory escalation threshold)
   2) stub-interface fallback when sister substrate is not yet ready
   3) manifest schema compliance (Catalog #192 + #127 contracts)
   4) per-pair breakdown ranking math
@@ -44,7 +44,7 @@ import smoke_time_traveler_l5_autonomy_macos_cpu as smoke  # noqa: E402
 def test_verdict_classifier_pass_in_band() -> None:
     """Score inside [low, high] returns PASS_IN_BAND."""
     v = smoke._classify_verdict(
-        0.160, band_low=0.150, band_high=0.170, falsification=0.190
+        0.160, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.PASS_IN_BAND
 
@@ -52,38 +52,38 @@ def test_verdict_classifier_pass_in_band() -> None:
 def test_verdict_classifier_pass_below_band() -> None:
     """Score below predicted band returns PASS_BELOW_BAND (better than predicted)."""
     v = smoke._classify_verdict(
-        0.140, band_low=0.150, band_high=0.170, falsification=0.190
+        0.140, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.PASS_BELOW_BAND
 
 
 def test_verdict_classifier_warn_above_band() -> None:
-    """Score above band but below falsification returns WARN_ABOVE_BAND."""
+    """Score above band but below escalation returns WARN_ABOVE_BAND."""
     v = smoke._classify_verdict(
-        0.180, band_low=0.150, band_high=0.170, falsification=0.190
+        0.180, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.WARN_ABOVE_BAND
 
 
-def test_verdict_classifier_falsified() -> None:
-    """Score >= falsification threshold returns FAIL_FALSIFIED."""
+def test_verdict_classifier_escalates_not_falsifies() -> None:
+    """Score >= threshold is advisory escalation, not method falsification."""
     v = smoke._classify_verdict(
-        0.195, band_low=0.150, band_high=0.170, falsification=0.190
+        0.195, band_low=0.150, band_high=0.170, escalation=0.190
     )
-    assert v == smoke.SmokeVerdict.FAIL_FALSIFIED
+    assert v == smoke.SmokeVerdict.ESCALATE_ABOVE_THRESHOLD
 
 
 def test_verdict_classifier_eval_error_on_none() -> None:
     """None score returns EVAL_HARNESS_ERROR."""
     v = smoke._classify_verdict(
-        None, band_low=0.150, band_high=0.170, falsification=0.190
+        None, band_low=0.150, band_high=0.170, escalation=0.190
     )
     assert v == smoke.SmokeVerdict.EVAL_HARNESS_ERROR
 
 
-def test_falsification_threshold_default_matches_design_memo() -> None:
-    """Per design memo: falsified above 0.190."""
-    assert smoke.FALSIFICATION_THRESHOLD == 0.190
+def test_escalation_threshold_default_matches_design_memo() -> None:
+    """Per design memo: contest-axis recheck above 0.190."""
+    assert smoke.ESCALATION_THRESHOLD == 0.190
     assert smoke.PREDICTED_BAND_LOW == 0.150
     assert smoke.PREDICTED_BAND_HIGH == 0.170
 
@@ -112,12 +112,11 @@ def test_dry_run_returns_pass_summary(tmp_path: Path) -> None:
     args.allow_non_darwin = True
     args.predicted_band_low = 0.150
     args.predicted_band_high = 0.170
-    args.falsification_threshold = 0.190
+    args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False
     args.epochs = 100
     args.batch_size = 4
-    args.samples = 100
     args.inflate_sh = None
 
     summary = smoke.run_smoke(args)
@@ -143,12 +142,11 @@ def test_stub_interface_falls_back_when_sister_not_ready(tmp_path: Path) -> None
     args.allow_non_darwin = True
     args.predicted_band_low = 0.150
     args.predicted_band_high = 0.170
-    args.falsification_threshold = 0.190
+    args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = True
     args.epochs = 100
     args.batch_size = 4
-    args.samples = 100
     args.inflate_sh = None
 
     summary = smoke.run_smoke(args)
@@ -175,6 +173,33 @@ def test_stub_archive_has_tt5l_magic(tmp_path: Path) -> None:
     assert head[4:5] == b"\x01"
 
 
+def test_inflate_resolution_requires_archive_local_tt5l_runtime(tmp_path: Path) -> None:
+    """Missing TT5L runtime is a harness error, not an exact_current fallback."""
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"not-a-real-zip")
+    resolved = smoke._resolve_inflate_sh_for_archive(
+        archive, output_dir=tmp_path / "out", requested=None
+    )
+    assert resolved["ok"] is False
+    assert resolved["reason"] == "tt5l_inflate_sh_not_found_no_exact_current_fallback"
+    assert all("exact_current" not in path for path in resolved["searched"])
+
+
+def test_inflate_resolution_uses_archive_local_submission_dir(tmp_path: Path) -> None:
+    """Trainer-emitted submission_dir/inflate.sh is the default runtime."""
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"not-a-real-zip")
+    inflate = tmp_path / "submission_dir" / "inflate.sh"
+    inflate.parent.mkdir()
+    inflate.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    resolved = smoke._resolve_inflate_sh_for_archive(
+        archive, output_dir=tmp_path / "out", requested=None
+    )
+    assert resolved["ok"] is True
+    assert resolved["path"] == str(inflate.resolve())
+    assert resolved["source"] == "archive_local_tt5l_runtime"
+
+
 def test_non_darwin_guard_emits_skip(tmp_path: Path) -> None:
     """Running on non-Darwin without --allow-non-darwin emits NON_DARWIN verdict."""
     import platform
@@ -191,12 +216,11 @@ def test_non_darwin_guard_emits_skip(tmp_path: Path) -> None:
     args.dry_run = True
     args.predicted_band_low = 0.150
     args.predicted_band_high = 0.170
-    args.falsification_threshold = 0.190
+    args.escalation_threshold = 0.190
     args.archive_path = None
     args.stub_interface = False
     args.epochs = 100
     args.batch_size = 4
-    args.samples = 100
     args.inflate_sh = None
     summary = smoke.run_smoke(args)
     assert summary["verdict"] == smoke.SmokeVerdict.NON_DARWIN
@@ -367,7 +391,7 @@ def test_smoke_summary_carries_catalog_192_compliance_flags(tmp_path: Path) -> N
         score=0.160,
         band_low=0.150,
         band_high=0.170,
-        falsification=0.190,
+        escalation=0.190,
         archive_bytes=100_000,
         manifest_path=tmp_path / "m.json",
         eval_payload={"score": 0.160, "d_seg": 0.001, "d_pose": 1e-5},
@@ -382,9 +406,13 @@ def test_smoke_summary_carries_catalog_192_compliance_flags(tmp_path: Path) -> N
     assert summary["ready_for_exact_eval_dispatch"] is False
     assert summary["ranking_only"] is True
     assert summary["in_predicted_band"] is True
-    assert summary["above_falsification"] is False
+    assert summary["above_escalation_threshold"] is False
     # Dispatch blockers list mirrors macos_cpu_advisory_signal DISPATCH_BLOCKERS.
     assert "macos_cpu_advisory_not_score_evidence" in summary["dispatch_blockers"]
+    assert (
+        "macos_cpu_advisory_cannot_falsify_architecture"
+        in summary["dispatch_blockers"]
+    )
 
 
 def test_autopilot_can_consume_manifest_emitted_by_harness(tmp_path: Path) -> None:

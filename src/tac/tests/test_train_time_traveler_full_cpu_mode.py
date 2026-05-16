@@ -231,8 +231,12 @@ def test_full_cuda_auth_eval_is_fail_closed_by_canonical_claim_gate() -> None:
     """Full CUDA mode must not return rc=0 after a broken auth-eval subprocess."""
 
     text = TRAINER_PATH.read_text(encoding="utf-8")
-    assert "capture_output=True" in text
-    assert "contest_auth_eval.py failed" in text
+    gate_text = (
+        REPO_ROOT / "src" / "tac" / "substrates" / "_shared" / "smoke_auth_eval_gate.py"
+    ).read_text(encoding="utf-8")
+    assert "capture_output=True" in gate_text
+    assert "contest_auth_eval.py failed" in gate_text
+    assert "_canon_gate_auth_eval_call(" in text
     assert "_canon_require_contest_cuda_auth_eval_claim(" in text
     assert "auth_eval_cuda_done_valid_claim" in text
 
