@@ -1055,13 +1055,51 @@ def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
     assert "l5_v2_probe_gate_artifact_20260516_codex.json" in action[
         "command_template"
     ]
+    assert (
+        action["measurement_schedule_tool_path"]
+        == l5_v2.L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH
+    )
+    assert "tools/build_l5_v2_lattice_measurement_schedule.py" in action[
+        "measurement_schedule_command_template"
+    ]
+    assert l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH in action[
+        "measurement_schedule_command_template"
+    ]
     assert l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH in action[
         "expected_artifacts"
     ]
     assert l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH in action[
         "expected_artifacts"
     ]
+    assert action["measurement_schedule_expected_artifacts"] == [
+        l5_v2.L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+        l5_v2.L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+    ]
     assert action["score_claim"] is False
+    assert "planning-only" in action["measurement_schedule_semantics"]
+
+
+def test_l5_v2_tt5l_readiness_surfaces_measurement_schedule_without_authority(
+    tmp_path: Path,
+) -> None:
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert (
+        tt5l["measurement_schedule_tool_path"]
+        == l5_v2.L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH
+    )
+    assert (
+        tt5l["measurement_schedule_artifact_path"]
+        == l5_v2.L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH
+    )
+    assert (
+        tt5l["measurement_schedule_report_path"]
+        == l5_v2.L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH
+    )
+    assert tt5l["measurement_schedule_score_claim"] is False
+    assert tt5l["measurement_schedule_promotion_eligible"] is False
+    assert tt5l["measurement_schedule_ready_for_exact_eval_dispatch"] is False
 
 
 def test_l5_v2_canonical_probe_gate_evidence_auto_consumes_valid_artifact(

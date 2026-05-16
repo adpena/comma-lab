@@ -23,6 +23,11 @@ from tac.exact_eval_custody import (
     is_contest_cpu_device_text,
     validate_exact_eval_evidence,
 )
+from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+    L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+    L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+)
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -1428,6 +1433,12 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "ready_for_exact_eval_dispatch": False,
         }
     elif not probe_valid:
+        measurement_schedule_command = (
+            f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
+            f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
+            f"--output-json {L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH} "
+            f"--output-md {L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH}"
+        )
         next_action = {
             "action_id": "populate_and_evaluate_c1_z5_tt5l_probe_observations",
             "phase": "probe_disambiguator",
@@ -1444,6 +1455,17 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH,
                 TT5L_PROBE_GATE_ARTIFACT_PATH,
             ],
+            "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+            "measurement_schedule_command_template": measurement_schedule_command,
+            "measurement_schedule_expected_artifacts": [
+                L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+                L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+            ],
+            "measurement_schedule_semantics": (
+                "planning-only first-match lattice; routes the next paired "
+                "C1/Z5/TT5L measurements without score, rank, promotion, or "
+                "dispatch authority"
+            ),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1539,6 +1561,12 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "proof_tool_exists": proof_tool_exists,
         "probe_tool_path": L5V2_PROBE_TOOL_PATH,
         "probe_tool_exists": probe_tool_exists,
+        "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+        "measurement_schedule_artifact_path": L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+        "measurement_schedule_report_path": L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+        "measurement_schedule_score_claim": False,
+        "measurement_schedule_promotion_eligible": False,
+        "measurement_schedule_ready_for_exact_eval_dispatch": False,
         "dispatch_recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
         "dispatch_recipe_exists": dispatch_recipe_exists,
         "next_non_pr106_l5_action": next_action,
@@ -2954,6 +2982,9 @@ def l5_v2_dispatch_readiness(
 
 __all__ = [
     "CAMPAIGN_ID",
+    "L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH",
+    "L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH",
+    "L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH",
     "L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256",
