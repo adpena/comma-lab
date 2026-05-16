@@ -2335,6 +2335,22 @@ def preflight_all(
         check_cathedral_literature_anchors_have_source_scope(
             strict=True, verbose=verbose,
         )
+        # 2026-05-15 Catalog #294 - 9-DIMENSION SUCCESS CHECKLIST EVIDENCE
+        # SECTION gate. Sister of Catalog #290 (Dimension 5) + Catalog #291
+        # (per-session cadence) + Catalog #292 (per-deliberation). Per the
+        # operator standing directive 2026-05-15 (
+        # feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md):
+        # every substrate landing memo + every stack-of-stacks composition
+        # memo dated >= 2026-05-15 MUST contain the literal section header
+        # ``## 9-dimension success checklist evidence`` so reviewers can
+        # audit evidence across all 9 dimensions. Initial wire-in is WARN-ONLY
+        # per CLAUDE.md "Strict-flip atomicity rule" — live count at landing
+        # is > 0 because most existing substrate landings predate the
+        # directive. Sister-subagent backfill wave is the follow-on
+        # op-routable; strict-flip planned alongside that wave's final commit.
+        check_substrate_landing_memo_has_9_dim_checklist_evidence_section(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -62207,6 +62223,315 @@ def check_nightly_catalog_gate_regression_workflow_canonical_use(
             "regression workflow MUST route through the canonical helper "
             "`tools/run_nightly_catalog_gate_regression.py`.\n  "
             + "\n  ".join(v[:600] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #294 - check_substrate_landing_memo_has_9_dim_checklist_evidence_section
+#
+# 9-DIMENSION SUCCESS CHECKLIST EVIDENCE SECTION 2026-05-15 self-protection
+# per operator standing directive *"Need to ensure uniqueness and beautify
+# and elegance and distinctness and rigor and optimization per technique and
+# stack of stacks while still deterministic reproducibility and extreme
+# optimization and performance and optimal minimal contest score"*.
+#
+# Anchor memo:
+#   - feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md
+#
+# Sister of:
+#   - Catalog #290 (substrate-design-memo-has-canonical-vs-unique-decision-section
+#     — checks Dimension 5 specifically; #294 covers the other 8 dimensions
+#     via the unified `## 9-dimension success checklist evidence` section header)
+#   - Catalog #291 (session-has-recent-META-ASSUMPTION-review — per-session
+#     cadence companion)
+#   - Catalog #292 (grand-council-deliberation-has-explicit-assumption-statements
+#     — per-deliberation companion)
+#   - Catalog #220 (substrate L1 scaffold operational mechanism declaration —
+#     same META class at the runtime-effect surface)
+#   - Catalog #229 (premise-verification-before-edit — same per-memo
+#     discipline pattern)
+#   - Catalog #241 (substrate META layer contract — encodes the canonical
+#     fields; #294 forces the landing memo to document evidence across all
+#     9 dimensions)
+#
+# Refuses repo-local `.omx/research/*_design_<YYYYMMDD>.md` memos by default,
+# plus external Claude-memory substrate landing memos only when
+# ``memory_dir=...`` is passed explicitly. The opt-in pattern mirrors Catalog
+# #290 + #291 + #292 so clean clones and CI see the same default result as
+# the operator machine (OSS-hermetic discipline).
+#
+# Filename scope matches one of:
+#   - ``feedback_*substrate*landed_<YYYYMMDD>.md``
+#   - ``feedback_*scaffold*landed_<YYYYMMDD>.md``
+#   - ``feedback_nscs<N>*landed_<YYYYMMDD>.md``
+#   - ``feedback_*stack_of_stacks*landed_<YYYYMMDD>.md`` (composition memos)
+#   - ``feedback_*composition*landed_<YYYYMMDD>.md`` (composition memos)
+#   - ``feedback_*_design_<YYYYMMDD>.md`` (in-repo design memos)
+# AND whose date suffix is >= 2026-05-15 (this directive's date).
+#
+# Body requirement: the literal section header
+# ``## 9-dimension success checklist evidence`` (case-insensitive).
+#
+# Same-line waiver `# 9_DIM_CHECKLIST_EVIDENCE_WAIVED:<rationale>` accepted
+# anywhere in the memo body (placeholder `<rationale>` / `<reason>` literals
+# rejected so the docstring example cannot self-waive).
+#
+# Bug class: per the 9-dim checklist directive, every substrate landing AND
+# every stack-of-stacks composition memo must document evidence across ALL
+# 9 dimensions: (1) UNIQUENESS (class-shift not within-class); (2) BEAUTY +
+# ELEGANCE (PR101-style 30-sec-reviewable); (3) DISTINCTNESS (explicitly
+# different from sisters); (4) RIGOR (premise verification + adversarial
+# review + assumption classification + empirical anchor); (5) OPTIMIZATION
+# PER TECHNIQUE (substrate-optimal engineering — covered by sister Catalog
+# #290); (6) STACK-OF-STACKS-COMPOSABILITY (orthogonal axes + additive ΔS);
+# (7) DETERMINISTIC REPRODUCIBILITY (byte-stable + seed-pinned); (8) EXTREME
+# OPTIMIZATION + PERFORMANCE; (9) OPTIMAL MINIMAL CONTEST SCORE. Missing
+# evidence on ANY dimension = landing INVALID. The literal section header is
+# the single structural requirement; the section body content is the
+# operator-facing audit surface.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — the live
+# count at landing is likely > 0 because most existing substrate landings
+# (NSCS01 / NSCS03 / D1 / etc.) predate the standing directive and do not
+# yet include the section. Sister-subagent backfill wave is the follow-up
+# op-routable; strict-flip planned alongside that wave's final commit.
+# ============================================================================
+
+# Cutoff date suffix; memos dated before this are exempt.
+_CHECK_294_CUTOFF_DATE_SUFFIX_INT = 20260515
+
+# Literal section header (case-insensitive substring match).
+_CHECK_294_REQUIRED_SECTION_HEADER = "## 9-dimension success checklist evidence"
+
+# Filename patterns scoping which memos are subject to this gate.
+_CHECK_294_SUBSTRATE_FILENAME_RE = re.compile(
+    r"^feedback_.*substrate.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_294_SCAFFOLD_FILENAME_RE = re.compile(
+    r"^feedback_.*scaffold.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_294_NSCS_FILENAME_RE = re.compile(
+    r"^feedback_nscs\d+.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_294_STACK_OF_STACKS_FILENAME_RE = re.compile(
+    r"^feedback_.*stack_of_stacks.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_294_COMPOSITION_FILENAME_RE = re.compile(
+    r"^feedback_.*composition.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_294_RESEARCH_DESIGN_FILENAME_RE = re.compile(
+    r"^.*_design_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+
+# Same-line waiver pattern: `# 9_DIM_CHECKLIST_EVIDENCE_WAIVED:<rationale>`.
+_CHECK_294_WAIVER_PATTERN = re.compile(
+    r"#\s*9_DIM_CHECKLIST_EVIDENCE_WAIVED\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_294_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def _check_294_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    for regex in (
+        _CHECK_294_SUBSTRATE_FILENAME_RE,
+        _CHECK_294_SCAFFOLD_FILENAME_RE,
+        _CHECK_294_NSCS_FILENAME_RE,
+        _CHECK_294_STACK_OF_STACKS_FILENAME_RE,
+        _CHECK_294_COMPOSITION_FILENAME_RE,
+        _CHECK_294_RESEARCH_DESIGN_FILENAME_RE,
+    ):
+        m = regex.match(filename)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _check_294_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder `9_DIM_CHECKLIST_EVIDENCE_WAIVED:<rationale>`
+    appears anywhere in the body."""
+    match = _CHECK_294_WAIVER_PATTERN.search(body)
+    if match is None:
+        return False
+    rationale = match.group(1).strip()
+    if not rationale:
+        return False
+    if rationale in _CHECK_294_WAIVER_PLACEHOLDERS:
+        return False
+    return True
+
+
+def _check_294_default_memory_dir() -> Path | None:
+    """No external memory scan by default.
+
+    Catalog #294 is a repository preflight gate; clean clones and CI must see
+    the same result as the operator machine. Pass ``memory_dir=...`` explicitly
+    when auditing local Claude memory.
+    """
+    return None
+
+
+def _check_294_default_research_dir(repo_root: Path | str | None = None) -> Path:
+    """Default in-repo research design-memo directory."""
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
+
+
+def check_substrate_landing_memo_has_9_dim_checklist_evidence_section(
+    *,
+    memory_dir: Path | str | None = None,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #294 — refuse substrate landing + stack-of-stacks composition
+    memos missing the ``## 9-dimension success checklist evidence`` section.
+
+    Per the operator standing directive 2026-05-15 (
+    ``feedback_9_dimension_success_checklist_per_substrate_and_stack_of_stacks_standing_directive_20260515.md``):
+    every substrate landing memo AND every stack-of-stacks composition memo
+    dated >= 2026-05-15 MUST document evidence across all 9 success
+    dimensions:
+
+    (1) UNIQUENESS (class-shift not within-class)
+    (2) BEAUTY + ELEGANCE (PR101-style 30-sec-reviewable)
+    (3) DISTINCTNESS (explicitly different from sisters)
+    (4) RIGOR (premise verification + adversarial review + assumption
+        classification + empirical anchor)
+    (5) OPTIMIZATION PER TECHNIQUE (substrate-optimal engineering — also
+        checked by sister Catalog #290 at the design-memo surface)
+    (6) STACK-OF-STACKS-COMPOSABILITY (orthogonal axes + additive ΔS)
+    (7) DETERMINISTIC REPRODUCIBILITY (byte-stable + seed-pinned)
+    (8) EXTREME OPTIMIZATION + PERFORMANCE
+    (9) OPTIMAL MINIMAL CONTEST SCORE (binding objective)
+
+    Missing evidence on ANY dimension = landing INVALID. The literal section
+    header is the single structural requirement; the section body content is
+    the operator-facing audit surface (per-dimension evidence + cite-source
+    per dimension).
+
+    Acceptance:
+    - Pre-cutoff memos (date < 2026-05-15) are exempt by date filter.
+    - In-scope memos with the literal header pass.
+    - In-scope memos with a non-placeholder
+      ``# 9_DIM_CHECKLIST_EVIDENCE_WAIVED:<rationale>`` waiver pass.
+    - In-scope memos without the header AND without the waiver are flagged.
+    - In-repo ``.omx/research/*_design_<YYYYMMDD>.md`` memos are in scope
+      (active design surface where subagents land before memory rollups
+      exist).
+    - External memory memos are scanned only when ``memory_dir`` is passed
+      explicitly; default behavior is clone-stable and repo-local
+      (OSS-hermetic per sister Catalog #290 / #291 / #292).
+
+    Sister of Catalog #290 (covers Dimension 5 specifically; #294 covers
+    Dimensions 1-4 + 6-9 via the unified section header) + Catalog #291
+    (per-session cadence companion) + Catalog #292 (per-council-deliberation
+    companion).
+
+    Memory: ``feedback_catalog_294_9_dim_checklist_evidence_section_landed_20260515.md``.
+    Lane: ``lane_catalog_294_9_dim_checklist_evidence_section_20260515``.
+    """
+    if memory_dir is None:
+        memory_target = _check_294_default_memory_dir()
+    elif isinstance(memory_dir, str):
+        memory_target = Path(memory_dir)
+    else:
+        memory_target = memory_dir
+    if research_dir is None:
+        research_target = _check_294_default_research_dir(repo_root)
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    seen_dirs: set[Path] = set()
+    target_surfaces: list[tuple[Path, str]] = []
+    if memory_target is not None:
+        target_surfaces.append((memory_target, "memory"))
+    target_surfaces.append((research_target, "research"))
+    for target, surface in target_surfaces:
+        try:
+            resolved_target = target.resolve()
+        except OSError:
+            resolved_target = target
+        if resolved_target in seen_dirs:
+            continue
+        seen_dirs.add(resolved_target)
+        if not target.is_dir():
+            continue
+        try:
+            candidates = sorted(target.iterdir())
+        except OSError:
+            continue
+        for entry in candidates:
+            if not entry.is_file():
+                continue
+            date_int = _check_294_in_scope(entry.name)
+            if date_int is None:
+                continue  # filename not in scope
+            if date_int < _CHECK_294_CUTOFF_DATE_SUFFIX_INT:
+                continue  # pre-cutoff memos exempt
+            try:
+                body = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Acceptance path 1: literal section header (case-insensitive).
+            if _CHECK_294_REQUIRED_SECTION_HEADER in body.lower():
+                continue
+            # Acceptance path 2: same-line waiver with non-placeholder rationale.
+            if _check_294_waiver_present(body):
+                continue
+            try:
+                rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}: {surface} substrate/composition landing memo dated "
+                f"{date_int} is missing the required "
+                "'## 9-dimension success checklist evidence' section header "
+                "(case-insensitive). Per the operator standing directive "
+                "2026-05-15: every substrate landing AND every stack-of-stacks "
+                "composition memo dated >= 2026-05-15 MUST document evidence "
+                "across all 9 dimensions (UNIQUENESS / BEAUTY+ELEGANCE / "
+                "DISTINCTNESS / RIGOR / OPTIMIZATION PER TECHNIQUE / "
+                "STACK-OF-STACKS-COMPOSABILITY / DETERMINISTIC REPRODUCIBILITY "
+                "/ EXTREME OPTIMIZATION+PERFORMANCE / OPTIMAL MINIMAL CONTEST "
+                "SCORE). Either add the section header OR carry a same-line "
+                "`# 9_DIM_CHECKLIST_EVIDENCE_WAIVED:<rationale>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_substrate_landing_memo_has_9_dim_checklist_evidence_section] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_landing_memo_has_9_dim_checklist_evidence_section] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_landing_memo_has_9_dim_checklist_evidence_section "
+            f"found {len(violations)} substrate/composition landing memo(s) "
+            "missing the required '## 9-dimension success checklist evidence' "
+            "section. Per the operator standing directive 2026-05-15 + "
+            "CLAUDE.md 'Bugs must be permanently fixed AND self-protected "
+            "against' non-negotiable. Catalog #294 (sister of Catalog #290 "
+            "Dimension 5 + Catalog #291 per-session cadence + Catalog #292 "
+            "per-deliberation discipline).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
 
