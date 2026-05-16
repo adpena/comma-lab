@@ -532,6 +532,43 @@ def test_load_probe_disambiguator_refuses_score_claim(tmp_path):
         loop.load_candidates_from_probe_disambiguator_output(p)
 
 
+def test_substrate_composition_matrix_preserves_zero_alpha(tmp_path):
+    """alpha=0.0 is a real saturation signal, not a missing value."""
+    matrix_path = tmp_path / "substrate_composition_matrix.json"
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "entries": {
+                    "a__x__b": [
+                        {
+                            "written_at_utc": "2026-05-16T00:00:00Z",
+                            "alpha": 0.0,
+                            "score_claim": False,
+                        }
+                    ],
+                    "b__x__a": [
+                        {
+                            "written_at_utc": "2026-05-16T00:01:00Z",
+                            "alpha": 0.9,
+                            "score_claim": False,
+                        }
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    candidate = _cand("candidate_ab")
+
+    loop.apply_substrate_composition_matrix_to_candidates(
+        [candidate],
+        substrate_ids_by_candidate={"candidate_ab": ("a", "b")},
+        matrix_path=matrix_path,
+    )
+
+    assert candidate.composition_alpha == pytest.approx(0.0)
+
+
 def test_main_accepts_probe_disambiguator_source(tmp_path):
     p = _write_probe_payload(tmp_path)
     out_path = tmp_path / "probe_report.json"

@@ -2214,7 +2214,9 @@ def apply_substrate_composition_matrix_to_candidates(
         a, b = sorted(sids)
         key_a = f"{a}__x__{b}"
         key_b = f"{b}__x__{a}"
-        alpha = alpha_index.get(key_a) or alpha_index.get(key_b)
+        alpha = alpha_index.get(key_a)
+        if alpha is None:
+            alpha = alpha_index.get(key_b)
         if alpha is None:
             # Fallback: scan keys for any pair containing both substrate ids
             # (the probe may emit keys in non-sorted form).
