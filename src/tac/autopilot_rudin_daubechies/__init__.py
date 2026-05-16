@@ -36,6 +36,40 @@ layer, not a "safe" black box.
 """
 from __future__ import annotations
 
+from .compressive_landscape import (
+    CompressiveSensingLandscapeRecovery,
+    LandscapeCell,
+)
+from .compressive_sensing_lattice_recovery import (
+    BayesianSequentialKSelector,
+    CoherenceMinimizingSelector,
+    DaubechiesDb4LatticeBasis,
+    FrontierPursuitClass,
+    LatticePhaseTransitionMonitor,
+    SparseSignalPosterior,
+    SubstrateLatticeNode,
+    SubstrateLatticeRecovery,
+    TreeStructuredSparsityPrior,
+    classify_predicted_band,
+    compute_pairwise_coherence,
+    diff_sparse_signal_posteriors,
+)
+from .falling_rule_list import (
+    FallingRule,
+    FallingRuleList,
+    PredicateRef,
+    RuleChain,
+)
+from .gosdt_dispatcher import (
+    DispatchDecision,
+    GOSDTDispatcher,
+    WhiteboardRule,
+)
+from .rashomon_ensemble import (
+    DEFAULT_RASHOMON_ENSEMBLE_SIZE,
+    RashomonEnsembleRanker,
+    RashomonMember,
+)
 from .slim_ranker import (
     DEFAULT_INTEGER_COEFFICIENT_BOUND,
     DEFAULT_SPARSITY_TARGET,
@@ -45,57 +79,50 @@ from .slim_ranker import (
     SLIMTrainingError,
     explain_slim_prediction,
 )
-from .falling_rule_list import (
-    FallingRule,
-    FallingRuleList,
-    PredicateRef,
-    RuleChain,
-)
-from .rashomon_ensemble import (
-    DEFAULT_RASHOMON_ENSEMBLE_SIZE,
-    RashomonEnsembleRanker,
-    RashomonMember,
-)
-from .compressive_landscape import (
-    CompressiveSensingLandscapeRecovery,
-    LandscapeCell,
-)
 from .wavelet_multi_scale_ranker import (
     WAVELET_NUM_SCALES_DEFAULT,
     WaveletMultiScaleFallingRuleListRanker,
-)
-from .gosdt_dispatcher import (
-    GOSDTDispatcher,
-    DispatchDecision,
-    WhiteboardRule,
 )
 
 __all__ = [
     # Phase 1
     "DEFAULT_INTEGER_COEFFICIENT_BOUND",
+    # Phase 3
+    "DEFAULT_RASHOMON_ENSEMBLE_SIZE",
     "DEFAULT_SPARSITY_TARGET",
-    "ProxyPanel",
-    "SLIMCoefficient",
-    "SLIMRanker",
-    "SLIMTrainingError",
-    "explain_slim_prediction",
+    # Phase 5
+    "WAVELET_NUM_SCALES_DEFAULT",
+    # Compressive-sensing lattice recovery (operator approval 2026-05-16):
+    "BayesianSequentialKSelector",
+    "CoherenceMinimizingSelector",
+    # Phase 4
+    "CompressiveSensingLandscapeRecovery",
+    "DaubechiesDb4LatticeBasis",
+    "DispatchDecision",
     # Phase 2
     "FallingRule",
     "FallingRuleList",
-    "PredicateRef",
-    "RuleChain",
-    # Phase 3
-    "DEFAULT_RASHOMON_ENSEMBLE_SIZE",
-    "RashomonEnsembleRanker",
-    "RashomonMember",
-    # Phase 4
-    "CompressiveSensingLandscapeRecovery",
-    "LandscapeCell",
-    # Phase 5
-    "WAVELET_NUM_SCALES_DEFAULT",
-    "WaveletMultiScaleFallingRuleListRanker",
+    "FrontierPursuitClass",
     # Phase 6
     "GOSDTDispatcher",
-    "DispatchDecision",
+    "LandscapeCell",
+    "LatticePhaseTransitionMonitor",
+    "PredicateRef",
+    "ProxyPanel",
+    "RashomonEnsembleRanker",
+    "RashomonMember",
+    "RuleChain",
+    "SLIMCoefficient",
+    "SLIMRanker",
+    "SLIMTrainingError",
+    "SparseSignalPosterior",
+    "SubstrateLatticeNode",
+    "SubstrateLatticeRecovery",
+    "TreeStructuredSparsityPrior",
+    "WaveletMultiScaleFallingRuleListRanker",
     "WhiteboardRule",
+    "classify_predicted_band",
+    "compute_pairwise_coherence",
+    "diff_sparse_signal_posteriors",
+    "explain_slim_prediction",
 ]

@@ -3507,6 +3507,199 @@ def update_rudin_daubechies_from_dispatch_outcome(
     ranker.update_from_anchor(observed_score, panel, axis=axis)
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# Compressive-sensing lattice recovery integration (opt-in, 2026-05-16)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Per operator approval 2026-05-16 + T4 Symposium Time-Traveler verdict
+# (`.omx/research/grand_council_symposium_time_traveler_optimal_staircase_20260516.md`):
+# the K=O(sqrt(N)) compressive-sensing claim becomes a first-class
+# autopilot input via the canonical helpers in
+# `tac.autopilot_rudin_daubechies.compressive_sensing_lattice_recovery`.
+#
+# The helper is OPT-IN: the autopilot's existing rank_candidates path is
+# unchanged.  Operators / agent partners who want the compressive-sensing
+# K=O(sqrt(N)) ranking surface call
+# ``rerank_candidates_via_compressive_sensing_lattice`` explicitly.
+#
+# Sister of ``rerank_candidates_via_rudin_daubechies``: where that helper
+# uses the SLIM/Rashomon ranker (Phase 1-3), this helper uses the
+# substrate-lattice sparse-signal posterior (enhancements 1+5+6) to
+# down-weight predicted savings on substrates the lattice posterior
+# does NOT believe are frontier-breaking.  The Daubechies-DeVore
+# uncertainty band gives an apples-to-apples confidence multiplier.
+
+
+def _build_substrate_lattice_from_candidates(
+    candidates: list[CandidateRow],
+    *,
+    frontier_threshold_cpu: float = 0.192,
+    expected_sparsity: int = 5,
+    use_daubechies_db4: bool = True,
+    use_tree_structured_prior: bool = True,
+):
+    """Construct a SubstrateLatticeRecovery from a CandidateRow list.
+
+    Maps each CandidateRow to a SubstrateLatticeNode using the row's
+    ``predicted_score_delta`` to derive a band around the current
+    frontier (frontier + delta ± half-width-from-EIG).  The mapping
+    uses ``classify_predicted_band`` per the horizon-class directive
+    2026-05-16 to assign each candidate a frontier_pursuit_class.
+    """
+    from tac.autopilot_rudin_daubechies import (
+        FrontierPursuitClass,
+        SubstrateLatticeNode,
+        SubstrateLatticeRecovery,
+        classify_predicted_band,
+    )
+
+    lr = SubstrateLatticeRecovery(
+        use_daubechies_db4=use_daubechies_db4,
+        use_tree_structured_prior=use_tree_structured_prior,
+        expected_sparsity=expected_sparsity,
+        frontier_threshold_cpu=frontier_threshold_cpu,
+    )
+    # Sort candidates by predicted_score_delta to give the lattice a stable
+    # ordering (so the wavelet basis sees neighboring substrates).
+    sorted_cands = sorted(candidates, key=lambda c: c.predicted_score_delta)
+    seen_ids: set[str] = set()
+    for c in sorted_cands:
+        if not c.candidate_id or c.candidate_id in seen_ids:
+            continue
+        seen_ids.add(c.candidate_id)
+        midpoint = frontier_threshold_cpu + c.predicted_score_delta
+        # EIG governs band half-width; clamp to a sensible range.
+        half_width = max(0.005, min(0.05, c.expected_information_gain or 0.01))
+        low = max(0.0, midpoint - half_width)
+        high = midpoint + half_width
+        try:
+            cls = classify_predicted_band(low, high)
+        except ValueError:
+            cls = FrontierPursuitClass.PLATEAU_ADJACENT
+        lr.add_node(
+            SubstrateLatticeNode(
+                node_id=c.candidate_id,
+                parent_id=None,
+                support_level=int(c.context_order or 0),
+                predicted_band_low=low,
+                predicted_band_high=high,
+                frontier_pursuit_class=cls,
+            )
+        )
+    return lr
+
+
+def rerank_candidates_via_compressive_sensing_lattice(
+    candidates: list[CandidateRow],
+    *,
+    frontier_threshold_cpu: float = 0.192,
+    expected_sparsity: int = 5,
+    anchors: list[tuple[str, float]] | None = None,
+    use_daubechies_db4: bool = True,
+    use_tree_structured_prior: bool = True,
+) -> list[tuple[CandidateRow, float, str]]:
+    """Rerank candidates via compressive-sensing lattice posterior.
+
+    Returns a list of ``(candidate, adjusted_predicted_delta, explanation)``
+    tuples sorted ascending by adjusted_predicted_delta (most-negative
+    first = greatest improvement).  The adjusted prediction is the row's
+    raw ``predicted_score_delta`` weighted by the lattice posterior's
+    ``posterior_frontier_probability`` so candidates the lattice
+    posterior does NOT believe are frontier-breaking are down-weighted.
+
+    Mathematically::
+
+        adjusted = predicted_score_delta * (
+            0.5 + 0.5 * posterior_frontier_probability
+        )
+
+    A candidate with posterior_frontier_probability=1.0 (high lattice
+    confidence) keeps its full predicted improvement; one with
+    posterior_frontier_probability=0.0 (lattice says NOT frontier-breaking)
+    is halved.  This is the canonical "trust the empirical anchor pool
+    AND the L1 reconstruction" composition.
+
+    Per operator approval 2026-05-16: the helper is the canonical
+    operator-facing transparency layer for K=O(sqrt(N)) compressive-sensing
+    rank conditioning.  Composes with the existing
+    ``rerank_candidates_via_rudin_daubechies`` (SLIM/Rashomon) per
+    Catalog #125 wire-in hook 4.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": the
+    explanation carries the lattice posterior's canonical confidence_tag
+    so the operator distinguishes K=2 vs K=8 vs K=16 anchor-pool
+    posteriors and the chosen basis (Haar vs Daubechies db4).
+    """
+    lr = _build_substrate_lattice_from_candidates(
+        candidates,
+        frontier_threshold_cpu=frontier_threshold_cpu,
+        expected_sparsity=expected_sparsity,
+        use_daubechies_db4=use_daubechies_db4,
+        use_tree_structured_prior=use_tree_structured_prior,
+    )
+    if anchors:
+        for node_id, score in anchors:
+            try:
+                lr.update_from_anchor(node_id, score)
+            except ValueError:
+                # Anchor at an unknown node: skip silently per
+                # CLAUDE.md "Forbidden score claims" (don't fabricate
+                # nonexistent posterior support).
+                continue
+    posterior = lr.recover_sparse_signal()
+    prob_map = dict(posterior.posterior_frontier_probability)
+    unc_map = dict(posterior.recovery_uncertainty)
+    out: list[tuple[CandidateRow, float, str]] = []
+    for c in candidates:
+        prob = prob_map.get(c.candidate_id, 0.0)
+        unc = unc_map.get(c.candidate_id, 0.0)
+        # Apply (0.5 + 0.5 * prob) multiplier per the canonical formula.
+        weight = 0.5 + 0.5 * prob
+        adjusted = c.predicted_score_delta * weight
+        expl = (
+            f"{posterior.confidence_tag} "
+            f"posterior_frontier_probability={prob:.3f} "
+            f"recovery_uncertainty={unc:.4f} "
+            f"weight={weight:.3f} "
+            f"raw_predicted_delta={c.predicted_score_delta:g} "
+            f"adjusted_predicted_delta={adjusted:g}"
+        )
+        out.append((c, adjusted, expl))
+    out.sort(key=lambda t: t[1])
+    return out
+
+
+def diagnose_compressive_sensing_lattice_undersampling(
+    candidates: list[CandidateRow],
+    *,
+    n_anchors: int,
+    expected_sparsity: int = 5,
+    safety_margin: float = 0.05,
+) -> dict[str, Any]:
+    """Run the Donoho-Tanner 2009 phase-transition monitor against the
+    cathedral autopilot's candidate pool.
+
+    Returns the diagnostic record per
+    :meth:`LatticePhaseTransitionMonitor.compute_undersampling_diagnostic`
+    sister Catalog #270 dispatch-optimization-protocol verdict pattern.
+    When ``recovery_regime`` is AT_THRESHOLD or FAILED, the autopilot
+    should SURFACE the diagnostic to the operator rather than auto-
+    dispatching against an unreliable posterior.
+
+    Per operator standing directive 2026-05-16 max-observability:
+    the diagnostic is the canonical "the autopilot is operating in
+    structurally-uncertain territory" surface.
+    """
+    from tac.autopilot_rudin_daubechies import LatticePhaseTransitionMonitor
+
+    monitor = LatticePhaseTransitionMonitor(safety_margin=safety_margin)
+    return monitor.compute_undersampling_diagnostic(
+        K=n_anchors,
+        N=len(candidates),
+        sparsity_estimate=expected_sparsity,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
