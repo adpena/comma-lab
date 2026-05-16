@@ -68,6 +68,8 @@ def test_feasible_band_inside_polytope():
     assert verdict.score_formula == mod.CONTEST_SCORE_FORMULA
     assert verdict.contest_seg_multiplier == 100.0
     assert verdict.constraint_set_ids == mod.BASE_CONSTRAINT_SET_IDS
+    assert verdict.feasibility_scope == mod.FEASIBILITY_SCOPE
+    assert verdict.move_level_constraint_proof is False
     assert verdict.score_claim is False
 
 
@@ -209,6 +211,9 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
     assert data["score_formula"].startswith("100*seg_dist")
     assert "tt5l_predictive_coding_hierarchy" in data["constraint_set_ids"]
     assert data["constraint_set_count"] == 8
+    assert data["feasibility_scope"] == "score_axis_sanity_only"
+    assert data["move_level_constraint_proof"] is False
+    assert "not a move-level feasibility proof" in data["projection_limitations"]
     assert data["score_claim"] is False
 
 

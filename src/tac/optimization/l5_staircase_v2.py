@@ -86,6 +86,7 @@ TT5L_DYKSTRA_SCORE_FORMULA = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
 )
 TT5L_DYKSTRA_PROJECTION_KIND = "score_axis_projection_with_declared_constraints"
+TT5L_DYKSTRA_FEASIBILITY_SCOPE = "score_axis_sanity_only"
 TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS = frozenset({
     "contest_rate_budget",
     "contest_seg_dist_budget",
@@ -1206,6 +1207,12 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     projection_kind = str(payload.get("polytope_projection_kind") or "")
     if payload and projection_kind != TT5L_DYKSTRA_PROJECTION_KIND:
         blockers.append("tt5l_dykstra_feasibility_projection_kind_missing_or_stale")
+    feasibility_scope = str(payload.get("feasibility_scope") or "")
+    if payload and feasibility_scope != TT5L_DYKSTRA_FEASIBILITY_SCOPE:
+        blockers.append("tt5l_dykstra_feasibility_scope_missing_or_stale")
+    move_level_constraint_proof = payload.get("move_level_constraint_proof")
+    if payload and move_level_constraint_proof is not False:
+        blockers.append("tt5l_dykstra_feasibility_move_level_proof_not_false")
     constraint_ids_payload = payload.get("constraint_set_ids")
     if isinstance(constraint_ids_payload, list):
         constraint_ids = {str(item) for item in constraint_ids_payload}
@@ -1238,6 +1245,8 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "score_formula": score_formula or None,
         "contest_seg_multiplier": contest_seg_multiplier,
         "polytope_projection_kind": projection_kind or None,
+        "feasibility_scope": feasibility_scope or None,
+        "move_level_constraint_proof": move_level_constraint_proof,
         "constraint_set_ids": sorted(constraint_ids),
         "score_claim": False,
         "promotion_eligible": False,

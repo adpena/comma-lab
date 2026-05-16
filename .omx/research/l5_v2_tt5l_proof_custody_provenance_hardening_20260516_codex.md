@@ -25,6 +25,9 @@ No score claim, promotion claim, or exact-eval readiness claim is made here.
   `score_claim`, `promotion_eligible`, and `ready_for_exact_eval_dispatch`.
   Missing fields, string `"false"`, numeric `0`, or any non-literal value block
   readiness.
+- Dykstra artifacts now declare `feasibility_scope=score_axis_sanity_only` and
+  `move_level_constraint_proof=false`; L5 v2 readiness rejects any artifact that
+  is missing these fields or claims move-level feasibility authority.
 - The C1/Z5/TT5L probe CLI exits nonzero when observations are missing and the
   verdict is blocked.
 - If a probe template already exists, the next action advances to populating and
@@ -86,7 +89,9 @@ Result: `All checks passed!`.
 Follow-up Dykstra flag regression:
 
 ```bash
-.venv/bin/python -m pytest src/tac/tests/test_l5_staircase_v2.py -q
+.venv/bin/python -m pytest \
+  src/tac/tests/test_check_substrate_dykstra_feasibility.py \
+  src/tac/tests/test_l5_staircase_v2.py -q
 ```
 
-Result: `77 passed in 0.51s`.
+Result: `88 passed in 0.71s`.

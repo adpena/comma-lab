@@ -555,6 +555,8 @@ def _write_tt5l_dykstra_artifact(repo_root: Path) -> Path:
                     l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
                 ),
                 "polytope_projection_kind": l5_v2.TT5L_DYKSTRA_PROJECTION_KIND,
+                "feasibility_scope": l5_v2.TT5L_DYKSTRA_FEASIBILITY_SCOPE,
+                "move_level_constraint_proof": False,
                 "projection_limitations": (
                     "test fixture: score-axis projection only; not score authority"
                 ),
@@ -868,6 +870,7 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
         "constraint_set_ids",
         "constraint_set_count",
         "polytope_projection_kind",
+        "feasibility_scope",
     ):
         payload.pop(key, None)
     artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
@@ -882,6 +885,23 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
     assert "tt5l_dykstra_feasibility_five_move_constraints_missing" in tt5l[
         "blockers"
     ]
+    assert "tt5l_dykstra_feasibility_scope_missing_or_stale" in tt5l["blockers"]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_rejects_move_level_proof_authority(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload["move_level_constraint_proof"] = True
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_move_level_proof_not_false" in tt5l["blockers"]
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
 
 
 @pytest.mark.parametrize(

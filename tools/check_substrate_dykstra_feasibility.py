@@ -81,9 +81,10 @@ TT5L_FIVE_MOVE_CONSTRAINT_SET_IDS: tuple[str, ...] = (
     "tt5l_tikhonov_rate_regularization",
 )
 POLYTOPE_PROJECTION_KIND: str = "score_axis_projection_with_declared_constraints"
+FEASIBILITY_SCOPE: str = "score_axis_sanity_only"
 PROJECTION_LIMITATIONS: str = (
     "score-axis projection only; not a contest score, not a full-frame "
-    "side-info proof, and not promotion evidence"
+    "side-info proof, not a move-level feasibility proof, and not promotion evidence"
 )
 
 # Default standing-floor distortion anchors observed on the A1 reference
@@ -122,7 +123,9 @@ class DykstraFeasibilityVerdict:
     constraint_set_ids: tuple[str, ...]
     constraint_set_count: int
     polytope_projection_kind: str
+    feasibility_scope: str
     projection_limitations: str
+    move_level_constraint_proof: bool
     score_claim: bool
     promotion_eligible: bool
     ready_for_exact_eval_dispatch: bool
@@ -380,7 +383,9 @@ def check_substrate_dykstra_feasibility(
         constraint_set_ids=constraint_ids,
         constraint_set_count=len(constraint_ids),
         polytope_projection_kind=POLYTOPE_PROJECTION_KIND,
+        feasibility_scope=FEASIBILITY_SCOPE,
         projection_limitations=PROJECTION_LIMITATIONS,
+        move_level_constraint_proof=False,
         score_claim=False,
         promotion_eligible=False,
         ready_for_exact_eval_dispatch=False,
