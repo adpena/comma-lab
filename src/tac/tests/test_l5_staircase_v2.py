@@ -371,6 +371,7 @@ def _write_tt5l_dykstra_artifact(repo_root: Path) -> Path:
                 "substrate_id": l5_v2.TT5L_DYKSTRA_SUBSTRATE_ID,
                 "verdict": "FEASIBLE",
                 "predicted_band": [0.150, 0.170],
+                "archive_size_bytes": 34_603,
                 "rate_contribution": 0.05,
                 "seg_budget": 0.001,
                 "pose_budget": 0.011,
@@ -625,6 +626,7 @@ def test_l5_v2_tt5l_dykstra_artifact_unblocks_sideinfo_next_action(
     tt5l = readiness["tt5l_campaign_readiness"]
 
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["dykstra_feasibility_status"]["archive_size_bytes"] == 34_603
     assert tt5l["sideinfo_gate_evidence_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
@@ -648,6 +650,24 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_empty_json(
 
     assert tt5l["dykstra_feasibility_artifact_valid"] is False
     assert "tt5l_dykstra_feasibility_artifact_empty" in tt5l["blockers"]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "run_tt5l_dykstra_feasibility_polytope"
+    )
+
+
+def test_l5_v2_tt5l_dykstra_artifact_requires_archive_size_basis(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload.pop("archive_size_bytes")
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_archive_size_bytes_missing" in tt5l["blockers"]
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "run_tt5l_dykstra_feasibility_polytope"
     )

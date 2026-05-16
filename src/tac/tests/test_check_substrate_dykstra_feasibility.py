@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import math
 import subprocess
 import sys
 from pathlib import Path
@@ -58,6 +57,7 @@ def test_feasible_band_inside_polytope():
         archive_size_bytes=200_000,
     )
     assert verdict.verdict == "FEASIBLE"
+    assert verdict.archive_size_bytes == 200_000
     assert verdict.blocker_axis is None
     assert verdict.feasibility_band_lo <= verdict.feasibility_band_hi
     assert verdict.dykstra_iteration_count >= 1
@@ -178,6 +178,7 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
     data = json.loads(out_path.read_text())
     assert data["verdict"] == "FEASIBLE"
     assert data["substrate_id"] == "test_cli_feasible"
+    assert data["archive_size_bytes"] == 200_000
 
 
 def test_cli_returns_nonzero_on_infeasible(tmp_path):

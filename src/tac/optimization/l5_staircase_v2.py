@@ -1102,6 +1102,9 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     verdict = str(payload.get("verdict") or "")
     if payload and verdict not in {"FEASIBLE", "INFEASIBLE", "INDETERMINATE"}:
         blockers.append("tt5l_dykstra_feasibility_verdict_invalid")
+    archive_size_bytes = _non_bool_int(payload.get("archive_size_bytes"))
+    if payload and (archive_size_bytes is None or archive_size_bytes <= 0):
+        blockers.append("tt5l_dykstra_feasibility_archive_size_bytes_missing")
     for field in ("feasibility_band_lo", "feasibility_band_hi"):
         value = _json_float(payload.get(field))
         if payload and value is None:
@@ -1123,6 +1126,7 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "artifact_valid": valid,
         "substrate_id": substrate_id or None,
         "verdict": verdict or None,
+        "archive_size_bytes": archive_size_bytes,
         "feasibility_band_lo": payload.get("feasibility_band_lo"),
         "feasibility_band_hi": payload.get("feasibility_band_hi"),
         "feasibility_rationale": payload.get("feasibility_rationale"),

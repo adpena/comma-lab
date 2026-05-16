@@ -87,6 +87,7 @@ class DykstraFeasibilityVerdict:
     substrate_id: str
     verdict: VerdictStr
     predicted_band: tuple[float, float]
+    archive_size_bytes: int
     rate_contribution: float
     seg_budget: float
     pose_budget: float
@@ -164,7 +165,8 @@ def _dykstra_feasibility(
     # Alternating projections — successive applications converge geometrically.
     iter_count = 0
     prev_lo, prev_hi = intersect_lo, intersect_hi
-    for iter_count in range(1, max_iter + 1):
+    for iteration in range(1, max_iter + 1):
+        iter_count = iteration
         lo_proj = _project_onto_rate(prev_lo, rate_contribution)
         lo_proj = _project_onto_seg(lo_proj, rate_contribution, seg_budget, pose_budget)
         lo_proj = _project_onto_pose(lo_proj, rate_contribution, seg_budget, pose_budget)
@@ -299,6 +301,7 @@ def check_substrate_dykstra_feasibility(
         substrate_id=substrate_id,
         verdict=verdict,
         predicted_band=(float(predicted_band_lo), float(predicted_band_hi)),
+        archive_size_bytes=int(archive_size_bytes),
         rate_contribution=float(rate_contribution),
         seg_budget=float(seg_budget),
         pose_budget=float(pose_budget),
