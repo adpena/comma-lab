@@ -1,7 +1,7 @@
 # L5 v2 paired measurement dispatch plan
 
 - schema: `l5_v2_paired_measurement_dispatch_plan_v1`
-- plan_id: `l5_v2_paired_measurement_dispatch_41a708a443c8af0c`
+- plan_id: `l5_v2_paired_measurement_dispatch_ff923cdedaeb1e5e`
 - active_rule_id: `fill_missing_c1_z5_tt5l_probe_observations`
 - work_unit_count: `3`
 - ready_work_unit_count: `0`
@@ -19,7 +19,11 @@
 
 ### measure_c1_world_model_foveation_paired_exact
 
+- work_unit_id: `measure_c1_world_model_foveation_paired_exact`
+- source_measurement_id: `measure_c1_world_model_foveation_paired_exact`
 - candidate_id: `c1_world_model_foveation`
+- sideinfo_variant: ``
+- sideinfo_required_cells: `[]`
 - lane_id: `lane_l5_v2_measure_c1_world_model_foveation_paired_exact`
 - lanes: `{'contest_cuda': 'lane_l5_v2_measure_c1_world_model_foveation_paired_exact_contest_cuda', 'contest_cpu': 'lane_l5_v2_measure_c1_world_model_foveation_paired_exact_contest_cpu'}`
 - pair_group_id: `pair_l5_v2_measure_c1_world_model_foveation_paired_exact_cpu_cuda`
@@ -33,7 +37,11 @@
 
 ### measure_z5_predictive_coding_paired_exact
 
+- work_unit_id: `measure_z5_predictive_coding_paired_exact`
+- source_measurement_id: `measure_z5_predictive_coding_paired_exact`
 - candidate_id: `z5_predictive_coding_world_model`
+- sideinfo_variant: ``
+- sideinfo_required_cells: `[]`
 - lane_id: `lane_l5_v2_measure_z5_predictive_coding_paired_exact`
 - lanes: `{'contest_cuda': 'lane_l5_v2_measure_z5_predictive_coding_paired_exact_contest_cuda', 'contest_cpu': 'lane_l5_v2_measure_z5_predictive_coding_paired_exact_contest_cpu'}`
 - pair_group_id: `pair_l5_v2_measure_z5_predictive_coding_paired_exact_cpu_cuda`
@@ -47,7 +55,11 @@
 
 ### measure_tt5l_autonomy_paired_exact
 
+- work_unit_id: `measure_tt5l_autonomy_paired_exact`
+- source_measurement_id: `measure_tt5l_autonomy_paired_exact`
 - candidate_id: `time_traveler_l5_autonomy`
+- sideinfo_variant: ``
+- sideinfo_required_cells: `[]`
 - lane_id: `lane_l5_v2_measure_tt5l_autonomy_paired_exact`
 - lanes: `{'contest_cuda': 'lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda', 'contest_cpu': 'lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu'}`
 - pair_group_id: `pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda`

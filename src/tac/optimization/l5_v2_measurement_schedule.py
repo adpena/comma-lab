@@ -165,6 +165,14 @@ def _sideinfo_effect_curve_blockers(
     return list(dict.fromkeys(blockers))
 
 
+def _sideinfo_effect_curve_required_cells() -> list[dict[str, str]]:
+    return [
+        {"axis": axis, "variant": variant}
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    ]
+
+
 def validate_l5_v2_sideinfo_effect_curve(
     curve: Mapping[str, Any] | None,
 ) -> list[str]:
@@ -183,8 +191,9 @@ def _measurement(
     required_axes: tuple[str, ...] = ("contest_cpu", "contest_cuda"),
     output_artifact: str,
     blockers: list[str] | None = None,
+    extra: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    row = {
         "measurement_id": measurement_id,
         "candidate_id": candidate_id,
         "purpose": purpose,
@@ -197,6 +206,9 @@ def _measurement(
         "ready_for_exact_eval_dispatch": False,
         "blockers": blockers or [],
     }
+    if extra:
+        row.update(dict(extra))
+    return row
 
 
 def _probe_measurement_ids_for_missing(candidate_ids: list[str]) -> list[str]:
@@ -282,6 +294,20 @@ def build_l5_v2_lattice_measurement_schedule(
             output_artifact=(
                 L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
             ),
+            extra={
+                "sideinfo_effect_curve_builder_tool": (
+                    L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH
+                ),
+                "sideinfo_effect_curve_dispatch_variants": list(
+                    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ),
+                "sideinfo_effect_curve_required_cells": (
+                    _sideinfo_effect_curve_required_cells()
+                ),
+                "sideinfo_effect_curve_aggregate_output_artifact": (
+                    L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+                ),
+            },
             blockers=(
                 []
                 if sideinfo_curve_valid
@@ -401,6 +427,14 @@ def render_l5_v2_lattice_measurement_schedule_markdown(
                     "- evidence authority: planning-only until paired exact artifacts land",
                 ]
             )
+            variants = row.get("sideinfo_effect_curve_dispatch_variants")
+            cells = row.get("sideinfo_effect_curve_required_cells")
+            if isinstance(variants, list):
+                lines.append(f"- sideinfo_effect_curve_dispatch_variants: `{variants}`")
+            if isinstance(cells, list):
+                lines.append(
+                    f"- sideinfo_effect_curve_required_cell_count: `{len(cells)}`"
+                )
     return "\n".join(lines) + "\n"
 
 

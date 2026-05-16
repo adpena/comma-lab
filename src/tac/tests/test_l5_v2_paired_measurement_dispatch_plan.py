@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_MEASUREMENT_SCHEDULE_SCHEMA,
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     build_l5_v2_lattice_measurement_schedule,
 )
 from tac.optimization.l5_v2_paired_measurement_dispatch_plan import (
@@ -26,6 +27,26 @@ _FALSE_AUTHORITY_KEYS = {
     "dispatch_attempted": False,
     "adjudication_required": True,
 }
+
+
+def _eligible_row(candidate_id: str) -> dict[str, object]:
+    return {
+        "candidate_id": candidate_id,
+        "eligible_for_architecture_lock": True,
+        "blockers": [],
+    }
+
+
+def _eligible_probe_intake() -> dict[str, object]:
+    return {
+        "verdict": {
+            "evaluated_observations": [
+                _eligible_row("c1_world_model_foveation"),
+                _eligible_row("z5_predictive_coding_world_model"),
+                _eligible_row("time_traveler_l5_autonomy"),
+            ]
+        }
+    }
 
 
 def test_l5_v2_dispatch_plan_expands_active_measurements_to_paired_work_units() -> None:
@@ -106,6 +127,33 @@ def test_l5_v2_dispatch_plan_top_level_blockers_include_row_and_dispatch_gaps() 
     assert "requires_byte_closed_archive_path" in plan["blockers"]
     assert "requires_archive_sha256" in plan["blockers"]
     assert "l5_v2_probe_observation_missing" in plan["blockers"]
+
+
+def test_l5_v2_dispatch_plan_expands_sideinfo_curve_to_variant_pairs() -> None:
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+    )
+    assert schedule["active_measurement_ids"] == ["measure_tt5l_sideinfo_effect_curve"]
+
+    plan = build_l5_v2_paired_measurement_dispatch_plan(schedule=schedule)
+
+    assert plan["work_unit_count"] == len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    assert plan["ready_work_unit_count"] == 0
+    variants = {row["sideinfo_variant"] for row in plan["work_units"]}
+    assert variants == set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    for row in plan["work_units"]:
+        variant = row["sideinfo_variant"]
+        assert row["measurement_id"] == "measure_tt5l_sideinfo_effect_curve"
+        assert row["source_measurement_id"] == "measure_tt5l_sideinfo_effect_curve"
+        assert row["work_unit_id"].endswith(f"__{variant}")
+        assert row["required_axes"] == ["contest_cpu", "contest_cuda"]
+        assert row["sideinfo_required_cells"] == [
+            {"axis": "contest_cpu", "variant": variant},
+            {"axis": "contest_cuda", "variant": variant},
+        ]
+        assert variant in row["pair_group_id"]
+        assert variant in row["dispatch_command_template"]
+        assert row["dispatch_command_executable"] is False
 
 
 def test_l5_v2_dispatch_plan_fails_closed_on_bad_schedule_schema() -> None:

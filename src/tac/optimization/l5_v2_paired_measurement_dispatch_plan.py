@@ -131,6 +131,34 @@ def _row_measurement_blockers(row: Mapping[str, Any]) -> list[str]:
     return _as_text_list(row.get("blockers"))
 
 
+def _row_dispatch_variants(row: Mapping[str, Any]) -> list[str]:
+    variants = _as_text_list(row.get("sideinfo_effect_curve_dispatch_variants"))
+    return variants or [""]
+
+
+def _work_unit_id(*, measurement_id: str, sideinfo_variant: str) -> str:
+    if not sideinfo_variant:
+        return measurement_id
+    return f"{measurement_id}__{_slug(sideinfo_variant)}"
+
+
+def _sideinfo_required_cells_for_variant(
+    row: Mapping[str, Any],
+    *,
+    sideinfo_variant: str,
+) -> list[dict[str, str]]:
+    if not sideinfo_variant:
+        return []
+    cells = _as_mapping_rows(row.get("sideinfo_effect_curve_required_cells"))
+    out: list[dict[str, str]] = []
+    for cell in cells:
+        variant = str(cell.get("variant") or "").strip()
+        axis = str(cell.get("axis") or "").strip()
+        if variant == sideinfo_variant and axis:
+            out.append({"axis": axis, "variant": variant})
+    return out
+
+
 def _dispatch_blockers(command: str) -> list[str]:
     blockers = [
         "requires_byte_closed_archive_path",
@@ -148,23 +176,31 @@ def _dispatch_blockers(command: str) -> list[str]:
     return _dedupe(blockers)
 
 
-def _paired_dispatch_command(*, measurement_id: str, candidate_id: str) -> list[str]:
+def _paired_dispatch_command(
+    *,
+    work_unit_id: str,
+    candidate_id: str,
+    sideinfo_variant: str = "",
+) -> list[str]:
+    label = candidate_id or work_unit_id
+    if sideinfo_variant:
+        label = f"{label}_{sideinfo_variant}"
     command = paired_auth_eval_dispatch_command_template(
         archive_path=_PLACEHOLDER_ARCHIVE,
         submission_dir=_PLACEHOLDER_SUBMISSION_DIR,
-        lane_id_base=_lane_id_base(measurement_id),
+        lane_id_base=_lane_id_base(work_unit_id),
         archive_sha256=_PLACEHOLDER_ARCHIVE_SHA256,
         execute=False,
-        label=f"l5_v2_{_slug(candidate_id or measurement_id)}",
-        run_id=_run_id(measurement_id),
+        label=f"l5_v2_{_slug(label)}",
+        run_id=_run_id(work_unit_id),
         inflate_sh="inflate.sh",
-        output_root=_output_root(measurement_id),
+        output_root=_output_root(work_unit_id),
         gpu="T4",
         claim_agent="codex:l5_v2_paired_measurement_dispatch",
-        claim_notes=f"l5_v2_paired_measurement:{_pair_group_id(measurement_id)}",
+        claim_notes=f"l5_v2_paired_measurement:{_pair_group_id(work_unit_id)}",
     )
     pair_index = command.index("--pair-group-id") + 1
-    command[pair_index] = _pair_group_id(measurement_id)
+    command[pair_index] = _pair_group_id(work_unit_id)
     return command
 
 
@@ -216,47 +252,68 @@ def build_l5_v2_paired_measurement_dispatch_plan(
                 + ",".join(unknown_axes)
             )
 
-        candidate_id = str(row.get("candidate_id") or "").strip()
-        pair_group_id = _pair_group_id(measurement_id)
-        command = _paired_dispatch_command(
-            measurement_id=measurement_id,
-            candidate_id=candidate_id,
-        )
-        command_string = " ".join(command)
         measurement_blockers = _row_measurement_blockers(row)
-        dispatch_blockers = _dispatch_blockers(command_string)
-        top_blockers.extend(measurement_blockers)
-        top_blockers.extend(dispatch_blockers)
-        lanes = {
-            "contest_cuda": f"{_lane_id_base(measurement_id)}_contest_cuda",
-            "contest_cpu": f"{_lane_id_base(measurement_id)}_contest_cpu",
-        }
-        work_units.append(
-            {
-                **_FALSE_AUTHORITY_FLAGS,
-                "measurement_id": measurement_id,
-                "candidate_id": candidate_id,
-                "lane_id": _lane_id_base(measurement_id),
-                "lanes": lanes,
-                "pair_group_id": pair_group_id,
-                "required_axes": list(_REQUIRED_EXACT_AXES),
-                "provider": "modal",
-                "paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
-                "dispatch_command": command,
-                "dispatch_command_template": command_string,
-                "dispatch_command_executable": False,
-                "claim_lifecycle_owner": (
-                    "tools/dispatch_modal_paired_auth_eval.py and the per-axis "
-                    "Modal auth-eval wrappers"
-                ),
-                "preclaim_forbidden": True,
-                "standalone_active_claim_command": None,
-                "axis_output_dirs": _axis_output_dirs(measurement_id=measurement_id),
-                "harvest_commands": _harvest_commands(measurement_id=measurement_id),
-                "measurement_blockers_to_close": measurement_blockers,
-                "dispatch_blockers": dispatch_blockers,
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        for sideinfo_variant in _row_dispatch_variants(row):
+            work_unit_id = _work_unit_id(
+                measurement_id=measurement_id,
+                sideinfo_variant=sideinfo_variant,
+            )
+            pair_group_id = _pair_group_id(work_unit_id)
+            command = _paired_dispatch_command(
+                work_unit_id=work_unit_id,
+                candidate_id=candidate_id,
+                sideinfo_variant=sideinfo_variant,
+            )
+            command_string = " ".join(command)
+            dispatch_blockers = _dispatch_blockers(command_string)
+            top_blockers.extend(measurement_blockers)
+            top_blockers.extend(dispatch_blockers)
+            lanes = {
+                "contest_cuda": f"{_lane_id_base(work_unit_id)}_contest_cuda",
+                "contest_cpu": f"{_lane_id_base(work_unit_id)}_contest_cpu",
             }
-        )
+            work_units.append(
+                {
+                    **_FALSE_AUTHORITY_FLAGS,
+                    "measurement_id": measurement_id,
+                    "source_measurement_id": measurement_id,
+                    "work_unit_id": work_unit_id,
+                    "sideinfo_variant": sideinfo_variant,
+                    "sideinfo_required_cells": _sideinfo_required_cells_for_variant(
+                        row,
+                        sideinfo_variant=sideinfo_variant,
+                    ),
+                    "sideinfo_effect_curve_aggregate_output_artifact": str(
+                        row.get("sideinfo_effect_curve_aggregate_output_artifact")
+                        or ""
+                    ),
+                    "candidate_id": candidate_id,
+                    "lane_id": _lane_id_base(work_unit_id),
+                    "lanes": lanes,
+                    "pair_group_id": pair_group_id,
+                    "required_axes": list(_REQUIRED_EXACT_AXES),
+                    "provider": "modal",
+                    "paired_dispatch_tool": PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+                    "dispatch_command": command,
+                    "dispatch_command_template": command_string,
+                    "dispatch_command_executable": False,
+                    "claim_lifecycle_owner": (
+                        "tools/dispatch_modal_paired_auth_eval.py and the per-axis "
+                        "Modal auth-eval wrappers"
+                    ),
+                    "preclaim_forbidden": True,
+                    "standalone_active_claim_command": None,
+                    "axis_output_dirs": _axis_output_dirs(
+                        measurement_id=work_unit_id
+                    ),
+                    "harvest_commands": _harvest_commands(
+                        measurement_id=work_unit_id
+                    ),
+                    "measurement_blockers_to_close": measurement_blockers,
+                    "dispatch_blockers": dispatch_blockers,
+                }
+            )
 
     top_blockers = _dedupe(top_blockers)
     plan_id_payload = {
@@ -320,7 +377,11 @@ def render_l5_v2_paired_measurement_dispatch_plan_markdown(
                 "",
                 f"### {row.get('measurement_id')}",
                 "",
+                f"- work_unit_id: `{row.get('work_unit_id')}`",
+                f"- source_measurement_id: `{row.get('source_measurement_id')}`",
                 f"- candidate_id: `{row.get('candidate_id')}`",
+                f"- sideinfo_variant: `{row.get('sideinfo_variant')}`",
+                f"- sideinfo_required_cells: `{row.get('sideinfo_required_cells')}`",
                 f"- lane_id: `{row.get('lane_id')}`",
                 f"- lanes: `{row.get('lanes')}`",
                 f"- pair_group_id: `{row.get('pair_group_id')}`",

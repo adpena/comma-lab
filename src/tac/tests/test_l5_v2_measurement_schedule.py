@@ -98,6 +98,13 @@ def test_l5_v2_schedule_routes_to_sideinfo_curve_after_probe_eligibility() -> No
     )
     assert sideinfo["score_claim"] is False
     assert sideinfo["required_axes"] == ["contest_cpu", "contest_cuda"]
+    assert sideinfo["sideinfo_effect_curve_dispatch_variants"] == list(
+        L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    )
+    assert len(sideinfo["sideinfo_effect_curve_required_cells"]) == (
+        len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+        * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    )
     assert "consumption_proof_is_not_yet_usefulness_proof" in sideinfo["blockers"]
     assert (
         "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"

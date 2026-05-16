@@ -42,6 +42,8 @@
 - required_axes: `['contest_cpu', 'contest_cuda']`
 - estimated_cost_usd: `1.0`
 - evidence authority: planning-only until paired exact artifacts land
+- sideinfo_effect_curve_dispatch_variants: `['zero', 'random_lsb', 'shuffled', 'trained', 'ablated']`
+- sideinfo_effect_curve_required_cell_count: `10`
 
 ### prepare_l5_v2_paired_anchor_packet
 
