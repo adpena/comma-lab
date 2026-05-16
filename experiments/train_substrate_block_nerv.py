@@ -1048,6 +1048,17 @@ def _full_main(args: argparse.Namespace) -> int:
                     provenance_path=args.output_dir / "provenance.json",
                     env_var_candidates=("BLOCK_NERV_GPU", "MODAL_GPU"),
                 )
+                # 12-month premortem item #2 (2026-05-16): stamp the
+                # upstream/ snapshot SHA so this anchor can be cross-checked
+                # against the snapshot it was scored on. Best-effort.
+                try:
+                    from tac.contest_compliance import (
+                        compute_upstream_snapshot_sha256,
+                    )
+
+                    _upstream_sha = compute_upstream_snapshot_sha256()
+                except Exception:  # pragma: no cover — best-effort
+                    _upstream_sha = None
                 result = ContestResult(
                     axis="cuda",
                     hardware_substrate=_detected_substrate,
@@ -1058,6 +1069,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     archive_bytes=archive_bytes,
                     notes=f"block_nerv first-anchor dispatch; epochs={args.epochs}",
                     observed_at_utc=_utc_now_iso(),
+                    upstream_snapshot_sha256=_upstream_sha,
                 )
                 update = posterior_update_locked(result)
                 print(

@@ -187,6 +187,14 @@ class ContestResult:
     notes: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
     observed_at_utc: str = ""
+    # Per the 12-month strategic-foresight premortem item #2
+    # (`.omx/research/12_month_frustration_premortem_and_recommendations_20260516.md`):
+    # every anchor MUST carry the upstream/ tree SHA-256 at scoring time so a
+    # later silent upstream rotation can be structurally detected. Legacy rows
+    # (pre-2026-05-16) have ``None`` and are treated as "snapshot unknown"
+    # by downstream consumers. New anchors should populate via
+    # ``tac.contest_compliance.compute_upstream_snapshot_sha256()``.
+    upstream_snapshot_sha256: str | None = None
 
     def is_authoritative(self) -> bool:
         """LEGACY: tag-only check (kept for back-compat).
@@ -1111,6 +1119,11 @@ def posterior_update(
         "observed_at_utc": result.observed_at_utc,
         "track_updates": track_updated,
         "source_rho_estimate": result.source_rho_estimate,
+        # 12-month premortem item #2: persist the upstream snapshot SHA-256
+        # so later consumers can detect cross-snapshot anchor comparisons.
+        # Legacy anchors written before this field landed serialize as
+        # ``None``; readers default to ``None`` on missing key.
+        "upstream_snapshot_sha256": result.upstream_snapshot_sha256,
     })
     if len(posterior.accepted_anchor_history) > 500:
         posterior.accepted_anchor_history = posterior.accepted_anchor_history[-500:]

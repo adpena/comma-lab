@@ -1393,6 +1393,18 @@ def main(
     try:
         from tac.deploy.modal.call_id_ledger import register_dispatched_call_id
 
+        # 12-month premortem item #2 (2026-05-16): stamp the upstream/
+        # snapshot SHA at dispatch time so a later upstream rotation cannot
+        # silently invalidate this anchor. Best-effort: never fail the
+        # dispatch on the helper's absence.
+        upstream_sha: str | None
+        try:
+            from tac.contest_compliance import compute_upstream_snapshot_sha256
+
+            upstream_sha = compute_upstream_snapshot_sha256()
+        except Exception:  # pragma: no cover — best-effort
+            upstream_sha = None
+
         register_dispatched_call_id(
             call_id=call_id,
             lane_id=resolved_lane_id,
@@ -1403,6 +1415,7 @@ def main(
             max_seconds=max_seconds,
             mounted_code_git_head=mounted_code_git_head,
             agent="claude",
+            upstream_snapshot_sha256=upstream_sha,
         )
         print(
             "  ledger appended: .omx/state/modal_call_id_ledger.jsonl "

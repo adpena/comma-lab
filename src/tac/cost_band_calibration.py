@@ -264,6 +264,11 @@ class CostBandAnchor:
     # additions/removals/renames. See
     # feedback_review_zeta_r4_LANDED_20260513.md Finding Z-4.1.
     schema_version: int = 1
+    # 12-month premortem item #2 (2026-05-16): upstream/ tree SHA-256 at
+    # dispatch time. Legacy rows pre-2026-05-16 are ``None`` and treated
+    # as "snapshot unknown" by predict()/drift-check callers. New anchors
+    # populate via ``tac.contest_compliance.compute_upstream_snapshot_sha256()``.
+    upstream_snapshot_sha256: str | None = None
 
 
 def _now_utc_iso() -> str:
@@ -317,6 +322,11 @@ def append_anchor(
             "outcome": anchor.outcome,
             "returncode": anchor.returncode,
             "notes": anchor.notes,
+            # 12-month premortem item #2: upstream snapshot SHA-256.
+            # Legacy rows pre-2026-05-16 lack this field — read-side
+            # defaults to ``None`` (snapshot unknown). New rows persist
+            # ``compute_upstream_snapshot_sha256()`` output.
+            "upstream_snapshot_sha256": anchor.upstream_snapshot_sha256,
         },
         sort_keys=True,
         allow_nan=False,
@@ -389,6 +399,11 @@ def load_anchors(
                     returncode=returncode_val,
                     notes=d.get("notes", ""),
                     schema_version=int(schema_version_raw),
+                    # 12-month premortem item #2 (2026-05-16): legacy rows
+                    # pre-this-field land as ``None`` so downstream
+                    # drift-checks can distinguish "unknown" from "known
+                    # different".
+                    upstream_snapshot_sha256=d.get("upstream_snapshot_sha256"),
                 )
             )
         except (KeyError, TypeError, ValueError):

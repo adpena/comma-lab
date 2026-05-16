@@ -1048,6 +1048,7 @@ def register_dispatched_call_id(
     agent: str = "claude",
     subagent_id: str | None = None,
     session_id: str | None = None,
+    upstream_snapshot_sha256: str | None = None,
     path: Path | None = None,
     lock_path: Path | None = None,
     **extra: Any,
@@ -1095,6 +1096,11 @@ def register_dispatched_call_id(
         "agent": agent,
         "subagent_id": subagent_id,
         "session_id": session_id,
+        # 12-month premortem item #2 (2026-05-16): persist the upstream/
+        # snapshot SHA-256 at dispatch time so a harvested call_id can be
+        # cross-checked against the snapshot it was scored on. Legacy rows
+        # pre-this-field land as ``None`` (snapshot unknown).
+        "upstream_snapshot_sha256": upstream_snapshot_sha256,
         "written_at_utc": _now_iso(),
         "written_pid": os.getpid(),
         "written_host": socket.gethostname(),

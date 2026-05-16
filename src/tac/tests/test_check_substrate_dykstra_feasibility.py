@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: MIT
+"""Sanity tests for ``tools/check_substrate_dykstra_feasibility.py``.
+
+Per the HIGH-RISK substrate cargo-cult unwind audit 2026-05-16 D3
+operator-approved decision: every L1+ substrate design memo MUST run
+this helper against its predicted ΔS band; the gate emits a
+FEASIBLE / INFEASIBLE / INDETERMINATE verdict consumed by the autopilot
+ranker + design memo §predicted-band sections.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import math
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _load_module():
+    """Load the CLI module without executing main()."""
+    target = (
+        Path(__file__).resolve().parent.parent.parent.parent
+        / "tools"
+        / "check_substrate_dykstra_feasibility.py"
+    )
+    module_name = "check_substrate_dykstra_feasibility_test"
+    spec = importlib.util.spec_from_file_location(module_name, target)
+    assert spec is not None
+    module = importlib.util.module_from_spec(spec)
+    # dataclass typing introspection needs the module visible in sys.modules
+    # at exec_module time.
+    sys.modules[module_name] = module
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_helper_module_loads():
+    mod = _load_module()
+    assert hasattr(mod, "check_substrate_dykstra_feasibility")
+    assert hasattr(mod, "DykstraFeasibilityVerdict")
+    assert hasattr(mod, "CONTEST_RATE_DENOM_BYTES")
+    assert mod.CONTEST_RATE_DENOM_BYTES == 37_545_489
+
+
+def test_feasible_band_inside_polytope():
+    mod = _load_module()
+    # Archive size 200,000 B -> rate_contribution = 25 * 200000 / 37545489
+    # ~= 0.1331. With S=0.001 and P=0.011 the feasible upper bound is
+    # 0.1331 + 0.001 + sqrt(0.11) ~= 0.467. A band [0.15, 0.20] sits
+    # comfortably inside the polytope.
+    verdict = mod.check_substrate_dykstra_feasibility(
+        substrate_id="test_feasible",
+        predicted_band_lo=0.15,
+        predicted_band_hi=0.20,
+        archive_size_bytes=200_000,
+    )
+    assert verdict.verdict == "FEASIBLE"
+    assert verdict.blocker_axis is None
+    assert verdict.feasibility_band_lo <= verdict.feasibility_band_hi
+    assert verdict.dykstra_iteration_count >= 1
+
+
+def test_infeasible_band_below_rate_contribution_flags_rate_blocker():
+    mod = _load_module()
+    # Archive size 10,000,000 B -> rate contribution ~= 25 * 10M / 37.5M ~= 6.66.
+    # A claimed band of [0.10, 0.18] is mathematically impossible because
+    # even with zero distortion the rate alone exceeds 6.0.
+    verdict = mod.check_substrate_dykstra_feasibility(
+        substrate_id="test_rate_infeasible",
+        predicted_band_lo=0.10,
+        predicted_band_hi=0.18,
+        archive_size_bytes=10_000_000,
+    )
+    assert verdict.verdict == "INFEASIBLE"
+    assert verdict.blocker_axis == "rate"
+    assert "rate" in verdict.feasibility_rationale.lower() or "blocker" in verdict.feasibility_rationale.lower()
+
+
+def test_infeasible_band_above_polytope_flags_pose_blocker():
+    mod = _load_module()
+    # Tight budgets — predicted band claims a score well above what the
+    # polytope can reach with seg=0.001 and pose=0.011 at a 100k archive.
+    verdict = mod.check_substrate_dykstra_feasibility(
+        substrate_id="test_pose_infeasible",
+        predicted_band_lo=2.5,
+        predicted_band_hi=3.0,
+        archive_size_bytes=100_000,
+    )
+    assert verdict.verdict == "INFEASIBLE"
+    assert verdict.blocker_axis in {"pose", "seg"}
+
+
+def test_band_outside_rate_polytope_when_band_far_below_rate():
+    mod = _load_module()
+    # Archive 10M B -> rate ~6.66; band [0.1, 0.2] entirely below.
+    verdict = mod.check_substrate_dykstra_feasibility(
+        substrate_id="test_far_below",
+        predicted_band_lo=0.1,
+        predicted_band_hi=0.2,
+        archive_size_bytes=10_000_000,
+    )
+    assert verdict.verdict == "INFEASIBLE"
+    assert verdict.rate_contribution > 0.2
+
+
+def test_invalid_inputs_raise_value_error():
+    mod = _load_module()
+    # Negative archive bytes
+    try:
+        mod.check_substrate_dykstra_feasibility(
+            substrate_id="x",
+            predicted_band_lo=0.1,
+            predicted_band_hi=0.2,
+            archive_size_bytes=-5,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError on negative archive_size_bytes")
+    # Inverted band
+    try:
+        mod.check_substrate_dykstra_feasibility(
+            substrate_id="x",
+            predicted_band_lo=0.3,
+            predicted_band_hi=0.1,
+            archive_size_bytes=100_000,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError on inverted band")
+    # Empty substrate id
+    try:
+        mod.check_substrate_dykstra_feasibility(
+            substrate_id="",
+            predicted_band_lo=0.1,
+            predicted_band_hi=0.2,
+            archive_size_bytes=100_000,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError on empty substrate_id")
+    # Non-finite band
+    try:
+        mod.check_substrate_dykstra_feasibility(
+            substrate_id="x",
+            predicted_band_lo=float("nan"),
+            predicted_band_hi=0.2,
+            archive_size_bytes=100_000,
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError on NaN band")
+
+
+def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    tool = repo_root / "tools" / "check_substrate_dykstra_feasibility.py"
+    out_path = tmp_path / "verdict.json"
+    proc = subprocess.run(
+        [
+            sys.executable, str(tool),
+            "--substrate-id", "test_cli_feasible",
+            "--predicted-band-lo", "0.15",
+            "--predicted-band-hi", "0.20",
+            "--archive-size-bytes", "200000",
+            "--output-json", str(out_path),
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert out_path.exists()
+    data = json.loads(out_path.read_text())
+    assert data["verdict"] == "FEASIBLE"
+    assert data["substrate_id"] == "test_cli_feasible"
+
+
+def test_cli_returns_nonzero_on_infeasible(tmp_path):
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    tool = repo_root / "tools" / "check_substrate_dykstra_feasibility.py"
+    proc = subprocess.run(
+        [
+            sys.executable, str(tool),
+            "--substrate-id", "test_cli_infeasible",
+            "--predicted-band-lo", "0.1",
+            "--predicted-band-hi", "0.2",
+            "--archive-size-bytes", "10000000",
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+    # rc=1 for INFEASIBLE per CLI contract; rc=2 for ValueError.
+    assert proc.returncode == 1, (proc.returncode, proc.stderr)
+    data = json.loads(proc.stdout)
+    assert data["verdict"] == "INFEASIBLE"
+    assert data["blocker_axis"] == "rate"
