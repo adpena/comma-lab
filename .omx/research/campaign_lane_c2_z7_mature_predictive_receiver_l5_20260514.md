@@ -106,7 +106,7 @@ Retrieved 2026-05-16.
     --advisory-cpu-explicitly-waived
 ```
 
-**Timing-smoke kill criterion:** if any iteration's Stage 0B does not show ≥-0.005 cumulative ΔS vs prior iteration's archive on macOS-CPU advisory eval, escalate to grand council for probe-disambiguator routing.
+**Timing-smoke escalation criterion:** if any iteration's Stage 0B does not show ≥-0.005 cumulative ΔS vs prior iteration's archive on macOS-CPU advisory eval, escalate to grand council for probe-disambiguator routing. macOS-CPU advisory is not falsification authority.
 
 ## 4. Full-run command (resumable + harvest)
 
@@ -182,14 +182,14 @@ TimeTravelerArchive-C2-L5-mature (target: 60-95 KB total)
 
 | Iteration | Continue if | Stop if |
 |---|---|---|
-| Iter 1 | macOS-CPU [0.07, 0.10] (matches C1 final + improvement) | macOS-CPU > 0.13 (substrate doesn't compose with Z6) |
-| Iter 2 | macOS-CPU [0.05, 0.08]; trigger Linux x86_64 paired eval | macOS-CPU > 0.10 |
-| Iter 3 | macOS-CPU [0.04, 0.06]; cross-substrate composition matrix dispatched | macOS-CPU > 0.07 |
+| Iter 1 | macOS-CPU [0.07, 0.10] (matches C1 final + improvement) | macOS-CPU > 0.13 → diagnostic escalation, not falsification |
+| Iter 2 | macOS-CPU [0.05, 0.08]; trigger Linux x86_64 paired eval | macOS-CPU > 0.10 → diagnostic escalation, not falsification |
+| Iter 3 | macOS-CPU [0.04, 0.06]; cross-substrate composition matrix dispatched | macOS-CPU > 0.07 → diagnostic escalation, not falsification |
 | Iter 4+ | each iteration improves macOS-CPU by ≥0.005 cumulative | 2 consecutive iterations show <0.002 improvement (saturation) |
 | Final exact eval | [contest-CPU] AND [contest-CUDA] both in [0.035, 0.07] → council L3 promotion | either >0.10 → DEFERRED-pending-research |
 
 **Falsification criteria:**
-- If iteration 3 final [contest-CPU] > 0.10 → Time-Traveler prediction at the L5 asymptote partially falsified.
+- If iteration 3 paired exact CPU/CUDA on the same archive/runtime remains >0.10 after result-review packet rules out engineering/config bugs → Time-Traveler prediction at the L5 asymptote partially falsified.
 - Time-Traveler frame still survives at the staircase Z3-Z6 level; only the Z7 deep-future asymptote is revisited.
 - Reactivation: requires alien-tech composition (E4 MDL-IBPS, Wyner-Ziv full substrate, DARTS-SuperNet output).
 

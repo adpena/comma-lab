@@ -95,11 +95,16 @@ TimeTravelerArchive (target: 95-110 KB total)
     └── magic + lengths + grammar version
 ```
 
-**Predicted contest-CPU score: 0.150-0.170** `[time-traveler-prediction]`
+**Planning score band: 0.150-0.170** `[time-traveler-prediction; not contest score evidence]`
 
-## Why this beats PR101 0.193
+This band is a planning prior only. It requires a byte-closed archive/runtime
+packet with matching archive SHA-256, runtime tree/content SHA-256, sample
+count, component recomputation, logs, and paired CPU/CUDA exact eval before it
+can support promotion, retirement, or leaderboard language.
 
-| Component        | PR101 budget    | Time-traveler   | Why TT wins                         |
+## Design target relative to PR101 0.193
+
+| Component        | PR101 budget    | Time-traveler target | Hypothesis under test              |
 |------------------|----------------:|----------------:|-------------------------------------|
 | Decoder weights  | ~110 KB         | ~35 KB          | Sub-100K params; Tikhonov regularization |
 | Latents          | ~67 KB          | 0 KB            | Replaced by prediction-error only   |
@@ -136,9 +141,9 @@ Cite: Friston (2010), "The free-energy principle: a unified brain theory?", Natu
 
 ### 3. Foveation Matched to Ego-Motion (Gibson 1950, Lee 1976, LAPose canvas)
 
-Dashcam attention is centered on the focus of expansion (FOE). Pixels near FOE need high fidelity (vehicles, lane markers, brake lights). Pixels far from FOE can be encoded cheaply (sky, road shoulders, peripheral parked cars).
+Dashcam attention is centered on the focus of expansion (FOE). Pixels near FOE may need high fidelity (vehicles, lane markers, brake lights). Pixels far from FOE may be cheaper if Pact scorer measurements prove they are lower-impact for the pinned video/runtime.
 
-Log-polar foveation grid: 2 KB encodes the spatial weighting map. Provides 5-10× effective resolution gain on score-relevant regions vs uniform encoding.
+Log-polar foveation grid: 2 KB target for the spatial weighting map. The 5-10x effective-resolution language is a planning target only; Pact must prove it with scorer-localized measurements and paired exact eval before treating it as archive-byte or score evidence.
 
 Connect to LAPose foveation atom manifest already in repo (`tools/build_lapose_foveation_atom_manifest.py`).
 
@@ -182,7 +187,7 @@ Mathematical: model description length L = K(decoder) + K(latents | decoder). Mi
 | SE-4 JSCC scorer-conditional coding | Ancient elder SE-4 (in flight from IMPL-A) | IMPL in flight |
 | CTW arithmetic | Codex CTW + ancient elder SE-2 | DESIGN |
 
-**This means we're CLOSER than the literature suggests** — the time-traveler architecture is buildable from primitives we already have. They just need to be COMPOSED into one coherent archive grammar.
+**Implementation proximity hypothesis** — the time-traveler architecture appears buildable from primitives we already have, but this is not a score claim. They still need to be composed into one coherent archive grammar and validated with paired exact eval.
 
 ## The One Piece Missing
 
@@ -199,7 +204,7 @@ Predicted Δscore if combined with existing primitives: -0.020 to -0.040 (toward
 ## Falsification Criteria
 
 This architecture is falsified if:
-- Empirical contest-CPU > 0.190 after building + training + auth-eval
+- Paired exact CPU/CUDA on the same archive/runtime remains >0.190 after building + training + auth-eval and after engineering/config bugs are ruled out by result-review packet
 - Decoder + world-model bytes can't compress below 60 KB while preserving scorer-equivalence
 - Differentiable-physics module increases inflate.py LOC budget above 200 (HNeRV parity lesson 4)
 - Per-pair side info exceeds 50 bytes/pair (rate budget breach)

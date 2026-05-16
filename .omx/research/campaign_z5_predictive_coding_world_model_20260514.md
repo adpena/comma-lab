@@ -19,8 +19,13 @@ Per CLAUDE.md "Long-burn score-lowering campaign default — NON-NEGOTIABLE":
   - Zen-floor field-medal council (`feedback_zen_floor_field_medal_grade_council_landed_20260514.md`): Time-Traveler's `[0.03, 0.07]` staircase asymptote requires class-shift moves; this is one of them.
   - CLAUDE.md "Long-burn score-lowering campaign default": "Visible high-EV directions such as ... RAFT/ego-motion, LA-pose/telescopic foveation ... arithmetic/range/ANS compiler passes, and scorer-inverse representations must become either a campaign ledger plus timing-smoke/launch decision in the same session or an explicit blocker."
 
+  Primary-source scope (retrieved 2026-05-16):
+  - Rao & Ballard (1999), https://doi.org/10.1038/4580 — supports predictive-error feedback as a neuroscience model.
+  - Friston (2010), https://doi.org/10.1038/nrn2787 — supports free-energy / world-model framing.
+  - This source block does not prove Pact archive-byte savings. Pact must prove byte-closed archive SHA, runtime tree/content SHA, scorer-free inflate, component recomputation, and paired CPU/CUDA exact eval before any score movement or class-shift reward is authoritative.
+
 - **Hypothesis**:
-  Training a 2-3 layer hierarchical predictive-coding network with ego-motion conditioning reduces residual entropy by 20-40% vs Z4 → **score band [0.155, 0.180]** on contest-CUDA T4 vs Z4's predicted [0.180, 0.188]. Δ predicted: −0.025 to −0.038 vs Z4.
+  Training a 2-3 layer hierarchical predictive-coding network with ego-motion conditioning targets a residual-entropy reduction versus Z4. The **planning band [0.155, 0.180]** is a design prior only, not contest-CUDA evidence; it requires paired CPU/CUDA exact anchors on the same archive/runtime before any promotion, reward, or retirement decision.
 
   Mechanism: for stationary-ergodic driving video, the asymptotic entropy is dominated by frame-to-frame surprise. A predictor that forecasts `z_t` from `z_{t-1}` + ego-motion encodes only the surprise residual, which has lower entropy than the marginal latent distribution.
 
@@ -88,8 +93,8 @@ The autoregressive predictor unroll across 600 pairs is the dominant per-step co
 - **YELLOW**: archive bytes outside band → operator decides repack with smaller predictor OR retire as `measured-config-retired`.
 - **RED**: archive determinism fails OR inflate-runtime > 200 LOC budget.
 
-### Exact eval gate (CUDA auth eval on EMA shadow)
-- **GREEN** (mark `contest_cuda` gate): contest-CUDA T4 score in [0.150, 0.180] (target [0.155, 0.180] + 0.005 tolerance for scorer numerical drift on T4).
+### Exact eval gate (paired CPU/CUDA auth eval on EMA shadow)
+- **GREEN** (mark paired exact-eval evidence): contest-CUDA T4 and contest-CPU Linux x86_64 scores both in [0.150, 0.180] with matching archive SHA, runtime tree/content SHA, sample count, logs, component recomputation, and paired CPU/CUDA exact custody.
 - **YELLOW** (operator review): score in [0.180, 0.200] — operator-route as `measured-config-retired-suboptimal`; document reactivation criteria. Run identity-predictor disambiguator probe to check if hypothesis is refuted.
 - **RED** (DEFERRED-pending-research): score > 0.200 — DEFER. Reactivation criteria: identity-predictor ablation shows the full predictor adds zero ΔS (refutes Rao-Ballard hypothesis on this scorer); OR identify autoregression-related numerical bug; OR observe predictor instability across pairs.
 
@@ -98,7 +103,7 @@ The autoregressive predictor unroll across 600 pairs is the dominant per-step co
 1. **Sensitivity-map**: predictor gradient norm IS the per-tensor importance signal — `∂L_full/∂θ_predictor` reveals which predictor weights dominate forecast accuracy; register `sensitivity_map.predictive_coding_v1` post Phase 2.
 2. **Pareto constraint**: `predictor_residual_entropy ≤ ε_residual` ∩ Z3+Z4 polytope; register `tac.pareto.predictive_coding_v1` post-smoke.
 3. **Bit-allocator hook**: per-pair-residual bit allocation derives from predictor forecast uncertainty — high-uncertainty pairs get more bits. Register `bit_allocator.predictive_coding_residual_v1` post-smoke.
-4. **Cathedral autopilot dispatch hook**: recipe registered at `.omx/operator_authorize_recipes/substrate_z5_predictive_coding_world_model_modal_t4_dispatch.yaml`; gated by Catalog #167 smoke-before-full and `canary_dependency=lane_z4_cooperative_receiver_loss_step2_20260514`. Ranker v2 (Catalog #219) reads `literature_anchor=Rao-Ballard1999` and applies the canonical -0.02 to -0.03 class-shift reward.
+4. **Cathedral autopilot dispatch hook**: recipe registered at `.omx/operator_authorize_recipes/substrate_z5_predictive_coding_world_model_modal_t4_dispatch.yaml`; gated by Catalog #167 smoke-before-full and `canary_dependency=lane_z4_cooperative_receiver_loss_step2_20260514`. Ranker v2 reads `literature_anchor=Rao-Ballard1999` as provenance metadata only; no class-shift reward is valid until a byte-closed paired exact anchor exists with archive/runtime custody.
 5. **Continual-learning posterior**: every Z5 empirical anchor seeds the posterior via `posterior_update_locked` (Catalog #128). The paired `(L_full, L_identity)` measurement is the canonical disambiguator data point.
 6. **Probe-disambiguator**: `tools/probe_z5_predictive_coding_vs_no_prediction_disambiguator.py` (planned post Phase 2). Compares full-hierarchical vs identity-predictor at matched parameter budgets. Returns: "Rao-Ballard wins" (Δ ≥ 0.005 in favor of hierarchical), "capacity wins" (within ±0.002), or "predictive-coding refuted" (identity wins).
 
@@ -114,6 +119,14 @@ All 8 declared inline in `src/tac/substrates/z5_predictive_coding_world_model/__
 6. `score_aware_loss`: `PredictiveCodingScoreAwareLoss` via `score_pair_components` (Catalog #164) + residual-entropy term (Rao-Ballard)
 7. `bolt_on_loc_budget`: `lane_class=substrate_engineering` (HNeRV L7); predictor + autoregression is substrate engineering
 8. `no_op_detector_planned`: predictor section MUST be consumed by inflate runtime; empirical detector mutates predictor bytes and verifies decoded frames change
+
+## Production / OSS reproducibility manifest
+
+- Runtime deps: torch + brotli, exact versions to be pinned in the emitted runtime manifest before dispatch.
+- License posture: MIT-compatible project code; dependency license check required before public release.
+- Clean-env import probe: required before any paid smoke; failure class is `remote_import_probe_failed`, not method negative.
+- Build host/container: Modal T4/A10G or Linux x86_64 CPU as axis-labeled; build host, git SHA, dirty diff SHA, archive SHA, and runtime tree/content SHA recorded in the result artifact.
+- Repro command: use `tools/run_modal_smoke_before_full.py` for timing smoke and `tools/dispatch_modal_paired_auth_eval.py` for paired exact eval; never single-axis exact eval without waiver.
 
 ## HNeRV parity discipline (CLAUDE.md non-negotiable 13 lessons)
 

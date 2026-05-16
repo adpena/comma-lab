@@ -51,6 +51,10 @@ def test_l5_v2_source_ledgers_pin_primary_sources_and_claim_blockers() -> None:
     assert "planning prior" in architecture
     assert "planning prior" in campaign
     assert "not contest score evidence" in source_basis
+    assert "Predicted contest-CPU score" not in architecture
+    assert "Why this beats PR101" not in architecture
+    assert "Provides 5-10x effective resolution gain" not in architecture
+    assert "Paired exact CPU/CUDA on the same archive/runtime" in architecture
 
 
 def test_l5_xray_planning_proxies_do_not_claim_score_or_archive_bytes() -> None:
@@ -70,21 +74,25 @@ def test_l5_xray_planning_proxies_do_not_claim_score_or_archive_bytes() -> None:
     assert "requires_entropy_coded_archive_bytes" in predictive
 
 
-def test_c1_z4_campaign_ledgers_keep_sources_and_promotion_blockers_near_claims() -> None:
+def test_c1_z4_z5_campaign_ledgers_keep_sources_and_promotion_blockers_near_claims() -> None:
     c1 = _read(".omx/research/campaign_lane_c1_z6_world_model_foveation_20260514.md")
     z4 = _read(".omx/research/campaign_z4_cooperative_receiver_loss_20260514.md")
+    z5 = _read(".omx/research/campaign_z5_predictive_coding_world_model_20260514.md")
     z4_init = _read("src/tac/substrates/z4_cooperative_receiver_loss/__init__.py")
 
-    for text in (c1, z4):
+    for text in (c1, z4, z5):
         assert "retrieved 2026-05-16" in text.lower()
-        assert "https://doi.org/10.1162/neco.1990.2.3.308" in text
         assert "paired CPU/CUDA exact" in text
         assert "archive SHA" in text
         assert "runtime tree/content SHA" in text
         assert "component recomputation" in text or "recompute components" in text
 
+    for text in (c1, z4):
+        assert "https://doi.org/10.1162/neco.1990.2.3.308" in text
+
     assert "provides 5-10x effective resolution gain" not in c1
     assert "PROMOTE to frontier" not in c1
+    assert "campaign falsified" not in c1
     assert "operator frontier review" in c1
     assert "https://doi.org/10.1068/p050437" in c1
     assert "https://doi.org/10.1038/4580" in c1
@@ -95,6 +103,23 @@ def test_c1_z4_campaign_ledgers_keep_sources_and_promotion_blockers_near_claims(
     assert "objective analogy only" in z4_init
     assert "scorer-free inflate" in z4
     assert "source-matched Z3/A1 baseline" in z4
+
+    assert "https://doi.org/10.1038/4580" in z5
+    assert "https://doi.org/10.1038/nrn2787" in z5
+    assert "reduces residual entropy by 20-40%" not in z5
+    assert "applies the canonical -0.02 to -0.03 class-shift reward" not in z5
+    assert "no class-shift reward is valid until a byte-closed paired exact anchor exists" in z5
+    assert "Production / OSS reproducibility manifest" in z5
+
+
+def test_l5_campaign_advisory_axes_are_not_falsification_authority() -> None:
+    c1 = _read(".omx/research/campaign_lane_c1_z6_world_model_foveation_20260514.md")
+    c2 = _read(".omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md")
+
+    assert "macOS-CPU > 0.150 (campaign falsified)" not in c1
+    assert "macOS-CPU advisory is not falsification authority" in c2
+    assert "If iteration 3 final [contest-CPU] > 0.10" not in c2
+    assert "paired exact CPU/CUDA on the same archive/runtime" in c2
 
 
 def test_l5_family_docstrings_keep_literature_and_score_claims_separate() -> None:

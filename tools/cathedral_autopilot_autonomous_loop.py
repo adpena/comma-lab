@@ -141,6 +141,9 @@ except Exception:  # pragma: no cover - tests can stub these
     predict_cost_band = None  # type: ignore[assignment]
     _POSTERIOR_IMPORTS_OK = False
 
+from tac.optimization.literature_source_scope import (  # noqa: E402
+    literature_source_scope_blockers,
+)
 
 AUTONOMOUS_LOOP_SCHEMA = "tac_cathedral_autopilot_autonomous_loop_v1"
 
@@ -153,6 +156,7 @@ AUTOPILOT_AUTHORIZED_TAG = "[autopilot-claude-le-5-dollar]"
 CANONICAL_HELPER_SCRIPT_RELPATH = "tools/claim_lane_dispatch.py"
 AUTOPILOT_CONTEST_TARGET_MODE = "contest_exact_eval"
 PLANNING_ONLY_SOURCE_BLOCKER = "planning_only_source_requires_operator_dispatch_packet"
+LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX = "literature_anchor_source_scope_missing"
 AUTOPILOT_CLAIM_PLATFORM = "cathedral_autopilot"
 AUTOPILOT_CLAIM_STATUS = "active_autopilot_authorized_dispatch"
 AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
@@ -883,11 +887,16 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # or contradict (across-class evidence already captured by Tier C
     # alone, even without a literature_anchor).
     d = adjust_predicted_delta_for_mdl_tier_c_density(d, c.mdl_tier_c_density)
+    literature_anchor = c.literature_anchor
+    literature_notes = c.notes
+    if _candidate_literature_anchor_rank_reward_suppressed(c):
+        literature_anchor = ""
+        literature_notes = ""
     d = adjust_predicted_delta_for_class_shift(
         d,
         lane_class=c.lane_class,
-        literature_anchor=c.literature_anchor,
-        notes=c.notes,
+        literature_anchor=literature_anchor,
+        notes=literature_notes,
     )
     # Catalog #227 composition matrix wire-in: stacking of two substrates
     # has an additivity factor alpha in [0, 1+] per the Z3xC6 probe-disambiguator
@@ -2206,6 +2215,17 @@ def _candidate_prediction_band_rank_reward_suppressed(c: CandidateRow) -> bool:
     )
 
 
+def _candidate_literature_anchor_rank_reward_suppressed(c: CandidateRow) -> bool:
+    """Return true when a literature anchor lacks source-scope custody."""
+
+    blockers = set(c.blockers or [])
+    notes = str(c.notes or "")
+    return any(
+        blocker.startswith(f"{LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX}:")
+        for blocker in blockers
+    ) or LITERATURE_SOURCE_SCOPE_BLOCKER_PREFIX in notes
+
+
 def _candidate_has_effective_negative_delta_for_race_mode(
     candidate: CandidateRow,
     *,
@@ -2244,7 +2264,17 @@ def _candidate_row_from_raw(
         str(lane_class_raw) if lane_class_raw is not None else None
     )
     blockers = list(raw.get("blockers", []))
+    source_scope_blockers = literature_source_scope_blockers(raw)
+    for blocker in source_scope_blockers:
+        if blocker not in blockers:
+            blockers.append(blocker)
     notes = str(raw.get("notes", ""))
+    if source_scope_blockers:
+        notes = (
+            f"{notes}; {'; '.join(source_scope_blockers)}"
+            if notes
+            else "; ".join(source_scope_blockers)
+        )
     expected_information_gain = float(raw["expected_information_gain"])
     if (
         expected_information_gain > 0.0

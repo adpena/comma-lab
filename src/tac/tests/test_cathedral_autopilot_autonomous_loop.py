@@ -621,6 +621,62 @@ def test_load_candidates_from_jsonl_preserves_valid_prediction_band_rank_reward(
     assert "prediction_band_rank_reward_suppressed" not in rows[0].blockers
 
 
+def test_load_candidates_from_jsonl_blocks_unscoped_literature_rank_reward(tmp_path):
+    p = tmp_path / "unscoped_literature.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "unscoped_lit",
+            "family": "predictive_coding",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 1.0,
+            "estimated_dispatch_cost_usd": 1.0,
+            "literature_anchor": "Rao-Ballard predictive coding",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    row = loop.load_candidates_from_jsonl(p)[0]
+
+    assert any(
+        blocker.startswith("literature_anchor_source_scope_missing:")
+        for blocker in row.blockers
+    )
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(row) == pytest.approx(
+        -0.005
+    )
+
+
+def test_load_candidates_from_jsonl_preserves_scoped_literature_rank_reward(tmp_path):
+    p = tmp_path / "scoped_literature.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "scoped_lit",
+            "family": "predictive_coding",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 1.0,
+            "estimated_dispatch_cost_usd": 1.0,
+            "literature_anchor": "Rao-Ballard predictive coding",
+            "source_supports": "Predictive error feedback as a neuroscience model.",
+            "paper_claim_scope": "Analogy for planning, not Pact score evidence.",
+            "pact_must_prove": "Byte-closed paired CPU/CUDA exact eval.",
+            "decode_complexity_evidence": "T4 timing smoke and runtime custody.",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    row = loop.load_candidates_from_jsonl(p)[0]
+
+    assert not any(
+        blocker.startswith("literature_anchor_source_scope_missing:")
+        for blocker in row.blockers
+    )
+    assert loop.apply_z1_empirical_revision_to_candidate_delta(row) == pytest.approx(
+        -0.015
+    )
+
+
 def test_load_candidates_from_jsonl_requires_literal_true_prediction_rank_reward(
     tmp_path,
 ):

@@ -171,7 +171,7 @@ TimeTravelerArchive-C1 (target: 95-110 KB total)
 | Smoke (Stage 0B) | seconds/epoch < 60s ON T4 AND archive ≤120 KB | timeout >30 min OR archive >150 KB OR proxy score >0.30 |
 | Stage 1 (foveation only) | macOS-CPU advisory score [0.180, 0.195] | macOS-CPU > 0.20 (predictive-coding base broken) |
 | Stage 2 (diff physics only) | macOS-CPU advisory score [0.140, 0.160] | macOS-CPU > 0.175 (composition not additive) |
-| Stage 3 (composed) | macOS-CPU advisory [0.100, 0.130]; trigger paid Linux x86_64 [contest-CPU] | macOS-CPU > 0.150 (campaign falsified) |
+| Stage 3 (composed) | macOS-CPU advisory [0.100, 0.130]; trigger paid Linux x86_64 [contest-CPU] | macOS-CPU > 0.150 → diagnostic escalation only, not campaign falsification |
 | Exact eval ([contest-CPU] + [contest-CUDA]) | both axes in [0.06, 0.10] band with matching archive SHA, runtime tree/content SHA, sample count, logs, component recomputation, and paired CPU/CUDA exact custody → operator frontier review; council L2 review | either axis >0.13 → DEFER-pending-research per HNeRV parity lesson 8 (DO NOT KILL) |
 
 **Falsification criteria (Z6 specific, council-deliberated):**

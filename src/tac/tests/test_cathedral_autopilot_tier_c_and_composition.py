@@ -260,12 +260,12 @@ def test_load_composition_index_refuses_score_claim(tmp_path: Path) -> None:
 
 
 def test_load_composition_index_malformed_json(tmp_path: Path) -> None:
-    """Malformed JSON → empty dict (silent skip)."""
+    """Malformed JSON fails closed instead of silently dropping matrix evidence."""
     mod = _load_autopilot_module()
     p = tmp_path / "substrate_composition_matrix.json"
     p.write_text("{not valid", encoding="utf-8")
-    idx = mod.load_substrate_composition_alpha_index(p)
-    assert idx == {}
+    with pytest.raises(ValueError, match="invalid JSON"):
+        mod.load_substrate_composition_alpha_index(p)
 
 
 def test_load_composition_index_real_t1_f_artifact() -> None:
