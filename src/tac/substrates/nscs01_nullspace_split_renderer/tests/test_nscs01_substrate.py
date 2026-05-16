@@ -16,7 +16,11 @@ Tests cover the canonical-vs-unique decisions per the design memo §7:
 """
 from __future__ import annotations
 
+import json
 import struct
+import subprocess
+import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -638,3 +642,93 @@ class TestSmokeTrainerEndToEnd:
                 "--output-dir", td,
                 "--device", "cpu",
             ])
+
+
+# ---------------------------------------------------------------------------
+# Byte-closed packet builder / runtime consumption proof
+# ---------------------------------------------------------------------------
+
+class TestNSCS01PacketBuilder:
+    def test_builder_emits_no_score_byte_closed_manifest(self, tmp_path: Path):
+        from tools.build_nscs01_split_renderer_packet import (
+            build_nscs01_split_renderer_packet,
+        )
+
+        out_dir = tmp_path / "nscs01_packet"
+        manifest = build_nscs01_split_renderer_packet(
+            out_dir=out_dir,
+            seed=123,
+            num_pairs=1,
+            latent_dim=4,
+            head0_base_channels=4,
+            head1_base_channels=8,
+        )
+        manifest_json = json.loads((out_dir / "build_manifest.json").read_text())
+
+        assert manifest["score_claim"] is False
+        assert manifest["promotion_eligible"] is False
+        assert manifest["ready_for_exact_eval_dispatch"] is False
+        assert manifest["packet_kind"] == "frame0_pose_heavy_frame1_seg_heavy_split_renderer"
+        assert manifest_json["byte_closed_runtime_packet"] is True
+        assert (out_dir / "0.bin").is_file()
+        assert (out_dir / "archive.zip").is_file()
+        assert (out_dir / "submission_dir" / "inflate.py").is_file()
+        assert (out_dir / "submission_dir" / "inflate.sh").is_file()
+
+        with zipfile.ZipFile(out_dir / "archive.zip") as zf:
+            infos = zf.infolist()
+            assert [info.filename for info in infos] == ["0.bin"]
+            assert zf.read("0.bin") == (out_dir / "0.bin").read_bytes()
+
+        proof = manifest_json["runtime_consumption_proof"]
+        assert proof["score_claim"] is False
+        assert proof["all_score_affecting_sections_consumed"] is True
+        consumed = {
+            section["section"]: section["consumed_by_runtime"]
+            for section in proof["sections"]
+        }
+        assert consumed == {
+            "HEAD0_BLOB": True,
+            "HEAD1_BLOB": True,
+            "LATENT_BLOB": True,
+        }
+        assert set(manifest_json["section_manifest"]) == {
+            "HEAD0_BLOB",
+            "HEAD1_BLOB",
+            "LATENT_BLOB",
+            "META_BLOB",
+        }
+
+    def test_emitted_runtime_inflates_builder_payload(self, tmp_path: Path):
+        from tools.build_nscs01_split_renderer_packet import (
+            build_nscs01_split_renderer_packet,
+        )
+
+        out_dir = tmp_path / "nscs01_packet"
+        build_nscs01_split_renderer_packet(
+            out_dir=out_dir,
+            seed=456,
+            num_pairs=1,
+            latent_dim=4,
+            head0_base_channels=4,
+            head1_base_channels=8,
+            run_consumption_proof=False,
+        )
+        file_list = tmp_path / "file_list.txt"
+        output_dir = tmp_path / "raw_out"
+        file_list.write_text("0.mkv\n", encoding="utf-8")
+
+        subprocess.run(
+            [
+                sys.executable,
+                str(out_dir / "submission_dir" / "inflate.py"),
+                str(out_dir),
+                str(output_dir),
+                str(file_list),
+            ],
+            check=True,
+        )
+
+        raw_path = output_dir / "0.raw"
+        assert raw_path.is_file()
+        assert raw_path.stat().st_size == 2 * 874 * 1164 * 3
