@@ -16,6 +16,18 @@ from tac.optimization.research_basis import (
     research_basis_manifest,
 )
 
+L5_V2_SOURCE_BASIS_SIDECAR_IDS = [
+    "neural_dsc_2021",
+    "dcvc_2021",
+    "fvc_2021",
+    "scale_space_flow_2020",
+    "video_interpolation_codec_2018",
+    "elic_2022",
+    "checkerboard_context_2021",
+    "rdp_tradeoff_2019",
+    "coin_2021",
+]
+
 
 def test_research_basis_source_literal_has_no_duplicate_basis_ids() -> None:
     source_text = Path(research_basis_module.__file__).read_text(encoding="utf-8")
@@ -86,6 +98,17 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
     )
     assert "deepfovea_2019" in research_basis_ids_for_family("foveation")
     assert "dsslic_2019" in research_basis_ids_for_family("semantic_labels")
+    assert research_basis_ids_for_family("cooperative_receiver") == [
+        "slepian_wolf_1973",
+        "wyner_ziv_1976",
+        "neural_dsc_2021",
+    ]
+    assert "elic_2022" in research_basis_ids_for_family("entropy")
+    assert "checkerboard_context_2021" in research_basis_ids_for_family("entropy")
+    assert "rdp_tradeoff_2019" in research_basis_ids_for_family(
+        "rate_distortion_perception"
+    )
+    assert "coin_2021" in research_basis_ids_for_family("inr")
     l5_v2_ids = research_basis_ids_for_family("time_traveler_l5_v2")
     assert l5_v2_ids == [
         "rao_ballard_1999",
@@ -95,6 +118,11 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
         "vjepa2_2025",
         "vjepa2_1_dense_2026",
         "teconerv_2026",
+        "neural_dsc_2021",
+        "dcvc_2021",
+        "fvc_2021",
+        "scale_space_flow_2020",
+        "video_interpolation_codec_2018",
         "pnvc_2025",
         "dcvc_rt_2025",
         "unified_intra_inter_nvc_2025",
@@ -105,14 +133,22 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
         "c3_neural_compression_2024",
         "atick_redlich_1990",
         "wyner_ziv_1976",
+        "slepian_wolf_1973",
         "lu_dvc_2019",
         "rissanen_mdl_1978",
         "mackay_itila_2003",
         "tishby_information_bottleneck_1999",
         "tishby_zaslavsky_2015",
         "balle_hyperprior_2018",
+        "elic_2022",
+        "checkerboard_context_2021",
+        "rdp_tradeoff_2019",
+        "coin_2021",
         "hnerv_2023",
     ]
+    for basis_id in L5_V2_SOURCE_BASIS_SIDECAR_IDS:
+        assert basis_id in l5_v2_ids
+    assert "slepian_wolf_1973" in l5_v2_ids
     assert research_basis_ids_for_family("predictive_receiver")[:4] == [
         "rao_ballard_1999",
         "friston_free_energy_2010",
@@ -128,6 +164,18 @@ def test_legacy_research_basis_aliases_resolve_to_canonical_ids() -> None:
     assert canonical_research_basis_id("Rao-Ballard1999") == "rao_ballard_1999"
     assert canonical_research_basis_id("dvc_2019") == "lu_dvc_2019"
     assert canonical_research_basis_id("wyner_ziv") == "wyner_ziv_1976"
+    assert canonical_research_basis_id("slepian_wolf") == "slepian_wolf_1973"
+    assert canonical_research_basis_id("neural_dsc") == "neural_dsc_2021"
+    assert canonical_research_basis_id("dcvc") == "dcvc_2021"
+    assert canonical_research_basis_id("fvc") == "fvc_2021"
+    assert canonical_research_basis_id("scale_space_flow") == "scale_space_flow_2020"
+    assert canonical_research_basis_id("ssf") == "scale_space_flow_2020"
+    assert canonical_research_basis_id("video_interpolation_codec") == "video_interpolation_codec_2018"
+    assert canonical_research_basis_id("elic") == "elic_2022"
+    assert canonical_research_basis_id("checkerboard_context") == "checkerboard_context_2021"
+    assert canonical_research_basis_id("ccm") == "checkerboard_context_2021"
+    assert canonical_research_basis_id("rdp_tradeoff") == "rdp_tradeoff_2019"
+    assert canonical_research_basis_id("coin") == "coin_2021"
     assert canonical_research_basis_id("pnvc") == "pnvc_2025"
     assert canonical_research_basis_id("snerv_spectra") == "snerv_spectra_2025"
     assert canonical_research_basis_id("metanerv") == "metanerv_2025"
@@ -146,6 +194,22 @@ def test_legacy_research_basis_aliases_resolve_to_canonical_ids() -> None:
     manifest = research_basis_manifest(["balle_2018", "balle_hyperprior_2018"])
     assert manifest["source_count"] == 1
     assert manifest["sources"][0]["basis_id"] == "balle_hyperprior_2018"
+
+
+def test_l5_v2_source_basis_sidecar_rows_remain_planning_only() -> None:
+    manifest = research_basis_manifest(
+        [*L5_V2_SOURCE_BASIS_SIDECAR_IDS, "slepian_wolf_1973"]
+    )
+
+    assert manifest["planning_only"] is True
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["source_count"] == len(L5_V2_SOURCE_BASIS_SIDECAR_IDS) + 1
+    assert "exact_cuda_auth_eval_required" in manifest["global_hardening_blockers"]
+    assert {source["basis_id"] for source in manifest["sources"]} == {
+        *L5_V2_SOURCE_BASIS_SIDECAR_IDS,
+        "slepian_wolf_1973",
+    }
 
 
 def test_all_registered_research_sources_satisfy_required_contract() -> None:
@@ -173,6 +237,9 @@ def test_all_registered_research_sources_satisfy_required_contract() -> None:
     assert "mlir_2020" in by_id
     assert "kaitai_struct" in by_id
     assert "rfc7932_brotli" in by_id
+    for basis_id in L5_V2_SOURCE_BASIS_SIDECAR_IDS:
+        assert basis_id in by_id
+    assert "slepian_wolf_1973" in by_id
     for basis_id, source in by_id.items():
         for field in REQUIRED_SOURCE_FIELDS:
             assert field in source, f"{basis_id} missing {field}"

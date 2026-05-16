@@ -287,9 +287,9 @@ def test_harvest_modal_calls_appends_call_id_ledger_terminal_event(
 ) -> None:
     mod = _load_harvest_module()
     from tac.deploy.modal.call_id_ledger import (
-        register_dispatched_call_id,
         query_by_call_id,
         query_unharvested,
+        register_dispatched_call_id,
     )
 
     ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
@@ -336,6 +336,71 @@ def test_harvest_modal_calls_appends_call_id_ledger_terminal_event(
     )
     assert second["already_terminal"] is True
     assert len(query_by_call_id("fc-demo", path=ledger)) == 2
+
+
+def test_harvest_modal_calls_supplements_lossy_terminal_call_id_row(
+    tmp_path: Path,
+) -> None:
+    mod = _load_harvest_module()
+    from tac.deploy.modal.call_id_ledger import (
+        query_by_call_id,
+        register_dispatched_call_id,
+        update_call_id_outcome,
+    )
+
+    ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    lock = ledger.with_suffix(ledger.suffix + ".lock")
+    register_dispatched_call_id(
+        call_id="fc-lossy",
+        lane_id="lane_demo",
+        label="demo",
+        path=ledger,
+        lock_path=lock,
+    )
+    update_call_id_outcome(
+        call_id="fc-lossy",
+        status="failed",
+        path=ledger,
+        lock_path=lock,
+        lane_id="lane_demo",
+        label="demo",
+    )
+
+    result = mod._append_call_id_ledger_terminal_event(
+        repo_root=tmp_path,
+        metadata={
+            "call_id": "fc-lossy",
+            "lane_id": "lane_demo",
+            "label": "demo",
+            "platform": "modal",
+            "gpu": "T4",
+        },
+        harvested={
+            "rc": 1,
+            "elapsed_seconds": 170.1,
+            "archive_sha256": "a" * 64,
+            "archive_bytes": 123,
+        },
+        terminal_claim={"appended": True, "status": "failed_modal_training_rc_1"},
+        agent="pytest",
+    )
+
+    assert result["appended"] is True
+    rows = query_by_call_id("fc-lossy", path=ledger)
+    assert [row["status"] for row in rows] == ["dispatched", "failed", "failed"]
+    assert rows[-1]["rc"] == 1
+    assert rows[-1]["elapsed_seconds"] == 170.1
+    assert rows[-1]["archive_sha256"] == "a" * 64
+    assert rows[-1]["archive_bytes"] == 123
+
+    second = mod._append_call_id_ledger_terminal_event(
+        repo_root=tmp_path,
+        metadata={"call_id": "fc-lossy"},
+        harvested={"rc": 1, "elapsed_seconds": 170.1},
+        terminal_claim={"appended": True, "status": "failed_modal_training_rc_1"},
+        agent="pytest",
+    )
+    assert second["already_terminal"] is True
 
 
 def test_harvest_modal_calls_rejects_unsafe_artifact_paths(tmp_path: Path) -> None:

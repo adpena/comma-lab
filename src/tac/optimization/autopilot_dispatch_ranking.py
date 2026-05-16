@@ -204,6 +204,14 @@ def _prediction_band_verdict_allows_rank_reward(
     return verdict.get("valid_for_rank_reward") is True
 
 
+def _pareto_row_allows_rank_reward(row: ParetoRow) -> bool:
+    """Return whether a row may contribute prediction-band-derived EIG."""
+
+    if row.prediction_band is not None and row.prediction_band_verdict is None:
+        return False
+    return _prediction_band_verdict_allows_rank_reward(row.prediction_band_verdict)
+
+
 def _compose_sideinfo_consumed(values: tuple[bool | None, ...]) -> bool | None:
     """Conservatively aggregate side-info proof across a composed candidate."""
 
@@ -245,9 +253,7 @@ def _build_singleton_dispatch_candidates(
         )
         rank_reward_note = (
             "; prediction_band_rank_reward_suppressed"
-            if not _prediction_band_verdict_allows_rank_reward(
-                r.prediction_band_verdict
-            )
+            if not _pareto_row_allows_rank_reward(r)
             else ""
         )
         expected_information_gain = (
@@ -400,8 +406,8 @@ def _build_orthogonal_pair_candidates(
                 if verdict is not None
             )
             rank_reward_allowed = all(
-                _prediction_band_verdict_allows_rank_reward(verdict)
-                for verdict in prediction_band_verdicts
+                _pareto_row_allows_rank_reward(row)
+                for row in (ri, rj)
             )
             if not rank_reward_allowed:
                 joint_eig = 0.0

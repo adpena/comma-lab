@@ -1,0 +1,115 @@
+schema_version: 1
+name: substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch
+lane_id: lane_nscs06_carmack_hotz_strip_everything_20260515
+summary: |
+  Carmack-Hotz strip-everything substrate first-anchor dispatch on Modal T4.
+  Symposium composite #4 (2026-05-15). NO neural codec. Compress-only pass
+  with closed-form bit allocation from SegNet argmax + Quantizr PR #56
+  grayscale-LUT + per-pair pose-delta warp. Predicted band [0.10, 0.20]
+  HIGH VARIANCE per symposium council.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+# Per Catalog #215: A100/H100 full-runs need A100/H100 smoke; T4 substrates
+# need T4 smoke. Carmack-Hotz scorer queries are one-shot (single forward
+# pass per video) so T4 is more than sufficient.
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+dispatch_enabled: true
+research_only: false
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 8.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 0.15
+predicted_delta: "[0.10, 0.20] HIGH VARIANCE [prediction; first-principles-bound; symposium #4]"
+predicted_delta_basis: |
+  feedback_grand_reunion_fields_grade_passion_full_council_debrief_vision_strategy_design_whiteboard_session_20260515.md#composite-4
+literature_anchor: |
+  Carmack iteration MVP + Hotz strip-everything + Quantizr PR #56 grayscale-LUT.
+  Predicted RATE saving -0.05 to -0.08 via stripping (no neural decoder bytes);
+  possible distortion LOSS +0.01 to +0.05 (analytical renderer fidelity).
+council_phase_5_prediction: 0.15
+substrate_tradition: SYMPOSIUM_COMPOSITE_4
+
+risk: |
+  HIGH VARIANCE first-anchor dispatch. Architectural risks:
+
+  (a) ANALYTICAL RENDERER UNDER-FIDELITY - the L1 SCAFFOLD inflate path uses
+      grayscale-as-luma (Y replicated to RGB) + global-translation pose warp.
+      Chroma is fundamentally not in the archive; if the contest scorer is
+      chroma-sensitive (SegNet IS, on lane markings in particular), distortion
+      can balloon. Mitigated by L1 -> L2 reactivation criterion: iterate the
+      analytical renderer (chroma-from-class-prior, better warp model) BEFORE
+      promoting beyond first-anchor.
+  (b) CLOSED-FORM CDF MISMATCH - the compress side uses the ACTUAL SegNet
+      argmax for class labels; the inflate side uses uniform class-prior
+      (class=0 for all cells) for the L1 path. This breaks the entropy
+      assumption and the arith decoder will see suboptimal codelengths.
+      First-anchor empirical anchor will reveal whether the mismatch is fatal.
+  (c) POSE-DELTA QUANTIZATION - uint8 pose at scale=10 gives ~0.01 precision
+      in pose space. PoseNet distortion can be 23x sensitive to pose drift;
+      smaller scale (larger range) may be needed in v2 (would bump CH06
+      schema to v2).
+
+  Total archive size: ~3-15 KB across 600 pairs (PALETTE ~16 B + CDF ~170 B
+  + arith-coded grayscale ~2-10 KB + pose ~3.6 KB + meta ~100 B). This is
+  2-3 ORDERS OF MAGNITUDE smaller than PR101's 179 KB; rate-axis contribution
+  to score is effectively 25 * 15000 / 37545489 = 0.00001 (negligible).
+
+envelope_status: "FITS $20 envelope at p50 fallback (~$8)"
+
+remote_driver: scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh
+  cost_band_trainer: experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py
+
+env_overrides:
+  NSCS06_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  NSCS06_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  NSCS06_OUTPUT_DIR: /workspace/pact/lane_nscs06_carmack_hotz_results/output
+  NSCS06_EPOCHS: "1"
+  NSCS06_UPSTREAM_DIR: /workspace/pact/upstream
+  NSCS06_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  Symposium composite #4 first-anchor dispatch. Per symposium council
+  (5/5 Inner Eleven PROCEED with HIGH VARIANCE annotation):
+  $5-15 + cheap; even failure is informative; ZERO-neural-weights archive
+  is a clean structural test of the chroma-from-grayscale-LUT premise.
+
+  Catalog #244 NVML block + Catalog #163 bootstrap sentinel + Catalog #166
+  sentinel files + Catalog #167 smoke-before-full pattern all wired via the
+  canonical remote driver auto-generated by tac.substrate_registry.driver_generator.
+
+  Cross-ref:
+    feedback_grand_reunion_fields_grade_passion_full_council_debrief_vision_strategy_design_whiteboard_session_20260515.md
+    feedback_grand_council_evidence_review_modal_failures_no_compromise_optimal_lowest_score_landed_20260515.md

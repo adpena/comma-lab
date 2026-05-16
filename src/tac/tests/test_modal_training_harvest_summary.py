@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import zipfile
 from pathlib import Path
 
 from tac.deploy.modal.harvest_summary import (
+    enrich_modal_training_result_summary,
     modal_training_summary_entry,
     normalise_modal_training_result_summary,
     partial_modal_training_result_summary,
@@ -92,6 +94,47 @@ def test_partial_harvest_summary_handles_missing_artifacts_dir(tmp_path: Path) -
 
     assert row["crash_kind"] == "HARVESTED_PARTIAL"
     assert row["n_artifacts"] == 0
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["rank_or_kill_eligible"] is False
+
+
+def test_enrich_partial_harvest_recovers_terminal_signal_and_archive(
+    tmp_path: Path,
+) -> None:
+    out_dir = tmp_path / "lane_modal"
+    artifacts_dir = out_dir / "harvested_artifacts"
+    payload_dir = out_dir / "lane_results" / "output"
+    artifacts_dir.mkdir(parents=True)
+    payload_dir.mkdir(parents=True)
+    archive = payload_dir / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", b"payload")
+    (payload_dir / "0.bin").write_bytes(b"payload")
+
+    row = enrich_modal_training_result_summary(
+        {
+            "crash_kind": "HARVESTED_PARTIAL",
+            "n_artifacts": 0,
+            "score_claim": False,
+        },
+        artifacts_dir=artifacts_dir,
+        out_dir=out_dir,
+        cost_anchor={"returncode": 1, "elapsed_seconds": 113.6},
+        terminal_claim={
+            "status": "failed_modal_training_rc_1",
+            "notes": "Modal training terminal recovery; elapsed_seconds=113.6",
+        },
+    )
+
+    assert row["rc"] == 1
+    assert row["elapsed_seconds"] == 113.6
+    assert row["n_artifacts"] >= 2
+    assert row["archive_sha256"]
+    assert row["archive_bytes"] == archive.stat().st_size
+    assert row["artifact_signal_warning"] == (
+        "harvested_artifacts_empty_but_provider_output_payloads_exist"
+    )
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["rank_or_kill_eligible"] is False

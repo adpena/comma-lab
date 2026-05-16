@@ -211,6 +211,8 @@ def _ranking_pareto_row(
     substrate_class: SubstrateClass,
     target_axis: ScoreAxis,
     sideinfo_consumed: bool | None,
+    prediction_band: dict[str, object] | None = None,
+    prediction_band_verdict: dict[str, object] | None = None,
 ) -> ParetoRow:
     return ParetoRow(
         substrate_id=substrate_id,
@@ -222,6 +224,8 @@ def _ranking_pareto_row(
         expected_information_gain=0.005,
         eig_per_dollar=0.005,
         sideinfo_consumed=sideinfo_consumed,
+        prediction_band=prediction_band,
+        prediction_band_verdict=prediction_band_verdict,
     )
 
 
@@ -537,6 +541,76 @@ def test_prediction_band_rank_reward_requires_literal_true_verdict():
     assert candidates[0].expected_information_gain == 0.0
     assert candidates[0].eig_per_dollar == 0.0
     assert "prediction_band_rank_reward_suppressed" in candidates[0].composition_notes
+
+
+def test_prediction_band_rank_reward_requires_verdict_when_band_present():
+    row = ParetoRow(
+        substrate_id="missing_prediction_band_verdict",
+        name="Missing prediction-band verdict",
+        substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+        target_axis=ScoreAxis.MIXED,
+        predicted_delta_alone_midpoint=-0.010,
+        estimated_dispatch_cost_usd=1.0,
+        expected_information_gain=0.7,
+        eig_per_dollar=0.7,
+        prediction_band={"id": "uncustodied-band"},
+        prediction_band_verdict=None,
+    )
+
+    candidates = _build_singleton_dispatch_candidates(
+        [row],
+        build_composition_matrix(),
+    )
+
+    assert candidates[0].expected_information_gain == 0.0
+    assert candidates[0].eig_per_dollar == 0.0
+    assert "prediction_band_rank_reward_suppressed" in candidates[0].composition_notes
+
+
+def test_orthogonal_pair_suppresses_eig_when_component_band_lacks_verdict():
+    matrix = build_composition_matrix(
+        [
+            _ranking_substrate_row(
+                "band_no_verdict",
+                substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+                target_axis=ScoreAxis.MIXED,
+                format_id=205,
+            ),
+            _ranking_substrate_row(
+                "plain_self_compress",
+                substrate_class=SubstrateClass.SELF_COMPRESSION,
+                target_axis=ScoreAxis.RATE,
+                format_id=206,
+            ),
+        ]
+    )
+    rows = [
+        _ranking_pareto_row(
+            "band_no_verdict",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            sideinfo_consumed=True,
+            prediction_band={"id": "uncustodied-band"},
+            prediction_band_verdict=None,
+        ),
+        _ranking_pareto_row(
+            "plain_self_compress",
+            substrate_class=SubstrateClass.SELF_COMPRESSION,
+            target_axis=ScoreAxis.RATE,
+            sideinfo_consumed=True,
+        ),
+    ]
+
+    pairs = _build_orthogonal_pair_candidates(
+        rows,
+        matrix,
+        per_dispatch_cap_usd=5.0,
+    )
+
+    assert len(pairs) == 1
+    assert pairs[0].expected_information_gain == 0.0
+    assert pairs[0].eig_per_dollar == 0.0
+    assert "prediction_band_rank_reward_suppressed" in pairs[0].composition_notes
 
 
 def test_campaign_blockers_prevent_autopilot_self_authorization(tmp_path):

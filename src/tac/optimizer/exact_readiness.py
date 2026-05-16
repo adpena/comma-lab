@@ -966,6 +966,7 @@ def promoted_row(
         "target_modes": ["contest_exact_eval"],
         "deployment_target": "t4_contest_runtime",
         "ready_for_exact_eval_dispatch": True,
+        "dispatch_packet_ready": True,
         "dispatch_attempted": False,
         "score_claim": False,
         "score_claim_verified": False,

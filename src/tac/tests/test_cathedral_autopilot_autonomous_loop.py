@@ -747,6 +747,8 @@ def test_load_exact_ready_queue_preserves_authority_after_live_audit(
         "predicted_score_delta": -0.005,
         "expected_information_gain": 0.5,
         "estimated_dispatch_cost_usd": 5.0,
+        "lane_id": "lane_exact_ready_row",
+        "dispatch_packet_ready": True,
         "ready_for_exact_eval_dispatch": True,
         "archive_sha256": _sha("a"),
         "runtime_tree_sha256": _sha("b"),
@@ -768,8 +770,13 @@ def test_load_exact_ready_queue_preserves_authority_after_live_audit(
     rows = loop.load_candidates_from_exact_ready_queue(p)
 
     assert rows[0].ready_for_exact_eval_dispatch is True
+    assert rows[0].dispatch_packet_ready is True
+    assert "dispatch_packet_ready_false" not in rows[0].dispatch_authority_blockers()
     assert rows[0].score_claim is False
     assert rows[0].promotion_eligible is False
+    auth = _auth_mode(tmp_path)
+    ok, reason = auth.can_authorize(rows[0])
+    assert ok, reason
 
 
 def test_load_exact_ready_queue_refuses_string_authority_bools(

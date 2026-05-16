@@ -437,6 +437,7 @@ def _append_call_id_ledger_terminal_event(
         from tac.deploy.modal.call_id_ledger import (
             TERMINAL_STATUSES,
             latest_status_by_call_id,
+            query_by_call_id,
             update_call_id_outcome,
         )
     except Exception as exc:  # pragma: no cover - defensive local import
@@ -456,14 +457,6 @@ def _append_call_id_ledger_terminal_event(
             "reason": f"call_id_ledger_status_read_failed:{type(exc).__name__}:{exc}",
             "call_id": call_id,
         }
-    if latest in TERMINAL_STATUSES:
-        return {
-            "appended": False,
-            "already_terminal": True,
-            "call_id": call_id,
-            "latest_status": latest,
-        }
-
     rc = None
     elapsed_seconds = None
     score = None
@@ -481,6 +474,29 @@ def _append_call_id_ledger_terminal_event(
         archive_sha256 = harvested.get("archive_sha256")
         archive_bytes = _coerce_int(harvested.get("archive_bytes"))
         evidence_grade = harvested.get("evidence_grade")
+    if latest in TERMINAL_STATUSES:
+        try:
+            lifecycle = query_by_call_id(call_id, path=ledger_path)
+        except Exception:
+            lifecycle = []
+        latest_row = lifecycle[-1] if lifecycle else {}
+        missing_structured_signal = any(
+            latest_row.get(key) in {None, ""}
+            for key, value in (
+                ("rc", rc),
+                ("elapsed_seconds", elapsed_seconds),
+                ("archive_sha256", archive_sha256),
+                ("archive_bytes", archive_bytes),
+            )
+            if value is not None
+        )
+        if not missing_structured_signal:
+            return {
+                "appended": False,
+                "already_terminal": True,
+                "call_id": call_id,
+                "latest_status": latest,
+            }
     try:
         record = update_call_id_outcome(
             call_id=call_id,
@@ -569,6 +585,7 @@ def harvest_modal_calls(
 
     ensure_repo_imports(repo_root)
     from tac.deploy.modal.harvest_summary import (
+        enrich_modal_training_result_summary,
         modal_training_summary_entry,
         normalise_modal_training_result_summary,
         partial_modal_training_result_summary,
@@ -684,6 +701,22 @@ def harvest_modal_calls(
                     }
                     terminal_marker.write_text(
                         json.dumps(terminal_claim, indent=2, sort_keys=True) + "\n",
+                        encoding="utf-8",
+                    )
+            if isinstance(harvested, dict):
+                enriched_harvested = enrich_modal_training_result_summary(
+                    harvested,
+                    artifacts_dir=artifacts_dir,
+                    out_dir=out_dir,
+                    cost_anchor=cost_anchor if isinstance(cost_anchor, dict) else None,
+                    terminal_claim=terminal_claim
+                    if isinstance(terminal_claim, dict)
+                    else None,
+                )
+                if enriched_harvested != harvested:
+                    harvested = enriched_harvested
+                    (artifacts_dir / "_harvest_summary.json").write_text(
+                        json.dumps(harvested, indent=2, default=str),
                         encoding="utf-8",
                     )
             terminal_evidence = _append_terminal_claim_evidence(

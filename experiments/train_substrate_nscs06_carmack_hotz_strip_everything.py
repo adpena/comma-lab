@@ -102,6 +102,7 @@ CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 COST_BAND_TOOL = REPO_ROOT / "tools" / "append_cost_band_anchor.py"
 
 EVAL_HW = (384, 512)
+CONTEST_RAW_HW = (874, 1164)
 N_PAIRS_FULL = 600
 CONTEST_NORMALIZER = 37_545_489.0
 
@@ -231,7 +232,7 @@ def _decode_real_pairs(video_path: Path, *, n_pairs: int, max_pairs: int | None)
     )
 
 
-def _rgb_to_grayscale_u8(rgb_bcwh: "np.ndarray") -> "np.ndarray":
+def _rgb_to_grayscale_u8(rgb_bcwh: np.ndarray) -> np.ndarray:
     """BT.601 luminance: Y = 0.299 R + 0.587 G + 0.114 B."""
     if rgb_bcwh.ndim != 3 or rgb_bcwh.shape[0] != 3:
         raise ValueError(f"expected (3, H, W); got {rgb_bcwh.shape}")
@@ -319,6 +320,10 @@ def _build_archive_zip(
 # ---------------------------------------------------------------------------
 def _smoke_main(args: argparse.Namespace) -> int:
     """Tiny CPU smoke validates codec roundtrip on synthetic pairs."""
+    from tac.substrates.nscs06_carmack_hotz_strip_everything import (
+        pack_archive,
+        parse_archive,
+    )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
         POSE_DIMS,
         encode_grayscale_stream,
@@ -328,10 +333,6 @@ def _smoke_main(args: argparse.Namespace) -> int:
         NUM_SEGNET_CLASSES,
         build_class_conditional_cdf,
         build_grayscale_palette,
-    )
-    from tac.substrates.nscs06_carmack_hotz_strip_everything import (
-        pack_archive,
-        parse_archive,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate import (
         inflate_one_video,
@@ -384,12 +385,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
         f"pairs={n_pairs} {h_g}x{w_g})"
     )
     # Run the inflate path end-to-end to verify roundtrip
-    inflate_dir = args.output_dir / "inflate_smoke"
-    inflate_one_video(bin_bytes, inflate_dir)
-    n_pngs = len(list(inflate_dir.glob("*.png")))
-    print(f"[smoke] inflate wrote {n_pngs} PNGs (expected {n_pairs * 2})")
-    if n_pngs != n_pairs * 2:
-        print("[smoke] FAIL: png count mismatch", file=sys.stderr)
+    raw_path = inflate_one_video(bin_bytes, args.output_dir / "inflate_smoke" / "0")
+    expected_raw_bytes = 32 * 24 * n_pairs * 2 * 3
+    raw_bytes = raw_path.stat().st_size
+    print(f"[smoke] inflate wrote {raw_bytes} raw bytes (expected {expected_raw_bytes})")
+    if raw_bytes != expected_raw_bytes:
+        print("[smoke] FAIL: raw byte-count mismatch", file=sys.stderr)
         return 1
     assert arc.num_pairs == n_pairs
     return 0
@@ -407,18 +408,17 @@ def _full_main(args: argparse.Namespace) -> int:
         unpatch_upstream_yuv6,
     )
     from tac.scorer import load_differentiable_scorers
+    from tac.substrates.nscs06_carmack_hotz_strip_everything import (
+        pack_archive,
+    )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
         POSE_DIMS,
         encode_grayscale_stream,
         quantize_pose_deltas,
     )
     from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
-        NUM_SEGNET_CLASSES,
         build_class_conditional_cdf,
         build_grayscale_palette,
-    )
-    from tac.substrates.nscs06_carmack_hotz_strip_everything import (
-        pack_archive,
     )
 
     _pin_seeds(args.seed)
@@ -589,8 +589,8 @@ def _full_main(args: argparse.Namespace) -> int:
             num_pairs=n_pairs,
             grayscale_h=h_g,
             grayscale_w=w_g,
-            output_height=H,
-            output_width=W,
+            output_height=CONTEST_RAW_HW[0],
+            output_width=CONTEST_RAW_HW[1],
         )
         (args.output_dir / "0.bin").write_bytes(bin_bytes)
         archive_sha = _sha256_bytes(bin_bytes)

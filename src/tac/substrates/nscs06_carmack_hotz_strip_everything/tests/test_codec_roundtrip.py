@@ -1,0 +1,373 @@
+# SPDX-License-Identifier: MIT
+"""Codec + archive + inflate roundtrip tests for the nscs06 Carmack-Hotz substrate.
+
+Per HNeRV parity discipline lesson L11 + Catalog #139 (no-op detector +
+structural consumption proof), the byte-mutation smoke is the canonical
+operational-mechanism acceptance criterion.
+"""
+
+from __future__ import annotations
+
+import struct
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tac.substrates.nscs06_carmack_hotz_strip_everything import (
+    CH06_HEADER_SIZE,
+    CH06_MAGIC,
+    CH06_SCHEMA_VERSION,
+    ArithmeticCoder,
+    ClassConditionalCDF,
+    GrayscalePalette,
+    allocate_bits_closed_form,
+    build_grayscale_palette,
+    inflate_one_video,
+    pack_archive,
+    parse_archive,
+)
+from tac.substrates.nscs06_carmack_hotz_strip_everything.archive import (
+    POSE_DIMS,
+    dequantize_pose_deltas,
+    encode_grayscale_stream,
+    quantize_pose_deltas,
+)
+from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
+    CDF_MAX,
+    NUM_SEGNET_CLASSES,
+    build_class_conditional_cdf,
+)
+
+
+def _build_synthetic_archive(
+    *, seed: int = 0, n_pairs: int = 4, palette_size: int = 16, h_g: int = 6, w_g: int = 8,
+    output_h: int = 24, output_w: int = 32,
+) -> tuple[bytes, GrayscalePalette, ClassConditionalCDF, np.ndarray, np.ndarray]:
+    """Build a self-consistent synthetic CH06 archive + return ground truth."""
+    rng = np.random.default_rng(seed)
+    samples = rng.integers(0, 256, size=(n_pairs, h_g, w_g), dtype=np.uint8)
+    palette = build_grayscale_palette(samples, palette_size=palette_size)
+    palette_indices = palette.quantize(samples)
+    cls = rng.integers(0, NUM_SEGNET_CLASSES, size=palette_indices.shape, dtype=np.uint8)
+    cdf = build_class_conditional_cdf(palette_indices, cls, palette_size=palette_size)
+    arith_bytes = encode_grayscale_stream(
+        palette_indices=palette_indices, class_labels=cls, cdf=cdf
+    )
+    pose = (rng.standard_normal((n_pairs, POSE_DIMS)) * 0.01).astype(np.float32)
+    pose_bytes, zero = quantize_pose_deltas(pose, scale=10.0)
+    meta = {"grayscale_downsample": 4, "pose_quant_scale": 10.0, "pose_quant_zero": zero}
+    blob = pack_archive(
+        palette=palette, cdf=cdf, grayscale_arith_bytes=arith_bytes,
+        pose_bytes=pose_bytes, meta=meta, num_pairs=n_pairs,
+        grayscale_h=h_g, grayscale_w=w_g, output_height=output_h, output_width=output_w,
+    )
+    return blob, palette, cdf, palette_indices, cls
+
+
+# ---------------------------------------------------------------------------
+# Codec primitives
+# ---------------------------------------------------------------------------
+
+class TestGrayscalePalette:
+    def test_build_size_matches_request(self) -> None:
+        rng = np.random.default_rng(0)
+        samples = rng.integers(0, 256, size=(8, 16), dtype=np.uint8)
+        for size in (2, 4, 8, 16, 32):
+            pal = build_grayscale_palette(samples, palette_size=size)
+            assert pal.size == size
+
+    def test_quantize_dequantize_levels(self) -> None:
+        levels = np.array([0, 64, 128, 192, 255], dtype=np.uint8)
+        pal = GrayscalePalette(levels=levels)
+        gray = np.array([[0, 60, 130], [195, 255, 100]], dtype=np.uint8)
+        idx = pal.quantize(gray)
+        recon = pal.dequantize(idx)
+        # Each recon value is in {levels}
+        assert np.isin(recon, levels).all()
+        # Idx is in valid range
+        assert idx.max() < pal.size
+
+    def test_invalid_dtype_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            GrayscalePalette(levels=np.array([0.5, 1.5], dtype=np.float32))
+
+
+class TestClassConditionalCDF:
+    def test_endpoints_pinned(self) -> None:
+        rng = np.random.default_rng(1)
+        pi = rng.integers(0, 8, size=100, dtype=np.uint8)
+        cls = rng.integers(0, NUM_SEGNET_CLASSES, size=100, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(pi, cls, palette_size=8)
+        assert (cdf.cdf[:, 0] == 0).all()
+        assert (cdf.cdf[:, -1] == CDF_MAX).all()
+
+    def test_monotone_non_decreasing(self) -> None:
+        rng = np.random.default_rng(2)
+        pi = rng.integers(0, 16, size=200, dtype=np.uint8)
+        cls = rng.integers(0, NUM_SEGNET_CLASSES, size=200, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(pi, cls, palette_size=16)
+        diffs = np.diff(cdf.cdf.astype(np.int32), axis=1)
+        assert (diffs >= 0).all()
+
+    def test_empty_class_uniform_smoothing(self) -> None:
+        # Only class 0 present in samples; class 1..4 get uniform-smoothing CDF
+        pi = np.zeros(50, dtype=np.uint8)
+        cls = np.zeros(50, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(pi, cls, palette_size=8)
+        # Class 1..4 should have non-degenerate (non-uniform-at-0) CDFs
+        for c in range(1, NUM_SEGNET_CLASSES):
+            row = cdf.cdf[c]
+            assert row[-1] == CDF_MAX
+            assert (row > 0).any()
+
+    def test_shape_mismatch_rejected(self) -> None:
+        pi = np.zeros(10, dtype=np.uint8)
+        cls = np.zeros(12, dtype=np.uint8)
+        with pytest.raises(ValueError):
+            build_class_conditional_cdf(pi, cls, palette_size=8)
+
+
+class TestArithmeticCoder:
+    def test_roundtrip_random_symbols(self) -> None:
+        rng = np.random.default_rng(7)
+        n = 500
+        pi = rng.integers(0, 16, size=n, dtype=np.uint8)
+        cls = rng.integers(0, NUM_SEGNET_CLASSES, size=n, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(
+            pi.reshape(-1, 1, 1), cls.reshape(-1, 1, 1), palette_size=16
+        )
+        coder = ArithmeticCoder()
+        for s, c in zip(pi, cls, strict=True):
+            coder.encode_symbol(int(s), cdf.cdf[int(c)])
+        enc = coder.finish_encoding()
+        dec = ArithmeticCoder.from_bytes(enc)
+        out = np.array([dec.decode_symbol(cdf.cdf[int(c)]) for c in cls], dtype=np.uint8)
+        assert np.array_equal(pi, out)
+
+    def test_compression_ratio_better_than_raw(self) -> None:
+        # Skewed distribution -> arith should beat raw 4-bits/symbol
+        rng = np.random.default_rng(8)
+        n = 1000
+        # Heavily skewed to symbol 0 (90%) -> entropy < 1 bit/symbol
+        pi = (rng.random(n) > 0.9).astype(np.uint8) * 5
+        cls = np.zeros(n, dtype=np.uint8)
+        cdf = build_class_conditional_cdf(
+            pi.reshape(-1, 1, 1), cls.reshape(-1, 1, 1), palette_size=16
+        )
+        coder = ArithmeticCoder()
+        for s, c in zip(pi, cls, strict=True):
+            coder.encode_symbol(int(s), cdf.cdf[int(c)])
+        enc = coder.finish_encoding()
+        raw_bits = n * 4  # palette_size=16 -> 4 bits/symbol
+        enc_bits = len(enc) * 8
+        # Arith should be at least 2x better than raw for this skewed distribution
+        assert enc_bits < raw_bits / 2
+
+    def test_invalid_symbol_rejected(self) -> None:
+        cdf_row = np.array([0, 32000, 65535], dtype=np.uint16)
+        coder = ArithmeticCoder()
+        with pytest.raises(ValueError):
+            coder.encode_symbol(5, cdf_row)  # only 2 symbols in row
+
+
+class TestAllocateBitsClosedForm:
+    def test_sum_equals_budget(self) -> None:
+        imp = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        alloc = allocate_bits_closed_form(imp, total_byte_budget=1000)
+        assert alloc.sum() == 1000
+
+    def test_proportional_to_importance(self) -> None:
+        imp = np.array([1.0, 4.0], dtype=np.float32)
+        alloc = allocate_bits_closed_form(imp, total_byte_budget=100)
+        # 4x importance -> ~4x allocation (within rounding)
+        assert alloc[1] >= alloc[0] * 3
+
+    def test_zero_importance_uniform(self) -> None:
+        imp = np.zeros(4, dtype=np.float32)
+        alloc = allocate_bits_closed_form(imp, total_byte_budget=8)
+        assert (alloc == 2).all()
+
+    def test_negative_importance_rejected(self) -> None:
+        imp = np.array([1.0, -1.0], dtype=np.float32)
+        with pytest.raises(ValueError):
+            allocate_bits_closed_form(imp, total_byte_budget=10)
+
+
+# ---------------------------------------------------------------------------
+# Archive grammar (CH06)
+# ---------------------------------------------------------------------------
+
+class TestCh06ArchiveRoundtrip:
+    def test_pack_parse_self_consistent(self) -> None:
+        blob, palette, cdf, palette_indices, cls = _build_synthetic_archive(seed=42)
+        arc = parse_archive(blob)
+        assert arc.num_pairs == 4
+        assert arc.palette_size == palette.size
+        assert arc.grayscale_h == 6
+        assert arc.grayscale_w == 8
+        assert arc.output_height == 24
+        assert arc.output_width == 32
+        # Palette levels preserved byte-stable
+        assert np.array_equal(arc.palette.levels, palette.levels)
+        # CDF preserved byte-stable
+        assert np.array_equal(arc.cdf.cdf, cdf.cdf)
+
+    def test_header_magic_pinned(self) -> None:
+        blob, _, _, _, _ = _build_synthetic_archive(seed=0)
+        assert blob[:4] == CH06_MAGIC
+        assert blob[4] == CH06_SCHEMA_VERSION
+
+    def test_header_size_invariant_30_bytes(self) -> None:
+        assert CH06_HEADER_SIZE == 30
+
+    def test_wrong_magic_rejected(self) -> None:
+        blob, _, _, _, _ = _build_synthetic_archive(seed=0)
+        tampered = b"XXXX" + blob[4:]
+        with pytest.raises(ValueError, match="bad magic"):
+            parse_archive(tampered)
+
+    def test_wrong_schema_version_rejected(self) -> None:
+        blob, _, _, _, _ = _build_synthetic_archive(seed=0)
+        tampered = blob[:4] + bytes([99]) + blob[5:]
+        with pytest.raises(ValueError, match="unsupported schema version"):
+            parse_archive(tampered)
+
+    def test_truncated_archive_rejected(self) -> None:
+        blob, _, _, _, _ = _build_synthetic_archive(seed=0)
+        with pytest.raises(ValueError):
+            parse_archive(blob[:10])
+
+    def test_size_mismatch_rejected(self) -> None:
+        blob, _, _, _, _ = _build_synthetic_archive(seed=0)
+        with pytest.raises(ValueError):
+            parse_archive(blob + b"extra")
+
+
+class TestPoseQuantization:
+    def test_quantize_dequantize_close(self) -> None:
+        rng = np.random.default_rng(9)
+        pose = rng.standard_normal((10, POSE_DIMS)).astype(np.float32) * 0.01
+        bytes_, zero = quantize_pose_deltas(pose, scale=100.0)
+        recon = dequantize_pose_deltas(bytes_, num_pairs=10, scale=100.0, zero=zero)
+        # uint8 quant with scale=100 -> precision ~0.01 in pose space
+        assert np.allclose(recon, pose, atol=0.011)
+
+    def test_wrong_shape_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            quantize_pose_deltas(np.zeros((10, 8), dtype=np.float32))
+
+
+# ---------------------------------------------------------------------------
+# Catalog #139 byte-mutation no-op detector (operational mechanism proof)
+# ---------------------------------------------------------------------------
+
+class TestByteMutationNoOpDetector:
+    def test_mutating_palette_byte_changes_output(self, tmp_path: Path) -> None:
+        """Per Catalog #139 + #220: mutating any archive byte MUST change inflate output."""
+        blob, palette, _, _, _ = _build_synthetic_archive(seed=10)
+
+        # Decode baseline.
+        raw_a = inflate_one_video(blob, tmp_path / "base" / "0").read_bytes()
+
+        # Mutate one palette byte at the END of the palette section
+        palette_start = CH06_HEADER_SIZE
+        mid = palette_start + palette.size // 2
+        mutated = bytearray(blob)
+        mutated[mid] = (mutated[mid] + 73) % 256
+        raw_b = inflate_one_video(bytes(mutated), tmp_path / "mut" / "0").read_bytes()
+
+        # At least one frame must differ
+        assert raw_a != raw_b, "byte mutation did not propagate to inflate output (no-op detector)"
+
+    def test_mutating_arith_stream_changes_output(self, tmp_path: Path) -> None:
+        blob, palette, cdf, _, _ = _build_synthetic_archive(seed=11)
+        # arith stream starts after: header + palette + cdf
+        palette_bytes = palette.size
+        cdf_bytes = NUM_SEGNET_CLASSES * (cdf.palette_size + 1) * 2
+        arith_start = CH06_HEADER_SIZE + palette_bytes + cdf_bytes
+        # Read arith length from header
+        unpacked = struct.unpack("<4sBHBHHHHHHIIH", blob[:CH06_HEADER_SIZE])
+        arith_len = unpacked[10]
+        assert arith_len > 0
+        mutated = bytearray(blob)
+        # Flip a bit in the middle of the arith stream
+        mid = arith_start + arith_len // 2
+        mutated[mid] ^= 0xFF
+
+        raw_a = inflate_one_video(blob, tmp_path / "base" / "0").read_bytes()
+        raw_b = inflate_one_video(bytes(mutated), tmp_path / "mut" / "0").read_bytes()
+        assert raw_a != raw_b
+
+    def test_inflate_writes_contest_raw_stem(self, tmp_path: Path) -> None:
+        """Auth eval requires ``<inflated_dir>/<video>.raw``, not PNG frames."""
+        n_pairs = 3
+        output_h = 12
+        output_w = 16
+        blob, _, _, _, _ = _build_synthetic_archive(
+            seed=12,
+            n_pairs=n_pairs,
+            output_h=output_h,
+            output_w=output_w,
+        )
+        raw_path = inflate_one_video(blob, tmp_path / "inflated" / "0")
+
+        assert raw_path == tmp_path / "inflated" / "0.raw"
+        assert raw_path.is_file()
+        assert raw_path.stat().st_size == output_w * output_h * n_pairs * 2 * 3
+        assert not list((tmp_path / "inflated").glob("*.png"))
+
+
+# ---------------------------------------------------------------------------
+# Inflate runtime budget + strict-scorer-rule
+# ---------------------------------------------------------------------------
+
+class TestInflateBudgetAndStrictScorerRule:
+    def test_inflate_module_no_torch_import(self) -> None:
+        """Strict-scorer-rule: inflate.py MUST NOT import torch."""
+        inflate_path = (
+            Path(__file__).resolve().parent.parent / "inflate.py"
+        )
+        body = inflate_path.read_text(encoding="utf-8")
+        # Test the import statements specifically, not docstring mentions
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("import torch", "from torch ")):
+                raise AssertionError(
+                    f"inflate.py forbidden torch import: {stripped!r} per strict-scorer-rule"
+                )
+
+    def test_inflate_module_no_scorer_imports(self) -> None:
+        inflate_path = (
+            Path(__file__).resolve().parent.parent / "inflate.py"
+        )
+        body = inflate_path.read_text(encoding="utf-8")
+        forbidden = (
+            "from tac.scorer",
+            "import smp",
+            "segmentation_models_pytorch",
+            "EfficientNet",
+            "PoseNet",
+            "SegNet",
+            "from upstream.modules",
+        )
+        for tok in forbidden:
+            assert tok not in body, (
+                f"inflate.py contains forbidden scorer token {tok!r} per strict-scorer-rule"
+            )
+
+    def test_inflate_runtime_within_loc_budget(self) -> None:
+        """HNeRV parity L4: inflate.py <= 100 LOC declared (we waive +20% for docstrings)."""
+        inflate_path = (
+            Path(__file__).resolve().parent.parent / "inflate.py"
+        )
+        body_lines = [
+            ln
+            for ln in inflate_path.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        # We've declared 100 LOC budget; allow modest doc/blank slack to 130
+        # The declared budget in the SubstrateContract is 100 LOC.
+        assert len(body_lines) <= 130, (
+            f"inflate.py is {len(body_lines)} non-comment LOC; exceeds 100 + slack"
+        )

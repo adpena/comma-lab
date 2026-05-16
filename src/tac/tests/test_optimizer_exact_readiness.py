@@ -248,6 +248,7 @@ def test_promotes_byte_closed_candidate_without_score_claim(tmp_path: Path) -> N
     assert promoted["dispatch_ready_count"] == 1
     row = promoted["dispatch_ready"][0]
     assert row["ready_for_exact_eval_dispatch"] is True
+    assert row["dispatch_packet_ready"] is True
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["target_modes"] == ["contest_exact_eval"]
