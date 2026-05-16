@@ -157,6 +157,7 @@ AUTOPILOT_CLAIM_PLATFORM = "cathedral_autopilot"
 AUTOPILOT_CLAIM_STATUS = "active_autopilot_authorized_dispatch"
 AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
 AUTOPILOT_CLAIM_TTL_HOURS = 24.0
+EXACT_READY_QUEUE_SCHEMA = "optimizer_candidate_exact_eval_ready_queue_v1"
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
@@ -2105,12 +2106,46 @@ def _coerce_str_list(value: object) -> list[str]:
     return out
 
 
+def _json_bool_field(
+    raw: dict[str, Any],
+    key: str,
+    *,
+    default: bool = False,
+    context: str,
+) -> bool:
+    """Read an authority-bearing JSON bool without Python truthiness coercion."""
+
+    if key not in raw:
+        return default
+    value = raw[key]
+    if isinstance(value, bool):
+        return value
+    raise ValueError(
+        f"{context} has non-boolean {key}={value!r}; expected JSON true/false"
+    )
+
+
 def _require_planning_only_flag(raw: dict[str, Any], key: str, *, context: str) -> None:
-    if raw.get(key, False):
+    if _json_bool_field(raw, key, default=False, context=context):
         raise ValueError(
             f"{context} has {key}=True; refusing to consume it as planning-only "
             "autopilot input"
         )
+
+
+def _audit_exact_ready_queue(
+    path: Path,
+    *,
+    repo_root: Path,
+    dispatch_claims_path: Path,
+) -> dict[str, Any]:
+    from tac.optimizer.exact_ready_audit import audit_exact_ready_queue
+
+    return audit_exact_ready_queue(
+        path,
+        repo_root=repo_root,
+        dispatch_claims_path=dispatch_claims_path,
+    )
 
 
 def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
@@ -2125,27 +2160,100 @@ def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
     return not ("[prediction" in notes or "[predicted" in notes)
 
 
-def load_candidates_from_jsonl(
-    path: Path,
+def _candidate_row_from_raw(
+    raw: dict[str, Any],
     *,
+    context: str,
     allow_dispatch_authority_flags: bool = False,
-) -> list[CandidateRow]:
-    """Load CandidateRow objects from a JSONL file (one row per line).
+) -> CandidateRow:
+    authority_flags = ["score_claim", "promotion_eligible"]
+    if not allow_dispatch_authority_flags:
+        authority_flags.append("ready_for_exact_eval_dispatch")
+    for flag in authority_flags:
+        _require_planning_only_flag(raw, flag, context=context)
+    mdl_density = _coerce_optional_float(raw.get("mdl_density"))
+    mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
+    composition_alpha = _coerce_optional_float(raw.get("composition_alpha"))
+    predicted_dispatch_risk = _coerce_optional_float(
+        raw.get("predicted_dispatch_risk")
+    )
+    lane_class_raw = raw.get("lane_class")
+    lane_class: str | None = (
+        str(lane_class_raw) if lane_class_raw is not None else None
+    )
+    blockers = list(raw.get("blockers", []))
+    notes = str(raw.get("notes", ""))
+    expected_information_gain = float(raw["expected_information_gain"])
+    if (
+        expected_information_gain > 0.0
+        and not _prediction_band_allows_rank_reward(raw)
+    ):
+        expected_information_gain = 0.0
+        if "prediction_band_rank_reward_suppressed" not in blockers:
+            blockers.append("prediction_band_rank_reward_suppressed")
+        notes += "; prediction_band_rank_reward_suppressed"
+    return CandidateRow(
+        candidate_id=raw["candidate_id"],
+        family=raw["family"],
+        predicted_score_delta=float(raw["predicted_score_delta"]),
+        expected_information_gain=expected_information_gain,
+        estimated_dispatch_cost_usd=_require_finite_positive_float(
+            raw["estimated_dispatch_cost_usd"],
+            field="estimated_dispatch_cost_usd",
+            context=context,
+        ),
+        blockers=blockers,
+        notes=notes,
+        timing_smoke_command=str(raw.get("timing_smoke_command", "")),
+        mdl_density=mdl_density,
+        lane_class=lane_class,
+        literature_anchor=str(raw.get("literature_anchor", "")),
+        source_supports=str(raw.get("source_supports", "")),
+        paper_claim_scope=str(raw.get("paper_claim_scope", "")),
+        pact_must_prove=str(raw.get("pact_must_prove", "")),
+        decode_complexity_evidence=str(raw.get("decode_complexity_evidence", "")),
+        mdl_tier_c_density=mdl_tier_c_density,
+        composition_alpha=composition_alpha,
+        license_ok=bool(raw.get("license_ok", True)),
+        inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
+        sideinfo_consumed=(
+            None
+            if raw.get("sideinfo_consumed") is None
+            else bool(raw.get("sideinfo_consumed"))
+        ),
+        exact_duplicate=bool(raw.get("exact_duplicate", False)),
+        context_order=int(raw.get("context_order", 0) or 0),
+        predicted_dispatch_risk=predicted_dispatch_risk,
+        lane_id=str(raw.get("lane_id", "")),
+        claim_keys=_coerce_str_list(raw.get("claim_keys")),
+        target_modes=_coerce_str_list(raw.get("target_modes")),
+        dispatch_packet_ready=_json_bool_field(
+            raw,
+            "dispatch_packet_ready",
+            default=False,
+            context=context,
+        ),
+        dispatch_packet_sha256=str(raw.get("dispatch_packet_sha256", "")),
+        archive_sha256=str(raw.get("archive_sha256", "")),
+        runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=(
+            _json_bool_field(
+                raw,
+                "ready_for_exact_eval_dispatch",
+                default=False,
+                context=context,
+            )
+            if allow_dispatch_authority_flags
+            else False
+        ),
+    )
 
-    Z1 empirical revision fields (2026-05-14) are read from the row when
-    present: ``mdl_density`` (float), ``lane_class`` (str), and
-    ``literature_anchor`` (str). Backward-compat: rows without these fields
-    use the defaults (None / None / "") so legacy queues load unchanged.
 
-    Catalog #227 Tier C empirical revision fields (2026-05-14) are also
-    read when present: ``mdl_tier_c_density`` (float) and
-    ``composition_alpha`` (float). Backward-compat: rows without these
-    fields use None defaults.
+def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
+    """Load planning-only CandidateRow objects from a JSONL file."""
 
-    OP-3 predicted_dispatch_risk wire-in (codex chunk 6 finding, 2026-05-15)
-    also reads ``predicted_dispatch_risk`` (float) when present. Backward-
-    compat: rows without the field use the None default.
-    """
     rows: list[CandidateRow] = []
     with path.open("r", encoding="utf-8") as f:
         for line_no, line in enumerate(f, start=1):
@@ -2157,81 +2265,66 @@ def load_candidates_from_jsonl(
                 f"{path}:{line_no} candidate "
                 f"{raw.get('candidate_id', '<missing-candidate-id>')!r}"
             )
-            authority_flags = ["score_claim", "promotion_eligible"]
-            if not allow_dispatch_authority_flags:
-                authority_flags.append("ready_for_exact_eval_dispatch")
-            for flag in authority_flags:
-                _require_planning_only_flag(raw, flag, context=context)
-            mdl_density = _coerce_optional_float(raw.get("mdl_density"))
-            mdl_tier_c_density = _coerce_optional_float(raw.get("mdl_tier_c_density"))
-            composition_alpha = _coerce_optional_float(raw.get("composition_alpha"))
-            predicted_dispatch_risk = _coerce_optional_float(
-                raw.get("predicted_dispatch_risk")
+            rows.append(_candidate_row_from_raw(raw, context=context))
+    return rows
+
+
+def load_candidates_from_exact_ready_queue(
+    path: Path,
+    *,
+    repo_root: Path = REPO_ROOT,
+    dispatch_claims_path: Path | None = None,
+) -> list[CandidateRow]:
+    """Load exact-ready rows only after the canonical live custody audit passes."""
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("exact-ready queue must be a JSON object")
+    if payload.get("schema") != EXACT_READY_QUEUE_SCHEMA:
+        raise ValueError(
+            "exact-ready queue schema unsupported:"
+            f"{payload.get('schema')!r}; expected {EXACT_READY_QUEUE_SCHEMA!r}"
+        )
+    claims_path = dispatch_claims_path or (
+        repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    )
+    audit = _audit_exact_ready_queue(
+        path,
+        repo_root=repo_root,
+        dispatch_claims_path=claims_path,
+    )
+    stale_rows = audit.get("stale_ready_rows")
+    if isinstance(stale_rows, list) and stale_rows:
+        first = stale_rows[0] if isinstance(stale_rows[0], dict) else {}
+        blockers = first.get("blockers") if isinstance(first, dict) else None
+        raise ValueError(
+            "exact-ready queue failed live custody audit:"
+            f"{first.get('candidate_id') if isinstance(first, dict) else '<unknown>'}:"
+            f"{blockers}"
+        )
+    raw_rows = payload.get("dispatch_ready")
+    if not isinstance(raw_rows, list) or not raw_rows:
+        raise ValueError("exact-ready queue has no dispatch_ready rows")
+    rows: list[CandidateRow] = []
+    for index, raw in enumerate(raw_rows):
+        if not isinstance(raw, dict):
+            raise ValueError(f"exact-ready queue row {index} is not an object")
+        if raw.get("ready_for_exact_eval_dispatch") is not True:
+            raise ValueError(
+                "exact-ready queue dispatch_ready row lacks "
+                f"ready_for_exact_eval_dispatch=True:{raw.get('candidate_id')!r}"
             )
-            lane_class_raw = raw.get("lane_class")
-            lane_class: str | None = (
-                str(lane_class_raw) if lane_class_raw is not None else None
+        context = (
+            f"{path}:dispatch_ready[{index}] candidate "
+            f"{raw.get('candidate_id', '<missing-candidate-id>')!r}"
+        )
+        rows.append(
+            _candidate_row_from_raw(
+                raw,
+                context=context,
+                allow_dispatch_authority_flags=True,
             )
-            blockers = list(raw.get("blockers", []))
-            notes = str(raw.get("notes", ""))
-            expected_information_gain = float(raw["expected_information_gain"])
-            if (
-                expected_information_gain > 0.0
-                and not _prediction_band_allows_rank_reward(raw)
-            ):
-                expected_information_gain = 0.0
-                if "prediction_band_rank_reward_suppressed" not in blockers:
-                    blockers.append("prediction_band_rank_reward_suppressed")
-                notes += "; prediction_band_rank_reward_suppressed"
-            rows.append(CandidateRow(
-                candidate_id=raw["candidate_id"],
-                family=raw["family"],
-                predicted_score_delta=float(raw["predicted_score_delta"]),
-                expected_information_gain=expected_information_gain,
-                estimated_dispatch_cost_usd=_require_finite_positive_float(
-                    raw["estimated_dispatch_cost_usd"],
-                    field="estimated_dispatch_cost_usd",
-                    context=context,
-                ),
-                blockers=blockers,
-                notes=notes,
-                timing_smoke_command=str(raw.get("timing_smoke_command", "")),
-                mdl_density=mdl_density,
-                lane_class=lane_class,
-                literature_anchor=str(raw.get("literature_anchor", "")),
-                source_supports=str(raw.get("source_supports", "")),
-                paper_claim_scope=str(raw.get("paper_claim_scope", "")),
-                pact_must_prove=str(raw.get("pact_must_prove", "")),
-                decode_complexity_evidence=str(
-                    raw.get("decode_complexity_evidence", "")
-                ),
-                mdl_tier_c_density=mdl_tier_c_density,
-                composition_alpha=composition_alpha,
-                license_ok=bool(raw.get("license_ok", True)),
-                inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
-                sideinfo_consumed=(
-                    None
-                    if raw.get("sideinfo_consumed") is None
-                    else bool(raw.get("sideinfo_consumed"))
-                ),
-                exact_duplicate=bool(raw.get("exact_duplicate", False)),
-                context_order=int(raw.get("context_order", 0) or 0),
-                predicted_dispatch_risk=predicted_dispatch_risk,
-                lane_id=str(raw.get("lane_id", "")),
-                claim_keys=_coerce_str_list(raw.get("claim_keys")),
-                target_modes=_coerce_str_list(raw.get("target_modes")),
-                dispatch_packet_ready=bool(raw.get("dispatch_packet_ready", False)),
-                dispatch_packet_sha256=str(raw.get("dispatch_packet_sha256", "")),
-                archive_sha256=str(raw.get("archive_sha256", "")),
-                runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
-                score_claim=False,
-                promotion_eligible=False,
-                ready_for_exact_eval_dispatch=(
-                    bool(raw.get("ready_for_exact_eval_dispatch", False))
-                    if allow_dispatch_authority_flags
-                    else False
-                ),
-            ))
+        )
     return rows
 
 
@@ -3223,12 +3316,26 @@ def main(argv: list[str] | None = None) -> int:
             )
     else:
         def _source() -> list[CandidateRow]:
-            return load_candidates_from_jsonl(
-                args.candidates_jsonl,
-                allow_dispatch_authority_flags=(
-                    args.operator_authorized_le_5_dollar_mode
-                ),
-            )
+            if (
+                args.operator_authorized_le_5_dollar_mode
+                and _env_authorizes_mode()
+            ):
+                try:
+                    payload = json.loads(args.candidates_jsonl.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    payload = None
+                if isinstance(payload, dict) and payload.get("schema") == EXACT_READY_QUEUE_SCHEMA:
+                    return load_candidates_from_exact_ready_queue(
+                        args.candidates_jsonl,
+                        dispatch_claims_path=args.claims_path,
+                    )
+                if isinstance(payload, dict):
+                    raise ValueError(
+                        "operator-authorized exact dispatch requires an "
+                        f"{EXACT_READY_QUEUE_SCHEMA!r} queue, not schema "
+                        f"{payload.get('schema')!r}"
+                    )
+            return load_candidates_from_jsonl(args.candidates_jsonl)
 
     try:
         reports = run_continuous_loop(

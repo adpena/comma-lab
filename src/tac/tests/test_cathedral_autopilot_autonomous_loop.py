@@ -663,10 +663,27 @@ def test_load_candidates_from_jsonl_refuses_authority_flags(tmp_path, flag):
         loop.load_candidates_from_jsonl(p)
 
 
-def test_load_candidates_from_jsonl_can_preserve_exact_ready_in_authorized_mode(
-    tmp_path,
-):
+def test_load_candidates_from_jsonl_refuses_string_authority_bool(tmp_path):
     p = tmp_path / "cands.jsonl"
+    raw = {
+        "candidate_id": "authority_row",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": 5.0,
+        "dispatch_packet_ready": "false",
+    }
+    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-boolean dispatch_packet_ready"):
+        loop.load_candidates_from_jsonl(p)
+
+
+def test_load_exact_ready_queue_preserves_authority_after_live_audit(
+    tmp_path,
+    monkeypatch,
+):
+    p = tmp_path / "exact_ready_queue.json"
     raw = {
         "candidate_id": "exact_ready_row",
         "family": "hnerv_lc_v2",
@@ -678,16 +695,58 @@ def test_load_candidates_from_jsonl_can_preserve_exact_ready_in_authorized_mode(
         "runtime_tree_sha256": _sha("b"),
         "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
     }
-    p.write_text(json.dumps(raw) + "\n", encoding="utf-8")
-
-    rows = loop.load_candidates_from_jsonl(
-        p,
-        allow_dispatch_authority_flags=True,
+    p.write_text(
+        json.dumps({
+            "schema": loop.EXACT_READY_QUEUE_SCHEMA,
+            "dispatch_ready": [raw],
+        }),
+        encoding="utf-8",
     )
+    monkeypatch.setattr(
+        loop,
+        "_audit_exact_ready_queue",
+        lambda *args, **kwargs: {"stale_ready_rows": []},
+    )
+
+    rows = loop.load_candidates_from_exact_ready_queue(p)
 
     assert rows[0].ready_for_exact_eval_dispatch is True
     assert rows[0].score_claim is False
     assert rows[0].promotion_eligible is False
+
+
+def test_load_exact_ready_queue_refuses_string_authority_bools(
+    tmp_path,
+    monkeypatch,
+):
+    p = tmp_path / "exact_ready_queue.json"
+    raw = {
+        "candidate_id": "exact_ready_row",
+        "family": "hnerv_lc_v2",
+        "predicted_score_delta": -0.005,
+        "expected_information_gain": 0.5,
+        "estimated_dispatch_cost_usd": 5.0,
+        "dispatch_packet_ready": "false",
+        "ready_for_exact_eval_dispatch": True,
+        "archive_sha256": _sha("a"),
+        "runtime_tree_sha256": _sha("b"),
+        "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+    }
+    p.write_text(
+        json.dumps({
+            "schema": loop.EXACT_READY_QUEUE_SCHEMA,
+            "dispatch_ready": [raw],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        loop,
+        "_audit_exact_ready_queue",
+        lambda *args, **kwargs: {"stale_ready_rows": []},
+    )
+
+    with pytest.raises(ValueError, match="non-boolean dispatch_packet_ready"):
+        loop.load_candidates_from_exact_ready_queue(p)
 
 
 @pytest.mark.parametrize("bad_cost", ["NaN", "Infinity", "-Infinity", "0"])
@@ -1465,28 +1524,38 @@ def test_main_refuses_authorized_mode_without_journal(tmp_path, capsys):
 
 
 def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsys):
-    cand_file = tmp_path / "c.jsonl"
+    cand_file = tmp_path / "exact_ready_queue.json"
     cand_file.write_text(
         json.dumps({
-            "candidate_id": "test_auth_mode_uniq_abc123",
-            "family": "hnerv",
-            "predicted_score_delta": -0.005,
-            "expected_information_gain": 0.5,
-            "estimated_dispatch_cost_usd": 2.0,
-            "dispatch_packet_ready": True,
-            "dispatch_packet_sha256": _sha("d"),
-            "archive_sha256": _sha("e"),
-            "runtime_tree_sha256": _sha("f"),
-            "lane_id": "lane_test_auth_mode_uniq_abc123",
-            "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
-            "ready_for_exact_eval_dispatch": True,
-        }) + "\n",
+            "schema": loop.EXACT_READY_QUEUE_SCHEMA,
+            "dispatch_ready": [
+                {
+                    "candidate_id": "test_auth_mode_uniq_abc123",
+                    "family": "hnerv",
+                    "predicted_score_delta": -0.005,
+                    "expected_information_gain": 0.5,
+                    "estimated_dispatch_cost_usd": 2.0,
+                    "dispatch_packet_ready": True,
+                    "dispatch_packet_sha256": _sha("d"),
+                    "archive_sha256": _sha("e"),
+                    "runtime_tree_sha256": _sha("f"),
+                    "lane_id": "lane_test_auth_mode_uniq_abc123",
+                    "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+                    "ready_for_exact_eval_dispatch": True,
+                }
+            ],
+        }),
         encoding="utf-8",
     )
     helper = TOOLS_DIR / "claim_lane_dispatch.py"
     journal = _repo_local_journal(tmp_path, "main_journal.jsonl")
     claims_path = tmp_path / "claims.md"
     monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
+    monkeypatch.setattr(
+        loop,
+        "_audit_exact_ready_queue",
+        lambda *args, **kwargs: {"stale_ready_rows": []},
+    )
     rc = loop.main([
         "--candidates-jsonl", str(cand_file),
         "--iterations", "1",
