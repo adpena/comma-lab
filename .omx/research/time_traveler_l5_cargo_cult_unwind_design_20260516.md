@@ -207,3 +207,36 @@ The SUBADDITIVE penalty per move is a 5-move geometric factor; the polytope proj
 - Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
 
 **Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
+
+---
+
+## 2026-05-16 Codex Supersession Note
+
+Append-only correction for executable CLI/provenance fidelity:
+
+- Lines above that name `tools/check_substrate_dykstra_feasibility.py --substrate ...`
+  are stale. The executable argparse surface uses `--substrate-id`, not
+  `--substrate`.
+- Lines above that say the Dykstra output updates the Cathedral autopilot
+  posterior are stale as a direct command claim. The tool writes the Dykstra
+  JSON artifact only. Any posterior update must happen through a separate
+  consumer with its own committed command, custody, and ledger evidence.
+- Current refreshed command:
+
+```bash
+.venv/bin/python tools/check_substrate_dykstra_feasibility.py \
+  --substrate-id time_traveler_l5_5move \
+  --predicted-band-lo 0.150 \
+  --predicted-band-hi 0.170 \
+  --archive-size-bytes 34603 \
+  --tt5l-five-move-polytope \
+  --output-json .omx/state/dykstra_feasibility_time_traveler_l5.json
+```
+
+Refreshed Dykstra artifact SHA-256:
+`226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60`.
+
+Current readiness after refresh: Dykstra score-axis sanity is valid, move-level
+feasibility is still missing, and the next TT5L action remains
+`materialize_tt5l_move_level_feasibility_proof`. No score claim, promotion
+claim, rank authority, or dispatch authority is implied by this note.
