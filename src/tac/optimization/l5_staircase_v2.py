@@ -110,6 +110,13 @@ TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA = "tt5l_move_level_feasibility_v1"
 TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID = (
     "tt5l_move_level_constraint_feasibility_v1"
 )
+TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH = (
+    ".omx/state/tt5l_first_anchor_timing_smoke.json"
+)
+TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA = "tt5l_first_anchor_timing_smoke_v1"
+TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID = (
+    "tt5l_first_anchor_timing_smoke_rate_v1"
+)
 TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
 TT5L_DYKSTRA_SCORE_FORMULA = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
@@ -308,9 +315,13 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             title="Paired CPU/CUDA anchor",
             objective=(
                 "Measure the exact same byte-closed packet on contest-compliant "
-                "CPU and CUDA axes before any promotion or submission discussion."
+                "CPU and CUDA axes with a timing-smoke custody artifact before "
+                "any promotion or submission discussion."
             ),
-            deliverable_surface="experiments/results/time_traveler_l5_v2/",
+            deliverable_surface=(
+                "experiments/results/time_traveler_l5_v2/ + "
+                f"{TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH}"
+            ),
             required_gate_ids=(
                 "paired_cpu_cuda_axis_plan",
                 "exact_anchor_or_diagnostic_pair",
@@ -1487,6 +1498,149 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _tt5l_first_anchor_timing_smoke_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return TT5L first-anchor timing-smoke artifact custody status."""
+
+    artifact_path = repo_root / TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        blockers.append("tt5l_first_anchor_timing_smoke_artifact_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("tt5l_first_anchor_timing_smoke_artifact_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+                if not payload:
+                    blockers.append("tt5l_first_anchor_timing_smoke_artifact_empty")
+            else:
+                blockers.append("tt5l_first_anchor_timing_smoke_artifact_not_object")
+
+    schema = str(payload.get("schema") or "")
+    if payload and schema != TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA:
+        blockers.append("tt5l_first_anchor_timing_smoke_schema_mismatch")
+    subject_id = str(payload.get("lane_id") or payload.get("subject_id") or "")
+    if payload and subject_id not in {LANE_ID, SUBJECT_ID}:
+        blockers.append("tt5l_first_anchor_timing_smoke_subject_id_mismatch")
+    predicate_id = str(payload.get("predicate_id") or "")
+    if payload and predicate_id != TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID:
+        blockers.append("tt5l_first_anchor_timing_smoke_predicate_id_mismatch")
+    if payload and payload.get("predicate_passed") is not True:
+        blockers.append("tt5l_first_anchor_timing_smoke_predicate_not_passed")
+
+    axes_payload = payload.get("required_axes", payload.get("paired_axes"))
+    paired_axes = (
+        tuple(str(axis) for axis in axes_payload)
+        if isinstance(axes_payload, list)
+        else ()
+    )
+    if payload and (
+        set(paired_axes) != set(_REQUIRED_EXACT_AXES)
+        or len(paired_axes) != len(_REQUIRED_EXACT_AXES)
+    ):
+        blockers.append("tt5l_first_anchor_timing_smoke_required_axes_not_paired")
+
+    provider = str(payload.get("provider") or "").strip()
+    if payload and provider.lower() in {"", "tbd", "unknown", "none"}:
+        blockers.append("tt5l_first_anchor_timing_smoke_provider_missing")
+    hardware = str(payload.get("gpu") or payload.get("hardware") or "").strip()
+    if payload and hardware.lower() in {"", "tbd", "unknown", "none"}:
+        blockers.append("tt5l_first_anchor_timing_smoke_hardware_missing")
+    provider_call_id = str(
+        payload.get("provider_call_id") or payload.get("call_id") or ""
+    ).strip()
+    if payload and not provider_call_id:
+        blockers.append("tt5l_first_anchor_timing_smoke_provider_call_id_missing")
+
+    command_argv = payload.get("command_argv")
+    command_argv_valid = (
+        isinstance(command_argv, list)
+        and bool(command_argv)
+        and all(isinstance(item, str) and bool(item.strip()) for item in command_argv)
+    )
+    if payload and not command_argv_valid:
+        blockers.append("tt5l_first_anchor_timing_smoke_command_argv_missing")
+
+    elapsed_seconds = _json_float(payload.get("elapsed_seconds"))
+    seconds_per_epoch = _json_float(payload.get("seconds_per_epoch"))
+    seconds_per_candidate = _json_float(payload.get("seconds_per_candidate"))
+    if payload and (elapsed_seconds is None or elapsed_seconds <= 0):
+        blockers.append("tt5l_first_anchor_timing_smoke_elapsed_seconds_missing")
+    if payload and (
+        (seconds_per_epoch is None or seconds_per_epoch <= 0)
+        and (seconds_per_candidate is None or seconds_per_candidate <= 0)
+    ):
+        blockers.append("tt5l_first_anchor_timing_smoke_rate_metric_missing")
+
+    result_artifact_path = str(payload.get("result_artifact_path") or "").strip()
+    resolved_result_artifact: Path | None = None
+    if not result_artifact_path:
+        if payload:
+            blockers.append("tt5l_first_anchor_timing_smoke_result_artifact_path_missing")
+    elif _is_transient_artifact_path(result_artifact_path):
+        blockers.append("tt5l_first_anchor_timing_smoke_result_artifact_path_transient")
+    else:
+        resolved_result_artifact, result_path_error = _resolve_artifact_path(
+            result_artifact_path,
+            repo_root,
+        )
+        if result_path_error is not None:
+            blockers.append(
+                f"tt5l_first_anchor_timing_smoke_result_artifact_path_{result_path_error}"
+            )
+            resolved_result_artifact = None
+        elif resolved_result_artifact is None or not resolved_result_artifact.is_file():
+            blockers.append("tt5l_first_anchor_timing_smoke_result_artifact_missing")
+            resolved_result_artifact = None
+
+    result_artifact_sha256 = str(
+        payload.get("result_artifact_sha256") or ""
+    ).strip().lower()
+    if payload and not _SHA256_HEX_RE.fullmatch(result_artifact_sha256):
+        blockers.append("tt5l_first_anchor_timing_smoke_result_artifact_sha256_invalid")
+    elif (
+        resolved_result_artifact is not None
+        and _sha256_file(resolved_result_artifact) != result_artifact_sha256
+    ):
+        blockers.append("tt5l_first_anchor_timing_smoke_result_artifact_sha256_mismatch")
+
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"tt5l_first_anchor_timing_smoke_{field}_not_false")
+
+    valid = not blockers
+    return {
+        "schema": "l5_v2_tt5l_first_anchor_timing_smoke_status_v1",
+        "artifact_path": TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": valid,
+        "subject_id": subject_id or None,
+        "predicate_id": predicate_id or None,
+        "predicate_passed": payload.get("predicate_passed"),
+        "required_axes": list(paired_axes),
+        "provider": provider or None,
+        "hardware": hardware or None,
+        "provider_call_id": provider_call_id or None,
+        "command_argv": list(command_argv) if command_argv_valid else None,
+        "elapsed_seconds": elapsed_seconds,
+        "seconds_per_epoch": seconds_per_epoch,
+        "seconds_per_candidate": seconds_per_candidate,
+        "result_artifact_path": result_artifact_path or None,
+        "result_artifact_sha256": result_artifact_sha256 or None,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -1520,9 +1674,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     dykstra_valid = dykstra_status["artifact_valid"] is True
     move_level_status = _tt5l_move_level_feasibility_status(repo_root=repo_root)
     move_level_valid = move_level_status["artifact_valid"] is True
+    timing_smoke_status = _tt5l_first_anchor_timing_smoke_status(repo_root=repo_root)
+    timing_smoke_valid = timing_smoke_status["artifact_valid"] is True
     sideinfo_effect_curve_allowed = dykstra_valid and move_level_valid and sideinfo_valid
     first_anchor_timing_smoke_allowed = (
-        sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid
+        sideinfo_effect_curve_allowed
+        and probe_valid
+        and paired_axis_plan_valid
+        and timing_smoke_valid
     )
 
     blockers = [
@@ -1539,6 +1698,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     blockers.extend(str(blocker) for blocker in dykstra_status["blockers"])
     if dykstra_valid:
         blockers.extend(str(blocker) for blocker in move_level_status["blockers"])
+    if sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid:
+        blockers.extend(str(blocker) for blocker in timing_smoke_status["blockers"])
 
     if not dykstra_valid:
         next_action = {
@@ -1697,6 +1858,36 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+    elif not timing_smoke_valid:
+        next_action = {
+            "action_id": "materialize_tt5l_first_anchor_timing_smoke_artifact",
+            "phase": "first_anchor_timing_smoke_custody",
+            "artifact_path": TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH,
+            "predicate_id": TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID,
+            "required_axes": list(_REQUIRED_EXACT_AXES),
+            "required_fields": [
+                "schema",
+                "lane_id",
+                "predicate_id",
+                "predicate_passed",
+                "required_axes",
+                "provider",
+                "hardware",
+                "provider_call_id",
+                "command_argv",
+                "elapsed_seconds",
+                "seconds_per_epoch_or_seconds_per_candidate",
+                "result_artifact_path",
+                "result_artifact_sha256",
+                "score_claim",
+                "promotion_eligible",
+                "ready_for_exact_eval_dispatch",
+            ],
+            "expected_artifacts": [TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     elif not anchor_pair_valid:
         next_action = {
             "action_id": "materialize_tt5l_exact_or_diagnostic_anchor_pair",
@@ -1747,6 +1938,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
         "anchor_pair_evidence_valid": anchor_pair_valid,
         "sideinfo_effect_curve_allowed": sideinfo_effect_curve_allowed,
+        "first_anchor_timing_smoke_artifact_valid": timing_smoke_valid,
+        "first_anchor_timing_smoke_status": timing_smoke_status,
         "first_anchor_timing_smoke_allowed": first_anchor_timing_smoke_allowed,
         "architecture_lock_allowed": probe_valid and paired_axis_plan_valid,
         "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
@@ -3200,6 +3393,9 @@ __all__ = [
     "TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS",
     "TT5L_DYKSTRA_SCORE_FORMULA",
     "TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE",
+    "TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH",
+    "TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID",
+    "TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",

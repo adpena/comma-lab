@@ -571,6 +571,66 @@ def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _write_tt5l_first_anchor_timing_smoke_artifact(repo_root: Path) -> Path:
+    result_artifact_path = (
+        repo_root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / "tt5l_timing_smoke_result.json"
+    )
+    result_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    result_artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "tt5l_timing_smoke_result_v1",
+                "lane_id": l5_v2.LANE_ID,
+                "smoke_passed": True,
+                "score_claim": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    artifact_path = repo_root / l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA,
+                "lane_id": l5_v2.LANE_ID,
+                "predicate_id": (
+                    l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID
+                ),
+                "predicate_passed": True,
+                "required_axes": ["contest_cpu", "contest_cuda"],
+                "provider": "modal",
+                "hardware": "A100",
+                "provider_call_id": "fc-test-tt5l",
+                "command_argv": [
+                    ".venv/bin/python",
+                    "experiments/train_substrate_time_traveler_l5_autonomy.py",
+                    "--timing-smoke",
+                ],
+                "elapsed_seconds": 123.0,
+                "seconds_per_epoch": 12.3,
+                "result_artifact_path": str(
+                    result_artifact_path.relative_to(repo_root)
+                ),
+                "result_artifact_sha256": _file_sha256(result_artifact_path),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
 def _write_tt5l_dykstra_artifact(
     repo_root: Path,
     *,
@@ -710,6 +770,12 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
     probe_step = next(step for step in steps if step.step_id == "l5v2_03_probe_disambiguator")
     assert probe_step.deliverable_surface == L5V2_PROBE_TOOL_PATH
     assert Path(L5V2_PROBE_TOOL_PATH).is_file()
+
+    anchor_step = next(step for step in steps if step.step_id == "l5v2_04_paired_axis_anchor")
+    assert (
+        l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH
+        in anchor_step.deliverable_surface
+    )
 
 
 def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
@@ -1486,9 +1552,61 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
     assert tt5l["probe_gate_evidence_valid"] is True
     assert tt5l["paired_axis_plan_evidence_valid"] is True
     assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert "tt5l_first_anchor_timing_smoke_artifact_missing" in tt5l["blockers"]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_first_anchor_timing_smoke_artifact"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["required_axes"] == [
+        "contest_cpu",
+        "contest_cuda",
+    ]
+
+
+def test_l5_v2_tt5l_first_anchor_timing_requires_custody_artifact(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_first_anchor_timing_smoke_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["first_anchor_timing_smoke_artifact_valid"] is True
     assert tt5l["first_anchor_timing_smoke_allowed"] is True
+    assert tt5l["first_anchor_timing_smoke_status"]["provider_call_id"] == (
+        "fc-test-tt5l"
+    )
+    assert tt5l["first_anchor_timing_smoke_status"]["seconds_per_epoch"] == 12.3
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_exact_or_diagnostic_anchor_pair"
+    )
+
+
+def test_l5_v2_tt5l_first_anchor_timing_rejects_mismatched_result_hash(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_first_anchor_timing_smoke_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload["result_artifact_sha256"] = _sha(999)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
+    assert (
+        "tt5l_first_anchor_timing_smoke_result_artifact_sha256_mismatch"
+        in tt5l["blockers"]
+    )
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_first_anchor_timing_smoke_artifact"
     )
 
 
