@@ -99,12 +99,42 @@ def test_apply_per_pair_residual_zero_side_info_is_identity() -> None:
     assert torch.allclose(out_1, rgb_1)
 
 
+def test_apply_per_pair_residual_consumes_every_canonical_section() -> None:
+    """Each TT5L side-info section must affect decoded RGB output."""
+    rgb_0 = torch.full((1, 3, 32, 48), 0.5)
+    rgb_1 = torch.full((1, 3, 32, 48), 0.5)
+    zero_side = torch.zeros(45)
+    zero_0, zero_1 = _apply_per_pair_residual(
+        rgb_0,
+        rgb_1,
+        zero_side,
+        int8_scale=64.0,
+    )
+    sections = {
+        "se3_lie": slice(0, 12),
+        "seg_boundary": slice(12, 30),
+        "hf_residual": slice(30, 36),
+        "predict_residual": slice(36, 45),
+    }
+    for name, span in sections.items():
+        side = torch.zeros(45)
+        side[span] = 64.0
+        out_0, out_1 = _apply_per_pair_residual(
+            rgb_0,
+            rgb_1,
+            side,
+            int8_scale=64.0,
+        )
+        moved = not torch.allclose(out_0, zero_0) or not torch.allclose(out_1, zero_1)
+        assert moved, f"TT5L side-info section {name} did not affect output"
+
+
 def test_training_side_info_transform_matches_inflate_quantized_path() -> None:
     """Training applies the same quantized side-info residual as inflate."""
     rgb_0 = torch.full((1, 3, 16, 16), 0.5)
     rgb_1 = torch.full((1, 3, 16, 16), 0.25)
     side_float = torch.zeros(45, requires_grad=True)
-    side_float.data[-9:] = torch.linspace(-0.5, 0.5, 9)
+    side_float.data[:] = torch.linspace(-0.5, 0.5, 45)
 
     train_0, train_1, side_int8_ste = apply_quantized_per_pair_residual_for_training(
         rgb_0,
@@ -128,7 +158,13 @@ def test_training_side_info_transform_matches_inflate_quantized_path() -> None:
 
     (train_0.mean() + train_1.mean()).backward()
     assert side_float.grad is not None
-    assert side_float.grad[-9:].abs().sum().item() > 0.0
+    for name, span in {
+        "se3_lie": slice(0, 12),
+        "seg_boundary": slice(12, 30),
+        "hf_residual": slice(30, 36),
+        "predict_residual": slice(36, 45),
+    }.items():
+        assert side_float.grad[span].abs().sum().item() > 0.0, name
 
 
 def test_inflate_one_video_writes_expected_raw_byte_count(tmp_path) -> None:
@@ -168,6 +204,29 @@ def test_inflate_one_video_side_info_bytes_affect_decoded_frames(tmp_path) -> No
     assert inflate_one_video(zero_archive, zero_out, device="cpu") == 2
     assert inflate_one_video(active_archive, active_out, device="cpu") == 2
     assert zero_out.read_bytes() != active_out.read_bytes()
+
+
+def test_inflate_one_video_consumes_all_side_info_sections(tmp_path) -> None:
+    """Archive-level mutation proof for all canonical TT5L side-info sections."""
+    zero_side = np.zeros((1, 45), dtype=np.int8)
+    zero_archive = _build_toy_archive_bytes(num_pairs=1, side_info=zero_side)
+    zero_out = tmp_path / "zero_sections.raw"
+    assert inflate_one_video(zero_archive, zero_out, device="cpu") == 2
+    zero_bytes = zero_out.read_bytes()
+
+    sections = {
+        "se3_lie": slice(0, 12),
+        "seg_boundary": slice(12, 30),
+        "hf_residual": slice(30, 36),
+        "predict_residual": slice(36, 45),
+    }
+    for name, span in sections.items():
+        active_side = zero_side.copy()
+        active_side[0, span] = 64
+        active_archive = _build_toy_archive_bytes(num_pairs=1, side_info=active_side)
+        active_out = tmp_path / f"{name}.raw"
+        assert inflate_one_video(active_archive, active_out, device="cpu") == 2
+        assert active_out.read_bytes() != zero_bytes, name
 
 
 def test_inflate_main_cli_three_arg_contract(tmp_path) -> None:

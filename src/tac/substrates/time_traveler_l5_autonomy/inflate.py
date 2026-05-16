@@ -39,6 +39,13 @@ from tac.substrates.time_traveler_l5_autonomy.archive import (
     parse_archive,
 )
 
+_TT5L_SIDEINFO_SECTION_BOUNDS: tuple[tuple[str, int, int], ...] = (
+    ("se3_lie", 0, 12),
+    ("seg_boundary", 12, 30),
+    ("hf_residual", 30, 36),
+    ("predict_residual", 36, 45),
+)
+
 
 def _build_substrate_from_archive(
     arc: TimeTravelerArchive, *, device: str
@@ -82,38 +89,111 @@ def _apply_per_pair_residual(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Apply per-pair int8-quantized residual as additive RGB correction.
 
-    The side-info bytes are interpreted as a small per-pair correction in
+    The side-info bytes are interpreted as small per-pair corrections in
     ``[-128/scale, 127/scale]`` units. Layout per pair (default 45 B):
 
-    * Bytes 0:12   SE(3) Lie-algebra pose delta (consumed by dynamics; not
-      added directly to RGB — left here for cross-frame consistency probes).
-    * Bytes 12:30  seg-boundary residual (18 B; not directly RGB-additive).
-    * Bytes 30:36  HF byte-stuffing residual (6 B; small RGB perturbation).
+    * Bytes 0:12   SE(3) Lie-algebra pose delta (frame-specific low-order
+      affine RGB field).
+    * Bytes 12:30  seg-boundary residual (two coarse 3x3 RGB fields).
+    * Bytes 30:36  HF byte-stuffing residual (frame-specific checker fields).
     * Bytes 36:45  predictive-coding residual (9 B; the actual RGB residual,
       tiled across the central foveal region).
 
-    Per the design memo, the residual is the predictive-coding correction
-    against the world model. The byte budget is small (~9 B effective per
-    pair) so the correction tiles into a coarse RGB delta then bilinear
-    upsamples.
+    Every charged side-info byte must affect inflated output. Bytes beyond the
+    canonical 45-byte layout are folded into a tiny weighted global residual so
+    alternate per-pair budgets do not silently create dead payload.
     """
     import torch.nn.functional as F
 
-    residual_floats = side_info_pair / int8_scale
-    # Use the last 9 bytes as the RGB-additive predictive residual.
-    rgb_residual = residual_floats[-9:]
-    # Reshape to (3, 3) and tile + smooth to RGB-additive correction.
-    correction = rgb_residual.view(3, 3).unsqueeze(0)
-    correction_full = F.interpolate(
-        correction.unsqueeze(0),
+    if int8_scale <= 0.0:
+        raise ValueError(f"int8_scale must be > 0; got {int8_scale}")
+    residual_floats = side_info_pair.flatten().float() / float(int8_scale)
+    device = rgb_0.device
+    dtype = rgb_0.dtype
+    residual_floats = residual_floats.to(device=device, dtype=dtype)
+    if residual_floats.numel() == 0:
+        return rgb_0.clamp(0.0, 1.0), rgb_1.clamp(0.0, 1.0)
+
+    h, w = int(rgb_0.shape[-2]), int(rgb_0.shape[-1])
+    yy, xx = torch.meshgrid(
+        torch.linspace(-1.0, 1.0, h, device=device, dtype=dtype),
+        torch.linspace(-1.0, 1.0, w, device=device, dtype=dtype),
+        indexing="ij",
+    )
+    xx = xx.unsqueeze(0).unsqueeze(0)
+    yy = yy.unsqueeze(0).unsqueeze(0)
+    checker = 0.25 + 0.75 * torch.sign(torch.sin(32.0 * xx) * torch.sin(32.0 * yy))
+
+    def _section(start: int, end: int) -> torch.Tensor:
+        out = torch.zeros(end - start, device=device, dtype=dtype)
+        available = residual_floats[start:min(end, residual_floats.numel())]
+        if available.numel():
+            out[: available.numel()] = available
+        return out
+
+    section_bounds = {
+        name: (start, end) for name, start, end in _TT5L_SIDEINFO_SECTION_BOUNDS
+    }
+
+    def _pose_field(vals: torch.Tensor) -> torch.Tensor:
+        base = vals[:3].view(1, 3, 1, 1)
+        affine = vals[3].view(1, 1, 1, 1) * xx + vals[4].view(1, 1, 1, 1) * yy
+        twist = vals[5].view(1, 1, 1, 1) * (xx * yy)
+        return base + affine + twist
+
+    se3 = _section(*section_bounds["se3_lie"]).view(2, 6)
+    pose_0 = _pose_field(se3[0])
+    pose_1 = _pose_field(se3[1])
+
+    seg = _section(*section_bounds["seg_boundary"]).view(2, 3, 3)
+    seg_0 = F.interpolate(
+        seg[0].unsqueeze(0).unsqueeze(0),
+        size=(h, w),
+        mode="bilinear",
+        align_corners=False,
+    ).squeeze(0)
+    seg_1 = F.interpolate(
+        seg[1].unsqueeze(0).unsqueeze(0),
+        size=(h, w),
+        mode="bilinear",
+        align_corners=False,
+    ).squeeze(0)
+
+    hf = _section(*section_bounds["hf_residual"]).view(2, 3)
+    hf_0 = hf[0].view(1, 3, 1, 1) * checker
+    hf_1 = hf[1].view(1, 3, 1, 1) * checker
+
+    predict = _section(*section_bounds["predict_residual"]).view(3, 3)
+    predict_full = F.interpolate(
+        predict.unsqueeze(0).unsqueeze(0),
         size=(rgb_0.shape[-2], rgb_0.shape[-1]),
         mode="bilinear",
         align_corners=False,
     ).squeeze(0)
-    # Apply gently; the residual is in [-1/scale, 1/scale] roughly. Scale
-    # down so the correction is at most ~3 gray levels (out of 255).
-    rgb_0_c = (rgb_0 + 0.02 * correction_full).clamp(0.0, 1.0)
-    rgb_1_c = (rgb_1 + 0.02 * correction_full).clamp(0.0, 1.0)
+
+    tail = residual_floats[45:]
+    if tail.numel():
+        weights = torch.linspace(1.0, 2.0, tail.numel(), device=device, dtype=dtype)
+        tail_scalar = (tail * weights).mean().view(1, 1, 1, 1)
+    else:
+        tail_scalar = torch.zeros(1, 1, 1, 1, device=device, dtype=dtype)
+
+    rgb_0_c = (
+        rgb_0
+        + 0.006 * pose_0
+        + 0.012 * seg_0
+        + 0.010 * hf_0
+        + 0.020 * predict_full
+        + 0.004 * tail_scalar
+    ).clamp(0.0, 1.0)
+    rgb_1_c = (
+        rgb_1
+        + 0.006 * pose_1
+        + 0.012 * seg_1
+        + 0.010 * hf_1
+        + 0.020 * predict_full
+        + 0.004 * tail_scalar
+    ).clamp(0.0, 1.0)
     return rgb_0_c, rgb_1_c
 
 
