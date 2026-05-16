@@ -1119,14 +1119,14 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             source_supports="Predictive coding, world models, and temporal INR papers support temporal residual and latent-dynamics hypotheses.",
             paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
-            decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only despite sideinfo flag.",
+            decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only and must not claim side-info consumption.",
             prediction_band=l5_v2_prediction_band_payload(),
             dispatch_blockers=(
                 "requires_byte_closed_temporal_sideinfo_consumption_proof",
                 "requires_paired_cpu_cuda_axis_plan_before_promotion",
                 "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
             ),
-            sideinfo_consumed=True,
+            sideinfo_consumed=False,
         ),
         SubstrateRow(
             substrate_id="c1_world_model_foveation",

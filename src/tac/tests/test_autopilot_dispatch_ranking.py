@@ -319,8 +319,10 @@ def test_uncustodied_prediction_bands_do_not_receive_autopilot_rank_reward():
     assert tt5l.predicted_score_delta < 0.0
     assert tt5l.prediction_band_verdict is not None
     assert tt5l.prediction_band_verdict["valid_for_rank_reward"] is False
+    assert tt5l.sideinfo_consumed is False
     assert "prediction_band_baseline_missing" in tt5l.blockers
     assert "prediction_band_empirical_anchor_missing" in tt5l.blockers
+    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in tt5l.blockers
     assert tt5l.expected_information_gain == 0.0
     assert tt5l.eig_per_dollar == 0.0
     assert "prediction_band_rank_reward_suppressed" in tt5l.composition_notes

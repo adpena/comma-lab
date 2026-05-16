@@ -43,11 +43,11 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (3 per Catalog #220)
     archive_bytes_added="27 KB per-pair side-info stream before brotli",
-    score_improvement_mechanism_status="OPERATIONAL",
-    runtime_overlay_consumed=True,
+    score_improvement_mechanism_status="RESEARCH_ONLY",
+    runtime_overlay_consumed=False,
     # 2.4 Recipe schema (8) mirrors substrate recipe YAML
     recipe_smoke_only=False,
-    recipe_research_only=False,
+    recipe_research_only=True,
     recipe_min_smoke_gpu="A100",
     recipe_min_vram_gb=40,
     recipe_pyav_decode_strategy="cpu_thread_async_upload",
@@ -64,7 +64,7 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     hook_pareto_constraint="rate_distortion_v1",
     hook_bit_allocator_class=NOT_APPLICABLE_WITH_RATIONALE,
     hook_autopilot_ranker_class_shift_token="time_traveler_l5_autonomy",
-    hook_continual_learning_anchor_kind="cuda_only",
+    hook_continual_learning_anchor_kind="paired_axis",
     hook_probe_disambiguator=L5V2_PROBE_TOOL_PATH,
     # 2.7 Compliance + 2.8 not-applicable rationales
     catalog_compliance_declarations=(
