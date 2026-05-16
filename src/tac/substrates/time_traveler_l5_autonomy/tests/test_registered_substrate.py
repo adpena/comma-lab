@@ -8,8 +8,8 @@ import importlib
 from tac.optimization.autopilot_dispatch_ranking import rank_dispatches
 from tac.optimization.substrate_composition_matrix import canonical_substrate_inventory
 from tac.substrate_registry import (
-    _clear_registry_for_tests,
     _REGISTERED_SUBSTRATES,
+    _clear_registry_for_tests,
     get_registered_substrates,
 )
 from tac.substrates.time_traveler_l5_autonomy.archive import (
@@ -38,6 +38,9 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
             contract.hook_autopilot_ranker_class_shift_token
             == "time_traveler_l5_autonomy"
         )
+        assert contract.runtime_dep_closure == ("torch>=2.5,<2.7", "brotli")
+        assert "av" not in contract.runtime_dep_closure
+        assert contract.inflate_runtime_loc_budget >= 327
     finally:
         _clear_registry_for_tests()
         _REGISTERED_SUBSTRATES.update(snapshot)
@@ -46,6 +49,12 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
 def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
     inventory_ids = {row.substrate_id for row in canonical_substrate_inventory()}
     assert "time_traveler_l5_autonomy" in inventory_ids
+    tt5l = next(
+        row for row in canonical_substrate_inventory()
+        if row.substrate_id == "time_traveler_l5_autonomy"
+    )
+    assert tt5l.runtime_dep_closure == ("torch", "brotli")
+    assert "av" not in tt5l.runtime_dep_closure
 
     ranking = rank_dispatches(drop_redundant_dominated=False, max_total=None)
     ranked_ids = {

@@ -124,6 +124,26 @@ def test_unknown_research_basis_blocks_rank_reward():
     assert "prediction_band_unknown_research_basis" in verdict.blockers
 
 
+def test_prediction_band_accepts_legacy_research_basis_aliases():
+    band = _valid_band()
+    payload = {
+        **prediction_band_to_dict(band),
+        "band_source": {
+            "local_ledger_paths": ["file:.omx/research/test.md"],
+            "research_basis_ids": ["balle_2018"],
+            "claim_scope": "planning prior only",
+        },
+    }
+    verdict = validate_optional_prediction_band(
+        payload,
+        subject_id="z3_balle_hyperprior_bolton",
+        low=-0.010,
+        high=-0.001,
+        axis="contest-cuda",
+    )
+    assert "prediction_band_unknown_research_basis" not in verdict.blockers
+
+
 def test_score_claim_inside_prediction_band_fails_closed():
     band = _valid_band()
     payload = {**prediction_band_to_dict(band), "score_claim": True}

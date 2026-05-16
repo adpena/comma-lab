@@ -7,6 +7,7 @@ from tac.optimization.research_basis import (
     REQUIRED_SOURCE_FIELDS,
     RESEARCH_SOURCES,
     ResearchBasisError,
+    canonical_research_basis_id,
     research_basis_ids_for_family,
     research_basis_manifest,
 )
@@ -46,6 +47,35 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
     )
     assert "yousfi_onehot_jpeg_2020" in research_basis_ids_for_family("categorical")
     assert "constriction_ans" in research_basis_ids_for_family("aq_huffman")
+    l5_v2_ids = research_basis_ids_for_family("time_traveler_l5_v2")
+    assert l5_v2_ids == [
+        "rao_ballard_1999",
+        "friston_free_energy_2010",
+        "dreamerv3_2023",
+        "ha_schmidhuber_world_models_2018",
+        "rissanen_mdl_1978",
+        "mackay_itila_2003",
+        "tishby_information_bottleneck_1999",
+        "tishby_zaslavsky_2015",
+        "balle_hyperprior_2018",
+        "hnerv_2023",
+    ]
+    assert research_basis_ids_for_family("predictive_receiver")[:4] == [
+        "rao_ballard_1999",
+        "friston_free_energy_2010",
+        "dreamerv3_2023",
+        "ha_schmidhuber_world_models_2018",
+    ]
+    assert "rissanen_mdl_1978" in research_basis_ids_for_family("mdl")
+    assert "mackay_itila_2003" in research_basis_ids_for_family("mdl")
+
+
+def test_legacy_research_basis_aliases_resolve_to_canonical_ids() -> None:
+    assert canonical_research_basis_id("balle_2018") == "balle_hyperprior_2018"
+    assert canonical_research_basis_id("Rao-Ballard1999") == "rao_ballard_1999"
+    manifest = research_basis_manifest(["balle_2018", "balle_hyperprior_2018"])
+    assert manifest["source_count"] == 1
+    assert manifest["sources"][0]["basis_id"] == "balle_hyperprior_2018"
 
 
 def test_all_registered_research_sources_satisfy_required_contract() -> None:

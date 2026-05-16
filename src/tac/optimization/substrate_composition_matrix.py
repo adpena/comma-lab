@@ -67,6 +67,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from tac.optimization.l5_staircase_v2 import l5_v2_prediction_band_payload
 from tac.optimization.prediction_band import (
     validate_optional_prediction_band,
     verdict_to_dict,
@@ -1103,7 +1104,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             target_axis=ScoreAxis.MIXED,
             format_id=0xB7,
             magic_bytes="TT5L",
-            runtime_dep_closure=("torch", "brotli", "av"),
+            runtime_dep_closure=("torch", "brotli"),
             byte_budget_band=(95_000, 110_000),
             predicted_delta_alone_band=(-0.0500, -0.0200),
             requires_score_aware_training=True,
@@ -1119,6 +1120,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
             decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only despite sideinfo flag.",
+            prediction_band=l5_v2_prediction_band_payload(),
             dispatch_blockers=(
                 "requires_byte_closed_temporal_sideinfo_consumption_proof",
                 "requires_paired_cpu_cuda_axis_plan_before_promotion",

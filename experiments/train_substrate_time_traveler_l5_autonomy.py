@@ -106,7 +106,6 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from tac.substrate_registry import register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
 )
@@ -136,9 +135,6 @@ from tac.substrates._shared.trainer_skeleton import (
 )
 from tac.substrates._shared.trainer_skeleton import (
     vendor_shared_inflate_runtime as _canon_vendor_shared_inflate_runtime,
-)
-from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
-    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
 )
 
 # Tier-1 optimization helpers (TIER-1-OPT-BATCH 2026-05-14).
@@ -364,6 +360,82 @@ def _utc_now_iso() -> str:
 
 def _sha256_bytes(data: bytes) -> str:
     return _canon_sha256_bytes(data)
+
+
+def _archive_bytes_proxy_estimate(
+    *,
+    world_model_bytes: int,
+    n_pairs: int,
+    per_pair_side_info_bytes: int,
+) -> int:
+    """Return the rate proxy used by the TT5L score-aware loss."""
+    if world_model_bytes < 0:
+        raise ValueError("world_model_bytes must be nonnegative")
+    if n_pairs <= 0:
+        raise ValueError("n_pairs must be positive")
+    if per_pair_side_info_bytes <= 0:
+        raise ValueError("per_pair_side_info_bytes must be positive")
+    return int(world_model_bytes + n_pairs * per_pair_side_info_bytes)
+
+
+def _byte_proxy_calibration(
+    *,
+    proxy_bytes: int,
+    bin_bytes: int,
+    archive_zip_bytes: int,
+) -> dict[str, Any]:
+    """Compare the trained byte proxy against emitted packet sizes."""
+    if proxy_bytes <= 0:
+        raise ValueError("proxy_bytes must be positive")
+    if bin_bytes <= 0 or archive_zip_bytes <= 0:
+        raise ValueError("emitted archive sizes must be positive")
+    bin_delta = int(bin_bytes - proxy_bytes)
+    zip_delta = int(archive_zip_bytes - proxy_bytes)
+    return {
+        "proxy_bytes": int(proxy_bytes),
+        "bin_bytes": int(bin_bytes),
+        "archive_zip_bytes": int(archive_zip_bytes),
+        "bin_minus_proxy_bytes": bin_delta,
+        "archive_zip_minus_proxy_bytes": zip_delta,
+        "bin_to_proxy_ratio": float(bin_bytes / proxy_bytes),
+        "archive_zip_to_proxy_ratio": float(archive_zip_bytes / proxy_bytes),
+    }
+
+
+def _shape_readiness_manifest(
+    *,
+    n_pairs: int,
+    output_height: int,
+    output_width: int,
+    smoke: bool,
+    full_cpu: bool,
+) -> dict[str, Any]:
+    """Return contest-shape readiness for TT5L artifacts."""
+    blockers: list[str] = []
+    exact_shape = (
+        n_pairs == N_PAIRS_FULL
+        and output_height == EVAL_HW[0]
+        and output_width == EVAL_HW[1]
+    )
+    if smoke:
+        blockers.append("smoke_artifact_not_score_evidence")
+    if n_pairs != N_PAIRS_FULL:
+        blockers.append("partial_pair_count_not_contest_shape")
+    if (output_height, output_width) != EVAL_HW:
+        blockers.append("renderer_resolution_not_contest_scorer_shape")
+    if full_cpu:
+        blockers.append("full_cpu_advisory_not_promotion_axis")
+    return {
+        "n_pairs": int(n_pairs),
+        "required_pairs": int(N_PAIRS_FULL),
+        "output_height": int(output_height),
+        "output_width": int(output_width),
+        "required_output_height": int(EVAL_HW[0]),
+        "required_output_width": int(EVAL_HW[1]),
+        "exact_contest_shape": bool(exact_shape and not smoke),
+        "score_claim_allowed": bool(exact_shape and not smoke and not full_cpu),
+        "promotion_blockers": blockers,
+    }
 
 
 def _git_head_sha() -> str:
@@ -722,6 +794,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     bin_sha = _sha256_bytes(bin_bytes)
     bin_size = len(bin_bytes)
+    archive_bytes_proxy = _archive_bytes_proxy_estimate(
+        world_model_bytes=substrate.estimate_world_model_bytes(),
+        n_pairs=cfg.num_pairs,
+        per_pair_side_info_bytes=cfg.per_pair_side_info_bytes,
+    )
     print(
         f"[{SUBSTRATE_TAG}-smoke] TT5L archive: {bin_size} B sha256={bin_sha[:16]}..."
     )
@@ -747,8 +824,23 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "bin_bytes": bin_size,
         "archive_zip_sha256": archive_zip_sha,
         "archive_zip_bytes": archive_zip_size,
+        "byte_proxy_calibration": _byte_proxy_calibration(
+            proxy_bytes=archive_bytes_proxy,
+            bin_bytes=bin_size,
+            archive_zip_bytes=archive_zip_size,
+        ),
+        "shape_readiness": _shape_readiness_manifest(
+            n_pairs=cfg.num_pairs,
+            output_height=cfg.output_height,
+            output_width=cfg.output_width,
+            smoke=True,
+            full_cpu=False,
+        ),
         "n_params": n_params,
         "git_head": _git_head_sha(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
     (args.output_dir / "smoke_metadata.json").write_text(
         json.dumps(smoke_meta, indent=2, sort_keys=True), encoding="utf-8"
@@ -974,6 +1066,18 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         n_params = substrate.parameter_count()
         wm_bytes = substrate.estimate_world_model_bytes()
+        archive_bytes_proxy_int = _archive_bytes_proxy_estimate(
+            world_model_bytes=wm_bytes,
+            n_pairs=n_pairs,
+            per_pair_side_info_bytes=args.per_pair_side_info_bytes,
+        )
+        shape_readiness = _shape_readiness_manifest(
+            n_pairs=n_pairs,
+            output_height=cfg.output_height,
+            output_width=cfg.output_width,
+            smoke=False,
+            full_cpu=full_cpu_active,
+        )
         print(
             f"[{SUBSTRATE_TAG}-full] substrate params: {n_params:,}  "
             f"world_model_bytes={wm_bytes}"
@@ -1140,7 +1244,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
                     # Closed-form rate proxy: world-model bytes + per-pair budget.
                     archive_bytes_proxy = torch.tensor(
-                        float(wm_bytes + n_pairs * args.per_pair_side_info_bytes),
+                        float(archive_bytes_proxy_int),
                         device=device,
                     )
 
@@ -1176,7 +1280,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     val_lag = _run_val_loop(
                         substrate, loss_fn, gt_pair_tensor, val_indices_pool,
                         torch.tensor(
-                            float(wm_bytes + n_pairs * args.per_pair_side_info_bytes),
+                            float(archive_bytes_proxy_int),
                             device=device,
                         ),
                         device,
@@ -1259,6 +1363,11 @@ def _full_main(args: argparse.Namespace) -> int:
         _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes, submission_dir=submission_dir)
         archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
         archive_zip_size = archive_zip_path.stat().st_size
+        byte_proxy_calibration = _byte_proxy_calibration(
+            proxy_bytes=archive_bytes_proxy_int,
+            bin_bytes=bin_size,
+            archive_zip_bytes=archive_zip_size,
+        )
         shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
         _stage("archive_emitted")
 
@@ -1325,6 +1434,9 @@ def _full_main(args: argparse.Namespace) -> int:
         "bin_bytes": bin_size,
         "archive_zip_sha256": archive_zip_sha,
         "archive_zip_bytes": archive_zip_size,
+        "archive_bytes_proxy": archive_bytes_proxy_int,
+        "byte_proxy_calibration": byte_proxy_calibration,
+        "shape_readiness": shape_readiness,
         "n_params": n_params,
         "world_model_bytes_estimate": wm_bytes,
         "best_val_lag": best_val_lag,
@@ -1343,6 +1455,11 @@ def _full_main(args: argparse.Namespace) -> int:
             env_var_candidates=("TT5L_GPU", "MODAL_GPU"),
         ),
     }
+    if not shape_readiness["score_claim_allowed"]:
+        provenance["score_claim"] = False
+        provenance["promotion_eligible"] = False
+        provenance["ready_for_exact_eval_dispatch"] = False
+        provenance["dispatch_blockers"] = list(shape_readiness["promotion_blockers"])
     # Advisory-only fields when --full-cpu is active (Catalog #127 + #192).
     if full_cpu_active:
         provenance["full_cpu_mode"] = True
@@ -1355,12 +1472,13 @@ def _full_main(args: argparse.Namespace) -> int:
         provenance["max_wall_clock_hours"] = float(args.max_wall_clock_hours)
         provenance["wall_clock_aborted"] = bool(wall_clock_aborted)
         provenance["macos_cpu_drift_calibration_extends_to_time_traveler_shape"] = False
-        provenance["dispatch_blockers"] = [
+        provenance["dispatch_blockers"] = list(dict.fromkeys([
+            *provenance.get("dispatch_blockers", []),
             "macos_cpu_advisory_not_score_evidence",
             "not_a_11_contest_compliant_cpu_axis",
             "requires_paired_contest_cpu_gha_linux_x86_64_before_score_claim",
             "requires_paired_contest_cuda_before_dual_axis_submission",
-        ]
+        ]))
     (args.output_dir / "provenance.json").write_text(
         json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
     )
@@ -1371,9 +1489,6 @@ def _full_main(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
-
-
-@register_substrate(TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT)
 
 
 def main(argv: list[str] | None = None) -> int:

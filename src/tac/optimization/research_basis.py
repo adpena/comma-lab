@@ -33,6 +33,17 @@ REQUIRED_SOURCE_FIELDS = (
     "hardening_blockers",
 )
 
+RESEARCH_SOURCE_ALIASES: dict[str, str] = {
+    "balle_2018": "balle_hyperprior_2018",
+    "rao_ballard1999": "rao_ballard_1999",
+    "rao-ballard1999": "rao_ballard_1999",
+    "dreamerv3": "dreamerv3_2023",
+    "ha_schmidhuber_2018": "ha_schmidhuber_world_models_2018",
+    "rissanen1978": "rissanen_mdl_1978",
+    "mackay2003": "mackay_itila_2003",
+    "tishby_zaslavsky": "tishby_zaslavsky_2015",
+}
+
 
 RESEARCH_SOURCES: dict[str, dict[str, Any]] = {
     "balle_e2e_2017": {
@@ -625,6 +636,405 @@ RESEARCH_SOURCES: dict[str, dict[str, Any]] = {
             "exact_cuda_auth_eval",
         ],
     },
+    "rao_ballard_1999": {
+        "title": "Predictive coding in the visual cortex: a functional interpretation of some extra-classical receptive-field effects",
+        "authors": ["Rajesh P. N. Rao", "Dana H. Ballard"],
+        "year": 1999,
+        "venue_or_status": "Nature Neuroscience 2, 79-87",
+        "url": "https://www.nature.com/articles/nn0199_79",
+        "lineage": ["predictive_coding", "visual_cortex", "residual_prediction"],
+        "local_paradigms": ["time_traveler_l5", "world_model", "predictive_receiver"],
+        "local_variables": [
+            "expected_residual_entropy_delta",
+            "latent_prediction_error",
+            "temporal_residual_score_delta",
+        ],
+        "contest_terms": ["seg_dist", "pose_dist", "archive_bytes"],
+        "charged_byte_contract": "Predictive residuals and latent dynamics are planning priors until the predictor, residual stream, and decoder contract are byte-closed.",
+        "hardening_blockers": [
+            "prediction_residual_custody",
+            "paired_cpu_cuda_empirical_anchor",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "friston_free_energy_2010": {
+        "title": "The free-energy principle: a unified brain theory?",
+        "authors": ["Karl Friston"],
+        "year": 2010,
+        "venue_or_status": "Nature Reviews Neuroscience 11, 127-138",
+        "url": "https://www.nature.com/articles/nrn2787",
+        "lineage": ["free_energy_principle", "predictive_processing", "variational_inference"],
+        "local_paradigms": ["time_traveler_l5", "world_model", "meta_lagrangian"],
+        "local_variables": [
+            "variational_free_energy_proxy",
+            "latent_prior_kl",
+            "prediction_error_precision",
+        ],
+        "contest_terms": ["seg_dist", "pose_dist", "archive_bytes"],
+        "charged_byte_contract": "Free-energy or KL terms are objective priors; any posterior, prior, or precision table consumed by inflate must be charged or fixed.",
+        "hardening_blockers": [
+            "objective_to_contest_component_mapping",
+            "posterior_prior_payload_custody",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "dreamerv3_2023": {
+        "title": "Mastering Diverse Domains through World Models",
+        "authors": ["Danijar Hafner", "Jurgis Pasukonis", "Jimmy Ba", "Timothy Lillicrap"],
+        "year": 2023,
+        "venue_or_status": "arXiv:2301.04104",
+        "url": "https://arxiv.org/abs/2301.04104",
+        "lineage": ["world_models", "rssm", "latent_imagination"],
+        "local_paradigms": ["time_traveler_l5", "c1_world_model", "predictive_receiver"],
+        "local_variables": [
+            "rssm_prior_kl",
+            "posterior_prior_residual",
+            "latent_rollout_error",
+        ],
+        "contest_terms": ["pose_dist", "seg_dist", "archive_bytes"],
+        "charged_byte_contract": "Dreamer-style RSSM modules are analogy and architecture priors until the trained dynamics, latents, and decoder are byte-closed for contest inflate.",
+        "hardening_blockers": [
+            "rssm_byte_closed_archive",
+            "frame_pair_component_ablation",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "ha_schmidhuber_world_models_2018": {
+        "title": "World Models",
+        "authors": ["David Ha", "Jurgen Schmidhuber"],
+        "year": 2018,
+        "venue_or_status": "arXiv:1803.10122",
+        "url": "https://arxiv.org/abs/1803.10122",
+        "lineage": ["world_models", "latent_dynamics", "compact_controller"],
+        "local_paradigms": ["time_traveler_l5", "world_model", "predictive_receiver"],
+        "local_variables": [
+            "latent_dynamics_state",
+            "recurrent_world_model_state",
+            "controller_conditioning_payload",
+        ],
+        "contest_terms": ["seg_dist", "pose_dist", "archive_bytes"],
+        "charged_byte_contract": "World-model weights, latent states, and controller state are architecture priors until byte-closed inside the contest archive or fixed runtime.",
+        "hardening_blockers": [
+            "world_model_state_custody",
+            "runtime_decode_budget_anchor",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "atick_redlich_1990": {
+        "title": "Towards a Theory of Early Visual Processing",
+        "authors": ["Joseph J. Atick", "A. Norman Redlich"],
+        "year": 1990,
+        "venue_or_status": "Neural Computation 2(3), 308-320",
+        "url": "https://doi.org/10.1162/neco.1990.2.3.308",
+        "lineage": ["efficient_coding", "natural_image_statistics", "decorrelation"],
+        "local_paradigms": ["atw_codec", "world_model", "entropy_rate"],
+        "local_variables": [
+            "natural_image_redundancy_delta",
+            "decorrelation_filter",
+            "expected_entropy_delta_bits",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist"],
+        "charged_byte_contract": "Efficient-coding filters are planning priors unless their transform, inverse, and transmitted residuals are deterministic and byte-closed.",
+        "hardening_blockers": [
+            "transform_inverse_runtime_parity",
+            "entropy_model_custody",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "tishby_information_bottleneck_1999": {
+        "title": "The Information Bottleneck Method",
+        "authors": ["Naftali Tishby", "Fernando C. Pereira", "William Bialek"],
+        "year": 2000,
+        "venue_or_status": "arXiv:physics/0004057",
+        "url": "https://arxiv.org/abs/physics/0004057",
+        "lineage": ["information_bottleneck", "rate_distortion", "representation_learning"],
+        "local_paradigms": ["atw_codec", "ib_lagrangian", "meta_lagrangian"],
+        "local_variables": [
+            "ib_beta",
+            "mutual_information_proxy",
+            "task_relevant_rate_delta",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "IB objectives are rank priors until the learned representation and entropy model are charged in archive bytes.",
+        "hardening_blockers": [
+            "mutual_information_proxy_calibration",
+            "task_relevance_component_mapping",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "tishby_zaslavsky_2015": {
+        "title": "Deep Learning and the Information Bottleneck Principle",
+        "authors": ["Naftali Tishby", "Noga Zaslavsky"],
+        "year": 2015,
+        "venue_or_status": "IEEE Information Theory Workshop 2015 / arXiv:1503.02406",
+        "url": "https://arxiv.org/abs/1503.02406",
+        "lineage": ["information_bottleneck", "deep_learning", "representation_compression"],
+        "local_paradigms": ["ib_lagrangian", "mdl", "time_traveler_l5"],
+        "local_variables": [
+            "ib_phase_transition_proxy",
+            "representation_compression_term",
+            "task_relevant_rate_delta",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Deep-IB arguments are objective priors; contest authority requires byte-closed representation payloads and exact component deltas.",
+        "hardening_blockers": [
+            "ib_proxy_to_contest_metric_calibration",
+            "representation_payload_accounting",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "wyner_ziv_1976": {
+        "title": "The rate-distortion function for source coding with side information at the decoder",
+        "authors": ["Aaron D. Wyner", "Jacob Ziv"],
+        "year": 1976,
+        "venue_or_status": "IEEE Transactions on Information Theory 22(1), 1-10",
+        "url": "https://doi.org/10.1109/TIT.1976.1055508",
+        "lineage": ["distributed_source_coding", "decoder_side_information", "rate_distortion"],
+        "local_paradigms": ["wyner_ziv", "cooperative_receiver", "frame0_side_information"],
+        "local_variables": [
+            "decoder_side_information",
+            "conditional_rate_delta_bits",
+            "cooperative_receiver_residual",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Decoder side information must be derived from fixed contest inputs or carried as charged archive payload.",
+        "hardening_blockers": [
+            "side_information_derivation_proof",
+            "paired_cpu_cuda_empirical_anchor",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "slepian_wolf_1973": {
+        "title": "Noiseless coding of correlated information sources",
+        "authors": ["David Slepian", "Jack K. Wolf"],
+        "year": 1973,
+        "venue_or_status": "IEEE Transactions on Information Theory 19(4), 471-480",
+        "url": "https://www.itsoc.org/publications/papers/noiseless-coding-of-correlated-information-sources",
+        "lineage": ["distributed_source_coding", "correlated_sources", "conditional_entropy"],
+        "local_paradigms": ["wyner_ziv", "cooperative_receiver", "entropy_rate"],
+        "local_variables": [
+            "conditional_entropy_floor_bits",
+            "correlated_source_partition",
+            "syndrome_or_bin_index",
+        ],
+        "contest_terms": ["archive_bytes"],
+        "charged_byte_contract": "Binning, syndrome, or correlation metadata must be charged unless deterministically derived from fixed contest runtime and inputs.",
+        "hardening_blockers": [
+            "correlation_model_custody",
+            "bin_index_payload_accounting",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "shannon_rate_distortion_1959": {
+        "title": "Coding Theorems for a Discrete Source With a Fidelity Criterion",
+        "authors": ["Claude E. Shannon"],
+        "year": 1959,
+        "venue_or_status": "IRE National Convention Record 7(4), 142-163",
+        "url": "https://ieeexplore.ieee.org/document/5311476",
+        "lineage": ["rate_distortion", "source_coding", "fidelity_criterion"],
+        "local_paradigms": ["meta_lagrangian", "entropy_rate", "pareto_kkt"],
+        "local_variables": [
+            "rate_distortion_function",
+            "fidelity_constraint",
+            "description_length_delta_bytes",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Rate-distortion lower bounds are theory priors; contest movement requires byte-closed archives and exact eval.",
+        "hardening_blockers": [
+            "component_distortion_mapping",
+            "archive_byte_accounting",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "rissanen_mdl_1978": {
+        "title": "Modeling by Shortest Data Description",
+        "authors": ["Jorma Rissanen"],
+        "year": 1978,
+        "venue_or_status": "Automatica 14(5), 465-471",
+        "url": "https://research.ibm.com/publications/modeling-by-shortest-data-description",
+        "lineage": ["minimum_description_length", "model_selection", "statistical_inference"],
+        "local_paradigms": ["mdl", "time_traveler_l5", "ibps"],
+        "local_variables": [
+            "model_description_length_bits",
+            "residual_description_length_bits",
+            "aggregate_mdl_estimate",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "MDL estimates are planning and ablation evidence until the chosen model plus residual stream are byte-closed and exactly evaluated.",
+        "hardening_blockers": [
+            "mdl_estimate_to_archive_bytes_reconciliation",
+            "residual_payload_custody",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "mackay_itila_2003": {
+        "title": "Information Theory, Inference, and Learning Algorithms",
+        "authors": ["David J. C. MacKay"],
+        "year": 2003,
+        "venue_or_status": "Cambridge University Press",
+        "url": "https://www.inference.org.uk/itila/book.html",
+        "lineage": ["information_theory", "inference", "coding"],
+        "local_paradigms": ["entropy_rate", "mdl", "time_traveler_l5"],
+        "local_variables": [
+            "bits_back_intuition",
+            "arithmetic_code_length_bits",
+            "description_length_delta_bytes",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Information-theoretic code-length arguments must reconcile with emitted archive bytes, deterministic decoder state, and exact scorer deltas.",
+        "hardening_blockers": [
+            "entropy_code_payload_accounting",
+            "deterministic_decoder_contract",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "snerv_scalable_2024": {
+        "title": "SNeRV: Scalable Neural Representations for Video Coding",
+        "authors": ["SNeRV scalable authors"],
+        "year": 2024,
+        "venue_or_status": "OpenReview",
+        "url": "https://openreview.net/forum?id=ZqN4bnXSSY",
+        "lineage": ["neural_video_representation", "scalable_coding", "multi_resolution"],
+        "local_paradigms": ["hnerv", "nerv_family", "stack_of_stacks"],
+        "local_variables": [
+            "multi_resolution_layer_stack",
+            "quality_scalable_payload",
+            "decode_cost_per_layer",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Scalable layers are charged unless omitted; each layer must have runtime-consumption proof and component delta.",
+        "hardening_blockers": [
+            "snerv_name_collision_disambiguated",
+            "layer_consumption_proof",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "snerv_spectra_2025": {
+        "title": "SNeRV: Spectra-preserving Neural Representation for Video",
+        "authors": ["SNeRV spectra-preserving authors"],
+        "year": 2025,
+        "venue_or_status": "arXiv:2501.01681",
+        "url": "https://arxiv.org/abs/2501.01681",
+        "lineage": ["neural_video_representation", "spectral_preservation", "frequency_domain"],
+        "local_paradigms": ["hnerv", "wavelet", "frequency_residual"],
+        "local_variables": [
+            "spectral_loss_weight",
+            "frequency_residual_delta",
+            "high_frequency_payload_bytes",
+        ],
+        "contest_terms": ["seg_dist", "pose_dist", "archive_bytes"],
+        "charged_byte_contract": "Spectral residual payloads and frequency-domain metadata must be charged or derived deterministically.",
+        "hardening_blockers": [
+            "snerv_name_collision_disambiguated",
+            "spectral_metric_to_contest_mapping",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "hnerv_2023": {
+        "title": "HNeRV: A Hybrid Neural Representation for Videos",
+        "authors": ["Hao Chen", "Matthew Gwilliam", "Ser-Nam Lim", "Abhinav Shrivastava"],
+        "year": 2023,
+        "venue_or_status": "CVPR 2023",
+        "url": "https://openaccess.thecvf.com/content/CVPR2023/html/Chen_HNeRV_A_Hybrid_Neural_Representation_for_Videos_CVPR_2023_paper.html",
+        "lineage": ["neural_video_representation", "hybrid_inr", "content_adaptive_embedding"],
+        "local_paradigms": ["hnerv", "nerv_family", "time_traveler_l5"],
+        "local_variables": [
+            "content_adaptive_embedding",
+            "decoder_weight_payload",
+            "temporal_representation_capacity",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "HNeRV embeddings and decoder weights are charged payload unless fixed by contest runtime; paper compression ratios are not contest score evidence.",
+        "hardening_blockers": [
+            "source_runtime_replay_or_parity",
+            "archive_payload_accounting",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "metanerv_2025": {
+        "title": "MetaNeRV: Meta Neural Representations for Videos with Spatial-Temporal Guidance",
+        "authors": ["MetaNeRV authors"],
+        "year": 2025,
+        "venue_or_status": "arXiv:2501.02427",
+        "url": "https://arxiv.org/abs/2501.02427",
+        "lineage": ["neural_video_representation", "meta_learning", "spatiotemporal_guidance"],
+        "local_paradigms": ["hnerv", "nerv_family", "time_traveler_l5"],
+        "local_variables": [
+            "meta_initialization_payload",
+            "spatiotemporal_guidance_signal",
+            "per_video_adaptation_steps",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Meta initialization and adaptation state are charged unless fixed in contest runtime; guidance signals require archive custody.",
+        "hardening_blockers": [
+            "meta_init_license_and_custody",
+            "adaptation_runtime_budget",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "c3_neural_compression_2024": {
+        "title": "C3: High-Performance and Low-Complexity Neural Compression from a Single Image or Video",
+        "authors": ["Hyunjik Kim", "Matthias Bauer", "Lucas Theis", "Jonathan Richard Schwarz", "Emilien Dupont"],
+        "year": 2024,
+        "venue_or_status": "CVPR 2024",
+        "url": "https://openaccess.thecvf.com/content/CVPR2024/html/Kim_C3_High-Performance_and_Low-Complexity_Neural_Compression_from_a_Single_Image_CVPR_2024_paper.html",
+        "lineage": ["neural_compression", "low_complexity_decode", "overfitted_codec"],
+        "local_paradigms": ["cool_chic", "c3", "self_compressing_nn"],
+        "local_variables": [
+            "decoder_macs_per_pixel",
+            "overfitted_latent_payload",
+            "rate_distortion_delta",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Overfitted latents, model parameters, and any entropy model must be charged in archive.zip and decoded inside budget.",
+        "hardening_blockers": [
+            "decode_complexity_anchor",
+            "byte_closed_archive_manifest",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "cool_chic_2023": {
+        "title": "COOL-CHIC: Coordinate-based Low Complexity Hierarchical Image Codec",
+        "authors": ["COOL-CHIC authors"],
+        "year": 2023,
+        "venue_or_status": "ICCV 2023",
+        "url": "https://openaccess.thecvf.com/content/ICCV2023/papers/Ladune_COOL-CHIC_Coordinate-based_Low_Complexity_Hierarchical_Image_Codec_ICCV_2023_paper.pdf",
+        "lineage": ["coordinate_codec", "low_complexity_decode", "hierarchical_latents"],
+        "local_paradigms": ["cool_chic", "c3", "coordinate_mlp_residual"],
+        "local_variables": [
+            "coordinate_grid_payload",
+            "hierarchical_latent_entropy",
+            "decoder_complexity_budget",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Coordinate networks and hierarchical latents are charged archive payload unless fixed by contest runtime.",
+        "hardening_blockers": [
+            "hierarchical_latent_custody",
+            "decode_complexity_anchor",
+            "exact_cuda_auth_eval",
+        ],
+    },
+    "dcvc_rt_2025": {
+        "title": "Towards Practical Real-Time Neural Video Compression",
+        "authors": ["Zhaoyang Jia", "Bin Li", "Jiahao Li", "Wenxuan Xie", "Linfeng Qi", "Houqiang Li", "Yan Lu"],
+        "year": 2025,
+        "venue_or_status": "arXiv:2502.20762",
+        "url": "https://arxiv.org/abs/2502.20762",
+        "lineage": ["neural_video_compression", "real_time_decode", "integerization"],
+        "local_paradigms": ["learned_video_compression", "decode_complexity", "production_runtime"],
+        "local_variables": [
+            "decode_fps_anchor",
+            "integerized_model_delta",
+            "latent_resolution_policy",
+        ],
+        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
+        "charged_byte_contract": "Runtime speed and integerization are production priors; any model bank, latent, or rate-control metadata consumed by inflate is charged.",
+        "hardening_blockers": [
+            "runtime_dependency_closure",
+            "t4_decode_budget_anchor",
+            "exact_cuda_auth_eval",
+        ],
+    },
 }
 
 DEFAULT_RESEARCH_BASIS_IDS = [
@@ -642,20 +1052,53 @@ FAMILY_RESEARCH_BASIS_IDS: dict[str, list[str]] = {
     "entropy": ["flavc_2025", "balle_hyperprior_2018", "compressai", "constriction_ans", "yousfi_onehot_jpeg_2020"],
     "foveation": ["telescope_2026", "foveated_diffusion_2026", "foveated_telepresence_2025", "lyra2_2026"],
     "gamma": ["balle_e2e_2017", "balle_hyperprior_2018", "compressai"],
-    "hnerv": ["msnerv_2025", "nerv_2021", "hinerv_2023", "balle_hyperprior_2018", "fridrich_stc_2011"],
+    "hnerv": ["hnerv_2023", "msnerv_2025", "nerv_2021", "hinerv_2023", "balle_hyperprior_2018", "fridrich_stc_2011"],
+    "ib_lagrangian": ["tishby_information_bottleneck_1999", "tishby_zaslavsky_2015", "balle_hyperprior_2018"],
     "lapose": ["lapose_2026", "geometric_visual_servo_ot_2026"],
     "mask_payload": ["nerv_2021", "hinerv_2023", "mae_2021", "fridrich_pq_wetpaper_2004"],
     "meta_lagrangian": ["dworetzky_fridrich_detector_batch_2025", "geometric_visual_servo_ot_2026", "fridrich_stc_2011", "hawq_v3_2020", "awq_2024"],
-    "mdl": ["balle_overfitted_wasserstein_2025", "compression_as_adaptation_2026"],
+    "mdl": ["rissanen_mdl_1978", "mackay_itila_2003", "balle_overfitted_wasserstein_2025", "compression_as_adaptation_2026"],
     "optimal_transport": ["geometric_visual_servo_ot_2026", "balle_overfitted_wasserstein_2025"],
     "pose": ["lapose_2026", "geometric_visual_servo_ot_2026", "foveated_telepresence_2025"],
+    "predictive_receiver": ["rao_ballard_1999", "friston_free_energy_2010", "dreamerv3_2023", "ha_schmidhuber_world_models_2018"],
     "self_augmentation": ["mae_2021", "lyra2_2026"],
     "semantic_labels": ["rdc_universal_2025", "yousfi_onehot_jpeg_2020"],
     "self_compressing_nn": ["compression_as_adaptation_2026", "balle_overfitted_wasserstein_2025"],
     "sensitivity": ["kaziakhmedov_fridrich_lies_2025", "awq_2024", "hawq_v3_2020"],
     "telescopic_foveation": ["telescope_2026", "foveated_diffusion_2026", "foveated_telepresence_2025"],
+    "time_traveler_l5": [
+        "rao_ballard_1999",
+        "friston_free_energy_2010",
+        "dreamerv3_2023",
+        "ha_schmidhuber_world_models_2018",
+        "rissanen_mdl_1978",
+        "mackay_itila_2003",
+        "hnerv_2023",
+    ],
+    "time_traveler_l5_v2": [
+        "rao_ballard_1999",
+        "friston_free_energy_2010",
+        "dreamerv3_2023",
+        "ha_schmidhuber_world_models_2018",
+        "rissanen_mdl_1978",
+        "mackay_itila_2003",
+        "tishby_information_bottleneck_1999",
+        "tishby_zaslavsky_2015",
+        "balle_hyperprior_2018",
+        "hnerv_2023",
+    ],
     "wavelet": ["fridrich_stc_2011", "fridrich_pq_wetpaper_2004"],
+    "world_model": ["ha_schmidhuber_world_models_2018", "dreamerv3_2023", "friston_free_energy_2010", "rao_ballard_1999"],
 }
+
+
+def canonical_research_basis_id(raw_id: str) -> str:
+    """Return the canonical source id for a persisted or legacy alias."""
+
+    basis_id = str(raw_id or "").strip()
+    if not basis_id:
+        raise ResearchBasisError("research basis id must be nonempty")
+    return RESEARCH_SOURCE_ALIASES.get(basis_id, RESEARCH_SOURCE_ALIASES.get(basis_id.lower(), basis_id))
 
 
 def research_basis_ids_for_family(*family_values: str) -> list[str]:
@@ -665,8 +1108,9 @@ def research_basis_ids_for_family(*family_values: str) -> list[str]:
     for family in family_values:
         key = str(family or "").lower()
         for basis_id in FAMILY_RESEARCH_BASIS_IDS.get(key, []):
-            if basis_id not in out:
-                out.append(basis_id)
+            canonical_id = canonical_research_basis_id(basis_id)
+            if canonical_id not in out:
+                out.append(canonical_id)
     if not out:
         out.extend(DEFAULT_RESEARCH_BASIS_IDS)
     return out
@@ -681,9 +1125,7 @@ def research_basis_manifest(ids: Iterable[str] | None = None) -> dict[str, Any]:
     seen: set[str] = set()
     sources = []
     for raw_id in resolved_ids:
-        basis_id = str(raw_id or "").strip()
-        if not basis_id:
-            raise ResearchBasisError("research basis id must be nonempty")
+        basis_id = canonical_research_basis_id(str(raw_id or ""))
         if basis_id in seen:
             continue
         if basis_id not in RESEARCH_SOURCES:
@@ -744,9 +1186,11 @@ __all__ = [
     "FAMILY_RESEARCH_BASIS_IDS",
     "REQUIRED_SOURCE_FIELDS",
     "RESEARCH_SOURCES",
+    "RESEARCH_SOURCE_ALIASES",
     "SCHEMA_VERSION",
     "TOOL_NAME",
     "ResearchBasisError",
+    "canonical_research_basis_id",
     "research_basis_ids_for_family",
     "research_basis_manifest",
 ]

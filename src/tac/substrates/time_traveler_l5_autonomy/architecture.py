@@ -436,6 +436,37 @@ class TimeTravelerSubstrate(nn.Module):
         yy, xx = torch.meshgrid(ys, xs, indexing="ij")
         return torch.stack([xx.flatten(), yy.flatten()], dim=-1)
 
+    def _motion_conditioned_coord_grid(
+        self,
+        *,
+        pair_idx: int,
+        coord_grid_xy: torch.Tensor,
+    ) -> torch.Tensor:
+        """Apply a small SE(3)-derived ego-motion warp to renderer coordinates.
+
+        TT5L charges per-pair pose codes and a Markov dynamics prior. The
+        renderer must therefore consume both, or the bytes are a false
+        mechanism. This lightweight warp maps the six Lie coordinates onto a
+        bounded 2-D affine perturbation: translation, scale, shear, and yaw.
+        """
+        pose = self.pose_codes[pair_idx]
+        prev_idx = max(0, pair_idx - 1)
+        predicted_pose = self.dynamics.predict_next(
+            self.pose_codes[prev_idx].unsqueeze(0)
+        ).squeeze(0)
+        motion = pose + 0.5 * predicted_pose
+        translation = 0.05 * torch.tanh(motion[:2])
+        scale = 1.0 + 0.02 * torch.tanh(motion[2])
+        shear = 0.02 * torch.tanh(motion[3:5])
+        yaw = 0.05 * torch.tanh(motion[5])
+        cos_yaw = torch.cos(yaw)
+        sin_yaw = torch.sin(yaw)
+        x = coord_grid_xy[:, 0]
+        y = coord_grid_xy[:, 1]
+        warped_x = scale * (cos_yaw * x - sin_yaw * y) + shear[0] * y + translation[0]
+        warped_y = scale * (sin_yaw * x + cos_yaw * y) + shear[1] * x + translation[1]
+        return torch.stack([warped_x, warped_y], dim=-1).clamp(-1.25, 1.25)
+
     def render_pair(self, pair_idx: int | torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Render one pair as ``(rgb_0, rgb_1)`` both shaped ``(1, 3, H, W)``.
 
@@ -448,7 +479,10 @@ class TimeTravelerSubstrate(nn.Module):
             )
         device = self.pose_codes.device
         H, W = self.cfg.output_height, self.cfg.output_width
-        coord_grid_xy = self._build_coord_grid(device)  # (H*W, 2)
+        coord_grid_xy = self._motion_conditioned_coord_grid(
+            pair_idx=idx,
+            coord_grid_xy=self._build_coord_grid(device),
+        )  # (H*W, 2)
         t = idx / max(1, self.cfg.num_pairs - 1)
         foveation_map = self.foveation()  # (H, W)
         foveation_flat = foveation_map.flatten().unsqueeze(-1)  # (H*W, 1)

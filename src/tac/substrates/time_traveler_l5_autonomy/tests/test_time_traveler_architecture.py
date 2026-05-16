@@ -233,16 +233,42 @@ def test_substrate_render_pair_accepts_tensor_index() -> None:
 def test_substrate_renderer_gradients_flow_back() -> None:
     """A loss on render_pair output propagates gradient to renderer + pose codes."""
     cfg = TimeTravelerConfig(
-        hidden_dim=8, num_hidden_layers=2, output_height=16, output_width=16
+        hidden_dim=8, num_hidden_layers=2, output_height=16, output_width=16,
+        num_pairs=5
     )
     substrate = TimeTravelerSubstrate(cfg)
-    rgb_0, rgb_1 = substrate.render_pair(0)
+    rgb_0, rgb_1 = substrate.render_pair(2)
     loss = (rgb_0**2 + rgb_1**2).mean()
     loss.backward()
     # Renderer weights must have gradient.
     for name, p in substrate.renderer.named_parameters():
         assert p.grad is not None, f"renderer.{name} has no gradient"
         assert p.grad.abs().sum().item() > 0, f"renderer.{name} gradient is zero"
+    assert substrate.pose_codes.grad is not None
+    assert substrate.pose_codes.grad[2].abs().sum().item() > 0
+    for name, p in substrate.dynamics.named_parameters():
+        assert p.grad is not None, f"dynamics.{name} has no gradient"
+        assert p.grad.abs().sum().item() > 0, f"dynamics.{name} gradient is zero"
+
+
+def test_substrate_render_pair_consumes_pose_codes_and_dynamics() -> None:
+    """Changing pose/dynamics changes rendered pixels for the same pair."""
+    cfg = TimeTravelerConfig(
+        hidden_dim=8, num_hidden_layers=2, output_height=16, output_width=16,
+        num_pairs=5
+    )
+    substrate = TimeTravelerSubstrate(cfg)
+    with torch.no_grad():
+        before_0, before_1 = substrate.render_pair(2)
+        substrate.pose_codes[2, 0] += 5.0
+        after_pose_0, after_pose_1 = substrate.render_pair(2)
+        substrate.dynamics.bias[1] += 5.0
+        after_dynamics_0, after_dynamics_1 = substrate.render_pair(2)
+
+    assert not torch.allclose(before_0, after_pose_0, atol=1e-6)
+    assert not torch.allclose(before_1, after_pose_1, atol=1e-6)
+    assert not torch.allclose(after_pose_0, after_dynamics_0, atol=1e-6)
+    assert not torch.allclose(after_pose_1, after_dynamics_1, atol=1e-6)
 
 
 def test_substrate_state_dict_has_expected_top_level_keys() -> None:

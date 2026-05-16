@@ -127,6 +127,59 @@ def test_state_dict_cpu_snapshot_clones_current_weights(trainer_module):
     assert model.weight.item() == 9.0
 
 
+def test_archive_byte_proxy_calibration_records_drift(trainer_module):
+    proxy = trainer_module._archive_bytes_proxy_estimate(
+        world_model_bytes=1000,
+        n_pairs=4,
+        per_pair_side_info_bytes=45,
+    )
+    calibration = trainer_module._byte_proxy_calibration(
+        proxy_bytes=proxy,
+        bin_bytes=1500,
+        archive_zip_bytes=1400,
+    )
+
+    assert proxy == 1180
+    assert calibration["proxy_bytes"] == 1180
+    assert calibration["bin_minus_proxy_bytes"] == 320
+    assert calibration["archive_zip_minus_proxy_bytes"] == 220
+    assert calibration["bin_to_proxy_ratio"] == pytest.approx(1500 / 1180)
+
+
+def test_shape_readiness_blocks_smoke_partial_and_full_cpu(trainer_module):
+    smoke = trainer_module._shape_readiness_manifest(
+        n_pairs=4,
+        output_height=24,
+        output_width=32,
+        smoke=True,
+        full_cpu=False,
+    )
+    full_cpu = trainer_module._shape_readiness_manifest(
+        n_pairs=trainer_module.N_PAIRS_FULL,
+        output_height=trainer_module.EVAL_HW[0],
+        output_width=trainer_module.EVAL_HW[1],
+        smoke=False,
+        full_cpu=True,
+    )
+    exact_cuda = trainer_module._shape_readiness_manifest(
+        n_pairs=trainer_module.N_PAIRS_FULL,
+        output_height=trainer_module.EVAL_HW[0],
+        output_width=trainer_module.EVAL_HW[1],
+        smoke=False,
+        full_cpu=False,
+    )
+
+    assert smoke["score_claim_allowed"] is False
+    assert "smoke_artifact_not_score_evidence" in smoke["promotion_blockers"]
+    assert "partial_pair_count_not_contest_shape" in smoke["promotion_blockers"]
+    assert "renderer_resolution_not_contest_scorer_shape" in smoke["promotion_blockers"]
+    assert full_cpu["exact_contest_shape"] is True
+    assert full_cpu["score_claim_allowed"] is False
+    assert "full_cpu_advisory_not_promotion_axis" in full_cpu["promotion_blockers"]
+    assert exact_cuda["score_claim_allowed"] is True
+    assert exact_cuda["promotion_blockers"] == []
+
+
 def test_best_checkpoint_uses_ema_snapshot_taken_before_live_restore() -> None:
     """The full trainer must save the EMA-applied state, not restored live weights."""
 

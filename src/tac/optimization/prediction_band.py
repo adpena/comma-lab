@@ -17,7 +17,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from tac.optimization.research_basis import RESEARCH_SOURCES
+from tac.optimization.research_basis import (
+    RESEARCH_SOURCES,
+    ResearchBasisError,
+    canonical_research_basis_id,
+)
 
 SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
@@ -254,15 +258,21 @@ def validate_prediction_band(
     source = band.band_source
     if not source.local_ledger_paths or not source.claim_scope.strip():
         blockers.append("prediction_band_source_missing")
-    unknown = tuple(
-        source_id for source_id in source.research_basis_ids
-        if source_id not in known
-    )
     if not source.research_basis_ids:
         blockers.append("prediction_band_research_basis_missing")
-    elif unknown:
-        blockers.append("prediction_band_unknown_research_basis")
-        annotations.append(f"unknown_research_basis_ids={list(unknown)!r}")
+    else:
+        unknown: list[str] = []
+        for source_id in source.research_basis_ids:
+            try:
+                canonical_id = canonical_research_basis_id(source_id)
+            except ResearchBasisError:
+                unknown.append(source_id)
+                continue
+            if canonical_id not in known:
+                unknown.append(source_id)
+        if unknown:
+            blockers.append("prediction_band_unknown_research_basis")
+            annotations.append(f"unknown_research_basis_ids={unknown!r}")
 
     uncertainty = band.uncertainty
     if not uncertainty.method.strip() or not uncertainty.confidence_tag.strip():

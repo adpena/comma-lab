@@ -30,7 +30,7 @@ walker sees them):
 - ``archive_grammar``: monolithic single-file ``0.bin`` (HNeRV parity L3)
 - ``parser_section_manifest``: TT5L header + 4 length-prefixed sections
   (world model state_dict + per-pair side info + AC state + meta JSON)
-- ``inflate_runtime_loc_budget``: <= 200 LOC substantive (HNeRV parity L4
+- ``inflate_runtime_loc_budget``: <= 350 LOC substantive (HNeRV parity L4
   substrate-engineering waiver — full renderer including pose dynamics +
   foveation grid + differentiable physics)
 - ``runtime_dep_closure``: torch + brotli only (HNeRV parity L4 <= 2 deps)
@@ -76,18 +76,19 @@ from tac.substrates.time_traveler_l5_autonomy.archive import (
     parse_archive,
     parse_tt5l_archive_bytes,
 )
+from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
+    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
+)
 from tac.substrates.time_traveler_l5_autonomy.score_aware_loss import (
     TimeTravelerLossWeights,
     TimeTravelerScoreAwareLoss,
-)
-from tac.substrates.time_traveler_l5_autonomy.registered_substrate import (
-    TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT,
 )
 
 __all__ = [
     "EVAL_HW",
     "NUM_PAIRS",
     "PER_PAIR_SIDE_INFO_TARGET_BYTES",
+    "TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "TT5L_HEADER_FMT",
@@ -95,7 +96,6 @@ __all__ = [
     "TT5L_MAGIC",
     "TT5L_SCHEMA_VERSION",
     "TT5L_SECTION_ROLES",
-    "TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT",
     "TimeTravelerArchive",
     "TimeTravelerConfig",
     "TimeTravelerLossWeights",
