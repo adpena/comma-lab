@@ -72,22 +72,48 @@ __all__ = [
     "CouncilTier",
     "VALID_TIERS",
     "VALID_VERDICTS",
+    "VALID_MISSION_CONTRIBUTIONS",
     "CouncilDeliberationRecord",
+    "CouncilRecordValidationError",
     "CouncilPosteriorCorruptError",
     "DEFAULT_COUNCIL_POSTERIOR_PATH",
     "DEFAULT_COUNCIL_POSTERIOR_LOCK_PATH",
     "SCHEMA_VERSION",
+    "RIGOR_DOMINANT_THRESHOLD",
+    "DEFERRED_RETROSPECTIVE_WINDOW_DAYS",
     "append_council_anchor",
     "load_council_anchors",
     "load_council_anchors_strict",
     "query_anchors_by_topic",
     "query_dissent_history",
     "query_assumption_classification_history",
+    "query_overrides",
+    "query_due_retrospectives",
+    "query_mission_contribution_distribution",
+    "is_rigor_dominant",
+    "compute_deferred_retrospective_due_utc",
     "update_from_anchor",
 ]
 
 
 SCHEMA_VERSION = "council_deliberation_posterior_v1"
+
+# Per CLAUDE.md "Mission alignment — non-negotiable" subsection of "Council
+# hierarchy: 4-tier protocol" (operator binding standing directive 2026-05-16):
+# every T2+ council deliberation MUST forecast the mission-contribution
+# category. The 60% threshold for is_rigor_dominant() is the operator-visible
+# alert anchor — when rigor_overhead + apparatus_maintenance crosses 60% of
+# T2+ verdicts in any 30-day window, the council is producing more apparatus-
+# maintenance than frontier-breaking work and operator review is required.
+# Memory:
+# feedback_council_apparatus_in_service_of_innovation_rigor_optimization_score_lowering_20260516.md.
+RIGOR_DOMINANT_THRESHOLD = 0.60
+
+# Per the mission-alignment operational consequence 3: every deferred or
+# killed substrate gets a 30-day score-impact retrospective so the operator
+# can audit whether the deferral cost actual score improvement. The 30-day
+# window pairs with CLAUDE.md "Forbidden premature KILL" non-negotiable.
+DEFERRED_RETROSPECTIVE_WINDOW_DAYS = 30
 
 
 # Repo root resolution mirrors the rest of tac.* (this module sits in
@@ -144,6 +170,46 @@ VALID_VERDICTS = frozenset({
     "ESCALATE_TO_OPERATOR",
     "ESCALATE_TO_HIGHER_TIER",
 })
+
+
+# Per CLAUDE.md "Mission alignment — non-negotiable" subsection of "Council
+# hierarchy: 4-tier protocol" (operator binding standing directive 2026-05-16
+# verbatim: *"and all in service of innovation and rigor and extreme
+# optimization and performance and score lowering"*). Every T2+ council
+# deliberation MUST classify its `council_predicted_mission_contribution`
+# into one of these 5 categories so the operator can audit whether the
+# council apparatus is producing innovation-enabling or innovation-blocking
+# verdicts. The breakdown is surfaced via
+# :func:`query_mission_contribution_distribution` and
+# :func:`is_rigor_dominant`.
+#
+# Category semantics:
+#   - frontier_breaking — opens a class-shift path predicted to lower score
+#   - frontier_protecting — prevents a regression that would raise score
+#     (sister of strict-mode preflight gates)
+#   - rigor_overhead — procedural-only verdict; no direct score contribution
+#     but enables future contributions
+#   - apparatus_maintenance — infrastructure update without score implications
+#   - mission_questioned — verdict triggered the "is this serving the
+#     mission?" question; documented for retrospective
+VALID_MISSION_CONTRIBUTIONS = frozenset({
+    "frontier_breaking",
+    "frontier_protecting",
+    "rigor_overhead",
+    "apparatus_maintenance",
+    "mission_questioned",
+})
+
+
+class CouncilRecordValidationError(ValueError):
+    """Raised when a :class:`CouncilDeliberationRecord` violates an invariant.
+
+    Distinct from generic :class:`ValueError` so mission-alignment validators
+    can refuse records that lack the required mission-contribution forecast
+    or the operator-override rationale even when the field types are
+    superficially well-formed (e.g. ``override_invoked=True`` but
+    ``override_rationale=None``).
+    """
 
 
 class CouncilPosteriorCorruptError(RuntimeError):
@@ -214,10 +280,90 @@ class CouncilDeliberationRecord:
     parent_id_or_session: str | None = None
     memory_path: str | None = None
     notes: str = ""
+    # ─── Mission-alignment fields (operator-binding directive 2026-05-16) ──
+    # Per CLAUDE.md "Mission alignment — non-negotiable" subsection.
+    # Required at T2+. None permitted at T1 (working-group recommendations
+    # are not binding decisions and need not forecast mission contribution).
+    predicted_mission_contribution: str | None = None
+    # Operator-frontier-override at ALL tiers (operational consequence 1).
+    # Default false; REQUIRED field even when false so a downstream auditor
+    # can distinguish "not invoked" from "field absent on legacy row".
+    override_invoked: bool = False
+    # Required when override_invoked=True; verbatim operator quote per
+    # CLAUDE.md "Mission alignment — non-negotiable" rule 1.
+    override_rationale: str | None = None
+    # Operational consequence 3: every deferred / killed substrate gets a
+    # 30-day retrospective. The due date is computed as
+    # `deliberation_utc + DEFERRED_RETROSPECTIVE_WINDOW_DAYS` when the
+    # verdict defers/kills a substrate; None otherwise. Pair with
+    # `deferred_substrate_id` so the retrospective can identify the lane.
+    deferred_substrate_retrospective_due_utc: str | None = None
+    deferred_substrate_id: str | None = None
     written_at_utc: str = ""
     written_pid: int | None = None
     written_host: str | None = None
     schema: str = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:  # noqa: D401 — post-init validator
+        """Validate mission-alignment invariants per CLAUDE.md non-negotiable.
+
+        Raises :class:`CouncilRecordValidationError` (subclass of ValueError)
+        when:
+
+        * ``council_tier`` is T2/T3/T4 AND ``predicted_mission_contribution``
+          is None (operational consequence 5 — every T2+ verdict MUST forecast
+          mission contribution).
+        * ``predicted_mission_contribution`` is set but not in
+          :data:`VALID_MISSION_CONTRIBUTIONS`.
+        * ``override_invoked=True`` AND ``override_rationale`` is None or
+          empty (operational consequence 1 — operator-frontier-override
+          REQUIRES verbatim operator quote).
+        * ``deferred_substrate_retrospective_due_utc`` is set AND
+          ``deferred_substrate_id`` is None (the two fields are paired so
+          the retrospective can identify the lane).
+
+        The structural-correctness invariants (tier/attendees/verdict shape)
+        are still validated in :func:`_validate_record` at append time so
+        downstream tools that bypass ``__post_init__`` (e.g. JSONL replay
+        with relaxed schema) still get the structural guarantees.
+        """
+        # Mission-contribution validation.
+        if self.predicted_mission_contribution is not None:
+            if self.predicted_mission_contribution not in VALID_MISSION_CONTRIBUTIONS:
+                raise CouncilRecordValidationError(
+                    f"predicted_mission_contribution="
+                    f"{self.predicted_mission_contribution!r} not in "
+                    f"{sorted(VALID_MISSION_CONTRIBUTIONS)} (per CLAUDE.md "
+                    "'Mission alignment — non-negotiable' subsection)"
+                )
+        if self.council_tier in (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4):
+            if self.predicted_mission_contribution is None:
+                raise CouncilRecordValidationError(
+                    f"council_tier={self.council_tier} requires "
+                    "predicted_mission_contribution to be set (one of "
+                    f"{sorted(VALID_MISSION_CONTRIBUTIONS)}) per CLAUDE.md "
+                    "'Mission alignment — non-negotiable' operational "
+                    "consequence 5. T1 working groups are exempt."
+                )
+        # Override-rationale validation.
+        if self.override_invoked:
+            if not self.override_rationale or not str(self.override_rationale).strip():
+                raise CouncilRecordValidationError(
+                    "override_invoked=True requires override_rationale to be "
+                    "a non-empty verbatim operator quote per CLAUDE.md "
+                    "'Mission alignment — non-negotiable' operational "
+                    "consequence 1 (operator-frontier-override at ALL tiers)."
+                )
+        # Deferred-retrospective field pairing validation.
+        if self.deferred_substrate_retrospective_due_utc is not None:
+            if not self.deferred_substrate_id:
+                raise CouncilRecordValidationError(
+                    "deferred_substrate_retrospective_due_utc is set but "
+                    "deferred_substrate_id is None; the two fields are "
+                    "paired so the 30-day retrospective per CLAUDE.md "
+                    "'Mission alignment — non-negotiable' operational "
+                    "consequence 3 can identify the lane."
+                )
 
 
 def _now_utc_iso() -> str:
@@ -278,6 +424,14 @@ def _record_to_dict(record: CouncilDeliberationRecord) -> dict[str, Any]:
         "parent_id_or_session": record.parent_id_or_session,
         "memory_path": record.memory_path,
         "notes": record.notes,
+        # Mission-alignment fields (operator-binding directive 2026-05-16).
+        "predicted_mission_contribution": record.predicted_mission_contribution,
+        "override_invoked": bool(record.override_invoked),
+        "override_rationale": record.override_rationale,
+        "deferred_substrate_retrospective_due_utc": (
+            record.deferred_substrate_retrospective_due_utc
+        ),
+        "deferred_substrate_id": record.deferred_substrate_id,
         "written_at_utc": record.written_at_utc or _now_utc_iso(),
         "written_pid": record.written_pid if record.written_pid is not None else os.getpid(),
         "written_host": record.written_host or socket.gethostname(),
@@ -290,10 +444,23 @@ def _dict_to_record(payload: dict[str, Any]) -> CouncilDeliberationRecord:
     adv_raw = payload.get("council_assumption_adversary_verdict") or []
     decisions_raw = payload.get("council_decisions_recorded") or []
     related_raw = payload.get("related_deliberation_ids") or []
+    # Mission-alignment fields: legacy rows lack them; default to None /
+    # False for backward compat. Mission-alignment validators in
+    # __post_init__ run against the reconstructed record, so legacy T2+
+    # rows without predicted_mission_contribution would raise — defer the
+    # validation by reading the legacy field as a backfill-default. Legacy
+    # rows are intentionally treated as `apparatus_maintenance` (the most
+    # common historical pattern; safe default per the mission-alignment
+    # binding directive backfill rule).
+    predicted_mission = payload.get("predicted_mission_contribution")
+    tier = str(payload["council_tier"])
+    if predicted_mission is None and tier in ("T2", "T3", "T4"):
+        # Backfill-default for legacy rows (pre-mission-alignment-extension).
+        predicted_mission = "apparatus_maintenance"
     return CouncilDeliberationRecord(
         deliberation_id=str(payload["deliberation_id"]),
         topic=str(payload["topic"]),
-        council_tier=str(payload["council_tier"]),
+        council_tier=tier,
         council_attendees=tuple(str(m) for m in attendees),
         council_quorum_met=bool(payload.get("council_quorum_met", False)),
         council_verdict=str(payload["council_verdict"]),
@@ -309,6 +476,13 @@ def _dict_to_record(payload: dict[str, Any]) -> CouncilDeliberationRecord:
         parent_id_or_session=payload.get("parent_id_or_session"),
         memory_path=payload.get("memory_path"),
         notes=str(payload.get("notes", "")),
+        predicted_mission_contribution=predicted_mission,
+        override_invoked=bool(payload.get("override_invoked", False)),
+        override_rationale=payload.get("override_rationale"),
+        deferred_substrate_retrospective_due_utc=payload.get(
+            "deferred_substrate_retrospective_due_utc"
+        ),
+        deferred_substrate_id=payload.get("deferred_substrate_id"),
         written_at_utc=str(payload.get("written_at_utc", "")),
         written_pid=(
             int(payload["written_pid"]) if payload.get("written_pid") is not None else None
@@ -501,6 +675,195 @@ def query_assumption_classification_history(
             if needle in assumption_field:
                 matches.append((anchor, dict(entry)))
     return matches
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Mission-alignment query helpers (per CLAUDE.md "Mission alignment —
+# non-negotiable" subsection; operator binding standing directive 2026-05-16).
+# ──────────────────────────────────────────────────────────────────────
+
+
+def query_overrides(
+    *,
+    since_utc: str | None = None,
+    posterior_path: Path | None = None,
+) -> list[CouncilDeliberationRecord]:
+    """Surface every operator-frontier-override deliberation for audit.
+
+    Per CLAUDE.md "Mission alignment — non-negotiable" operational
+    consequence 1: every operator-frontier-override bypasses quorum +
+    tie-break + recusal for the specific decision, PRESERVES maximum-
+    signal, and TRIGGERS a 30-day score-impact retrospective. This
+    helper is the audit surface — operators / sister subagents can
+    enumerate every override invocation and trace whether the override
+    delivered the predicted mission contribution.
+
+    ``since_utc`` is an ISO-8601 string; records with
+    ``written_at_utc < since_utc`` are excluded. None returns all.
+    """
+    anchors = load_council_anchors(posterior_path=posterior_path)
+    cutoff = _parse_utc_iso_or_none(since_utc) if since_utc else None
+    out: list[CouncilDeliberationRecord] = []
+    for anchor in anchors:
+        if not anchor.override_invoked:
+            continue
+        if cutoff is not None:
+            written = _parse_utc_iso_or_none(anchor.written_at_utc)
+            if written is None or written < cutoff:
+                continue
+        out.append(anchor)
+    return out
+
+
+def query_due_retrospectives(
+    *,
+    as_of_utc: str | None = None,
+    posterior_path: Path | None = None,
+) -> list[CouncilDeliberationRecord]:
+    """Surface every deferred/killed substrate whose 30-day retrospective is due.
+
+    Per CLAUDE.md "Mission alignment — non-negotiable" operational
+    consequence 3: every substrate that received a DEFERRED / KILL /
+    research_only verdict gets a 30-day score-impact retrospective.
+    This helper returns every record where
+    ``as_of_utc >= deferred_substrate_retrospective_due_utc``.
+
+    ``as_of_utc`` defaults to the current UTC time. The returned list is
+    sorted by retrospective due date (oldest first) so operators see the
+    most-overdue retrospectives first.
+    """
+    anchors = load_council_anchors(posterior_path=posterior_path)
+    if as_of_utc is None:
+        now = _dt.datetime.now(_dt.UTC)
+    else:
+        parsed = _parse_utc_iso_or_none(as_of_utc)
+        if parsed is None:
+            return []
+        now = parsed
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=_dt.UTC)
+    due: list[tuple[_dt.datetime, CouncilDeliberationRecord]] = []
+    for anchor in anchors:
+        if anchor.deferred_substrate_retrospective_due_utc is None:
+            continue
+        due_at = _parse_utc_iso_or_none(
+            anchor.deferred_substrate_retrospective_due_utc
+        )
+        if due_at is None:
+            continue
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=_dt.UTC)
+        if now >= due_at:
+            due.append((due_at, anchor))
+    due.sort(key=lambda pair: pair[0])
+    return [anchor for _, anchor in due]
+
+
+def query_mission_contribution_distribution(
+    *,
+    since_utc: str | None = None,
+    posterior_path: Path | None = None,
+    tier_filter: tuple[str, ...] = (CouncilTier.T2, CouncilTier.T3, CouncilTier.T4),
+) -> dict[str, int]:
+    """Count anchors per ``predicted_mission_contribution`` category.
+
+    Per CLAUDE.md "Mission alignment — non-negotiable" operational
+    consequence 5: the breakdown surfaces whether the council apparatus
+    is producing innovation-enabling or innovation-blocking verdicts. The
+    operator-visible alert pairs with :func:`is_rigor_dominant`.
+
+    By default counts only T2+ deliberations (T1 working groups are
+    exempt from the mission-contribution forecast). ``since_utc`` filters
+    by ``written_at_utc``; None returns all-time. Returns a dict with
+    every category in :data:`VALID_MISSION_CONTRIBUTIONS` as a key
+    (zero-init missing categories).
+    """
+    anchors = load_council_anchors(posterior_path=posterior_path)
+    cutoff = _parse_utc_iso_or_none(since_utc) if since_utc else None
+    counts: dict[str, int] = {cat: 0 for cat in VALID_MISSION_CONTRIBUTIONS}
+    for anchor in anchors:
+        if anchor.council_tier not in tier_filter:
+            continue
+        if anchor.predicted_mission_contribution is None:
+            continue
+        if cutoff is not None:
+            written = _parse_utc_iso_or_none(anchor.written_at_utc)
+            if written is None or written < cutoff:
+                continue
+        category = anchor.predicted_mission_contribution
+        if category in counts:
+            counts[category] += 1
+    return counts
+
+
+def is_rigor_dominant(
+    *,
+    since_utc: str | None = None,
+    posterior_path: Path | None = None,
+    threshold: float = RIGOR_DOMINANT_THRESHOLD,
+) -> bool:
+    """Return True when (rigor_overhead + apparatus_maintenance) / total > threshold.
+
+    Per CLAUDE.md "Mission alignment — non-negotiable" operational
+    consequence 5: when the breakdown of T2+ deliberations is rigor-
+    dominant, the council apparatus is producing more apparatus-
+    maintenance than frontier-breaking work — operator-visible alert
+    fires.
+
+    Returns False when the total count is zero (no data to evaluate).
+    """
+    counts = query_mission_contribution_distribution(
+        since_utc=since_utc, posterior_path=posterior_path
+    )
+    total = sum(counts.values())
+    if total == 0:
+        return False
+    overhead = counts.get("rigor_overhead", 0) + counts.get(
+        "apparatus_maintenance", 0
+    )
+    return (overhead / total) > threshold
+
+
+def compute_deferred_retrospective_due_utc(
+    deliberation_utc: str | None = None,
+    *,
+    window_days: int = DEFERRED_RETROSPECTIVE_WINDOW_DAYS,
+) -> str:
+    """Compute the 30-day retrospective due-date for a deferred/killed substrate.
+
+    Per CLAUDE.md "Mission alignment — non-negotiable" operational
+    consequence 3. Returns the ISO-8601 UTC string for
+    ``deliberation_utc + window_days``. If ``deliberation_utc`` is None,
+    uses the current UTC time.
+
+    Use this when constructing a :class:`CouncilDeliberationRecord` whose
+    verdict defers or kills a substrate, so the
+    ``deferred_substrate_retrospective_due_utc`` field is set correctly.
+    """
+    if deliberation_utc is None:
+        base = _dt.datetime.now(_dt.UTC)
+    else:
+        parsed = _parse_utc_iso_or_none(deliberation_utc)
+        if parsed is None:
+            raise ValueError(
+                f"deliberation_utc={deliberation_utc!r} is not a valid ISO-8601 UTC string"
+            )
+        base = parsed
+    if base.tzinfo is None:
+        base = base.replace(tzinfo=_dt.UTC)
+    due = base + _dt.timedelta(days=window_days)
+    return due.isoformat(timespec="seconds")
+
+
+def _parse_utc_iso_or_none(s: str | None) -> _dt.datetime | None:
+    """Tolerant ISO-8601 parse; returns None on malformed input."""
+    if not s:
+        return None
+    try:
+        normalized = s.replace("Z", "+00:00")
+        return _dt.datetime.fromisoformat(normalized)
+    except (ValueError, TypeError):
+        return None
 
 
 # Canonical name for the continual-learning posterior update hook

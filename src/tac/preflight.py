@@ -64291,6 +64291,30 @@ _CHECK_300_REQUIRED_FIELDS: tuple[str, ...] = (
 # per Catalog #292's HARD-EARNED vs CARGO-CULTED discipline).
 _CHECK_300_T2_PLUS_REQUIRED_FIELD = "council_assumption_adversary_verdict"
 
+# T2+ mission-alignment fields per CLAUDE.md "Mission alignment —
+# non-negotiable" subsection (operator binding standing directive 2026-05-16
+# per `feedback_council_apparatus_in_service_of_innovation_rigor_optimization_score_lowering_20260516.md`).
+# These extend the T2+ required set with the 3 mission-alignment frontmatter
+# fields. council_override_rationale is REQUIRED only when
+# council_override_invoked is true (paired-field validation below).
+_CHECK_300_T2_PLUS_MISSION_REQUIRED_FIELDS: tuple[str, ...] = (
+    "council_predicted_mission_contribution",
+    "council_override_invoked",
+)
+
+# Valid values for council_predicted_mission_contribution per the canonical
+# enum at tac.council_continual_learning.VALID_MISSION_CONTRIBUTIONS. Kept
+# in lock-step with that enum so a future migration to a new category is
+# caught at both the helper-construction surface AND the frontmatter
+# inspection surface.
+_CHECK_300_VALID_MISSION_CONTRIBUTIONS: frozenset[str] = frozenset({
+    "frontier_breaking",
+    "frontier_protecting",
+    "rigor_overhead",
+    "apparatus_maintenance",
+    "mission_questioned",
+})
+
 # Recognized tier values for `council_tier:`.
 _CHECK_300_VALID_TIERS: frozenset[str] = frozenset({"T1", "T2", "T3", "T4"})
 
@@ -64346,6 +64370,66 @@ def _check_300_extract_tier(body: str) -> str | None:
 def _check_300_default_research_dir(repo_root: Path | str | None = None) -> Path:
     root = Path(repo_root or REPO_ROOT).resolve()
     return root / ".omx" / "research"
+
+
+def _check_300_extract_mission_contribution(body: str) -> str | None:
+    """Extract the value of `council_predicted_mission_contribution:` from the memo body.
+
+    Tolerates leading whitespace and optionally-quoted values. Returns the
+    first match if the value is in :data:`_CHECK_300_VALID_MISSION_CONTRIBUTIONS`;
+    None otherwise (caller treats as missing or malformed).
+    """
+    m = re.search(
+        r"council_predicted_mission_contribution\s*:\s*['\"]?([a-z_]+)['\"]?",
+        body,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    value = m.group(1).lower()
+    if value in _CHECK_300_VALID_MISSION_CONTRIBUTIONS:
+        return value
+    return None
+
+
+def _check_300_extract_override_invoked(body: str) -> bool | None:
+    """Extract the value of `council_override_invoked:` from the memo body.
+
+    Returns True / False on canonical YAML boolean values; None when the
+    field is missing or malformed (caller treats as missing).
+    """
+    m = re.search(
+        r"council_override_invoked\s*:\s*['\"]?(true|false|yes|no)['\"]?",
+        body,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    value = m.group(1).lower()
+    if value in ("true", "yes"):
+        return True
+    if value in ("false", "no"):
+        return False
+    return None
+
+
+def _check_300_has_override_rationale(body: str) -> bool:
+    """Return True when `council_override_rationale:` field is present with non-empty value.
+
+    A bare `council_override_rationale:` (no value) OR
+    `council_override_rationale: null` does NOT count as present.
+    """
+    m = re.search(
+        r"council_override_rationale\s*:\s*['\"]?([^\n\r]+?)['\"]?\s*(?:#|$)",
+        body,
+        re.IGNORECASE | re.MULTILINE,
+    )
+    if not m:
+        return False
+    value = m.group(1).strip().strip("'\"").lower()
+    if not value or value in ("null", "none", "~"):
+        return False
+    return True
 
 
 def check_council_deliberation_declares_tier_in_frontmatter(
@@ -64454,6 +64538,36 @@ def check_council_deliberation_declares_tier_in_frontmatter(
             if tier in ("T2", "T3", "T4"):
                 if f"{_CHECK_300_T2_PLUS_REQUIRED_FIELD}:" not in body:
                     missing.append(_CHECK_300_T2_PLUS_REQUIRED_FIELD)
+                # Mission-alignment field presence (operator binding directive
+                # 2026-05-16). Required for T2+ per CLAUDE.md "Mission
+                # alignment — non-negotiable" subsection of "Council
+                # hierarchy: 4-tier protocol".
+                for mission_field in _CHECK_300_T2_PLUS_MISSION_REQUIRED_FIELDS:
+                    if f"{mission_field}:" not in body:
+                        missing.append(mission_field)
+                # Mission-contribution VALUE validation (must be one of the
+                # canonical enum values). If field present but value
+                # malformed, treat as missing-with-bad-value annotation.
+                if f"council_predicted_mission_contribution:" in body:
+                    mc = _check_300_extract_mission_contribution(body)
+                    if mc is None:
+                        missing.append(
+                            "council_predicted_mission_contribution (value must be one of "
+                            f"{sorted(_CHECK_300_VALID_MISSION_CONTRIBUTIONS)})"
+                        )
+                # Override-rationale paired-field validation: when
+                # council_override_invoked=true, council_override_rationale
+                # is REQUIRED (verbatim operator quote per operational
+                # consequence 1).
+                if f"council_override_invoked:" in body:
+                    override = _check_300_extract_override_invoked(body)
+                    if override is True and not _check_300_has_override_rationale(body):
+                        missing.append(
+                            "council_override_rationale (REQUIRED when "
+                            "council_override_invoked: true per CLAUDE.md "
+                            "'Mission alignment — non-negotiable' operational "
+                            "consequence 1)"
+                        )
             # Tier itself: if council_tier is missing OR invalid, treat as
             # missing (the field name might be present but value malformed).
             if tier is None and "council_tier" not in [
@@ -64471,12 +64585,17 @@ def check_council_deliberation_declares_tier_in_frontmatter(
                 f"{rel}: {surface} council memo dated {date_int} is missing the "
                 f"v2 4-tier frontmatter field(s): {sorted(set(missing))}. Per "
                 "CLAUDE.md 'Council hierarchy: 4-tier protocol' non-negotiable + "
-                "COUNCIL-HIERARCHY-V2 landing 2026-05-16: every council "
-                "deliberation memo dated >= 2026-05-16 MUST declare council_"
-                "tier (T1/T2/T3/T4) + council_attendees + council_quorum_met + "
-                "council_verdict + council_dissent + council_decisions_"
-                "recorded (T2+ additionally requires council_assumption_"
-                "adversary_verdict per Catalog #292 + Fix 7). Add the "
+                "COUNCIL-HIERARCHY-V2 landing 2026-05-16 + 'Mission alignment "
+                "— non-negotiable' subsection (operator binding standing "
+                "directive 2026-05-16): every council deliberation memo "
+                "dated >= 2026-05-16 MUST declare council_tier (T1/T2/T3/T4) "
+                "+ council_attendees + council_quorum_met + council_verdict "
+                "+ council_dissent + council_decisions_recorded (T2+ "
+                "additionally requires council_assumption_adversary_verdict "
+                "per Catalog #292 + Fix 7, AND council_predicted_mission_"
+                "contribution + council_override_invoked per the mission-"
+                "alignment binding directive; council_override_rationale is "
+                "REQUIRED when council_override_invoked: true). Add the "
                 "frontmatter fields OR add a same-line `# COUNCIL_TIER_"
                 "FRONTMATTER_WAIVED:<rationale>` waiver with non-placeholder "
                 "rationale."

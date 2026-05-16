@@ -28,6 +28,15 @@ council_decisions_recorded:
   - "op-routable #2: Catalog #297 signal-axis-destruction reversibility probe enforces structurally"
   - "op-routable #3: NSCS06 lane set research_only=true per CLAUDE.md 'Forbidden premature KILL' lessons exhausted"
 related_deliberation_ids: []
+# Mission-alignment fields backfilled 2026-05-16 (Catalog #300 mission-
+# alignment extension per `feedback_mission_alignment_followon_catalog_300_extension_landed_20260516.md`).
+# Classification: frontier_protecting (the symposium verdict prevents re-
+# shipping the v6 553x-outside-band substrate; sister of strict-mode
+# preflight gate Catalog #297 signal-axis-destruction). override_invoked
+# false (no operator-frontier-override invoked for this T4 symposium).
+# Body preserved per Catalog #110/#113 HISTORICAL_PROVENANCE.
+council_predicted_mission_contribution: frontier_protecting
+council_override_invoked: false
 ---
 
 # Grand Council Symposium — NSCS06 Carmack-Hotz Strip-Everything 500-1000× Falsification + Redesign Multi-Path

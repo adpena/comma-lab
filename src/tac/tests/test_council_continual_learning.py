@@ -19,16 +19,25 @@ import pytest
 from tac.council_continual_learning import (
     CouncilDeliberationRecord,
     CouncilPosteriorCorruptError,
+    CouncilRecordValidationError,
     CouncilTier,
+    DEFERRED_RETROSPECTIVE_WINDOW_DAYS,
+    RIGOR_DOMINANT_THRESHOLD,
     SCHEMA_VERSION,
+    VALID_MISSION_CONTRIBUTIONS,
     VALID_TIERS,
     VALID_VERDICTS,
     append_council_anchor,
+    compute_deferred_retrospective_due_utc,
+    is_rigor_dominant,
     load_council_anchors,
     load_council_anchors_strict,
     query_anchors_by_topic,
     query_assumption_classification_history,
     query_dissent_history,
+    query_due_retrospectives,
+    query_mission_contribution_distribution,
+    query_overrides,
     update_from_anchor,
 )
 
@@ -45,7 +54,23 @@ def _record(
     adv_verdict=({"assumption": "EMA decay 0.997", "classification": "HARD-EARNED", "rationale": "PR101 empirical"},),
     decisions=("op-routable #1",),
     related=(),
+    # Mission-alignment fields (operator binding directive 2026-05-16):
+    # required at T2+ per CLAUDE.md "Mission alignment — non-negotiable"
+    # operational consequence 5. Default to apparatus_maintenance (the
+    # most common historical pattern; safe default for fixture rows that
+    # don't otherwise care about the value).
+    predicted_mission_contribution: str | None = "apparatus_maintenance",
+    override_invoked: bool = False,
+    override_rationale: str | None = None,
+    deferred_substrate_retrospective_due_utc: str | None = None,
+    deferred_substrate_id: str | None = None,
 ) -> CouncilDeliberationRecord:
+    # T1 fixtures default to no mission contribution (T1 is exempt). If the
+    # caller passes tier=T1 with the default predicted_mission_contribution,
+    # silently clear it so the fixture matches the T1 contract.
+    effective_mission = predicted_mission_contribution
+    if tier == CouncilTier.T1 and predicted_mission_contribution == "apparatus_maintenance":
+        effective_mission = None
     return CouncilDeliberationRecord(
         deliberation_id=deliberation_id,
         topic=topic,
@@ -57,6 +82,11 @@ def _record(
         council_assumption_adversary_verdict=tuple(adv_verdict),
         council_decisions_recorded=tuple(decisions),
         related_deliberation_ids=tuple(related),
+        predicted_mission_contribution=effective_mission,
+        override_invoked=override_invoked,
+        override_rationale=override_rationale,
+        deferred_substrate_retrospective_due_utc=deferred_substrate_retrospective_due_utc,
+        deferred_substrate_id=deferred_substrate_id,
     )
 
 
@@ -375,6 +405,8 @@ def _worker_append(args):
             council_assumption_adversary_verdict=(
                 {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
             ),
+            # Required at T2+ per mission-alignment binding directive 2026-05-16.
+            predicted_mission_contribution="apparatus_maintenance",
         )
         append_council_anchor(
             record,
@@ -403,3 +435,400 @@ def test_4_proc_spawn_pool_concurrent_append(tmp_path: Path):
         payload = json.loads(r)
         ids.add(payload["deliberation_id"])
     assert len(ids) == 20
+
+
+# ───────────────────────────────────────────────────────────────────
+# Mission-alignment tests (operator binding directive 2026-05-16).
+# Per CLAUDE.md "Mission alignment — non-negotiable" subsection of
+# "Council hierarchy: 4-tier protocol".
+# ───────────────────────────────────────────────────────────────────
+
+
+def test_valid_mission_contributions_canonical_set():
+    assert VALID_MISSION_CONTRIBUTIONS == frozenset({
+        "frontier_breaking",
+        "frontier_protecting",
+        "rigor_overhead",
+        "apparatus_maintenance",
+        "mission_questioned",
+    })
+
+
+def test_rigor_dominant_threshold_is_60_percent():
+    assert RIGOR_DOMINANT_THRESHOLD == 0.60
+
+
+def test_deferred_retrospective_window_is_30_days():
+    assert DEFERRED_RETROSPECTIVE_WINDOW_DAYS == 30
+
+
+def test_t2_record_requires_predicted_mission_contribution():
+    with pytest.raises(CouncilRecordValidationError, match="predicted_mission_contribution"):
+        CouncilDeliberationRecord(
+            deliberation_id="t2_no_mission",
+            topic="t",
+            council_tier=CouncilTier.T2,
+            council_attendees=("Shannon",),
+            council_quorum_met=True,
+            council_verdict="PROCEED",
+            council_assumption_adversary_verdict=(
+                {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+            ),
+            # predicted_mission_contribution intentionally None — must raise.
+        )
+
+
+def test_t1_record_allows_none_predicted_mission_contribution():
+    # T1 working groups don't make binding decisions; mission forecast is exempt.
+    rec = CouncilDeliberationRecord(
+        deliberation_id="t1_no_mission",
+        topic="t",
+        council_tier=CouncilTier.T1,
+        council_attendees=("Shannon",),
+        council_quorum_met=True,
+        council_verdict="PROCEED",
+    )
+    assert rec.predicted_mission_contribution is None
+
+
+def test_record_rejects_invalid_mission_contribution():
+    with pytest.raises(CouncilRecordValidationError, match="predicted_mission_contribution"):
+        CouncilDeliberationRecord(
+            deliberation_id="bad_mission",
+            topic="t",
+            council_tier=CouncilTier.T2,
+            council_attendees=("Shannon",),
+            council_quorum_met=True,
+            council_verdict="PROCEED",
+            council_assumption_adversary_verdict=(
+                {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+            ),
+            predicted_mission_contribution="bogus_category",
+        )
+
+
+def test_override_invoked_true_requires_rationale():
+    with pytest.raises(CouncilRecordValidationError, match="override_rationale"):
+        CouncilDeliberationRecord(
+            deliberation_id="bare_override",
+            topic="t",
+            council_tier=CouncilTier.T2,
+            council_attendees=("Shannon",),
+            council_quorum_met=True,
+            council_verdict="PROCEED",
+            council_assumption_adversary_verdict=(
+                {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+            ),
+            predicted_mission_contribution="frontier_breaking",
+            override_invoked=True,
+            # override_rationale intentionally None — must raise.
+        )
+
+
+def test_override_with_empty_rationale_rejected():
+    with pytest.raises(CouncilRecordValidationError, match="override_rationale"):
+        CouncilDeliberationRecord(
+            deliberation_id="empty_override",
+            topic="t",
+            council_tier=CouncilTier.T2,
+            council_attendees=("Shannon",),
+            council_quorum_met=True,
+            council_verdict="PROCEED",
+            council_assumption_adversary_verdict=(
+                {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+            ),
+            predicted_mission_contribution="frontier_breaking",
+            override_invoked=True,
+            override_rationale="   ",   # whitespace-only
+        )
+
+
+def test_override_with_rationale_constructs():
+    rec = CouncilDeliberationRecord(
+        deliberation_id="good_override",
+        topic="t",
+        council_tier=CouncilTier.T2,
+        council_attendees=("Shannon",),
+        council_quorum_met=True,
+        council_verdict="PROCEED",
+        council_assumption_adversary_verdict=(
+            {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+        ),
+        predicted_mission_contribution="frontier_breaking",
+        override_invoked=True,
+        override_rationale="operator verbatim: leaderboard moved, skip sextet pact for this dispatch",
+    )
+    assert rec.override_invoked is True
+    assert "leaderboard" in (rec.override_rationale or "")
+
+
+def test_deferred_retrospective_field_pairing_required():
+    with pytest.raises(CouncilRecordValidationError, match="deferred_substrate_id"):
+        CouncilDeliberationRecord(
+            deliberation_id="unpaired_retro",
+            topic="t",
+            council_tier=CouncilTier.T2,
+            council_attendees=("Shannon",),
+            council_quorum_met=True,
+            council_verdict="DEFER_PENDING_EVIDENCE",
+            council_assumption_adversary_verdict=(
+                {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+            ),
+            predicted_mission_contribution="frontier_protecting",
+            deferred_substrate_retrospective_due_utc="2026-06-15T15:00:00+00:00",
+            # deferred_substrate_id intentionally None — must raise.
+        )
+
+
+def test_deferred_retrospective_paired_fields_construct():
+    rec = CouncilDeliberationRecord(
+        deliberation_id="paired_retro",
+        topic="t",
+        council_tier=CouncilTier.T2,
+        council_attendees=("Shannon",),
+        council_quorum_met=True,
+        council_verdict="DEFER_PENDING_EVIDENCE",
+        council_assumption_adversary_verdict=(
+            {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+        ),
+        predicted_mission_contribution="frontier_protecting",
+        deferred_substrate_retrospective_due_utc="2026-06-15T15:00:00+00:00",
+        deferred_substrate_id="lane_some_deferred_substrate_20260516",
+    )
+    assert rec.deferred_substrate_id is not None
+    assert rec.deferred_substrate_retrospective_due_utc is not None
+
+
+def test_compute_deferred_retrospective_due_utc_adds_30_days():
+    base = "2026-05-16T15:00:00+00:00"
+    due = compute_deferred_retrospective_due_utc(base)
+    # 30 days later -> 2026-06-15T15:00:00+00:00
+    assert due.startswith("2026-06-15T15:00:00")
+
+
+def test_compute_deferred_retrospective_due_utc_default_uses_now():
+    due = compute_deferred_retrospective_due_utc()
+    # Should not raise; should be ~30 days in the future.
+    import datetime as _dt
+    parsed = _dt.datetime.fromisoformat(due.replace("Z", "+00:00"))
+    now = _dt.datetime.now(_dt.UTC)
+    delta = parsed - now
+    assert _dt.timedelta(days=29, hours=23) < delta < _dt.timedelta(days=30, hours=1)
+
+
+def test_append_persists_mission_alignment_fields(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    rec = _record(
+        deliberation_id="mission_persist",
+        predicted_mission_contribution="frontier_breaking",
+        override_invoked=True,
+        override_rationale="operator verbatim test",
+        deferred_substrate_retrospective_due_utc="2026-06-15T15:00:00+00:00",
+        deferred_substrate_id="lane_some_substrate",
+    )
+    append_council_anchor(rec, posterior_path=posterior, lock_path=lock)
+    loaded = load_council_anchors(posterior_path=posterior)
+    assert len(loaded) == 1
+    a = loaded[0]
+    assert a.predicted_mission_contribution == "frontier_breaking"
+    assert a.override_invoked is True
+    assert a.override_rationale == "operator verbatim test"
+    assert a.deferred_substrate_id == "lane_some_substrate"
+    assert a.deferred_substrate_retrospective_due_utc == "2026-06-15T15:00:00+00:00"
+
+
+def test_legacy_row_loads_with_apparatus_maintenance_backfill_default(tmp_path: Path):
+    """Legacy rows (pre-mission-alignment) lack the field; loader backfills T2+."""
+    posterior = tmp_path / "c.jsonl"
+    legacy = {
+        "schema": SCHEMA_VERSION,
+        "deliberation_id": "legacy_one",
+        "topic": "legacy",
+        "council_tier": "T3",
+        "council_attendees": ["S"],
+        "council_quorum_met": True,
+        "council_verdict": "PROCEED",
+        "council_dissent": [],
+        "council_assumption_adversary_verdict": [
+            {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+        ],
+        "council_decisions_recorded": [],
+        "related_deliberation_ids": [],
+        "event_type": "dispatched",
+        "written_at_utc": "2026-05-15T00:00:00+00:00",
+        # No predicted_mission_contribution / override_invoked / override_rationale.
+    }
+    posterior.write_text(json.dumps(legacy) + "\n")
+    loaded = load_council_anchors(posterior_path=posterior)
+    assert len(loaded) == 1
+    # Backfill default for T2+ legacy rows: apparatus_maintenance.
+    assert loaded[0].predicted_mission_contribution == "apparatus_maintenance"
+    assert loaded[0].override_invoked is False
+    assert loaded[0].override_rationale is None
+
+
+def test_query_overrides_returns_only_overrides(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    append_council_anchor(
+        _record(deliberation_id="no_override", override_invoked=False),
+        posterior_path=posterior, lock_path=lock,
+    )
+    append_council_anchor(
+        _record(
+            deliberation_id="yes_override",
+            override_invoked=True,
+            override_rationale="operator verbatim",
+        ),
+        posterior_path=posterior, lock_path=lock,
+    )
+    hits = query_overrides(posterior_path=posterior)
+    assert len(hits) == 1
+    assert hits[0].deliberation_id == "yes_override"
+
+
+def test_query_overrides_since_utc_filters(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    # Write an old override and a new override.
+    import datetime as _dt
+    old_ts = "2026-04-01T00:00:00+00:00"
+    new_ts = _dt.datetime.now(_dt.UTC).isoformat(timespec="seconds")
+    payload_old = {
+        "schema": SCHEMA_VERSION,
+        "deliberation_id": "old_override",
+        "topic": "t",
+        "council_tier": "T2",
+        "council_attendees": ["S"],
+        "council_quorum_met": True,
+        "council_verdict": "PROCEED",
+        "council_dissent": [],
+        "council_assumption_adversary_verdict": [
+            {"assumption": "A", "classification": "HARD-EARNED", "rationale": "R"},
+        ],
+        "council_decisions_recorded": [],
+        "related_deliberation_ids": [],
+        "event_type": "dispatched",
+        "predicted_mission_contribution": "frontier_breaking",
+        "override_invoked": True,
+        "override_rationale": "old",
+        "written_at_utc": old_ts,
+    }
+    posterior.write_text(json.dumps(payload_old) + "\n")
+    append_council_anchor(
+        _record(
+            deliberation_id="new_override",
+            override_invoked=True,
+            override_rationale="new",
+        ),
+        posterior_path=posterior, lock_path=lock,
+    )
+    hits = query_overrides(since_utc="2026-05-01T00:00:00+00:00", posterior_path=posterior)
+    # Only new_override should match the cutoff.
+    ids = {h.deliberation_id for h in hits}
+    assert "new_override" in ids
+    assert "old_override" not in ids
+
+
+def test_query_due_retrospectives_returns_overdue(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    # Write a deliberation whose retrospective is due in the past.
+    past_due = "2026-04-15T00:00:00+00:00"
+    rec = _record(
+        deliberation_id="overdue_substrate",
+        verdict="DEFER_PENDING_EVIDENCE",
+        deferred_substrate_retrospective_due_utc=past_due,
+        deferred_substrate_id="lane_some_deferred_substrate",
+    )
+    append_council_anchor(rec, posterior_path=posterior, lock_path=lock)
+    # Write a deliberation whose retrospective is due in the future.
+    future_due = "2027-05-16T00:00:00+00:00"
+    rec_future = _record(
+        deliberation_id="future_substrate",
+        verdict="DEFER_PENDING_EVIDENCE",
+        deferred_substrate_retrospective_due_utc=future_due,
+        deferred_substrate_id="lane_future_deferred_substrate",
+    )
+    append_council_anchor(rec_future, posterior_path=posterior, lock_path=lock)
+    due = query_due_retrospectives(
+        as_of_utc="2026-05-16T00:00:00+00:00",
+        posterior_path=posterior,
+    )
+    ids = {h.deliberation_id for h in due}
+    assert "overdue_substrate" in ids
+    assert "future_substrate" not in ids
+
+
+def test_query_mission_contribution_distribution(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    append_council_anchor(
+        _record(deliberation_id="d1", predicted_mission_contribution="frontier_breaking"),
+        posterior_path=posterior, lock_path=lock,
+    )
+    append_council_anchor(
+        _record(deliberation_id="d2", predicted_mission_contribution="frontier_breaking"),
+        posterior_path=posterior, lock_path=lock,
+    )
+    append_council_anchor(
+        _record(deliberation_id="d3", predicted_mission_contribution="apparatus_maintenance"),
+        posterior_path=posterior, lock_path=lock,
+    )
+    dist = query_mission_contribution_distribution(posterior_path=posterior)
+    assert dist["frontier_breaking"] == 2
+    assert dist["apparatus_maintenance"] == 1
+    assert dist["mission_questioned"] == 0
+
+
+def test_is_rigor_dominant_true_when_overhead_exceeds_threshold(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    # 7 apparatus_maintenance + 3 frontier_breaking = 70% rigor → True.
+    for i in range(7):
+        append_council_anchor(
+            _record(
+                deliberation_id=f"app_{i}",
+                predicted_mission_contribution="apparatus_maintenance",
+            ),
+            posterior_path=posterior, lock_path=lock,
+        )
+    for i in range(3):
+        append_council_anchor(
+            _record(
+                deliberation_id=f"fb_{i}",
+                predicted_mission_contribution="frontier_breaking",
+            ),
+            posterior_path=posterior, lock_path=lock,
+        )
+    assert is_rigor_dominant(posterior_path=posterior) is True
+
+
+def test_is_rigor_dominant_false_when_frontier_breaking_dominates(tmp_path: Path):
+    posterior = tmp_path / "c.jsonl"
+    lock = tmp_path / ".c.lock"
+    # 2 apparatus_maintenance + 8 frontier_breaking = 20% rigor → False.
+    for i in range(2):
+        append_council_anchor(
+            _record(
+                deliberation_id=f"app_{i}",
+                predicted_mission_contribution="apparatus_maintenance",
+            ),
+            posterior_path=posterior, lock_path=lock,
+        )
+    for i in range(8):
+        append_council_anchor(
+            _record(
+                deliberation_id=f"fb_{i}",
+                predicted_mission_contribution="frontier_breaking",
+            ),
+            posterior_path=posterior, lock_path=lock,
+        )
+    assert is_rigor_dominant(posterior_path=posterior) is False
+
+
+def test_is_rigor_dominant_false_when_no_anchors(tmp_path: Path):
+    posterior = tmp_path / "missing.jsonl"
+    # No file → no data → False (not rigor-dominant by absence).
+    assert is_rigor_dominant(posterior_path=posterior) is False

@@ -31539,6 +31539,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_mission_alignment_followon_catalog_300_extension_20260516",
+      "name": "Mission-alignment follow-on for Catalog #300 (council v2 hierarchy)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/preflight.py + src/tac/council_continual_learning.py + tools/audit_council_tier_cadence.py + CLAUDE.md mission-alignment subsection landed in same commit batch"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #300 extended with 3 T2+ required fields; live count 0 after backfill"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_mission_alignment_followon_catalog_300_extension_landed_20260516.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31548,5 +31589,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T15:40:09Z"
+  "updated_at": "2026-05-16T16:04:37Z"
 }

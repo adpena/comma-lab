@@ -19,7 +19,12 @@ def preflight_module():
 
 
 def _T2_frontmatter() -> str:
-    """Minimal valid T2 v2 frontmatter for fixture use."""
+    """Minimal valid T2 v2 frontmatter for fixture use.
+
+    Includes the mission-alignment fields (council_predicted_mission_contribution
+    + council_override_invoked) required at T2+ per the operator binding
+    standing directive 2026-05-16.
+    """
     return (
         "---\n"
         "council_tier: T2\n"
@@ -33,6 +38,8 @@ def _T2_frontmatter() -> str:
         "    rationale: PR101 empirical\n"
         "council_decisions_recorded:\n"
         "  - op-routable #1\n"
+        "council_predicted_mission_contribution: apparatus_maintenance\n"
+        "council_override_invoked: false\n"
         "---\n\n"
         "body text\n"
     )
@@ -411,3 +418,214 @@ def test_verbose_output_dirty(preflight_module, capsys, tmp_path: Path):
     )
     captured = capsys.readouterr()
     assert "violation" in captured.out
+
+
+# ───────────────────────────────────────────────────────────────────
+# Mission-alignment frontmatter extension tests (operator binding
+# directive 2026-05-16). Per CLAUDE.md "Mission alignment —
+# non-negotiable" subsection of "Council hierarchy: 4-tier protocol".
+# ───────────────────────────────────────────────────────────────────
+
+
+def _T2_frontmatter_missing_mission() -> str:
+    """T2 frontmatter that has v2 fields but lacks mission-alignment fields."""
+    return (
+        "---\n"
+        "council_tier: T2\n"
+        "council_attendees: [Shannon, Dykstra]\n"
+        "council_quorum_met: true\n"
+        "council_verdict: PROCEED\n"
+        "council_dissent: []\n"
+        "council_assumption_adversary_verdict:\n"
+        "  - assumption: A\n"
+        "    classification: HARD-EARNED\n"
+        "    rationale: R\n"
+        "council_decisions_recorded: []\n"
+        # NO mission-alignment fields.
+        "---\n\n"
+        "body text\n"
+    )
+
+
+def _T2_frontmatter_with_override_no_rationale() -> str:
+    """T2 frontmatter declaring override invoked but no rationale."""
+    return (
+        "---\n"
+        "council_tier: T2\n"
+        "council_attendees: [Shannon, Dykstra]\n"
+        "council_quorum_met: true\n"
+        "council_verdict: PROCEED\n"
+        "council_dissent: []\n"
+        "council_assumption_adversary_verdict:\n"
+        "  - assumption: A\n"
+        "    classification: HARD-EARNED\n"
+        "    rationale: R\n"
+        "council_decisions_recorded: []\n"
+        "council_predicted_mission_contribution: frontier_breaking\n"
+        "council_override_invoked: true\n"
+        # NO council_override_rationale.
+        "---\n\n"
+        "body text\n"
+    )
+
+
+def test_extract_mission_contribution_canonical(preflight_module):
+    body = "council_predicted_mission_contribution: frontier_breaking"
+    assert preflight_module._check_300_extract_mission_contribution(body) == "frontier_breaking"
+
+
+def test_extract_mission_contribution_quoted(preflight_module):
+    body = 'council_predicted_mission_contribution: "apparatus_maintenance"'
+    assert preflight_module._check_300_extract_mission_contribution(body) == "apparatus_maintenance"
+
+
+def test_extract_mission_contribution_invalid(preflight_module):
+    body = "council_predicted_mission_contribution: bogus_category"
+    assert preflight_module._check_300_extract_mission_contribution(body) is None
+
+
+def test_extract_override_invoked_true(preflight_module):
+    body = "council_override_invoked: true"
+    assert preflight_module._check_300_extract_override_invoked(body) is True
+
+
+def test_extract_override_invoked_false(preflight_module):
+    body = "council_override_invoked: false"
+    assert preflight_module._check_300_extract_override_invoked(body) is False
+
+
+def test_has_override_rationale_true(preflight_module):
+    body = 'council_override_rationale: "operator verbatim quote"'
+    assert preflight_module._check_300_has_override_rationale(body) is True
+
+
+def test_has_override_rationale_false_for_null(preflight_module):
+    body = "council_override_rationale: null"
+    assert preflight_module._check_300_has_override_rationale(body) is False
+
+
+def test_has_override_rationale_false_when_missing(preflight_module):
+    body = "council_override_invoked: false\nother: x"
+    assert preflight_module._check_300_has_override_rationale(body) is False
+
+
+def test_t2_without_mission_contribution_flagged(preflight_module, tmp_path: Path):
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    _write_memo(research, "feedback_grand_council_no_mission_20260520.md",
+                _T2_frontmatter_missing_mission())
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert len(violations) == 1
+    assert "council_predicted_mission_contribution" in violations[0]
+    assert "council_override_invoked" in violations[0]
+
+
+def test_t2_with_override_no_rationale_flagged(preflight_module, tmp_path: Path):
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    _write_memo(research, "feedback_grand_council_bare_override_20260520.md",
+                _T2_frontmatter_with_override_no_rationale())
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert len(violations) == 1
+    assert "council_override_rationale" in violations[0]
+    assert "REQUIRED when" in violations[0]
+
+
+def test_t2_with_invalid_mission_contribution_flagged(preflight_module, tmp_path: Path):
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    body = (
+        "---\n"
+        "council_tier: T2\n"
+        "council_attendees: [Shannon]\n"
+        "council_quorum_met: true\n"
+        "council_verdict: PROCEED\n"
+        "council_dissent: []\n"
+        "council_assumption_adversary_verdict:\n"
+        "  - assumption: A\n"
+        "    classification: HARD-EARNED\n"
+        "    rationale: R\n"
+        "council_decisions_recorded: []\n"
+        "council_predicted_mission_contribution: bogus_category\n"
+        "council_override_invoked: false\n"
+        "---\n\n"
+        "body\n"
+    )
+    _write_memo(research, "feedback_grand_council_bogus_mission_20260520.md", body)
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert len(violations) == 1
+    assert "council_predicted_mission_contribution" in violations[0]
+
+
+def test_t1_does_not_require_mission_alignment_fields(preflight_module, tmp_path: Path):
+    """T1 working groups are exempt from mission-contribution + override fields."""
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    _write_memo(research, "feedback_skunkworks_council_t1_test_20260520.md",
+                _T1_frontmatter())
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert violations == []
+
+
+def test_t2_full_mission_alignment_passes(preflight_module, tmp_path: Path):
+    """T2 memo with all v2 + mission-alignment fields passes cleanly."""
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    _write_memo(research, "feedback_grand_council_full_mission_20260520.md",
+                _T2_frontmatter())
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert violations == []
+
+
+def test_t2_with_override_and_rationale_passes(preflight_module, tmp_path: Path):
+    body = (
+        "---\n"
+        "council_tier: T2\n"
+        "council_attendees: [Shannon]\n"
+        "council_quorum_met: true\n"
+        "council_verdict: PROCEED\n"
+        "council_dissent: []\n"
+        "council_assumption_adversary_verdict:\n"
+        "  - assumption: A\n"
+        "    classification: HARD-EARNED\n"
+        "    rationale: R\n"
+        "council_decisions_recorded: []\n"
+        "council_predicted_mission_contribution: frontier_breaking\n"
+        "council_override_invoked: true\n"
+        'council_override_rationale: "operator verbatim: leaderboard moved, skip sextet"\n'
+        "---\n\n"
+        "body\n"
+    )
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True)
+    _write_memo(research, "feedback_grand_council_override_test_20260520.md", body)
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        research_dir=research, repo_root=tmp_path,
+    )
+    assert violations == []
+
+
+def test_constants_pinned(preflight_module):
+    # Mission-alignment required fields tuple is canonical.
+    assert preflight_module._CHECK_300_T2_PLUS_MISSION_REQUIRED_FIELDS == (
+        "council_predicted_mission_contribution",
+        "council_override_invoked",
+    )
+    # Valid mission contributions match the canonical helper enum.
+    assert preflight_module._CHECK_300_VALID_MISSION_CONTRIBUTIONS == frozenset({
+        "frontier_breaking",
+        "frontier_protecting",
+        "rigor_overhead",
+        "apparatus_maintenance",
+        "mission_questioned",
+    })
