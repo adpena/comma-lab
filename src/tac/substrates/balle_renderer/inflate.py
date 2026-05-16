@@ -32,7 +32,36 @@ from tac.substrates._shared.inflate_runtime import (
 )
 
 from .architecture import BalleRendererConfig, BalleRendererSubstrate
-from .archive import parse_archive
+from .archive import BRV1_RENDER_SILENT_SIDEINFO_BLOCKER, parse_archive
+
+
+def _is_brv1_smoke_or_research_packet(
+    meta: dict[str, object],
+    *,
+    num_pairs: int,
+) -> bool:
+    """Return True for explicitly tagged BRV1 smoke/research packets."""
+    if meta.get("research_only") is True:
+        return True
+    if meta.get("smoke") is not True:
+        return False
+    if num_pairs > 16:
+        return False
+    return (
+        meta.get("sideinfo_consumption_contract")
+        == "brv1_smoke_closure_check_only"
+    )
+
+
+def _require_non_smoke_sideinfo_decode_contract(
+    meta: dict[str, object],
+    *,
+    num_pairs: int,
+) -> None:
+    """Refuse BRV1 non-smoke packets until BRV2 consumes side-info in decode."""
+    if _is_brv1_smoke_or_research_packet(meta, num_pairs=num_pairs):
+        return
+    raise RuntimeError(BRV1_RENDER_SILENT_SIDEINFO_BLOCKER)
 
 
 def _validate_archived_scales(
@@ -80,6 +109,10 @@ def inflate_one_video(
     """
     arc = parse_archive(archive_bytes)
     meta = arc.meta
+    _require_non_smoke_sideinfo_decode_contract(
+        meta,
+        num_pairs=int(arc.latents.shape[0]),
+    )
     render_device = select_inflate_device(device)
 
     cfg = BalleRendererConfig(

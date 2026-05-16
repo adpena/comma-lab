@@ -25,6 +25,7 @@ from tac.substrates.balle_renderer.architecture import (
 from tac.substrates.balle_renderer.archive import (
     BRV1_HEADER_SIZE,
     BRV1_MAGIC,
+    BRV1_RENDER_SILENT_SIDEINFO_BLOCKER,
     BRV1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
@@ -76,7 +77,7 @@ def _split_state_dict(
     return enc_sd, dec_sd, hp_sd, latents
 
 
-def _make_meta(cfg: BalleRendererConfig) -> dict:
+def _make_meta(cfg: BalleRendererConfig, *, smoke: bool = True) -> dict:
     return {
         "embed_dim": cfg.embed_dim,
         "initial_grid_h": cfg.initial_grid_h,
@@ -89,6 +90,12 @@ def _make_meta(cfg: BalleRendererConfig) -> dict:
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
         "num_upsample_blocks": cfg.num_upsample_blocks,
+        "smoke": bool(smoke),
+        "sideinfo_consumption_contract": (
+            "brv1_smoke_closure_check_only"
+            if smoke
+            else "brv2_consumed_sideinfo_required"
+        ),
     }
 
 
@@ -298,6 +305,83 @@ def test_inflate_accepts_closed_scales_stream(tmp_path):
     frames = inflate_one_video(blob, out_raw, device="cpu")
     assert frames == 2
     assert out_raw.stat().st_size == 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
+
+
+def test_inflate_refuses_non_smoke_brv1_render_silent_sideinfo(tmp_path):
+    """BRV1 is not allowed for the next non-smoke monolithic archive.
+
+    The current raw-int16 grammar stores render latents directly. Its
+    hyper-latents are closure-checked, but they do not drive entropy decode or
+    pixel reconstruction. Until BRV2 lands that consumed-sideinfo path, inflate
+    must fail closed for non-smoke packets instead of producing a misleading
+    score-bearing archive.
+    """
+    cfg = BalleRendererConfig(
+        latent_dim=8,
+        hyper_latent_dim=4,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(16, 12, 8, 6, 4, 4, 4),
+        hyper_mlp_channels=(8, 8),
+        sin_frequency=30.0,
+        num_pairs=1,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+    )
+    torch.manual_seed(23)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    blob = pack_archive(
+        enc_sd,
+        dec_sd,
+        hp_sd,
+        latents,
+        scales,
+        _make_meta(cfg, smoke=False),
+    )
+
+    out_raw = tmp_path / "non_smoke_brv1.raw"
+    with pytest.raises(
+        RuntimeError,
+        match="BRV1 raw-int16 side-info is render-silent",
+    ):
+        inflate_one_video(blob, out_raw, device="cpu")
+    assert not out_raw.exists()
+    assert "BRV2" in BRV1_RENDER_SILENT_SIDEINFO_BLOCKER
+
+
+def test_inflate_refuses_large_smoke_tagged_brv1(tmp_path):
+    """A score-shaped packet cannot bypass BRV2 by setting ``smoke=true``."""
+    cfg = BalleRendererConfig(
+        latent_dim=8,
+        hyper_latent_dim=4,
+        embed_dim=24,
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=(16, 12, 8, 6, 4, 4, 4),
+        hyper_mlp_channels=(8, 8),
+        sin_frequency=30.0,
+        num_pairs=17,
+        output_height=24,
+        output_width=32,
+        num_upsample_blocks=3,
+    )
+    torch.manual_seed(24)
+    model = BalleRendererSubstrate(cfg).eval()
+    enc_sd, dec_sd, hp_sd, latents = _split_state_dict(model)
+    with torch.no_grad():
+        scales = model.hyper_analysis(latents)
+    blob = pack_archive(enc_sd, dec_sd, hp_sd, latents, scales, _make_meta(cfg))
+
+    with pytest.raises(
+        RuntimeError,
+        match="BRV1 raw-int16 side-info is render-silent",
+    ):
+        inflate_one_video(blob, tmp_path / "oversized_smoke.raw", device="cpu")
 
 
 def test_inflate_rejects_mutated_scales_stream(tmp_path):

@@ -29,6 +29,12 @@ Per the council §4.2 β candidate archive-grammar declaration:
 The grammar is FIXED at design-time; mutating it changes the schema VERSION
 and requires a new inflate.py.
 
+BRV1 is smoke/research-only for non-trivial Ballé claims: its main latents are
+stored as raw int16 values, and the hyper-latent stream is only closure-checked
+by inflate. A non-smoke monolithic archive must use a BRV2 consumed-sideinfo
+decode contract where the hyper-latents drive reconstruction, not just
+validation.
+
 Round-trip contract (tested in tests/test_balle_renderer_roundtrip.py per
 Catalog #91):
 
@@ -60,6 +66,14 @@ BRV1_MAGIC: bytes = b"BRV1"
 
 BRV1_SCHEMA_VERSION: int = 1
 """Schema version byte. Bump when grammar changes."""
+
+BRV1_RENDER_SILENT_SIDEINFO_BLOCKER: str = (
+    "BRV1 raw-int16 side-info is render-silent: LATENTS_BLOB carries the "
+    "rendered latent values directly, while SCALES_BLOB is closure-checked "
+    "only. Non-smoke Ballé monolithic archives require a BRV2 "
+    "consumed-sideinfo decode contract before inflate."
+)
+"""Fail-closed blocker for non-smoke BRV1 packets."""
 
 # Header layout:
 #   MAGIC(4) + VERSION(1) + LATENT_DIM(2) + HYPER_DIM(2) + NUM_PAIRS(2)

@@ -53,8 +53,11 @@ Catalog #124 archive-grammar 8 fields:
                                CompressAI runtime dep)
     export_format:             brotli-compressed state_dicts + raw int16
                                main/hyper latents + sidecar JSON meta.
-                               Arithmetic/range coding remains a readiness
-                               blocker before exact replacement dispatch.
+                               BRV1 is smoke/research-only because hyper
+                               latents are closure-checked but render-silent.
+                               BRV2 consumed-sideinfo decode remains a
+                               readiness blocker before exact replacement
+                               dispatch.
     score_aware_loss:          L = α·B(θ)/N + β·d_seg(θ) + γ·sqrt(d_pose(θ))
                                + λ_hp·R_hyperprior(θ)
                                where R_hyperprior = E[-log p_z(z)] +
