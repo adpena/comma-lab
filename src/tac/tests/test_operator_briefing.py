@@ -134,7 +134,8 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["rank_or_kill_eligible"] is False
     assert l5["ready_for_exact_eval_dispatch"] is False
     assert l5["target_rows_are_fail_fast_only"] is True
-    assert l5["canonical_sideinfo_evidence_present"] is True
+    assert l5["canonical_sideinfo_evidence_present"] is False
+    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
     assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
     active_claim_count = int(out["dispatch_claim_summary"].get("active_count") or 0)
     assert l5["active_dispatch_claim_count"] == active_claim_count

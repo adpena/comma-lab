@@ -228,6 +228,8 @@ def test_operator_briefing_dispatch_gate_rejects_l5_authority_leak() -> None:
     }
     l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
     l5["ready_for_exact_eval_dispatch"] = True
+    l5["l5_ready_for_score_or_rank_dispatch"] = True
+    l5["l5_ready_for_dispatch"] = True
     l5["target_rows_are_fail_fast_only"] = False
     l5["next_exact_eval_targets_sample"] = [
         {
@@ -243,6 +245,16 @@ def test_operator_briefing_dispatch_gate_rejects_l5_authority_leak() -> None:
     failures = module._operator_briefing_dispatch_failures(payload)
 
     assert "l5_v2_frontier_readiness:ready_for_exact_eval_dispatch_not_false" in failures
+    assert (
+        "l5_v2_frontier_readiness:"
+        "l5_ready_for_score_or_rank_dispatch_true_without_top_level_authority"
+        in failures
+    )
+    assert (
+        "l5_v2_frontier_readiness:"
+        "l5_ready_for_dispatch_true_without_top_level_authority"
+        in failures
+    )
     assert "l5_v2_frontier_readiness:target_rows_not_fail_fast_only" in failures
     assert "l5_v2_frontier_readiness:target_0:score_claim_not_false" in failures
     assert (

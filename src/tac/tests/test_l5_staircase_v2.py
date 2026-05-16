@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -232,6 +233,7 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
         "passed": True,
     }
     if gate_id == "byte_closed_temporal_sideinfo_consumption":
+        payload["proof_scope"] = "contest_full_frame_consumption_proof"
         payload["byte_mutation_proof"] = {
             "section": "temporal_sideinfo",
             "parser_consumed_bytes": True,
@@ -254,6 +256,11 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
                 "byte_mutation_inflated_outputs_manifest.json"
             ),
             "inflated_raw_output_aggregate_sha256": _sha(23),
+            "n_pairs_hashed": 600,
+            "total_frames": 1200,
+            "file_list_sha256": _sha(28),
+            "baseline_raw_output_aggregate_sha256": _sha(29),
+            "mutated_raw_output_aggregate_sha256": _sha(30),
         }
     elif gate_id == "c1_z5_tt5l_probe_disambiguator":
         assert repo_root is not None
@@ -279,11 +286,20 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
             manifest_path.write_text(
                 json.dumps(
-                    {
-                        "raw_output_aggregate_sha256": proof[
-                            "inflated_raw_output_aggregate_sha256"
-                        ],
-                    },
+                        {
+                            "raw_output_aggregate_sha256": proof[
+                                "inflated_raw_output_aggregate_sha256"
+                            ],
+                            "n_pairs_hashed": proof["n_pairs_hashed"],
+                            "total_frames": proof["total_frames"],
+                            "file_list_sha256": proof["file_list_sha256"],
+                            "baseline_raw_output_aggregate_sha256": proof[
+                                "baseline_raw_output_aggregate_sha256"
+                            ],
+                            "mutated_raw_output_aggregate_sha256": proof[
+                                "mutated_raw_output_aggregate_sha256"
+                            ],
+                        },
                     sort_keys=True,
                 )
                 + "\n",
@@ -490,6 +506,22 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
     matrix_relpath = Path(".omx/research/test_pr106_packetir_matrix.json")
     matrix_path = tmp_path / matrix_relpath
     matrix_path.parent.mkdir(parents=True)
+    archive_bytes = 186327
+    cpu_seg = 0.00063
+    cpu_pose = 0.00016
+    cuda_seg = 0.00064
+    cuda_pose = 0.00003
+    cpu_score = 100 * cpu_seg + math.sqrt(10 * cpu_pose) + 25 * archive_bytes / 37_545_489
+    cuda_score = 100 * cuda_seg + math.sqrt(10 * cuda_pose) + 25 * archive_bytes / 37_545_489
+    for relpath in (
+        "experiments/results/cpu/result.json",
+        "experiments/results/cpu/result.log",
+        "experiments/results/cuda/result.json",
+        "experiments/results/cuda/result.log",
+    ):
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{relpath}\n", encoding="utf-8")
     matrix = {
         "schema": "pr106_packetir_candidate_matrix_v1",
         "candidate_count": 1,
@@ -505,10 +537,12 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
                 "status": "paired_exact_measured",
                 "archive_sha256": _sha(12),
                 "archive_path": "submissions/pr106/archive.zip",
-                "source_artifact_warnings": [
-                    "contest_cuda:source_artifact_score_claim_true"
-                ],
+                "source_artifact_warnings": [],
                 "runtime_consumption": {
+                    "valid": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
                     "path": "experiments/results/runtime_consumption.json",
                     "sha256": _sha(21),
                     "sidecar_kind": "exact_radix_dim_fixed_meta",
@@ -526,25 +560,51 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
                 "exact_axis_evidence": {
                     "contest_cpu": {
                         "valid": True,
-                        "canonical_score": 0.190,
+                        "canonical_score": cpu_score,
+                        "score": cpu_score,
                         "archive_sha256": _sha(12),
-                        "archive_size_bytes": 186327,
-                        "avg_segnet_dist": 0.00063,
-                        "avg_posenet_dist": 0.00016,
+                        "archive_size_bytes": archive_bytes,
+                        "archive_bytes": archive_bytes,
+                        "avg_segnet_dist": cpu_seg,
+                        "seg_dist": cpu_seg,
+                        "avg_posenet_dist": cpu_pose,
+                        "pose_dist": cpu_pose,
+                        "axis": "contest_cpu",
+                        "runtime_tree_sha256": _sha(23),
+                        "n_samples": 600,
+                        "hardware": "linux-x86_64 cpu",
+                        "inflate_device": "cpu",
+                        "eval_device": "cpu",
+                        "auth_eval_command": "contest_auth_eval.py --device cpu",
                         "artifact_path": "experiments/results/cpu/result.json",
+                        "log_path": "experiments/results/cpu/result.log",
                         "sha256": _sha(31),
                         "score_claim_in_source_artifact": False,
+                        "promotion_eligible_in_source_artifact": False,
                     },
                     "contest_cuda": {
                         "valid": True,
-                        "canonical_score": 0.226,
+                        "canonical_score": cuda_score,
+                        "score": cuda_score,
                         "archive_sha256": _sha(12),
-                        "archive_size_bytes": 186327,
-                        "avg_segnet_dist": 0.00064,
-                        "avg_posenet_dist": 0.00003,
+                        "archive_size_bytes": archive_bytes,
+                        "archive_bytes": archive_bytes,
+                        "avg_segnet_dist": cuda_seg,
+                        "seg_dist": cuda_seg,
+                        "avg_posenet_dist": cuda_pose,
+                        "pose_dist": cuda_pose,
+                        "axis": "contest_cuda",
+                        "runtime_tree_sha256": _sha(23),
+                        "n_samples": 600,
+                        "hardware": "Tesla T4",
+                        "inflate_device": "cuda",
+                        "eval_device": "cuda",
+                        "auth_eval_command": "contest_auth_eval.py --device cuda",
                         "artifact_path": "experiments/results/cuda/result.json",
+                        "log_path": "experiments/results/cuda/result.log",
                         "sha256": _sha(32),
-                        "score_claim_in_source_artifact": True,
+                        "score_claim_in_source_artifact": False,
+                        "promotion_eligible_in_source_artifact": False,
                     },
                 },
             }
@@ -570,19 +630,19 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
     assert payload["candidate_count"] == 1
     candidate = payload["candidates"][0]
     assert candidate["source_axis_scores"] == {
-        "contest_cpu": 0.190,
-        "contest_cuda": 0.226,
+        "contest_cpu": cpu_score,
+        "contest_cuda": cuda_score,
     }
-    assert candidate["source_worst_axis_score"] == 0.226
+    assert candidate["source_worst_axis_score"] == max(cpu_score, cuda_score)
     assert "source_max_axis_score" not in candidate
     assert candidate["packetir_sidecar_kind"] == "exact_radix_dim_fixed_meta"
     assert candidate["packetir_notes"] == "exact-radix grammar test"
-    assert candidate["packetir_source_artifact_warnings"] == [
-        "contest_cuda:source_artifact_score_claim_true"
-    ]
-    assert candidate["source_cpu_cuda_score_gap"] == pytest.approx(-0.036)
+    assert candidate["packetir_source_artifact_warnings"] == []
+    assert candidate["source_cpu_cuda_score_gap"] == pytest.approx(
+        cpu_score - cuda_score
+    )
     component_delta = candidate["source_cpu_minus_cuda_component_delta"]
-    assert component_delta["canonical_score"] == pytest.approx(-0.036)
+    assert component_delta["canonical_score"] == pytest.approx(cpu_score - cuda_score)
     assert component_delta["avg_segnet_dist"] == pytest.approx(-0.00001)
     assert component_delta["avg_posenet_dist"] == pytest.approx(0.00013)
     assert candidate["source_runtime_dir"] == "submissions/pr106_runtime"
@@ -593,6 +653,106 @@ def test_l5_v2_pr106_stack_cell_candidates_label_worst_axis_score(
         is True
     )
     assert candidate["score_claim"] is False
+
+
+def test_l5_v2_packetir_paired_rows_revalidate_exact_eval_custody(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    matrix_relpath = Path(".omx/research/test_pr106_packetir_matrix_missing_samples.json")
+    matrix_path = tmp_path / matrix_relpath
+    matrix_path.parent.mkdir(parents=True)
+    for relpath in (
+        "experiments/results/cpu/result.json",
+        "experiments/results/cpu/result.log",
+        "experiments/results/cuda/result.json",
+        "experiments/results/cuda/result.log",
+    ):
+        path = tmp_path / relpath
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{relpath}\n", encoding="utf-8")
+    archive_bytes = 1
+    score = 25 * archive_bytes / 37_545_489
+    axis_rows = {}
+    for axis in ("contest_cpu", "contest_cuda"):
+        device = "cpu" if axis == "contest_cpu" else "cuda"
+        axis_rows[axis] = {
+            "valid": True,
+            "axis": axis,
+            "canonical_score": score,
+            "score": score,
+            "archive_sha256": _sha(12),
+            "archive_size_bytes": archive_bytes,
+            "archive_bytes": archive_bytes,
+            "avg_segnet_dist": 0.0,
+            "seg_dist": 0.0,
+            "avg_posenet_dist": 0.0,
+            "pose_dist": 0.0,
+            "runtime_tree_sha256": _sha(23),
+            "n_samples": 600,
+            "hardware": "linux-x86_64 cpu" if device == "cpu" else "Tesla T4",
+            "inflate_device": device,
+            "eval_device": device,
+            "auth_eval_command": f"contest_auth_eval.py --device {device}",
+            "artifact_path": f"experiments/results/{device}/result.json",
+            "log_path": f"experiments/results/{device}/result.log",
+            "score_claim_in_source_artifact": False,
+            "promotion_eligible_in_source_artifact": False,
+        }
+    axis_rows["contest_cpu"].pop("n_samples")
+    matrix = {
+        "schema": "pr106_packetir_candidate_matrix_v1",
+        "candidate_count": 1,
+        "status_counts": {"paired_exact_measured": 1},
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rows": [
+            {
+                "candidate_id": "format_0x0c_missing_samples",
+                "format_id": "0x0C",
+                "status": "paired_exact_measured",
+                "archive_sha256": _sha(12),
+                "archive_path": "submissions/pr106/archive.zip",
+                "runtime_consumption": {
+                    "valid": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "runtime_content_tree_sha256_matches_current_runtime_dir": True,
+                    "current_modal_uploaded_runtime": {
+                        "runtime_content_tree_sha256": _sha(22),
+                        "runtime_tree_sha256": _sha(23),
+                    },
+                },
+                "exact_axis_evidence": axis_rows,
+            }
+        ],
+    }
+    matrix_path.write_text(
+        json.dumps(matrix, allow_nan=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH",
+        str(matrix_relpath),
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256",
+        _file_sha256(matrix_path),
+    )
+
+    payload = l5_v2_pr106_stack_cell_candidates(repo_root=tmp_path)
+
+    assert payload["candidate_count"] == 0
+    assert any(
+        "l5_v2_packetir_matrix_paired_row_axis_blocked:"
+        "format_0x0c_missing_samples:" in str(blocker)
+        and "exact_eval:contest_cpu:n_samples_missing" in str(blocker)
+        for blocker in payload["blockers"]
+    )
 
 
 def test_l5_v2_pr106_stack_cell_candidates_fail_closed_without_matrix(
@@ -1179,6 +1339,63 @@ def test_l5_v2_sideinfo_consumption_requires_full_frame_inflate_custody(
         "l5_v2_gate_artifact_semantics_invalid:"
         "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:inflate_command"
         in readiness["blockers"]
+    )
+
+
+def test_l5_v2_sideinfo_consumption_rejects_toy_manifest_scope(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    payload["proof_scope"] = "local_no_gpu_toy_tt5l_archive_parser_and_inflate_consumption_only"
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    proof["n_pairs_hashed"] = 1
+    proof["total_frames"] = 2
+    proof.pop("file_list_sha256", None)
+    proof.pop("baseline_raw_output_aggregate_sha256", None)
+    manifest_path = tmp_path / str(proof["inflated_outputs_manifest_path"])
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "raw_output_aggregate_sha256": proof[
+                    "inflated_raw_output_aggregate_sha256"
+                ],
+                "n_pairs_hashed": 1,
+                "total_frames": 2,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    blockers = readiness["blockers"]
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "proof_scope_not_contest_full_frame"
+        in blockers
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "n_pairs_hashed"
+        in blockers
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "total_frames"
+        in blockers
     )
 
 

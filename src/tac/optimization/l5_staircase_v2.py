@@ -71,6 +71,12 @@ L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
+_TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES = frozenset({
+    "contest_full_frame_consumption_proof",
+    "contest_full_frame_sideinfo_consumption_proof",
+})
+_TT5L_CONTEST_N_PAIRS = 600
+_TT5L_CONTEST_TOTAL_FRAMES = 1200
 @dataclass(frozen=True)
 class L5V2Gate:
     """One non-negotiable gate before L5 v2 can dispatch or promote."""
@@ -380,6 +386,34 @@ def l5_v2_packetir_stack_evidence_payload(
         current_runtime = runtime_consumption.get("current_modal_uploaded_runtime")
         if not isinstance(current_runtime, Mapping):
             current_runtime = {}
+        runtime_blockers: list[str] = []
+        if runtime_consumption.get("valid") is not True:
+            runtime_blockers.append("runtime_consumption_not_valid")
+        if runtime_consumption.get("score_claim") is not False:
+            runtime_blockers.append("runtime_consumption_score_claim_not_false")
+        if runtime_consumption.get("promotion_eligible") is not False:
+            runtime_blockers.append(
+                "runtime_consumption_promotion_eligible_not_false"
+            )
+        if runtime_consumption.get("ready_for_exact_eval_dispatch") is not False:
+            runtime_blockers.append(
+                "runtime_consumption_dispatch_ready_not_false"
+            )
+        if (
+            runtime_consumption.get(
+                "runtime_content_tree_sha256_matches_current_runtime_dir"
+            )
+            is not True
+        ):
+            runtime_blockers.append(
+                "runtime_consumption_current_runtime_content_sha_mismatch"
+            )
+        if runtime_blockers:
+            blockers.append(
+                "l5_v2_packetir_matrix_paired_row_runtime_blocked:"
+                f"{row.get('candidate_id')}:{','.join(runtime_blockers)}"
+            )
+            continue
         exact_axis_evidence = row.get("exact_axis_evidence")
         if not isinstance(exact_axis_evidence, Mapping):
             blockers.append(
@@ -396,6 +430,31 @@ def l5_v2_packetir_stack_evidence_payload(
                 continue
             if evidence.get("valid") is not True:
                 axis_blockers.append(f"axis_invalid:{axis}")
+            if evidence.get("score_claim_in_source_artifact") is not False:
+                axis_blockers.append(f"source_score_claim_not_false:{axis}")
+            if evidence.get("promotion_eligible_in_source_artifact") is not False:
+                axis_blockers.append(f"source_promotion_eligible_not_false:{axis}")
+            validation_payload = _packetir_axis_evidence_for_exact_validation(
+                evidence,
+                axis=axis,
+            )
+            validation = validate_exact_eval_evidence(
+                validation_payload,
+                expected_axis=axis,
+                expected_archive_sha256=str(row.get("archive_sha256") or "") or None,
+                expected_runtime_tree_sha256=(
+                    current_runtime.get("runtime_tree_sha256") or None
+                ),
+                require_artifact_path=True,
+                require_hardware=True,
+                require_auth_eval_command=True,
+                require_log_path=True,
+                require_devices=True,
+                artifact_base_dir=resolved_repo_root,
+                annotation_prefix=f"l5_v2_packetir_{row.get('candidate_id')}_{axis}",
+            )
+            for validation_blocker in validation.blockers:
+                axis_blockers.append(f"exact_eval:{axis}:{validation_blocker}")
             axis_payload[axis] = {
                 "valid": evidence.get("valid") is True,
                 "canonical_score": evidence.get("canonical_score"),
@@ -428,6 +487,7 @@ def l5_v2_packetir_stack_evidence_payload(
                 "l5_v2_packetir_matrix_paired_row_axis_blocked:"
                 f"{row.get('candidate_id')}:{','.join(axis_blockers)}"
             )
+            continue
         paired_candidates.append(
             {
                 "candidate_id": row.get("candidate_id"),
@@ -730,6 +790,18 @@ def l5_v2_canonical_sideinfo_gate_evidence(
         return None
     if _sha256_file(proof_path) != TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256:
         return None
+    try:
+        proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(proof, Mapping):
+        return None
+    if _gate_semantic_blockers(
+        "byte_closed_temporal_sideinfo_consumption",
+        proof,
+        repo_root=resolved_repo_root,
+    ):
+        return None
     return L5V2GateEvidence(
         gate_id="byte_closed_temporal_sideinfo_consumption",
         artifact_path=TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
@@ -932,6 +1004,164 @@ def _raw_output_aggregate_sha(row: Mapping[str, Any]) -> str:
         if value:
             return value
     return ""
+
+
+def _packetir_axis_evidence_for_exact_validation(
+    evidence: Mapping[str, Any],
+    *,
+    axis: str,
+) -> dict[str, Any]:
+    """Normalize PacketIR matrix rows into the shared exact-eval contract."""
+
+    return {
+        **dict(evidence),
+        "axis": evidence.get("axis") or axis,
+        "score": evidence.get("score") or evidence.get("canonical_score"),
+        "seg_dist": evidence.get("seg_dist") or evidence.get("avg_segnet_dist"),
+        "pose_dist": evidence.get("pose_dist") or evidence.get("avg_posenet_dist"),
+        "archive_bytes": (
+            evidence.get("archive_bytes")
+            or evidence.get("archive_size_bytes")
+            or evidence.get("archive_zip_bytes")
+        ),
+    }
+
+
+def _matching_sha_pair(
+    mapping: Mapping[str, Any],
+    first_keys: Iterable[str],
+    second_keys: Iterable[str],
+) -> tuple[str, str]:
+    first = str(_first_present(mapping, first_keys) or "").strip().lower()
+    second = str(_first_present(mapping, second_keys) or "").strip().lower()
+    return first, second
+
+
+def _contest_full_frame_sideinfo_blockers(
+    artifact_payload: Mapping[str, Any],
+    proof: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
+    blockers: list[str] = []
+    proof_scope = str(
+        artifact_payload.get("proof_scope") or proof.get("proof_scope") or ""
+    ).strip()
+    if proof_scope not in _TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "proof_scope_not_contest_full_frame"
+        )
+    n_pairs_hashed = _non_bool_int(
+        _first_present(proof, ("n_pairs_hashed", "pair_count", "n_pairs"))
+    )
+    if n_pairs_hashed != _TT5L_CONTEST_N_PAIRS:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "n_pairs_hashed"
+        )
+    total_frames = _non_bool_int(
+        _first_present(proof, ("total_frames", "frames_hashed", "n_frames"))
+    )
+    if total_frames != _TT5L_CONTEST_TOTAL_FRAMES:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "total_frames"
+        )
+    file_list_sha = str(proof.get("file_list_sha256") or "").strip().lower()
+    if not _SHA256_HEX_RE.fullmatch(file_list_sha):
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "file_list_sha256"
+        )
+    source_raw_sha, candidate_raw_sha = _matching_sha_pair(
+        proof,
+        (
+            "source_raw_output_aggregate_sha256",
+            "baseline_raw_output_aggregate_sha256",
+            "baseline_inflated_raw_output_aggregate_sha256",
+        ),
+        (
+            "candidate_raw_output_aggregate_sha256",
+            "mutated_raw_output_aggregate_sha256",
+            "mutated_inflated_raw_output_aggregate_sha256",
+        ),
+    )
+    if (
+        not _SHA256_HEX_RE.fullmatch(source_raw_sha)
+        or not _SHA256_HEX_RE.fullmatch(candidate_raw_sha)
+        or source_raw_sha == candidate_raw_sha
+    ):
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "source_candidate_raw_aggregate_sha_pair"
+        )
+
+    manifest_value = proof.get("inflated_outputs_manifest_path") or proof.get(
+        "inflated_outputs_manifest"
+    )
+    resolved, path_error = _resolve_artifact_path(str(manifest_value or ""), repo_root)
+    if path_error is None and resolved is not None and resolved.is_file():
+        try:
+            manifest = json.loads(resolved.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = None
+        if isinstance(manifest, Mapping):
+            manifest_pairs = _non_bool_int(
+                _first_present(manifest, ("n_pairs_hashed", "pair_count", "n_pairs"))
+            )
+            if manifest_pairs != _TT5L_CONTEST_N_PAIRS:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "inflated_outputs_manifest_path:n_pairs_hashed"
+                )
+            manifest_frames = _non_bool_int(
+                _first_present(manifest, ("total_frames", "frames_hashed", "n_frames"))
+            )
+            if manifest_frames != _TT5L_CONTEST_TOTAL_FRAMES:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "inflated_outputs_manifest_path:total_frames"
+                )
+            manifest_file_list_sha = str(
+                manifest.get("file_list_sha256") or ""
+            ).strip().lower()
+            if manifest_file_list_sha != file_list_sha:
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "inflated_outputs_manifest_path:file_list_sha256"
+                )
+            manifest_source_sha, manifest_candidate_sha = _matching_sha_pair(
+                manifest,
+                (
+                    "source_raw_output_aggregate_sha256",
+                    "baseline_raw_output_aggregate_sha256",
+                    "baseline_inflated_raw_output_aggregate_sha256",
+                ),
+                (
+                    "candidate_raw_output_aggregate_sha256",
+                    "mutated_raw_output_aggregate_sha256",
+                    "mutated_inflated_raw_output_aggregate_sha256",
+                ),
+            )
+            if (
+                manifest_source_sha != source_raw_sha
+                or manifest_candidate_sha != candidate_raw_sha
+            ):
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    "inflated_outputs_manifest_path:source_candidate_raw_aggregate_sha_pair"
+                )
+    return blockers
 
 
 def _project_probe_verdict_for_recompute_check(
@@ -1288,6 +1518,13 @@ def _gate_semantic_blockers(
                 "l5_v2_gate_artifact_semantics_invalid:"
                 f"{gate_id}:byte_mutation_proof:inflate_command"
             )
+        blockers.extend(
+            _contest_full_frame_sideinfo_blockers(
+                artifact_payload,
+                proof,
+                repo_root=repo_root,
+            )
+        )
         return blockers
 
     if gate_id == "c1_z5_tt5l_probe_disambiguator":

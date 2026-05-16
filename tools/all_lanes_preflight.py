@@ -791,6 +791,14 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
         ):
             if l5.get(flag) is not False:
                 failures.append(f"l5_v2_frontier_readiness:{flag}_not_false")
+        for flag in (
+            "l5_ready_for_score_or_rank_dispatch",
+            "l5_ready_for_dispatch",
+        ):
+            if l5.get(flag) is True:
+                failures.append(
+                    f"l5_v2_frontier_readiness:{flag}_true_without_top_level_authority"
+                )
         try:
             target_count = int(l5.get("next_exact_eval_target_count") or 0)
         except (TypeError, ValueError):
