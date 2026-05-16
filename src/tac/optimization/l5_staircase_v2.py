@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import re
+import zipfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -2326,10 +2327,80 @@ def _tt5l_probe_observation_intake_status(*, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _inspect_tt5l_archive_sideinfo(archive_zip_path: Path) -> dict[str, Any]:
+    """Return side-info liveness stats for a TT5L contest archive.zip.
+
+    The L5-v2 paired dispatch gate is allowed to spend on low-rate TT5L
+    archives, but not on archives whose temporal side channel is structurally
+    dead. A zero side-info stream reproduces the 2026-05-16 TT5L 25ep collapse:
+    excellent rate term, but no learned per-pair correction signal.
+    """
+
+    stats: dict[str, Any] = {
+        "checked": True,
+        "valid": False,
+        "archive_member": "",
+        "num_pairs": 0,
+        "per_pair_bytes": 0,
+        "total_values": 0,
+        "nonzero_values": 0,
+        "nonzero_fraction": 0.0,
+        "min": None,
+        "max": None,
+        "error": "",
+    }
+    try:
+        from tac.substrates.time_traveler_l5_autonomy.archive import parse_archive
+
+        with zipfile.ZipFile(archive_zip_path, "r") as zf:
+            names = set(zf.namelist())
+            member = "0.bin" if "0.bin" in names else "x" if "x" in names else ""
+            if not member:
+                stats["error"] = "missing_tt5l_member_0_bin_or_x"
+                return stats
+            archive_bytes = zf.read(member)
+        parsed = parse_archive(archive_bytes)
+        side_info = parsed.per_pair_side_info
+        total_values = int(side_info.size)
+        nonzero_values = int((side_info != 0).sum())
+        stats.update(
+            {
+                "valid": True,
+                "archive_member": member,
+                "num_pairs": int(parsed.num_pairs),
+                "per_pair_bytes": int(parsed.per_pair_bytes),
+                "total_values": total_values,
+                "nonzero_values": nonzero_values,
+                "nonzero_fraction": (
+                    float(nonzero_values / total_values) if total_values else 0.0
+                ),
+                "min": int(side_info.min()) if total_values else None,
+                "max": int(side_info.max()) if total_values else None,
+                "error": "",
+            }
+        )
+    except Exception as exc:  # pragma: no cover - exact error surfaced in stats.
+        stats["error"] = f"{type(exc).__name__}:{exc}"
+    return stats
+
+
 def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, Any]:
     artifact_path = repo_root / TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
     blockers: list[str] = []
     payload: Mapping[str, Any] = {}
+    sideinfo_stats: dict[str, Any] = {
+        "checked": False,
+        "valid": False,
+        "archive_member": "",
+        "num_pairs": 0,
+        "per_pair_bytes": 0,
+        "total_values": 0,
+        "nonzero_values": 0,
+        "nonzero_fraction": 0.0,
+        "min": None,
+        "max": None,
+        "error": "",
+    }
 
     if not artifact_path.is_file():
         blockers.append("l5_v2_tt5l_materialized_paired_work_unit_missing")
@@ -2404,6 +2475,19 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
                 if observed_archive_sha256 != archive_sha256:
                     blockers.append(
                         "l5_v2_tt5l_materialized_paired_work_unit_archive_sha_mismatch"
+                    )
+                sideinfo_stats = _inspect_tt5l_archive_sideinfo(archive_file)
+                if sideinfo_stats["valid"] is not True:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_invalid"
+                    )
+                elif int(sideinfo_stats["total_values"]) <= 0:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_empty"
+                    )
+                elif int(sideinfo_stats["nonzero_values"]) <= 0:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_all_zero"
                     )
 
     runtime = payload.get("runtime") if payload else None
@@ -2599,6 +2683,7 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
             axis: str(runtime_content_by_axis.get(axis) or "")
             for axis in ("contest_cpu", "contest_cuda")
         },
+        "tt5l_sideinfo_stats": sideinfo_stats,
         "operator_plan_command_template": operator_plan_command,
         "operator_execute_command_template_after_review": operator_plan_command
         + " --execute",

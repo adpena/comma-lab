@@ -43,25 +43,45 @@
     },
     {
       "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-      "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
-      "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+      "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+      "artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
       "axis_evidence": [
         {
           "archive_bytes": 34603,
           "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-          "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
-          "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+          "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+          "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+          "axis": "contest_cpu",
+          "eval_device": "cpu",
+          "hardware": "Linux x86_64",
+          "inflate_device": "cpu",
+          "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+          "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.stdout.log",
+          "n_samples": 600,
+          "pose_dist": 0.18508005,
+          "raw_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+          "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+          "score": 3.8987840060549908,
+          "score_delta": null,
+          "seg_dist": 0.02515302
+        },
+        {
+          "archive_bytes": 34603,
+          "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+          "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+          "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
           "axis": "contest_cuda",
           "eval_device": "cuda",
           "hardware": "Tesla T4",
           "inflate_device": "auto",
-          "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+          "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
           "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
-          "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+          "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.stdout.log",
           "n_samples": 600,
           "pose_dist": 0.18563657,
           "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
-          "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+          "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
           "score": 3.9007398365396795,
           "score_delta": null,
           "seg_dist": 0.02515214
@@ -71,6 +91,7 @@
       "candidate_id": "time_traveler_l5_autonomy",
       "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
       "exact_axes": [
+        "contest_cpu",
         "contest_cuda"
       ],
       "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
@@ -79,7 +100,8 @@
       "predicted_or_measured_delta": 0.0,
       "runtime_tree_sha256": "",
       "runtime_tree_sha256_by_axis": {
-        "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+        "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+        "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
       },
       "sideinfo_consumed": false
     }
@@ -128,25 +150,45 @@
         },
         {
           "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-          "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
-          "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+          "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+          "artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
           "axis_evidence": [
             {
               "archive_bytes": 34603,
               "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-              "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
-              "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+              "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+              "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+              "axis": "contest_cpu",
+              "eval_device": "cpu",
+              "hardware": "Linux x86_64",
+              "inflate_device": "cpu",
+              "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
+              "inflated_outputs_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+              "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.stdout.log",
+              "n_samples": 600,
+              "pose_dist": 0.18508005,
+              "raw_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+              "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+              "score": 3.8987840060549908,
+              "score_delta": null,
+              "seg_dist": 0.02515302
+            },
+            {
+              "archive_bytes": 34603,
+              "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+              "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+              "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
               "axis": "contest_cuda",
               "eval_device": "cuda",
               "hardware": "Tesla T4",
               "inflate_device": "auto",
-              "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+              "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
               "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
-              "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+              "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.stdout.log",
               "n_samples": 600,
               "pose_dist": 0.18563657,
               "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
-              "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+              "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
               "score": 3.9007398365396795,
               "score_delta": null,
               "seg_dist": 0.02515214
@@ -156,6 +198,7 @@
           "candidate_id": "time_traveler_l5_autonomy",
           "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
           "exact_axes": [
+            "contest_cpu",
             "contest_cuda"
           ],
           "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
@@ -164,7 +207,8 @@
           "predicted_or_measured_delta": 0.0,
           "runtime_tree_sha256": "",
           "runtime_tree_sha256_by_axis": {
-            "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+            "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+            "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
           },
           "sideinfo_consumed": false
         }
@@ -255,25 +299,45 @@
           },
           {
             "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-            "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
-            "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+            "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+            "artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
             "axis_evidence": [
               {
                 "archive_bytes": 34603,
                 "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-                "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
-                "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+                "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+                "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+                "axis": "contest_cpu",
+                "eval_device": "cpu",
+                "hardware": "Linux x86_64",
+                "inflate_device": "cpu",
+                "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
+                "inflated_outputs_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+                "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.stdout.log",
+                "n_samples": 600,
+                "pose_dist": 0.18508005,
+                "raw_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+                "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+                "score": 3.8987840060549908,
+                "score_delta": null,
+                "seg_dist": 0.02515302
+              },
+              {
+                "archive_bytes": 34603,
+                "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+                "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+                "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
                 "axis": "contest_cuda",
                 "eval_device": "cuda",
                 "hardware": "Tesla T4",
                 "inflate_device": "auto",
-                "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+                "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
                 "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
-                "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+                "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.stdout.log",
                 "n_samples": 600,
                 "pose_dist": 0.18563657,
                 "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
-                "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+                "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
                 "score": 3.9007398365396795,
                 "score_delta": null,
                 "seg_dist": 0.02515214
@@ -281,9 +345,8 @@
             ],
             "blockers": [
               "l5_v2_probe_predicate_failed",
-              "l5_v2_probe_paired_exact_axes_missing",
               "l5_v2_probe_sideinfo_consumption_missing",
-              "l5_v2_probe_axis_evidence_missing:contest_cpu",
+              "l5_v2_probe_axis_score_delta_missing:contest_cpu",
               "l5_v2_probe_axis_score_delta_missing:contest_cuda"
             ],
             "byte_closed_archive": true,
@@ -291,11 +354,10 @@
             "eligible_for_architecture_lock": false,
             "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
             "exact_axes": [
+              "contest_cpu",
               "contest_cuda"
             ],
-            "missing_exact_axes": [
-              "contest_cpu"
-            ],
+            "missing_exact_axes": [],
             "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
             "paired_score_delta": null,
             "predicate_id": "l5_v2_probe_observation_intake_v1",
@@ -303,7 +365,8 @@
             "predicted_or_measured_delta": 0.0,
             "runtime_tree_sha256": "",
             "runtime_tree_sha256_by_axis": {
-              "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+              "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+              "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
             },
             "selection_delta": null,
             "sideinfo_consumed": false
@@ -328,7 +391,7 @@
         "selected_delta_source": "paired_axis_score_delta",
         "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
       },
-      "verdict_sha256": "a329478e10a791adc08957b2c08cada898410bbb957bb4419d237adf79585fac"
+      "verdict_sha256": "961039c2092517049c0d22c3ebd106c356dd1cdec8f314f065162706eef2066d"
     },
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
@@ -340,6 +403,70 @@
   "schema": "l5_v2_probe_observation_intake_v1",
   "score_claim": false,
   "source_records": [
+    {
+      "accepted_for_observation": true,
+      "axis": "contest_cpu",
+      "axis_evidence": {
+        "archive_bytes": 34603,
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+        "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+        "axis": "contest_cpu",
+        "eval_device": "cpu",
+        "hardware": "Linux x86_64",
+        "inflate_device": "cpu",
+        "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
+        "inflated_outputs_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+        "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.stdout.log",
+        "n_samples": 600,
+        "pose_dist": 0.18508005,
+        "raw_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+        "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+        "score": 3.8987840060549908,
+        "score_delta": null,
+        "seg_dist": 0.02515302
+      },
+      "blockers": [],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "custody_blockers": [],
+      "custody_valid_for_observation": true,
+      "exists": true,
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+      "recognized_for_observation": true,
+      "sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af"
+    },
+    {
+      "accepted_for_observation": true,
+      "axis": "contest_cuda",
+      "axis_evidence": {
+        "archive_bytes": 34603,
+        "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+        "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+        "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
+        "axis": "contest_cuda",
+        "eval_device": "cuda",
+        "hardware": "Tesla T4",
+        "inflate_device": "auto",
+        "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
+        "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
+        "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.stdout.log",
+        "n_samples": 600,
+        "pose_dist": 0.18563657,
+        "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
+        "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
+        "score": 3.9007398365396795,
+        "score_delta": null,
+        "seg_dist": 0.02515214
+      },
+      "blockers": [],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "custody_blockers": [],
+      "custody_valid_for_observation": true,
+      "exists": true,
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+      "recognized_for_observation": true,
+      "sha256": "300fedc535226513497596e5e89b9eb18f8ccd48815a256fee307b618d8d82be"
+    },
     {
       "accepted_for_observation": false,
       "axis": "contest_cuda",
@@ -589,25 +716,45 @@
       },
       {
         "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-        "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
-        "artifact_sha256": "83be1ad54faab0cb07ec44321eff258d3a8245f39386ff1173fd1201ed76ddba",
+        "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+        "artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
         "axis_evidence": [
           {
             "archive_bytes": 34603,
             "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
-            "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
-            "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+            "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+            "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+            "axis": "contest_cpu",
+            "eval_device": "cpu",
+            "hardware": "Linux x86_64",
+            "inflate_device": "cpu",
+            "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
+            "inflated_outputs_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+            "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.stdout.log",
+            "n_samples": 600,
+            "pose_dist": 0.18508005,
+            "raw_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+            "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+            "score": 3.8987840060549908,
+            "score_delta": null,
+            "seg_dist": 0.02515302
+          },
+          {
+            "archive_bytes": 34603,
+            "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+            "artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+            "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
             "axis": "contest_cuda",
             "eval_device": "cuda",
             "hardware": "Tesla T4",
             "inflate_device": "auto",
-            "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+            "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
             "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
-            "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+            "log_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.stdout.log",
             "n_samples": 600,
             "pose_dist": 0.18563657,
             "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
-            "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+            "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
             "score": 3.9007398365396795,
             "score_delta": null,
             "seg_dist": 0.02515214
@@ -615,9 +762,8 @@
         ],
         "blockers": [
           "l5_v2_probe_predicate_failed",
-          "l5_v2_probe_paired_exact_axes_missing",
           "l5_v2_probe_sideinfo_consumption_missing",
-          "l5_v2_probe_axis_evidence_missing:contest_cpu",
+          "l5_v2_probe_axis_score_delta_missing:contest_cpu",
           "l5_v2_probe_axis_score_delta_missing:contest_cuda"
         ],
         "byte_closed_archive": true,
@@ -625,11 +771,10 @@
         "eligible_for_architecture_lock": false,
         "evidence_grade": "contest_axis_artifact_intake_not_architecture_lock_evidence",
         "exact_axes": [
+          "contest_cpu",
           "contest_cuda"
         ],
-        "missing_exact_axes": [
-          "contest_cpu"
-        ],
+        "missing_exact_axes": [],
         "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
         "paired_score_delta": null,
         "predicate_id": "l5_v2_probe_observation_intake_v1",
@@ -637,7 +782,8 @@
         "predicted_or_measured_delta": 0.0,
         "runtime_tree_sha256": "",
         "runtime_tree_sha256_by_axis": {
-          "contest_cuda": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd"
+          "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+          "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
         },
         "selection_delta": null,
         "sideinfo_consumed": false

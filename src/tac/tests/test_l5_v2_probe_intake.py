@@ -9,6 +9,7 @@ from pathlib import Path
 
 from tac.exact_eval_custody import contest_score
 from tac.optimization.l5_v2_probe_intake import (
+    DEFAULT_L5V2_PROBE_SOURCE_PATHS,
     build_l5_v2_probe_observation_intake,
 )
 
@@ -17,6 +18,21 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     return path
+
+
+def test_l5_v2_probe_intake_defaults_include_materialized_paired_axis_paths() -> None:
+    assert (
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/"
+        "modal_auth_eval_cpu/"
+        "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/"
+        "contest_auth_eval.json"
+    ) in DEFAULT_L5V2_PROBE_SOURCE_PATHS
+    assert (
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/"
+        "modal_auth_eval/"
+        "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/"
+        "contest_auth_eval.json"
+    ) in DEFAULT_L5V2_PROBE_SOURCE_PATHS
 
 
 def test_l5_v2_probe_intake_classifies_single_tt5l_cuda_as_incomplete(
@@ -202,6 +218,93 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
     }["time_traveler_l5_autonomy"]
     assert "l5_v2_probe_axis_log_path_missing:contest_cuda" not in tt5l["blockers"]
     assert "l5_v2_probe_contest_evidence_grade_missing" not in tt5l["blockers"]
+
+
+def test_l5_v2_probe_intake_accepts_modal_cpu_platform_custody(
+    tmp_path: Path,
+) -> None:
+    """Modal CPU results record Linux/x86_64 platform fields, not gpu_model."""
+
+    result_dir = (
+        tmp_path
+        / "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/"
+        "modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu"
+    )
+    raw_sha = "c" * 64
+    manifest = result_dir / "inflated_outputs_manifest.json"
+    stdout_log = result_dir / "contest_auth_eval.stdout.log"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps({"aggregate_sha256": raw_sha}) + "\n",
+        encoding="utf-8",
+    )
+    stdout_log.write_text("ok\n", encoding="utf-8")
+
+    result_json = _write_json(
+        result_dir / "contest_auth_eval.json",
+        {
+            "archive_size_bytes": 34_603,
+            "avg_posenet_dist": 0.18,
+            "avg_segnet_dist": 0.025,
+            "canonical_score": contest_score(
+                seg_dist=0.025,
+                pose_dist=0.18,
+                archive_bytes=34_603,
+            ),
+            "evidence_grade": "contest-CPU",
+            "n_samples": 600,
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cpu",
+                "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+                "inflate_device_policy": "auto",
+                "inflate_runtime_manifest": {
+                    "runtime_tree_sha256": "b" * 64,
+                },
+                "platform_machine": "x86_64",
+                "platform_system": "Linux",
+                "sys_argv": [
+                    "experiments/contest_auth_eval.py",
+                    "--archive",
+                    "/tmp/archive.zip",
+                    "--inflate-sh",
+                    "/tmp/inflate.sh",
+                    "--device",
+                    "cpu",
+                ],
+            },
+            "raw_output_aggregate_sha256": raw_sha,
+            "score_axis": "contest_cpu",
+        },
+    )
+
+    intake = build_l5_v2_probe_observation_intake(
+        [result_json.relative_to(tmp_path)],
+        repo_root=tmp_path,
+    )
+    source = next(
+        row
+        for row in intake["source_records"]
+        if row["path"].endswith("contest_auth_eval.json")
+    )
+    assert source["custody_valid_for_observation"] is True
+    assert source["accepted_for_observation"] is True
+    evidence = source["axis_evidence"]
+    assert evidence["hardware"] == "Linux x86_64"
+    assert evidence["inflate_device"] == "cpu"
+    assert evidence["eval_device"] == "cpu"
+
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+    assert tt5l["exact_axes"] == ["contest_cpu"]
+    assert "l5_v2_probe_axis_hardware_not_contest_cpu:contest_cpu" not in tt5l[
+        "blockers"
+    ]
+    assert "l5_v2_probe_axis_inflate_device_not_cpu:contest_cpu" not in tt5l[
+        "blockers"
+    ]
 
 
 def test_l5_v2_probe_intake_splits_recognition_from_custody_validity(

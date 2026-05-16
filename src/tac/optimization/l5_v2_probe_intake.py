@@ -37,6 +37,8 @@ L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH = (
     "tools/audit_l5_v2_probe_observations.py"
 )
 DEFAULT_L5V2_PROBE_SOURCE_PATHS: tuple[str, ...] = (
+    "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+    "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
     ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_evidence_row_20260515_codex.json",
     ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
     "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.json",
@@ -318,6 +320,78 @@ def _runtime_sha_for_payload(payload: Mapping[str, Any]) -> str:
     return ""
 
 
+def _hardware_for_payload(payload: Mapping[str, Any]) -> str:
+    def _clean_hardware_text(value: object) -> str:
+        text = str(value or "").strip()
+        if text.startswith("<error:") or text.startswith("<missing:"):
+            return ""
+        return text
+
+    direct = str(
+        _clean_hardware_text(_nested(payload, "custody", "gpu_model"))
+        or _clean_hardware_text(_nested(payload, "custody", "hardware"))
+        or _clean_hardware_text(_nested(payload, "provenance", "gpu_model"))
+        or _clean_hardware_text(_nested(payload, "provenance", "hardware"))
+        or _clean_hardware_text(payload.get("hardware"))
+    ).strip()
+    direct_is_probe_error = "filenotfounderror" in direct.lower() or direct.startswith(
+        "<error:"
+    )
+    if direct and not direct_is_probe_error:
+        return direct
+
+    platform_system = str(
+        payload.get("provenance_platform_system")
+        or _nested(payload, "provenance", "platform_system")
+        or ""
+    ).strip()
+    platform_machine = str(
+        payload.get("provenance_platform_machine")
+        or _nested(payload, "provenance", "platform_machine")
+        or ""
+    ).strip()
+    if platform_system and platform_machine:
+        return f"{platform_system} {platform_machine}"
+    return ""
+
+
+def _eval_device_for_payload(payload: Mapping[str, Any], command: str) -> str:
+    return str(
+        _nested(payload, "custody", "device")
+        or payload.get("eval_device")
+        or payload.get("provenance_device")
+        or _nested(payload, "provenance", "device")
+        or _command_flag_value(command, "--device")
+        or ""
+    ).strip()
+
+
+def _inflate_device_for_payload(
+    payload: Mapping[str, Any],
+    command: str,
+    *,
+    axis: str,
+    eval_device: str,
+) -> str:
+    explicit = str(
+        _nested(payload, "custody", "inflate_device")
+        or payload.get("inflate_device")
+        or _command_flag_value(command, "--inflate-device")
+        or ""
+    ).strip()
+    if explicit:
+        return explicit
+
+    policy = str(
+        payload.get("inflate_device_policy")
+        or _nested(payload, "provenance", "inflate_device_policy")
+        or ""
+    ).strip()
+    if axis == "contest_cpu" and eval_device.lower() == "cpu":
+        return "cpu"
+    return policy
+
+
 def _axis_evidence_from_payload(
     path: Path,
     payload: Mapping[str, Any],
@@ -338,6 +412,13 @@ def _axis_evidence_from_payload(
         path,
         payload,
         repo_root=repo_root,
+    )
+    eval_device = _eval_device_for_payload(payload, command)
+    inflate_device = _inflate_device_for_payload(
+        payload,
+        command,
+        axis=axis,
+        eval_device=eval_device,
     )
     return {
         "axis": axis,
@@ -379,28 +460,9 @@ def _axis_evidence_from_payload(
             ),
         ),
         "n_samples": _first_positive_int(payload, ("custody.n_samples", "n_samples")),
-        "hardware": str(
-            _nested(payload, "custody", "gpu_model")
-            or _nested(payload, "custody", "hardware")
-            or _nested(payload, "provenance", "gpu_model")
-            or _nested(payload, "provenance", "hardware")
-            or payload.get("hardware")
-            or ""
-        ),
-        "inflate_device": str(
-            _nested(payload, "custody", "inflate_device")
-            or payload.get("inflate_device")
-            or _nested(payload, "provenance", "inflate_device_policy")
-            or _command_flag_value(command, "--inflate-device")
-            or ""
-        ),
-        "eval_device": str(
-            _nested(payload, "custody", "device")
-            or payload.get("eval_device")
-            or _nested(payload, "provenance", "device")
-            or _command_flag_value(command, "--device")
-            or ""
-        ),
+        "hardware": _hardware_for_payload(payload),
+        "inflate_device": inflate_device,
+        "eval_device": eval_device,
         "auth_eval_command": command,
         "log_path": _local_auth_eval_log_path(path, payload, repo_root=repo_root),
         "artifact_path": artifact_path,

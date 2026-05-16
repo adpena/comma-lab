@@ -97,9 +97,17 @@ Result JSON:
 | lane id | `lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu` |
 | Modal call id | `fc-01KRSJ6J0R0X21BWR2PSFMHP0P` |
 | output dir | `experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu` |
-| recovery status at ledger time | `pending` |
-| evidence grade | `[pending-contest-CPU]` |
-| score_claim | `false` |
+| recovery status | `recovered` |
+| evidence grade | `[contest-CPU]` |
+| hardware substrate | `linux_x86_64_cpu` |
+| passed | `true` |
+| archive bytes | `34603` |
+| avg_segnet_dist | `0.02515302` |
+| avg_posenet_dist | `0.18508005` |
+| score_rate_contribution | `0.023040717354886494` |
+| score_seg_contribution | `2.515302` |
+| score_pose_contribution | `1.360441288700104` |
+| recomputed score | `3.8987840060549908` |
 | promotion_eligible | `false` |
 
 CPU recovery command:
@@ -109,42 +117,131 @@ CPU recovery command:
   --output-dir experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu
 ```
 
+Result JSON:
+`experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/modal_cpu_auth_eval_result.json`
+
+Note: the first local CPU recovery attempt at `2026-05-16T23:38:09Z` failed
+with `ConnectionError: Could not connect to the Modal server` and recorded a
+non-score terminal row. A second recovery with network access succeeded at
+`2026-05-16T23:40:48Z`; the later terminal row is authoritative.
+
+## Paired Classification
+
+Both axes are now harvested for the same archive SHA
+`2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a` and the
+same runtime content tree
+`630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718`.
+
+| axis | score | seg | pose | rate term | runtime tree |
+|---|---:|---:|---:|---:|---|
+| `[contest-CPU]` | `3.8987840060549908` | `0.02515302` | `0.18508005` | `0.023040717354886494` | `2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584` |
+| `[contest-CUDA]` | `3.9007398365396795` | `0.02515214` | `0.18563657` | `0.023040717354886494` | `2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28` |
+
+The CPU/CUDA gap is only about `0.001956`, so this is not primarily a
+hardware-axis surprise. It is a paired, component-collapsed measured
+configuration: the byte term is excellent, but the frame distortion contract is
+not remotely score-bearing.
+
+## Side-Info Liveness Finding
+
+The materialized TT5L archive now fails the tightened work-unit status check
+because its per-pair temporal side-info stream is all zero:
+
+| field | value |
+|---|---|
+| archive member | `0.bin` |
+| num_pairs | `600` |
+| per_pair_bytes | `45` |
+| total_values | `27000` |
+| nonzero_values | `0` |
+| nonzero_fraction | `0.0` |
+
+This explains why the tiny archive can pass rate accounting while collapsing
+SegNet/PoseNet: the measured 25ep packet did not carry an active per-pair
+temporal correction signal. This is not a proof that TT5L or the L5 staircase
+is dead; it is a precise measured-config failure for the all-zero-side-info
+packet.
+
+Hardening added in the live code path:
+
+- `src/tac/optimization/l5_staircase_v2.py` inspects TT5L `archive.zip`
+  side-info during materialized paired work-unit validation.
+- All-zero side-info now blocks future TT5L paired work-unit dispatch readiness
+  with
+  `l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_all_zero`.
+- Focused tests cover both nonzero-side-info pass-through and all-zero-side-info
+  rejection.
+
+## Probe Intake Update
+
+The returned paired results were converted into the L5 v2 probe observation
+intake and gate artifacts:
+
+- `.omx/research/l5_v2_probe_observation_intake_20260516_codex.json`
+- `.omx/research/l5_v2_probe_observation_intake_20260516_codex.md`
+- `.omx/research/l5_v2_probe_gate_artifact_20260516_codex.json`
+
+The updated intake now records TT5L exact axes as
+`['contest_cpu', 'contest_cuda']`, but the gate remains fail-closed:
+
+- C1 and Z5 paired exact observations are still missing.
+- TT5L `sideinfo_consumed=false`.
+- TT5L score deltas are still missing because no axis-matched non-TT5L baseline
+  row has been bound into this probe observation.
+- `architecture_lock_allowed=false`.
+
+One hardening bug was fixed in `src/tac/optimization/l5_v2_probe_intake.py`:
+Modal CPU evidence records Linux/x86_64 custody through
+`provenance.platform_system` + `provenance.platform_machine`, and the CPU run
+can carry an `auto` inflate policy while the actual provenance device is CPU.
+The intake now normalizes that to hardware `Linux x86_64` and inflate device
+`cpu` for CPU-axis validation. It also ignores the expected Modal CPU
+`gpu_model=<error:FileNotFoundError...>` probe artifact instead of treating that
+as hardware authority.
+
 ## Classification
 
 This is a legitimate recovered `[contest-CUDA]` result for the exact archive and
-runtime above, but it is a negative result for the measured configuration:
+runtime above, and now a legitimate recovered `[contest-CPU]` result for the
+same paired packet. It is a negative result for the measured configuration:
 
 - Not a promotion result.
 - Not submission-ready.
 - Not a reason to kill L5 or L5-v2 as a campaign.
-- Classification: `component_collapse_or_recovered_runtime_config_regression`
-  until xray review proves whether the failure is model-quality, archive
-  grammar, inflate-runtime, scorer-device sensitivity, or a training/export
-  mismatch.
+- Classification: `training_export_zero_sideinfo_mismatch`.
 
 The small archive byte term succeeded mechanically, but SegNet and PoseNet
 distortions dominate the score. The measured failure therefore lives in the
-distortion contract, not in rate accounting.
+distortion contract, not in rate accounting. The proximate engineering cause is
+a dead per-pair side-info channel in the exported archive/checkpoint, not a
+CPU/CUDA axis surprise.
 
 ## Required Follow-Up
 
-1. Recover the CPU axis through the command above and append a paired result
-   addendum with `[contest-CPU]` fields.
-2. Run an xray-style output review on the CUDA inflated frames before changing
+1. Run an xray-style output review on the CPU and CUDA inflated frames before changing
    lane status. Minimum checks: frame count, raw output manifest, first/last
    frame sanity, per-component collapse localization, and comparison against the
    original 25ep smoke artifacts.
-3. Check whether the recovered runtime tree matches the intended TT5L smoke
+2. Check whether the recovered runtime tree matches the intended TT5L smoke
    runtime semantics, not just the projected tree hash.
-4. If the failure is export/runtime mismatch, repair and re-pair the same archive
+3. Materialize the TT5L side-info effect curve (`zero`, `random_lsb`,
+   `shuffled`, `trained`, `ablated`) on both axes before treating side-info as
+   causally useful.
+4. Repair TT5L training/export so `trained` side-info is nonzero and consumed,
+   then rerun paired exact only after the liveness guard passes.
+5. Materialize C1 and Z5 paired exact work units so the C1/Z5/TT5L probe gate
+   can arbitrate the staircase from comparable evidence.
+6. Build the Z6 L1 scaffold as the next non-local-minimum score-lowering
+   action; do not wait for TT5L 25ep debugging to finish before starting Z6.
+7. If the failure is export/runtime mismatch, repair and re-pair the same archive
    class. If the failure is trained model quality, treat this exact 25ep archive
    as a negative anchor and continue L5-v2 with a stronger byte-closed
    predictive-receiver/export design.
 
 ## No-Signal-Loss Notes
 
-- The untracked live claim ledger records terminal CUDA recovery and active CPU
-  pending rows, including the same call ids above.
+- The untracked live claim ledger records terminal CUDA and CPU recovery rows,
+  including the same call ids above.
 - Raw Modal artifacts are retained under `experiments/results/l5_v2_probe/` and
   intentionally remain ignored.
 - This tracked ledger is the durable source for future analysis, paper
