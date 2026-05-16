@@ -23,6 +23,50 @@ Operator confirmation (2026-05-13, post-synthesis): "The time-traveler frame is 
 
 This memo formalizes that synthesis.
 
+## Primary Source Basis
+
+Retrieved 2026-05-16. These sources motivate the architecture but do not
+authorize score claims, promotion, or dispatch without byte-closed contest
+artifacts.
+
+- Contest formula and submission/runtime contract:
+  https://github.com/commaai/comma_video_compression_challenge
+- Public HNeRV/PacketIR frontier lineage:
+  - PR95: https://github.com/commaai/comma_video_compression_challenge/pull/95
+  - PR100: https://github.com/commaai/comma_video_compression_challenge/pull/100
+  - PR101: https://github.com/commaai/comma_video_compression_challenge/pull/101
+  - PR103: https://github.com/commaai/comma_video_compression_challenge/pull/103
+  - PR106: https://github.com/commaai/comma_video_compression_challenge/pull/106
+- Neural representation baseline family:
+  - HNeRV CVF: https://openaccess.thecvf.com/content/CVPR2023/html/Chen_HNeRV_A_Hybrid_Neural_Representation_for_Videos_CVPR_2023_paper.html
+  - HNeRV arXiv: https://arxiv.org/abs/2304.02633
+- Decoder-side information / predictive receiver theory:
+  - Shannon (1959), "Coding theorems for a discrete source with a fidelity criterion"
+  - Slepian & Wolf (1973), "Noiseless coding of correlated information sources",
+    https://doi.org/10.1109/TIT.1973.1055037
+  - Wyner & Ziv (1976), "The rate-distortion function for source coding with side information at the decoder",
+    https://doi.org/10.1109/TIT.1976.1055508
+- Predictive coding / efficient coding:
+  - Atick & Redlich (1990), https://doi.org/10.1162/neco.1990.2.3.308
+  - Rao & Ballard (1999), https://doi.org/10.1038/4580
+  - Friston (2010), https://doi.org/10.1038/nrn2787
+- Runtime-aware neural video codec pressure:
+  - DCVC-RT arXiv: https://arxiv.org/abs/2502.20762
+  - DCVC code family: https://github.com/microsoft/DCVC
+- Temporal-coherence representation pressure:
+  - TeCoNeRV arXiv: https://arxiv.org/abs/2602.16711
+  - TeCoNeRV project page: https://namithap10.github.io/teconerv/
+
+## Claim-Blocking Notes
+
+- The predicted contest-CPU score band below remains a planning prior until an
+  archive/runtime packet has paired CPU/CUDA exact eval.
+- Byte budgets below are design targets, not measured archive bytes, until a
+  packet manifest records section offsets, archive SHA-256, runtime tree/content
+  SHA-256, and inflate output custody.
+- "Sub-100K params" is a constraint hypothesis; it is not an empirical result
+  until the exported decoder is counted from the exact archive grammar.
+
 ## The Architecture
 
 ```

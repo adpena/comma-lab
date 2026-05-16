@@ -40,6 +40,41 @@ Mature the full Time-Traveler L5 architecture: cooperative-receiver + predictive
 - Rao-Ballard 1999 + Friston 2010 (predictive coding hierarchy)
 - Shannon 1959 (vector-valued R(D) — recovered by ancient-elder memo §16 as a single highest-leverage theoretical work)
 
+**Primary URLs / identifiers (retrieved 2026-05-16):**
+- Official challenge/runtime contract:
+  https://github.com/commaai/comma_video_compression_challenge
+- Public frontier lineage:
+  - PR95: https://github.com/commaai/comma_video_compression_challenge/pull/95
+  - PR100: https://github.com/commaai/comma_video_compression_challenge/pull/100
+  - PR101: https://github.com/commaai/comma_video_compression_challenge/pull/101
+  - PR103: https://github.com/commaai/comma_video_compression_challenge/pull/103
+  - PR106: https://github.com/commaai/comma_video_compression_challenge/pull/106
+- HNeRV:
+  https://openaccess.thecvf.com/content/CVPR2023/html/Chen_HNeRV_A_Hybrid_Neural_Representation_for_Videos_CVPR_2023_paper.html
+  and https://arxiv.org/abs/2304.02633
+- DCVC-RT:
+  https://arxiv.org/abs/2502.20762 and https://github.com/microsoft/DCVC
+- TeCoNeRV:
+  https://arxiv.org/abs/2602.16711 and https://namithap10.github.io/teconerv/
+- Atick-Redlich:
+  https://doi.org/10.1162/neco.1990.2.3.308
+- Rao-Ballard:
+  https://doi.org/10.1038/4580
+- Friston free-energy:
+  https://doi.org/10.1038/nrn2787
+- Slepian-Wolf:
+  https://doi.org/10.1109/TIT.1973.1055037
+- Wyner-Ziv:
+  https://doi.org/10.1109/TIT.1976.1055508
+
+**Claim blockers:**
+- The `[0.035, 0.07]` asymptote is a planning prior, not an empirical score.
+- Provider cost rows are planning estimates unless refreshed by a live provider
+  rate snapshot at dispatch time.
+- Mature-L5 claims require a byte-closed archive grammar, exact archive SHA,
+  runtime tree/content SHA, paired CPU/CUDA exact eval, and component deltas
+  before public/paper wording can call the result empirical.
+
 **Hypothesis (Time-Traveler post-L5 asymptote):**
 1. Full L5 substrate composes 5 first-principles design moves: (1) cooperative-receiver, (2) predictive coding, (3) foveation matched to ego-motion, (4) differentiable world model, (5) sub-100K params with Tikhonov regularization.
 2. Each prior staircase step (Z3, Z4, Z5, Z6) leaves cumulative slack; Z7 closes the gap to Time-Traveler's deep-future prediction by iterating + composing all 5 mechanisms in ONE coherent archive grammar.
