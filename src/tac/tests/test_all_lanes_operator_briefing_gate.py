@@ -360,10 +360,34 @@ def test_operator_briefing_dispatch_gate_rejects_tt5l_timing_without_probe_plan(
 
     assert (
         "l5_v2_frontier_readiness:"
-        "tt5l_timing_smoke_without_dykstra_sideinfo_probe_and_paired_axis_plan"
+        "tt5l_timing_smoke_without_dykstra_move_level_sideinfo_probe_paired_axis_plan_and_timing_artifact"
         in failures
     )
     assert "l5_v2_frontier_readiness:tt5l_dykstra_status_validity_mismatch" not in failures
+
+
+def test_operator_briefing_dispatch_gate_rejects_l5_gate_probe_without_tt5l_preconditions() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    l5["l5_ready_for_gate_probe_dispatch"] = True
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:"
+        "gate_probe_dispatch_without_tt5l_cargo_cult_preconditions"
+        in failures
+    )
 
 
 def test_operator_briefing_dispatch_gate_rejects_sideinfo_curve_without_dykstra() -> None:
@@ -387,7 +411,7 @@ def test_operator_briefing_dispatch_gate_rejects_sideinfo_curve_without_dykstra(
 
     assert (
         "l5_v2_frontier_readiness:"
-        "tt5l_sideinfo_effect_curve_without_dykstra_and_sideinfo"
+        "tt5l_sideinfo_effect_curve_without_dykstra_move_level_and_sideinfo"
         in failures
     )
 

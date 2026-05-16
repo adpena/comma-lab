@@ -110,6 +110,9 @@ TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA = "tt5l_move_level_feasibility_v1"
 TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID = (
     "tt5l_move_level_constraint_feasibility_v1"
 )
+TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH = (
+    "tools/build_tt5l_first_anchor_timing_smoke_artifact.py"
+)
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH = (
     ".omx/state/tt5l_first_anchor_timing_smoke.json"
 )
@@ -320,6 +323,7 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
             ),
             deliverable_surface=(
                 "experiments/results/time_traveler_l5_v2/ + "
+                f"{TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH} + "
                 f"{TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH}"
             ),
             required_gate_ids=(
@@ -1641,6 +1645,18 @@ def _tt5l_first_anchor_timing_smoke_status(*, repo_root: Path) -> dict[str, Any]
     }
 
 
+def tt5l_first_anchor_timing_smoke_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return public TT5L timing-smoke custody status for tools and tests."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    return _tt5l_first_anchor_timing_smoke_status(repo_root=resolved_repo_root)
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -1862,6 +1878,16 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         next_action = {
             "action_id": "materialize_tt5l_first_anchor_timing_smoke_artifact",
             "phase": "first_anchor_timing_smoke_custody",
+            "tool_path": TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH,
+            "command_template": (
+                f".venv/bin/python {TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH} "
+                "--result-artifact <timing_smoke_result_json> "
+                "--provider <provider> --hardware <hardware> "
+                "--provider-call-id <provider_call_id> "
+                "--elapsed-seconds <seconds> "
+                "--seconds-per-epoch <seconds_per_epoch> "
+                "--command-argv-json '<exact argv json array>'"
+            ),
             "artifact_path": TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH,
             "predicate_id": TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID,
             "required_axes": list(_REQUIRED_EXACT_AXES),
@@ -3362,6 +3388,27 @@ def l5_v2_dispatch_readiness(
             repo_root=resolved_repo_root,
         )
     )
+    tt5l_campaign = payload["tt5l_campaign_readiness"]
+    tt5l_cargo_cult_preconditions_valid = (
+        tt5l_campaign["dykstra_feasibility_artifact_valid"] is True
+        and tt5l_campaign["move_level_feasibility_artifact_valid"] is True
+    )
+    payload["tt5l_cargo_cult_preconditions_valid"] = (
+        tt5l_cargo_cult_preconditions_valid
+    )
+    if not tt5l_cargo_cult_preconditions_valid:
+        payload["ready_for_gate_probe_dispatch"] = False
+        payload["ready_for_score_or_rank_dispatch"] = False
+        payload["ready_for_dispatch"] = False
+        if all_gate_evidence_valid:
+            payload["blockers"].append(
+                "tt5l_cargo_cult_preconditions_not_gate_probe_ready"
+            )
+            payload["blockers"].extend(
+                f"tt5l_campaign:{blocker}"
+                for blocker in tt5l_campaign.get("blockers", [])
+                if str(blocker)
+            )
     return payload
 
 
@@ -3396,6 +3443,7 @@ __all__ = [
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH",
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID",
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA",
+    "TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",
@@ -3422,4 +3470,5 @@ __all__ = [
     "l5_v2_research_basis_ids",
     "l5_v2_staircase_steps",
     "l5_v2_tt5l_campaign_readiness",
+    "tt5l_first_anchor_timing_smoke_status",
 ]

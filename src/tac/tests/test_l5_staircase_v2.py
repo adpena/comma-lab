@@ -773,6 +773,10 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
 
     anchor_step = next(step for step in steps if step.step_id == "l5v2_04_paired_axis_anchor")
     assert (
+        l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH
+        in anchor_step.deliverable_surface
+    )
+    assert (
         l5_v2.TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH
         in anchor_step.deliverable_surface
     )
@@ -1969,7 +1973,9 @@ def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) ->
 
     assert ready["all_gate_claims_satisfied"] is True
     assert ready["all_gate_evidence_valid"] is True
-    assert ready["ready_for_gate_probe_dispatch"] is True
+    assert ready["ready_for_gate_probe_dispatch"] is False
+    assert ready["tt5l_cargo_cult_preconditions_valid"] is False
+    assert "tt5l_cargo_cult_preconditions_not_gate_probe_ready" in ready["blockers"]
     assert ready["ready_for_score_or_rank_dispatch"] is False
     assert ready["ready_for_dispatch"] is False
     assert "prediction_band_not_dispatch_ready" in ready["blockers"]
@@ -1985,9 +1991,29 @@ def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) ->
     assert all(gate["evidence_valid"] is True for gate in ready["gates"])
 
 
+def test_l5_v2_dispatch_readiness_gate_probe_requires_tt5l_feasibility(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+
+    ready = l5_v2_dispatch_readiness(
+        gate_evidence=_valid_gate_evidence(tmp_path),
+        repo_root=tmp_path,
+    )
+
+    assert ready["all_gate_evidence_valid"] is True
+    assert ready["tt5l_cargo_cult_preconditions_valid"] is True
+    assert ready["ready_for_gate_probe_dispatch"] is True
+    assert "tt5l_cargo_cult_preconditions_not_gate_probe_ready" not in ready["blockers"]
+    assert ready["ready_for_score_or_rank_dispatch"] is False
+    assert ready["ready_for_dispatch"] is False
+
+
 def test_l5_v2_valid_gates_do_not_unlock_blocked_prediction_band(
     tmp_path: Path,
 ) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+
     readiness = l5_v2_dispatch_readiness(
         gate_evidence=_valid_gate_evidence(tmp_path),
         repo_root=tmp_path,

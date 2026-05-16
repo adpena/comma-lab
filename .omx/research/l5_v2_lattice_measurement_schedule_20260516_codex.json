@@ -10,16 +10,7 @@
   "measurements": [
     {
       "blockers": [
-        "l5_v2_probe_artifact_path_missing",
-        "l5_v2_probe_artifact_sha_invalid",
-        "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
-        "l5_v2_probe_byte_closed_archive_missing",
-        "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_archive_sha_invalid",
-        "l5_v2_probe_runtime_tree_sha_invalid",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
-        "l5_v2_probe_axis_evidence_missing:contest_cuda"
+        "l5_v2_probe_observation_missing"
       ],
       "candidate_id": "c1_world_model_foveation",
       "estimated_cost_usd": 2.0,
@@ -37,16 +28,7 @@
     },
     {
       "blockers": [
-        "l5_v2_probe_artifact_path_missing",
-        "l5_v2_probe_artifact_sha_invalid",
-        "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
-        "l5_v2_probe_byte_closed_archive_missing",
-        "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_archive_sha_invalid",
-        "l5_v2_probe_runtime_tree_sha_invalid",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
-        "l5_v2_probe_axis_evidence_missing:contest_cuda"
+        "l5_v2_probe_observation_missing"
       ],
       "candidate_id": "z5_predictive_coding_world_model",
       "estimated_cost_usd": 5.0,
@@ -64,15 +46,7 @@
     },
     {
       "blockers": [
-        "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
-        "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
-        "l5_v2_probe_contest_evidence_grade_missing",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
-        "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
-        "l5_v2_probe_axis_log_path_missing:contest_cuda",
-        "l5_v2_probe_axis_score_delta_missing:contest_cuda"
+        "l5_v2_probe_observation_missing"
       ],
       "candidate_id": "time_traveler_l5_autonomy",
       "estimated_cost_usd": 7.5,
@@ -91,7 +65,8 @@
     {
       "blockers": [
         "tt5l_sideinfo_effect_curve_missing",
-        "consumption_proof_is_not_yet_usefulness_proof"
+        "consumption_proof_is_not_yet_usefulness_proof",
+        "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
       ],
       "candidate_id": "time_traveler_l5_autonomy",
       "estimated_cost_usd": 1.0,
@@ -99,9 +74,10 @@
       "measurement_id": "measure_tt5l_sideinfo_effect_curve",
       "output_artifact": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl",
       "promotion_eligible": false,
-      "purpose": "separate side-info consumption from causal usefulness via zero, random-LSB, shuffled, trained, and ablated side-info",
+      "purpose": "separate side-info consumption from causal usefulness with paired CPU/CUDA zero, random-LSB, shuffled, trained, and ablated side-info",
       "ready_for_exact_eval_dispatch": false,
       "required_axes": [
+        "contest_cpu",
         "contest_cuda"
       ],
       "score_claim": false
@@ -157,7 +133,10 @@
         "measure_tt5l_sideinfo_effect_curve"
       ],
       "missing_or_blocked_candidates": [],
-      "rule_id": "measure_tt5l_sideinfo_effect_curve"
+      "rule_id": "measure_tt5l_sideinfo_effect_curve",
+      "sideinfo_effect_curve_blockers": [
+        "tt5l_sideinfo_effect_curve_missing"
+      ]
     },
     {
       "condition": "probe lock and side-info effect curve are both present",
@@ -166,10 +145,15 @@
         "prepare_l5_v2_paired_anchor_packet"
       ],
       "missing_or_blocked_candidates": [],
-      "rule_id": "prepare_paired_anchor_packet"
+      "rule_id": "prepare_paired_anchor_packet",
+      "sideinfo_effect_curve_blockers": []
     }
   ],
   "schema": "l5_v2_lattice_measurement_schedule_v1",
   "score_claim": false,
+  "sideinfo_effect_curve_blockers": [
+    "tt5l_sideinfo_effect_curve_missing"
+  ],
+  "sideinfo_effect_curve_valid": false,
   "tool": "tools/build_l5_v2_lattice_measurement_schedule.py"
 }

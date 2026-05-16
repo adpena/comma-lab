@@ -836,27 +836,42 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                         f"l5_v2_frontier_readiness:tt5l_campaign:{flag}_not_false"
                     )
             dykstra_valid = tt5l.get("dykstra_feasibility_artifact_valid") is True
+            move_level_valid = (
+                tt5l.get("move_level_feasibility_artifact_valid") is True
+            )
             sideinfo_valid = tt5l.get("sideinfo_gate_evidence_valid") is True
             probe_valid = tt5l.get("probe_gate_evidence_valid") is True
             paired_axis_plan_valid = (
                 tt5l.get("paired_axis_plan_evidence_valid") is True
             )
-            if tt5l.get("sideinfo_effect_curve_allowed") is True and not (
-                dykstra_valid and sideinfo_valid
+            timing_smoke_artifact_valid = (
+                tt5l.get("first_anchor_timing_smoke_artifact_valid") is True
+            )
+            if l5.get("l5_ready_for_gate_probe_dispatch") is True and not (
+                dykstra_valid and move_level_valid
             ):
                 failures.append(
                     "l5_v2_frontier_readiness:"
-                    "tt5l_sideinfo_effect_curve_without_dykstra_and_sideinfo"
+                    "gate_probe_dispatch_without_tt5l_cargo_cult_preconditions"
+                )
+            if tt5l.get("sideinfo_effect_curve_allowed") is True and not (
+                dykstra_valid and move_level_valid and sideinfo_valid
+            ):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    "tt5l_sideinfo_effect_curve_without_dykstra_move_level_and_sideinfo"
                 )
             if tt5l.get("first_anchor_timing_smoke_allowed") is True and not (
                 dykstra_valid
+                and move_level_valid
                 and sideinfo_valid
                 and probe_valid
                 and paired_axis_plan_valid
+                and timing_smoke_artifact_valid
             ):
                 failures.append(
                     "l5_v2_frontier_readiness:"
-                    "tt5l_timing_smoke_without_dykstra_sideinfo_probe_and_paired_axis_plan"
+                    "tt5l_timing_smoke_without_dykstra_move_level_sideinfo_probe_paired_axis_plan_and_timing_artifact"
                 )
             dykstra_status = tt5l.get("dykstra_feasibility_status")
             if not isinstance(dykstra_status, dict):
