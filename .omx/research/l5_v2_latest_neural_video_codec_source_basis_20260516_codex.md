@@ -45,7 +45,7 @@ Retrieved 2026-05-16.
   without a byte-closed contest grammar and scorer-aware training.
 - PR101/PR106 links are public-frontier provenance anchors; any exact score
   claim still requires local archive SHA, runtime tree/content SHA, CPU/CUDA
-  axis labels, logs, and paired exact-eval custody.
+  axis labels, logs, and paired CPU/CUDA exact-eval custody.
 
 ## Integration
 

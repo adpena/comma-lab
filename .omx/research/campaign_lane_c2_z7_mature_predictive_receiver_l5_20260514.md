@@ -41,6 +41,8 @@ Mature the full Time-Traveler L5 architecture: cooperative-receiver + predictive
 - Shannon 1959 (vector-valued R(D) — recovered by ancient-elder memo §16 as a single highest-leverage theoretical work)
 
 **Primary URLs / identifiers (retrieved 2026-05-16):**
+Retrieved 2026-05-16.
+
 - Official challenge/runtime contract:
   https://github.com/commaai/comma_video_compression_challenge
 - Public frontier lineage:

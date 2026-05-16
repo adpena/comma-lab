@@ -12,6 +12,47 @@ def _read(path: str) -> str:
     return (REPO_ROOT / path).read_text(encoding="utf-8")
 
 
+def test_l5_v2_source_ledgers_pin_primary_sources_and_claim_blockers() -> None:
+    source_basis = _read(
+        ".omx/research/l5_v2_latest_neural_video_codec_source_basis_20260516_codex.md"
+    )
+    architecture = _read(
+        ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
+    )
+    campaign = _read(
+        ".omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md"
+    )
+
+    combined = "\n".join([source_basis, architecture, campaign])
+    for required_source in (
+        "https://github.com/commaai/comma_video_compression_challenge",
+        "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+        "https://github.com/commaai/comma_video_compression_challenge/pull/101",
+        "https://github.com/commaai/comma_video_compression_challenge/pull/106",
+        "https://openaccess.thecvf.com/content/CVPR2023/html/"
+        "Chen_HNeRV_A_Hybrid_Neural_Representation_for_Videos_CVPR_2023_paper.html",
+        "https://arxiv.org/abs/2502.20762",
+        "https://arxiv.org/abs/2602.16711",
+        "https://doi.org/10.1109/TIT.1973.1055037",
+        "https://doi.org/10.1109/TIT.1976.1055508",
+    ):
+        assert required_source in combined
+
+    for text in (source_basis, architecture, campaign):
+        assert "Retrieved 2026-05-16" in text
+        assert (
+            "do not authorize" in text
+            or "Claim Scope" in text
+            or "Claim blockers" in text
+            or "Claim-Blocking Notes" in text
+        )
+        assert "paired CPU/CUDA exact" in text or "CPU/CUDA axis labels" in text
+
+    assert "planning prior" in architecture
+    assert "planning prior" in campaign
+    assert "not contest score evidence" in source_basis
+
+
 def test_l5_family_docstrings_keep_literature_and_score_claims_separate() -> None:
     tt5l = _read("src/tac/substrates/time_traveler_l5_autonomy/__init__.py")
     z5 = _read("src/tac/substrates/z5_predictive_coding_world_model/__init__.py")
