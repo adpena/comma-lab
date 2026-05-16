@@ -1,0 +1,261 @@
+{
+  "authority_scope": "structural_move_level_mechanism_proof_only_not_score_claim_not_promotion",
+  "blockers": [],
+  "command_argv": [
+    "tools/prove_tt5l_move_level_feasibility.py",
+    "--repo-root",
+    ".",
+    "--score-axis-sanity-artifact",
+    ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+    "--output-json",
+    ".omx/research/tt5l_move_level_structural_proof_20260516_codex.json"
+  ],
+  "constraint_set_count": 8,
+  "constraint_set_ids": [
+    "contest_pose_dist_budget",
+    "contest_rate_budget",
+    "contest_seg_dist_budget",
+    "tt5l_cooperative_receiver",
+    "tt5l_differentiable_world_model",
+    "tt5l_ego_motion_foveation",
+    "tt5l_predictive_coding_hierarchy",
+    "tt5l_tikhonov_rate_regularization"
+  ],
+  "generated_at_utc": "2026-05-16T19:03:46.725079+00:00",
+  "generated_by_tool": "tools/prove_tt5l_move_level_feasibility.py",
+  "mechanism_records": [
+    {
+      "constraint_id": "contest_rate_budget",
+      "details": {
+        "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+        "dykstra_move_level_constraint_proof": false,
+        "dykstra_verdict": "FEASIBLE",
+        "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+        "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "contest_seg_dist_budget",
+      "details": {
+        "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+        "dykstra_move_level_constraint_proof": false,
+        "dykstra_verdict": "FEASIBLE",
+        "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+        "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "contest_pose_dist_budget",
+      "details": {
+        "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+        "dykstra_move_level_constraint_proof": false,
+        "dykstra_verdict": "FEASIBLE",
+        "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+        "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_predictive_coding_hierarchy",
+      "details": {
+        "residual_grad_abs_sum": 0.17035086452960968,
+        "scaled_term": 0.1139388307929039,
+        "unscaled_residual_l2": 1.1393883228302002
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_cooperative_receiver",
+      "details": {
+        "cooperative_loss": 67.75950622558594,
+        "pose_term": 10.267620086669922,
+        "proof_scope": "standin_scorer_gradient_contract",
+        "rgb_grad_abs_sum": 2.141716957092285,
+        "seg_term": 0.576265811920166
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_ego_motion_foveation",
+      "details": {
+        "foveation_grid": [
+          4,
+          6
+        ],
+        "max_output_delta_after_pose_and_foveation_perturb": 0.1745058298110962,
+        "pose_dim": 6
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_differentiable_world_model",
+      "details": {
+        "grad_abs_sum_by_group": {
+          "dynamics": 0.004405551080708392,
+          "foveation": 0.06509146094322205,
+          "pose_codes": 0.012598770670592785,
+          "renderer": 9.141135200858116
+        },
+        "output_shapes": [
+          [
+            1,
+            3,
+            8,
+            12
+          ],
+          [
+            1,
+            3,
+            8,
+            12
+          ]
+        ],
+        "proof_scope": "tiny_cpu_structural_gradient_probe"
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_tikhonov_rate_regularization",
+      "details": {
+        "adamw_weight_decay_threaded": true,
+        "argparse_flag_observed": true,
+        "implementation_kind": "AdamW_decoupled_weight_decay_regularization",
+        "trainer_path": "experiments/train_substrate_time_traveler_l5_autonomy.py",
+        "weight_decay_flag_declared": true
+      },
+      "passed": true,
+      "residual": 0.0
+    },
+    {
+      "constraint_id": "tt5l_archive_move_roundtrip",
+      "details": {
+        "archive_bytes": 1215,
+        "archive_sha256": "509d0e15ca35b3936245738aaf17d6a897bc0635da8e51192a0f79b485671e26",
+        "per_pair_side_info_shape": [
+          2,
+          45
+        ],
+        "sections": {
+          "ac_state_blob": {
+            "length": 17,
+            "start": 1090
+          },
+          "meta_blob": {
+            "length": 108,
+            "start": 1107
+          },
+          "per_pair_side_info_blob": {
+            "length": 10,
+            "start": 1080
+          },
+          "tt5l_header": {
+            "length": 34,
+            "start": 0
+          },
+          "world_model_blob": {
+            "length": 1046,
+            "start": 34
+          }
+        }
+      },
+      "passed": true,
+      "residual": 0.0
+    }
+  ],
+  "move_level_constraint_proof": true,
+  "predicate_id": "tt5l_move_level_constraint_feasibility_v1",
+  "predicate_passed": true,
+  "promotion_eligible": false,
+  "proof_type": "structural_mechanism_feasibility",
+  "ready_for_exact_eval_dispatch": false,
+  "residual_max": 0.0,
+  "residual_tolerance": 1e-12,
+  "schema": "tt5l_move_level_structural_feasibility_proof_v1",
+  "score_axis_sanity_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+  "score_axis_sanity_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60",
+  "score_claim": false,
+  "subject_id": "time_traveler_l5_5move",
+  "tool_sha256": "fc96ca6bd89d772ee004c9c8222d842b698b6b812c6d75b647c1ccf4e55bfbf0",
+  "witness_variables": {
+    "contest_pose_dist_budget": {
+      "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+      "dykstra_move_level_constraint_proof": false,
+      "dykstra_verdict": "FEASIBLE",
+      "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+      "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+    },
+    "contest_rate_budget": {
+      "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+      "dykstra_move_level_constraint_proof": false,
+      "dykstra_verdict": "FEASIBLE",
+      "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+      "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+    },
+    "contest_seg_dist_budget": {
+      "authority_scope": "contest_axes_bound_to_dykstra_sanity_not_reproved_here",
+      "dykstra_move_level_constraint_proof": false,
+      "dykstra_verdict": "FEASIBLE",
+      "score_axis_artifact_path": ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+      "score_axis_artifact_sha256": "226c227c1c08b25ea7208c6ee774f7621b25c25929870c28535a1f8896504b60"
+    },
+    "tt5l_cooperative_receiver": {
+      "cooperative_loss": 67.75950622558594,
+      "pose_term": 10.267620086669922,
+      "proof_scope": "standin_scorer_gradient_contract",
+      "rgb_grad_abs_sum": 2.141716957092285,
+      "seg_term": 0.576265811920166
+    },
+    "tt5l_differentiable_world_model": {
+      "grad_abs_sum_by_group": {
+        "dynamics": 0.004405551080708392,
+        "foveation": 0.06509146094322205,
+        "pose_codes": 0.012598770670592785,
+        "renderer": 9.141135200858116
+      },
+      "output_shapes": [
+        [
+          1,
+          3,
+          8,
+          12
+        ],
+        [
+          1,
+          3,
+          8,
+          12
+        ]
+      ],
+      "proof_scope": "tiny_cpu_structural_gradient_probe"
+    },
+    "tt5l_ego_motion_foveation": {
+      "foveation_grid": [
+        4,
+        6
+      ],
+      "max_output_delta_after_pose_and_foveation_perturb": 0.1745058298110962,
+      "pose_dim": 6
+    },
+    "tt5l_predictive_coding_hierarchy": {
+      "residual_grad_abs_sum": 0.17035086452960968,
+      "scaled_term": 0.1139388307929039,
+      "unscaled_residual_l2": 1.1393883228302002
+    },
+    "tt5l_tikhonov_rate_regularization": {
+      "adamw_weight_decay_threaded": true,
+      "argparse_flag_observed": true,
+      "implementation_kind": "AdamW_decoupled_weight_decay_regularization",
+      "trainer_path": "experiments/train_substrate_time_traveler_l5_autonomy.py",
+      "weight_decay_flag_declared": true
+    }
+  }
+}

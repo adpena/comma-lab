@@ -541,6 +541,22 @@ def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object
 
 
 def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
+    source_root = Path(__file__).resolve().parent.parent.parent.parent
+    builder_tool_path = repo_root / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH
+    builder_tool_path.parent.mkdir(parents=True, exist_ok=True)
+    builder_tool_path.write_text(
+        (
+            source_root / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH
+        ).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    proof_tool_relpath = "tools/prove_tt5l_move_level_feasibility.py"
+    proof_tool_path = repo_root / proof_tool_relpath
+    proof_tool_path.parent.mkdir(parents=True, exist_ok=True)
+    proof_tool_path.write_text(
+        (source_root / proof_tool_relpath).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     proof_artifact_path = (
         repo_root
         / "experiments"
@@ -562,13 +578,32 @@ def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    dykstra_artifact_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
+    mechanism_records = [
+        {
+            "constraint_id": constraint_id,
+            "passed": True,
+            "residual": 0.0,
+            "details": {"fixture": True},
+        }
+        for constraint_id in sorted(l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS)
+    ]
+    artifact_path = repo_root / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    proof_payload["score_axis_sanity_artifact_sha256"] = _file_sha256(
+        dykstra_artifact_path
+    )
+    proof_payload["generated_by_tool"] = proof_tool_relpath
+    proof_payload["tool_sha256"] = _file_sha256(proof_tool_path)
+    proof_payload["mechanism_records"] = mechanism_records
+    proof_payload["witness_variables"] = {
+        constraint_id: {"fixture": True}
+        for constraint_id in sorted(l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS)
+    }
     proof_artifact_path.write_text(
         json.dumps(proof_payload, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    dykstra_artifact_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
-    artifact_path = repo_root / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
     artifact_path.write_text(
         json.dumps(
             {
@@ -594,6 +629,7 @@ def _write_tt5l_move_level_feasibility_artifact(repo_root: Path) -> Path:
                     dykstra_artifact_path
                 ),
                 "generated_by_tool": l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+                "tool_sha256": _file_sha256(builder_tool_path),
                 "generated_at_utc": "2026-05-16T00:00:00+00:00",
                 "command_argv": [
                     ".venv/bin/python",
@@ -1112,6 +1148,53 @@ def test_l5_v2_tt5l_move_level_feasibility_requires_proof_hash_match(
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
     assert tt5l["move_level_feasibility_artifact_valid"] is False
     assert "tt5l_move_level_feasibility_proof_artifact_sha256_mismatch" in tt5l[
+        "blockers"
+    ]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_move_level_feasibility_proof"
+    )
+
+
+def test_l5_v2_tt5l_move_level_feasibility_rejects_handwritten_shape(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    artifact_path = tmp_path / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA,
+                "subject_id": l5_v2.TT5L_DYKSTRA_SUBSTRATE_ID,
+                "predicate_id": l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID,
+                "predicate_passed": True,
+                "move_level_constraint_proof": True,
+                "residual_max": 0.0,
+                "residual_tolerance": 1e-9,
+                "constraint_set_ids": sorted(
+                    l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                ),
+                "constraint_set_count": len(
+                    l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["move_level_feasibility_artifact_valid"] is False
+    assert "tt5l_move_level_feasibility_generated_by_tool_mismatch" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_move_level_feasibility_tool_sha256_invalid" in tt5l["blockers"]
+    assert "tt5l_move_level_feasibility_proof_artifact_path_missing" in tt5l[
         "blockers"
     ]
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (

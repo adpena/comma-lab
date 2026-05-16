@@ -94,7 +94,21 @@ def _float_field(payload: dict[str, Any], field: str) -> float:
     return parsed
 
 
-def _proof_payload_fields(proof_payload: dict[str, Any]) -> tuple[float, float, list[str]]:
+def _proof_payload_fields(
+    proof_payload: dict[str, Any],
+    *,
+    repo_root: Path,
+) -> tuple[float, float, list[str]]:
+    proof_tool = str(proof_payload.get("generated_by_tool") or "").strip()
+    if not proof_tool:
+        raise ValueError("proof artifact generated_by_tool is required")
+    proof_tool_path = _repo_path(proof_tool, repo_root=repo_root)
+    if not proof_tool_path.is_file():
+        raise ValueError(f"proof artifact generating tool is missing: {proof_tool}")
+    proof_tool_sha256 = str(proof_payload.get("tool_sha256") or "").strip().lower()
+    if _sha256_file(proof_tool_path) != proof_tool_sha256:
+        raise ValueError("proof artifact tool_sha256 does not match generated_by_tool")
+
     if proof_payload.get("predicate_passed") is not True:
         raise ValueError("proof artifact predicate_passed must be true")
     if proof_payload.get("move_level_constraint_proof") is not True:
@@ -115,6 +129,23 @@ def _proof_payload_fields(proof_payload: dict[str, Any]) -> tuple[float, float, 
     constraint_ids = sorted({str(item) for item in raw_constraint_ids if str(item)})
     if set(constraint_ids) != TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS:
         raise ValueError("proof artifact constraint_set_ids do not match TT5L set")
+
+    records = proof_payload.get("mechanism_records")
+    if not isinstance(records, list) or not records:
+        raise ValueError("proof artifact mechanism_records must be a non-empty list")
+    passed_record_ids = {
+        str(record.get("constraint_id") or "")
+        for record in records
+        if isinstance(record, dict)
+        and record.get("passed") is True
+        and isinstance(record.get("details"), dict)
+        and bool(record["details"])
+    }
+    if not TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS.issubset(passed_record_ids):
+        raise ValueError("proof artifact mechanism_records do not cover TT5L set")
+    witness_variables = proof_payload.get("witness_variables")
+    if not isinstance(witness_variables, dict) or not witness_variables:
+        raise ValueError("proof artifact witness_variables must be a non-empty object")
     return residual_max, residual_tolerance, constraint_ids
 
 
@@ -161,8 +192,17 @@ def _payload_from_args(args: argparse.Namespace, *, repo_root: Path) -> dict[str
 
     proof_payload = _load_json_object(proof_artifact, label="proof artifact")
     residual_max, residual_tolerance, constraint_ids = _proof_payload_fields(
-        proof_payload
+        proof_payload,
+        repo_root=repo_root,
     )
+    score_axis_artifact_sha256 = _sha256_file(score_axis_artifact)
+    if proof_payload.get("score_axis_sanity_artifact_sha256") != (
+        score_axis_artifact_sha256
+    ):
+        raise ValueError(
+            "proof artifact score_axis_sanity_artifact_sha256 does not match "
+            "score-axis sanity artifact"
+        )
 
     return {
         "schema": TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA,
@@ -185,8 +225,9 @@ def _payload_from_args(args: argparse.Namespace, *, repo_root: Path) -> dict[str
             score_axis_artifact,
             repo_root=repo_root,
         ),
-        "score_axis_sanity_artifact_sha256": _sha256_file(score_axis_artifact),
+        "score_axis_sanity_artifact_sha256": score_axis_artifact_sha256,
         "generated_by_tool": TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+        "tool_sha256": _sha256_file(Path(__file__)),
         "generated_at_utc": dt.datetime.now(dt.UTC).isoformat(),
         "command_argv": args.proof_command_argv_json,
         "score_claim": False,

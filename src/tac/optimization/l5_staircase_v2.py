@@ -1451,6 +1451,25 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     generated_by_tool = str(payload.get("generated_by_tool") or "").strip()
     if payload and generated_by_tool != TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH:
         blockers.append("tt5l_move_level_feasibility_generated_by_tool_mismatch")
+    tool_sha256 = str(payload.get("tool_sha256") or "").strip().lower()
+    resolved_tool: Path | None = None
+    if payload and not _SHA256_HEX_RE.fullmatch(tool_sha256):
+        blockers.append("tt5l_move_level_feasibility_tool_sha256_invalid")
+    elif payload:
+        resolved_tool, tool_path_error = _resolve_artifact_path(
+            TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+            repo_root,
+        )
+        if tool_path_error is not None:
+            blockers.append(
+                f"tt5l_move_level_feasibility_tool_path_{tool_path_error}"
+            )
+            resolved_tool = None
+        elif resolved_tool is None or not resolved_tool.is_file():
+            blockers.append("tt5l_move_level_feasibility_tool_missing")
+            resolved_tool = None
+        elif _sha256_file(resolved_tool) != tool_sha256:
+            blockers.append("tt5l_move_level_feasibility_tool_sha256_mismatch")
     command_argv = payload.get("command_argv")
     command_argv_valid = (
         isinstance(command_argv, list)
@@ -1490,6 +1509,7 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
 
     proof_artifact_path = str(payload.get("proof_artifact_path") or "").strip()
     resolved_proof_artifact: Path | None = None
+    proof_payload: Mapping[str, Any] = {}
     if not proof_artifact_path:
         if payload:
             blockers.append("tt5l_move_level_feasibility_proof_artifact_path_missing")
@@ -1508,6 +1528,20 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         elif resolved_proof_artifact is None or not resolved_proof_artifact.is_file():
             blockers.append("tt5l_move_level_feasibility_proof_artifact_missing")
             resolved_proof_artifact = None
+        else:
+            try:
+                loaded_proof = json.loads(
+                    resolved_proof_artifact.read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError):
+                blockers.append("tt5l_move_level_feasibility_proof_artifact_json_invalid")
+            else:
+                if isinstance(loaded_proof, Mapping) and loaded_proof:
+                    proof_payload = loaded_proof
+                else:
+                    blockers.append(
+                        "tt5l_move_level_feasibility_proof_artifact_not_object"
+                    )
 
     proof_artifact_sha256 = str(
         payload.get("proof_artifact_sha256") or ""
@@ -1567,6 +1601,55 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
             "tt5l_move_level_feasibility_score_axis_sanity_artifact_sha256_mismatch"
         )
 
+    if proof_payload:
+        proof_generated_by_tool = str(proof_payload.get("generated_by_tool") or "")
+        proof_tool_sha256 = str(proof_payload.get("tool_sha256") or "").strip().lower()
+        if not proof_generated_by_tool:
+            blockers.append("tt5l_move_level_feasibility_proof_generated_by_tool_missing")
+        if not _SHA256_HEX_RE.fullmatch(proof_tool_sha256):
+            blockers.append("tt5l_move_level_feasibility_proof_tool_sha256_invalid")
+        else:
+            proof_tool_path, proof_tool_path_error = _resolve_artifact_path(
+                proof_generated_by_tool,
+                repo_root,
+            )
+            if proof_tool_path_error is not None:
+                blockers.append(
+                    "tt5l_move_level_feasibility_proof_tool_path_"
+                    f"{proof_tool_path_error}"
+                )
+            elif proof_tool_path is None or not proof_tool_path.is_file():
+                blockers.append("tt5l_move_level_feasibility_proof_tool_missing")
+            elif _sha256_file(proof_tool_path) != proof_tool_sha256:
+                blockers.append(
+                    "tt5l_move_level_feasibility_proof_tool_sha256_mismatch"
+                )
+        if proof_payload.get("score_axis_sanity_artifact_sha256") != (
+            score_axis_artifact_sha256 or None
+        ):
+            blockers.append(
+                "tt5l_move_level_feasibility_proof_score_axis_sha256_mismatch"
+            )
+        proof_records_payload = proof_payload.get("mechanism_records")
+        if isinstance(proof_records_payload, list):
+            proof_records = [
+                row for row in proof_records_payload if isinstance(row, Mapping)
+            ]
+        else:
+            proof_records = []
+        record_ids = {
+            str(record.get("constraint_id") or "")
+            for record in proof_records
+            if record.get("passed") is True and isinstance(record.get("details"), Mapping)
+        }
+        if not TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS.issubset(record_ids):
+            blockers.append(
+                "tt5l_move_level_feasibility_proof_mechanism_records_incomplete"
+            )
+        witness_variables = proof_payload.get("witness_variables")
+        if not isinstance(witness_variables, Mapping) or not witness_variables:
+            blockers.append("tt5l_move_level_feasibility_witness_variables_missing")
+
     for field in (
         "score_claim",
         "promotion_eligible",
@@ -1586,6 +1669,7 @@ def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "predicate_passed": payload.get("predicate_passed"),
         "move_level_constraint_proof": payload.get("move_level_constraint_proof"),
         "generated_by_tool": generated_by_tool or None,
+        "tool_sha256": tool_sha256 or None,
         "command_argv": list(command_argv) if command_argv_valid else None,
         "residual_max": residual_max,
         "residual_tolerance": residual_tolerance,

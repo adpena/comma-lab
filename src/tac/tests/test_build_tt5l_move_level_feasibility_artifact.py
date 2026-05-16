@@ -9,6 +9,16 @@ from pathlib import Path
 
 import tac.optimization.l5_staircase_v2 as l5_v2
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
+
+def _copy_tool_into_tmp_repo(tmp_path: Path, relpath: str) -> Path:
+    source = REPO_ROOT / relpath
+    target = tmp_path / relpath
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    return target
+
 
 def _write_score_axis_artifact(repo_root: Path) -> Path:
     artifact_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
@@ -33,7 +43,11 @@ def _write_score_axis_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
-def _write_proof_artifact(repo_root: Path) -> Path:
+def _write_proof_artifact(repo_root: Path, *, score_axis_artifact: Path) -> Path:
+    proof_tool = _copy_tool_into_tmp_repo(
+        repo_root,
+        "tools/prove_tt5l_move_level_feasibility.py",
+    )
     artifact_path = (
         repo_root
         / "experiments"
@@ -55,6 +69,28 @@ def _write_proof_artifact(repo_root: Path) -> Path:
                 "constraint_set_ids": sorted(
                     l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
                 ),
+                "score_axis_sanity_artifact_sha256": hashlib.sha256(
+                    score_axis_artifact.read_bytes()
+                ).hexdigest(),
+                "generated_by_tool": "tools/prove_tt5l_move_level_feasibility.py",
+                "tool_sha256": hashlib.sha256(proof_tool.read_bytes()).hexdigest(),
+                "mechanism_records": [
+                    {
+                        "constraint_id": constraint_id,
+                        "passed": True,
+                        "residual": 0.0,
+                        "details": {"fixture": True},
+                    }
+                    for constraint_id in sorted(
+                        l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                    )
+                ],
+                "witness_variables": {
+                    constraint_id: {"fixture": True}
+                    for constraint_id in sorted(
+                        l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                    )
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -68,10 +104,16 @@ def _write_proof_artifact(repo_root: Path) -> Path:
 
 
 def test_tt5l_move_level_tool_builds_valid_artifact(tmp_path: Path) -> None:
-    repo_root = Path(__file__).resolve().parent.parent.parent.parent
-    tool = repo_root / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
+    tool = REPO_ROOT / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
+    _copy_tool_into_tmp_repo(
+        tmp_path,
+        l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH,
+    )
     score_axis_artifact = _write_score_axis_artifact(tmp_path)
-    proof_artifact = _write_proof_artifact(tmp_path)
+    proof_artifact = _write_proof_artifact(
+        tmp_path,
+        score_axis_artifact=score_axis_artifact,
+    )
     proof_relpath = str(proof_artifact.relative_to(tmp_path))
 
     proc = subprocess.run(
@@ -110,6 +152,9 @@ def test_tt5l_move_level_tool_builds_valid_artifact(tmp_path: Path) -> None:
         score_axis_artifact.read_bytes()
     ).hexdigest()
     assert payload["generated_by_tool"] == l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH
+    assert payload["tool_sha256"] == hashlib.sha256(
+        (tmp_path / l5_v2.TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH).read_bytes()
+    ).hexdigest()
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
@@ -118,8 +163,7 @@ def test_tt5l_move_level_tool_builds_valid_artifact(tmp_path: Path) -> None:
 
 
 def test_tt5l_move_level_tool_refuses_missing_proof_artifact(tmp_path: Path) -> None:
-    repo_root = Path(__file__).resolve().parent.parent.parent.parent
-    tool = repo_root / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
+    tool = REPO_ROOT / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
     _write_score_axis_artifact(tmp_path)
 
     proc = subprocess.run(
@@ -146,10 +190,12 @@ def test_tt5l_move_level_tool_refuses_missing_proof_artifact(tmp_path: Path) -> 
 
 
 def test_tt5l_move_level_tool_refuses_unproven_payload(tmp_path: Path) -> None:
-    repo_root = Path(__file__).resolve().parent.parent.parent.parent
-    tool = repo_root / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
-    _write_score_axis_artifact(tmp_path)
-    proof_artifact = _write_proof_artifact(tmp_path)
+    tool = REPO_ROOT / "tools" / "build_tt5l_move_level_feasibility_artifact.py"
+    score_axis_artifact = _write_score_axis_artifact(tmp_path)
+    proof_artifact = _write_proof_artifact(
+        tmp_path,
+        score_axis_artifact=score_axis_artifact,
+    )
     payload = json.loads(proof_artifact.read_text(encoding="utf-8"))
     payload["move_level_constraint_proof"] = False
     proof_artifact.write_text(
