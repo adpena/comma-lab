@@ -87,6 +87,67 @@ if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
 
+CLAIM_VERIFIED=0
+append_terminal_claim() {
+    local rc="$1"
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "WARN: claim helper missing; cannot append terminal dispatch claim"
+        return 0
+    fi
+    local status
+    if [ "$rc" -eq 0 ]; then
+        status="completed_atw_codec_v2_remote_driver"
+    elif [ "${CLAIM_VERIFIED:-0}" != "1" ]; then
+        status="failed_atw_codec_v2_claim_verification_rc_${rc}"
+    else
+        status="failed_atw_codec_v2_remote_driver_rc_${rc}"
+    fi
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --force \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "remote_lane_substrate_atw_codec_v2" \
+        --status "$status" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$ATW_V2_OUTPUT_DIR" \
+        >> "$LOG_DIR/run.log" 2>&1 || {
+        log "WARN: failed to append terminal dispatch claim status=$status"
+    }
+}
+
+cleanup() {
+    local rc="$?"
+    if [ -n "$HEARTBEAT_PID" ]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    append_terminal_claim "$rc"
+    exit "$rc"
+}
+trap cleanup EXIT
+
+CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
+"$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
+    --claims-path "$DISPATCH_CLAIMS_PATH" \
+    --format json > "$CLAIM_SUMMARY_JSON" || {
+    log "FATAL: claim summary failed for $DISPATCH_CLAIMS_PATH"
+    exit 21
+}
+"$CLAIM_PYTHON" - "$CLAIM_SUMMARY_JSON" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" <<'PY'
+import json
+import sys
+
+summary_path, lane_id, job_id = sys.argv[1:4]
+payload = json.loads(open(summary_path, encoding="utf-8").read())
+for row in payload.get("active", []):
+    if row.get("lane_id") == lane_id and row.get("instance_job_id") == job_id:
+        raise SystemExit(0)
+print(f"missing active claim lane={lane_id} job={job_id}", file=sys.stderr)
+raise SystemExit(1)
+PY
+CLAIM_VERIFIED=1
+log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
+
 # Stage 0b: NVDEC probe.
 if [ -x "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
     log "stage_0b_nvdec_probe_begin"
@@ -167,7 +228,6 @@ log "stage_2_provenance_done"
     done
 ) &
 HEARTBEAT_PID=$!
-trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
 # Stage 4: invoke trainer (Catalog #172/#179 engineering primitives wired).
 log "stage_4_trainer_invoke_begin video=$ATW_V2_VIDEO_PATH epochs=$ATW_V2_EPOCHS variant=$ATW_V2_VARIANT device=$ATW_V2_DEVICE"
@@ -206,12 +266,33 @@ case "$ATW_V2_DEVICE" in
         ;;
 esac
 AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_${AUTH_EVAL_AXIS}.json"
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
-if [ -f "$AUTH_EVAL_JSON" ]; then
-    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_ATW_CODEC_V2_DONE [contest-$AUTH_EVAL_AXIS_LABEL] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC variant=$ATW_V2_VARIANT"
+ARCHIVE_ZIP_PATH="$OUTPUT_DIR/archive.zip"
+PAYLOAD_0BIN_PATH="$OUTPUT_DIR/0.bin"
+if [ "$TRAIN_RC" -eq 0 ] && [ -f "$AUTH_EVAL_JSON" ]; then
+    if AUTH_EVAL_SCORE="$(PYTHONPATH="$WORKSPACE/src${PYTHONPATH:+:$PYTHONPATH}" "$PYBIN" - "$AUTH_EVAL_JSON" "contest_${AUTH_EVAL_AXIS}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+from tac.auth_eval_result import parse_auth_eval_score_claim
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+claim = parse_auth_eval_score_claim(
+    payload,
+    required_score_axis=sys.argv[2],
+    require_component_recompute=True,
+)
+if claim is None:
+    raise SystemExit("auth eval JSON is not a custody-valid score claim")
+print(f"{claim.score:.12g}")
+PY
+)"; then
+        log "LANE_ATW_CODEC_V2_DONE [contest-$AUTH_EVAL_AXIS_LABEL] score=$AUTH_EVAL_SCORE auth_eval=$AUTH_EVAL_JSON archive_zip=$ARCHIVE_ZIP_PATH payload_0bin=$PAYLOAD_0BIN_PATH rc=$TRAIN_RC variant=$ATW_V2_VARIANT"
+    else
+        log "LANE_ATW_CODEC_V2_DONE [training-artifact] auth_eval_not_custody_valid=$AUTH_EVAL_JSON archive_zip=$ARCHIVE_ZIP_PATH payload_0bin=$PAYLOAD_0BIN_PATH rc=$TRAIN_RC variant=$ATW_V2_VARIANT"
+    fi
 else
-    log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 11)"
+    log "LANE_ATW_CODEC_V2_DONE [training-artifact] auth_eval_missing_or_trainer_failed=$AUTH_EVAL_JSON archive_zip=$ARCHIVE_ZIP_PATH payload_0bin=$PAYLOAD_0BIN_PATH rc=$TRAIN_RC variant=$ATW_V2_VARIANT"
 fi
 
 exit "$TRAIN_RC"

@@ -759,3 +759,44 @@ def test_substrate_contract_registers() -> None:
     assert "wz_head_blob" in sm
     assert "distill_head_blob" in sm
     assert "cdf_table_blob" in sm
+
+
+# ---------------------------------------------------------------------------
+# 9. Remote driver custody tests
+# ---------------------------------------------------------------------------
+
+
+def test_remote_driver_verifies_active_claim_and_terminalizes() -> None:
+    """Remote spend path must verify + close lane claims, not just name the file."""
+    text = (REPO_ROOT / "scripts/remote_lane_substrate_atw_codec_v2.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"$WORKSPACE/tools/claim_lane_dispatch.py" summary' in text
+    assert 'payload.get("active", [])' in text
+    assert 'row.get("lane_id") == lane_id' in text
+    assert 'row.get("instance_job_id") == job_id' in text
+    assert "stage_0_dispatch_claim_verified" in text
+    assert "append_terminal_claim()" in text
+    assert "completed_atw_codec_v2_remote_driver" in text
+    assert "failed_atw_codec_v2_claim_verification_rc_${rc}" in text
+    assert "--force" in text
+
+
+def test_remote_driver_labels_contest_score_only_after_claim_parser() -> None:
+    """A JSON file existing is not enough to print a contest-axis score marker."""
+    text = (REPO_ROOT / "scripts/remote_lane_substrate_atw_codec_v2.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "parse_auth_eval_score_claim" in text
+    assert "required_score_axis=sys.argv[2]" in text
+    assert "auth_eval_not_custody_valid" in text
+    assert "auth_eval_missing_or_trainer_failed" in text
+    assert 'ARCHIVE_ZIP_PATH="$OUTPUT_DIR/archive.zip"' in text
+    assert "archive_zip=$ARCHIVE_ZIP_PATH" in text
+    assert "payload_0bin=$PAYLOAD_0BIN_PATH" in text
+    assert (
+        "LANE_ATW_CODEC_V2_DONE [contest-$AUTH_EVAL_AXIS_LABEL] "
+        "score=$AUTH_EVAL_SCORE"
+    ) in text
