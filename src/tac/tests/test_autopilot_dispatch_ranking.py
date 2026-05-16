@@ -30,8 +30,8 @@ from tac.optimization.autopilot_dispatch_ranking import (
 from tac.optimization.substrate_composition_matrix import (
     ParetoRow,
     ScoreAxis,
-    SubstrateRow,
     SubstrateClass,
+    SubstrateRow,
     build_composition_matrix,
 )
 
@@ -389,6 +389,8 @@ def test_as_candidate_row_kwargs_carries_z1_metadata_to_autopilot_loop():
     from tools.cathedral_autopilot_autonomous_loop import CandidateRow
     row = CandidateRow(**cand.as_candidate_row_kwargs())
     assert row.lane_class == "substrate_class_shift"
+    assert row.lane_id == ""
+    assert row.claim_keys == []
     assert row.literature_anchor == "balle_2018"
     assert row.source_supports.startswith("Scale hyperpriors")
     assert row.paper_claim_scope.startswith("Natural-image")
@@ -444,6 +446,8 @@ def test_z3_singleton_registered_with_balle_2018_anchor_and_campaign_metadata():
     from tools.cathedral_autopilot_autonomous_loop import CandidateRow
 
     row = CandidateRow(**z3.as_candidate_row_kwargs())
+    assert row.lane_id == "lane_z3_balle_hyperprior_bolton_recover_20260514"
+    assert "lane_z3_balle_hyperprior_bolton_recover_20260514" in row.dispatch_claim_keys()
     assert row.source_supports == z3.source_supports
 
 
@@ -503,6 +507,8 @@ def test_time_traveler_l5_source_scope_flows_to_autopilot_candidate_row():
     from tools.cathedral_autopilot_autonomous_loop import CandidateRow
 
     row = CandidateRow(**tt5l.as_candidate_row_kwargs())
+    assert row.lane_id == "lane_time_traveler_l5_autonomy_substrate_20260513"
+    assert "lane_time_traveler_l5_autonomy_substrate_20260513" in row.dispatch_claim_keys()
     assert row.literature_anchor == tt5l.literature_anchor
     assert row.source_supports == tt5l.source_supports
     assert row.paper_claim_scope == tt5l.paper_claim_scope

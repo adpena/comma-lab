@@ -107,6 +107,8 @@ class RankedDispatchCandidate:
     decode_complexity_evidence: str = ""
     source_fidelity_metadata: tuple[str, ...] = ()
     campaign_metadata: tuple[str, ...] = ()
+    lane_id: str = ""
+    claim_keys: tuple[str, ...] = ()
     prediction_band: dict[str, Any] | None = None
     prediction_band_verdict: dict[str, Any] | None = None
     blockers: tuple[str, ...] = ()
@@ -131,6 +133,8 @@ class RankedDispatchCandidate:
             "estimated_dispatch_cost_usd": self.estimated_dispatch_cost_usd,
             "blockers": list(self.blockers),
             "notes": self.composition_notes,
+            "lane_id": self.lane_id,
+            "claim_keys": list(self.claim_keys),
             "lane_class": self.lane_class or None,
             "literature_anchor": self.literature_anchor,
             "source_supports": self.source_supports,
@@ -274,6 +278,8 @@ def _build_singleton_dispatch_candidates(
                 decode_complexity_evidence=r.decode_complexity_evidence,
                 source_fidelity_metadata=source_fidelity_metadata,
                 campaign_metadata=campaign_metadata,
+                lane_id=r.lane_id,
+                claim_keys=(r.lane_id,) if r.lane_id else (),
                 prediction_band=r.prediction_band,
                 prediction_band_verdict=r.prediction_band_verdict,
                 blockers=r.dispatch_blockers,
@@ -383,6 +389,11 @@ def _build_orthogonal_pair_candidates(
                 )
                 if part
             )
+            claim_keys = tuple(
+                dict.fromkeys(
+                    row.lane_id for row in (ri, rj) if row.lane_id
+                )
+            )
             prediction_band_verdicts = tuple(
                 verdict
                 for verdict in (ri.prediction_band_verdict, rj.prediction_band_verdict)
@@ -429,6 +440,7 @@ def _build_orthogonal_pair_candidates(
                     decode_complexity_evidence=decode_complexity_evidence,
                     source_fidelity_metadata=source_fidelity_metadata,
                     campaign_metadata=campaign_metadata,
+                    claim_keys=claim_keys,
                     prediction_band_verdict={
                         "components": list(prediction_band_verdicts),
                     },
@@ -609,6 +621,7 @@ def serialize_candidate(c: RankedDispatchCandidate) -> dict[str, Any]:
     d["substrate_ids"] = list(c.substrate_ids)
     d["blockers"] = list(c.blockers)
     d["campaign_metadata"] = list(c.campaign_metadata)
+    d["claim_keys"] = list(c.claim_keys)
     d["source_fidelity_metadata"] = list(c.source_fidelity_metadata)
     return d
 

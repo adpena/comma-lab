@@ -1070,6 +1070,72 @@ def test_load_substrate_composition_ranking_requires_schema(tmp_path):
         loop.load_candidates_from_substrate_composition_ranking(p)
 
 
+def _write_substrate_ranking_payload(tmp_path: Path, row: dict | None = None) -> Path:
+    p = tmp_path / "ranking.json"
+    base_row = {
+        "candidate_id": "singleton__time_traveler_l5_autonomy",
+        "family": "renderer_replacement",
+        "substrate_ids": ["time_traveler_l5_autonomy"],
+        "predicted_score_delta": -0.020,
+        "expected_information_gain": 0.0,
+        "estimated_dispatch_cost_usd": 5.0,
+        "composition_notes": "planning row",
+        "fits_per_dispatch_cap": True,
+        "fits_cumulative_envelope": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "campaign_metadata": [
+            "lane_id=lane_time_traveler_l5_autonomy_substrate_20260513",
+            "campaign_id=campaign_time_traveler_l5_v2_staircase_20260516",
+        ],
+        "mdl_tier_c_density": 0.25,
+        "predicted_dispatch_risk": 12.5,
+    }
+    if row:
+        base_row.update(row)
+    p.write_text(
+        json.dumps(
+            {
+                "schema": loop.SUBSTRATE_COMPOSITION_RANKING_SCHEMA,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "ranked_dispatches": [base_row],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return p
+
+
+def test_ranking_loader_promotes_campaign_lane_id_to_claim_keys(tmp_path):
+    p = _write_substrate_ranking_payload(tmp_path)
+
+    rows = loop.load_candidates_from_substrate_composition_ranking(p)
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.lane_id == "lane_time_traveler_l5_autonomy_substrate_20260513"
+    assert "lane_time_traveler_l5_autonomy_substrate_20260513" in row.claim_keys
+    assert row.mdl_tier_c_density == pytest.approx(0.25)
+    assert row.predicted_dispatch_risk == pytest.approx(12.5)
+
+
+def test_ranking_loader_blocks_active_lane_claim_by_campaign_lane_id(tmp_path):
+    ranking_path = _write_substrate_ranking_payload(tmp_path)
+    claims_path = tmp_path / "claims.md"
+    lane_id = "lane_time_traveler_l5_autonomy_substrate_20260513"
+    claims_path.write_text(_claims_text(_claim_row(lane_id=lane_id)), encoding="utf-8")
+    rows = loop.load_candidates_from_substrate_composition_ranking(ranking_path)
+
+    report = loop.run_one_loop_iteration(rows, claims_path=claims_path)
+
+    assert report.n_candidates_blocked_by_dispatch_claim == 1
+    assert report.n_candidates_ranked == 0
+    assert any(lane_id in note for note in report.notes)
+
+
 def test_candidate_substrate_ids_from_ranking_requires_schema(tmp_path):
     p = tmp_path / "ranking.json"
     p.write_text(

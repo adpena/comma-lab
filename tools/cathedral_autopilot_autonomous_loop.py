@@ -2116,6 +2116,18 @@ def _coerce_str_list(value: object) -> list[str]:
     return out
 
 
+def _extract_lane_ids_from_campaign_metadata(value: object) -> list[str]:
+    """Extract exact lane IDs from ranking metadata emitted before lane_id fields."""
+
+    out: list[str] = []
+    for item in _coerce_str_list(value):
+        for match in re.finditer(r"(?:^|:)lane_id=([A-Za-z0-9_.:-]+)", item):
+            lane_id = match.group(1).strip()
+            if lane_id and lane_id not in out:
+                out.append(lane_id)
+    return out
+
+
 def _json_bool_field(
     raw: dict[str, Any],
     key: str,
@@ -2562,6 +2574,16 @@ def load_candidates_from_substrate_composition_ranking(
                 composition_alpha = float(composition_alpha_raw)
             except (TypeError, ValueError):
                 composition_alpha = None
+        campaign_lane_ids = _extract_lane_ids_from_campaign_metadata(
+            raw.get("campaign_metadata")
+        )
+        lane_id = str(raw.get("lane_id") or "").strip()
+        if not lane_id and len(campaign_lane_ids) == 1:
+            lane_id = campaign_lane_ids[0]
+        claim_keys = _coerce_str_list(raw.get("claim_keys"))
+        for lane_key in campaign_lane_ids:
+            if lane_key not in claim_keys:
+                claim_keys.append(lane_key)
         rows.append(CandidateRow(
             candidate_id=str(raw["candidate_id"]),
             family=str(raw["family"]),
@@ -2583,6 +2605,7 @@ def load_candidates_from_substrate_composition_ranking(
             decode_complexity_evidence=str(
                 raw.get("decode_complexity_evidence", "")
             ),
+            mdl_tier_c_density=_coerce_optional_float(raw.get("mdl_tier_c_density")),
             composition_alpha=composition_alpha,
             license_ok=_json_bool_field(raw, "license_ok", default=True, context=context),
             inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),
@@ -2598,6 +2621,11 @@ def load_candidates_from_substrate_composition_ranking(
                 context=context,
             ),
             context_order=int(raw.get("context_order", 0) or 0),
+            predicted_dispatch_risk=_coerce_optional_float(
+                raw.get("predicted_dispatch_risk")
+            ),
+            lane_id=lane_id,
+            claim_keys=claim_keys,
             score_claim=False,
             promotion_eligible=False,
             ready_for_exact_eval_dispatch=False,
