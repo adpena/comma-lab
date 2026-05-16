@@ -172,6 +172,22 @@ Hardening added in the live code path:
 - Focused tests cover both nonzero-side-info pass-through and all-zero-side-info
   rejection.
 
+Follow-up hardening added after the paired review:
+
+- `experiments/train_substrate_time_traveler_l5_autonomy.py` now refuses to
+  export a TT5L archive when quantized per-pair side-info is empty or all zero,
+  so the exact 25ep failure class cannot silently recur at trainer export time.
+- Export provenance now records pair coverage and section coverage, not just a
+  global nonzero count: `nonzero_pair_count`, `all_zero_pair_count`,
+  `min/max/mean_nonzero_values_per_pair`, `section_liveness`, and
+  `liveness_warnings`.
+- The guard deliberately does not impose an arbitrary nonzero-fraction
+  threshold. Sparse side-info may be valid for hard-pair targeting, but the
+  provenance now exposes nearly-dead packets such as one-nonzero-byte exports
+  for adversarial review and effect-curve gating.
+- Focused tests cover empty rejection, all-zero rejection, sparse warning
+  provenance, and full section-coverage provenance.
+
 ## Probe Intake Update
 
 The returned paired results were converted into the L5 v2 probe observation
@@ -228,7 +244,9 @@ CPU/CUDA axis surprise.
    `shuffled`, `trained`, `ablated`) on both axes before treating side-info as
    causally useful.
 4. Repair TT5L training/export so `trained` side-info is nonzero and consumed,
-   then rerun paired exact only after the liveness guard passes.
+   then rerun paired exact only after the liveness guard passes and the
+   recorded pair/section coverage is plausible for the intended score-lowering
+   mechanism.
 5. Materialize C1 and Z5 paired exact work units so the C1/Z5/TT5L probe gate
    can arbitrate the staircase from comparable evidence.
 6. Build the Z6 L1 scaffold as the next non-local-minimum score-lowering

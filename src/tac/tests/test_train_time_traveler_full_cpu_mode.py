@@ -186,8 +186,49 @@ def test_export_side_info_liveness_stats_reject_all_zero_int8(trainer_module):
     assert stats["total_values"] == 360
     assert stats["nonzero_values"] == 1
     assert stats["nonzero_fraction"] == pytest.approx(1 / 360)
+    assert stats["total_pairs"] == 8
+    assert stats["nonzero_pair_count"] == 1
+    assert stats["all_zero_pair_count"] == 7
+    assert stats["nonzero_pair_fraction"] == pytest.approx(1 / 8)
+    assert stats["min_nonzero_values_per_pair"] == 0
+    assert stats["max_nonzero_values_per_pair"] == 1
+    assert stats["mean_nonzero_values_per_pair"] == pytest.approx(1 / 8)
+    assert stats["liveness_warnings"] == [
+        "tt5l_side_info_some_pairs_all_zero",
+        "tt5l_side_info_at_most_one_nonzero_per_pair_on_average",
+    ]
+    section_liveness = stats["section_liveness"]
+    assert section_liveness["checked"] is True
+    assert section_liveness["per_pair_bytes"] == 45
+    assert section_liveness["sections"]["se3_lie"]["offset"] == 0
+    assert section_liveness["sections"]["se3_lie"]["width"] == 12
+    assert section_liveness["sections"]["se3_lie"]["nonzero_values"] == 1
+    assert section_liveness["sections"]["seg_boundary"]["nonzero_values"] == 0
+    assert section_liveness["sections"]["hf_residual"]["nonzero_values"] == 0
+    assert section_liveness["sections"]["predict_residual"]["nonzero_values"] == 0
     assert stats["min"] == 0
     assert stats["max"] == 1
+
+
+def test_export_side_info_liveness_stats_record_full_section_coverage(trainer_module):
+    side_info = torch.zeros((2, 45), dtype=torch.int8)
+    side_info[:, 0] = 1
+    side_info[:, 12] = -1
+    side_info[:, 30] = 2
+    side_info[:, 36] = -2
+
+    stats = trainer_module._require_live_quantized_side_info_for_export(side_info)
+
+    assert stats["nonzero_values"] == 8
+    assert stats["nonzero_pair_count"] == 2
+    assert stats["all_zero_pair_count"] == 0
+    assert stats["nonzero_pair_fraction"] == 1.0
+    assert stats["liveness_warnings"] == []
+    sections = stats["section_liveness"]["sections"]
+    assert sections["se3_lie"]["nonzero_values"] == 2
+    assert sections["seg_boundary"]["nonzero_values"] == 2
+    assert sections["hf_residual"]["nonzero_values"] == 2
+    assert sections["predict_residual"]["nonzero_values"] == 2
 
 
 def test_export_side_info_liveness_rejects_empty_int8(trainer_module):

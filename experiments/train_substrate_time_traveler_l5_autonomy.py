@@ -480,7 +480,10 @@ def _quantized_side_info_liveness_stats(per_pair_side_info_int8: Any) -> dict[st
     total_values = int(side_info.numel())
     nonzero_values = int(torch.count_nonzero(side_info).item()) if total_values else 0
     if side_info.ndim >= 2:
-        pair_view = side_info.reshape(int(side_info.shape[0]), -1)
+        per_pair_width = 1
+        for dim in side_info.shape[1:]:
+            per_pair_width *= int(dim)
+        pair_view = side_info.reshape(int(side_info.shape[0]), per_pair_width)
         total_pairs = int(pair_view.shape[0])
         per_pair_nonzero = torch.count_nonzero(pair_view, dim=1)
         nonzero_pair_count = int(torch.count_nonzero(per_pair_nonzero).item())
