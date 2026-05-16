@@ -13,6 +13,11 @@ false-authority paths found during adversarial review:
 2. The Cathedral autopilot's compressive-sensing lattice diagnostic could be
    visible in JSON while a non-EXACT recovery regime was not also converted
    into a dispatch blocker on candidate rows.
+3. A broader scan found the same remote-worker claim custody pattern in
+   `scripts/remote_lane_substrate_nscs01_nullspace_split_renderer.sh`: it
+   force-created `active_nscs01_remote_driver` from inside the worker and used
+   the invalid `--instance-id` flag for terminal rows instead of verifying the
+   pre-existing dispatch claim.
 
 This ledger records hardening only. It makes no score claim and does not
 promote any scaffold to paid dispatch or exact eval.
@@ -48,6 +53,11 @@ promote any scaffold to paid dispatch or exact eval.
   its completed-or-superseded status, including L1 blocker detail, rather than
   hiding the reason the original build action is no longer actionable.
 
+- `scripts/remote_lane_substrate_nscs01_nullspace_split_renderer.sh` now uses
+  the same active-claim summary verification pattern; terminal rows use
+  `--instance-job-id` plus explicit `--claims-path` and `--agent`. The remote
+  worker no longer mints its own forced active dispatch claim.
+
 ## Verification
 
 Commands run:
@@ -55,10 +65,12 @@ Commands run:
 ```bash
 bash -n \
   scripts/remote_lane_substrate_rudin_floor_interpretable_ml.sh \
-  scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+  scripts/remote_lane_substrate_time_traveler_l5_z6.sh \
+  scripts/remote_lane_substrate_nscs01_nullspace_split_renderer.sh
 .venv/bin/python -m pytest \
   src/tac/substrates/rudin_floor_interpretable_ml/tests/test_rudin_floor_l1_scaffold.py::test_remote_driver_requires_and_closes_dispatch_claim \
   src/tac/substrates/time_traveler_l5_z6/tests/test_z6.py::test_remote_driver_verifies_active_claim_and_preserves_full_epoch_default \
+  src/tac/substrates/nscs01_nullspace_split_renderer/tests/test_nscs01_substrate.py::test_remote_driver_verifies_existing_active_claim_not_force_creates_one \
   src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_asymptotic_pursuit_candidates_are_source_backed \
   src/tac/tests/test_operator_briefing.py::test_briefing_json_composite_has_all_three_keys \
   src/tac/tests/test_cathedral_autopilot_autonomous_loop.py::test_main_surfaces_compressive_sensing_lattice_diagnostic -q
@@ -66,6 +78,7 @@ bash -n \
   src/tac/optimization/l5_staircase_v2.py \
   src/tac/substrates/rudin_floor_interpretable_ml/tests/test_rudin_floor_l1_scaffold.py \
   src/tac/substrates/time_traveler_l5_z6/tests/test_z6.py \
+  src/tac/substrates/nscs01_nullspace_split_renderer/tests/test_nscs01_substrate.py \
   src/tac/tests/test_cathedral_autopilot_autonomous_loop.py \
   src/tac/tests/test_l5_staircase_v2.py \
   src/tac/tests/test_operator_briefing.py \
@@ -80,8 +93,9 @@ git diff --check
 
 Observed evidence:
 
-- Shell syntax passed for both changed remote drivers.
-- Focused regression tests passed: `5 passed in 9.54s`.
+- Shell syntax passed for all three changed remote drivers.
+- Focused regression tests passed after the NSCS01 sister terminal-claim
+  tightening: `6 passed in 8.07s`.
 - Ruff passed on changed Python files.
 - py_compile passed on changed Python entry points.
 - `git diff --check` passed.

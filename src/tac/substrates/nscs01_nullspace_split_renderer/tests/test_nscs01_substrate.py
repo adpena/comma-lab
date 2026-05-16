@@ -49,6 +49,9 @@ from tac.substrates.nscs01_nullspace_split_renderer.archive import (
     _unpack_bits,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[5]
+REMOTE_DRIVER = REPO_ROOT / "scripts" / "remote_lane_substrate_nscs01_nullspace_split_renderer.sh"
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -586,6 +589,21 @@ class TestCatalog164PreprocessContract:
             )
 
 
+def test_remote_driver_verifies_existing_active_claim_not_force_creates_one():
+    """Remote NSCS01 driver must verify, not create, its dispatch claim."""
+    src = REMOTE_DRIVER.read_text(encoding="utf-8")
+    assert "verify_active_dispatch_claim()" in src
+    assert 'claim_lane_dispatch.py" summary' in src
+    assert "--live-only" in src
+    assert 'payload.get("active", [])' in src
+    assert "CLAIM_VERIFIED=1" in src
+    assert '--claims-path "$DISPATCH_CLAIMS_PATH"' in src
+    assert '--agent "remote_lane_substrate_nscs01_nullspace_split_renderer"' in src
+    assert "--instance-job-id" in src
+    assert "--instance-id" not in src
+    assert "active_nscs01_remote_driver" not in src
+
+
 # ---------------------------------------------------------------------------
 # SubstrateContract registration
 # ---------------------------------------------------------------------------
@@ -706,10 +724,6 @@ class TestNullspaceGradientProperty:
         # Pull the seg term out and backprop ONLY it. The seg term is detached
         # in `parts`, so reconstruct it from the loss equation: subtract the
         # other terms and backprop the residual.
-        seg_only = loss_fn.weights.beta_seg * (
-            parts["seg_term"].detach()
-            * 0.0  # bypass detached version; recompute below for backward
-        )
         # Easier: zero ALL grads, then backward the full loss with weights
         # set so seg_term dominates → check that frame_0 grads are still tiny
         # because seg_term mathematically cannot reach frame_0.
