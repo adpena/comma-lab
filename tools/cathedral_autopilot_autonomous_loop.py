@@ -175,10 +175,6 @@ def _path_is_relative_to(path: Path, root: Path) -> bool:
 
 def validate_authorized_journal_path(journal_path: Path, *, repo_root: Path = REPO_ROOT) -> None:
     """Refuse transient paths for self-authorized dispatch journals."""
-    allowed_roots = (repo_root / ".omx" / "state", repo_root / "reports")
-    if any(_path_is_relative_to(journal_path, root) for root in allowed_roots):
-        return
-
     forbidden_roots = (
         Path("/tmp"),
         Path("/private/tmp"),
@@ -191,10 +187,71 @@ def validate_authorized_journal_path(journal_path: Path, *, repo_root: Path = RE
             "(.omx/state/ or reports/); refusing transient path "
             f"{str(journal_path)!r}"
         )
+    allowed_roots = (repo_root / ".omx" / "state", repo_root / "reports")
+    if any(_path_is_relative_to(journal_path, root) for root in allowed_roots):
+        return
     raise ValueError(
         "--journal-path for authorized mode must be under repo-local .omx/state/ "
         f"or reports/; got {str(journal_path)!r}"
     )
+
+
+def _require_candidate_dispatch_cost(candidate: CandidateRow) -> float:
+    return _require_finite_positive_float(
+        candidate.estimated_dispatch_cost_usd,
+        field="estimated_dispatch_cost_usd",
+        context=f"candidate {candidate.candidate_id!r}",
+    )
+
+
+def validate_authorized_mode_config(
+    auth_mode: OperatorAuthorizedModeConfig | None,
+    *,
+    repo_root: Path = REPO_ROOT,
+) -> None:
+    """Validate authorized-mode config before ranking or dispatch side effects."""
+    if auth_mode is None or not auth_mode.enabled:
+        return
+    _require_finite_positive_float(
+        auth_mode.per_dispatch_cap_usd,
+        field="per_dispatch_cap_usd",
+        context="operator-authorized mode",
+    )
+    _require_finite_positive_float(
+        auth_mode.cumulative_cap_usd,
+        field="cumulative_cap_usd",
+        context="operator-authorized mode",
+    )
+    try:
+        spent = float(auth_mode.cumulative_spent_usd)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "operator-authorized mode has non-numeric cumulative_spent_usd="
+            f"{auth_mode.cumulative_spent_usd!r}"
+        ) from exc
+    if not math.isfinite(spent) or spent < 0.0:
+        raise ValueError(
+            "operator-authorized mode must carry finite non-negative "
+            f"cumulative_spent_usd; got {auth_mode.cumulative_spent_usd!r}"
+        )
+    if auth_mode.journal_path is None:
+        raise ValueError(
+            "operator-authorized mode requires a durable journal_path before "
+            "ranking or dispatch authorization"
+        )
+    validate_authorized_journal_path(auth_mode.journal_path, repo_root=repo_root)
+
+
+def _authorized_mode_config_blocker(
+    auth_mode: OperatorAuthorizedModeConfig | None,
+    *,
+    repo_root: Path = REPO_ROOT,
+) -> str:
+    try:
+        validate_authorized_mode_config(auth_mode, repo_root=repo_root)
+    except ValueError as exc:
+        return str(exc)
+    return ""
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -317,9 +374,8 @@ class CandidateRow:
     ready_for_exact_eval_dispatch: bool = False
 
     def eig_per_dollar(self) -> float:
-        if self.estimated_dispatch_cost_usd <= 0.0:
-            return float("inf")
-        return self.expected_information_gain / self.estimated_dispatch_cost_usd
+        cost = _require_candidate_dispatch_cost(self)
+        return self.expected_information_gain / cost
 
     def dispatch_claim_keys(self) -> list[str]:
         """Return candidate/lane/claim identifiers for conflict checks."""
@@ -1076,6 +1132,9 @@ def rank_candidates(
 
     Per CLAUDE.md "Forbidden /tmp paths": no temp paths used; pure in-memory.
     """
+    for candidate in candidates:
+        _require_candidate_dispatch_cost(candidate)
+
     def _effective_delta(c: CandidateRow) -> float:
         if apply_z1_empirical_revision:
             return apply_z1_empirical_revision_to_candidate_delta(c)
@@ -1084,8 +1143,6 @@ def rank_candidates(
     def _effective_eig_per_dollar(c: CandidateRow) -> float:
         base = c.eig_per_dollar()
         if not apply_z1_empirical_revision:
-            return base
-        if base == float("inf"):
             return base
 
         # Preserve the existing Tier-A MDL-density EIG modifier so saturated
@@ -1435,67 +1492,73 @@ def make_dispatch_halt_event(
     autopilot_claim_reason = ""
 
     if auth_mode is not None and auth_mode.enabled:
-        env_ok = (
-            _env_authorizes_mode()
-            if env_authorized is None
-            else bool(env_authorized)
-        )
-        if not env_ok:
+        config_blocker = _authorized_mode_config_blocker(auth_mode, repo_root=REPO_ROOT)
+        if config_blocker:
             requires = True
-            autopilot_refused = (
-                f"env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
-                f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED} is missing; CLI "
-                "flag alone is insufficient (defense-in-depth)"
-            )
+            autopilot_refused = config_blocker
+            halt_blockers.append("operator_authorized_mode_config_invalid")
         else:
-            ok, reason = auth_mode.can_authorize(candidate)
-            if ok:
-                if claims_path is None:
-                    autopilot_claim_reason = (
-                        "claims_path is required before self-authorization so "
-                        "tests and direct callers cannot silently write an "
-                        "implicit dispatch claim"
-                    )
-                else:
-                    (
-                        autopilot_claim_recorded,
-                        autopilot_claim_reason,
-                        autopilot_claim_instance_job_id,
-                    ) = _record_autopilot_dispatch_claim(
-                        candidate,
-                        auth_mode=auth_mode,
-                        claims_path=claims_path,
-                    )
-                if autopilot_claim_recorded:
-                    prospective = (
-                        auth_mode.cumulative_spent_usd
-                        + candidate.estimated_dispatch_cost_usd
-                    )
-                    autopilot_authorized = True
-                    autopilot_tag = AUTOPILOT_AUTHORIZED_TAG
-                    autopilot_reason = (
-                        f"per-dispatch cost ${candidate.estimated_dispatch_cost_usd:.4f} "
-                        f"<= cap ${auth_mode.per_dispatch_cap_usd:.4f}; "
-                        f"cumulative ${prospective:.4f} "
-                        f"<= envelope ${auth_mode.cumulative_cap_usd:.4f}; "
-                        f"dispatch claim recorded as {autopilot_claim_instance_job_id}"
-                    )
-                    # Reserve cost in the per-process counter so the next
-                    # candidate in this iteration sees the updated cumulative.
-                    auth_mode.record_authorization(candidate)
-                    requires = False
+            env_ok = (
+                _env_authorizes_mode()
+                if env_authorized is None
+                else bool(env_authorized)
+            )
+            if not env_ok:
+                requires = True
+                autopilot_refused = (
+                    f"env-var {OPERATOR_AUTHORIZED_MODE_ENV_VAR}="
+                    f"{OPERATOR_AUTHORIZED_MODE_ENV_VALUE_ENABLED} is missing; CLI "
+                    "flag alone is insufficient (defense-in-depth)"
+                )
+            else:
+                ok, reason = auth_mode.can_authorize(candidate)
+                if ok:
+                    if claims_path is None:
+                        autopilot_claim_reason = (
+                            "claims_path is required before self-authorization so "
+                            "tests and direct callers cannot silently write an "
+                            "implicit dispatch claim"
+                        )
+                    else:
+                        (
+                            autopilot_claim_recorded,
+                            autopilot_claim_reason,
+                            autopilot_claim_instance_job_id,
+                        ) = _record_autopilot_dispatch_claim(
+                            candidate,
+                            auth_mode=auth_mode,
+                            claims_path=claims_path,
+                        )
+                    if autopilot_claim_recorded:
+                        prospective = (
+                            auth_mode.cumulative_spent_usd
+                            + candidate.estimated_dispatch_cost_usd
+                        )
+                        autopilot_authorized = True
+                        autopilot_tag = AUTOPILOT_AUTHORIZED_TAG
+                        autopilot_reason = (
+                            f"per-dispatch cost ${candidate.estimated_dispatch_cost_usd:.4f} "
+                            f"<= cap ${auth_mode.per_dispatch_cap_usd:.4f}; "
+                            f"cumulative ${prospective:.4f} "
+                            f"<= envelope ${auth_mode.cumulative_cap_usd:.4f}; "
+                            f"dispatch claim recorded as {autopilot_claim_instance_job_id}"
+                        )
+                        # Reserve cost in the per-process counter so the next
+                        # candidate in this iteration sees the updated cumulative.
+                        auth_mode.record_authorization(candidate)
+                        requires = False
+                    else:
+                        requires = True
+                        autopilot_refused = (
+                            "dispatch claim is required before self-authorization; "
+                            f"{autopilot_claim_reason}"
+                        )
+                        halt_blockers.append(
+                            "dispatch_claim_required_for_self_authorization"
+                        )
                 else:
                     requires = True
-                    autopilot_refused = (
-                        "dispatch claim is required before self-authorization; "
-                        f"{autopilot_claim_reason}"
-                    )
-                    halt_blockers.append(
-                        "dispatch_claim_required_for_self_authorization"
-                    )
-            else:
-                requires = True
-                autopilot_refused = reason
+                    autopilot_refused = reason
 
     return HaltEvent(
         event_class=EventClass.DISPATCH,
@@ -1718,6 +1781,9 @@ def run_one_loop_iteration(
     """
     started = dt.datetime.now(dt.UTC).isoformat()
     notes: list[str] = []
+    validate_authorized_mode_config(auth_mode, repo_root=REPO_ROOT)
+    for candidate in candidates:
+        _require_candidate_dispatch_cost(candidate)
 
     # W/I/A I-1: optionally auto-load continual-learning posterior so the
     # loop's rank step applies empirical-anchor reweighting. Tests inject
@@ -2202,7 +2268,14 @@ def load_candidates_from_substrate_composition_ranking(
             family=str(raw["family"]),
             predicted_score_delta=float(raw["predicted_score_delta"]),
             expected_information_gain=float(raw["expected_information_gain"]),
-            estimated_dispatch_cost_usd=float(raw["estimated_dispatch_cost_usd"]),
+            estimated_dispatch_cost_usd=_require_finite_positive_float(
+                raw["estimated_dispatch_cost_usd"],
+                field="estimated_dispatch_cost_usd",
+                context=(
+                    "substrate composition ranked dispatch "
+                    f"{raw.get('candidate_id')!r}"
+                ),
+            ),
             blockers=row_blockers,
             notes="\n".join(notes_lines),
             mdl_density=_coerce_optional_float(raw.get("mdl_density")),
@@ -2415,7 +2488,11 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 family=str(raw.get("family", "probe_disambiguator")),
                 predicted_score_delta=float(raw.get("predicted_score_delta", 0.0)),
                 expected_information_gain=float(raw.get("expected_information_gain", 0.0)),
-                estimated_dispatch_cost_usd=float(raw.get("estimated_dispatch_cost_usd", 0.0)),
+                estimated_dispatch_cost_usd=_require_finite_positive_float(
+                    raw.get("estimated_dispatch_cost_usd", 0.0),
+                    field="estimated_dispatch_cost_usd",
+                    context=f"probe-disambiguator row {cid!r}",
+                ),
                 blockers=row_blockers,
                 notes=notes,
                 mdl_density=_coerce_optional_float(raw.get("mdl_density")),
@@ -2978,6 +3055,16 @@ def main(argv: list[str] | None = None) -> int:
                 "for the structured-row JSONL ledger (per CLAUDE.md no-/tmp-path)"
             )
         if args.operator_authorized_le_5_dollar_mode and args.journal_path is not None:
+            _require_finite_positive_float(
+                args.per_dispatch_cap_usd,
+                field="--per-dispatch-cap-usd",
+                context="operator-authorized CLI",
+            )
+            _require_finite_positive_float(
+                args.cumulative_cap_usd,
+                field="--cumulative-cap-usd",
+                context="operator-authorized CLI",
+            )
             validate_authorized_journal_path(args.journal_path, repo_root=REPO_ROOT)
     except (ValueError, FileNotFoundError) as exc:
         print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
@@ -3034,18 +3121,22 @@ def main(argv: list[str] | None = None) -> int:
         def _source() -> list[CandidateRow]:
             return load_candidates_from_jsonl(args.candidates_jsonl)
 
-    reports = run_continuous_loop(
-        _source,
-        iterations=args.iterations,
-        rank_axis=args.rank_axis,
-        requires_approval_on=approval_set,
-        claims_path=args.claims_path,
-        race_mode=args.race_mode,
-        max_dispatch_recommendations=args.max_dispatch_recommendations,
-        auth_mode=auth_mode,
-        continual_posterior_path=args.continual_posterior_path,
-        auto_load_continual_posterior=args.load_continual_posterior,
-    )
+    try:
+        reports = run_continuous_loop(
+            _source,
+            iterations=args.iterations,
+            rank_axis=args.rank_axis,
+            requires_approval_on=approval_set,
+            claims_path=args.claims_path,
+            race_mode=args.race_mode,
+            max_dispatch_recommendations=args.max_dispatch_recommendations,
+            auth_mode=auth_mode,
+            continual_posterior_path=args.continual_posterior_path,
+            auto_load_continual_posterior=args.load_continual_posterior,
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
+        return 2
 
     if args.use_substrate_composition_matrix_ranking is not None:
         source_tag = "substrate_composition_matrix_constraints_enforced"

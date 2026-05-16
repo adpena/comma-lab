@@ -5,7 +5,7 @@ Covers:
   - rank_candidates by eig_per_dollar (descending)
   - rank_candidates by predicted_score_delta (most-negative first)
   - rank_candidates rejects unknown axis
-  - eig_per_dollar = +inf for zero-cost candidate
+  - malformed dispatch costs fail closed before ranking
   - make_dispatch_halt_event sets requires_approval=True when DISPATCH gated
   - make_dispatch_halt_event sets requires_approval=False when not gated
   - make_kill_halt_event ALWAYS sets requires_approval=True (CLAUDE.md non-neg)
@@ -38,7 +38,9 @@ from __future__ import annotations
 
 import json
 import math
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -49,9 +51,24 @@ if str(TOOLS_DIR) not in sys.path:
 
 import cathedral_autopilot_autonomous_loop as loop  # noqa: E402
 
+TEST_JOURNAL_ROOT = (
+    loop.REPO_ROOT / ".omx" / "state" / "pytest_cathedral_autopilot_journals"
+)
+
+
+@pytest.fixture(autouse=True)
+def _cleanup_repo_local_test_journals():
+    shutil.rmtree(TEST_JOURNAL_ROOT, ignore_errors=True)
+    yield
+    shutil.rmtree(TEST_JOURNAL_ROOT, ignore_errors=True)
+
 
 def _sha(seed: str) -> str:
     return (seed * 64)[:64]
+
+
+def _repo_local_journal(tmp_path: Path, filename: str = "autopilot_journal.jsonl") -> Path:
+    return TEST_JOURNAL_ROOT / tmp_path.name / filename
 
 
 def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
@@ -136,14 +153,18 @@ def test_rank_unknown_axis_raises():
         loop.rank_candidates([], rank_axis="something_made_up")
 
 
-def test_eig_per_dollar_inf_for_zero_cost():
-    c = _cand(eig=1.0, cost_usd=0.0)
-    assert c.eig_per_dollar() == float("inf")
+@pytest.mark.parametrize("bad_cost", [0.0, -1.0, math.nan, math.inf, -math.inf])
+def test_eig_per_dollar_refuses_malformed_cost(bad_cost):
+    c = _cand(eig=1.0, cost_usd=bad_cost)
+    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+        c.eig_per_dollar()
 
 
-def test_eig_per_dollar_inf_for_negative_cost():
-    c = _cand(eig=1.0, cost_usd=-1.0)
-    assert c.eig_per_dollar() == float("inf")
+@pytest.mark.parametrize("bad_cost", [0.0, -1.0, math.nan, math.inf, -math.inf])
+def test_rank_candidates_refuses_malformed_cost_before_sort(bad_cost):
+    c = _cand(eig=1.0, cost_usd=bad_cost)
+    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+        loop.rank_candidates([c], rank_axis="eig_per_dollar")
 
 
 # ── HALT events ────────────────────────────────────────────────────────────
@@ -534,7 +555,7 @@ def _write_probe_payload(tmp_path: Path, payload: dict | None = None) -> Path:
                 "family": "zen_floor_planning_probe",
                 "predicted_score_delta": 0.0,
                 "expected_information_gain": 2.0,
-                "estimated_dispatch_cost_usd": 0.0,
+                "estimated_dispatch_cost_usd": 0.01,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -766,7 +787,7 @@ def _auth_mode(
     helper = TOOLS_DIR / "claim_lane_dispatch.py"
     if not helper_exists:
         helper = tmp_path / "missing_claim_lane_dispatch.py"
-    journal = tmp_path / "autopilot_journal.jsonl"
+    journal = _repo_local_journal(tmp_path)
     return loop.OperatorAuthorizedModeConfig(
         enabled=enabled,
         per_dispatch_cap_usd=per_dispatch_cap,
@@ -874,6 +895,19 @@ def test_can_authorize_refuses_malformed_dispatch_packet_hash(tmp_path):
     assert "dispatch_packet_or_archive_runtime_hash_required" in reason
 
 
+def test_can_authorize_refuses_placeholder_dispatch_packet_hash_even_with_pair(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256="dispatch_packet_sha256_for_a",
+        archive_sha256=_sha("b"),
+        runtime_tree_sha256=_sha("c"),
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "dispatch_packet_sha256_malformed" in reason
+
+
 def test_can_authorize_accepts_valid_archive_runtime_hash_pair(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(
@@ -900,6 +934,21 @@ def test_can_authorize_refuses_malformed_archive_runtime_hash_pair(tmp_path):
     assert ok is False
     assert "runtime_tree_sha256_malformed" in reason
     assert "ready_for_exact_eval_dispatch_requires_archive_and_runtime_hash" in reason
+
+
+def test_can_authorize_refuses_placeholder_archive_runtime_hash_pair(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256="",
+        archive_sha256="archive_sha256_for_a",
+        runtime_tree_sha256="runtime_tree_sha256_for_a",
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "archive_sha256_malformed" in reason
+    assert "runtime_tree_sha256_malformed" in reason
+    assert "dispatch_packet_or_archive_runtime_hash_required" in reason
 
 
 def test_can_authorize_approves_within_caps(tmp_path):
@@ -941,6 +990,28 @@ def test_make_dispatch_halt_event_authorized_when_mode_on_and_env_set(tmp_path):
     assert loop.AUTOPILOT_CLAIM_STATUS in claim_text
 
 
+def test_make_dispatch_halt_event_refuses_tmp_journal_before_claim(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    cfg.journal_path = (
+        Path(tempfile.gettempdir())
+        / f"cathedral_autopilot_tmp_journal_{tmp_path.name}.jsonl"
+    )
+    claims_path = tmp_path / "claims.md"
+    e = loop.make_dispatch_halt_event(
+        _cand("tmp_journal", cost_usd=3.0),
+        requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
+        auth_mode=cfg,
+        env_authorized=True,
+        claims_path=claims_path,
+    )
+    assert e.autopilot_authorized is False
+    assert e.autopilot_claim_recorded is False
+    assert e.requires_approval is True
+    assert "refusing transient path" in e.autopilot_refused_reason
+    assert "operator_authorized_mode_config_invalid" in e.blockers
+    assert not claims_path.exists()
+
+
 def test_make_dispatch_halt_event_self_authorization_requires_successful_claim(tmp_path):
     bad_helper = tmp_path / "bad_claim_helper.py"
     bad_helper.write_text(
@@ -952,7 +1023,7 @@ def test_make_dispatch_halt_event_self_authorization_requires_successful_claim(t
         per_dispatch_cap_usd=5.0,
         cumulative_cap_usd=20.0,
         canonical_helper_script=bad_helper,
-        journal_path=tmp_path / "journal.jsonl",
+        journal_path=_repo_local_journal(tmp_path, "bad_helper_journal.jsonl"),
     )
     c = _cand("claim_required", cost_usd=3.0)
     e = loop.make_dispatch_halt_event(
@@ -1054,6 +1125,51 @@ def test_loop_iteration_journal_appends_one_row_per_authorization(tmp_path):
     assert cfg.cumulative_spent_usd == 5.0
 
 
+@pytest.mark.parametrize(
+    ("per_dispatch_cap", "cumulative_cap"),
+    [
+        (math.nan, 20.0),
+        (math.inf, 20.0),
+        (5.0, math.nan),
+        (5.0, math.inf),
+    ],
+)
+def test_loop_iteration_refuses_non_finite_caps_before_claim_or_journal(
+    tmp_path,
+    per_dispatch_cap,
+    cumulative_cap,
+):
+    cfg = _auth_mode(
+        tmp_path,
+        per_dispatch_cap=per_dispatch_cap,
+        cumulative_cap=cumulative_cap,
+    )
+    claims_path = tmp_path / "claims.md"
+    with pytest.raises(ValueError, match="finite positive"):
+        loop.run_one_loop_iteration(
+            [_cand("bad_cap", cost_usd=1.0)],
+            claims_path=claims_path,
+            auth_mode=cfg,
+            env_authorized=True,
+        )
+    assert not claims_path.exists()
+    assert not cfg.journal_path.exists()
+
+
+def test_loop_iteration_refuses_malformed_cost_before_claim_or_journal(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    claims_path = tmp_path / "claims.md"
+    with pytest.raises(ValueError, match="finite positive estimated_dispatch_cost_usd"):
+        loop.run_one_loop_iteration(
+            [_cand("bad_cost", cost_usd=math.nan)],
+            claims_path=claims_path,
+            auth_mode=cfg,
+            env_authorized=True,
+        )
+    assert not claims_path.exists()
+    assert not cfg.journal_path.exists()
+
+
 def test_loop_iteration_cumulative_envelope_halts_excess(tmp_path):
     cfg = _auth_mode(tmp_path, cumulative_cap=10.0)
     cands = [
@@ -1137,8 +1253,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
         encoding="utf-8",
     )
     helper = TOOLS_DIR / "claim_lane_dispatch.py"
-    monkeypatch.setattr(loop, "REPO_ROOT", tmp_path)
-    journal = tmp_path / ".omx" / "state" / "journal.jsonl"
+    journal = _repo_local_journal(tmp_path, "main_journal.jsonl")
     claims_path = tmp_path / "claims.md"
     monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
     rc = loop.main([
@@ -1179,17 +1294,68 @@ def test_main_authorized_mode_refuses_tmp_journal_before_claim(
         encoding="utf-8",
     )
     claims_path = tmp_path / "claims.md"
+    journal = (
+        Path(tempfile.gettempdir())
+        / f"cathedral_autopilot_cli_tmp_journal_{tmp_path.name}.jsonl"
+    )
     monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
     rc = loop.main([
         "--candidates-jsonl", str(cand_file),
         "--iterations", "1",
         "--operator-authorized-le-5-dollar-mode",
-        "--journal-path", str(tmp_path / "journal.jsonl"),
+        "--journal-path", str(journal),
         "--canonical-helper-script", str(TOOLS_DIR / "claim_lane_dispatch.py"),
         "--claims-path", str(claims_path),
     ])
     assert rc == 2
     assert "refusing transient path" in capsys.readouterr().err
+    assert not claims_path.exists()
+
+
+@pytest.mark.parametrize(
+    ("cap_flag", "cap_value"),
+    [
+        ("--per-dispatch-cap-usd", "nan"),
+        ("--per-dispatch-cap-usd", "inf"),
+        ("--cumulative-cap-usd", "nan"),
+        ("--cumulative-cap-usd", "inf"),
+    ],
+)
+def test_main_authorized_mode_refuses_non_finite_caps_before_claim(
+    tmp_path,
+    monkeypatch,
+    capsys,
+    cap_flag,
+    cap_value,
+):
+    cand_file = tmp_path / "c.jsonl"
+    cand_file.write_text(
+        json.dumps({
+            "candidate_id": "test_auth_mode_bad_cap",
+            "family": "hnerv",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.5,
+            "estimated_dispatch_cost_usd": 2.0,
+            "dispatch_packet_ready": True,
+            "dispatch_packet_sha256": _sha("f"),
+            "lane_id": "lane_test_auth_mode_bad_cap",
+            "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+        }) + "\n",
+        encoding="utf-8",
+    )
+    claims_path = tmp_path / "claims.md"
+    monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
+    rc = loop.main([
+        "--candidates-jsonl", str(cand_file),
+        "--iterations", "1",
+        "--operator-authorized-le-5-dollar-mode",
+        "--journal-path", str(_repo_local_journal(tmp_path, "bad_cap_journal.jsonl")),
+        "--canonical-helper-script", str(TOOLS_DIR / "claim_lane_dispatch.py"),
+        "--claims-path", str(claims_path),
+        cap_flag, cap_value,
+    ])
+    assert rc == 2
+    assert "finite positive" in capsys.readouterr().err
     assert not claims_path.exists()
 
 
@@ -1207,8 +1373,7 @@ def test_main_authorized_mode_without_env_warns_but_still_runs(tmp_path, monkeyp
     )
     helper = tmp_path / "claim_lane_dispatch.py"
     helper.write_text("# canonical\n", encoding="utf-8")
-    monkeypatch.setattr(loop, "REPO_ROOT", tmp_path)
-    journal = tmp_path / ".omx" / "state" / "journal.jsonl"
+    journal = _repo_local_journal(tmp_path, "no_env_journal.jsonl")
     monkeypatch.delenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, raising=False)
     rc = loop.main([
         "--candidates-jsonl", str(cand_file),
