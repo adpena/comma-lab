@@ -810,6 +810,40 @@ def _run_val_loop(
     return float(sum(losses) / len(losses)) if losses else math.inf
 
 
+def _run_posterior_update_from_auth_eval_json(
+    auth_eval_json_path: Path,
+    *,
+    architecture_class: str,
+    stage_callback,
+):
+    """Update the continual-learning posterior with explicit custody status."""
+    try:
+        from tac.continual_learning import (
+            posterior_update_locked_from_auth_eval_json,
+        )
+
+        update = posterior_update_locked_from_auth_eval_json(
+            auth_eval_json_path,
+            architecture_class=architecture_class,
+            notes=f"{SUBSTRATE_TAG}_full_auth_eval",
+        )
+        accepted = bool(getattr(update, "accepted", False))
+        print(
+            f"[{SUBSTRATE_TAG}-full] posterior_update accepted="
+            f"{getattr(update, 'accepted', '?')}"
+        )
+        stage_callback(
+            "posterior_update_accepted"
+            if accepted
+            else "posterior_update_refused"
+        )
+        return update
+    except Exception as exc:
+        print(f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}")
+        stage_callback(f"posterior_update_failed_{type(exc).__name__}")
+        return None
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """Full training — score-aware Lagrangian end-to-end."""
     import torch
@@ -1244,19 +1278,11 @@ def _full_main(args: argparse.Namespace) -> int:
 
     # 13. Posterior update (Catalog #128 atomic fcntl).
     if not args.skip_auth_eval and auth_eval_json_path.exists():
-        try:
-            from tac.continual_learning import (
-                posterior_update_locked_from_auth_eval_json,
-            )
-
-            update = posterior_update_locked_from_auth_eval_json(auth_eval_json_path)
-            print(
-                f"[{SUBSTRATE_TAG}-full] posterior_update accepted="
-                f"{getattr(update, 'accepted', '?')}"
-            )
-            _stage("posterior_updated")
-        except Exception as exc:
-            print(f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}")
+        _run_posterior_update_from_auth_eval_json(
+            auth_eval_json_path,
+            architecture_class=SUBSTRATE_LANE_ID,
+            stage_callback=_stage,
+        )
 
     # 14. Provenance.
     provenance = {

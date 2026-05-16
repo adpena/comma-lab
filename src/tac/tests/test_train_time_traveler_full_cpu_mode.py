@@ -26,7 +26,10 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import sys
+import types
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -131,6 +134,64 @@ def test_best_checkpoint_uses_ema_snapshot_taken_before_live_restore() -> None:
     assert "ema_eval_state = _state_dict_cpu_snapshot(substrate)" in text
     assert "substrate.load_state_dict(live_state)" in text
     assert '"state_dict": ema_eval_state' in text
+
+
+def test_posterior_update_passes_architecture_class_and_records_acceptance(
+    trainer_module,
+    monkeypatch,
+    tmp_path,
+):
+    """TT5L posterior updates must not lose anchors via missing architecture_class."""
+
+    calls: list[dict[str, object]] = []
+    fake_continual = types.ModuleType("tac.continual_learning")
+
+    def fake_update(path, **kwargs):
+        calls.append({"path": path, **kwargs})
+        return SimpleNamespace(accepted=True)
+
+    fake_continual.posterior_update_locked_from_auth_eval_json = fake_update
+    monkeypatch.setitem(sys.modules, "tac.continual_learning", fake_continual)
+
+    stages: list[str] = []
+    auth_eval_json = tmp_path / "auth_eval.json"
+    result = trainer_module._run_posterior_update_from_auth_eval_json(
+        auth_eval_json,
+        architecture_class=trainer_module.SUBSTRATE_LANE_ID,
+        stage_callback=stages.append,
+    )
+
+    assert result.accepted is True
+    assert calls == [
+        {
+            "path": auth_eval_json,
+            "architecture_class": trainer_module.SUBSTRATE_LANE_ID,
+            "notes": f"{trainer_module.SUBSTRATE_TAG}_full_auth_eval",
+        }
+    ]
+    assert stages == ["posterior_update_accepted"]
+
+
+def test_posterior_update_records_failure_status(trainer_module, monkeypatch, tmp_path):
+    """Posterior-update failures remain non-fatal but leave stage-log evidence."""
+
+    fake_continual = types.ModuleType("tac.continual_learning")
+
+    def fake_update(_path, **_kwargs):
+        raise TypeError("boom")
+
+    fake_continual.posterior_update_locked_from_auth_eval_json = fake_update
+    monkeypatch.setitem(sys.modules, "tac.continual_learning", fake_continual)
+
+    stages: list[str] = []
+    result = trainer_module._run_posterior_update_from_auth_eval_json(
+        tmp_path / "auth_eval.json",
+        architecture_class=trainer_module.SUBSTRATE_LANE_ID,
+        stage_callback=stages.append,
+    )
+
+    assert result is None
+    assert stages == ["posterior_update_failed_TypeError"]
 
 
 # ---------------------------------------------------------------------------
