@@ -828,10 +828,11 @@ def _gate_evidence_blockers(
                     artifact_predicate_id = str(
                         artifact_payload.get("predicate_id") or ""
                     ).strip()
-                    if (
-                        artifact_predicate_id
-                        and artifact_predicate_id != evidence.predicate_id.strip()
-                    ):
+                    if not artifact_predicate_id:
+                        blockers.append(
+                            f"l5_v2_gate_artifact_predicate_id_missing:{gate.gate_id}"
+                        )
+                    elif artifact_predicate_id != evidence.predicate_id.strip():
                         blockers.append(
                             "l5_v2_gate_artifact_predicate_id_mismatch:"
                             f"{gate.gate_id}:{artifact_predicate_id}"
