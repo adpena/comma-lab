@@ -64,7 +64,12 @@ def test_l5_v2_schedule_routes_to_sideinfo_curve_after_probe_eligibility() -> No
         if row["measurement_id"] == "measure_tt5l_sideinfo_effect_curve"
     )
     assert sideinfo["score_claim"] is False
+    assert sideinfo["required_axes"] == ["contest_cpu", "contest_cuda"]
     assert "consumption_proof_is_not_yet_usefulness_proof" in sideinfo["blockers"]
+    assert (
+        "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
+        in sideinfo["blockers"]
+    )
 
 
 def test_l5_v2_schedule_json_and_markdown_are_durable() -> None:
@@ -74,6 +79,7 @@ def test_l5_v2_schedule_json_and_markdown_are_durable() -> None:
 
     assert decoded["schema"] == L5V2_MEASUREMENT_SCHEDULE_SCHEMA
     assert "L5 v2 lattice measurement schedule" in report
+    assert "required_axes" in report
     assert "score_claim: `false`" in report
 
 

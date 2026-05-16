@@ -159,12 +159,12 @@ def build_l5_v2_lattice_measurement_schedule(
             measurement_id="measure_tt5l_sideinfo_effect_curve",
             candidate_id="time_traveler_l5_autonomy",
             purpose=(
-                "separate side-info consumption from causal usefulness via "
-                "zero, random-LSB, shuffled, trained, and ablated side-info"
+                "separate side-info consumption from causal usefulness with "
+                "paired CPU/CUDA zero, random-LSB, shuffled, trained, and "
+                "ablated side-info"
             ),
             estimated_cost_usd=1.0,
             expected_information_gain_nats=0.40,
-            required_axes=("contest_cuda",),
             output_artifact=(
                 "experiments/results/l5_v2_probe/"
                 "tt5l_sideinfo_effect_curve.jsonl"
@@ -172,6 +172,7 @@ def build_l5_v2_lattice_measurement_schedule(
             blockers=[
                 "tt5l_sideinfo_effect_curve_missing",
                 "consumption_proof_is_not_yet_usefulness_proof",
+                "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock",
             ],
         ),
         _measurement(
@@ -264,6 +265,7 @@ def render_l5_v2_lattice_measurement_schedule_markdown(
                     "",
                     f"- candidate_id: `{row.get('candidate_id')}`",
                     f"- purpose: {row.get('purpose')}",
+                    f"- required_axes: `{row.get('required_axes')}`",
                     f"- estimated_cost_usd: `{row.get('estimated_cost_usd')}`",
                     "- evidence authority: planning-only until paired exact artifacts land",
                 ]
