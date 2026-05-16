@@ -36,11 +36,14 @@ Covers:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import shutil
+import stat
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -50,6 +53,8 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 import cathedral_autopilot_autonomous_loop as loop  # noqa: E402
+
+from tac.optimizer.exact_readiness import runtime_dependency_manifest  # noqa: E402
 
 TEST_JOURNAL_ROOT = (
     loop.REPO_ROOT / ".omx" / "state" / "pytest_cathedral_autopilot_journals"
@@ -67,6 +72,63 @@ def _sha(seed: str) -> str:
     return (seed * 64)[:64]
 
 
+def _write_exact_ready_archive(path: Path) -> tuple[int, str]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo("0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(info, b"payload", compress_type=zipfile.ZIP_STORED)
+    raw = path.read_bytes()
+    return len(raw), hashlib.sha256(raw).hexdigest()
+
+
+def _exact_ready_cand(
+    tmp_path: Path,
+    cid: str = "exact",
+    *,
+    cost_usd: float = 1.0,
+) -> loop.CandidateRow:
+    submission = tmp_path / f"submission_{cid}"
+    archive_bytes, archive_sha = _write_exact_ready_archive(submission / "archive.zip")
+    inflate = submission / "inflate.sh"
+    inflate.write_text("#!/usr/bin/env bash\nset -euo pipefail\nexit 0\n", encoding="utf-8")
+    inflate.chmod(inflate.stat().st_mode | stat.S_IXUSR)
+    (submission / "report.txt").write_text("cathedral exact custody fixture\n", encoding="utf-8")
+    manifest = submission / "archive_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "candidate_archive_sha256": archive_sha,
+                "candidate_archive_bytes": archive_bytes,
+                "candidate_archive": {"member_name": "0.bin"},
+                "score_claim": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    runtime_sha = runtime_dependency_manifest(submission, loop.REPO_ROOT)[
+        "runtime_tree_sha256"
+    ]
+    return _cand(
+        cid,
+        cost_usd=cost_usd,
+        lane_id=f"lane_{tmp_path.name}_{cid}",
+        dispatch_packet_sha256="",
+        archive_sha256=archive_sha,
+        runtime_tree_sha256=runtime_sha,
+        archive_path=str(submission / "archive.zip"),
+        submission_dir=str(submission),
+        archive_manifest_path=str(manifest),
+        candidate_archive_bytes=archive_bytes,
+        deployment_target="t4_contest_runtime",
+        score_affecting_payload_changed=True,
+        charged_bits_changed=True,
+    )
+
+
 def _repo_local_journal(tmp_path: Path, filename: str = "autopilot_journal.jsonl") -> Path:
     return TEST_JOURNAL_ROOT / tmp_path.name / filename
 
@@ -80,8 +142,15 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           lane_id: str | None = None,
           target_modes: list[str] | None = None,
           dispatch_packet_sha256: str | None = None,
+          archive_path: str = "",
+          submission_dir: str = "",
+          archive_manifest_path: str = "",
           archive_sha256: str | None = None,
+          candidate_archive_bytes: int | None = None,
           runtime_tree_sha256: str | None = None,
+          deployment_target: str = "",
+          score_affecting_payload_changed: bool = False,
+          charged_bits_changed: bool = False,
           ready_for_exact_eval_dispatch: bool = True) -> loop.CandidateRow:
     return loop.CandidateRow(
         candidate_id=cid,
@@ -102,10 +171,17 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
             if dispatch_packet_sha256 is not None
             else _sha("a")
         ),
+        archive_path=archive_path,
+        submission_dir=submission_dir,
+        archive_manifest_path=archive_manifest_path,
         archive_sha256=archive_sha256 if archive_sha256 is not None else _sha("b"),
+        candidate_archive_bytes=candidate_archive_bytes,
         runtime_tree_sha256=(
             runtime_tree_sha256 if runtime_tree_sha256 is not None else _sha("c")
         ),
+        deployment_target=deployment_target,
+        score_affecting_payload_changed=score_affecting_payload_changed,
+        charged_bits_changed=charged_bits_changed,
         ready_for_exact_eval_dispatch=ready_for_exact_eval_dispatch,
     )
 
@@ -799,19 +875,7 @@ def test_load_exact_ready_queue_preserves_authority_after_live_audit(
     monkeypatch,
 ):
     p = tmp_path / "exact_ready_queue.json"
-    raw = {
-        "candidate_id": "exact_ready_row",
-        "family": "hnerv_lc_v2",
-        "predicted_score_delta": -0.005,
-        "expected_information_gain": 0.5,
-        "estimated_dispatch_cost_usd": 5.0,
-        "lane_id": "lane_exact_ready_row",
-        "dispatch_packet_ready": True,
-        "ready_for_exact_eval_dispatch": True,
-        "archive_sha256": _sha("a"),
-        "runtime_tree_sha256": _sha("b"),
-        "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
-    }
+    raw = dict(_exact_ready_cand(tmp_path, "exact_ready_row").__dict__)
     p.write_text(
         json.dumps({
             "schema": loop.EXACT_READY_QUEUE_SCHEMA,
@@ -1554,7 +1618,7 @@ def test_can_authorize_refuses_placeholder_dispatch_packet_hash_even_with_pair(t
     assert "dispatch_packet_sha256_malformed" in reason
 
 
-def test_can_authorize_accepts_valid_archive_runtime_hash_pair(tmp_path):
+def test_can_authorize_refuses_hash_pair_without_live_custody(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(
         cost_usd=1.0,
@@ -1563,8 +1627,10 @@ def test_can_authorize_accepts_valid_archive_runtime_hash_pair(tmp_path):
         runtime_tree_sha256=_sha("c"),
     )
     ok, reason = cfg.can_authorize(c)
-    assert ok is True
-    assert reason == ""
+    assert ok is False
+    assert "exact_dispatch_authority:archive_path_missing" in reason
+    assert "exact_dispatch_authority:archive_bytes_missing_or_invalid" in reason
+    assert "exact_dispatch_authority:score_affecting_change_proof_missing" in reason
 
 
 def test_can_authorize_refuses_contest_exact_without_exact_ready_authority(tmp_path):
@@ -1613,7 +1679,7 @@ def test_can_authorize_refuses_placeholder_archive_runtime_hash_pair(tmp_path):
 
 def test_can_authorize_approves_within_caps(tmp_path):
     cfg = _auth_mode(tmp_path)
-    c = _cand(cost_usd=4.5)
+    c = _exact_ready_cand(tmp_path, "within_caps", cost_usd=4.5)
     ok, reason = cfg.can_authorize(c)
     assert ok is True
     assert reason == ""
@@ -1630,7 +1696,7 @@ def test_record_authorization_increments_cumulative(tmp_path):
 
 def test_make_dispatch_halt_event_authorized_when_mode_on_and_env_set(tmp_path):
     cfg = _auth_mode(tmp_path)
-    c = _cand(cost_usd=3.0)
+    c = _exact_ready_cand(tmp_path, "authorized", cost_usd=3.0)
     claims_path = tmp_path / "claims.md"
     e = loop.make_dispatch_halt_event(
         c,
@@ -1646,7 +1712,7 @@ def test_make_dispatch_halt_event_authorized_when_mode_on_and_env_set(tmp_path):
     assert e.autopilot_claim_instance_job_id
     assert cfg.cumulative_spent_usd == 3.0
     claim_text = claims_path.read_text(encoding="utf-8")
-    assert "lane_c1" in claim_text
+    assert c.lane_id in claim_text
     assert loop.AUTOPILOT_CLAIM_STATUS in claim_text
 
 
@@ -1685,7 +1751,7 @@ def test_make_dispatch_halt_event_self_authorization_requires_successful_claim(t
         canonical_helper_script=bad_helper,
         journal_path=_repo_local_journal(tmp_path, "bad_helper_journal.jsonl"),
     )
-    c = _cand("claim_required", cost_usd=3.0)
+    c = _exact_ready_cand(tmp_path, "claim_required", cost_usd=3.0)
     e = loop.make_dispatch_halt_event(
         c,
         requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),
@@ -1753,7 +1819,7 @@ def test_kill_event_never_auto_authorized(tmp_path):
 
 def test_loop_iteration_journal_row_written_on_authorization(tmp_path):
     cfg = _auth_mode(tmp_path)
-    c = _cand("a", cost_usd=2.0)
+    c = _exact_ready_cand(tmp_path, "a", cost_usd=2.0)
     c.source_supports = "Paper supports the planning hypothesis only."
     c.paper_claim_scope = "Literature scope, not Pact score evidence."
     c.pact_must_prove = "Byte-closed contest eval."
@@ -1776,11 +1842,16 @@ def test_loop_iteration_journal_row_written_on_authorization(tmp_path):
     assert row["paper_claim_scope"].startswith("Literature scope")
     assert row["pact_must_prove"].startswith("Byte-closed")
     assert row["decode_complexity_evidence"].startswith("T4")
+    assert row["archive_path"] == c.archive_path
+    assert row["candidate_archive_bytes"] == c.candidate_archive_bytes
 
 
 def test_loop_iteration_journal_appends_one_row_per_authorization(tmp_path):
     cfg = _auth_mode(tmp_path)
-    cands = [_cand("a", cost_usd=2.0), _cand("b", cost_usd=3.0)]
+    cands = [
+        _exact_ready_cand(tmp_path, "a", cost_usd=2.0),
+        _exact_ready_cand(tmp_path, "b", cost_usd=3.0),
+    ]
     rep = loop.run_one_loop_iteration(
         cands,
         claims_path=tmp_path / "no_claims.md",
@@ -1841,9 +1912,9 @@ def test_loop_iteration_refuses_malformed_cost_before_claim_or_journal(tmp_path)
 def test_loop_iteration_cumulative_envelope_halts_excess(tmp_path):
     cfg = _auth_mode(tmp_path, cumulative_cap=10.0)
     cands = [
-        _cand("a", cost_usd=5.0),
-        _cand("b", cost_usd=4.0),
-        _cand("c", cost_usd=4.0),  # 5+4+4=13 > 10
+        _exact_ready_cand(tmp_path, "a", cost_usd=5.0),
+        _exact_ready_cand(tmp_path, "b", cost_usd=4.0),
+        _exact_ready_cand(tmp_path, "c", cost_usd=4.0),  # 5+4+4=13 > 10
     ]
     rep = loop.run_one_loop_iteration(
         cands,
@@ -1906,25 +1977,11 @@ def test_main_refuses_authorized_mode_without_journal(tmp_path, capsys):
 
 def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsys):
     cand_file = tmp_path / "exact_ready_queue.json"
+    row = dict(_exact_ready_cand(tmp_path, "test_auth_mode_uniq_abc123", cost_usd=2.0).__dict__)
     cand_file.write_text(
         json.dumps({
             "schema": loop.EXACT_READY_QUEUE_SCHEMA,
-            "dispatch_ready": [
-                {
-                    "candidate_id": "test_auth_mode_uniq_abc123",
-                    "family": "hnerv",
-                    "predicted_score_delta": -0.005,
-                    "expected_information_gain": 0.5,
-                    "estimated_dispatch_cost_usd": 2.0,
-                    "dispatch_packet_ready": True,
-                    "dispatch_packet_sha256": _sha("d"),
-                    "archive_sha256": _sha("e"),
-                    "runtime_tree_sha256": _sha("f"),
-                    "lane_id": "lane_test_auth_mode_uniq_abc123",
-                    "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
-                    "ready_for_exact_eval_dispatch": True,
-                }
-            ],
+            "dispatch_ready": [row],
         }),
         encoding="utf-8",
     )
@@ -1951,7 +2008,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
     assert payload["operator_authorized_mode"]["env_authorized"] is True
     assert payload["operator_authorized_mode"]["cumulative_spent_usd"] == 2.0
     assert journal.is_file()
-    assert "lane_test_auth_mode_uniq_abc123" in claims_path.read_text(encoding="utf-8")
+    assert row["lane_id"] in claims_path.read_text(encoding="utf-8")
 
 
 def test_main_authorized_mode_refuses_tmp_journal_before_claim(
@@ -2090,7 +2147,7 @@ def test_env_var_name_stable():
 
 def test_authorized_event_serialization_round_trip(tmp_path):
     cfg = _auth_mode(tmp_path)
-    c = _cand("a", cost_usd=2.0)
+    c = _exact_ready_cand(tmp_path, "a", cost_usd=2.0)
     e = loop.make_dispatch_halt_event(
         c,
         requires_approval_classes=frozenset({loop.EventClass.DISPATCH}),

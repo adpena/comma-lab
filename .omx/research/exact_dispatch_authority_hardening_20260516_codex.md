@@ -56,6 +56,63 @@ Next exact-dispatch hardening should route Cathedral autonomous loop, direct
 Modal CUDA/CPU actuators, and Lightning direct submitters through the same
 helper so the rule is uniform across providers.
 
+## Cathedral Autonomous Loop Extension
+
+Landed a second actuator-bound use of the shared authority helper in
+`tools/cathedral_autopilot_autonomous_loop.py`.
+
+Previously, the le-$5 Cathedral self-authorization path accepted a local
+dispatch-authority checklist: lane id, contest target mode, dispatch readiness,
+and syntactically valid archive/runtime hashes. That was better than a naked
+`ready_for_exact_eval_dispatch=true` flag, but still too weak: a stale row with
+valid-looking hashes and no live archive path, byte count, manifest, report, or
+score-affecting-change proof could reach the self-authorization decision before
+the lane-claim write.
+
+The loop now carries exact custody fields on `CandidateRow`:
+
+- `archive_path`
+- `submission_dir`
+- `archive_manifest_path`
+- `candidate_archive_bytes`
+- `deployment_target`
+- `score_affecting_payload_changed`
+- `charged_bits_changed`
+- `score_affecting_runtime_changed`
+
+`OperatorAuthorizedModeConfig.can_authorize()` now passes the candidate through
+`exact_dispatch_authority(...)` before any autonomous dispatch can be tagged as
+authorized. `make_dispatch_halt_event(...)` forwards the caller's claim ledger
+path so the same live custody decision sees the same dispatch-claim surface
+that the subsequent claim write will use. The authorization journal also records
+the custody paths and byte count so future analysis can reconstruct exactly
+which packet crossed the gate.
+
+### Regression
+
+The Cathedral tests now include a tiny byte-closed exact-ready fixture:
+
+- strict `archive.zip` with member `0.bin`
+- executable `inflate.sh`
+- `report.txt`
+- `archive_manifest.json`
+- computed runtime tree SHA from the real contest auth-eval runtime manifest
+- `score_affecting_payload_changed=true`
+- `charged_bits_changed=true`
+
+Hash-only rows now fail closed with
+`exact_dispatch_authority:archive_path_missing`,
+`exact_dispatch_authority:archive_bytes_missing_or_invalid`, and
+`exact_dispatch_authority:score_affecting_change_proof_missing`. Positive
+Cathedral self-authorization tests must use the byte-closed fixture.
+
+### Residual Work
+
+Direct Modal CUDA/CPU actuators and Lightning direct submitters still need the
+same helper at their paid-dispatch boundary. That work should be next if a
+future review finds a path that can launch exact eval from row metadata without
+first proving live archive/runtime/report/manifest custody.
+
 ## Verification
 
 - `.venv/bin/python -m pytest tests/test_parallel_dispatch_top_k_exact_ready_audit.py::test_parallel_dispatch_ready_flag_still_requires_live_custody -q` -> `1 passed`
@@ -63,4 +120,6 @@ helper so the rule is uniform across providers.
 - `.venv/bin/python -m pytest tests/test_audit_exact_ready_queues_cli.py tests/test_parallel_dispatch_top_k_exact_ready_audit.py -q` -> `10 passed`
 - `.venv/bin/python -m ruff check src/tac/optimizer/exact_dispatch_authority.py tools/parallel_dispatch_top_k.py tests/test_parallel_dispatch_top_k_exact_ready_audit.py` -> clean
 - `.venv/bin/python -m py_compile src/tac/optimizer/exact_dispatch_authority.py tools/parallel_dispatch_top_k.py` -> clean
+- `.venv/bin/python -m pytest src/tac/tests/test_cathedral_autopilot_autonomous_loop.py -q` -> `148 passed`
+- `.venv/bin/python -m ruff check tools/cathedral_autopilot_autonomous_loop.py src/tac/tests/test_cathedral_autopilot_autonomous_loop.py` -> clean
 - `git diff --check` -> clean

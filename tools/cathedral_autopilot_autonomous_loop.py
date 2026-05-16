@@ -147,6 +147,9 @@ from tac.optimization.literature_source_scope import (  # noqa: E402
 from tac.optimization.substrate_composition_matrix import (  # noqa: E402
     canonical_substrate_inventory,
 )
+from tac.optimizer.exact_dispatch_authority import (  # noqa: E402
+    exact_dispatch_authority,
+)
 
 AUTONOMOUS_LOOP_SCHEMA = "tac_cathedral_autopilot_autonomous_loop_v1"
 
@@ -387,8 +390,16 @@ class CandidateRow:
     target_modes: list[str] = field(default_factory=list)
     dispatch_packet_ready: bool = False
     dispatch_packet_sha256: str = ""
+    archive_path: str = ""
+    submission_dir: str = ""
+    archive_manifest_path: str = ""
     archive_sha256: str = ""
+    candidate_archive_bytes: int | None = None
     runtime_tree_sha256: str = ""
+    deployment_target: str = ""
+    score_affecting_payload_changed: bool = False
+    charged_bits_changed: bool = False
+    score_affecting_runtime_changed: bool | None = None
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
@@ -409,13 +420,17 @@ class CandidateRow:
                 deduped.append(s)
         return deduped
 
-    def dispatch_authority_blockers(self) -> list[str]:
+    def dispatch_authority_blockers(
+        self,
+        *,
+        dispatch_claims_path: Path | None = None,
+    ) -> list[str]:
         """Return blockers that prevent autonomous dispatch authorization.
 
         Planning rows are useful for ranking, but they are not executable
         packets. The le-$5 autopilot path may only self-authorize rows that
-        already carry lane identity, contest target metadata, and a hash of the
-        dispatch packet or exact archive/runtime packet being launched.
+        already carry lane identity, contest target metadata, and live custody
+        for the exact archive/runtime packet being launched.
         """
         blockers: list[str] = []
         if self.score_claim:
@@ -449,7 +464,21 @@ class CandidateRow:
             blockers.append(
                 "ready_for_exact_eval_dispatch_requires_archive_and_runtime_hash"
             )
-        return blockers
+        if contest_exact_target or self.ready_for_exact_eval_dispatch:
+            authority = exact_dispatch_authority(
+                dataclasses.asdict(self),
+                repo_root=REPO_ROOT,
+                source="cathedral_autopilot_autonomous_loop",
+                active_floor_archive_bytes=None,
+                active_floor_score=None,
+                dispatch_claims_path=dispatch_claims_path
+                or REPO_ROOT / ".omx" / "state" / "active_lane_dispatch_claims.md",
+            )
+            blockers.extend(
+                f"exact_dispatch_authority:{blocker}"
+                for blocker in authority.blockers
+            )
+        return list(dict.fromkeys(blockers))
 
 
 @dataclass
@@ -473,7 +502,12 @@ class OperatorAuthorizedModeConfig:
     journal_path: Path | None = None
     cumulative_spent_usd: float = 0.0
 
-    def can_authorize(self, candidate: CandidateRow) -> tuple[bool, str]:
+    def can_authorize(
+        self,
+        candidate: CandidateRow,
+        *,
+        dispatch_claims_path: Path | None = None,
+    ) -> tuple[bool, str]:
         """Return ``(authorized, reason)``.
 
         Authorization requires every precondition to hold. The first failing
@@ -520,17 +554,19 @@ class OperatorAuthorizedModeConfig:
                 f"candidate has unresolved blockers {candidate.blockers!r}; "
                 "operator must adjudicate before any dispatch"
             )
-        authority_blockers = candidate.dispatch_authority_blockers()
+        if not self.canonical_helper_script or not self.canonical_helper_script.is_file():
+            return False, (
+                f"canonical helper script {self.canonical_helper_script!r} does not "
+                "exist; operator must point --canonical-helper-script at a real file"
+            )
+        authority_blockers = candidate.dispatch_authority_blockers(
+            dispatch_claims_path=dispatch_claims_path
+        )
         if authority_blockers:
             return False, (
                 f"candidate is not a dispatch-authority packet; unresolved "
                 f"authority blockers {authority_blockers!r}; operator must "
                 "adjudicate before any autonomous dispatch"
-            )
-        if not self.canonical_helper_script or not self.canonical_helper_script.is_file():
-            return False, (
-                f"canonical helper script {self.canonical_helper_script!r} does not "
-                "exist; operator must point --canonical-helper-script at a real file"
             )
         return True, ""
 
@@ -575,7 +611,11 @@ class HaltEvent:
     claim_keys: list[str] = field(default_factory=list)
     target_modes: list[str] = field(default_factory=list)
     dispatch_packet_sha256: str = ""
+    archive_path: str = ""
+    submission_dir: str = ""
+    archive_manifest_path: str = ""
     archive_sha256: str = ""
+    candidate_archive_bytes: int | None = None
     runtime_tree_sha256: str = ""
     timing_smoke_command: str = ""
     ready_for_exact_eval_dispatch: bool = False
@@ -1555,7 +1595,10 @@ def make_dispatch_halt_event(
                     "flag alone is insufficient (defense-in-depth)"
                 )
             else:
-                ok, reason = auth_mode.can_authorize(candidate)
+                ok, reason = auth_mode.can_authorize(
+                    candidate,
+                    dispatch_claims_path=claims_path,
+                )
                 if ok:
                     if claims_path is None:
                         autopilot_claim_reason = (
@@ -1626,7 +1669,11 @@ def make_dispatch_halt_event(
         claim_keys=candidate.dispatch_claim_keys(),
         target_modes=list(candidate.target_modes),
         dispatch_packet_sha256=candidate.dispatch_packet_sha256,
+        archive_path=candidate.archive_path,
+        submission_dir=candidate.submission_dir,
+        archive_manifest_path=candidate.archive_manifest_path,
         archive_sha256=candidate.archive_sha256,
+        candidate_archive_bytes=candidate.candidate_archive_bytes,
         runtime_tree_sha256=candidate.runtime_tree_sha256,
         timing_smoke_command=candidate.timing_smoke_command,
         ready_for_exact_eval_dispatch=candidate.ready_for_exact_eval_dispatch,
@@ -1670,7 +1717,11 @@ def append_autopilot_journal_row(
         "claim_keys": list(event.claim_keys),
         "target_modes": list(event.target_modes),
         "dispatch_packet_sha256": event.dispatch_packet_sha256,
+        "archive_path": event.archive_path,
+        "submission_dir": event.submission_dir,
+        "archive_manifest_path": event.archive_manifest_path,
         "archive_sha256": event.archive_sha256,
+        "candidate_archive_bytes": event.candidate_archive_bytes,
         "runtime_tree_sha256": event.runtime_tree_sha256,
         "ready_for_exact_eval_dispatch": event.ready_for_exact_eval_dispatch,
         "literature_anchor": event.literature_anchor,
@@ -2081,6 +2132,16 @@ def _coerce_optional_float(value: object) -> float | None:
         return None
 
 
+def _coerce_optional_positive_int(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        out = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return out if out > 0 else None
+
+
 def _require_finite_positive_float(
     value: object,
     *,
@@ -2296,6 +2357,10 @@ def _candidate_row_from_raw(
     predicted_dispatch_risk = _coerce_optional_float(
         raw.get("predicted_dispatch_risk")
     )
+    candidate_archive_bytes_raw = raw.get(
+        "candidate_archive_bytes",
+        raw.get("archive_bytes", raw.get("archive_size_bytes")),
+    )
     lane_class_raw = raw.get("lane_class")
     lane_class: str | None = (
         str(lane_class_raw) if lane_class_raw is not None else None
@@ -2370,8 +2435,50 @@ def _candidate_row_from_raw(
             context=context,
         ),
         dispatch_packet_sha256=str(raw.get("dispatch_packet_sha256", "")),
-        archive_sha256=str(raw.get("archive_sha256", "")),
+        archive_path=str(
+            raw.get("archive_path", raw.get("candidate_archive_path", "")) or ""
+        ),
+        submission_dir=str(
+            raw.get("submission_dir", raw.get("submission_path", "")) or ""
+        ),
+        archive_manifest_path=str(
+            raw.get(
+                "archive_manifest_path",
+                raw.get("manifest_path", raw.get("runtime_packet_manifest_path", "")),
+            )
+            or ""
+        ),
+        archive_sha256=str(
+            raw.get(
+                "archive_sha256",
+                raw.get("candidate_archive_sha256", raw.get("expected_archive_sha256", "")),
+            )
+            or ""
+        ),
+        candidate_archive_bytes=_coerce_optional_positive_int(
+            candidate_archive_bytes_raw
+        ),
         runtime_tree_sha256=str(raw.get("runtime_tree_sha256", "")),
+        deployment_target=str(
+            raw.get("deployment_target", raw.get("dispatch_target", "")) or ""
+        ),
+        score_affecting_payload_changed=_json_bool_field(
+            raw,
+            "score_affecting_payload_changed",
+            default=False,
+            context=context,
+        ),
+        charged_bits_changed=_json_bool_field(
+            raw,
+            "charged_bits_changed",
+            default=False,
+            context=context,
+        ),
+        score_affecting_runtime_changed=_json_optional_bool_field(
+            raw,
+            "score_affecting_runtime_changed",
+            context=context,
+        ),
         score_claim=False,
         promotion_eligible=False,
         ready_for_exact_eval_dispatch=(
