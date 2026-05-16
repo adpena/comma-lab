@@ -86,9 +86,13 @@ def test_paired_modal_plan_emits_cpu_and_cuda_commands_with_same_pair_group(
     assert plan["pair_group_id"] == "unit_pair_group"
     cuda_cmd = plan["commands"]["contest_cuda"]
     cpu_cmd = plan["commands"]["contest_cpu"]
+    expected_archive_sha = mod._sha256(archive)
+    assert plan["archive"]["expected_sha256"] == expected_archive_sha
+    assert plan["archive"]["expected_sha256_match"] is True
     for cmd in (cuda_cmd, cpu_cmd):
         assert cmd[cmd.index("--pair-group-id") + 1] == "unit_pair_group"
         assert cmd[cmd.index("--archive") + 1] == str(archive.resolve())
+        assert cmd[cmd.index("--expected-archive-sha256") + 1] == expected_archive_sha
         assert "--single-axis-waiver-reason" not in cmd
     assert "experiments/modal_auth_eval.py" in cuda_cmd
     assert "experiments/modal_auth_eval_cpu.py" in cpu_cmd
@@ -416,4 +420,29 @@ def test_paired_modal_plan_rejects_legacy_single_hash_before_provider_start(
             claim_agent="codex:test",
             claim_notes="unit test",
             expected_runtime_tree_sha256="a" * 64,
+        )
+
+
+def test_paired_modal_plan_rejects_expected_archive_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+
+    with pytest.raises(ValueError, match="expected archive sha does not match"):
+        mod.build_plan(
+            archive=archive,
+            submission_dir="",
+            inflate_sh="inflate.sh",
+            run_id="unit_pair_run",
+            pair_group_id="unit_pair_group",
+            lane_id_base="lane_unit_pair",
+            output_root=Path("experiments/results"),
+            modal_bin=".venv/bin/modal",
+            gpu="T4",
+            claim_agent="codex:test",
+            claim_notes="unit test",
+            expected_archive_sha256="0" * 64,
         )

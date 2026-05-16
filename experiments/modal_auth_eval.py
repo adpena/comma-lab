@@ -892,6 +892,7 @@ def run_auth_eval_h100(
 @app.local_entrypoint()
 def main(
     archive: str = "/tmp/modal_submission/archive.zip",
+    expected_archive_sha256: str = "",
     output_dir: str = "",
     inflate_sh: str = "submissions/robust_current/inflate.sh",
     submission_dir: str = "",
@@ -934,6 +935,12 @@ def main(
     archive_bytes = prepared.archive_bytes
     archive_sha256 = prepared.archive_sha256
     archive_size_bytes = prepared.archive_size_bytes
+    expected_archive_sha256 = str(expected_archive_sha256 or "").strip().lower()
+    if expected_archive_sha256 and expected_archive_sha256 != archive_sha256:
+        raise SystemExit(
+            "FATAL: --expected-archive-sha256 does not match selected archive: "
+            f"expected={expected_archive_sha256} actual={archive_sha256}"
+        )
     inflate_sh_rel = prepared.inflate_sh_rel
     submission_dir_path = prepared.submission_dir_path
     submission_dir_zip = prepared.submission_dir_zip
@@ -990,6 +997,8 @@ def main(
         "app": APP_NAME,
         "archive_path": str(archive_path),
         "archive_sha256": archive_sha256,
+        "expected_archive_sha256": expected_archive_sha256 or archive_sha256,
+        "expected_archive_sha256_match": True,
         "archive_size_bytes": archive_size_bytes,
         "inflate_sh": inflate_sh_rel,
         "submission_dir": str(submission_dir_path) if submission_dir_path else None,
@@ -1095,6 +1104,7 @@ def main(
                 "inflate_device_policy": inflate_device_policy,
                 "inflate_env_overrides": list(inflate_env_overrides),
                 "expected_runtime_tree_sha256": expected_runtime_tree_sha256,
+                "expected_archive_sha256": expected_archive_sha256 or archive_sha256,
                 "lane_id": lane_id,
                 "instance_job_id": instance_job_id,
                 "claim_agent": claim_agent,
@@ -1166,6 +1176,8 @@ def main(
     result["local_output_dir"] = str(out_dir)
     result["archive_path"] = str(archive_path)
     result["archive_sha256"] = archive_sha256
+    result["expected_archive_sha256"] = expected_archive_sha256 or archive_sha256
+    result["expected_archive_sha256_match"] = True
     result["archive_size_bytes"] = archive_size_bytes
     result["inflate_sh"] = inflate_sh_rel
     result["source_repo_commit"] = source_repo_commit

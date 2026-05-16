@@ -150,14 +150,13 @@ def test_briefing_json_composite_has_all_three_keys():
         )
     else:
         assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
-        assert l5["next_exact_eval_target_count"] == 11
-        assert len(l5["next_exact_eval_targets"]) == 11
-        assert len(l5["next_exact_eval_targets_sample"]) == 5
-    assert l5["packetir_status_counts"]["paired_exact_blocked"] == 3
-    assert l5["packetir_status_counts"]["paired_exact_measured"] == 2
-    assert l5["packetir_paired_candidate_count"] == 2
-    assert l5["pr106_stack_cell_candidate_count"] == 2
-    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" not in l5[
+        assert l5["next_exact_eval_target_count"] == 0
+        assert l5["next_exact_eval_targets"] == []
+        assert l5["next_exact_eval_targets_sample"] == []
+    assert l5["packetir_status_counts"]["runtime_consumption_blocked"] == 16
+    assert l5["packetir_paired_candidate_count"] == 0
+    assert l5["pr106_stack_cell_candidate_count"] == 0
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in l5[
         "blockers"
     ]
     if l5["next_exact_eval_targets_sample"]:

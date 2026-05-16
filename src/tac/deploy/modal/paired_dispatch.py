@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 PAIRED_AUTH_EVAL_DISPATCH_TOOL = "tools/dispatch_modal_paired_auth_eval.py"
+PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT = "codex:modal_paired_auth_eval"
 
 
 def paired_auth_eval_dispatch_command_template(
@@ -21,7 +22,7 @@ def paired_auth_eval_dispatch_command_template(
     output_root: str | Path = "experiments/results",
     modal_bin: str = ".venv/bin/modal",
     gpu: str = "T4",
-    claim_agent: str = "codex:gpt-5.5",
+    claim_agent: str = PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
     claim_notes: str = "",
 ) -> list[str]:
     """Build the plan-only or execute form of the paired Modal dispatcher.
@@ -42,6 +43,8 @@ def paired_auth_eval_dispatch_command_template(
         inflate_sh,
         "--label",
         str(label or lane_id_base),
+        "--expected-archive-sha256",
+        str(archive_sha256),
     ]
     if run_id:
         command.extend(["--run-id", str(run_id)])
@@ -75,4 +78,8 @@ def paired_auth_eval_dispatch_command_template(
     return command
 
 
-__all__ = ["PAIRED_AUTH_EVAL_DISPATCH_TOOL", "paired_auth_eval_dispatch_command_template"]
+__all__ = [
+    "PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT",
+    "PAIRED_AUTH_EVAL_DISPATCH_TOOL",
+    "paired_auth_eval_dispatch_command_template",
+]

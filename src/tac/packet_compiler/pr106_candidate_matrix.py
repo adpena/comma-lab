@@ -10,11 +10,13 @@ remains non-promotional and axis-labelled.
 from __future__ import annotations
 
 import shlex
+import sys
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest
 from tac.deploy.modal.paired_dispatch import (
     PAIRED_AUTH_EVAL_DISPATCH_TOOL,
     paired_auth_eval_dispatch_command_template,
@@ -43,6 +45,7 @@ _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 _PAIRED_MODAL_DISPATCH_TOOL = PAIRED_AUTH_EVAL_DISPATCH_TOOL
 _PAIRED_MODAL_PROVIDER = "modal_paired_cpu_cuda"
 _LEGACY_ROUNDED_COMPONENT_SCORE_TOLERANCE = 1e-6
+_CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
 
 
 @dataclass(frozen=True)
@@ -783,7 +786,106 @@ def _runtime_with_derived_content_sha(
     out["runtime_content_tree_sha256"] = next(iter(exact_content_shas))
     out["runtime_content_tree_sha256_source"] = "derived_from_matching_paired_exact_eval"
     out["runtime_content_tree_sha256_derivation_axes"] = list(_REQUIRED_EXACT_AXES)
+    out["runtime_content_tree_sha256_derived_not_direct_manifested"] = True
+    out["runtime_content_tree_sha256_backfill_required"] = True
+    out["runtime_content_tree_sha256_backfill_path"] = out.get("path")
     return out
+
+
+def _current_modal_uploaded_runtime_manifest(
+    runtime: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    runtime_dir = str(runtime.get("runtime_dir") or "")
+    if not runtime_dir:
+        return {"exists": False, "blockers": ["runtime_dir_missing"]}
+    runtime_path = _resolve(runtime_dir, repo_root)
+    inflate_sh = runtime_path / "inflate.sh"
+    if not runtime_path.is_dir():
+        return {
+            "exists": False,
+            "runtime_dir": repo_relative(runtime_path, repo_root),
+            "blockers": ["runtime_dir_current_missing"],
+        }
+    if not inflate_sh.is_file():
+        return {
+            "exists": False,
+            "runtime_dir": repo_relative(runtime_path, repo_root),
+            "blockers": ["runtime_dir_current_inflate_sh_missing"],
+        }
+    try:
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from experiments.contest_auth_eval import _runtime_dependency_manifest
+
+        local_manifest = _runtime_dependency_manifest(
+            inflate_sh,
+            repo_root / "upstream",
+            repo_root=repo_root,
+        )
+        projected = modal_uploaded_submission_dir_runtime_manifest(
+            local_manifest,
+            remote_submission_dir=_CUDA_REMOTE_SUBMISSION_DIR,
+        )
+    except Exception as exc:  # pragma: no cover - defensive local-custody path
+        return {
+            "exists": True,
+            "runtime_dir": repo_relative(runtime_path, repo_root),
+            "blockers": [f"runtime_dir_current_hash_exception:{type(exc).__name__}"],
+        }
+    return {
+        "exists": True,
+        "runtime_dir": repo_relative(runtime_path, repo_root),
+        "runtime_tree_sha256": str(projected.get("runtime_tree_sha256") or ""),
+        "runtime_content_tree_sha256": str(
+            projected.get("runtime_content_tree_sha256") or ""
+        ),
+        "runtime_file_count": projected.get("runtime_file_count"),
+        "blockers": [],
+    }
+
+
+def _runtime_with_current_runtime_custody(
+    runtime: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    out = dict(runtime)
+    blockers = [str(item) for item in out.get("blockers", []) if str(item)]
+    current = _current_modal_uploaded_runtime_manifest(out, repo_root=repo_root)
+    out["current_modal_uploaded_runtime"] = current
+    blockers.extend(str(item) for item in current.get("blockers", []) if str(item))
+    expected_content = str(out.get("runtime_content_tree_sha256") or "").strip().lower()
+    current_content = str(current.get("runtime_content_tree_sha256") or "").strip().lower()
+    out["runtime_content_tree_sha256_matches_current_runtime_dir"] = (
+        bool(expected_content)
+        and bool(current_content)
+        and expected_content == current_content
+    )
+    if current.get("exists") is True and expected_content and current_content:
+        if expected_content != current_content:
+            blockers.append("runtime_dir_current_content_tree_sha_mismatch")
+    elif current.get("exists") is True and not expected_content:
+        blockers.append("runtime_consumption_runtime_content_tree_sha_missing")
+    out["blockers"] = list(dict.fromkeys(blockers))
+    out["valid"] = out.get("valid") is True and not out["blockers"]
+    return out
+
+
+def _source_artifact_warnings(
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    warnings: list[str] = []
+    for axis in _REQUIRED_EXACT_AXES:
+        evidence = exact_evidence.get(axis)
+        if not isinstance(evidence, Mapping):
+            continue
+        if evidence.get("score_claim_in_source_artifact") is True:
+            warnings.append(f"{axis}:source_artifact_score_claim_true")
+        if evidence.get("promotion_eligible_in_source_artifact") is True:
+            warnings.append(f"{axis}:source_artifact_promotion_eligible_true")
+    return list(dict.fromkeys(warnings))
 
 
 def _candidate_status(
@@ -910,7 +1012,6 @@ def _paired_modal_command_template(
         archive_sha256=archive_sha256,
         execute=execute,
         label=lane_id_base,
-        run_id=f"{lane_id_base}_<UTC>",
     )
     if pair_group_id not in command:
         raise ValueError("canonical paired dispatch helper emitted unexpected pair_group_id")
@@ -1114,6 +1215,8 @@ def _row_for_candidate(
         for axis, path in sorted(spec.exact_eval_paths.items())
     }
     runtime = _runtime_with_derived_content_sha(runtime, exact_evidence)
+    runtime = _runtime_with_current_runtime_custody(runtime, repo_root=repo_root)
+    source_artifact_warnings = _source_artifact_warnings(exact_evidence)
     status = _candidate_status(
         archive_exists=archive_path.is_file(),
         identity_passed=identity.get("passed") is True,
@@ -1129,6 +1232,7 @@ def _row_for_candidate(
             "packet_ir_identity": identity,
             "runtime_consumption": runtime,
             "exact_axis_evidence": exact_evidence,
+            "source_artifact_warnings": source_artifact_warnings,
             "status": status,
             "status_blockers": status_blockers,
             "format_id": packet_format_id,
@@ -1183,8 +1287,8 @@ def render_pr106_packetir_candidate_matrix_markdown(matrix: Mapping[str, Any]) -
         "This is an audit artifact only: `score_claim=false`, "
         "`promotion_eligible=false`, and CPU/CUDA axes are not converted.",
         "",
-        "| candidate | format | status | archive bytes | exact axes | blockers |",
-        "|---|---:|---|---:|---|---|",
+        "| candidate | format | status | archive bytes | exact axes | source warnings | blockers |",
+        "|---|---:|---|---:|---|---|---|",
     ]
     for row in matrix.get("rows", []):
         if not isinstance(row, Mapping):
@@ -1211,16 +1315,87 @@ def render_pr106_packetir_candidate_matrix_markdown(matrix: Mapping[str, Any]) -
                         f"{axis}:{item}" for item in evidence.get("blockers", [])
                     )
         blocker_text = ", ".join(dict.fromkeys(blockers)) or "-"
+        warning_text = ", ".join(
+            str(item) for item in row.get("source_artifact_warnings", []) if str(item)
+        ) or "-"
         lines.append(
-            "| {candidate} | `{fmt}` | `{status}` | {bytes_} | {axes} | {blockers} |".format(
+            "| {candidate} | `{fmt}` | `{status}` | {bytes_} | {axes} | {warnings} | {blockers} |".format(
                 candidate=row.get("candidate_id"),
                 fmt=row.get("format_id") or row.get("expected_format_id"),
                 status=row.get("status"),
                 bytes_=archive_bytes,
                 axes=", ".join(axes) or "-",
+                warnings=warning_text,
                 blockers=blocker_text,
             )
         )
+    paired_rows = [
+        row
+        for row in matrix.get("rows", [])
+        if isinstance(row, Mapping)
+        and set(_valid_exact_axes(row.get("exact_axis_evidence", {}))) == set(_REQUIRED_EXACT_AXES)
+    ]
+    if paired_rows:
+        lines.extend(
+            [
+                "",
+                "## Paired exact evidence custody",
+                "",
+                "These rows remain planning inputs only. Source artifact score claims "
+                "are shown as warnings and do not promote this matrix.",
+                "",
+                "| candidate | axis | score | seg | pose | artifact | artifact sha | runtime content sha | log | source score claim |",
+                "|---|---|---:|---:|---:|---|---|---|---|---|",
+            ]
+        )
+        for row in paired_rows:
+            exact = row.get("exact_axis_evidence")
+            if not isinstance(exact, Mapping):
+                continue
+            for axis in _REQUIRED_EXACT_AXES:
+                evidence = exact.get(axis)
+                if not isinstance(evidence, Mapping) or evidence.get("valid") is not True:
+                    continue
+                lines.append(
+                    "| {candidate} | `{axis}` | {score} | {seg} | {pose} | `{artifact}` | `{artifact_sha}` | `{runtime_sha}` | `{log}` | `{source_score_claim}` |".format(
+                        candidate=row.get("candidate_id"),
+                        axis=axis,
+                        score=evidence.get("canonical_score"),
+                        seg=evidence.get("avg_segnet_dist"),
+                        pose=evidence.get("avg_posenet_dist"),
+                        artifact=evidence.get("artifact_path") or evidence.get("path"),
+                        artifact_sha=evidence.get("sha256"),
+                        runtime_sha=evidence.get("runtime_content_tree_sha256"),
+                        log=evidence.get("log_path"),
+                        source_score_claim=evidence.get("score_claim_in_source_artifact"),
+                    )
+                )
+        lines.extend(
+            [
+                "",
+                "### Runtime content SHA derivation notes",
+                "",
+                "| candidate | runtime content sha | source | derived not direct manifested | backfill path |",
+                "|---|---|---|---|---|",
+            ]
+        )
+        for row in paired_rows:
+            runtime = row.get("runtime_consumption")
+            if not isinstance(runtime, Mapping):
+                continue
+            lines.append(
+                "| {candidate} | `{runtime_sha}` | `{source}` | `{derived}` | `{backfill}` |".format(
+                    candidate=row.get("candidate_id"),
+                    runtime_sha=runtime.get("runtime_content_tree_sha256"),
+                    source=runtime.get("runtime_content_tree_sha256_source"),
+                    derived=runtime.get(
+                        "runtime_content_tree_sha256_derived_not_direct_manifested",
+                        False,
+                    ),
+                    backfill=runtime.get("runtime_content_tree_sha256_backfill_path")
+                    or "-",
+                )
+            )
     targets = matrix.get("next_exact_eval_targets", [])
     if isinstance(targets, list) and targets:
         lines.extend(

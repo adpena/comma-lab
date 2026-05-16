@@ -49,6 +49,9 @@ from tac.deploy.modal.anchor_lookup import (  # noqa: E402
 from tac.deploy.modal.auth_eval import (  # noqa: E402
     modal_uploaded_submission_dir_runtime_manifest,
 )
+from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
+)
 
 CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
 CPU_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval_cpu/submission_dir"
@@ -78,6 +81,21 @@ def _optional_arg(cmd: list[str], flag: str, value: str) -> None:
 
 def _is_sha256(value: str) -> bool:
     return bool(re.fullmatch(r"[0-9a-fA-F]{64}", str(value or "").strip()))
+
+
+def _validate_expected_archive_sha256(*, expected: str, actual: str) -> None:
+    expected = str(expected or "").strip().lower()
+    if not expected:
+        return
+    if not _is_sha256(expected):
+        raise ValueError(
+            f"expected archive sha must be a 64-char sha256; got {expected!r}"
+        )
+    if expected != str(actual or "").strip().lower():
+        raise ValueError(
+            "expected archive sha does not match selected archive: "
+            f"expected={expected} actual={actual}"
+        )
 
 
 def _normalize_inflate_sh_for_submission_dir(
@@ -307,6 +325,7 @@ def build_plan(
     expected_runtime_tree_sha256: str = "",
     expected_cuda_runtime_tree_sha256: str = "",
     expected_cpu_runtime_tree_sha256: str = "",
+    expected_archive_sha256: str = "",
     skip_axis_if_promotable_anchor_exists: bool = False,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -314,6 +333,7 @@ def build_plan(
     if not archive.is_file():
         raise FileNotFoundError(f"archive not found: {archive}")
     archive_sha = _sha256(archive)
+    _validate_expected_archive_sha256(expected=expected_archive_sha256, actual=archive_sha)
     archive_bytes = archive.stat().st_size
     notes = claim_notes or (
         "paired Modal auth eval; same archive/runtime required on contest_cuda and contest_cpu axes"
@@ -345,6 +365,8 @@ def build_plan(
         "experiments/modal_auth_eval.py",
         "--archive",
         str(archive),
+        "--expected-archive-sha256",
+        archive_sha,
         "--inflate-sh",
         inflate_sh_for_cmd,
         "--output-dir",
@@ -371,6 +393,8 @@ def build_plan(
         "experiments/modal_auth_eval_cpu.py",
         "--archive",
         str(archive),
+        "--expected-archive-sha256",
+        archive_sha,
         "--inflate-sh",
         inflate_sh_for_cmd,
         "--output-dir",
@@ -443,6 +467,8 @@ def build_plan(
             "path": str(archive),
             "bytes": archive_bytes,
             "sha256": archive_sha,
+            "expected_sha256": expected_archive_sha256 or archive_sha,
+            "expected_sha256_match": True,
         },
         "runtime": {
             "submission_dir": submission_dir or None,
@@ -496,6 +522,7 @@ def build_plan(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path, required=True)
+    parser.add_argument("--expected-archive-sha256", default="")
     parser.add_argument("--submission-dir", default="")
     parser.add_argument("--inflate-sh", default="submissions/robust_current/inflate.sh")
     parser.add_argument("--label", default="")
@@ -505,7 +532,7 @@ def main() -> int:
     parser.add_argument("--output-root", type=Path, default=Path("experiments/results"))
     parser.add_argument("--modal-bin", default=".venv/bin/modal")
     parser.add_argument("--gpu", default="T4")
-    parser.add_argument("--claim-agent", default="codex:modal_paired_auth_eval")
+    parser.add_argument("--claim-agent", default=PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT)
     parser.add_argument("--claim-notes", default="")
     parser.add_argument(
         "--expected-runtime-tree-sha256",
@@ -577,6 +604,7 @@ def main() -> int:
             expected_runtime_tree_sha256=args.expected_runtime_tree_sha256,
             expected_cuda_runtime_tree_sha256=args.expected_cuda_runtime_tree_sha256,
             expected_cpu_runtime_tree_sha256=args.expected_cpu_runtime_tree_sha256,
+            expected_archive_sha256=args.expected_archive_sha256,
             skip_axis_if_promotable_anchor_exists=args.skip_axis_if_promotable_anchor_exists,
             repo_root=resolved_repo_root,
         )
