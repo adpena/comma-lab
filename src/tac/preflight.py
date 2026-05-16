@@ -2314,6 +2314,18 @@ def preflight_all(
         check_session_has_recent_meta_assumption_review(
             strict=False, verbose=verbose,
         )
+        # OR2-GRAND-COUNCIL-PER-ROUND-ASSUMPTION-STATEMENT-DISCIPLINE (#292):
+        # sister of #291 at the per-council-DELIBERATION surface. Fix 7 of
+        # the Adversarial-apparatus retrospective binds the discipline
+        # WITHIN each council memo (every member, every round, must surface
+        # their operating-within assumption) so the structural blindness
+        # cannot recur inside a clean Catalog #291 cadence. WARN-ONLY
+        # initially per CLAUDE.md "Strict-flip atomicity rule" — pre-Fix-7
+        # council memos may lack the discipline tokens. Strict-flip planned
+        # after the next backfill wave.
+        check_grand_council_deliberation_has_explicit_assumption_statements(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -61570,6 +61582,322 @@ def check_session_has_recent_meta_assumption_review(
             "'Bugs must be permanently fixed AND self-protected against'. "
             "Catalog #291 (L5-STAIRCASE-V2-AND-ADVERSARIAL-APPARATUS-STRUCTURAL-"
             "FIXES; sister of Catalog #185 + #229 + #290).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #292 - check_grand_council_deliberation_has_explicit_assumption_statements
+#
+# OR2-GRAND-COUNCIL-PER-ROUND-ASSUMPTION-STATEMENT-DISCIPLINE 2026-05-15
+# self-protection per Fix 7 of the Adversarial-apparatus retrospective
+# (`feedback_adversarial_review_apparatus_blind_to_shared_assumption_failure_meta_meta_meta_meta_20260515.md`).
+#
+# Anchor: Catalog #291 enforces the periodic META-ASSUMPTION ADVERSARIAL
+# REVIEW at the SESSION-LEVEL surface (every 7 days OR every 50 landings).
+# But the structural blindness can recur WITHIN a single grand council
+# deliberation that operates inside an unexamined assumption backdrop. Fix 7
+# binds the discipline at the per-DELIBERATION-PER-ROUND surface: every
+# council member, every round, must explicitly state "the shared assumption
+# I am operating within for this design is X", and the Assumption-Adversary
+# must evaluate X for HARD-EARNED vs CARGO-CULTED classification.
+#
+# Bug class: a grand council can fan out a clean Catalog #291 cadence (the
+# session has a recent META-ASSUMPTION review) AND still produce an
+# assumption-bound deliberation if individual members never surface their
+# operating-within assumptions. The 0.196-0.199 cluster is the empirical
+# cost of pre-2026-05-15 deliberations that reached consensus without
+# per-member assumption-statement discipline.
+#
+# This gate scans `~/.claude/projects/-Users-adpena-Projects-pact/memory`
+# (or any explicitly-passed `memory_dir`) for council deliberation memos
+# matching `feedback_*council*.md` whose date suffix is >= the 2026-05-15
+# cutoff (exempts legacy memos pre-Fix-7) and refuses any memo lacking the
+# canonical per-round explicit-assumption-statement vocabulary AND the
+# Assumption-Adversary evaluation block. Repo-local `.omx/research`
+# council/symposium memos are also scanned so clean clones and CI see the
+# same default result.
+#
+# Acceptance:
+#   - Memo body contains a per-member operating-within phrase
+#     (`operating within`, `shared assumption I am`, `the assumption I am`,
+#     `the shared assumption`, `assumption I am operating within`) — at
+#     least once per memo, OR
+#   - Memo body contains `Assumption-Adversary` evaluation block (verifies
+#     HARD-EARNED vs CARGO-CULTED classification was performed).
+#   - Same-line `# COUNCIL_ASSUMPTION_STATEMENT_WAIVED:<rationale>` waiver
+#     in the memo body honored for the rare deliberate text-only deferred
+#     case (placeholder `<rationale>` / `<reason>` literals rejected so the
+#     gate's docstring example cannot self-waive).
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — live
+# count at landing is likely > 0 because pre-2026-05-15 council memos may
+# lack the discipline tokens; the date cutoff exempts them, but recent
+# memos that landed before THIS gate's text amendment to "Council conduct"
+# may still drift. Strict-flip planned after the next backfill wave once
+# in-flight sister memos all carry the per-member tokens.
+#
+# Sister of:
+#   - Catalog #291 (META-ASSUMPTION cadence — session-level cousin; #292
+#     enforces per-deliberation discipline where #291 enforces per-session
+#     cadence)
+#   - Catalog #229 (premise-verification-before-edit — same per-discipline
+#     pattern at the verification surface)
+#   - Catalog #290 (substrate scaffold canonical-vs-unique discipline —
+#     same per-memo discipline pattern at the substrate-design surface)
+#   - Catalog #185 (CLAUDE.md catalog-text-vs-empirical-state drift — META-
+#     meta-meta protection for this entry's claimed live count)
+# ============================================================================
+
+# Cutoff date suffix; council memos dated before this are exempt by date
+# filter (legacy memos pre-Fix-7 cannot be expected to carry the new
+# discipline tokens).
+_CHECK_292_CUTOFF_DATE_SUFFIX_INT = 20260515
+
+# Filename patterns matching council deliberation memos in scope.
+# Matches:
+#   feedback_*council*landed_<YYYYMMDD>.md
+#   feedback_*grand_council*<YYYYMMDD>.md
+#   feedback_*skunkworks_council*<YYYYMMDD>.md
+#   feedback_*reunion*symposium*<YYYYMMDD>.md  (grand reunion symposium counts)
+_CHECK_292_COUNCIL_FILENAME_RE = re.compile(
+    r"^feedback_.*(?:grand_council|skunkworks_council|council|reunion.*symposium)"
+    r".*?(\d{8}).*\.md$",
+    re.IGNORECASE,
+)
+
+# Tokens that indicate per-member explicit assumption-statement discipline.
+# A council memo passes if ANY of these tokens appears in the body. The
+# tokens were derived from Fix 7 verbatim: "the shared assumption I am
+# operating within for this design is X".
+_CHECK_292_OPERATING_WITHIN_TOKENS: tuple[str, ...] = (
+    "operating within",
+    "shared assumption i am",
+    "the assumption i am",
+    "the shared assumption",
+    "assumption i am operating within",
+    "shared-assumption i am",
+    "shared assumption for this",
+    "my operating assumption",
+    "operating assumption for this",
+)
+
+# Sister token-set: Assumption-Adversary evaluation block. A memo that
+# performs explicit HARD-EARNED vs CARGO-CULTED classification per
+# assumption is also accepted (the discipline is observable even if
+# individual operating-within phrases are absent in the surface text).
+_CHECK_292_ASSUMPTION_ADVERSARY_TOKENS: tuple[str, ...] = (
+    "assumption-adversary",
+    "assumption adversary",
+    "hard-earned vs cargo-culted",
+    "hard_earned vs cargo_culted",
+    "hard earned vs cargo culted",
+    "cargo-culted",
+    "cargo_culted",
+)
+
+_CHECK_292_WAIVER_PATTERN = re.compile(
+    r"#\s*COUNCIL_ASSUMPTION_STATEMENT_WAIVED\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_292_WAIVER_PLACEHOLDERS = frozenset((
+    "<rationale>",
+    "<reason>",
+    "",
+))
+
+
+def _check_292_parse_date_suffix(suffix: str) -> int | None:
+    """Parse YYYYMMDD into a calendar-sortable int; return None on malformed."""
+    if len(suffix) != 8:
+        return None
+    try:
+        year = int(suffix[0:4])
+        month = int(suffix[4:6])
+        day = int(suffix[6:8])
+    except ValueError:
+        return None
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return None
+    return year * 10000 + month * 100 + day
+
+
+def _check_292_has_waiver(body: str) -> bool:
+    """Same-line waiver respected when rationale is non-placeholder."""
+    for m in _CHECK_292_WAIVER_PATTERN.finditer(body):
+        rationale = m.group(1).strip().lower()
+        if rationale not in _CHECK_292_WAIVER_PLACEHOLDERS:
+            return True
+    return False
+
+
+def _check_292_default_memory_dir() -> Path | None:
+    """No external memory scan by default.
+
+    Catalog #292 is a repository preflight gate; clean clones and CI must
+    see the same default result as the operator machine. Pass
+    ``memory_dir=...`` explicitly when auditing local Claude memory.
+    """
+    return None
+
+
+def _check_292_default_research_dir(repo_root: Path | str | None = None) -> Path:
+    """Default in-repo research council/symposium memo directory."""
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
+
+
+def check_grand_council_deliberation_has_explicit_assumption_statements(
+    *,
+    memory_dir: Path | str | None = None,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #292 — refuse grand council deliberation memos missing the
+    per-round explicit-assumption-statement discipline.
+
+    Per CLAUDE.md "Council conduct" Fix-7 amendment + "META-ASSUMPTION
+    ADVERSARIAL REVIEW" non-negotiable. Every council deliberation memo
+    dated >= 2026-05-15 MUST carry one of:
+
+      1. A per-member operating-within phrase (e.g. "the shared assumption
+         I am operating within for this design is X"), OR
+      2. An Assumption-Adversary evaluation block (verifies HARD-EARNED vs
+         CARGO-CULTED classification per round), OR
+      3. A same-line ``# COUNCIL_ASSUMPTION_STATEMENT_WAIVED:<rationale>``
+         waiver with non-placeholder rationale.
+
+    Bug class: Catalog #291 enforces the periodic META-ASSUMPTION review
+    cadence at the SESSION-LEVEL surface, but a council can still produce
+    assumption-bound deliberation outputs WITHIN a clean cadence if no
+    individual member surfaces their operating-within assumption. The
+    0.196-0.199 cluster is the empirical cost of pre-Fix-7 deliberations
+    that reached consensus without per-member assumption-statement
+    discipline. The Assumption-Adversary council role (CLAUDE.md "Council
+    conduct" sextet pact) is the runtime mechanism; this gate is the
+    structural protection that refuses council memos lacking the
+    discipline tokens.
+
+    Acceptance:
+      - Pre-cutoff memos (date < 2026-05-15) are exempt by date filter.
+      - Post-cutoff council memos with operating-within phrase pass.
+      - Post-cutoff council memos with Assumption-Adversary evaluation
+        block pass.
+      - Post-cutoff council memos with same-line waiver + non-placeholder
+        rationale pass.
+      - In-repo ``.omx/research/*council*.md`` and ``*symposium*.md`` are
+        in scope.
+      - External memory memos are scanned only when ``memory_dir`` is
+        passed explicitly; default behavior is clone-stable and repo-local.
+
+    Sister of Catalog #291 (session-level cadence) + Catalog #229 (premise
+    verification) + Catalog #290 (substrate canonical-vs-unique discipline)
+    + Catalog #185 (META-meta-meta CLAUDE.md drift detector).
+
+    Memory:
+    ``feedback_or2_grand_council_per_round_assumption_statement_discipline_landed_20260515.md``.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+    rule" because pre-Fix-7 council memos may lack the discipline tokens
+    even when dated >= cutoff (the cutoff was chosen TODAY; same-day
+    legacy memos predating the Fix-7 amendment exist). Strict-flip planned
+    after the next backfill wave clears in-flight sisters.
+    """
+    if memory_dir is None:
+        memory_target = _check_292_default_memory_dir()
+    elif isinstance(memory_dir, str):
+        memory_target = Path(memory_dir)
+    else:
+        memory_target = memory_dir
+    if research_dir is None:
+        research_target = _check_292_default_research_dir(repo_root)
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    seen_dirs: set[Path] = set()
+    target_surfaces: list[tuple[Path, str]] = []
+    if memory_target is not None:
+        target_surfaces.append((memory_target, "memory"))
+    target_surfaces.append((research_target, "research"))
+
+    for target, surface in target_surfaces:
+        try:
+            resolved_target = target.resolve()
+        except OSError:
+            resolved_target = target
+        if resolved_target in seen_dirs:
+            continue
+        seen_dirs.add(resolved_target)
+        if not target.is_dir():
+            continue
+        try:
+            candidates = sorted(target.iterdir())
+        except OSError:
+            continue
+        for entry in candidates:
+            if not entry.is_file():
+                continue
+            m = _CHECK_292_COUNCIL_FILENAME_RE.match(entry.name)
+            if not m:
+                continue
+            date_int = _check_292_parse_date_suffix(m.group(1))
+            if date_int is None:
+                continue
+            if date_int < _CHECK_292_CUTOFF_DATE_SUFFIX_INT:
+                continue
+            try:
+                body = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            body_lower = body.lower()
+            if any(tok in body_lower for tok in _CHECK_292_OPERATING_WITHIN_TOKENS):
+                continue
+            if any(tok in body_lower for tok in _CHECK_292_ASSUMPTION_ADVERSARY_TOKENS):
+                continue
+            if _check_292_has_waiver(body):
+                continue
+            try:
+                rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}: {surface} council memo dated {date_int} is missing the "
+                "required per-round explicit-assumption-statement discipline. Per "
+                "CLAUDE.md 'Council conduct' Fix-7 amendment + 'META-ASSUMPTION "
+                "ADVERSARIAL REVIEW' non-negotiable: every council deliberation "
+                "memo dated >= 2026-05-15 MUST carry one of (a) per-member "
+                "operating-within phrase (e.g. 'the shared assumption I am "
+                "operating within for this design is X'), (b) Assumption-Adversary "
+                "evaluation block (HARD-EARNED vs CARGO-CULTED classification), "
+                "or (c) same-line `# COUNCIL_ASSUMPTION_STATEMENT_WAIVED:"
+                "<rationale>` waiver with non-placeholder rationale."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_grand_council_deliberation_has_explicit_assumption_statements] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_grand_council_deliberation_has_explicit_assumption_statements] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_grand_council_deliberation_has_explicit_assumption_statements "
+            f"found {len(violations)} council deliberation memo(s) missing the "
+            "per-round explicit-assumption-statement discipline. Per CLAUDE.md "
+            "'Council conduct' Fix-7 amendment + 'META-ASSUMPTION ADVERSARIAL "
+            "REVIEW' non-negotiable + 'Bugs must be permanently fixed AND self-"
+            "protected against'. Catalog #292 (OR2-GRAND-COUNCIL-PER-ROUND-"
+            "ASSUMPTION-STATEMENT-DISCIPLINE; sister of Catalog #185 + #229 + "
+            "#290 + #291).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
