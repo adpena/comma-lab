@@ -1,3 +1,35 @@
+---
+# COUNCIL-HIERARCHY-V2 frontmatter backfilled 2026-05-16 (Catalog #300 sister
+# landing; per CLAUDE.md "Council hierarchy: 4-tier protocol" hybrid backfill
+# rule for ≤10 most-actively-cited pre-cutoff council memos). Body content
+# preserved per Catalog #110/#113 HISTORICAL_PROVENANCE; only frontmatter
+# added. Council tier inferred T4 (symposium scope; full grand council + 6-of-6
+# sextet + specialist seats per the v2 spec). Persisted as continual-learning
+# anchor via tac.council_continual_learning.append_council_anchor.
+council_tier: T4
+council_attendees: [Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Assumption-Adversary, Carmack, Hotz, Selfcomp, Quantizr, MacKay, Ballé, Hinton, Mallat, van_den_Oord, Tao, Boyd, Hassabis, Karpathy, Schmidhuber]
+council_quorum_met: true
+council_verdict: PROCEED_WITH_REVISIONS
+council_dissent:
+  - member: Assumption-Adversary
+    verbatim: "redesign multi-path candidates risk repeating cargo-cult-prediction failure if predicted bands aren't grounded in Dykstra-feasibility intersection of contest constraints"
+council_assumption_adversary_verdict:
+  - assumption: "5-move Carmack-Hotz composition is additive under contest polytope constraints"
+    classification: CARGO-CULTED
+    rationale: "v6 553× outside-band empirical receipt proves the additivity assumption was unexamined; Dykstra would have flagged the feasibility region intersection as non-empty"
+  - assumption: "grayscale Y=R=G=B replication recoverable by inflate-side reconstruction"
+    classification: CARGO-CULTED
+    rationale: "SegNet stride-2 stem cannot recover destroyed chroma; seg=64.59 is the empirical falsification"
+  - assumption: "np.roll global translation safe for PoseNet"
+    classification: CARGO-CULTED
+    rationale: "pose=149.03 is empirical proof PoseNet is NOT translation-invariant; this was an untested assumption"
+council_decisions_recorded:
+  - "op-routable #1: redesign multi-path with Dykstra-feasibility check per Catalog #296"
+  - "op-routable #2: Catalog #297 signal-axis-destruction reversibility probe enforces structurally"
+  - "op-routable #3: NSCS06 lane set research_only=true per CLAUDE.md 'Forbidden premature KILL' lessons exhausted"
+related_deliberation_ids: []
+---
+
 # Grand Council Symposium — NSCS06 Carmack-Hotz Strip-Everything 500-1000× Falsification + Redesign Multi-Path
 
 **Date:** 2026-05-16

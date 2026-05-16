@@ -31498,6 +31498,47 @@
         }
       },
       "notes": "PREMORTEM-CONSOLIDATION-WAVE 2026-05-16. Lands 5 artifacts per the 12-month premortem optimal cut (#1 substrate retirement + #5 gate quota + #4 HANDOFF + #6 memory rotation + #10 state JSONL archival). Catalogs #298 + #299 WARN-ONLY at landing. Sister: lane_12_month_frustration_premortem_20260516. research_only=false (operational landing). lane_class=substrate_engineering"
+    },
+    {
+      "id": "lane_council_hierarchy_v2_landing_20260516",
+      "name": "COUNCIL-HIERARCHY-V2 4-tier protocol + Catalog #300 + canonical helper + audit tool",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/council_continual_learning.py + src/tac/preflight.py:Catalog#300 + tools/audit_council_tier_cadence.py + CLAUDE.md 'Council hierarchy: 4-tier protocol' section"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #300 wired warn-only in preflight_all(); strict-flip after 5 v2 deliberations land"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_council_hierarchy_v2_landed_20260516.md (eats own dogfood T3 v2 frontmatter)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -31507,5 +31548,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T15:09:41Z"
+  "updated_at": "2026-05-16T15:40:09Z"
 }

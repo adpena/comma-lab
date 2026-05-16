@@ -514,6 +514,151 @@ active claims.
 
 This rule exists because 2026-05-01 ~23:50 UTC the user reported a possible Q-FAITHFUL dispatch conflict between Claude (H100 SXM via Vast.ai) and codex (Lightning) — no formal cross-agent coordination existed and we may have burned $5-10 of duplicate GPU spend. Level 2 is now the norm: use the helper script and strict submitter checks, not manual table edits except for emergency recovery.
 
+## Council hierarchy: 4-tier protocol — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator-approved 2026-05-16 verbatim *"all of that sounds great, we want to ensure maximum signal and continual learning"* on the COUNCIL-HIERARCHY-V2 spec. Extends the existing "Council conduct" sextet pact + "Grand Council (advisory)" 20-seat roster + "Design decisions — non-negotiable" + "Adversarial council review of design decisions" + "Recursive adversarial review protocol" + "META-ASSUMPTION ADVERSARIAL REVIEW" non-negotiables with a structured **4-tier hierarchy** that makes quorum / tie-break / recusal / elevation / operator-attention-budget all explicit. Memory: `feedback_council_hierarchy_v2_landed_20260516.md`. Anchor memos: Catalog #291 (per-session META-ASSUMPTION cadence), Catalog #292 (per-deliberation assumption surfacing), HARD-EARNED-vs-CARGO-CULTED addendum (`feedback_assumptions_classification_hard_earned_vs_cargo_culted_critical_addendum_20260515.md`).
+
+### The 4 tiers
+
+| Tier | Name | Quorum | Tie-break | Binding scope | Cadence budget |
+|---|---|---|---|---|---|
+| **T1** | Working Group | All summoned (1-3 named members) | Working-group lead | Bounded-scope recommendation; NO veto power; output feeds a T2/T3 deliberation | UNBOUNDED (many/day OK) |
+| **T2** | Inner-Skunkworks | 5-of-6 sextet (Shannon LEAD / Dykstra CO-LEAD / Yousfi / Fridrich / Contrarian / Assumption-Adversary) | Shannon LEAD (information-theory grounding); Dykstra CO-LEAD on optimization-feasibility ties | In-flight engineering tradeoffs; loss-function choices; architecture parameters; trainer wire-ins | ≤3/day, ≤90/30d |
+| **T3** | Full Grand Council | 5-of-6 sextet + ≥12-of-20 grand council (existing 12 seats + 8 new 2026-05-15 seats per the roster expansion) | Shannon LEAD; Dykstra CO-LEAD fallback; specialist tiebreaker for paradigm-specific deliberations | CLAUDE.md non-negotiable additions/amendments; cross-cutting wire-ins; strategic redirection within a track | ≤3/week, ≤13/30d |
+| **T4** | Symposium | 6-of-6 sextet + ≥16-of-20 grand council + ≥1 specialist seat per affected paradigm/path | Operator-resolves on remaining ties | Kill-and-replace decisions; multi-month directional shifts; operator-pre-attention escalation when council cannot reach consensus | ≤2/30d (≤2/month) |
+
+### Recusal triggers
+
+A council member MUST recuse from a deliberation when ANY of:
+
+1. **Authorship conflict** — the member is the canonical author of the work being deliberated (e.g. Shannon recuses from a deliberation specifically critiquing his information-theory framing for THIS problem; Yousfi recuses from a deliberation on Yousfi-PR-related decisions).
+2. **Sister-subagent conflict** — the member is the subagent that produced the artifact under review in the SAME session (prevents lazy self-approval per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" reviewer-vs-author separation).
+3. **Prior-position-precommit** — the member has already cast a binding position on the EXACT same question within the last 7 days (forces the council to surface NEW signal in the new deliberation rather than re-litigating).
+
+Recusal is announced at the start of the deliberation; the remaining quorum threshold applies (e.g. T2 with Shannon recused → 5-of-5 of remaining sextet seats; if quorum cannot be met, elevation trigger #2 fires).
+
+### Tier elevation triggers
+
+* **T1 → T2** when ANY of: (a) the working group's recommendation requires changing a loss function / training schedule / scorer routing; (b) the working group encounters a HARD-EARNED-vs-CARGO-CULTED classification disagreement; (c) the working group's empirical finding contradicts a sister T2 anchor on the same topic.
+* **T2 → T3** when ANY of: (a) the deliberation touches a CLAUDE.md non-negotiable (addition / amendment / interpretation); (b) recusal drops quorum below 5-of-6; (c) Contrarian veto invoked AND alternative does not reach 4-of-6 consensus within ~30 min; (d) Assumption-Adversary identifies the deliberation as operating within a CARGO-CULTED assumption (per the Catalog #292 + HARD-EARNED-vs-CARGO-CULTED framework) AND the sextet does NOT reach consensus on whether to violate the assumption.
+* **T3 → T4** when ANY of: (a) decision is kill-and-replace of an existing substrate/codec class (not a single lane; a class); (b) decision would commit >1 month of operator/agent attention to a new direction; (c) ≥3 grand-council members invoke specialist-disagreement (e.g. Boyd and Tao disagree on convex feasibility; Atick and Tishby disagree on cooperative-receiver framing); (d) recursive adversarial review protocol cycle hits 5 unsuccessful clean-pass attempts on the same topic (per CLAUDE.md "Recursive adversarial review protocol — close paths" R12-D structural unsatisfiability).
+
+### Memory file naming + frontmatter (v2 contract)
+
+Council deliberation memos MUST be named per the canonical pattern:
+
+```
+feedback_<grand_council|skunkworks_council|reunion_symposium>_<topic-slug>_<YYYYMMDD>.md
+```
+
+The YAML frontmatter MUST include the v2 fields (enforced structurally by Catalog #300 `check_council_deliberation_declares_tier_in_frontmatter`):
+
+```yaml
+---
+council_tier: T2   # one of T1/T2/T3/T4
+council_attendees: [Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Assumption-Adversary]
+council_quorum_met: true
+council_verdict: PROCEED   # PROCEED / PROCEED_WITH_REVISIONS / DEFER_PENDING_EVIDENCE / REFUSE / ESCALATE_TO_OPERATOR / ESCALATE_TO_HIGHER_TIER
+council_dissent:
+  - member: Contrarian
+    verbatim: "the argument elides the cost-band uncertainty; I want a paired-comparison smoke before commit"
+council_assumption_adversary_verdict:   # required at T2+
+  - assumption: "EMA decay 0.997 + use shadow at inference"
+    classification: HARD-EARNED
+    rationale: "PR101 empirical + Quantizr 0.33 anchor"
+  - assumption: "canonical scorer-preprocess routing always optimal"
+    classification: CARGO-CULTED
+    rationale: "untested on this substrate's gradient path"
+council_decisions_recorded:
+  - "op-routable #1: dispatch paired-comparison smoke at $0.15"
+  - "op-routable #2: defer canonicalization until smoke result"
+---
+```
+
+### Operator-attention budget per tier (over-cadence alerts)
+
+Sustainable cadence per tier (window = 30d unless noted):
+
+* **T1** — UNBOUNDED. Elevation triggers handle the "too many T1s producing crossing findings" case.
+* **T2** — ≤3/day, ≤90/30d. Over budget = design tradeoffs are coming faster than 5 humans can deliberate rigorously.
+* **T3** — ≤3/week, ≤13/30d. Over budget = CLAUDE.md non-negotiable changes / cross-cutting wire-ins are coming too fast for council coherence.
+* **T4** — ≤2/30d. Over budget = strategic redirection is happening too often (strong signal of unstable directional commitment).
+
+Cadence verdicts emitted by `tools/audit_council_tier_cadence.py`:
+
+* **WITHIN_BUDGET** — count ≤ 80% of budget.
+* **APPROACHING_LIMIT** — 80% < count ≤ 100% of budget.
+* **OVER_CADENCE** — count > 100% of budget. Operator-visible alert: STOP AND CONSOLIDATE. Review whether recent deliberations could have been resolved at a LOWER tier; re-cadence the operator-attention budget.
+
+### Maximum signal preservation rule
+
+Per the operator 2026-05-16 meta-principle *"ensure maximum signal"*, every council deliberation MUST record (NO lossy summarization is permitted):
+
+1. **Verbatim dissent** — every minority opinion preserved verbatim in `council_dissent`. The Contrarian's vote pattern + verbatim is queryable across deliberations via `tac.council_continual_learning.query_dissent_history` (so future deliberations can trace which members have consistently flagged X as cargo-culted).
+2. **Per-member operating-within assumption** — at the top of each member's position, the explicit assumption surface required by Catalog #292 + CLAUDE.md "Council conduct" Fix-7 amendment. Lossy paraphrase is FORBIDDEN.
+3. **HARD-EARNED-vs-CARGO-CULTED classification** — per surfaced assumption, the Assumption-Adversary's verdict in `council_assumption_adversary_verdict`. Required at T2+. Classifications are queryable across deliberations via `tac.council_continual_learning.query_assumption_classification_history` (so future Assumption-Adversary deliberations can trace classification stability — an assumption flipping HARD-EARNED ↔ CARGO-CULTED across deliberations is a red flag).
+4. **Full vote tally** — including abstentions and recusals (e.g. `"T3 grand council: 14 PROCEED / 2 DEFER / 1 REFUSE / 3 recused (authorship); quorum 5-of-6 sextet met; 14-of-17 grand council voted; verdict PROCEED with PROCEED_WITH_REVISIONS dissent recorded"`).
+5. **Cite-chain to prior deliberations** — `related_deliberation_ids` lists prior council deliberations on the same topic so future recursive review can trace position evolution. Queryable via `tac.council_continual_learning.query_anchors_by_topic`.
+
+Lossy summarization that drops any of (1)-(5) is a CARGO-CULTED engineering shortcut and a forbidden pattern.
+
+### Continual learning wire-in rule
+
+Per the operator 2026-05-16 meta-principle *"continual learning"*, every T2+ deliberation MUST emit a continual-learning anchor via the canonical helper:
+
+```python
+from tac.council_continual_learning import (
+    CouncilDeliberationRecord, CouncilTier, append_council_anchor,
+)
+
+record = CouncilDeliberationRecord(
+    deliberation_id="<slug>_<YYYYMMDD>",
+    topic="<short subject>",
+    council_tier=CouncilTier.T2,
+    council_attendees=("Shannon", "Dykstra", ...),
+    council_quorum_met=True,
+    council_verdict="PROCEED",
+    council_dissent=({"member": "Contrarian", "verbatim": "..."},),
+    council_assumption_adversary_verdict=(
+        {"assumption": "...", "classification": "HARD-EARNED", "rationale": "..."},
+    ),
+    council_decisions_recorded=("op-routable #1: ...",),
+)
+append_council_anchor(record)   # appends to .omx/state/council_deliberation_posterior.jsonl
+```
+
+T1 working groups SHOULD emit an anchor when their finding crosses an elevation trigger (so the downstream T2/T3 deliberation has the prior anchor as side information). T1 outputs that do NOT cross an elevation trigger MAY skip the persisted anchor (recommendation is captured in the deliberating T2/T3's memo body).
+
+The persisted council verdicts + dissent + assumption classifications become signal that:
+
+* Future deliberations consume via `query_anchors_by_topic` (cite-chain detection).
+* The autopilot ranker consumes via the upcoming `tac.cathedral_autopilot_*` hook for council-verdict-aware candidate weighting.
+* The Rashomon ensemble (Catalog #252 sister) consumes via fcntl-locked posterior reads.
+* The Assumption-Adversary consumes via `query_assumption_classification_history` (classification-stability monitoring).
+
+### Backward compatibility (hybrid backfill)
+
+Pre-2026-05-16 council memos are EXEMPT from Catalog #300 frontmatter requirements (the v2 fields did not exist when those memos were written). However, the ≤10 most-actively-cited pre-cutoff council memos are backfilled with v2 frontmatter (NO body mutation per Catalog #110/#113 HISTORICAL_PROVENANCE discipline; only the YAML frontmatter is added/extended) AND persisted as continual-learning anchors via `append_council_anchor` so the autopilot ranker / Rashomon ensemble can see the canonical historical baseline.
+
+### Concrete enforcement
+
+* STRICT preflight Catalog #300 (`check_council_deliberation_declares_tier_in_frontmatter`) refuses post-2026-05-16 council memos lacking v2 frontmatter. WARN-ONLY at landing per "Strict-flip atomicity rule"; strict-flip planned after 5 deliberations land in v2 format.
+* Sister Catalog #292 (`check_grand_council_deliberation_has_explicit_assumption_statements`) enforces per-DELIBERATION body-level assumption surfacing.
+* `tools/audit_council_tier_cadence.py` emits OVER_CADENCE alerts per tier; CI / operator-authorize harness may consult to gate over-budget tier dispatches.
+* `tac.council_continual_learning` is the canonical wire-in; bare writes to `.omx/state/council_deliberation_posterior.jsonl` outside the canonical helper are refused by Catalog #131 sister discipline.
+
+### Cross-references
+
+* "Council conduct" — sextet pact baseline + per-round explicit-assumption-statement discipline.
+* "Grand Council (advisory)" — 20-seat roster expansion (12 existing + 8 new 2026-05-15 seats).
+* "Design decisions — non-negotiable" — quintet pact base + council-grade tradeoff requirement.
+* "Adversarial council review of design decisions" — the canonical council-deliberation pattern this hierarchy operationalizes.
+* "Recursive adversarial review protocol" — the per-round assumption-challenge axis + 3-clean-pass discipline that T2+ deliberations inherit.
+* "META-ASSUMPTION ADVERSARIAL REVIEW" — the per-session cadence Catalog #291 enforces.
+* "Bugs must be permanently fixed AND self-protected against" — the structural-protection pattern Catalog #300 + #292 + #291 jointly satisfy.
+* `feedback_assumptions_classification_hard_earned_vs_cargo_culted_critical_addendum_20260515.md` — the canonical HARD-EARNED-vs-CARGO-CULTED framework T2+ Assumption-Adversary verdicts use.
+* `feedback_council_hierarchy_v2_landed_20260516.md` — this section's landing memo (eats own dogfood; carries v2 frontmatter as the first T3 deliberation in v2 format).
+
 ## Operator gates must be wired and used — NON-NEGOTIABLE
 
 Recovered tools are not done when the source file exists. They must be wired
@@ -2585,6 +2730,8 @@ Catalog #291 OSS-hermetic implementation note (2026-05-15 follow-up): the runtim
 298. `check_substrate_lane_l1_scaffold_not_stale_dispatch` — PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md "Substrate retirement discipline" non-negotiable + the 12-month premortem (`.omx/research/12_month_frustration_premortem_and_recommendations_20260516.md` Category E + Section 3 #1). Refuses any in-scope L1 substrate lane in `.omx/state/lane_registry.json` (id-substring matched against the canonical `_CHECK_298_IN_SCOPE_ID_SUBSTRINGS` set mirroring Catalog #220 / #272) with `impl_complete=true` that has no `tools/lane_maturity.py mark` activity within the 30-day staleness window (via `.omx/state/lane_maturity_audit.log` scan) AND no opt-out. Opt-out cascade per CLAUDE.md "Substrate retirement discipline" non-negotiable: (a) `research_only=true` top-level field OR notes-token `research_only=true` / `research-only=true`; (b) `lane_class=substrate_engineering` / `lane_class=research_substrate` top-level field OR notes-token; (c) `archived=true` top-level field OR notes-token `lane_state=archived` / `terminal_verdict`; (d) `target_modes` list containing `research_substrate` / `research_only`; (e) same-line waiver `# RETIREMENT_DISCIPLINE_WAIVED:<rationale>` in lane notes / evidence (placeholder `<rationale>` / `<reason>` literals rejected). Bug class: premortem Category E. At current cadence we project 200+ stale L1 SCAFFOLD substrate lanes by 2027-05-16; the cathedral autopilot ranker over-fits on the 200+ scale; every dispatch wave that DOES fire spends $20-100 chasing one substrate, leaving the other 199 untouched. Companion canonical operator-facing audit tool `tools/audit_stale_l1_substrates.py` produces the monthly retirement candidate list with per-lane verdict (ACTIVE_RECENT_DISPATCH / ACTIVE_RECENT_MARK / STALE_PENDING_DECISION / OPT_OUT_RESEARCH_ONLY / OPT_OUT_SUBSTRATE_ENGINEERING / OPT_OUT_ARCHIVED). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" because the operator-routed backfill sweep of existing stale L1 lanes is itself the strict-flip atomic. Live count at landing: 0 (75 in-scope substrate lanes scanned; 31 ACTIVE_RECENT_MARK + 28 OPT_OUT_RESEARCH_ONLY + 16 OPT_OUT_SUBSTRATE_ENGINEERING; all currently within 30-day mark window per WAVE-9 substrate canvas activity). Strict-flip planned once cadence shifts produce real stale candidates AND the operator-routed retirement sweep clears them. Sister of Catalog #220 (substrate L1+ scaffold operational mechanism declaration) + Catalog #272 (distinguishing-feature integration contract) + Catalog #233 (L1->L2 promotion canonical 4-gate) + Catalog #90 (lane registry consistency). Together they extinct the "L1 SCAFFOLD substrate accumulates indefinitely without dispatch resolution" failure mode that drives premortem Category E. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": this gate enforces RETIREMENT (research_only / archived / waiver) not KILL — the default verdict for stale L1 is DEFERRED-pending-decision, never killed. Memory: `feedback_premortem_consolidation_wave_5_items_landed_20260516.md`. Lane: `lane_premortem_consolidation_wave_5_items_20260516`.
 
 299. `check_catalog_quota_under_400` — PREMORTEM-CONSOLIDATION-WAVE 2026-05-16 self-protection per CLAUDE.md "Gate consolidation discipline" non-negotiable + the 12-month premortem (`.omx/research/12_month_frustration_premortem_and_recommendations_20260516.md` Category A + Section 3 #5 + Section 5 anti-pattern #1). Refuses CLAUDE.md catalog table entries (any `^N. \`check_*\`` line) where N > `_CHECK_299_CATALOG_QUOTA` (= 400) unless the CLAUDE.md file first 200 lines carry a file-level `# CATALOG_QUOTA_EXCEEDED_OK:<rationale>` waiver (placeholder `<rationale>` / `<reason>` literals rejected). Bug class: premortem Category A. At current cadence (~5-10 new gates/week) the catalog # crosses 500 by Q4 2026 and 700+ by 2027-05-16. `preflight.py` swells past 100K LOC. Strict-mode `preflight_all()` execution time grows past 60 seconds even in `--scope dev` mode. The operator-authorize harness's 30-second budget breaks; dispatchers either start skipping preflight or get used to multi-minute pre-flights. New gates get added but reviewed only by their author. META-meta gates (#118, #159, #176, #185, #186, #289) themselves drift because nobody audits the META-meta surface. The Catalog #273-#278 phantom-row incident (2026-05-15) becomes the rule, not the exception. The quota brake at #400 forces an explicit "stop and consolidate" pause: review the existing 295+ gates for retirement candidates BEFORE adding the new one. New gates past the quota MUST satisfy ONE of: (a) retire an existing strict gate (mark DEPRECATED + remove orchestrator callsite after 30 days), (b) carry the file-level waiver, OR (c) REPLACE an existing strict gate (delete old entry + orchestrator callsite in the same commit batch). Initial wire-in is WARN-ONLY because the current registered catalog max is ~299 so the quota is not yet binding. Strict-flip planned when catalog # approaches 400 (so the operator gets the explicit "stop and consolidate" pause at the right moment). Live count at landing: 0 (max registered catalog # = 299, well under quota of 400). Sister of Catalog #118 (no duplicate numbers) + Catalog #159 (catalog text matches strict value) + Catalog #176 (strict callsites have CLAUDE.md row) + Catalog #185 (LIVE_COUNT drift detection) + Catalog #186 (catalog claim committed via serializer). Together they extinct the catalog # drift / phantom-row / exhaustion failure modes at SIX surfaces: number uniqueness (#118) + text-strict parity (#159) + callsite-has-row (#176) + live-count drift (#185) + claim-transactional (#186) + quota brake (#299). Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable: EVERY new STRICT gate's introduction MUST evaluate whether it could be written as a META-meta gate that subsumes >=3 sister cases (one gate kills three bug classes) BEFORE landing. Pure-additive gate landings are the slow death per premortem Section 5 anti-pattern #10. Memory: `feedback_premortem_consolidation_wave_5_items_landed_20260516.md`. Lane: `lane_premortem_consolidation_wave_5_items_20260516`.
+
+300. `check_council_deliberation_declares_tier_in_frontmatter` — COUNCIL-HIERARCHY-V2 self-protection 2026-05-16 (operator-approved 4-tier protocol with maximum-signal preservation + continual-learning wire-in meta-principles per `feedback_council_hierarchy_v2_landed_20260516.md`). Refuses post-cutoff (date >= 2026-05-16) council deliberation memos under `.omx/research/*council*<YYYYMMDD>.md` / `*grand_council*` / `*skunkworks_council*` / `*reunion*symposium*` lacking the v2 4-tier frontmatter fields. Required fields (all tiers): `council_tier` (one of T1/T2/T3/T4) + `council_attendees` + `council_quorum_met` + `council_verdict` (one of PROCEED / PROCEED_WITH_REVISIONS / DEFER_PENDING_EVIDENCE / REFUSE / ESCALATE_TO_OPERATOR / ESCALATE_TO_HIGHER_TIER) + `council_dissent` + `council_decisions_recorded`. T2+ additionally requires `council_assumption_adversary_verdict` per Catalog #292 + CLAUDE.md "Council conduct" Fix-7 amendment. Bug class: Catalog #292 enforces per-deliberation BODY-LEVEL assumption surfacing for all council memos dated >= 2026-05-15; #300 is the FRONTMATTER-LEVEL extension that captures tier + attendees + quorum + verdict + dissent + decisions as a structured machine-readable contract. Without the tier declaration, downstream consumers (continual-learning posterior at `.omx/state/council_deliberation_posterior.jsonl`, the Rashomon ensemble, the cadence audit tool `tools/audit_council_tier_cadence.py`) cannot route the deliberation through the correct sub-flow per tier (T1 unbounded / T2 ≤3/day / T3 ≤3/week / T4 ≤2/month operator-attention budget). Acceptance cascades: (a) pre-cutoff memos exempt by date filter (Catalog #292 still applies); (b) post-cutoff memos with all required v2 frontmatter fields pass; (c) same-line `# COUNCIL_TIER_FRONTMATTER_WAIVED:<rationale>` waiver with non-placeholder rationale (placeholder `<rationale>` / `<reason>` literals rejected so the gate's docstring example cannot self-waive); (d) external Claude-memory scans opt-in via `memory_dir=` kwarg only (OSS-hermetic per Catalog #290/#291/#292 sister design). Initial wire-in is **WARN-ONLY** per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 0 (no post-cutoff council memos exist yet). Strict-flip planned after 5 council deliberations land in v2 format. Sister of Catalog #291 (`check_session_has_recent_meta_assumption_review`, session-level cadence) + Catalog #292 (`check_grand_council_deliberation_has_explicit_assumption_statements`, body-level cousin) + Catalog #229 (`check_subagent_landing_includes_premise_verification_evidence`, per-discipline pattern) + Catalog #290 (`check_substrate_design_memo_has_canonical_vs_unique_decision_section`, same OSS-hermetic design-memo gate pattern) + Catalog #185 (`check_strict_flipped_catalog_entries_have_live_count_zero`, META-meta drift detection). Together they extinct the "council deliberation produced without machine-readable contract" bug class structurally at THREE surfaces: session-level cadence (#291) + body-level assumption surfacing (#292) + frontmatter-level tier-routing (#300). Sister canonical helper at `src/tac/council_continual_learning.py` (~430 LOC: `CouncilDeliberationRecord` dataclass + `append_council_anchor` fcntl-locked JSONL writer per Catalog #128/#131 + `load_council_anchors_strict` Catalog #138 fail-closed loader + `query_anchors_by_topic` / `query_dissent_history` / `query_assumption_classification_history` cite-chain helpers + `update_from_anchor` Catalog #265 canonical-contract alias). Sister cadence audit tool at `tools/audit_council_tier_cadence.py` emits per-tier WITHIN_BUDGET / APPROACHING_LIMIT / OVER_CADENCE verdicts; exit rc=1 on any over-cadence tier (operator-visible STOP AND CONSOLIDATE alert per CLAUDE.md "Council hierarchy: 4-tier protocol" operator-attention budget section). 32 dedicated tests in `src/tac/tests/test_check_300_council_hierarchy_v2_frontmatter.py` covering helper unit tests (date suffix parser / tier extractor / waiver mechanism), end-to-end gate behavior (no research dir / clean memo / missing-fields memo / pre-cutoff exempt / non-council out-of-scope / skunkworks council in-scope / reunion symposium in-scope / T1 skips assumption-adversary requirement / T3 requires assumption-adversary / same-line waiver / placeholder rejection / strict-mode raises with Catalog #300 message / strict silent on clean / multi-violation aggregation / string repo_root / orchestrator warn-only wire-in regression guard / invalid date suffix skipped / external memory opt-in-only / live-repo regression guard / verbose output clean+dirty). Plus 28 sister tests for the canonical helper at `src/tac/tests/test_council_continual_learning.py` (schema validation / append + fcntl-locked persistence / strict-load corruption raise / lenient skip / query helpers / 4-proc spawn-pool concurrent-append safety / update_from_anchor alias) and 12 sister tests for the cadence audit tool at `src/tac/tests/test_audit_council_tier_cadence.py` (classify per-tier / audit empty / audit over-cadence / outcome events not counted / render text / CLI JSON / CLI rc=1 on over-cadence). Memory: `feedback_council_hierarchy_v2_landed_20260516.md`. Lane: `lane_council_hierarchy_v2_landing_20260516`.
 
 297. `check_substrate_signal_axis_destruction_has_reversibility_probe` — META-CARGO-CULT META-CC-2 self-protection 2026-05-16 (per `.omx/research/meta_assumption_backfill_audit_all_staircase_substrates_20260516.md` + `.omx/research/grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md` + commit `4292c8ce2` (symposium) + commit `b0a7ff474` (META-assumption audit)). Refuses substrate trainers + codec modules under `src/tac/substrates/*/` and `experiments/train_substrate_*.py` files containing forbidden signal-axis-destruction tokens: (1) `Y=R=G=B` / `R=G=B=Y` chained-assignment (NSCS06 grayscale-to-RGB replication anchor); (2) `grayscale_to_rgb(...duplicate...)` call with duplicate semantics; (3) `frame.mean(...color...)` chroma-collapsing axis-mean; (4) `rgb_grey = (r+g+b)/3` manual chroma-to-luma reduction; (5) `single_channel_only` variable / kwarg / comment marker; (6) `_grayscale_to_rgb` helper function name; (7) `_drop_chroma` helper function name. Per-line acceptance cascade: (a) sister probe file exists at `tools/probe_<substrate_id>_reversibility*.py` (canonical pattern, sister derived from `src/tac/substrates/<id>/` parent dir OR `experiments/train_substrate_<id>.py` filename token); (b) same-line waiver `# SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:<rationale>` on the destruction-token line (placeholder `<rationale>` / `<reason>` literals rejected); (c) enclosing function name contains the substring `_compress_time_only` signaling explicitly that destruction lives only at compress time and the downstream loss does NOT route through SegNet/PoseNet on the destroyed signal. Pure comment lines (starting with `#` after leading whitespace) are NOT flagged so docstring/comment mentions are tolerated. Test files (`/tests/` subdir, `test_*.py` filenames) + vendored intake clones + generated build/oss-export artifacts excluded. Bug class anchors: NSCS06 Y=R=G=B chroma replication (seg=64.59 because SegNet's stride-2 stem cannot recover destroyed chroma); NSCS06 np.roll global translation (pose=149.03 empirical proof that PoseNet is NOT translation-invariant); Z3-G1 empty `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""` slots (silent reproduction of Z3 v2 baseline 0.19869 to 5 decimals — empty slots never affect the score). Per CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level deconstruction and entropy discipline" + Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #139 (no-op detector packet compiler) + Catalog #105 (no-op provenance): every transform that mutates archive bytes MUST be paired with a proof that the mutation actually affects the score, not just an assumption. Sister of Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #272 (distinguishing-feature integration contract) + Catalog #139 (packet compiler no-op detector) + Catalog #105 (no-op provenance). Together they close the "compress-destroys-signal-without-inflate-reconstruction" surface across multiple orthogonal axes: L1+ scaffold byte-addition (#220) + distinguishing-feature contract (#272) + packet compiler no-op detector (#139) + no-op provenance (#105) + signal-axis destruction reversibility probe (#297). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 2 (`src/tac/substrates/nscs06_carmack_hotz_strip_everything/inflate.py:42` + `:111` — the `_grayscale_to_rgb` helper def + invocation; NSCS06 lane is already `research_only=true` per the v6 falsification per commit `a16eb06fd`). Strict-flip planned after either (a) operator-routed NSCS06 redesign lands a sister `tools/probe_nscs06_carmack_hotz_strip_everything_reversibility.py` proving the chroma reconstruction is empirically reversible per the contest scorer's actual gradient response, OR (b) the NSCS06 `_grayscale_to_rgb` helper definition is rewritten into a `_compress_time_only`-named function, OR (c) operator-approved same-line waivers documenting the deferred reversibility status. 24 dedicated tests in `src/tac/tests/test_check_297_signal_axis_reversibility.py` covering live-repo regression guard (≤5 ceiling), out-of-scope (no substrates dir / empty / file without tokens), positive (every destruction pattern flagged: grayscale_to_rgb helper / Y=R=G=B chained / _drop_chroma / single_channel_only / rgb_grey literal / grayscale_to_rgb call with duplicate / train_substrate_*.py file in experiments), negative (sister probe file accepts / probe with suffix accepts / same-line waiver / `_compress_time_only` function short-circuits), waiver semantics (`<rationale>` + `<reason>` placeholders rejected), comment-line tolerance (pure comment with pattern NOT flagged), strict-mode (raises with Catalog #297 message / silent on clean), aggregation (multi-violation one file / multi-violation across files), test files excluded, string repo_root accepted, syntax-error file tolerated, verbose output (clean + dirty). Memory: `feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md`. Lane: `lane_catalog_296_297_metacargocult_strict_gates_20260516`.
 

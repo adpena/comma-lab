@@ -2449,6 +2449,24 @@ def preflight_all(
         check_catalog_quota_under_400(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #300 - COUNCIL-HIERARCHY-V2 FRONTMATTER.
+        # Per CLAUDE.md "Council hierarchy: 4-tier protocol" non-negotiable
+        # + COUNCIL-HIERARCHY-V2 landing 2026-05-16. Sister of Catalog #292
+        # at the FRONTMATTER surface where #292 enforces body-level
+        # assumption surfacing. Every council deliberation memo dated >=
+        # 2026-05-16 MUST declare the v2 4-tier frontmatter (council_tier
+        # + council_attendees + council_quorum_met + council_verdict +
+        # council_dissent + council_decisions_recorded; T2+ additionally
+        # requires council_assumption_adversary_verdict). Without the
+        # tier declaration, downstream consumers (continual-learning
+        # posterior, Rashomon ensemble, cadence audit tool) cannot route
+        # the deliberation through the correct sub-flow. WARN-ONLY at
+        # landing per "Strict-flip atomicity rule"; strict-flip planned
+        # after 5 deliberations land in v2 format. Memory:
+        # feedback_council_hierarchy_v2_landed_20260516.md.
+        check_council_deliberation_declares_tier_in_frontmatter(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -64185,6 +64203,304 @@ def check_catalog_quota_under_400(
             "catalog. Add a file-level `# CATALOG_QUOTA_EXCEEDED_OK:"
             "<rationale>` waiver in CLAUDE.md first 200 lines OR "
             "retire / replace existing gates:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #300 - check_council_deliberation_declares_tier_in_frontmatter
+#
+# COUNCIL-HIERARCHY-V2 self-protection 2026-05-16 (operator-approved 4-tier
+# protocol with maximum-signal preservation + continual-learning wire-in
+# meta-principles per `feedback_council_hierarchy_v2_landed_20260516.md`).
+#
+# Anchor: Catalog #292 enforces per-DELIBERATION assumption surfacing for
+# all council memos dated >= 2026-05-15. The COUNCIL-HIERARCHY-V2 landing
+# extends the discipline with a 4-tier protocol (T1 Working Group / T2
+# Inner-Skunkworks / T3 Full Grand Council / T4 Symposium) so that quorum
+# rules, tie-break rules, recusal triggers, elevation triggers, and the
+# operator-attention budget per tier are all explicit. Without a TIER
+# declaration in the council memo frontmatter, downstream consumers (the
+# continual-learning posterior, the Rashomon ensemble, the audit cadence
+# tool) cannot route the deliberation through the correct sub-flow.
+#
+# Refuses any post-cutoff council memo lacking the v2 frontmatter fields.
+# Required fields (per the v2 spec):
+#   - council_tier             — one of T1/T2/T3/T4
+#   - council_attendees        — list of named members
+#   - council_quorum_met       — boolean per quorum rules
+#   - council_verdict          — one of PROCEED / PROCEED_WITH_REVISIONS /
+#                                DEFER_PENDING_EVIDENCE / REFUSE /
+#                                ESCALATE_TO_OPERATOR / ESCALATE_TO_HIGHER_TIER
+#   - council_dissent          — list (may be empty); verbatim minority opinions
+#   - council_decisions_recorded — list (may be empty); op-routables emitted
+#
+# T2+ memos additionally require:
+#   - council_assumption_adversary_verdict — list (≥1 entry)
+#
+# Acceptance:
+#   - Pre-cutoff memos (date < 2026-05-16T18:00:00Z) are exempt by date filter
+#     (Catalog #292 still applies to those; #300 is the v2 extension).
+#   - Post-cutoff memos with all required frontmatter fields pass.
+#   - Same-line `# COUNCIL_TIER_FRONTMATTER_WAIVED:<rationale>` waiver in
+#     the memo body honored (placeholder `<rationale>` / `<reason>` rejected).
+#
+# WARN-ONLY at landing per "Strict-flip atomicity rule" — no post-cutoff
+# council memos exist at landing time. Strict-flip planned after 5 council
+# deliberations land in v2 format.
+#
+# Sister of:
+#   - Catalog #291 (META-ASSUMPTION cadence — session-level cousin)
+#   - Catalog #292 (per-deliberation assumption surfacing — body-level cousin)
+#   - Catalog #229 (premise-verification-before-edit pattern)
+#   - Catalog #290 (substrate canonical-vs-unique discipline — same OSS-hermetic
+#     design pattern)
+#   - Catalog #185 (CLAUDE.md catalog text vs empirical state drift)
+# ============================================================================
+
+# Cutoff cutoff UTC instant; memos written before this are exempt by date
+# filter (Catalog #292 still applies for the body-level discipline).
+_CHECK_300_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+# Filename patterns matching council deliberation memos in scope. Extends
+# Catalog #292's regex to ALSO match council memos in `.omx/research/` that
+# don't carry the `feedback_` prefix (e.g.
+# `grand_council_symposium_<topic>_<YYYYMMDD>.md` lives in repo-local
+# research with no feedback_ prefix; Claude memory memos use the
+# `feedback_*council*<date>.md` convention).
+_CHECK_300_COUNCIL_FILENAME_RE = re.compile(
+    r"^(?:feedback_)?.*(?:grand_council|skunkworks_council|council|reunion.*symposium)"
+    r".*?(\d{8}).*\.md$",
+    re.IGNORECASE,
+)
+
+# Required v2 frontmatter field names (case-sensitive; checked as
+# `<field>:` substring in the memo body, matching standard YAML
+# frontmatter syntax).
+_CHECK_300_REQUIRED_FIELDS: tuple[str, ...] = (
+    "council_tier",
+    "council_attendees",
+    "council_quorum_met",
+    "council_verdict",
+    "council_dissent",
+    "council_decisions_recorded",
+)
+
+# T2+ additionally requires this field (assumption-adversary classification
+# per Catalog #292's HARD-EARNED vs CARGO-CULTED discipline).
+_CHECK_300_T2_PLUS_REQUIRED_FIELD = "council_assumption_adversary_verdict"
+
+# Recognized tier values for `council_tier:`.
+_CHECK_300_VALID_TIERS: frozenset[str] = frozenset({"T1", "T2", "T3", "T4"})
+
+_CHECK_300_WAIVER_PATTERN = re.compile(
+    r"#\s*COUNCIL_TIER_FRONTMATTER_WAIVED\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_300_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def _check_300_parse_date_suffix(suffix: str) -> int | None:
+    """Parse YYYYMMDD into a sortable int; return None on malformed."""
+    if len(suffix) != 8:
+        return None
+    try:
+        year = int(suffix[0:4])
+        month = int(suffix[4:6])
+        day = int(suffix[6:8])
+    except ValueError:
+        return None
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        return None
+    return year * 10000 + month * 100 + day
+
+
+def _check_300_has_waiver(body: str) -> bool:
+    for m in _CHECK_300_WAIVER_PATTERN.finditer(body):
+        rationale = m.group(1).strip().lower()
+        if rationale not in _CHECK_300_WAIVER_PLACEHOLDERS:
+            return True
+    return False
+
+
+def _check_300_extract_tier(body: str) -> str | None:
+    """Extract the value of `council_tier:` from the memo body.
+
+    Tolerates leading whitespace, quoted values, and inline values.
+    Returns the first match; if no value or unrecognized value, returns
+    None (caller treats as missing).
+    """
+    m = re.search(
+        r"council_tier\s*:\s*['\"]?(T[1234])['\"]?",
+        body,
+        re.IGNORECASE,
+    )
+    if not m:
+        return None
+    tier = m.group(1).upper()
+    if tier in _CHECK_300_VALID_TIERS:
+        return tier
+    return None
+
+
+def _check_300_default_research_dir(repo_root: Path | str | None = None) -> Path:
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
+
+
+def check_council_deliberation_declares_tier_in_frontmatter(
+    *,
+    memory_dir: Path | str | None = None,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #300 — refuse council memos missing the v2 4-tier frontmatter.
+
+    Per CLAUDE.md "Council hierarchy: 4-tier protocol" non-negotiable +
+    COUNCIL-HIERARCHY-V2 landing 2026-05-16. Every council deliberation
+    memo dated >= 2026-05-16 MUST carry the v2 frontmatter fields so
+    downstream consumers (continual-learning posterior, Rashomon
+    ensemble, cadence audit tool) can route the deliberation through
+    the correct sub-flow.
+
+    Required v2 frontmatter (all tiers):
+      - council_tier (one of T1/T2/T3/T4)
+      - council_attendees
+      - council_quorum_met
+      - council_verdict
+      - council_dissent
+      - council_decisions_recorded
+
+    T2+ additionally:
+      - council_assumption_adversary_verdict
+
+    Acceptance:
+      - Pre-cutoff memos (date < 20260516) exempt by date filter
+        (Catalog #292 still applies).
+      - Post-cutoff memos with all required fields pass.
+      - Same-line `# COUNCIL_TIER_FRONTMATTER_WAIVED:<rationale>`
+        waiver with non-placeholder rationale.
+
+    Sister of Catalog #291 (session-level cadence), #292 (body-level
+    assumption surfacing), #229 (premise verification), #290 (substrate
+    canonical-vs-unique), #185 (META-meta drift detector).
+
+    Memory: ``feedback_council_hierarchy_v2_landed_20260516.md``.
+
+    Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+    rule"; live count at landing is 0. Strict-flip planned after 5
+    deliberations land in v2 format.
+    """
+    if memory_dir is None:
+        memory_target = None
+    elif isinstance(memory_dir, str):
+        memory_target = Path(memory_dir)
+    else:
+        memory_target = memory_dir
+    if research_dir is None:
+        research_target = _check_300_default_research_dir(repo_root)
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    seen_dirs: set[Path] = set()
+    target_surfaces: list[tuple[Path, str]] = []
+    if memory_target is not None:
+        target_surfaces.append((memory_target, "memory"))
+    target_surfaces.append((research_target, "research"))
+
+    for target, surface in target_surfaces:
+        try:
+            resolved_target = target.resolve()
+        except OSError:
+            resolved_target = target
+        if resolved_target in seen_dirs:
+            continue
+        seen_dirs.add(resolved_target)
+        if not target.is_dir():
+            continue
+        try:
+            candidates = sorted(target.iterdir())
+        except OSError:
+            continue
+        for entry in candidates:
+            if not entry.is_file():
+                continue
+            m = _CHECK_300_COUNCIL_FILENAME_RE.match(entry.name)
+            if not m:
+                continue
+            date_int = _check_300_parse_date_suffix(m.group(1))
+            if date_int is None:
+                continue
+            if date_int < _CHECK_300_CUTOFF_DATE_SUFFIX_INT:
+                continue
+            try:
+                body = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if _check_300_has_waiver(body):
+                continue
+            # Collect missing required fields.
+            missing: list[str] = []
+            for field in _CHECK_300_REQUIRED_FIELDS:
+                if f"{field}:" not in body:
+                    missing.append(field)
+            # T2+ additionally requires the assumption-adversary verdict.
+            tier = _check_300_extract_tier(body)
+            if tier in ("T2", "T3", "T4"):
+                if f"{_CHECK_300_T2_PLUS_REQUIRED_FIELD}:" not in body:
+                    missing.append(_CHECK_300_T2_PLUS_REQUIRED_FIELD)
+            # Tier itself: if council_tier is missing OR invalid, treat as
+            # missing (the field name might be present but value malformed).
+            if tier is None and "council_tier" not in [
+                f for f in _CHECK_300_REQUIRED_FIELDS if f not in missing
+            ]:
+                # council_tier: substring is present but value is unrecognized.
+                missing.append("council_tier (value must be one of T1/T2/T3/T4)")
+            if not missing:
+                continue
+            try:
+                rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}: {surface} council memo dated {date_int} is missing the "
+                f"v2 4-tier frontmatter field(s): {sorted(set(missing))}. Per "
+                "CLAUDE.md 'Council hierarchy: 4-tier protocol' non-negotiable + "
+                "COUNCIL-HIERARCHY-V2 landing 2026-05-16: every council "
+                "deliberation memo dated >= 2026-05-16 MUST declare council_"
+                "tier (T1/T2/T3/T4) + council_attendees + council_quorum_met + "
+                "council_verdict + council_dissent + council_decisions_"
+                "recorded (T2+ additionally requires council_assumption_"
+                "adversary_verdict per Catalog #292 + Fix 7). Add the "
+                "frontmatter fields OR add a same-line `# COUNCIL_TIER_"
+                "FRONTMATTER_WAIVED:<rationale>` waiver with non-placeholder "
+                "rationale."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_council_deliberation_declares_tier_in_frontmatter] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_council_deliberation_declares_tier_in_frontmatter] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_council_deliberation_declares_tier_in_frontmatter "
+            f"found {len(violations)} council deliberation memo(s) missing "
+            "the v2 4-tier frontmatter. Per CLAUDE.md 'Council hierarchy: "
+            "4-tier protocol' non-negotiable + 'Bugs must be permanently "
+            "fixed AND self-protected against'. Catalog #300 (COUNCIL-"
+            "HIERARCHY-V2; sister of Catalog #291 + #292 + #229 + #290 + "
+            "#185).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
