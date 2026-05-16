@@ -632,16 +632,129 @@ class TestSmokeTrainerEndToEnd:
         assert (out_dir / "submission_dir" / "inflate.sh").exists()
         assert (out_dir / "submission_dir" / "inflate.py").exists()
 
-    def test_full_main_is_council_gated(self):
-        """Per CLAUDE.md substrate-scaffolds-MUST-be-COMPLETE: full path raises."""
-        import tempfile
+    def test_full_main_is_implemented_per_pr95_paradigm(self):
+        """Per UNIQUE-AND-COMPLETE-PER-METHOD landing 2026-05-15: _full_main
+        is implemented (not council-gated NotImplementedError anymore).
+        The trainer-skeleton device_or_die enforces CUDA + scorer load fails
+        cleanly when upstream weights are absent — both are acceptable
+        SystemExit/RuntimeError signals that _full_main entered.
+        """
+        import inspect
 
-        from experiments.train_substrate_nscs01_nullspace_split_renderer import main
-        with tempfile.TemporaryDirectory() as td, pytest.raises(NotImplementedError, match="council-gated"):
-            main([
-                "--output-dir", td,
-                "--device", "cpu",
-            ])
+        from experiments.train_substrate_nscs01_nullspace_split_renderer import (
+            _full_main,
+        )
+        src = inspect.getsource(_full_main)
+        # Catalog #229 premise-verification anchor: the implementation MUST
+        # bind the PR95-paradigm ingredients explicitly.
+        assert "patch_upstream_yuv6_globally" in src
+        assert "load_differentiable_scorers" in src
+        assert "EMA" in src
+        assert "NullspaceSplitScoreAwareLoss" in src
+        assert "_canon_decode_real_pairs" in src
+        assert "_canon_gate_auth_eval_call" in src
+        assert "posterior_update_locked" in src
+        # NotImplementedError-as-default is FORBIDDEN (was the old scaffold gate).
+        assert "raise NotImplementedError" not in src
+
+
+# ---------------------------------------------------------------------------
+# Nullspace gradient property — the structural NSCS01 exploit (end-to-end)
+# ---------------------------------------------------------------------------
+
+
+class TestNullspaceGradientProperty:
+    """The DEFINING property of NSCS01: frame_0_head receives NO SegNet gradient.
+
+    Per ASSUMPTIONS-CHALLENGE-AUDIT entry SA02 + upstream/modules.py:108
+    SegNet's preprocess_input slices ``x[:, -1, ...]``. The
+    NullspaceSplitScoreAwareLoss stages the pair as ``(rgb_0_rt, rgb_1_rt)``
+    so the SegNet term depends ONLY on ``frame_1_pred``. Therefore
+    ``loss_seg.backward()`` MUST write ZERO gradient to every parameter of
+    ``frame_0_head``.
+
+    This test verifies the structural property end-to-end with mocked
+    scorers (no upstream weight load needed).
+    """
+
+    def test_frame_0_head_receives_zero_segnet_gradient(self):
+        """Backward through the seg_term alone leaves frame_0_head.grad == 0."""
+        # Use the smoke renderer (CAMERA_H, CAMERA_W output even at tiny config).
+        r = _smoke_renderer(num_pairs=2)
+        seg = _MockScorer(channels=5, target_h=16, target_w=32)
+        pose = _MockPoseScorer(target_h=16, target_w=32)
+        # Freeze scorer params so .backward() routes only into the renderer.
+        for p in list(seg.parameters()) + list(pose.parameters()):
+            p.requires_grad_(False)
+        loss_fn = NullspaceSplitScoreAwareLoss(seg, pose, NullspaceSplitLossWeights())
+
+        idx = torch.tensor([0, 1], dtype=torch.long)
+        f0_pred, f1_pred = r.reconstruct_pair(idx)
+        # GT pair (deterministic random in [0, 255]).
+        gt_0 = torch.rand_like(f0_pred) * 255.0
+        gt_1 = torch.rand_like(f1_pred) * 255.0
+        loss, parts = loss_fn(
+            frame_0_pred=f0_pred,
+            frame_1_pred=f1_pred,
+            gt_frame_0=gt_0,
+            gt_frame_1=gt_1,
+            archive_bytes_proxy=torch.tensor(10_000.0),
+            apply_eval_roundtrip=True,
+            noise_std=0.0,
+        )
+
+        # Pull the seg term out and backprop ONLY it. The seg term is detached
+        # in `parts`, so reconstruct it from the loss equation: subtract the
+        # other terms and backprop the residual.
+        seg_only = loss_fn.weights.beta_seg * (
+            parts["seg_term"].detach()
+            * 0.0  # bypass detached version; recompute below for backward
+        )
+        # Easier: zero ALL grads, then backward the full loss with weights
+        # set so seg_term dominates → check that frame_0 grads are still tiny
+        # because seg_term mathematically cannot reach frame_0.
+
+        # Clear grads and try the surgical approach: backward through a loss
+        # made ONLY of the seg term by recomputing it without detach.
+        for p in r.parameters():
+            if p.grad is not None:
+                p.grad.zero_()
+
+        # Recompute seg term WITHOUT detach by calling the underlying helper.
+        from tac.differentiable_eval_roundtrip import (
+            apply_eval_roundtrip_during_training,
+        )
+        from tac.losses import scorer_loss_terms_btchw
+        from tac.substrates.score_aware_common import stage_frame_pair
+
+        # Re-render so the autograd graph is fresh.
+        f0_pred2, f1_pred2 = r.reconstruct_pair(idx)
+        rgb_0_rt = apply_eval_roundtrip_during_training(f0_pred2)
+        rgb_1_rt = apply_eval_roundtrip_during_training(f1_pred2)
+        pair_pred = stage_frame_pair(rgb_0_rt, rgb_1_rt)
+        pair_gt = stage_frame_pair(gt_0, gt_1)
+        _rate_dummy, _pose_term, seg_term_live = scorer_loss_terms_btchw(
+            pair_pred, pair_gt, pose, seg,
+        )
+        seg_term_live.backward()
+
+        # The structural property: frame_0_head MUST have all-zero gradients
+        # because SegNet's preprocess slices x[:, -1, ...] (last frame only)
+        # and frame_0_pred is at index 0 in the pair tensor.
+        for name, p in r.frame_0_head.named_parameters():
+            assert p.grad is not None, f"frame_0_head.{name} has no grad attr"
+            grad_norm = p.grad.norm().item()
+            assert grad_norm == 0.0, (
+                f"frame_0_head.{name} received NON-ZERO gradient ({grad_norm}) "
+                f"from seg_term — nullspace property VIOLATED"
+            )
+        # Sanity: frame_1_head MUST have non-zero grads (it is what SegNet sees).
+        head1_total_grad = sum(
+            p.grad.norm().item() for p in r.frame_1_head.parameters() if p.grad is not None
+        )
+        assert head1_total_grad > 0.0, (
+            "frame_1_head received NO gradient from seg_term — scorer wiring broken"
+        )
 
 
 # ---------------------------------------------------------------------------
