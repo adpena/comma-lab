@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
+from tac.deploy.modal.paired_dispatch import paired_auth_eval_dispatch_command_template
 from tac.exact_eval_custody import contest_score
 from tac.packet_compiler.pr106_candidate_matrix import (
     DEFAULT_PR106_PACKETIR_CANDIDATES,
@@ -165,13 +167,45 @@ def test_pr106_packetir_candidate_matrix_emits_fail_fast_exact_eval_targets() ->
     assert "--execute" not in format_04_targets[0]["command_template"]
     assert "--execute" in format_04_targets[0]["execute_command_template_after_plan_review"]
     assert "/Users/" not in format_04_targets[0]["command_template"]
-    target = format_04_targets[0]
+
+
+def test_pr106_packetir_target_command_uses_canonical_paired_dispatch_helper() -> None:
+    matrix = build_pr106_packetir_candidate_matrix()
+    target = _targets_for_id(matrix, "format_0x04_rank_elided")[0]
+    lane_id_base = str(target["lane_id_base"])
+    archive_sha256 = str(target["archive_sha256"])
+
+    expected_plan = "PYTHONPATH=src:upstream:$PWD " + shlex.join(
+        paired_auth_eval_dispatch_command_template(
+            archive_path=str(target["archive_path"]),
+            submission_dir=str(target["runtime_dir"]),
+            lane_id_base=lane_id_base,
+            archive_sha256=archive_sha256,
+            execute=False,
+            label=lane_id_base,
+            run_id=f"{lane_id_base}_<UTC>",
+        )
+    )
+    expected_execute = "PYTHONPATH=src:upstream:$PWD " + shlex.join(
+        paired_auth_eval_dispatch_command_template(
+            archive_path=str(target["archive_path"]),
+            submission_dir=str(target["runtime_dir"]),
+            lane_id_base=lane_id_base,
+            archive_sha256=archive_sha256,
+            execute=True,
+            label=lane_id_base,
+            run_id=f"{lane_id_base}_<UTC>",
+        )
+    )
+
+    assert target["command_template"] == expected_plan
+    assert target["execute_command_template_after_plan_review"] == expected_execute
     assert target["missing_axes"] == ["contest_cpu"]
     assert target["existing_valid_axes"] == ["contest_cuda"]
     assert target["modal_entrypoint"] == "tools/dispatch_modal_paired_auth_eval.py"
     assert "tools/dispatch_modal_paired_auth_eval.py" in target["command_template"]
     assert "experiments/modal_auth_eval_cpu.py" not in target["command_template"]
-    assert "--gpu" not in target["command_template"]
+    assert "--gpu T4" in target["command_template"]
 
     format_05_targets = _targets_for_id(matrix, "format_0x05_fixed_meta")
     assert len(format_05_targets) == 1

@@ -9,11 +9,16 @@ remains non-promotional and axis-labelled.
 
 from __future__ import annotations
 
+import shlex
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.deploy.modal.paired_dispatch import (
+    PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+    paired_auth_eval_dispatch_command_template,
+)
 from tac.exact_eval_custody import (
     SCORE_FORMULA_TOLERANCE,
     contest_score,
@@ -35,7 +40,7 @@ PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_MD = (
 
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
-_PAIRED_MODAL_DISPATCH_TOOL = "tools/dispatch_modal_paired_auth_eval.py"
+_PAIRED_MODAL_DISPATCH_TOOL = PAIRED_AUTH_EVAL_DISPATCH_TOOL
 _PAIRED_MODAL_PROVIDER = "modal_paired_cpu_cuda"
 _LEGACY_ROUNDED_COMPONENT_SCORE_TOLERANCE = 1e-6
 
@@ -893,35 +898,23 @@ def _paired_modal_command_template(
     *,
     archive_path: str,
     runtime_dir: str,
+    archive_sha256: str,
     pair_group_id: str,
     lane_id_base: str,
     execute: bool,
 ) -> str:
-    parts = [
-        "PYTHONPATH=src:upstream:$PWD",
-        ".venv/bin/python",
-        _PAIRED_MODAL_DISPATCH_TOOL,
-        "--archive",
-        archive_path,
-        "--label",
-        lane_id_base,
-        "--run-id",
-        f"{lane_id_base}_<UTC>",
-        "--pair-group-id",
-        pair_group_id,
-        "--lane-id-base",
-        lane_id_base,
-        "--output-root",
-        "experiments/results",
-        "--expected-runtime-tree-sha256",
-        "auto",
-        "--skip-axis-if-promotable-anchor-exists",
-    ]
-    if runtime_dir:
-        parts.extend(["--submission-dir", runtime_dir, "--inflate-sh", "inflate.sh"])
-    if execute:
-        parts.append("--execute")
-    return " ".join(parts)
+    command = paired_auth_eval_dispatch_command_template(
+        archive_path=archive_path,
+        submission_dir=runtime_dir,
+        lane_id_base=lane_id_base,
+        archive_sha256=archive_sha256,
+        execute=execute,
+        label=lane_id_base,
+        run_id=f"{lane_id_base}_<UTC>",
+    )
+    if pair_group_id not in command:
+        raise ValueError("canonical paired dispatch helper emitted unexpected pair_group_id")
+    return "PYTHONPATH=src:upstream:$PWD " + shlex.join(command)
 
 
 def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -1006,6 +999,7 @@ def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str
                 "command_template": _paired_modal_command_template(
                     archive_path=archive_path,
                     runtime_dir=runtime_dir,
+                    archive_sha256=str(row.get("archive_sha256") or ""),
                     pair_group_id=pair_group_id,
                     lane_id_base=lane_id_base,
                     execute=False,
@@ -1013,6 +1007,7 @@ def _next_exact_eval_targets(rows: Iterable[Mapping[str, Any]]) -> list[dict[str
                 "execute_command_template_after_plan_review": _paired_modal_command_template(
                     archive_path=archive_path,
                     runtime_dir=runtime_dir,
+                    archive_sha256=str(row.get("archive_sha256") or ""),
                     pair_group_id=pair_group_id,
                     lane_id_base=lane_id_base,
                     execute=True,
