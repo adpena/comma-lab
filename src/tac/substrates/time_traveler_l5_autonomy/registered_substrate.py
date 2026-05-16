@@ -43,8 +43,8 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     no_op_detector_planned=True,
     # 2.3 Operational mechanism (3 per Catalog #220)
     archive_bytes_added="27 KB per-pair side-info stream before brotli",
-    score_improvement_mechanism_status="RESEARCH_ONLY",
-    runtime_overlay_consumed=False,
+    score_improvement_mechanism_status="OPERATIONAL",
+    runtime_overlay_consumed=True,
     # 2.4 Recipe schema (8) mirrors substrate recipe YAML
     recipe_smoke_only=False,
     recipe_research_only=True,
@@ -74,6 +74,7 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
         "catalog_220_operational_mechanism_declared",
         "catalog_226_gate_auth_eval_call_used",
         "catalog_197_full_cpu_coupled_flags_required",
+        "catalog_l5_v2_sideinfo_consumption_proof_sha_bound",
     ),
     hook_not_applicable_rationale={
         "hook_sensitivity_contribution": (

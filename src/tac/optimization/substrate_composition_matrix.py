@@ -1133,14 +1133,17 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             ),
             paper_claim_scope="Temporal representation support only; does not validate TT5L byte budget, foveation multiplier, or score band.",
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
-            decode_complexity_evidence="No measured full-runtime T4 decode cost; current row is planning-only and must not claim side-info consumption.",
+            decode_complexity_evidence=(
+                "Local no-GPU toy TT5L parser+inflate proof shows temporal "
+                "side-info and AC-state bytes are consumed; no measured "
+                "full-runtime T4 decode cost yet."
+            ),
             prediction_band=l5_v2_prediction_band_payload(),
             dispatch_blockers=(
-                "requires_byte_closed_temporal_sideinfo_consumption_proof",
                 "requires_paired_cpu_cuda_axis_plan_before_promotion",
                 "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
             ),
-            sideinfo_consumed=False,
+            sideinfo_consumed=True,
         ),
         SubstrateRow(
             substrate_id="c1_world_model_foveation",

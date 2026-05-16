@@ -73,6 +73,9 @@ TT5L_MAGIC: bytes = b"TT5L"
 TT5L_SCHEMA_VERSION: int = 1
 """Schema version byte. Bump when grammar changes."""
 
+TT5L_DETERMINISTIC_STATE_DICT_SCHEMA: str = "tt5l_state_dict_v2"
+"""JSON state_dict payload schema used by deterministic proof artifacts."""
+
 # Header layout: MAGIC(4) + VERSION(1) + NUM_PAIRS(2) + HIDDEN_DIM(2)
 #              + NUM_HIDDEN_LAYERS(1) + OUTPUT_H(2) + OUTPUT_W(2)
 #              + FOV_H(1) + FOV_W(1) + POSE_DIM(1) + PER_PAIR_BYTES(1)
@@ -127,8 +130,74 @@ def _serialize_state_dict(sd: dict[str, torch.Tensor]) -> bytes:
     return bytes(brotli.compress(buf.getvalue(), quality=_BROTLI_QUALITY))
 
 
+def serialize_deterministic_state_dict_blob(sd: dict[str, torch.Tensor]) -> bytes:
+    """Serialize a state_dict as deterministic JSON + brotli FP16 tensor records.
+
+    This is currently used by no-GPU proof artifacts where byte-stable archive
+    custody matters more than payload size. The trainer/export path still uses
+    the compact pickle stream above until the size tradeoff is measured.
+    """
+
+    tensors: list[dict[str, object]] = []
+    for key in sorted(sd):
+        tensor = sd[key].detach().cpu().to(dtype=torch.float16).contiguous()
+        arr = tensor.numpy()
+        tensors.append(
+            {
+                "name": key,
+                "dtype": "float16",
+                "shape": list(arr.shape),
+                "data_hex": arr.tobytes().hex(),
+            }
+        )
+    raw = (
+        json.dumps(
+            {"schema": TT5L_DETERMINISTIC_STATE_DICT_SCHEMA, "tensors": tensors},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+    return bytes(brotli.compress(raw, quality=_BROTLI_QUALITY))
+
+
 def _deserialize_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
     raw = brotli.decompress(blob)
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        payload = None
+    if (
+        isinstance(payload, dict)
+        and payload.get("schema") == TT5L_DETERMINISTIC_STATE_DICT_SCHEMA
+    ):
+        tensors: dict[str, torch.Tensor] = {}
+        rows = payload.get("tensors")
+        if not isinstance(rows, list):
+            raise ValueError("tt5l_state_dict_v2 tensors field is not a list")
+        for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError("tt5l_state_dict_v2 tensor row is not an object")
+            name = str(row.get("name") or "")
+            dtype = str(row.get("dtype") or "")
+            shape = row.get("shape")
+            data_hex = str(row.get("data_hex") or "")
+            if not name or dtype != "float16":
+                raise ValueError("tt5l_state_dict_v2 tensor row has invalid name/dtype")
+            if (
+                not isinstance(shape, list)
+                or not all(isinstance(dim, int) and dim >= 0 for dim in shape)
+            ):
+                raise ValueError("tt5l_state_dict_v2 tensor row has invalid shape")
+            arr = np.frombuffer(bytes.fromhex(data_hex), dtype=np.float16).copy()
+            expected = int(np.prod(shape, dtype=np.int64)) if shape else 1
+            if arr.size != expected:
+                raise ValueError(
+                    f"tt5l_state_dict_v2 tensor {name!r} has {arr.size} values, "
+                    f"expected {expected}"
+                )
+            tensors[name] = torch.from_numpy(arr.reshape(shape))
+        return tensors
     sd = pickle.loads(raw)
     if not isinstance(sd, dict):
         raise ValueError("state_dict blob did not unpickle to a dict")
@@ -445,6 +514,7 @@ TT5L_SECTION_ROLES: dict[str, str] = {
 
 
 __all__ = [
+    "TT5L_DETERMINISTIC_STATE_DICT_SCHEMA",
     "TT5L_HEADER_FMT",
     "TT5L_HEADER_SIZE",
     "TT5L_MAGIC",
@@ -456,4 +526,5 @@ __all__ = [
     "parse_archive",
     "parse_tt5l_archive_bytes",
     "quantize_per_pair_residual_int8",
+    "serialize_deterministic_state_dict_blob",
 ]

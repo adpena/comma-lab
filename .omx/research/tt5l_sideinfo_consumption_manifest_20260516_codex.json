@@ -1,0 +1,28 @@
+{
+  "aggregate_sha256": "e2854684aa269c99bc395e2c99ab838208dea4076753bd094d580d8d014a1fde",
+  "outputs": {
+    "ac_state_mutated": {
+      "bytes": 6104016,
+      "frames": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_consumption_proof_20260516_codex/ac_state_mutated.raw",
+      "sha256": "4ebd7236400ee254314006d26632526ee92542077a3fdca0787c4250b0dd90b4"
+    },
+    "baseline": {
+      "bytes": 6104016,
+      "frames": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_consumption_proof_20260516_codex/baseline.raw",
+      "sha256": "8251cbd39b0020df901153c9edbd29620ca1887cf211f1312c42106709a889da"
+    },
+    "sideinfo_mutated": {
+      "bytes": 6104016,
+      "frames": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_consumption_proof_20260516_codex/sideinfo_mutated.raw",
+      "sha256": "c9ed95bb741f2d4a6ee061cffc275c6e8f1227c2900dc15d4c184fa68e02256b"
+    }
+  },
+  "promotion_eligible": false,
+  "raw_output_aggregate_sha256": "e2854684aa269c99bc395e2c99ab838208dea4076753bd094d580d8d014a1fde",
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "tt5l_sideinfo_consumption_inflated_outputs_manifest_v1",
+  "score_claim": false
+}

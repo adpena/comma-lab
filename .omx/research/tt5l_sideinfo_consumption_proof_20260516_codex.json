@@ -1,0 +1,96 @@
+{
+  "ac_state_status": "consumed_as_residual_calibration_not_real_range_or_ans_entropy_decoder",
+  "artifact_work_dir": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_consumption_proof_20260516_codex",
+  "byte_mutation_proof": {
+    "archive_section_name": "per_pair_side_info_blob",
+    "baseline_archive_sha256": "15ae399508809a9a5556db7bdbda91a908e1aee22e249e1c57e23a4c85668470",
+    "baseline_inflate_sha256": "8251cbd39b0020df901153c9edbd29620ca1887cf211f1312c42106709a889da",
+    "consumption_mode": "per_pair_residual_decode",
+    "inflate_command": "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh <archive_dir> <output_dir> <file_list>",
+    "inflated_outputs_manifest_path": ".omx/research/tt5l_sideinfo_consumption_manifest_20260516_codex.json",
+    "inflated_raw_output_aggregate_sha256": "e2854684aa269c99bc395e2c99ab838208dea4076753bd094d580d8d014a1fde",
+    "mutated_archive_sha256": "9de7feeee5757ee006413481952f3a94052878943c714e765de164c738d2fc9e",
+    "mutated_byte_offsets": [
+      2485,
+      2487,
+      2488,
+      2489,
+      2490
+    ],
+    "mutated_inflate_sha256": "c9ed95bb741f2d4a6ee061cffc275c6e8f1227c2900dc15d4c184fa68e02256b",
+    "mutated_section_nbytes": 13,
+    "mutated_section_offset": 2481,
+    "mutated_section_sha256": "da954ac793807b87a0bf40137afefd554591bd47ec292a2d25ea90c8ea06a9c9",
+    "output_changed": true,
+    "parser_consumed_bytes": true,
+    "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+    "section": "tt5l_temporal_sideinfo",
+    "section_nbytes": 10,
+    "section_offset": 2481,
+    "section_sha256": "aa4b9ad6f9cd53ac63b4729614b16590d4989c161f5c3b3df024eb3dd4b4e111"
+  },
+  "component_proofs": {
+    "ac_state": {
+      "archive_section_name": "ac_state_blob",
+      "baseline_archive_sha256": "9de7feeee5757ee006413481952f3a94052878943c714e765de164c738d2fc9e",
+      "baseline_inflate_sha256": "c9ed95bb741f2d4a6ee061cffc275c6e8f1227c2900dc15d4c184fa68e02256b",
+      "consumption_mode": "residual_calibration_not_entropy_decode",
+      "mutated_archive_sha256": "1b3b729d40d101723fb258cebbea2faea28bd844662385febb27ae6751aca791",
+      "mutated_byte_offsets": [
+        2509,
+        2510,
+        2511
+      ],
+      "mutated_inflate_sha256": "4ebd7236400ee254314006d26632526ee92542077a3fdca0787c4250b0dd90b4",
+      "mutated_section_nbytes": 18,
+      "mutated_section_offset": 2494,
+      "mutated_section_sha256": "b99493eb5776104e71e5a0d3571c980f201c883ab5ca285f7e7a57a9a612aeaa",
+      "output_changed": true,
+      "parser_consumed_bytes": true,
+      "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+      "section": "tt5l_ac_state_residual_calibration",
+      "section_nbytes": 18,
+      "section_offset": 2494,
+      "section_sha256": "94983bea5ea2c5c1c622a499714db975cfb37d0691ad3fd9a2690818a83b3519"
+    },
+    "per_pair_side_info": {
+      "archive_section_name": "per_pair_side_info_blob",
+      "baseline_archive_sha256": "15ae399508809a9a5556db7bdbda91a908e1aee22e249e1c57e23a4c85668470",
+      "baseline_inflate_sha256": "8251cbd39b0020df901153c9edbd29620ca1887cf211f1312c42106709a889da",
+      "consumption_mode": "per_pair_residual_decode",
+      "mutated_archive_sha256": "9de7feeee5757ee006413481952f3a94052878943c714e765de164c738d2fc9e",
+      "mutated_byte_offsets": [
+        2485,
+        2487,
+        2488,
+        2489,
+        2490
+      ],
+      "mutated_inflate_sha256": "c9ed95bb741f2d4a6ee061cffc275c6e8f1227c2900dc15d4c184fa68e02256b",
+      "mutated_section_nbytes": 13,
+      "mutated_section_offset": 2481,
+      "mutated_section_sha256": "da954ac793807b87a0bf40137afefd554591bd47ec292a2d25ea90c8ea06a9c9",
+      "output_changed": true,
+      "parser_consumed_bytes": true,
+      "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+      "section": "tt5l_temporal_sideinfo",
+      "section_nbytes": 10,
+      "section_offset": 2481,
+      "section_sha256": "aa4b9ad6f9cd53ac63b4729614b16590d4989c161f5c3b3df024eb3dd4b4e111"
+    }
+  },
+  "gate_id": "byte_closed_temporal_sideinfo_consumption",
+  "predicate_id": "tt5l_byte_closed_temporal_sideinfo_consumption_v1",
+  "predicate_passed": true,
+  "promotion_eligible": false,
+  "proof_scope": "local_no_gpu_toy_tt5l_archive_parser_and_inflate_consumption_only",
+  "ready_for_exact_eval_dispatch": false,
+  "runtime_tree_files": [
+    "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
+    "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
+    "src/tac/substrates/time_traveler_l5_autonomy/inflate.py"
+  ],
+  "runtime_tree_sha256": "8b04ee7ecb3e8dd6d68aee109ae3ac8c7a20c3a0b32e3c979062174af195bf7b",
+  "schema": "tt5l_sideinfo_consumption_proof_v1",
+  "score_claim": false
+}

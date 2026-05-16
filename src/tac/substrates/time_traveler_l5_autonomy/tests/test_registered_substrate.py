@@ -3,10 +3,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 from pathlib import Path
 
 from tac.optimization.autopilot_dispatch_ranking import rank_dispatches
+from tac.optimization.l5_staircase_v2 import (
+    TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
+    TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256,
+)
 from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
 from tac.optimization.substrate_composition_matrix import canonical_substrate_inventory
 from tac.substrate_registry import (
@@ -48,8 +53,8 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
             == "time_traveler_l5_autonomy"
         )
         assert contract.hook_probe_disambiguator == L5V2_PROBE_TOOL_PATH
-        assert contract.score_improvement_mechanism_status == "RESEARCH_ONLY"
-        assert contract.runtime_overlay_consumed is False
+        assert contract.score_improvement_mechanism_status == "OPERATIONAL"
+        assert contract.runtime_overlay_consumed is True
         assert contract.recipe_research_only is True
         assert contract.hook_continual_learning_anchor_kind == "paired_axis"
         assert Path(L5V2_PROBE_TOOL_PATH).is_file()
@@ -74,8 +79,8 @@ def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
     )
     assert tt5l.runtime_dep_closure == ("torch", "brotli", "numpy")
     assert "av" not in tt5l.runtime_dep_closure
-    assert tt5l.sideinfo_consumed is False
-    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in (
+    assert tt5l.sideinfo_consumed is True
+    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" not in (
         tt5l.dispatch_blockers
     )
 
@@ -86,6 +91,13 @@ def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
         for substrate_id in candidate.substrate_ids
     }
     assert "time_traveler_l5_autonomy" in ranked_ids
+
+
+def test_time_traveler_l5_consumption_claim_is_sha_bound() -> None:
+    proof_path = Path(TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH)
+    assert proof_path.is_file()
+    digest = hashlib.sha256(proof_path.read_bytes()).hexdigest()
+    assert digest == TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256
 
 
 def test_time_traveler_l5_declares_archive_numpy_runtime_dependency() -> None:

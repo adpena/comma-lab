@@ -43,6 +43,15 @@ LANE_ID = "lane_time_traveler_l5_autonomy_substrate_20260513"
 CAMPAIGN_ID = "campaign_time_traveler_l5_v2_staircase_20260516"
 PREDICTED_DELTA_BAND = (-0.0500, -0.0200)
 PREDICTED_DELTA_AXIS = "mixed"
+TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
+    ".omx/research/tt5l_sideinfo_consumption_proof_20260516_codex.json"
+)
+TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256 = (
+    "8d3a2285c8b6b2804b78c01b50d857973fe0f553db3546a71a2a2959f3332c76"
+)
+TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
+    "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -372,6 +381,30 @@ def _coerce_gate_evidence(
         if evidence.gate_id:
             coerced[evidence.gate_id] = evidence
     return coerced
+
+
+def l5_v2_canonical_sideinfo_gate_evidence(
+    *,
+    repo_root: str | Path | None = None,
+) -> L5V2GateEvidence | None:
+    """Return the committed TT5L side-info proof iff path and SHA match."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    proof_path = resolved_repo_root / TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
+    if not proof_path.is_file():
+        return None
+    if _sha256_file(proof_path) != TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256:
+        return None
+    return L5V2GateEvidence(
+        gate_id="byte_closed_temporal_sideinfo_consumption",
+        artifact_path=TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
+        artifact_sha256=TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256,
+        predicate_id=TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
+        predicate_passed=True,
+        evidence_grade="local_no_gpu_parser_and_inflate_consumption_proof",
+    )
 
 
 def _is_transient_artifact_path(path: str) -> bool:
@@ -1381,9 +1414,13 @@ __all__ = [
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
+    "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
+    "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
+    "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
+    "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
     "l5_v2_prediction_band_payload",
     "l5_v2_prediction_band_verdict",
