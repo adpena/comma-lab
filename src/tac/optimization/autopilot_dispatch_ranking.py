@@ -200,6 +200,16 @@ def _prediction_band_verdict_allows_rank_reward(
     return verdict.get("valid_for_rank_reward") is True
 
 
+def _compose_sideinfo_consumed(values: tuple[bool | None, ...]) -> bool | None:
+    """Conservatively aggregate side-info proof across a composed candidate."""
+
+    if all(value is True for value in values):
+        return True
+    if any(value is False for value in values):
+        return False
+    return None
+
+
 def _build_singleton_dispatch_candidates(
     pareto_rows: list[ParetoRow],
     matrix: CompositionMatrix,
@@ -425,9 +435,8 @@ def _build_orthogonal_pair_candidates(
                     blockers=blockers,
                     license_ok=ri.license_ok and rj.license_ok,
                     inflate_dep_count=ri.inflate_dep_count + rj.inflate_dep_count,
-                    sideinfo_consumed=(
-                        (ri.sideinfo_consumed or False)
-                        or (rj.sideinfo_consumed or False)
+                    sideinfo_consumed=_compose_sideinfo_consumed(
+                        (ri.sideinfo_consumed, rj.sideinfo_consumed)
                     ),
                     exact_duplicate=ri.exact_duplicate or rj.exact_duplicate,
                     context_order=max(ri.context_order, rj.context_order),

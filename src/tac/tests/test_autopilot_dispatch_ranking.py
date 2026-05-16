@@ -19,6 +19,7 @@ from tac.optimization.autopilot_dispatch_ranking import (
     SCHEMA_VERSION,
     RankedDispatchCandidate,
     RankingResult,
+    _build_orthogonal_pair_candidates,
     _build_singleton_dispatch_candidates,
     rank_dispatches,
     serialize_candidate,
@@ -29,6 +30,7 @@ from tac.optimization.autopilot_dispatch_ranking import (
 from tac.optimization.substrate_composition_matrix import (
     ParetoRow,
     ScoreAxis,
+    SubstrateRow,
     SubstrateClass,
     build_composition_matrix,
 )
@@ -178,6 +180,133 @@ def test_orthogonal_pair_joint_cost_enforced():
     ]
     for c in pair_dispatches:
         assert c.estimated_dispatch_cost_usd <= cap
+
+
+def _ranking_substrate_row(
+    substrate_id: str,
+    *,
+    substrate_class: SubstrateClass,
+    target_axis: ScoreAxis,
+    format_id: int,
+) -> SubstrateRow:
+    return SubstrateRow(
+        substrate_id=substrate_id,
+        name=substrate_id,
+        substrate_class=substrate_class,
+        target_axis=target_axis,
+        format_id=format_id,
+        magic_bytes=f"T{format_id:03d}"[-4:],
+        runtime_dep_closure=(),
+        byte_budget_band=(1, 2),
+        predicted_delta_alone_band=(-0.01, -0.001),
+        requires_score_aware_training=False,
+        landed_at="2026-05-16",
+        landing_memo="test",
+    )
+
+
+def _ranking_pareto_row(
+    substrate_id: str,
+    *,
+    substrate_class: SubstrateClass,
+    target_axis: ScoreAxis,
+    sideinfo_consumed: bool | None,
+) -> ParetoRow:
+    return ParetoRow(
+        substrate_id=substrate_id,
+        name=substrate_id,
+        substrate_class=substrate_class,
+        target_axis=target_axis,
+        predicted_delta_alone_midpoint=-0.005,
+        estimated_dispatch_cost_usd=1.0,
+        expected_information_gain=0.005,
+        eig_per_dollar=0.005,
+        sideinfo_consumed=sideinfo_consumed,
+    )
+
+
+def test_orthogonal_pair_sideinfo_consumption_is_conservative_per_substrate():
+    matrix = build_composition_matrix(
+        [
+            _ranking_substrate_row(
+                "needs_sideinfo",
+                substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+                target_axis=ScoreAxis.MIXED,
+                format_id=201,
+            ),
+            _ranking_substrate_row(
+                "proof_missing",
+                substrate_class=SubstrateClass.SELF_COMPRESSION,
+                target_axis=ScoreAxis.RATE,
+                format_id=202,
+            ),
+        ]
+    )
+    rows = [
+        _ranking_pareto_row(
+            "needs_sideinfo",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            sideinfo_consumed=True,
+        ),
+        _ranking_pareto_row(
+            "proof_missing",
+            substrate_class=SubstrateClass.SELF_COMPRESSION,
+            target_axis=ScoreAxis.RATE,
+            sideinfo_consumed=False,
+        ),
+    ]
+
+    pairs = _build_orthogonal_pair_candidates(
+        rows,
+        matrix,
+        per_dispatch_cap_usd=5.0,
+    )
+
+    assert len(pairs) == 1
+    assert pairs[0].sideinfo_consumed is False
+
+
+def test_orthogonal_pair_sideinfo_consumption_keeps_unknown_when_not_all_proven():
+    matrix = build_composition_matrix(
+        [
+            _ranking_substrate_row(
+                "proven_sideinfo",
+                substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+                target_axis=ScoreAxis.MIXED,
+                format_id=203,
+            ),
+            _ranking_substrate_row(
+                "unknown_sideinfo",
+                substrate_class=SubstrateClass.SELF_COMPRESSION,
+                target_axis=ScoreAxis.RATE,
+                format_id=204,
+            ),
+        ]
+    )
+    rows = [
+        _ranking_pareto_row(
+            "proven_sideinfo",
+            substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+            target_axis=ScoreAxis.MIXED,
+            sideinfo_consumed=True,
+        ),
+        _ranking_pareto_row(
+            "unknown_sideinfo",
+            substrate_class=SubstrateClass.SELF_COMPRESSION,
+            target_axis=ScoreAxis.RATE,
+            sideinfo_consumed=None,
+        ),
+    ]
+
+    pairs = _build_orthogonal_pair_candidates(
+        rows,
+        matrix,
+        per_dispatch_cap_usd=5.0,
+    )
+
+    assert len(pairs) == 1
+    assert pairs[0].sideinfo_consumed is None
 
 
 # ── L2 Hinton-distilled encoder integration ─────────────────────────────
