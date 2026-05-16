@@ -23,15 +23,15 @@ ensure_repo_imports(REPO_ROOT)
 
 CLAIM_CLOSURE_ERROR_RC = 6
 
+from tac.continual_learning import (  # noqa: E402
+    contest_result_from_auth_eval_payload,
+    posterior_update_locked_from_auth_eval_json,
+)
 from tac.deploy.modal.auth_eval import (  # noqa: E402
     ClaimSpec,
     read_spawn_metadata,
     recover_modal_auth_eval,
     terminal_modal_auth_eval_claim,
-)
-from tac.continual_learning import (  # noqa: E402
-    contest_result_from_auth_eval_payload,
-    posterior_update_locked_from_auth_eval_json,
 )
 
 
