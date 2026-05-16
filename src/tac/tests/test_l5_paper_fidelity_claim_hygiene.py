@@ -53,6 +53,50 @@ def test_l5_v2_source_ledgers_pin_primary_sources_and_claim_blockers() -> None:
     assert "not contest score evidence" in source_basis
 
 
+def test_l5_xray_planning_proxies_do_not_claim_score_or_archive_bytes() -> None:
+    foveation = _read("src/tac/xray/foveation_ego_motion.py")
+    predictive = _read("src/tac/xray/predictive_coding_hierarchy.py")
+
+    assert "~70%" not in foveation
+    assert "in ~25% of pixels" not in foveation
+    assert "planning hypothesis" in foveation
+    assert "requires_pact_video_scorer_measurement" in foveation
+    assert "requires_paired_cpu_cuda_exact_eval" in foveation
+
+    assert "should yield additional rate savings" not in predictive
+    assert "quantifies that claim" not in predictive
+    assert "does not report archive bytes, rate savings, or\nscore movement" in predictive
+    assert "budget_is_archive_bytes" in predictive
+    assert "requires_entropy_coded_archive_bytes" in predictive
+
+
+def test_c1_z4_campaign_ledgers_keep_sources_and_promotion_blockers_near_claims() -> None:
+    c1 = _read(".omx/research/campaign_lane_c1_z6_world_model_foveation_20260514.md")
+    z4 = _read(".omx/research/campaign_z4_cooperative_receiver_loss_20260514.md")
+    z4_init = _read("src/tac/substrates/z4_cooperative_receiver_loss/__init__.py")
+
+    for text in (c1, z4):
+        assert "retrieved 2026-05-16" in text.lower()
+        assert "https://doi.org/10.1162/neco.1990.2.3.308" in text
+        assert "paired CPU/CUDA exact" in text
+        assert "archive SHA" in text
+        assert "runtime tree/content SHA" in text
+        assert "component recomputation" in text or "recompute components" in text
+
+    assert "provides 5-10x effective resolution gain" not in c1
+    assert "PROMOTE to frontier" not in c1
+    assert "operator frontier review" in c1
+    assert "https://doi.org/10.1068/p050437" in c1
+    assert "https://doi.org/10.1038/4580" in c1
+    assert "https://doi.org/10.1038/nrn2787" in c1
+
+    assert "bit budget shrinks from ``H(X)`` to ``H(X | f_R(X))``" not in z4_init
+    assert "objective analogy only" in z4
+    assert "objective analogy only" in z4_init
+    assert "scorer-free inflate" in z4
+    assert "source-matched Z3/A1 baseline" in z4
+
+
 def test_l5_family_docstrings_keep_literature_and_score_claims_separate() -> None:
     tt5l = _read("src/tac/substrates/time_traveler_l5_autonomy/__init__.py")
     z5 = _read("src/tac/substrates/z5_predictive_coding_world_model/__init__.py")

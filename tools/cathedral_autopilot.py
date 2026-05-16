@@ -52,6 +52,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from dataclasses import asdict, dataclass, field
@@ -2300,12 +2301,17 @@ def _load_l5_v2_packetir_matrix_for_cathedral() -> dict[str, Any]:
     path = REPO_ROOT / L5_V2_PACKETIR_MATRIX_PATH
     base: dict[str, Any] = {
         "path": str(L5_V2_PACKETIR_MATRIX_PATH),
+        "expected_artifact_sha256": l5v2.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
         "exists": path.is_file(),
         "load_blockers": [],
     }
     if not path.is_file():
         base["load_blockers"].append("l5_v2_packetir_matrix_missing")
         return base
+    artifact_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    base["artifact_sha256"] = artifact_sha256
+    if artifact_sha256 != l5v2.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256:
+        base["load_blockers"].append("l5_v2_packetir_matrix_artifact_sha_mismatch")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -2314,13 +2320,34 @@ def _load_l5_v2_packetir_matrix_for_cathedral() -> dict[str, Any]:
     if not isinstance(payload, dict):
         base["load_blockers"].append("l5_v2_packetir_matrix_not_object")
         return base
-    return {**base, **payload}
+    if payload.get("score_claim") is not False:
+        base["load_blockers"].append("l5_v2_packetir_matrix_score_claim_not_false")
+    if payload.get("promotion_eligible") is not False:
+        base["load_blockers"].append(
+            "l5_v2_packetir_matrix_promotion_eligible_not_false"
+        )
+    if payload.get("ready_for_exact_eval_dispatch") is not False:
+        base["load_blockers"].append("l5_v2_packetir_matrix_dispatch_ready_not_false")
+    existing_blockers = [
+        str(blocker) for blocker in payload.get("load_blockers", []) if str(blocker)
+    ]
+    return {
+        **base,
+        **payload,
+        "exists": True,
+        "artifact_sha256": artifact_sha256,
+        "load_blockers": list(
+            dict.fromkeys([*base["load_blockers"], *existing_blockers])
+        ),
+    }
 
 
 def _l5_v2_exact_targets_by_candidate(
     matrix: dict[str, Any],
 ) -> dict[str, list[dict[str, Any]]]:
     targets_by_candidate: dict[str, list[dict[str, Any]]] = {}
+    if matrix.get("load_blockers"):
+        return targets_by_candidate
     targets = matrix.get("next_exact_eval_targets", [])
     if not isinstance(targets, list):
         return targets_by_candidate
@@ -2355,7 +2382,14 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
     """Expose L5-v2/PR106 stack state to Cathedral without dispatch authority."""
 
     try:
-        readiness = l5v2.l5_v2_dispatch_readiness(repo_root=REPO_ROOT)
+        sideinfo_evidence = l5v2.l5_v2_canonical_sideinfo_gate_evidence(
+            repo_root=REPO_ROOT
+        )
+        gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
+        readiness = l5v2.l5_v2_dispatch_readiness(
+            gate_evidence=gate_evidence,
+            repo_root=REPO_ROOT,
+        )
     except Exception as exc:  # pragma: no cover - defensive visibility surface
         return [
             {

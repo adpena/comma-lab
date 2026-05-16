@@ -4,18 +4,20 @@
 Wraps the existing :class:`tac.codec.cooperative_receiver.PredictiveCodingWeights`
 codec primitive in a typed :class:`XRayPrimitive` surface. Given a sequence
 of frames, estimates the per-level prediction error norm + residual byte
-budget at each level of the Rao-Ballard 1999 hierarchical predictive-coding
-model.
+budget proxy at each level of the Rao-Ballard 1999 hierarchical
+predictive-coding model.
 
 The Time-Traveler L5 substrate (per
 ``time_traveler_architecture_reverse_engineered_20260513.md``) uses a
-SINGLE-LEVEL Rao-Ballard hierarchy. The council deliberated 2026-05-13
-that deeper hierarchies (2-3 levels) should yield additional rate savings
-via cross-frame redundancy capture.
+SINGLE-LEVEL Rao-Ballard hierarchy. The council deliberated 2026-05-13 that
+deeper hierarchies (2-3 levels) might capture additional cross-frame
+redundancy.
 
-This primitive is the analyzer that quantifies that claim: given a frame
-sequence, it returns per-level residual norms so the bit-allocator and
-autopilot can decide whether to expand the hierarchy.
+This primitive is a planning-proxy analyzer: given a frame sequence, it
+returns per-level residual norms and raw coefficient-count proxies so the
+bit-allocator and autopilot can decide whether a byte-closed entropy-coded
+probe is worth building. It does not report archive bytes, rate savings, or
+score movement.
 
 Wire-in hooks engaged:
 
@@ -30,7 +32,12 @@ Cross-references
 ----------------
 - Source codec primitive: :mod:`tac.codec.cooperative_receiver.predictive_coding`
 - Rao-Ballard 1999 *Nature Neuroscience* canonical paper
+  (DOI: https://doi.org/10.1038/4580)
 - Time-Traveler L5 reverse-engineering memo
+
+Claim boundary: promotion requires entropy-coded archive bytes, archive
+SHA-256, runtime tree/content SHA, component recomputation, and paired
+CPU/CUDA exact-eval custody.
 
 CLAUDE.md compliance tags
 -------------------------
@@ -42,10 +49,10 @@ CLAUDE.md compliance tags
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import torch
+if TYPE_CHECKING:
+    import torch
 
 from tac.xray.base import (
     ComposedXRayPrimitive,
@@ -67,13 +74,13 @@ class PredictiveCodingReport:
     per_level_residual_norm : tuple[float, ...]
         L2 norm of the prediction error at each level.
     per_level_residual_byte_budget : tuple[int, ...]
-        Estimated byte budget at each level (= ceil(log2(residual_norm) /
-        8 * tensor_size)).
+        Raw residual coefficient-count proxy retained under the legacy field
+        name for compatibility. It is not entropy-coded archive bytes.
     total_residual_byte_budget : int
-        Sum of per_level_residual_byte_budget.
+        Sum of raw residual coefficient-count proxies.
     compression_ratio_estimate : float
-        Estimated raw-frames-to-residual compression ratio
-        (= raw_bytes / total_residual_byte_budget).
+        Raw-frames-to-residual proxy ratio, not a contest archive compression
+        ratio.
     """
 
     n_frames: int
@@ -110,8 +117,9 @@ class PredictiveCodingHierarchy:
     2. Predict frame at level ``l`` from level ``l+1`` via upsampling.
     3. Compute residual at level ``l`` = (frame_l - prediction_l).
 
-    The L2 norm of each level's residual tells the bit-allocator how
-    much byte budget to spend at that level.
+    The L2 norm of each level's residual tells the bit-allocator where a
+    follow-up entropy-coded probe might deserve byte budget. It is not itself
+    byte-closed evidence.
     """
 
     @property
@@ -216,6 +224,24 @@ class PredictiveCodingHierarchy:
             metadata={
                 "n_levels_requested": n_levels,
                 "bytes_per_residual_dim": bytes_per_residual_dim,
+                "planning_proxy_only": True,
+                "score_claim": False,
+                "budget_is_archive_bytes": False,
+                "source_supports": (
+                    "hierarchical predictive-coding residual structure, not "
+                    "Pact archive-byte savings"
+                ),
+                "pact_must_prove": (
+                    "entropy-code residual streams, record archive SHA and "
+                    "runtime custody, recompute components, and run paired "
+                    "CPU/CUDA exact eval"
+                ),
+                "blockers": (
+                    "requires_entropy_coded_archive_bytes",
+                    "requires_archive_sha256",
+                    "requires_runtime_tree_sha",
+                    "requires_paired_cpu_cuda_exact_eval",
+                ),
             },
         )
 

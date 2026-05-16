@@ -1716,6 +1716,8 @@ def l5_v2_dispatch_readiness(
         "planning_only": True,
         "score_claim": False,
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
         "all_gate_claims_satisfied": all_gate_claims_satisfied,
         "all_gate_evidence_valid": all_gate_evidence_valid,
         "ready_for_gate_probe_dispatch": all_gate_evidence_valid,

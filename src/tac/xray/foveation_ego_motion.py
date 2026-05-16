@@ -2,17 +2,18 @@
 """F12b: Gibson 1950 ego-motion-matched foveation analyzer.
 
 Per zen_floor council 2026-05-13 and Time-Traveler L5 architecture: in
-driving sequences, focus-of-expansion (FOE) concentrates ~70% of usable
-visual information in ~25% of pixels. The per-pixel bit-budget should
-be foveated — allocate more bits to the FOE region, fewer to the
-parafoveal periphery.
+driving sequences, focus-of-expansion (FOE) is a planning hypothesis for
+spatial rate allocation. This module does not prove a fixed information
+fraction or score delta. It emits a foveation-weight proxy so downstream
+probes can measure whether allocating more bits near FOE and fewer bits in
+the parafoveal periphery helps under the contest scorer.
 
 This primitive:
 
 1. Given a stream of ego-motion poses (from PoseNet or LAPose), estimates
    the focus-of-expansion location per pair.
 2. Returns a per-pixel foveation weight map (Gaussian-decay from FOE).
-3. Surfaces the total foveated-vs-uniform bit-budget reduction estimate.
+3. Surfaces the total foveated-vs-uniform bit-budget planning proxy.
 
 Wire-in hooks engaged:
 
@@ -26,8 +27,15 @@ Wire-in hooks engaged:
 Cross-references
 ----------------
 - Source: Gibson 1950 *The Perception of the Visual World*
+  (bibliographic record: https://philpapers.org/rec/GIBTPO-2)
+- Source: Lee 1976 time-to-collision braking / optic-flow evidence
+  (DOI: https://doi.org/10.1068/p050437)
 - Time-Traveler L5 reverse-engineering memo
 - D4 Wyner-Ziv frame-0 nullspace sister memory
+
+Claim boundary: any Pact score or byte-saving claim requires a local video
+measurement artifact, archive SHA-256, runtime tree/content SHA, component
+recomputation, and paired CPU/CUDA exact-eval custody.
 
 CLAUDE.md compliance tags
 -------------------------
@@ -39,7 +47,6 @@ CLAUDE.md compliance tags
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import torch
@@ -66,8 +73,8 @@ class FoveationReport:
     foe_sigma_pixels : float
         Sigma of the Gaussian-decay foveation kernel (in pixels).
     foveated_budget_ratio : float
-        Total foveation-weight integral / uniform integral. In (0, 1];
-        smaller = more aggressive foveation.
+        Total foveation-weight integral / uniform integral. This is a
+        planning proxy, not a measured archive-byte or score delta.
     central_25_percent_weight : float
         Sum of foveation weight in the central 25% of pixels (vs uniform 0.25).
     image_size : tuple[int, int]
@@ -239,6 +246,23 @@ class FoveationEgoMotionAnalyzer:
                 "foveation_floor": foveation_floor,
                 "image_size_h": image_size[0],
                 "image_size_w": image_size[1],
+                "planning_proxy_only": True,
+                "score_claim": False,
+                "source_supports": (
+                    "optic-flow / FOE motivation for spatial attention and "
+                    "time-to-collision control, not a Pact score theorem"
+                ),
+                "pact_must_prove": (
+                    "measure scorer deltas on Pact videos with archive SHA, "
+                    "runtime custody, component recomputation, and paired "
+                    "CPU/CUDA exact eval"
+                ),
+                "blockers": (
+                    "requires_pact_video_scorer_measurement",
+                    "requires_archive_sha256",
+                    "requires_runtime_tree_sha",
+                    "requires_paired_cpu_cuda_exact_eval",
+                ),
             },
         )
 

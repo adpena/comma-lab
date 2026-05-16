@@ -18,10 +18,29 @@ Per CLAUDE.md "Long-burn score-lowering campaign default — NON-NEGOTIABLE":
   - Zen-floor field-medal council (`feedback_zen_floor_field_medal_grade_council_landed_20260514.md`): Step 2 predicted band [0.180, 0.188].
   - CLAUDE.md "SegNet vs PoseNet importance — operating-point dependent (UPDATED 2026-05-04)": at PR106 frontier, pose marginal is 2.71× SegNet's; the cooperative-receiver loss is dominated by aligning gradient flow with the pose-axis distortion (not pixel-MSE).
 
+- **Primary URLs / identifiers (retrieved 2026-05-16)**:
+  - Atick-Redlich efficient coding:
+    https://doi.org/10.1162/neco.1990.2.3.308
+  - Tishby-Zaslavsky information-bottleneck framing:
+    https://arxiv.org/abs/1503.02406 and https://arxiv.org/abs/1703.00810
+
+- **Claim boundary**:
+  objective analogy only: these sources are planning priors, not Pact score
+  evidence.
+  Atick-Redlich / information-bottleneck sources support the objective
+  analogy only. They do not prove that the Pact scorer shrinks archive bytes
+  or score. Z4 must still emit a byte-closed archive, keep scorer-free inflate,
+  compare against a source-matched Z3/A1 baseline, record archive SHA and
+  runtime tree/content SHA, recompute components, and run paired CPU/CUDA exact
+  eval before any promotion wording.
+
 - **Hypothesis**:
   Training the Z3+A1 substrate against `L = α·B/N + β_seg·d_seg + γ_pose·sqrt(d_pose) + λ_pixel·MSE_pixel` with `λ_pixel = 0` (pure cooperative-receiver) reaches **score band [0.180, 0.188]** on contest-CUDA T4 vs Z3's predicted [0.188, 0.193] baseline. Δ predicted: −0.005 to −0.010 vs Z3.
 
-  The gain is dominated by gradient-alignment: pixel-MSE wastes bits on perceptually-relevant but scorer-irrelevant texture; the scorer distortions are exactly what the contest measures, so training there is information-theoretically optimal per Atick-Redlich.
+  The gain hypothesis is dominated by gradient alignment: pixel-MSE may waste
+  bits on perceptually relevant but scorer-irrelevant texture, while scorer
+  distortions are exactly what the contest measures. This remains a Pact
+  planning hypothesis until the paired exact-eval packet above exists.
 
 ## 3. Timing-smoke command (~$0.50 Modal T4 1-epoch smoke)
 

@@ -615,6 +615,8 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     assert blocked["all_gate_claims_satisfied"] is False
     assert blocked["all_gate_evidence_valid"] is False
     assert blocked["promotion_eligible"] is False
+    assert blocked["ready_for_exact_eval_dispatch"] is False
+    assert blocked["rank_or_kill_eligible"] is False
     assert {
         "requires_byte_closed_temporal_sideinfo_consumption_proof",
         "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
@@ -631,6 +633,8 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     assert boolean_only["ready_for_score_or_rank_dispatch"] is False
     assert boolean_only["ready_for_dispatch"] is False
     assert boolean_only["promotion_eligible"] is False
+    assert boolean_only["ready_for_exact_eval_dispatch"] is False
+    assert boolean_only["rank_or_kill_eligible"] is False
     assert boolean_only["score_claim"] is False
     assert all(gate["claimed_satisfied"] is True for gate in boolean_only["gates"])
     assert all(
@@ -663,6 +667,8 @@ def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) ->
     ]
     assert ready["prediction_band_rank_ready"] is False
     assert ready["promotion_eligible"] is False
+    assert ready["ready_for_exact_eval_dispatch"] is False
+    assert ready["rank_or_kill_eligible"] is False
     assert ready["score_claim"] is False
     assert all(gate["evidence_valid"] is True for gate in ready["gates"])
 

@@ -39,8 +39,28 @@ Build differentiable world model + foveation-matched-to-ego-motion substrate (Ti
 - Gibson 1950 + Lee 1976 + LAPose existing canvas
 - Rao-Ballard 1999 + Friston 2010 predictive coding
 
+**Primary URLs / identifiers (retrieved 2026-05-16):**
+Retrieved 2026-05-16.
+
+- Atick-Redlich efficient coding:
+  https://doi.org/10.1162/neco.1990.2.3.308
+- Gibson visual-world bibliographic record:
+  https://philpapers.org/rec/GIBTPO-2
+- Lee time-to-collision / visual braking:
+  https://doi.org/10.1068/p050437
+- Rao-Ballard predictive coding:
+  https://doi.org/10.1038/4580
+- Friston free-energy principle:
+  https://doi.org/10.1038/nrn2787
+- Time-Traveler source architecture ledger:
+  `.omx/research/time_traveler_architecture_reverse_engineered_20260513.md`
+
 **Hypothesis (first-principles):**
-1. Foveation-matched-to-ego-motion (log-polar grid around FOE) provides 5-10× effective resolution gain on score-relevant pixels at fixed byte budget per Gibson 1950 + the SegNet stride-2-stem blind spot pattern that already validates the cost-map approach in YUCR.
+1. Foveation-matched-to-ego-motion (log-polar grid around FOE) is a planning
+   hypothesis for allocating more bytes to score-relevant pixels at fixed byte
+   budget per Gibson 1950 / Lee 1976 and the SegNet stride-2-stem blind spot
+   pattern that motivated the YUCR cost-map approach. It is not an empirical
+   Pact score or byte-saving claim until measured with archive/runtime custody.
 2. Differentiable physics renderer encodes scene state (~50-100 bytes/scene) rather than pixels (~590 KB raw). Tikhonov regularization principle: under-parameterized with good prior beats over-parameterized without prior.
 3. Cumulative predicted ΔS = -0.020 to -0.040 on top of Z3+Z4+Z5 staircase steps; total cumulative -0.080 to -0.140 from PR101 0.193 → S ∈ [0.06, 0.10].
 
@@ -152,7 +172,7 @@ TimeTravelerArchive-C1 (target: 95-110 KB total)
 | Stage 1 (foveation only) | macOS-CPU advisory score [0.180, 0.195] | macOS-CPU > 0.20 (predictive-coding base broken) |
 | Stage 2 (diff physics only) | macOS-CPU advisory score [0.140, 0.160] | macOS-CPU > 0.175 (composition not additive) |
 | Stage 3 (composed) | macOS-CPU advisory [0.100, 0.130]; trigger paid Linux x86_64 [contest-CPU] | macOS-CPU > 0.150 (campaign falsified) |
-| Exact eval ([contest-CPU] + [contest-CUDA]) | both axes in [0.06, 0.10] band → PROMOTE to frontier; council L2 review | either axis >0.13 → DEFER-pending-research per HNeRV parity lesson 8 (DO NOT KILL) |
+| Exact eval ([contest-CPU] + [contest-CUDA]) | both axes in [0.06, 0.10] band with matching archive SHA, runtime tree/content SHA, sample count, logs, component recomputation, and paired CPU/CUDA exact custody → operator frontier review; council L2 review | either axis >0.13 → DEFER-pending-research per HNeRV parity lesson 8 (DO NOT KILL) |
 
 **Falsification criteria (Z6 specific, council-deliberated):**
 - If Stage 3 final [contest-CPU] > 0.13 → zen-floor band revises UP to [0.10, 0.15]; Time-Traveler trajectory partially falsified; reactivation = staircase Step 7+ requires alien-tech composition (E4 MDL-IBPS or Wyner-Ziv full substrate).

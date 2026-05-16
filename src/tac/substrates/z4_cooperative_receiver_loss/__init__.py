@@ -12,16 +12,31 @@ Lagrangian" non-negotiable.
 Core insight (Atick & Redlich 1990 / Tishby-Zaslavsky cooperative receivers)
 ---------------------------------------------------------------------------
 
+Primary sources:
+
+- Atick-Redlich efficient coding:
+  https://doi.org/10.1162/neco.1990.2.3.308
+- Tishby-Zaslavsky information-bottleneck framing:
+  https://arxiv.org/abs/1503.02406 and https://arxiv.org/abs/1703.00810
+
 The classical compression objective is to minimize ``H(X)`` (source entropy).
-The cooperative-receiver insight is that when the decoder D and the receiver
-R cooperate, the bit budget shrinks from ``H(X)`` to ``H(X | f_R(X))`` where
-``f_R`` is everything R can compute. For the contest receiver R = SegNet +
-PoseNet, the entropy that matters is the scorer-conditional residual:
+The cooperative-receiver hypothesis used here is that when the training
+objective is aligned with receiver-computed quantities, bytes may be shifted
+away from scorer-irrelevant pixel detail and toward scorer-relevant residuals.
+For the contest receiver R = SegNet + PoseNet, the planning target is the
+scorer-conditional residual:
 
     R_relevant = H(X | W_seg, A_seg, P_seg, W_pose, A_pose, P_pose)
 
 where W, A, P are scorer weights, activations, and predictions (in the
 limit, the scorer-derived statistics the contest evaluates against).
+
+Claim boundary: objective analogy only. These papers do not prove Z4
+archive-byte savings or contest score movement. Z4 remains blocked from
+promotion until it emits a byte-closed archive with scorer-free inflate,
+records archive SHA and runtime tree/content SHA, compares against a
+source-matched Z3/A1 baseline, recomputes components, and runs paired CPU/CUDA
+exact eval.
 
 **This is a LOSS-ONLY change, not an architecture change.** Z4 inherits
 the Z3 substrate's encoder + decoder + per-pair latent grammar verbatim
@@ -181,11 +196,6 @@ from tac.substrates.z4_cooperative_receiver_loss.score_aware_loss import (
 )
 
 __all__ = [
-    "CooperativeReceiverArchive",
-    "CooperativeReceiverConfig",
-    "CooperativeReceiverLossWeights",
-    "CooperativeReceiverScoreAwareLoss",
-    "CooperativeReceiverSubstrate",
     "EVAL_HW",
     "NUM_PAIRS",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
@@ -195,6 +205,11 @@ __all__ = [
     "Z4CR1_MAGIC",
     "Z4CR1_SCHEMA_VERSION",
     "Z4CR1_SECTION_ROLES",
+    "CooperativeReceiverArchive",
+    "CooperativeReceiverConfig",
+    "CooperativeReceiverLossWeights",
+    "CooperativeReceiverScoreAwareLoss",
+    "CooperativeReceiverSubstrate",
     "pack_archive",
     "parse_archive",
     "parse_z4cr1_archive_bytes",

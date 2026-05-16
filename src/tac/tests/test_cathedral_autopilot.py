@@ -456,10 +456,12 @@ def test_validation_queue_preserves_unknown_cross_paradigm_rows() -> None:
 def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> None:
     """Cathedral must see L5-v2 stack blockers without promoting them."""
     autopilot = _load_autopilot()
-    monkeypatch.setattr(
-        autopilot.l5v2,
-        "l5_v2_dispatch_readiness",
-        lambda repo_root: {
+    captured: dict[str, object] = {}
+
+    def fake_readiness(*, gate_evidence=None, repo_root=None):
+        captured["gate_evidence"] = gate_evidence
+        captured["repo_root"] = repo_root
+        return {
             "blockers": ["requires_sideinfo_proof"],
             "packetir_stack_evidence": {
                 "blockers": ["l5_v2_packetir_no_runtime_bound_paired_exact_candidates"],
@@ -474,7 +476,17 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
                 "blockers": ["l5_v2_pr106_stack_cell_candidates_missing"],
                 "candidates": [],
             },
-        },
+        }
+
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_canonical_sideinfo_gate_evidence",
+        lambda repo_root: {"gate_id": "byte_closed_temporal_sideinfo_consumption"},
+    )
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_dispatch_readiness",
+        fake_readiness,
     )
     monkeypatch.setattr(
         autopilot,
@@ -529,6 +541,82 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
     assert queued["exact_eval_targets"]["format_0x0c_exact_radix"][0][
         "score_claim"
     ] is False
+    assert captured["gate_evidence"] == [
+        {"gate_id": "byte_closed_temporal_sideinfo_consumption"}
+    ]
+    assert captured["repo_root"] == autopilot.REPO_ROOT
+
+
+def test_l5_v2_validation_queue_suppresses_targets_when_matrix_blocked(
+    monkeypatch,
+) -> None:
+    """A stale/blocked PacketIR matrix must not leak Cathedral exact targets."""
+    autopilot = _load_autopilot()
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_canonical_sideinfo_gate_evidence",
+        lambda repo_root: None,
+    )
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_dispatch_readiness",
+        lambda *, gate_evidence=None, repo_root=None: {
+            "blockers": [],
+            "packetir_stack_evidence": {
+                "blockers": [],
+                "paired_candidate_count": 0,
+                "source_status_counts": {"paired_exact_measured": 1},
+                "axis_semantics": {
+                    "contest_cpu": "kept separate",
+                    "contest_cuda": "kept separate",
+                },
+            },
+            "pr106_stack_cell_candidates": {
+                "blockers": [],
+                "candidates": [
+                    {
+                        "cell_id": "l5_v2_pr106_format_0x0c_stack",
+                        "packetir_candidate_id": "format_0x0c_exact_radix",
+                        "source_max_archive_size_bytes": 185_578,
+                        "blockers": [],
+                    }
+                ],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        autopilot,
+        "_load_l5_v2_packetir_matrix_for_cathedral",
+        lambda: {
+            "load_blockers": ["l5_v2_packetir_matrix_artifact_sha_mismatch"],
+            "next_exact_eval_targets": [
+                {
+                    "candidate_id": "format_0x0c_exact_radix",
+                    "lane_id": "lane_pr106_packetir_0x0c",
+                    "command_template": "python dispatch.py --plan",
+                }
+            ],
+        },
+    )
+
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        target_score=0.190,
+    )
+
+    queued = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"] == "l5_v2_pr106_packetir_stack_cell"
+    )
+    assert queued["exact_eval_targets"] == []
+    assert "l5_v2_packetir_matrix_artifact_sha_mismatch" in queued[
+        "dispatch_blockers"
+    ]
+    assert queued["ready_for_exact_eval_dispatch"] is False
+    assert queued["score_claim"] is False
 
 
 def test_validation_queue_does_not_reward_zero_byte_proxy_rows() -> None:
