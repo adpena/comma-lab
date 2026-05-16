@@ -10,9 +10,9 @@
 # bootstrap_runtime_deps() function. Per Catalog #163 the canonical
 # REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 sentinel is set before sourcing.
 #
-# Score-tagging: any score this script produces is tagged [contest-CUDA] in
-# the completion-log line (LANE_NSCS06_V8_PATH_B_DONE marker) per CLAUDE.md
-# "Apples-to-apples evidence discipline" non-negotiable.
+# Score-tagging: completion logs derive any contest-axis marker from the auth
+# eval JSON's score_claim_valid + score_axis fields. Modal CPU advisory runs
+# are training artifacts and must never be logged as contest-CUDA.
 #
 # Heartbeat: every 5 min per CLAUDE.md "Remote code parity - non-negotiable".
 set -euo pipefail
@@ -184,21 +184,50 @@ TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
 # Stage 5: completion record.
-case "$NSCS06_V8_DEVICE" in
+AUTH_EVAL_DEVICE_EFFECTIVE="${AUTH_EVAL_DEVICE:-$NSCS06_V8_DEVICE}"
+AUTH_EVAL_DEVICE_NORMALIZED=$(printf '%s' "$AUTH_EVAL_DEVICE_EFFECTIVE" | tr '[:upper:]' '[:lower:]')
+case "$AUTH_EVAL_DEVICE_NORMALIZED" in
     cuda|gpu)
         AUTH_EVAL_AXIS="cuda"
-        AUTH_EVAL_AXIS_LABEL="CUDA"
         ;;
     *)
         AUTH_EVAL_AXIS="cpu"
-        AUTH_EVAL_AXIS_LABEL="CPU"
         ;;
 esac
 AUTH_EVAL_JSON="$OUTPUT_DIR/contest_auth_eval_${AUTH_EVAL_AXIS}.json"
-ARCHIVE_PATH="$OUTPUT_DIR/0.bin"
+ARCHIVE_ZIP_PATH="$OUTPUT_DIR/archive.zip"
+PAYLOAD_PATH="$OUTPUT_DIR/0.bin"
 if [ -f "$AUTH_EVAL_JSON" ]; then
-    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON"
-    log "LANE_NSCS06_V8_PATH_B_DONE [contest-$AUTH_EVAL_AXIS_LABEL] auth_eval=$AUTH_EVAL_JSON archive=$ARCHIVE_PATH rc=$TRAIN_RC"
+    AUTH_EVAL_SUMMARY=$("$PYBIN" - "$AUTH_EVAL_JSON" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+payload = json.loads(open(path, encoding="utf-8").read())
+axis = str(payload.get("score_axis") or "unknown")
+device = str(payload.get("device") or payload.get("auth_eval_device") or "unknown")
+score = payload.get("score")
+score_claim = payload.get("score_claim") is True
+score_claim_valid = payload.get("score_claim_valid") is True
+promotion_eligible = payload.get("promotion_eligible") is True
+if score_claim_valid and axis == "contest_cuda":
+    marker = "[contest-CUDA]"
+elif score_claim_valid and axis == "contest_cpu":
+    marker = "[contest-CPU]"
+elif score_claim_valid:
+    marker = f"[{axis}]"
+else:
+    marker = "[training-artifact-no-score-claim]"
+print(
+    f"{marker} score={score} axis={axis} device={device} "
+    f"score_claim={str(score_claim).lower()} "
+    f"score_claim_valid={str(score_claim_valid).lower()} "
+    f"promotion_eligible={str(promotion_eligible).lower()}"
+)
+PY
+)
+    log "auth_eval_artifact_present path=$AUTH_EVAL_JSON $AUTH_EVAL_SUMMARY"
+    log "LANE_NSCS06_V8_PATH_B_DONE $AUTH_EVAL_SUMMARY auth_eval=$AUTH_EVAL_JSON archive_zip=$ARCHIVE_ZIP_PATH payload=$PAYLOAD_PATH rc=$TRAIN_RC"
 else
     log "auth_eval_artifact_missing path=$AUTH_EVAL_JSON (trainer may have failed before stage 11)"
 fi

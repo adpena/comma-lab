@@ -41,7 +41,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 import time
 import zipfile
@@ -203,6 +202,20 @@ def _device_or_die(name: str, *, smoke: bool):
     return _device_or_die_canonical(
         name, smoke=smoke, substrate_tag="nscs06_v8_path_b_wavelet"
     )
+
+
+def _auth_eval_device_name(device: Any) -> str:
+    """Return the explicit auth-eval device name used for artifact custody."""
+
+    explicit = os.environ.get("AUTH_EVAL_DEVICE", "").strip().lower()
+    raw = explicit or str(getattr(device, "type", device)).strip().lower()
+    if raw.startswith("cuda") or raw.startswith("gpu"):
+        return "cuda"
+    if raw.startswith("cpu"):
+        return "cpu"
+    if raw.startswith("mps"):
+        return "mps"
+    return raw or "cpu"
 
 
 def _decode_real_pairs(video_path: Path, *, n_pairs: int, max_pairs: int | None):
@@ -479,25 +492,21 @@ def _full_main(args: argparse.Namespace) -> int:
     )
     from tac.scorer import load_differentiable_scorers
     from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
-        ArithmeticCoder,
         CDF_MAX,
         NUM_SEGNET_CLASSES,
+        ArithmeticCoder,
     )
     from tac.substrates.nscs06_v8_path_b_wavelet import (
         NUM_SUBBANDS,
         PER_SUBBAND_QUANT_STEPS,
-        SUBBAND_LABELS,
         build_per_subband_laplacian_priors,
-        compute_wyner_ziv_residual,
         dwt2_db4_depth2,
-        encode_subband_arith,
         pack_archive,
         quantize_subband,
     )
     from tac.substrates.nscs06_v8_path_b_wavelet.wavelet_codec import (
-        laplacian_cdf_uint16,
-        PerSubbandLaplacianPriors,
         QUANT_ZERO_INDEX,
+        laplacian_cdf_uint16,
     )
 
     _pin_seeds(args.seed)
@@ -656,7 +665,7 @@ def _full_main(args: argparse.Namespace) -> int:
         priors = build_per_subband_laplacian_priors(per_class_samples)
         _stage("priors_built")
 
-        # 8. Arith-encode each channel × frame_0/frame_1_residual stream.
+        # 8. Arith-encode each channel x frame_0/frame_1_residual stream.
         # For L1 SCAFFOLD we encode the FIRST pair only (the inflate runtime
         # uses the same data for every pair; per-pair offsets remain at 0).
         # This is byte-bounded by design (per design memo Section 14 L1 path).
@@ -673,7 +682,7 @@ def _full_main(args: argparse.Namespace) -> int:
                     laplacian_cdf_uint16(float(priors.scales[s, c]))
                     for c in range(NUM_SEGNET_CLASSES)
                 ]
-                for q, c in zip(qsb.ravel(), cls_sb.ravel()):
+                for q, c in zip(qsb.ravel(), cls_sb.ravel(), strict=False):
                     coder.encode_symbol(
                         int(q) + QUANT_ZERO_INDEX, cdfs[int(c)]
                     )
@@ -771,9 +780,13 @@ def _full_main(args: argparse.Namespace) -> int:
 
         # 11. Auth eval (Catalog #226 canonical helper)
         auth_eval_result_path: Path | None = None
+        auth_eval_result: dict[str, object] | None = None
         contest_cuda_score: float | None = None
         if not args.skip_auth_eval and archive_zip_path.is_file():
-            auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"
+            auth_eval_device = _auth_eval_device_name(device)
+            auth_eval_result_path = (
+                args.output_dir / f"contest_auth_eval_{auth_eval_device}.json"
+            )
             auth_result = _canon_gate_auth_eval_call(
                 args=args,
                 archive_zip=archive_zip_path,
@@ -783,14 +796,41 @@ def _full_main(args: argparse.Namespace) -> int:
                 contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
                 substrate_tag="nscs06_v8_path_b_wavelet",
                 device=device,
+                auth_eval_device=auth_eval_device,
+                return_non_cuda_result=True,
             )
             if auth_result is not None:
-                contest_cuda_score = auth_result["auth_eval_cuda_score"]
-                print(
-                    f"[v8-full] [contest-CUDA] score = {contest_cuda_score} "
-                    f"(archive_sha256={archive_zip_sha})"
+                auth_eval_result = dict(auth_result)
+                auth_eval_result_path = Path(
+                    str(
+                        auth_eval_result.get("auth_eval_json_path")
+                        or auth_eval_result_path
+                    )
                 )
-            _stage("auth_eval_cuda_done")
+                result_axis = str(auth_eval_result.get("auth_eval_score_axis") or "")
+                result_claim_valid = (
+                    auth_eval_result.get("auth_eval_score_claim_valid") is True
+                )
+                result_score = auth_eval_result.get(
+                    "auth_eval_score", auth_eval_result.get("auth_eval_cuda_score")
+                )
+                if result_axis == "contest_cuda" and result_claim_valid:
+                    contest_cuda_score = float(auth_eval_result["auth_eval_cuda_score"])
+                    auth_eval_result.setdefault("auth_eval_score", contest_cuda_score)
+                    auth_eval_result.setdefault("auth_eval_device", "cuda")
+                    auth_eval_result.setdefault("auth_eval_score_claim", True)
+                    print(
+                        f"[v8-full] [contest-CUDA] score = {contest_cuda_score} "
+                        f"(archive_sha256={archive_zip_sha})"
+                    )
+                else:
+                    auth_eval_result.setdefault("auth_eval_device", auth_eval_device)
+                    print(
+                        f"[v8-full] auth-eval {result_axis or auth_eval_device} "
+                        f"score = {result_score} "
+                        "(score_claim=false; not promotion eligible)"
+                    )
+            _stage(f"auth_eval_{auth_eval_device}_done")
 
         train_elapsed_sec = time.time() - train_started_at
 
@@ -861,14 +901,43 @@ def _full_main(args: argparse.Namespace) -> int:
             "payload_0bin_sha256": payload_0bin_sha,
             "payload_0bin_bytes": payload_0bin_bytes,
             "auth_eval_cuda_score": contest_cuda_score,
+            "auth_eval_score": (
+                auth_eval_result.get("auth_eval_score") if auth_eval_result else None
+            ),
+            "auth_eval_score_axis": (
+                auth_eval_result.get("auth_eval_score_axis")
+                if auth_eval_result
+                else None
+            ),
+            "auth_eval_device": (
+                auth_eval_result.get("auth_eval_device") if auth_eval_result else None
+            ),
+            "auth_eval_evidence_grade": (
+                auth_eval_result.get("auth_eval_evidence_grade")
+                if auth_eval_result
+                else None
+            ),
+            "auth_eval_score_claim_valid": (
+                auth_eval_result.get("auth_eval_score_claim_valid")
+                if auth_eval_result
+                else False
+            ),
+            "auth_eval_result": auth_eval_result,
             "auth_eval_json_path": (
                 str(auth_eval_result_path) if auth_eval_result_path else None
             ),
             "stage_log": stage_log,
             "custody_status": "ci-rebuildable",
-            "score_claim": contest_cuda_score is not None,
+            "score_claim": bool(
+                auth_eval_result
+                and auth_eval_result.get("auth_eval_score_claim") is True
+                and auth_eval_result.get("auth_eval_score_claim_valid") is True
+            ),
             "score_axis_tag": (
-                "[contest-CUDA]" if contest_cuda_score is not None else None
+                auth_eval_result.get("auth_eval_lane_tag")
+                if auth_eval_result
+                and auth_eval_result.get("auth_eval_score_claim_valid") is True
+                else None
             ),
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -897,7 +966,7 @@ NSCS06_V8_SUBSTRATE_CONTRACT = SubstrateContract(
     archive_grammar=(
         "WLV2 monolithic single-file 0.bin: 61-byte header (magic=WLV2, version=1) "
         "+ per-(subband, class) Laplacian priors (float32) + per-pair stream "
-        "offsets (uint32) + 6 wavelet streams (gray/Cb/Cr × frame_0/Wyner-Ziv "
+        "offsets (uint32) + 6 wavelet streams (gray/Cb/Cr x frame_0/Wyner-Ziv "
         "residual) arith-coded with per-class CDFs + class-label stream "
         "(uniform CDF) + utf-8 json meta + per-subband quant steps. NO neural "
         "weights. NO PyTorch at inflate. DB4 depth-2 separable 2D DWT per "

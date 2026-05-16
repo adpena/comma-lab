@@ -23,6 +23,7 @@ Coverage:
 from __future__ import annotations
 
 import struct
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -34,9 +35,7 @@ from tac.substrates.nscs06_v8_path_b_wavelet import (
     SUBBAND_LABELS,
     WLV2_HEADER_FMT,
     WLV2_HEADER_SIZE,
-    WLV2_MAGIC,
     WLV2_SCHEMA_VERSION,
-    WaveletResidualArchive,
     compute_wyner_ziv_residual,
     dequantize_subband,
     dwt2_db4_depth2,
@@ -54,9 +53,9 @@ from tac.substrates.nscs06_v8_path_b_wavelet.wavelet_codec import (
     DB4_RECON_HI,
     DB4_RECON_LO,
     DWT_LEVEL,
-    PerSubbandLaplacianPriors,
     QUANT_CLAMP_T,
     QUANT_LEVELS,
+    PerSubbandLaplacianPriors,
     decode_subband_arith,
     encode_subband_arith,
 )
@@ -307,7 +306,6 @@ def test_byte_mutation_changes_output(tmp_path: Path):
         NUM_SEGNET_CLASSES,
     )
 
-    rng = np.random.default_rng(20260516)
     eval_h, eval_w = 24, 32
     n_pairs = 1
     # Build a real (non-empty) wavelet stream for one channel by quantizing a
@@ -323,12 +321,11 @@ def test_byte_mutation_changes_output(tmp_path: Path):
     # Build the full per-channel stream: concatenate arith across all 7 subbands
     # using uniform class=0 + Laplacian priors.
     priors = _make_priors(scale=4.0)
+    # Build cls subband stream FIRST (uniform CDF) — inflate decodes this first
     from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import (
+        CDF_MAX,
         ArithmeticCoder,
     )
-
-    # Build cls subband stream FIRST (uniform CDF) — inflate decodes this first
-    from tac.substrates.nscs06_carmack_hotz_strip_everything.codec import CDF_MAX
     uniform_cdf = np.linspace(0, CDF_MAX, NUM_SEGNET_CLASSES + 1, dtype=np.int64)
     uniform_cdf[-1] = CDF_MAX
     uniform_cdf = uniform_cdf.astype(np.uint16)
@@ -344,8 +341,8 @@ def test_byte_mutation_changes_output(tmp_path: Path):
 
     # Build gray_f0 channel stream
     from tac.substrates.nscs06_v8_path_b_wavelet.wavelet_codec import (
-        laplacian_cdf_uint16,
         QUANT_ZERO_INDEX,
+        laplacian_cdf_uint16,
     )
 
     gray_coder = ArithmeticCoder()
@@ -528,3 +525,38 @@ def test_priors_shape_invariant():
     bad_scales3 = np.zeros((NUM_SUBBANDS, 5), dtype=np.float32)
     with pytest.raises(ValueError, match="all scales must be positive"):
         PerSubbandLaplacianPriors(scales=bad_scales3)
+
+
+def test_trainer_auth_eval_axis_is_device_aware():
+    repo_root = Path(__file__).resolve().parents[5]
+    source = (
+        repo_root / "experiments" / "train_substrate_nscs06_v8_path_b_wavelet.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        'args.output_dir / f"contest_auth_eval_{auth_eval_device}.json"'
+        in source
+    )
+    assert "auth_eval_device=auth_eval_device" in source
+    assert "return_non_cuda_result=True" in source
+    assert "auth_eval_result: dict[str, object] | None = None" in source
+    assert '"auth_eval_result": auth_eval_result' in source
+    assert (
+        'auth_eval_result_path = args.output_dir / "contest_auth_eval_cuda.json"'
+        not in source
+    )
+
+
+def test_remote_script_auth_eval_axis_has_no_unconditional_contest_tag():
+    repo_root = Path(__file__).resolve().parents[5]
+    script_path = (
+        repo_root / "scripts" / "remote_lane_substrate_nscs06_v8_path_b_wavelet.sh"
+    )
+    source = script_path.read_text(encoding="utf-8")
+
+    assert "AUTH_EVAL_DEVICE_EFFECTIVE" in source
+    assert "score_claim_valid" in source
+    assert "training-artifact-no-score-claim" in source
+    assert "LANE_NSCS06_V8_PATH_B_DONE [contest-" not in source
+
+    subprocess.run(["bash", "-n", str(script_path)], check=True)
