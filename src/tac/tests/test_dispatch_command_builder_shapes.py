@@ -71,6 +71,7 @@ def _ready_custody_candidate(tmp_path: Path, **overrides) -> dict:
         "archive_path": archive.as_posix(),
         "archive_size_bytes": archive.stat().st_size,
         "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "runtime_tree_sha256": "f" * 64,
     }
     candidate.update(overrides)
     return candidate
@@ -150,6 +151,7 @@ def test_parallel_dispatch_accepts_candidate_archive_schema_with_exact_custody(
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "runtime_tree_sha256": "f" * 64,
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 
@@ -184,6 +186,24 @@ def test_parallel_dispatch_rejects_ready_candidate_without_exact_archive_custody
         raise AssertionError("expected DispatchInputError")
 
     assert "archive_custody:archive_sha256_missing_or_invalid" in message
+
+
+def test_parallel_dispatch_rejects_ready_candidate_without_runtime_tree_custody(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool("parallel_dispatch_top_k")
+    candidate = _ready_custody_candidate(tmp_path)
+    del candidate["runtime_tree_sha256"]
+    ranked = _write_ranked_input(tmp_path, [candidate])
+
+    try:
+        tool._load_top_k(ranked, k=None)
+    except tool.DispatchInputError as exc:
+        message = str(exc)
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected DispatchInputError")
+
+    assert "runtime_custody:runtime_tree_sha256_missing_or_invalid" in message
 
 
 def test_parallel_dispatch_rejects_predicted_codecop_score_fields_even_with_custody(
@@ -350,6 +370,7 @@ def test_parallel_dispatch_rejects_candidate_archive_bytes_above_floor_by_defaul
         "candidate_archive_path": archive.as_posix(),
         "candidate_archive_bytes": archive.stat().st_size,
         "candidate_archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+        "runtime_tree_sha256": "f" * 64,
     }
     ranked = _write_ranked_input(tmp_path, [candidate])
 

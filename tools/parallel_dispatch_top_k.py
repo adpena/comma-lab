@@ -349,6 +349,36 @@ def _candidate_archive_sha256(candidate: dict) -> str:
     return ""
 
 
+def _candidate_runtime_tree_sha256(candidate: dict) -> str:
+    for key in (
+        "candidate_runtime_tree_sha256",
+        "runtime_tree_sha256",
+        "expected_runtime_tree_sha256",
+        "inflate_runtime_tree_sha256",
+    ):
+        value = candidate.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    for outer_key in (
+        "runtime_manifest",
+        "inflate_runtime_manifest",
+        "runtime_custody",
+        "provenance",
+    ):
+        nested = candidate.get(outer_key)
+        if not isinstance(nested, dict):
+            continue
+        value = nested.get("runtime_tree_sha256")
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+        inflate_manifest = nested.get("inflate_runtime_manifest")
+        if isinstance(inflate_manifest, dict):
+            value = inflate_manifest.get("runtime_tree_sha256")
+            if isinstance(value, str) and value.strip():
+                return value.strip().lower()
+    return ""
+
+
 def _candidate_exact_score(candidate: dict) -> float | None:
     for key in ("contest_cuda_score", "final_score", "contest_score", "score"):
         parsed = _coerce_float(candidate.get(key))
@@ -618,6 +648,18 @@ def _archive_custody_blockers(
     return blockers
 
 
+def _runtime_custody_blockers(candidate: dict) -> list[str]:
+    if (
+        candidate.get("ready_for_exact_eval_dispatch") is not True
+        and not _candidate_targets_contest_dispatch(candidate)
+    ):
+        return []
+    runtime_tree_sha256 = _candidate_runtime_tree_sha256(candidate)
+    if not _is_sha256(runtime_tree_sha256):
+        return ["runtime_tree_sha256_missing_or_invalid"]
+    return []
+
+
 def _candidate_blockers(
     candidate: dict,
     *,
@@ -687,6 +729,10 @@ def _candidate_blockers(
             candidate,
             ranked_input_dir=ranked_input_dir,
         )
+    )
+    blockers.extend(
+        f"runtime_custody:{blocker}"
+        for blocker in _runtime_custody_blockers(candidate)
     )
     archive_bytes = _candidate_archive_bytes(candidate)
     if (
