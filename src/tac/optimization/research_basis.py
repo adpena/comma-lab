@@ -1544,27 +1544,6 @@ RESEARCH_SOURCES: dict[str, dict[str, Any]] = {
             "exact_cuda_auth_eval",
         ],
     },
-    "dcvc_rt_2025": {
-        "title": "Towards Practical Real-Time Neural Video Compression",
-        "authors": ["Zhaoyang Jia", "Bin Li", "Jiahao Li", "Wenxuan Xie", "Linfeng Qi", "Houqiang Li", "Yan Lu"],
-        "year": 2025,
-        "venue_or_status": "arXiv:2502.20762",
-        "url": "https://arxiv.org/abs/2502.20762",
-        "lineage": ["neural_video_compression", "real_time_decode", "integerization"],
-        "local_paradigms": ["learned_video_compression", "decode_complexity", "production_runtime"],
-        "local_variables": [
-            "decode_fps_anchor",
-            "integerized_model_delta",
-            "latent_resolution_policy",
-        ],
-        "contest_terms": ["archive_bytes", "seg_dist", "pose_dist"],
-        "charged_byte_contract": "Runtime speed and integerization are production priors; any model bank, latent, or rate-control metadata consumed by inflate is charged.",
-        "hardening_blockers": [
-            "runtime_dependency_closure",
-            "t4_decode_budget_anchor",
-            "exact_cuda_auth_eval",
-        ],
-    },
 }
 
 DEFAULT_RESEARCH_BASIS_IDS = [

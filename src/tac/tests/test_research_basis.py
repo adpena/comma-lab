@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
+import tac.optimization.research_basis as research_basis_module
 from tac.optimization.research_basis import (
     REQUIRED_SOURCE_FIELDS,
     RESEARCH_SOURCES,
@@ -11,6 +15,16 @@ from tac.optimization.research_basis import (
     research_basis_ids_for_family,
     research_basis_manifest,
 )
+
+
+def test_research_basis_source_literal_has_no_duplicate_basis_ids() -> None:
+    source_text = Path(research_basis_module.__file__).read_text(encoding="utf-8")
+    block = source_text.split("RESEARCH_SOURCES: dict[str, dict[str, Any]] = {", 1)[1]
+    block = block.split("\n\nDEFAULT_RESEARCH_BASIS_IDS", 1)[0]
+    basis_ids = re.findall(r'^\s{4}"([^"]+)":\s*{', block, flags=re.MULTILINE)
+    duplicate_ids = sorted({basis_id for basis_id in basis_ids if basis_ids.count(basis_id) > 1})
+
+    assert duplicate_ids == []
 
 
 def test_research_basis_manifest_is_planning_only_and_hardened() -> None:
