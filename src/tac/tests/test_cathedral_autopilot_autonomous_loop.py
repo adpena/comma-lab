@@ -647,6 +647,11 @@ def _write_probe_payload(tmp_path: Path, payload: dict | None = None) -> Path:
                 "mdl_tier_c_density": 0.25,
                 "composition_alpha": 0.8,
                 "blockers": ["byte_closed_codec_candidate_required_before_dispatch"],
+                "literature_anchor": "Rao-Ballard predictive coding",
+                "source_supports": "Paper supports predictive error feedback.",
+                "paper_claim_scope": "Analogy for L5 planning, not Pact evidence.",
+                "pact_must_prove": "Paired exact CPU/CUDA byte-closed archive.",
+                "decode_complexity_evidence": "T4 timing smoke required.",
                 "notes": "[proxy] selected_interpretation=proxy_static_floor",
             }
         ],
@@ -667,7 +672,29 @@ def test_load_probe_disambiguator_autopilot_rows_read_only(tmp_path):
     assert loop.PLANNING_ONLY_SOURCE_BLOCKER in row.blockers
     assert row.mdl_tier_c_density == pytest.approx(0.25)
     assert row.composition_alpha == pytest.approx(0.8)
+    assert row.literature_anchor == "Rao-Ballard predictive coding"
+    assert row.source_supports == "Paper supports predictive error feedback."
+    assert row.paper_claim_scope == "Analogy for L5 planning, not Pact evidence."
+    assert row.pact_must_prove == "Paired exact CPU/CUDA byte-closed archive."
+    assert row.decode_complexity_evidence == "T4 timing smoke required."
     assert "[probe-disambiguator; read-only planning]" in row.notes
+
+
+def test_load_probe_disambiguator_suppresses_prediction_band_rank_reward(tmp_path):
+    p = _write_probe_payload(tmp_path)
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    payload["autopilot_rows"][0]["prediction_band"] = {
+        "band_id": "probe-band",
+        "subject_id": "lane_zen_floor_probe_disambiguator_20260514",
+    }
+    payload["autopilot_rows"][0]["expected_information_gain"] = 9.0
+    p.write_text(json.dumps(payload), encoding="utf-8")
+
+    rows = loop.load_candidates_from_probe_disambiguator_output(p)
+
+    assert rows[0].expected_information_gain == 0.0
+    assert "prediction_band_rank_reward_suppressed" in rows[0].blockers
+    assert "prediction_band_rank_reward_suppressed" in rows[0].notes
 
 
 def test_load_probe_disambiguator_refuses_score_claim(tmp_path):

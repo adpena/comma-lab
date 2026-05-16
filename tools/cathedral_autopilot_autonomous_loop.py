@@ -2535,6 +2535,23 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
         row_blockers = list(raw.get("blockers", []))
         if PLANNING_ONLY_SOURCE_BLOCKER not in row_blockers:
             row_blockers.append(PLANNING_ONLY_SOURCE_BLOCKER)
+        expected_information_gain = float(raw.get("expected_information_gain", 0.0))
+        if (
+            expected_information_gain > 0.0
+            and not _prediction_band_allows_rank_reward(raw)
+        ):
+            expected_information_gain = 0.0
+            if "prediction_band_rank_reward_suppressed" not in row_blockers:
+                row_blockers.append("prediction_band_rank_reward_suppressed")
+            raw_notes = str(raw.get("notes", ""))
+            raw = {
+                **raw,
+                "notes": (
+                    f"{raw_notes}; prediction_band_rank_reward_suppressed"
+                    if raw_notes
+                    else "prediction_band_rank_reward_suppressed"
+                ),
+            }
         notes = "\n".join(
             [
                 "[probe-disambiguator; read-only planning]",
@@ -2549,7 +2566,7 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 candidate_id=str(cid),
                 family=str(raw.get("family", "probe_disambiguator")),
                 predicted_score_delta=float(raw.get("predicted_score_delta", 0.0)),
-                expected_information_gain=float(raw.get("expected_information_gain", 0.0)),
+                expected_information_gain=expected_information_gain,
                 estimated_dispatch_cost_usd=_require_finite_nonnegative_float(
                     raw.get("estimated_dispatch_cost_usd", 0.0),
                     field="estimated_dispatch_cost_usd",
@@ -2560,6 +2577,12 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 mdl_density=_coerce_optional_float(raw.get("mdl_density")),
                 lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
                 literature_anchor=str(raw.get("literature_anchor", "")),
+                source_supports=str(raw.get("source_supports", "")),
+                paper_claim_scope=str(raw.get("paper_claim_scope", "")),
+                pact_must_prove=str(raw.get("pact_must_prove", "")),
+                decode_complexity_evidence=str(
+                    raw.get("decode_complexity_evidence", "")
+                ),
                 mdl_tier_c_density=_coerce_optional_float(
                     raw.get("mdl_tier_c_density")
                 ),
