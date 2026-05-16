@@ -10,7 +10,16 @@
   "measurements": [
     {
       "blockers": [
-        "l5_v2_probe_observation_missing"
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda"
       ],
       "candidate_id": "c1_world_model_foveation",
       "estimated_cost_usd": 2.0,
@@ -28,7 +37,16 @@
     },
     {
       "blockers": [
-        "l5_v2_probe_observation_missing"
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda"
       ],
       "candidate_id": "z5_predictive_coding_world_model",
       "estimated_cost_usd": 5.0,
@@ -46,7 +64,15 @@
     },
     {
       "blockers": [
-        "l5_v2_probe_observation_missing"
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
+        "l5_v2_probe_contest_evidence_grade_missing",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
+        "l5_v2_probe_axis_log_path_missing:contest_cuda",
+        "l5_v2_probe_axis_score_delta_missing:contest_cuda"
       ],
       "candidate_id": "time_traveler_l5_autonomy",
       "estimated_cost_usd": 7.5,

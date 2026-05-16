@@ -714,4 +714,60 @@ def test_tt5l_inflate_provenance_cli_help_uses_repo_venv() -> None:
     assert "--archive" in result.stdout
     assert "--output-dir" in result.stdout
     assert "--command" in result.stdout
+    assert "--log-path" in result.stdout
     assert "--frame-nbytes" in result.stdout
+
+
+def test_tt5l_inflate_provenance_cli_binds_log_path(tmp_path: Path) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_inflate_provenance_cli_{tmp_path.name}"
+    )
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        archive = artifact_root / "0.bin"
+        archive.write_bytes(_contest_shape_tt5l_archive(np.zeros((600, 45), dtype=np.int8)))
+        file_list, output_dir, _ = _write_contest_file_list_and_outputs(artifact_root)
+        log_path = artifact_root / "inflate.log"
+        log_path.write_text("TT5L inflate completed with exit_code=0\n", encoding="utf-8")
+        artifact_path = artifact_root / "inflate_provenance.json"
+
+        result = subprocess.run(
+            [
+                "tools/build_tt5l_inflate_provenance.py",
+                "--archive",
+                str(archive.relative_to(root)),
+                "--output-dir",
+                str(output_dir.relative_to(root)),
+                "--file-list",
+                str(file_list.relative_to(root)),
+                "--artifact-out",
+                str(artifact_path.relative_to(root)),
+                "--command",
+                (
+                    "PACT_INFLATE_DEVICE=cpu .venv/bin/python -m "
+                    "tac.substrates.time_traveler_l5_autonomy.inflate "
+                    "archive_dir output_dir file_list.txt"
+                ),
+                "--log-path",
+                str(log_path.relative_to(root)),
+                "--frame-nbytes",
+                "1",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+        assert "score_claim=false" in result.stdout
+        assert payload["log_path"] == str(log_path.relative_to(root))
+        assert payload["log_sha256"] == _sha256_file(log_path)
+        assert payload["log_bytes"] == log_path.stat().st_size
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)

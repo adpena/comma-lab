@@ -50,6 +50,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--file-list", required=True, type=Path)
     parser.add_argument("--artifact-out", required=True, type=Path)
     parser.add_argument("--command", required=True)
+    parser.add_argument(
+        "--log-path",
+        type=Path,
+        default=None,
+        help=(
+            "Optional stdout/stderr log captured from the inflate command. "
+            "Required for L5-v2 gate-consumable provenance."
+        ),
+    )
     parser.add_argument("--exit-code", default=0, type=int)
     parser.add_argument(
         "--frame-nbytes",
@@ -71,6 +80,7 @@ def main(argv: list[str] | None = None) -> int:
         file_list_path=args.file_list,
         artifact_path=args.artifact_out,
         command=args.command,
+        log_path=args.log_path,
         exit_code=args.exit_code,
         repo_root=REPO_ROOT,
         frame_nbytes=args.frame_nbytes,

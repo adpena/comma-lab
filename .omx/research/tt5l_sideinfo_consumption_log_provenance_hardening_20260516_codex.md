@@ -26,13 +26,11 @@ Cathedral autopilot: N/A, this does not create dispatch-ready evidence.
 Continual learning: N/A, no empirical anchor.
 Probe disambiguator: N/A, no ambiguous design branch.
 
-## Residual Blocker
+## Follow-Up Resolution
 
-Existing committed full-frame proof artifacts and L5 staircase consumer checks
-do not yet require log-bound provenance. I did not edit
-`src/tac/optimization/l5_staircase_v2.py` or rematerialize committed proof
-artifacts in this slice because ownership was limited to the consumption proof
-builder, its CLI, direct tests, and this ledger. The separate inflate
-provenance CLI is also outside this slice's ownership; it must be extended to
-record a log path/hash before it can mint proof-acceptable provenance after
-this hardening.
+Resolved in the follow-up L5-v2 slice: `tools/build_tt5l_inflate_provenance.py`
+now exposes `--log-path`, the committed contest full-frame proof was
+rematerialized from log-bound CPU inflates, and
+`src/tac/optimization/l5_staircase_v2.py` now pins the refreshed committed proof
+SHA-256. This removed the side-info gate blocker without weakening the semantic
+checks.

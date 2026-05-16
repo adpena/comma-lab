@@ -70,7 +70,7 @@ TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH = (
     ".omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json"
 )
 TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256 = (
-    "8e71c522f31bd957e7c00b2a9505db774469293e330d1ca5d0c90795f66b2d2d"
+    "d430dd7ccc97da125ca3985a2f70d7cef4c37d39cccad1952698d37d177c9a86"
 )
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
