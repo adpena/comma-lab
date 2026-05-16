@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
 from tac.optimization.prediction_band import (
     BandSource,
     BaselineRef,
@@ -144,7 +145,7 @@ def l5_v2_staircase_steps() -> tuple[L5V2Step, ...]:
                 "Ship both defensible interpretations and let paired probes "
                 "choose architecture direction before full training."
             ),
-            deliverable_surface="tools/probe_l5_v2_staircase_disambiguator.py",
+            deliverable_surface=L5V2_PROBE_TOOL_PATH,
             required_gate_ids=("c1_z5_tt5l_probe_disambiguator",),
             research_basis_ids=basis,
         ),

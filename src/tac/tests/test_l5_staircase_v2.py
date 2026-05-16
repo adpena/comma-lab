@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from pathlib import Path
+
 from tac.optimization.l5_staircase_v2 import (
     PREDICTED_DELTA_BAND,
     SUBJECT_ID,
@@ -11,6 +13,7 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
 )
+from tac.optimization.l5_v2_probe_disambiguator import L5V2_PROBE_TOOL_PATH
 from tac.optimization.substrate_composition_matrix import (
     build_composition_matrix,
     per_substrate_pareto_rows,
@@ -50,6 +53,10 @@ def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
         assert step.dispatch_allowed is False
         assert step.promotion_eligible is False
         assert set(step.required_gate_ids) <= gate_ids
+
+    probe_step = next(step for step in steps if step.step_id == "l5v2_02_probe_disambiguator")
+    assert probe_step.deliverable_surface == L5V2_PROBE_TOOL_PATH
+    assert Path(L5V2_PROBE_TOOL_PATH).is_file()
 
 
 def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
