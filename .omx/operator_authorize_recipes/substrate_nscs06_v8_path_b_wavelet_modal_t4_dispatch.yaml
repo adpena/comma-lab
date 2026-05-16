@@ -1,0 +1,186 @@
+schema_version: 1
+name: substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch
+lane_id: lane_nscs06_v8_path_b_wavelet_residual_substrate_build_20260516
+summary: |
+  NSCS06 v8 Path B wavelet-residual first-anchor dispatch on Modal T4.
+  Design memo .omx/research/nscs06_v8_path_b_wavelet_residual_full_stack_design_20260516.md
+  (commit 963549469). UNIQUE-AND-COMPLETE-PER-METHOD: DB4 depth-2 separable
+  2D DWT + per-(subband, class) Laplacian-prior arithmetic coding +
+  Wyner-Ziv side-information temporal coding + WLV2 monolithic archive
+  grammar. Predicted band [15, 25] FEASIBLE per Catalog #296 Dykstra
+  polytope [0.40, 28.76] at seg_budget=0.06 / pose_budget=50 / archive=600KB.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: T4
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - research_substrate
+canary_status: independent_substrate
+dispatch_enabled: true
+research_only: false
+
+dispatch_blockers: []
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 15.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: 20.0
+predicted_delta: "v8 Path B predicted band [15, 25] [prediction; first-principles + Dykstra-feasibility-validated; MEDIUM VARIANCE]"
+predicted_delta_basis: |
+  STACKED FIRST-PRINCIPLES BOUNDS (per design memo Section 18):
+    v7 Path A baseline: 58.89 [diagnostic_cpu] = 25.27 seg + 30.94 pose + 2.67 rate
+    v8 Path B predicted decomposition:
+      - seg_contrib 100*seg_avg: 6.0 - 10.0 (seg_avg 0.06 - 0.10)
+        mechanism: real chroma (Cb + Cr) full-resolution coded per Mallat
+        decorrelation; chroma no longer anchor-derived; SegNet sees coloured
+        frames.
+      - pose_contrib sqrt(10*pose_avg): 6.32 - 12.25 (pose_avg 4.0 - 15.0)
+        mechanism: Wyner-Ziv per-pixel temporal residual replaces 6-DOF
+        affine warp; per-pixel residual decorrelates the v7 structural
+        approximation error.
+      - rate_contrib 25*archive_bytes/N: 0.40 (archive 600 KB)
+        mechanism: DB4 depth-2 decorrelation 5-10x vs raw spatial per
+        Mallat 1989 + Daubechies 1992 Ch. 6.
+      - TOTAL: [12.72, 22.65] -> rounded with MEDIUM VARIANCE -> [15, 25]
+    Catalog #296 Dykstra-feasibility check: FEASIBLE.
+    Polytope [0.40, 28.76] strictly contains predicted [15, 25].
+
+literature_anchor: |
+  - Mallat 1989 multiresolution approximation + wavelet orthonormal bases
+  - Daubechies 1992 Ten Lectures on Wavelets Ch. 6 (DB4 filter)
+  - Antonini-Barlaud-Mathieu-Daubechies 1992 image coding via wavelets
+  - Wyner-Ziv 1976 side-information source coding theorem
+  - Witten-Neal-Cleary 1987 arithmetic coding
+  - MacKay 2003 ITILA Ch. 2 (max-entropy Laplacian under |E| constraint)
+  - Slepian-Wolf 1973 (companion to Wyner-Ziv)
+  Source-supports: paper-grade information-theoretic + wavelet-coding
+  bounds; predicted band derived from each by first-principles arithmetic
+  over the contest scorer's per-component cost function. PACT must prove:
+  the per-subband Laplacian-prior + per-class CDF arithmetic coder + DB4
+  depth-2 separable 2D DWT + Wyner-Ziv residual operationally produces
+  the predicted band on the byte-closed WLV2 archive at the contest video.
+
+paper_claim_scope: |
+  Mallat 1989 + Daubechies 1992 establish that DB4 depth-2 separable 2D
+  DWT achieves 5-10x decorrelation on natural images. Wyner-Ziv 1976
+  establishes the rate to encode X given side-info Y is H(X|Y) << H(X)
+  for correlated sequences. Both bounds are theoretical; PACT must prove
+  them empirically on the contest scorer + contest video.
+
+pact_must_prove: |
+  v8 produces a contest-CUDA paired score in the predicted band [15, 25]
+  on the byte-closed WLV2 archive when dispatched to Modal T4 with the
+  canonical contest auth eval helper. Below [15, 25]: breakthrough. Above
+  [25, 40]: marginal; pivot to Path C. Above [40]: WAIVE Path B.
+
+decode_complexity_evidence: |
+  Inflate runtime ~310 LOC (substrate_engineering exception per HNeRV L7).
+  Dependencies: numpy + Pillow + pywavelets (3 total; pywt is +1 over v7).
+  Per-pair compute: 7 IDWT decompositions (~ms) + 7 arith decodes
+  (~tens-of-ms per stream) + YUV->RGB (~ms) + bilinear upscale (~ms).
+  Total inflate budget for 600 pairs at 384x512 << contest 30-min runtime.
+
+council_phase_5_prediction: 20.0
+substrate_tradition: NSCS06_V8_PATH_B_DESIGN_MEMO_2026_05_16
+
+risk: |
+  MEDIUM VARIANCE first-anchor dispatch. Architectural risks:
+
+  (a) WAVELET DECORRELATION ASSUMPTION - DB4 depth-2 + Laplacian prior
+      assumes natural-image statistics. Contest video has driving-scene
+      content with sky + road + lanes; spectral content may differ from
+      generic natural-image priors. Mitigated by per-(subband, class)
+      empirical scale estimation.
+
+  (b) WYNER-ZIV RESIDUAL ENTROPY - assumes H(frame_1|frame_0) is small
+      relative to H(frame_1). For low-motion driving content this should
+      hold; for high-motion content the residual entropy approaches
+      H(frame_1) and the rate gain disappears.
+
+  (c) L1 SCAFFOLD SCOPE - this first dispatch ships the FIRST PAIR ONLY
+      streams (every pair decodes the same reconstruction). Per-pair-
+      distinct streams are L2 work (deferred per design memo Section 14).
+      The L1 dispatch validates pipeline integration + the Dykstra-
+      feasibility band prediction; L2 unlocks the full [15, 25] band.
+
+  Predicted archive size: ~600 KB (rate-axis contribution 25 * 600000 /
+  37545489 = 0.40). Per the Dykstra-feasibility check (Catalog #296),
+  the predicted band fits inside the convex polytope at all 3 budgets.
+
+envelope_status: "FITS $20 envelope at p50 fallback (~$15)"
+
+remote_driver: scripts/remote_lane_substrate_nscs06_v8_path_b_wavelet.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_nscs06_v8_path_b_wavelet.sh
+  cost_band_trainer: experiments/train_substrate_nscs06_v8_path_b_wavelet.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_nscs06_v8_path_b_wavelet.py
+
+env_overrides:
+  NSCS06_V8_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  NSCS06_V8_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  NSCS06_V8_OUTPUT_DIR: /workspace/pact/lane_nscs06_v8_path_b_wavelet_results/output
+  NSCS06_V8_EPOCHS: "1"
+  NSCS06_V8_UPSTREAM_DIR: /workspace/pact/upstream
+  NSCS06_V8_DEVICE: cuda
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_nscs06_v8_path_b_wavelet.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_nscs06_v8_path_b_wavelet.py
+  - tools/validate_dispatch_required_inputs.py
+
+notes: |
+  L1 SCAFFOLD first-anchor dispatch per design memo
+  .omx/research/nscs06_v8_path_b_wavelet_residual_full_stack_design_20260516.md
+  Symposium provenance: commit 4292c8ce2 ratified Path B contingent on
+  Path A landing inside the predicted [40, 65] band. v7 Path A landed 58.89
+  [diagnostic_cpu] INSIDE band; v8 Path B is the cargo-cult #3 + #6 follow-on.
+
+  REACTIVATION CRITERIA (per design memo Section 18):
+    contest-CUDA + contest-CPU paired in [15, 25] -> L2 promotion + queue
+        NSCS01 x v8 composition smoke (predicted additive ΔS -5 to -15)
+    [25, 40] -> marginal; pivot to Path C hybrid-neural
+    > 40 -> WAIVE Path B; DEFER per "Forbidden premature KILL"
+    < 15 -> BREAKTHROUGH; expand budget; immediate full-run + Path C precursor
+
+  9-DIMENSION SUCCESS CHECKLIST (per design memo Section 17):
+    1. UNIQUENESS: WLV2 grammar is a new wire-format codec class (vs CH06)
+    2. BEAUTY/ELEGANCE: ~700-900 LOC core (4 modules: wavelet_codec +
+       wyner_ziv_temporal + archive + inflate)
+    3. DISTINCTNESS: only NSCS06-class analytical-wavelet substrate
+    4. RIGOR: sextet-pact pre-spawn review + Catalog #229 premise verification
+       + Catalog #292 per-deliberation assumption surfacing (design memo
+       Section 16 hard-earned-vs-cargo-culted ledger)
+    5. OPTIMIZATION PER TECHNIQUE: Catalog #290 canonical-vs-unique decision
+       per layer (Section 12 / 15 - 9 ADOPTIONS / 5 FORKS)
+    6. STACK-OF-STACKS-COMPOSABILITY: NSCS01 x v8 top-candidate per Section 13
+    7. DETERMINISTIC REPRODUCIBILITY: byte-stable WLV2 grammar
+    8. EXTREME OPTIMIZATION: compress ~15 min T4 + inflate ~5 min CPU
+    9. OPTIMAL MINIMAL CONTEST SCORE: predicted [15, 25] -- 3x improvement
+       over v7's 58.89
+
+  Cross-ref:
+    .omx/research/nscs06_v8_path_b_wavelet_residual_full_stack_design_20260516.md
+    .omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md (v7 path A)
+    feedback_grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md
+    feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md
+    feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md
