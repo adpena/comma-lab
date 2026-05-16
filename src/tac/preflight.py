@@ -2514,6 +2514,22 @@ def preflight_all(
         check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof(
             strict=True, verbose=verbose,
         )
+        # 2026-05-16 Catalog #305 - MAX-OBSERVABILITY-INTO-BEHAVIOR
+        # OBSERVABILITY SURFACE SECTION gate. Per operator standing
+        # directive 2026-05-16: every substrate design memo + every landing
+        # memo + every stack-of-stacks composition memo dated >= 2026-05-16
+        # MUST contain the literal section header `## Observability surface`
+        # documenting the 6-facet observability surface (per-layer
+        # inspection / per-signal decomposition / run-to-run diff /
+        # post-hoc query interface / cite-chain / counterfactual hooks).
+        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
+        # atomicity rule" — live count at landing is bounded by the
+        # OBSERVABILITY-ADDENDUM backfill (this landing's Artifact 4).
+        # Sister of Catalog #290 + #294 + #303 + #296. Memory:
+        # feedback_max_observability_landed_catalog_305_20260516.md.
+        check_substrate_design_memo_has_observability_surface_section(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -65477,6 +65493,310 @@ def check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof(
             "\"Bit-level deconstruction and entropy discipline\" + NSCS06 "
             "v6 cargo-cult #1. Catalog #304 (sister of #105 / #139 / #220 "
             "/ #272).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #305 - check_substrate_design_memo_has_observability_surface_section
+#
+# MAX-OBSERVABILITY-INTO-BEHAVIOR 2026-05-16 self-protection per operator
+# standing directive verbatim: *"the xray and autopilot and all tools and the
+# experiment and designs themselves should be built so as to support absolute
+# max observability into behavior"*.
+#
+# Anchor memo:
+#   - feedback_max_observability_into_behavior_xray_autopilot_tools_experiments_designs_standing_directive_20260516.md
+#
+# Sister of:
+#   - Catalog #290 (canonical-vs-unique decision per layer — Dimension 5 of
+#     substrate-design-memo discipline; #305 covers the observability surface
+#     specifically)
+#   - Catalog #294 (9-dim success checklist evidence section — Dimensions 1-9
+#     of substrate-landing-memo discipline; #305 is the observability axis
+#     specifically)
+#   - Catalog #303 (cargo-cult audit section — closes the cargo-cult surface;
+#     #305 closes the observability surface)
+#   - Catalog #296 (predicted-band Dykstra feasibility — closes the
+#     planning-rigor surface; #305 closes the runtime-observability surface)
+#
+# Refuses repo-local `.omx/research/*_design_<YYYYMMDD>.md` substrate design
+# memos by default, plus external Claude-memory substrate landing memos only
+# when ``memory_dir=...`` is passed explicitly. The opt-in pattern mirrors
+# Catalog #290 + #291 + #292 + #294 so clean clones and CI see the same
+# default result as the operator machine (OSS-hermetic discipline).
+#
+# Filename scope: in-repo design memos `*_design_<YYYYMMDD>.md` AND
+# substrate / scaffold / NSCS / stack-of-stacks / composition landing memos
+# AND whose date suffix is >= 2026-05-16 (this directive's date).
+#
+# Body requirement: the literal section header ``## Observability surface``
+# (case-insensitive).
+#
+# Same-line waiver ``# OBSERVABILITY_SURFACE_SECTION_WAIVED:<rationale>``
+# accepted anywhere in the memo body (placeholder ``<rationale>`` /
+# ``<reason>`` literals rejected so the docstring example cannot self-waive).
+#
+# Bug class: per the 6-facet observability definition from the standing-
+# directive memo, every substrate design memo MUST document its
+# OBSERVABILITY SURFACE: (1) per-layer inspection (what's captured at each
+# forward pass), (2) per-signal decomposition (how composite metrics break
+# down), (3) run-to-run diff manifest (what makes two runs comparable),
+# (4) post-hoc query interface (which JSON/JSONL/SQLite/TensorBoard
+# surfaces), (5) cite-chain (anchored to commit + call_id +
+# upstream_snapshot_sha256), (6) counterfactual hooks (byte-mutation surface
+# + ablation switches). Without an observability surface declared at design
+# time, the substrate becomes an opaque black-box at runtime — its behavior
+# cannot be evaluated, decomposed, diffed, queried, cited, or counterfactually
+# probed without re-instrumenting. The 0.1928 cluster + the May 4 race
+# postmortem both empirically demonstrate the cost of opaque behavior:
+# substrates landed without observability surfaces never had their failure
+# modes structurally decomposed; root causes were diagnosed post-hoc via
+# expensive re-runs instead of via cheap post-hoc queries on harvested
+# artifacts.
+#
+# WARN-ONLY initially per CLAUDE.md "Strict-flip atomicity rule" — the live
+# count at landing is up to 10 because the 10 existing 2026-05-16 design
+# memos predate the directive. The OBSERVABILITY-ADDENDUM backfill (this
+# landing's Artifact 4) appends the section to each in-flight memo per
+# Catalog #110/#113 HISTORICAL_PROVENANCE discipline (APPEND-ONLY; no body
+# mutation). Strict-flip planned alongside that backfill's final commit.
+# ============================================================================
+
+# Cutoff date suffix; memos dated before this are exempt.
+_CHECK_305_CUTOFF_DATE_SUFFIX_INT = 20260516
+
+# Literal section header (case-insensitive substring match).
+_CHECK_305_REQUIRED_SECTION_HEADER = "## observability surface"
+
+# Filename patterns scoping which memos are subject to this gate.
+_CHECK_305_SUBSTRATE_FILENAME_RE = re.compile(
+    r"^feedback_.*substrate.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_305_SCAFFOLD_FILENAME_RE = re.compile(
+    r"^feedback_.*scaffold.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_305_NSCS_FILENAME_RE = re.compile(
+    r"^feedback_nscs\d+.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_305_STACK_OF_STACKS_FILENAME_RE = re.compile(
+    r"^feedback_.*stack_of_stacks.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_305_COMPOSITION_FILENAME_RE = re.compile(
+    r"^feedback_.*composition.*landed_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+_CHECK_305_RESEARCH_DESIGN_FILENAME_RE = re.compile(
+    r"^.*_design_(\d{8})\.md$",
+    re.IGNORECASE,
+)
+
+# Same-line waiver pattern: `# OBSERVABILITY_SURFACE_SECTION_WAIVED:<rationale>`.
+_CHECK_305_WAIVER_PATTERN = re.compile(
+    r"#\s*OBSERVABILITY_SURFACE_SECTION_WAIVED\s*:\s*([^\s][^\n#]{0,200})"
+)
+_CHECK_305_WAIVER_PLACEHOLDERS = frozenset(("<rationale>", "<reason>", ""))
+
+
+def _check_305_in_scope(filename: str) -> int | None:
+    """Return parsed YYYYMMDD int if the filename is in-scope, else None."""
+    for regex in (
+        _CHECK_305_SUBSTRATE_FILENAME_RE,
+        _CHECK_305_SCAFFOLD_FILENAME_RE,
+        _CHECK_305_NSCS_FILENAME_RE,
+        _CHECK_305_STACK_OF_STACKS_FILENAME_RE,
+        _CHECK_305_COMPOSITION_FILENAME_RE,
+        _CHECK_305_RESEARCH_DESIGN_FILENAME_RE,
+    ):
+        m = regex.match(filename)
+        if m:
+            try:
+                return int(m.group(1))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _check_305_waiver_present(body: str) -> bool:
+    """Return True if a non-placeholder `OBSERVABILITY_SURFACE_SECTION_WAIVED:<rationale>`
+    appears anywhere in the body."""
+    match = _CHECK_305_WAIVER_PATTERN.search(body)
+    if match is None:
+        return False
+    rationale = match.group(1).strip()
+    if not rationale:
+        return False
+    if rationale in _CHECK_305_WAIVER_PLACEHOLDERS:
+        return False
+    return True
+
+
+def _check_305_default_memory_dir() -> Path | None:
+    """No external memory scan by default.
+
+    Catalog #305 is a repository preflight gate; clean clones and CI must see
+    the same result as the operator machine. Pass ``memory_dir=...`` explicitly
+    when auditing local Claude memory.
+    """
+    return None
+
+
+def _check_305_default_research_dir(repo_root: Path | str | None = None) -> Path:
+    """Default in-repo research design-memo directory."""
+    root = Path(repo_root or REPO_ROOT).resolve()
+    return root / ".omx" / "research"
+
+
+def check_substrate_design_memo_has_observability_surface_section(
+    *,
+    memory_dir: Path | str | None = None,
+    research_dir: Path | str | None = None,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #305 — refuse substrate design / landing / composition memos
+    missing the ``## Observability surface`` section.
+
+    Per operator standing directive 2026-05-16: *"the xray and autopilot and
+    all tools and the experiment and designs themselves should be built so as
+    to support absolute max observability into behavior"*.
+
+    Every substrate design memo + every landing memo + every stack-of-stacks
+    composition memo dated >= 2026-05-16 MUST document its OBSERVABILITY
+    SURFACE across all 6 facets:
+
+    (1) Per-layer inspection (what's captured at each forward pass)
+    (2) Per-signal decomposition (how composite metrics break down)
+    (3) Run-to-run diff manifest (what makes two runs comparable)
+    (4) Post-hoc query interface (which JSON/JSONL/SQLite/TensorBoard
+        surfaces)
+    (5) Cite-chain (anchored to commit + call_id + upstream_snapshot_sha256)
+    (6) Counterfactual hooks (byte-mutation surface + ablation switches)
+
+    Missing observability surface = substrate is structurally opaque at
+    runtime = its behavior cannot be evaluated, decomposed, diffed, queried,
+    cited, or counterfactually probed without re-instrumenting. The 0.1928
+    cluster + the May 4 race postmortem both empirically demonstrate the cost
+    of opaque behavior. The literal section header is the single structural
+    requirement; the section body content is the operator-facing audit
+    surface.
+
+    Acceptance:
+    - Pre-cutoff memos (date < 2026-05-16) are exempt by date filter.
+    - In-scope memos with the literal header pass.
+    - In-scope memos with a non-placeholder
+      ``# OBSERVABILITY_SURFACE_SECTION_WAIVED:<rationale>`` waiver pass.
+    - In-scope memos without the header AND without the waiver are flagged.
+    - In-repo ``.omx/research/*_design_<YYYYMMDD>.md`` memos are in scope
+      (active design surface where subagents land before memory rollups
+      exist).
+    - External memory memos are scanned only when ``memory_dir`` is passed
+      explicitly; default behavior is clone-stable and repo-local
+      (OSS-hermetic per sister Catalog #290 / #291 / #292 / #294).
+
+    Sister of Catalog #290 (canonical-vs-unique decision per layer) +
+    Catalog #294 (9-dim success checklist evidence) + Catalog #303 (cargo-cult
+    audit section) + Catalog #296 (predicted-band Dykstra feasibility).
+
+    Memory: ``feedback_max_observability_into_behavior_xray_autopilot_tools_experiments_designs_standing_directive_20260516.md``.
+    Lane: ``lane_max_observability_into_behavior_landed_catalog_305_20260516``.
+    """
+    if memory_dir is None:
+        memory_target = _check_305_default_memory_dir()
+    elif isinstance(memory_dir, str):
+        memory_target = Path(memory_dir)
+    else:
+        memory_target = memory_dir
+    if research_dir is None:
+        research_target = _check_305_default_research_dir(repo_root)
+    elif isinstance(research_dir, str):
+        research_target = Path(research_dir)
+    else:
+        research_target = research_dir
+
+    violations: list[str] = []
+    seen_dirs: set[Path] = set()
+    target_surfaces: list[tuple[Path, str]] = []
+    if memory_target is not None:
+        target_surfaces.append((memory_target, "memory"))
+    target_surfaces.append((research_target, "research"))
+    for target, surface in target_surfaces:
+        try:
+            resolved_target = target.resolve()
+        except OSError:
+            resolved_target = target
+        if resolved_target in seen_dirs:
+            continue
+        seen_dirs.add(resolved_target)
+        if not target.is_dir():
+            continue
+        try:
+            candidates = sorted(target.iterdir())
+        except OSError:
+            continue
+        for entry in candidates:
+            if not entry.is_file():
+                continue
+            date_int = _check_305_in_scope(entry.name)
+            if date_int is None:
+                continue  # filename not in scope
+            if date_int < _CHECK_305_CUTOFF_DATE_SUFFIX_INT:
+                continue  # pre-cutoff memos exempt
+            try:
+                body = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Acceptance path 1: literal section header (case-insensitive).
+            if _CHECK_305_REQUIRED_SECTION_HEADER in body.lower():
+                continue
+            # Acceptance path 2: same-line waiver with non-placeholder rationale.
+            if _check_305_waiver_present(body):
+                continue
+            try:
+                rel = entry.relative_to(Path(repo_root or REPO_ROOT).resolve())
+            except ValueError:
+                rel = entry
+            violations.append(
+                f"{rel}: {surface} substrate design/landing/composition memo "
+                f"dated {date_int} is missing the required "
+                "'## Observability surface' section header "
+                "(case-insensitive). Per the operator standing directive "
+                "2026-05-16 (MAX-OBSERVABILITY-INTO-BEHAVIOR): every substrate "
+                "design memo + every landing memo + every stack-of-stacks "
+                "composition memo dated >= 2026-05-16 MUST document its "
+                "observability surface across 6 facets (per-layer inspection / "
+                "per-signal decomposition / run-to-run diff / post-hoc query "
+                "interface / cite-chain / counterfactual hooks). Either add "
+                "the section header OR carry a same-line "
+                "`# OBSERVABILITY_SURFACE_SECTION_WAIVED:<rationale>` waiver."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_substrate_design_memo_has_observability_surface_section] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_substrate_design_memo_has_observability_surface_section] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_design_memo_has_observability_surface_section "
+            f"found {len(violations)} substrate design/landing/composition "
+            "memo(s) missing the required '## Observability surface' section. "
+            "Per the operator standing directive 2026-05-16 + CLAUDE.md "
+            "'Max observability — non-negotiable' + 'Bugs must be permanently "
+            "fixed AND self-protected against' non-negotiables. Catalog #305 "
+            "(MAX-OBSERVABILITY-INTO-BEHAVIOR; sister of Catalog #290 + #294 "
+            "+ #303 + #296).\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

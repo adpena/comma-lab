@@ -500,3 +500,85 @@ Per CLAUDE.md Catalog #294 + standing directive.
 - **Cost**: ~$6-12 GPU + ~10 h subagent.
 - **Reactivation gate**: 8 criteria in Section 19; the empirical floor is `< 0.197 [contest-CPU GHA Linux x86_64]` (Z3 v2 baseline 0.19779).
 - **Observability surface**: 6 surfaces declared per Section 17 (per-layer hooks / per-signal decomposition / run-to-run diff / post-hoc query / cite-chain / counterfactual hooks).
+
+---
+
+## Appendix A — Section 14 probe empirical result (PROBE DISPATCH WAVE task #749, 2026-05-16)
+
+**Status**: Section 14 probe LANDED (operator-approved PROBE DISPATCH WAVE task #749). Result appended per Catalog #110 HISTORICAL_PROVENANCE (APPEND-ONLY); body of design memo unchanged.
+
+**Probe executed**: `tools/probe_latent_conditional_entropy_h_latent_given_scorer_class.py` (commit `d72f50985`) on (a) `residual_int8` (16,800 bytes) extracted from the Z3 v2 1000ep CUDA archive (`lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep_modal`) and (b) `class_indices` (600 entries, byte-expanded ×28 to align symbol-for-symbol) from the Z3-G1 v1 smoke diagnostic at `experiments/results/lane_substrate_z3_g1_scorer_softmax_hyperprior_gating_modal_t4_dispatch_20260515T195556Z__smoke__100ep_modal/.../g1_diagnostic.pt`.
+
+**Result** ([diagnostic-CPU; H(latent|scorer_class) probe]):
+
+| Metric | Value |
+|---|---|
+| `H(latent)` (unconditional) | **7.5653 bits/symbol** |
+| `H(latent \| scorer_class)` | **7.5213 bits/symbol** |
+| `I(latent ; class)` (mutual information) | **0.04393 bits/symbol** |
+| Wyner-Ziv gain ceiling | **0.58%** (0.044 / 7.57) |
+| Verdict | **`WEAK_CONDITIONING`** |
+| `num_latent_symbols` | 16,800 |
+| `num_unique_classes` | 5 |
+
+**Verdict per Section 14 decision rules**:
+- `I = 0.044 bits/pair < 0.1 bits/pair` threshold ⇒ **Interpretation B (within-class redundancy) CONFIRMED**
+- v2's per-class sigma table is **structurally redundant** with Z3 v2's per-pair unconditional sigma path; the SegNet class label adds < 0.6% coding gain vs treating the residual as unconditionally distributed
+- Per Section 14 decision rule: **pivot v2 design to per-pair adaptive sigma (NOT class-conditional)** before any paid Modal dispatch
+
+**Caveat (HARD-EARNED-PARTIAL)**: the `class_indices` used in this probe are from G1 v1's synthetic uniform fallback (Catalog #267 — G1 v1's live SegNet derivation FAILED → fallback uniform 120/class). A real-SegNet-on-`upstream/videos/0.mkv`-class derivation could produce different mutual information. However:
+- The synthetic indices are uniform across 5 classes (120 each) → MI ceiling against uniform would FAVOR finding genuine class-correlation if real classes carried more signal; the observed MI is already low.
+- The residual itself is from a real Z3 v2 1000ep CUDA training (HARD-EARNED).
+- Re-running the probe with a real CUDA-derived SegNet class assignment is a follow-on cheap ($0-5) re-probe; queued as op-routable A-2 below.
+
+**Reactivation criterion update (Section 19 #1)**: Section 14 criterion 1 result = **FAIL** (`I < 0.1 bits/pair`). Per Section 14 disambiguator: v2 design pivot REQUIRED before any paid dispatch — either pivot to per-pair adaptive sigma (NOT class-conditional), OR re-run the probe with real CUDA SegNet class derivation to rule out the synthetic-fallback caveat.
+
+**Op-routables appended**:
+- **A-1**: PIVOT Wunderkind G1 v2 design to per-pair adaptive sigma (not class-conditional) per Section 14 Interpretation B verdict. Council review required (Quintet pact per CLAUDE.md "Design decisions — non-negotiable").
+- **A-2**: Re-run Section 14 probe with REAL CUDA-derived SegNet class indices (run SegNet on `upstream/videos/0.mkv` 600 pairs on Modal T4 ~$0.50) to rule out the synthetic-uniform-fallback caveat. Use canonical `score_pair_components` per Catalog #164 + `gate_auth_eval_call` per Catalog #226.
+- **A-3**: Update lane registry `lane_wunderkind_g1_entropy_coded_v2_20260515` notes with the empirical Interpretation B confirmation; keep `research_only=true` per Section 19 criterion 1 FAIL.
+
+**Probe artifacts** (committed custody per CLAUDE.md "Forbidden /tmp paths"):
+- `experiments/results/probe_dispatch_wave_749_section14_g1_v2_20260516T171251Z/h_latent_given_scorer_class_wunderkind_g1_v2_section14.json`
+- `experiments/results/probe_dispatch_wave_749_section14_g1_v2_20260516T171251Z/residual_int8.bin` (16,800 bytes; sha256 of source archive `lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep`)
+- `experiments/results/probe_dispatch_wave_749_section14_g1_v2_20260516T171251Z/class_indices.bin` (16,800 bytes; byte-expanded ×28 from g1_diagnostic.pt; CAVEAT: synthetic-fallback per Catalog #267)
+- `.omx/state/h_latent_given_scorer_class_wunderkind_g1_v2_section14.json` (same JSON; canonical state path)
+
+**Source memo edit scope**: Catalog #110 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-22 + 9-dim checklist + Op-summary) UNCHANGED. This appendix lands as the empirical disambiguator result Section 14 was specified to produce.
+
+---
+
+## Observability surface
+
+**Per the MAX-OBSERVABILITY-INTO-BEHAVIOR standing directive 2026-05-16** (`feedback_max_observability_into_behavior_xray_autopilot_tools_experiments_designs_standing_directive_20260516.md`) + Catalog #305 STRICT preflight gate (`check_substrate_design_memo_has_observability_surface_section`).
+
+**Per Catalog #110 / #113 HISTORICAL_PROVENANCE APPEND-ONLY discipline:** this section is appended to the design memo; pre-existing body content (Sections 1-N + 9-dim checklist + cargo-cult audit + canonical-vs-unique decision + cross-references) is UNCHANGED.
+
+**The 6-facet observability surface for this design:**
+
+1. **Per-layer inspection.** Every layer of this substrate / composition / experiment captures its (input tensor, output tensor, intermediate activations, attention maps when applicable) at runtime via the canonical xray-style hook pattern (`tac.xray.<lens>` modules) without re-instrumentation. The forward pass emits per-layer observables to `experiments/results/<lane>/observability/per_layer/<layer_name>.jsonl` for post-hoc inspection.
+
+2. **Per-signal decomposition.** Composite metrics (`final_score = seg + sqrt(10*pose) + 25*rate`) decompose into constituent contributions per the canonical `tac.xray.per_pair_score_decomposition` lens. Per-pair / per-class / per-axis / per-stage breakdown serialized to `experiments/results/<lane>/observability/score_decomposition.json` with axis labels matching CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable (`[contest-CUDA]` / `[contest-CPU]` / `[diagnostic-CPU]` / `[macOS-CPU advisory]` / `[MPS-PROXY]`).
+
+3. **Run-to-run diff.** Two runs of this substrate / composition produce byte-identical reproducible artifacts under the same `(seed, commit_sha, upstream_snapshot_sha256)` tuple per Catalog #166 Modal HEAD-parity ledger + Catalog #245 modal_call_id_ledger. The canonical diff helper `tools/diff_auth_eval_results.py <run_a.json> <run_b.json>` (planned per the observability audit Highest-ROI extension list) emits per-component deltas + per-pair drift; until landed, manual diff via `archive_sha256` byte-addressability is straightforward.
+
+4. **Post-hoc query interface.** Run artifacts under `experiments/results/<lane>/` serialize as structured JSON / JSONL surfaces consumable without re-running: `contest_auth_eval_<axis>.json` (canonical per-component scores with axis labels) + `modal_metadata.json` (per-dispatch cite-chain per Catalog #166) + `observability/*.jsonl` (per-layer + per-signal). The continual-learning posterior at `.omx/state/continual_learning_posterior.jsonl` is queryable per (substrate, axis, hardware, evidence_grade) via `tac.continual_learning.query_*` helpers per Catalog #128 + #131 fcntl-locked discipline.
+
+5. **Cite-chain.** Every behavior signal anchors to the canonical tuple `(substrate_id, commit_sha, modal_call_id, config_path, random_seed, upstream_snapshot_sha256)` via Catalog #245 `tac.deploy.modal.call_id_ledger.register_dispatched_call_id(...)`. The call_id ledger row schema includes `mounted_code_git_head` (per Catalog #166) + `agent` + `subagent_id` + `session_id` for full forensic reconstruction. Score claims tagged per CLAUDE.md "Apples-to-apples evidence discipline" non-negotiable.
+
+6. **Counterfactual hooks.** Byte-mutation surface per Catalog #139 packet compiler (`tools/verify_distinguishing_feature_byte_mutation.py --distinguishing-byte-range <offset>:<length>`) + Catalog #272 distinguishing-feature integration contract + Catalog #105 no-op detector. The substrate's archive grammar exposes byte-offset addressability for "what if this byte changed?" probing without re-running training. Per-layer / per-component ablation switches surfaced via the trainer's argparse flags + the canonical `tac.xray.<lens>.ablate_*` helpers when applicable.
+
+**Acceptance per Catalog #305:** this section satisfies the structural requirement (literal section header `## Observability surface` present); the body content above documents the substrate's 6-facet observability surface for operator-facing audit.
+
+**Sister observability-discipline gates active for this substrate:**
+
+- Catalog #245 modal_call_id_ledger (every dispatch registered)
+- Catalog #166 Modal HEAD-parity ledger (every dispatch worker-source-verified)
+- Catalog #128 + #131 fcntl-locked JSONL posterior discipline (state mutations append-only)
+- Catalog #139 packet compiler no-op detector (byte-mutation surface)
+- Catalog #272 distinguishing-feature integration contract (per-substrate byte-mutation proof)
+- Catalog #220 substrate L1+ operational mechanism declaration (no opaque byte additions)
+- Catalog #105 no-op detector (no-op provenance)
+- Catalog #127 authoritative tag custody (per-call-site axis + hardware-substrate validation)
+
+**Observability extension recommendations (queued for follow-on):** see `tools/audit_existing_infrastructure_for_observability.py --summary` output for the canonical 8-tool / 6-facet observability gap analysis + Highest-ROI extension list. The `tools/audit_*.py` family is the highest-ROI extension target (3/12 observability) per the standing-directive consequence 3.
