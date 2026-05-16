@@ -58,6 +58,8 @@ predicted_score_target: null
 # convex-intersection regime, NOT additive (old band was additive sum of per-move
 # improvements; structural over-estimate).
 predicted_band: null
+prediction_band_rank_reward_suppressed: true
+retired_predicted_band: [0.150, 0.170]
 smoke_score_band: [0.10, 0.30]
 predicted_delta: "NULL pending Dykstra-feasibility 5-move polytope + Z1 within-class haircut application [prediction] per cargo-cult-unwind 2026-05-16; OLD band [0.150, 0.170] retired as additive-composition cargo-cult per Boyd's convex-feasibility lens"
 predicted_delta_basis: ".omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/time_traveler_architecture_reverse_engineered_20260513.md + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.4 + Catalog #219 Z1 ablation"
@@ -73,7 +75,8 @@ literature_anchor: |
   Gibson (1950) The Perception of the Visual World (foveation-FOE);
   Lee (1976) Perception 5:437-459 (time-to-collision);
   Sitzmann et al. NeurIPS 2020 (SIREN init for renderer MLP).
-council_phase_5_prediction: 0.160
+council_phase_5_prediction: null
+retired_council_phase_5_prediction: 0.160
 
 risk: |
   PAIR T directive 2026-05-13 dispatch recipe. The substrate is novel —
@@ -83,9 +86,10 @@ risk: |
   prediction or measurement.
 
   Architectural risk:
-  - First-anchor risk: the predicted_band may be off by 0.05+ in either
-    direction. Operator should treat any contest-CUDA result as new
-    information regardless of whether it lands in the predicted band.
+  - First-anchor risk: the retired additive planning prior may be off by
+    0.05+ in either direction. Operator should treat any contest-CUDA result
+    as new information; do not compare it to the retired band as a pass/fail
+    target.
   - Renderer is sub-60K params with SIREN-style init; lr=5e-4 with
     grad-clip=1.0 is conservative against omega=30 gradient amplification.
   - Per-pair side info budget is 45 B/pair (27 KB trailer); per codex's
