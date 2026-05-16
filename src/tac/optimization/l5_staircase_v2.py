@@ -67,6 +67,11 @@ TT5L_MODAL_A100_DISPATCH_RECIPE_PATH = (
 TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH = (
     "experiments/results/time_traveler_l5_v2/l5_v2_probe_template.json"
 )
+TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
+TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
+    ".omx/state/dykstra_feasibility_time_traveler_l5.json"
+)
+TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
     ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
 )
@@ -1062,6 +1067,72 @@ def _gate_evidence_valid(readiness: Mapping[str, Any], gate_id: str) -> bool:
     return bool(gate and gate.get("evidence_valid") is True)
 
 
+def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return the TT5L cargo-cult-unwind feasibility artifact status.
+
+    This is deliberately separate from score/eval gates. The Dykstra artifact
+    is a planning-control requirement that prevents the retired five-move
+    additive score band from quietly re-entering TT5L dispatch decisions.
+    """
+
+    tool_path = repo_root / TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH
+    artifact_path = repo_root / TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not tool_path.is_file():
+        blockers.append("tt5l_dykstra_feasibility_tool_missing")
+    if not artifact_path.is_file():
+        blockers.append("tt5l_dykstra_feasibility_artifact_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("tt5l_dykstra_feasibility_artifact_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+                if not payload:
+                    blockers.append("tt5l_dykstra_feasibility_artifact_empty")
+            else:
+                blockers.append("tt5l_dykstra_feasibility_artifact_not_object")
+
+    substrate_id = str(payload.get("substrate_id") or "")
+    if payload and substrate_id not in {TT5L_DYKSTRA_SUBSTRATE_ID, SUBJECT_ID, LANE_ID}:
+        blockers.append("tt5l_dykstra_feasibility_substrate_id_mismatch")
+    verdict = str(payload.get("verdict") or "")
+    if payload and verdict not in {"FEASIBLE", "INFEASIBLE", "INDETERMINATE"}:
+        blockers.append("tt5l_dykstra_feasibility_verdict_invalid")
+    for field in ("feasibility_band_lo", "feasibility_band_hi"):
+        value = _json_float(payload.get(field))
+        if payload and value is None:
+            blockers.append(f"tt5l_dykstra_feasibility_{field}_missing")
+    if payload.get("score_claim") is True:
+        blockers.append("tt5l_dykstra_feasibility_score_claim_true")
+    if payload.get("promotion_eligible") is True:
+        blockers.append("tt5l_dykstra_feasibility_promotion_eligible_true")
+    if payload.get("ready_for_exact_eval_dispatch") is True:
+        blockers.append("tt5l_dykstra_feasibility_dispatch_ready_true")
+
+    valid = not blockers
+    return {
+        "schema": "l5_v2_tt5l_dykstra_feasibility_status_v1",
+        "tool_path": TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH,
+        "tool_exists": tool_path.is_file(),
+        "artifact_path": TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": valid,
+        "substrate_id": substrate_id or None,
+        "verdict": verdict or None,
+        "feasibility_band_lo": payload.get("feasibility_band_lo"),
+        "feasibility_band_hi": payload.get("feasibility_band_hi"),
+        "feasibility_rationale": payload.get("feasibility_rationale"),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -1088,6 +1159,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     proof_tool_exists = (repo_root / TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH).is_file()
     dispatch_recipe_exists = (repo_root / TT5L_MODAL_A100_DISPATCH_RECIPE_PATH).is_file()
     probe_tool_exists = (repo_root / L5V2_PROBE_TOOL_PATH).is_file()
+    dykstra_status = _tt5l_dykstra_feasibility_status(repo_root=repo_root)
+    dykstra_valid = dykstra_status["artifact_valid"] is True
 
     blockers = [
         str(blocker)
@@ -1100,8 +1173,30 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.append("tt5l_modal_a100_dispatch_recipe_missing")
     if not probe_tool_exists:
         blockers.append("l5_v2_probe_disambiguator_tool_missing")
+    blockers.extend(str(blocker) for blocker in dykstra_status["blockers"])
 
-    if not sideinfo_valid:
+    if not dykstra_valid:
+        next_action = {
+            "action_id": "run_tt5l_dykstra_feasibility_polytope",
+            "phase": "cargo_cult_unwind_feasibility",
+            "command_template": (
+                f".venv/bin/python {TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH} "
+                f"--substrate-id {TT5L_DYKSTRA_SUBSTRATE_ID} "
+                "--predicted-band-lo 0.150 --predicted-band-hi 0.170 "
+                "--archive-size-bytes <tt5l_target_or_candidate_archive_bytes> "
+                f"--output-json {TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH}"
+            ),
+            "expected_artifacts": [TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH],
+            "cargo_cult_unwind_basis": (
+                "retired additive five-move TT5L score band must be projected "
+                "through the Dykstra feasibility artifact before side-info "
+                "proofs, timing smokes, or dispatch planning"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not sideinfo_valid:
         next_action = {
             "action_id": "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof",
             "phase": "sideinfo_consumption_proof",
@@ -1195,11 +1290,13 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "dykstra_feasibility_artifact_valid": dykstra_valid,
+        "dykstra_feasibility_status": dykstra_status,
         "sideinfo_gate_evidence_valid": sideinfo_valid,
         "probe_gate_evidence_valid": probe_valid,
         "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
         "anchor_pair_evidence_valid": anchor_pair_valid,
-        "first_anchor_timing_smoke_allowed": sideinfo_valid,
+        "first_anchor_timing_smoke_allowed": dykstra_valid and sideinfo_valid,
         "architecture_lock_allowed": probe_valid and paired_axis_plan_valid,
         "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
         "proof_tool_exists": proof_tool_exists,

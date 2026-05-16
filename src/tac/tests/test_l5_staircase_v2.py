@@ -359,6 +359,41 @@ def _valid_gate_evidence_payloads(repo_root: Path) -> dict[str, dict[str, object
     }
 
 
+def _write_tt5l_dykstra_artifact(repo_root: Path) -> Path:
+    tool_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH
+    tool_path.parent.mkdir(parents=True, exist_ok=True)
+    tool_path.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    artifact_path = repo_root / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "substrate_id": l5_v2.TT5L_DYKSTRA_SUBSTRATE_ID,
+                "verdict": "FEASIBLE",
+                "predicted_band": [0.150, 0.170],
+                "rate_contribution": 0.05,
+                "seg_budget": 0.001,
+                "pose_budget": 0.011,
+                "feasibility_band_lo": 0.150,
+                "feasibility_band_hi": 0.170,
+                "feasibility_rationale": (
+                    "test fixture: TT5L retired additive band intersects "
+                    "planning-only Dykstra feasibility interval"
+                ),
+                "blocker_axis": None,
+                "dykstra_iteration_count": 1,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
 def test_l5_v2_research_basis_is_explicit_and_canonical() -> None:
     ids = l5_v2_research_basis_ids()
 
@@ -566,10 +601,89 @@ def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action() -> None:
     assert tt5l["proof_tool_path"] == (
         "tools/build_tt5l_contest_sideinfo_consumption_proof.py"
     )
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "run_tt5l_dykstra_feasibility_polytope"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["phase"] == (
+        "cargo_cult_unwind_feasibility"
+    )
+    assert l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH in tt5l[
+        "next_non_pr106_l5_action"
+    ]["expected_artifacts"]
+    assert "tt5l_dykstra_feasibility_artifact_missing" in tt5l["blockers"]
+    assert "PR106" not in tt5l["next_non_pr106_l5_action"]["action_id"]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_unblocks_sideinfo_next_action(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["sideinfo_gate_evidence_valid"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
     )
-    assert "PR106" not in tt5l["next_non_pr106_l5_action"]["action_id"]
+    assert "tt5l_dykstra_feasibility_artifact_missing" not in tt5l["blockers"]
+
+
+def test_l5_v2_tt5l_dykstra_artifact_rejects_empty_json(
+    tmp_path: Path,
+) -> None:
+    tool_path = tmp_path / l5_v2.TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH
+    tool_path.parent.mkdir(parents=True, exist_ok=True)
+    tool_path.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+    artifact_path = tmp_path / l5_v2.TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text("{}\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_artifact_empty" in tt5l["blockers"]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "run_tt5l_dykstra_feasibility_polytope"
+    )
+
+
+def test_l5_v2_valid_gates_do_not_unlock_tt5l_timing_without_dykstra(
+    tmp_path: Path,
+) -> None:
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=_valid_gate_evidence(tmp_path),
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["sideinfo_gate_evidence_valid"] is True
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "run_tt5l_dykstra_feasibility_polytope"
+    )
+
+
+def test_l5_v2_tt5l_timing_requires_dykstra_and_sideinfo_evidence(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=_valid_gate_evidence(tmp_path),
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["sideinfo_gate_evidence_valid"] is True
+    assert tt5l["first_anchor_timing_smoke_allowed"] is True
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
