@@ -32,13 +32,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+TOOLS_ROOT = REPO_ROOT / "tools"
+for import_root in (str(REPO_ROOT), str(SRC_ROOT), str(TOOLS_ROOT)):
+    if import_root not in sys.path:
+        sys.path.insert(0, import_root)
+
 try:
     from tools.auth_eval_records import parse_auth_eval_payload
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
     from auth_eval_records import parse_auth_eval_payload
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCAN_ROOT = REPO_ROOT / "experiments" / "results"
 AXIS_SORT_ORDER = {
     "contest_cuda": 0,

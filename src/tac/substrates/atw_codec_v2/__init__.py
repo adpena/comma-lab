@@ -82,8 +82,10 @@ target_modes: ``research_substrate``
 lane_class: ``substrate_engineering``
 research_only: true (Phase 2 council approval required to lift _full_main
 NotImplementedError per CLAUDE.md "Substrate scaffolds MUST be COMPLETE
-or RESEARCH-ONLY" until D4 probe returns ``MEANINGFUL_CONDITIONING`` +
-Dykstra-feasibility check + Variant A vs B council adjudication)
+or RESEARCH-ONLY". The 2026-05-16 D4 probe on A1 latents returned
+``INDEPENDENT`` at ``I(latent; scorer_class)=0.006385502752`` bits/symbol, so
+the measured A1-latent/class-conditioning surface is deferred and ATW v2 must
+remain research-only unless a richer side-information reactivation probe lands.)
 canary_status: ``post_canary_dependent``
 canary_dependency: ``lane_atw_codec_design_v1_20260515``
 
@@ -103,15 +105,18 @@ Per the MAX-OBSERVABILITY-INTO-BEHAVIOR standing directive 2026-05-16 + Catalog
    ``(seed, commit_sha, upstream_snapshot_sha256)`` tuple per Catalog #166.
 4. **Post-hoc query**: ``experiments/results/lane_atw_codec_v2_*/`` carries
    contest_auth_eval_<axis>.json + modal_metadata.json + observability/*.jsonl.
-5. **D4 probe verdict** at ``.omx/state/h_latent_given_scorer_class_atw_v2.json``
-   (NULL until probe fires; PRE-DISPATCH GATE per design memo §19).
+5. **D4 probe verdict** at
+   ``.omx/research/atw_codec_v2_d4_probe_verdict_20260516_codex.json``
+   (INDEPENDENT on A1 latents; PRE-DISPATCH GATE per design memo §19).
 
 Probe-disambiguator (Catalog #125 hook #6)
 ------------------------------------------
 
 Three layers per design memo §19:
 
-1. **D4 probe** ($3-5 CPU): disambiguates Wyner-Ziv hypothesis directly.
+1. **D4 probe** ($0 CPU reuse of sister class artifact; LANDED): disambiguates
+   Wyner-Ziv hypothesis directly. Current verdict: ``INDEPENDENT`` on A1
+   latents, therefore no ATW v2 Phase-2 dispatch authority from this signal.
 2. **Three-knob regime sweep** (Variant A only; $30 paired): four-corner
    ablations Atick-only / ATW canonical / Tishby IB pure / Z3 baseline.
 3. **Variant A vs B paired smoke** ($10-20): if D4 = MEANINGFUL and Council
@@ -153,6 +158,11 @@ Lane: ``lane_atw_codec_v2_substrate_build_20260516``
 
 from __future__ import annotations
 
+from tac.optimization.atw_v2_phase2_gate import (
+    ATW_V2_D4_VERDICT_ARTIFACT_PATH,
+    ATW_V2_PHASE2_GATE_STATUS_SCHEMA,
+    atw_v2_phase2_gate_status,
+)
 from tac.substrates.atw_codec_v2.architecture import (
     CDF_TABLE_NUM_SYMBOLS,
     DEFAULT_SCORER_CLASS_PRIOR_DIM,
@@ -190,6 +200,10 @@ DESIGN_MEMO_PATH = (
 RESEARCH_ONLY = True
 IMPLEMENTATION_STATUS = "l1_architecture_archive_inflate_and_loss_modules_available_research_only"
 MISSING_IMPLEMENTATION_MODULES: tuple[str, ...] = ()
+D4_PROBE_VERDICT = "INDEPENDENT"
+D4_PROBE_MUTUAL_INFORMATION_BITS = 0.006385502752311645
+D4_PROBE_PHASE2_STATUS = "defer_measured_a1_latent_class_conditioning_surface"
+D4_PROBE_NEXT_ACTION = "do_not_dispatch_atw_v2_phase2_from_this_signal"
 
 __all__ = [
     "ATW2_HEADER_FMT",
@@ -197,7 +211,13 @@ __all__ = [
     "ATW2_MAGIC",
     "ATW2_SCHEMA_VERSION",
     "ATW2_SECTION_ROLES",
+    "ATW_V2_D4_VERDICT_ARTIFACT_PATH",
+    "ATW_V2_PHASE2_GATE_STATUS_SCHEMA",
     "CDF_TABLE_NUM_SYMBOLS",
+    "D4_PROBE_MUTUAL_INFORMATION_BITS",
+    "D4_PROBE_NEXT_ACTION",
+    "D4_PROBE_PHASE2_STATUS",
+    "D4_PROBE_VERDICT",
     "DEFAULT_SCORER_CLASS_PRIOR_DIM",
     "DESIGN_MEMO_PATH",
     "EVAL_HW",
@@ -216,6 +236,7 @@ __all__ = [
     "ATWv2LossWeights",
     "ATWv2ScoreAwareLoss",
     "ATWv2Variant",
+    "atw_v2_phase2_gate_status",
     "inflate_one_video",
     "main_cli",
     "pack_archive",

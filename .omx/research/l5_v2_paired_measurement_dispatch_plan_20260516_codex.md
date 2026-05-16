@@ -1,7 +1,7 @@
 # L5 v2 paired measurement dispatch plan
 
 - schema: `l5_v2_paired_measurement_dispatch_plan_v1`
-- plan_id: `l5_v2_paired_measurement_dispatch_ff923cdedaeb1e5e`
+- plan_id: `l5_v2_paired_measurement_dispatch_244c26f82d119112`
 - active_rule_id: `fill_missing_c1_z5_tt5l_probe_observations`
 - work_unit_count: `3`
 - ready_work_unit_count: `0`

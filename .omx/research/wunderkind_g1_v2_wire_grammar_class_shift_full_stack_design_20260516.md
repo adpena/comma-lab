@@ -650,3 +650,131 @@ This memo references Atick-Redlich / cooperative-receiver framing as cross-refer
 Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" + Z6/Z7/Z8 design memo Pattern H + Catalog #311 acceptance cascade (c): same-line waiver `# PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK:cross-reference-only-not-substrate-central-cooperative-receiver-framing-cited-as-related-work-not-as-this-substrate-architectural-core-per-z6z7z8-design-memo-section-11-scope` applies. The waiver rationale is non-placeholder (>4 chars, not `<rationale>` / `<reason>`).
 
 Cross-references to cooperative-receiver / Atick-Redlich in this memo serve as theoretical-anchor / related-work / sister-substrate-comparison only; they do NOT make this substrate a predictive-coding substrate in the Pattern H sense.
+
+---
+
+## Appendix C — Four alternative-reducer probes (T2 council Q1.4 reactivation criteria, 2026-05-16)
+
+**Status**: T2 council Q1 SPLIT-VERDICT reactivation criteria executed. Result appended per Catalog #110/#113 HISTORICAL_PROVENANCE (APPEND-ONLY); body of design memo + Sections 1-22 + 9-dim checklist + Op-summary + Observability surface + Appendix A + Appendix B UNCHANGED. **Subagent**: SUBAGENT B (`alt_reducer_probes_subagent_b_20260516`) at lane `lane_four_alternative_reducer_probes_meta_pattern_e_remediation_20260516`.
+
+**Cite chain**: T2 council memo `.omx/research/grand_council_t2_wunderkind_g1_v2_pivot_validation_v3_cpu_competitiveness_20260516.md` Q1.4 enumerated 4 alternative reducers as the EXPANDED REACTIVATION CRITERIA after the canonical per-pair-dominant SegNet argmax reducer was empirically falsified (Appendix B: 600/600 → class 2; MI = 0.000 bits/symbol; INDEPENDENT verdict). Per CLAUDE.md "Forbidden premature KILL without research exhaustion" + sextet-pact Contrarian veto on kill-too-fast: v2 paradigm class (any SegNet-derived conditioning) cannot be DEFERRED class-wide until ALL alternative reducers have been probed independently.
+
+### C.1 Probe methodology
+
+**Tool**: `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py --substrate wunderkind_g1_v2 --max-pairs 600` driving the canonical library `tools/probe_alternative_reducers_latent_class_conditioning.py` (4 reducers + canonical MI estimator + reducer-specific thresholds per T2 Q1.4).
+
+**Source signal**: `upstream/videos/0.mkv` (sha256 `2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9`) decoded via canonical `upstream/frame_utils.py::AVVideoDataset::yuv420_to_rgb` semantics into 600 pairs of `(2, 3, 874, 1164)` fp32 tensors (mirrors Appendix B derivation).
+
+**Scorer**: canonical `tac.scorer.load_default_scorers(upstream)` loading `upstream/models/segnet.safetensors`. For each pair we computed:
+1. **Canonical preprocess argmax** (`smp.Unet('tu-efficientnet_b2', classes=5)` slice frame_1 + interpolate to (384, 512) per upstream/modules.py:108) — used by reducers 1, 2, 3.
+2. **Per-frame argmax of frame_0 + frame_1 separately** (each frame independently bilinear-interpolated to (384, 512) then SegNet forward) — used by reducer 4.
+
+**Latent stream**: existing v2 1000ep Z3 archive residual_int8 stream from `experiments/results/probe_dispatch_wave_749_section14_g1_v2_20260516T171251Z/residual_int8.bin` (sha256 `2a6dbfb834aede79f97c3d0d0f08206c054347f4db6919109bf6900e163419fd`; 16800 bytes = 600 pairs × 28 latent_dim). Per-pair reducer outputs byte-expanded ×28 to align symbol-for-symbol with the latent stream (mirrors Appendix B byte-expansion protocol).
+
+**Device**: CPU (hermetic; SegNet output is source-data derivation NOT auth-eval per Catalog #127 source-data carve-out). Wall clock: 2152s total (0.6s load + 9.2s decode + 2142s SegNet inference — both-frames-per-pair doubles vs Appendix B's frame_1-only). Cost: $0.
+
+**Output directory**: `experiments/results/alternative_reducer_probes_20260516T222227Z/` (Catalog #249 device-agnostic naming).
+
+### C.2 Per-reducer empirical verdict table
+
+| Reducer | Threshold | MI (bits/sym) | Unique fingerprints | WZ ceiling | **Verdict** |
+|---|---|---|---|---|---|
+| `per_pixel_histogram` (5-bin × 16-quant) | > 0.5 bits | 0.0283 | 4 | 0.37% | **WEAK_CONDITIONING** |
+| `per_region_histogram` (5-bin × 4-region × 8-quant) | > 1.0 bits | 0.0599 | 7 | 0.79% | **WEAK_CONDITIONING** |
+| `per_pair_class_2_fraction` (32-bucket) | > 0.2 bits | 0.0124 | 2 | 0.16% | **WEAK_CONDITIONING** |
+| `per_frame_argmax` (5²=25-class fingerprint) | > 0.2 bits | 0.0000 | 1 | 0.00% | **INDEPENDENT** |
+
+### C.3 Per-pair distribution receipts (forensic provenance)
+
+**Per-pair-dominant class (frame_1 canonical preprocess, 384×512)**: 600/600 → class 2. Matches Appendix B exactly.
+
+**Per-frame (frame_0_dominant, frame_1_dominant) pairs**: 600/600 → (2, 2). NO temporal motion observable at the per-pair-dominant resolution. The temporal-motion hypothesis (Yousfi Q1.2 *"a car appearing/disappearing between frames"*) is empirically falsified on the contest video at the per-frame-dominant level.
+
+**Per-pair class-2 fraction (continuous in [0, 1])**:
+- n = 600
+- min / max = 0.4808 / 0.5101
+- mean / median = 0.4952 / 0.4949
+- stdev = 0.0065
+- range (max - min) = 0.0293 (~3 percentage points)
+
+**Critical finding**: the per-pair class-2 fraction is **NOT in the [0.55, 0.95] range Yousfi predicted from dashcam physics** (Q1.2 footnote). The empirical mean is 0.495 — essentially 50% road pixels at the canonical (384, 512) resolution after SegNet's stride-2 stem. This explains the per_pair_class_2_fraction reducer's WEAK_CONDITIONING result: with only 32 buckets across a 0.03-wide distribution range, only 2 buckets are populated (bucket 15 at fraction ≈ [0.469, 0.500) with 451 pairs, bucket 16 at fraction ≈ [0.500, 0.531) with 149 pairs).
+
+**Per-pixel histogram fingerprints**: 4 distinct fingerprints; top fingerprint at 263939 (438/600 = 73% of pairs); next at 264195 (149/600 = 25%). Fingerprint count concentration is high — most pairs map to the same fingerprint.
+
+**Per-region histogram fingerprints**: 7 distinct fingerprints; top fingerprint at 576583900841640384 (376/600 = 63%); next at 576579502795129280 (158/600 = 26%). Slightly more diverse than per-pixel because spatial-region splitting captures top-half (sky) vs bottom-half (road) class differences across some pairs.
+
+**Per-frame argmax fingerprint**: 600/600 → 12 (= 2*5+2; frame_0 dominant = class 2, frame_1 dominant = class 2). Per-frame argmax degenerates to the same single fingerprint because the per-pair-dominant is already degenerate AND the per-frame dominant is identical (no per-frame temporal variability at the dominant-class resolution).
+
+### C.4 Verdict interpretation per T2 Q1.4 acceptance rules
+
+**Aggregated verdict**: `PARTIAL` — 3 of 4 reducers returned WEAK_CONDITIONING (MI > 0.01 independence tolerance but < the reducer-specific MEANINGFUL threshold); 1 of 4 returned INDEPENDENT. **NO reducer reaches the MEANINGFUL threshold required for v2 paradigm-class reactivation per Q1.4**.
+
+**Operator-facing recommendation** (per the canonical helper's `_recommend_action_for_verdicts`):
+
+> *"PARTIAL: alternative reducer(s) (per_pixel_histogram, per_region_histogram, per_pair_class_2_fraction) returned WEAK_CONDITIONING; MI > tolerance but < meaningful threshold. Paradigm class is DEFERRED-pending-tighter-reducer-design (Phase 2 council Q1.4 #5)."*
+
+### C.5 Per-reducer empirical interpretation (T2 Q1.2 sextet-pact assumption resurfacing)
+
+**Shannon (LEAD) on the empirical result**: the per-pixel + per-region + per-pair-class-2-fraction reducers all show MI > 0 (verifying the v2 paradigm class IS not strictly mathematically vacuous — these reducers carry SOME information about the latent residual). However, the absolute MI magnitude (0.0124-0.0599 bits/symbol) is small relative to H(latent) ≈ 7.57 bits/symbol — the Wyner-Ziv gain ceiling is 0.16%-0.79%. For a v2 archive that would have to ship a per-pair conditioning sidecar overhead, the rate cost of the sidecar likely EXCEEDS the achievable distortion savings at this WZ ceiling.
+
+**Dykstra (CO-LEAD) on convex-feasibility**: the polytope intersection for the per-pixel + per-region + per-pair-class-2-fraction reducers is non-empty BUT extremely narrow. A Phase 2 design that tries to exploit 0.0599 bits/symbol (per_region_histogram, the best reducer) would need an archive grammar that encodes the 7-fingerprint conditioning signal in FEWER bytes than the achievable distortion savings. At 0.0599 bits/symbol × 16800 symbols ≈ 1006 bits ≈ 126 bytes of distortion savings, the per-region-histogram conditioning sidecar would need to ship 7 fingerprints × log2(7) bits ≈ 20 bits = ~3 bytes per pair × 600 pairs = ~1800 bytes overhead — the sidecar EXCEEDS the savings by ~14×. Dykstra-feasibility is structurally negative for this reducer family AT the contest-video operating point.
+
+**Yousfi on the empirical class-2 fraction range [0.48, 0.51]**: my Q1.2 prediction of [0.55, 0.95] was empirically FALSIFIED — the contest video's per-pair class-2 fraction is centered at 0.495 with stdev 0.0065, NOT [0.55-0.95]. The CARGO-CULTED assumption in my Q1.2 position is identified: "dashcam physics predicts road ≈ 70% of pixels". Per Catalog #292 explicit assumption surfacing: the assumption I was operating within ("dashcam physics → road = 70%+ of pixels") is empirically incompatible with the SegNet stride-2-stem-at-384×512 argmax distribution. The stride-2 stem may be confounded by adjacent classes (lane lines, building edges, vehicle silhouettes) that get counted as "non-road" at the canonical resolution. HARD-EARNED revised understanding: at the contest scorer's argmax resolution, road class is ~50% NOT 70%.
+
+**Fridrich on the cooperative-receiver paradigm**: the per-region-histogram is the BEST of the 4 alternative reducers at MI=0.0599 bits/symbol, ~4.8× better than per-pair-class-2-fraction. The structural reason matches the cooperative-receiver intuition: spatial regions DO carry distinct class information (top-half: sky/clouds; bottom-half: road; lane-line strips: distinct class). However, the absolute MI magnitude remains TWO orders of magnitude below the MEANINGFUL threshold (1.0 bits/symbol). The cooperative-receiver paradigm with SegNet-derived spatial features is empirically VIABLE but the MI is too small to overcome sidecar overhead — Dykstra agrees the convex feasibility is structurally negative.
+
+**Contrarian on the verdict**: per the Q1.4 SPLIT-VERDICT, the PARTIAL outcome (3 weak + 1 independent, all below MEANINGFUL threshold) is NEITHER a full reactivation (which would require ≥1 MEANINGFUL) NOR a full deferral (which would require all 4 INDEPENDENT). The Q1.4 #5 "DEFERRED-pending-tighter-reducer-design" recommendation is the correct verdict — paradigm class stays research_only=true with EXTENDED reactivation criteria that include a NEW reducer methodology (one that captures finer-grained per-pair signal than the 4 evaluated). VETO any council consensus that interprets PARTIAL as "v2 paradigm permanently falsified" — the per-region MI at 0.0599 is the LARGEST signal seen so far and points the next reducer-design iteration toward finer spatial granularity.
+
+**Assumption-Adversary**: classification of the operating-within assumptions for this probe wave:
+
+| Assumption | Classification | Rationale |
+|---|---|---|
+| The 4 T2 Q1.4 reducers ENUMERATE the relevant reducer space | CARGO-CULTED | Counterexamples available: per-PoseNet-derived signal (not SegNet); per-pixel argmax with TEMPORAL conditioning across pair-pair sequences; SegNet logits BEFORE argmax (continuous-class distribution); per-pair entropy of pixel-class distribution (a scalar conditioning signal). The 4 reducers are a SAMPLE not an EXHAUSTIVE enumeration. |
+| The MI thresholds (0.5/1.0/0.2/0.2 bits/pair) are correctly calibrated for v2's archive grammar | HARD-EARNED-PARTIAL | The thresholds were chosen by T2 council Q1.4 deliberation per the convex-feasibility envelope of v2's 5-row sigma table archive grammar. A DIFFERENT archive grammar (e.g. compressed-per-region-sigma-table) could have a tighter threshold; the council MI levels are correct for v2-AS-SPECIFIED. |
+| The empirical MI values 0.0124-0.0599 are stable estimates (not bias-dominated) | HARD-EARNED | n_symbols = 16800 with n_unique_classes ∈ {1, 2, 4, 7, 25} — Miller-Madow bias bound is at most O((n_unique-1) / (2 * 16800 * ln(2))) ≈ 1e-4 bits/symbol for the worst case (per_frame_argmax 25-class). The MI estimates are at least 100× the Miller-Madow bias bound; the WEAK_CONDITIONING verdicts are stable, not bias artifacts. |
+| The per-frame argmax reducer is empirically equivalent to per-pair-dominant on this video | HARD-EARNED | 600/600 → (2, 2) confirmed empirically. The temporal-motion hypothesis from Yousfi Q1.2 (per-frame dominance varying due to cars / scene cuts) is FALSIFIED on `upstream/videos/0.mkv` at the canonical-resolution per-frame-dominant level. Temporal motion is present in pixel-level differences BUT not at the per-frame-dominant-class level. |
+
+The Assumption-Adversary VETOES any Phase 2 council consensus that defers the v2 paradigm class WITHOUT explicitly enumerating the CARGO-CULTED-reducer-enumeration assumption above. Future reducer-design iterations MUST probe (a) PoseNet-derived signals (orthogonal scorer; class-2-equivalent for PoseNet may have different distribution), (b) SegNet pre-argmax logits (continuous-class distribution carries more information than argmax), (c) per-pixel argmax with TEMPORAL conditioning (motion features across pair indices), (d) entropy of per-pair class distribution (scalar conditioning signal).
+
+### C.6 Implications for v2 reactivation (Section 19 / Appendix B update)
+
+**Section 14 criterion 1 update (op-routable C-1)**: the per-pair-dominant SegNet argmax reducer (Section 14 spec) is permanently FAILED per Appendix B. The 4 T2 Q1.4 alternative reducers each FAIL the MEANINGFUL threshold per this Appendix C, with the per-region-histogram showing the largest signal (MI=0.0599, WZ ceiling 0.79%).
+
+**Reactivation criteria update for the v2 paradigm class** (NEW; supersedes Appendix B's permanent-research-only verdict for the reducer-search axis):
+
+The v2 lane `lane_z3_g1_entropy_coded_v2_20260515` stays `research_only=true` with EXTENDED reactivation criteria:
+
+1. **(SAME as Appendix B)** Per-pair-dominant reducer is permanently FAILED on `upstream/videos/0.mkv`.
+2. **(NEW per Appendix C)** Of the 4 T2 Q1.4 alternative reducers, only `per_region_histogram` carries non-trivial signal (MI=0.0599, WZ ceiling 0.79%) — but the convex-feasibility check (Dykstra above) shows the sidecar overhead exceeds the achievable savings by ~14×; this reducer is also structurally FAILED for v2's archive grammar at this operating point.
+3. **(NEW per Appendix C reactivation-pending-tighter-reducer-design)** The v2 paradigm class is reactivatable IF a NEW reducer methodology (NOT in the T2 Q1.4 enumeration) returns MEANINGFUL_CONDITIONING (MI ≥ reducer-specific threshold) AND the archive grammar's conditioning-sidecar overhead is < achievable distortion savings per a Dykstra-feasibility check. Candidate NEW reducers: PoseNet-derived signals (orthogonal scorer); SegNet pre-argmax logits (continuous-class); per-pixel argmax with temporal conditioning; entropy of per-pair class distribution.
+4. **(NEW per Appendix C)** Per Catalog #220 distinguishing-feature integration contract: any NEW reducer must come with sister archive grammar that explicitly encodes the conditioning signal in archive bytes AND a byte-mutation smoke proving the new bytes are consumed by inflate.
+
+**Phase 2 council deliberation gate** (op-routable C-2): the Q1.4 #5 "DEFERRED-pending-tighter-reducer-design" verdict requires a Phase 2 council deliberation per Catalog #292 sextet-pact discipline to:
+
+(a) Adjudicate whether the 4-reducer enumeration was sufficient OR whether the Assumption-Adversary's NEW-reducer-class enumeration (PoseNet / logits / temporal / entropy) should be the next probe wave.
+
+(b) If Phase 2 council approves a NEW reducer wave, the new probes can re-use this Appendix C's infrastructure (`tools/probe_alternative_reducers_latent_class_conditioning.py` + `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py` + `experiments/results/alternative_reducer_probes_<timestamp>/`).
+
+(c) If Phase 2 council DOES NOT approve a NEW reducer wave, the v2 paradigm class is `DEFERRED-class-wide-pending-NEW-reducer-methodology-PROPOSAL` per Q1.4 #5 final-form verdict.
+
+### C.7 Op-routables (Appendix C closure)
+
+- **C-1**: Lane registry update: append to `lane_z3_g1_entropy_coded_v2_20260515` notes: *"Appendix C alternative-reducer probe wave (2026-05-16): 3 of 4 T2 Q1.4 reducers WEAK_CONDITIONING (best per_region MI=0.0599 bits/symbol, WZ ceiling 0.79%); 1 of 4 INDEPENDENT; NO reducer reaches MEANINGFUL threshold. PARTIAL recommendation — DEFERRED-pending-tighter-reducer-design per Q1.4 #5; reactivation extended with 4 NEW reducer-class candidates (PoseNet-derived / SegNet logits / temporal / entropy)."* Operator decision: confirm lane notes update.
+- **C-2**: Phase 2 council deliberation per Catalog #292 sextet-pact discipline (Assumption-Adversary surfaced the CARGO-CULTED-reducer-enumeration assumption): adjudicate whether NEW reducer wave (PoseNet / logits / temporal / entropy) is approved. If yes → SUBAGENT B's probe library is the canonical infrastructure; if no → v2 paradigm class is `DEFERRED-class-wide-pending-NEW-reducer-methodology-PROPOSAL`.
+- **C-3**: Cathedral autopilot continual-learning posterior: append `[diagnostic-CPU]` anchor rows for each of the 4 reducer verdicts per Catalog #128 fcntl-locked `posterior_update_locked` — empirical anchors that the v2 paradigm class's reducer-search axis returned PARTIAL on the contest video. Use `evidence_grade="diagnostic_cpu"`, `score_claim=false`, `promotion_eligible=false`, `ready_for_exact_eval_dispatch=false`, `rank_or_kill_eligible=false` per Catalog #127 strict custody.
+- **C-4**: Catalog #308 META-pattern E remediation status update: this Appendix C operationalizes the T2 Q1.4 reactivation criteria with a typed verdict table + per-reducer recommendation; the META-pattern E remediation is COMPLETE for the 4-reducer enumeration. The Assumption-Adversary surfaced the next layer (NEW reducer-class proposal) which is Phase 2 council deliberation scope.
+
+### C.8 Probe artifact custody
+
+- `tools/probe_alternative_reducers_latent_class_conditioning.py` (tracked canonical 4-reducer probe library)
+- `tools/run_alternative_reducer_probes_g1_v2_and_tishby_ib_pure.py` (tracked canonical orchestrator driver)
+- `src/tac/tests/test_probe_alternative_reducers.py` (tracked unit coverage for the reducer library)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/g1_v2_per_pair_reducer_outputs.json` (local ignored rebuildable artifact; summarized here, not committed per AGENTS.md research-state tracking rules)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/alternative_reducer_run_manifest_wunderkind_g1_v2.json` (local ignored rebuildable artifact; summarized here)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/alternative_reducer_verdict_wunderkind_g1_v2_per_pixel_histogram.json` (local ignored rebuildable artifact; summarized here)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/alternative_reducer_verdict_wunderkind_g1_v2_per_region_histogram.json` (local ignored rebuildable artifact; summarized here)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/alternative_reducer_verdict_wunderkind_g1_v2_per_pair_class_2_fraction.json` (local ignored rebuildable artifact; summarized here)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/alternative_reducer_verdict_wunderkind_g1_v2_per_frame_argmax.json` (local ignored rebuildable artifact; summarized here)
+- `experiments/results/alternative_reducer_probes_20260516T222227Z/combined_run_summary.json` (local ignored rebuildable artifact; summarized here)
+
+**Source memo edit scope**: Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY. Body of design memo (Sections 1-22 + 9-dim checklist + Op-summary + Observability surface + Appendix A + Appendix B) UNCHANGED. This Appendix C lands as the empirical disambiguator result T2 council Q1 SPLIT-VERDICT op-routable was specified to produce.

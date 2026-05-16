@@ -36,6 +36,23 @@ def _load_briefing_module():
     return module
 
 
+def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
+    module = _load_briefing_module()
+    calls = []
+
+    def fake_run(args, **_kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="{}\n", stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    module._run(BRIEFING, ["--json"])
+
+    assert calls
+    if module.REPO_VENV_PYTHON.is_file():
+        assert calls[0][0] == str(module.REPO_VENV_PYTHON)
+
+
 def test_briefing_runs_all_three_phases():
     proc = _run("--top", "3")
     assert "Dispatch claim coordination" in proc.stdout
@@ -61,6 +78,7 @@ def test_briefing_runs_all_three_phases():
     assert "asymptotic candidate count:" in proc.stdout
     assert "Asymptotic candidates:" in proc.stdout
     assert "paired measurement plan:" in proc.stdout
+    assert "ATW v2 D4 verdict:" in proc.stdout
     assert "next exact-eval targets:" in proc.stdout
 
 
@@ -137,6 +155,22 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["promotion_eligible"] is False
     assert l5["rank_or_kill_eligible"] is False
     assert l5["ready_for_exact_eval_dispatch"] is False
+    atw_gate = l5["atw_v2_phase2_gate_status"]
+    assert atw_gate["schema"] == "atw_codec_v2_phase2_gate_status_v1"
+    assert atw_gate["d4_verdict"] == "INDEPENDENT"
+    assert atw_gate["phase2_status"] == (
+        "defer_measured_a1_latent_class_conditioning_surface"
+    )
+    assert atw_gate["next_action"] == "do_not_dispatch_atw_v2_phase2_from_this_signal"
+    assert atw_gate["score_claim"] is False
+    assert atw_gate["promotion_eligible"] is False
+    assert atw_gate["rank_or_kill_eligible"] is False
+    assert atw_gate["ready_for_exact_eval_dispatch"] is False
+    assert atw_gate["dispatch_allowed"] is False
+    assert atw_gate["phase2_lift_allowed"] is False
+    assert l5["atw_v2_phase2_d4_verdict"] == "INDEPENDENT"
+    assert l5["atw_v2_phase2_dispatch_allowed"] is False
+    assert l5["atw_v2_phase2_lift_allowed"] is False
     assert l5["asymptotic_pursuit_candidate_count"] == 3
     assert len(l5["l5_v2_asymptotic_next_action_status"]) == 3
     assert {

@@ -781,6 +781,17 @@ def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "effect_blockers": [],
+                "axis_effects": {
+                    axis: {
+                        "trained_score": 0.1,
+                        "best_control_variant": "zero",
+                        "best_control_score": 0.2,
+                        "delta_vs_best_control": 0.1,
+                        "trained_beats_or_ties_best_control": True,
+                    }
+                    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+                },
                 "observed_cells": _tt5l_sideinfo_effect_curve_cells(),
             },
             sort_keys=True,

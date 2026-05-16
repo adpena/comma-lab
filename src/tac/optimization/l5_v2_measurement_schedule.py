@@ -181,6 +181,44 @@ def _sideinfo_effect_curve_blockers(
     if curve.get("predicate_passed") is not True:
         blockers.append("tt5l_sideinfo_effect_curve_predicate_not_passed")
 
+    effect_blockers = curve.get("effect_blockers")
+    if isinstance(effect_blockers, list):
+        for blocker in effect_blockers:
+            text = str(blocker).strip()
+            if text:
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_effect_blocked:" + text
+                )
+    elif effect_blockers is not None:
+        blockers.append("tt5l_sideinfo_effect_curve_effect_blockers_not_list")
+
+    axis_effects = curve.get("axis_effects")
+    if not isinstance(axis_effects, Mapping):
+        blockers.append("tt5l_sideinfo_effect_curve_axis_effects_missing")
+    else:
+        required_axis_set = set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+        observed_axis_effects = {
+            str(axis).strip()
+            for axis in axis_effects
+            if str(axis).strip()
+        }
+        extra_axis_effects = sorted(observed_axis_effects - required_axis_set)
+        if extra_axis_effects:
+            blockers.append(
+                "tt5l_sideinfo_effect_curve_axis_effects_extra:"
+                + ",".join(extra_axis_effects)
+            )
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            effect = axis_effects.get(axis)
+            if not isinstance(effect, Mapping):
+                blockers.append(
+                    f"tt5l_sideinfo_effect_curve_axis_effect_missing:{axis}"
+                )
+            elif effect.get("trained_beats_or_ties_best_control") is not True:
+                blockers.append(
+                    f"tt5l_sideinfo_effect_curve_trained_not_best_or_tied:{axis}"
+                )
+
     required_axes = set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
     axes = _as_text_set(curve.get("required_axes")) or _as_text_set(
         curve.get("paired_axes_evaluated")
@@ -212,6 +250,29 @@ def _sideinfo_effect_curve_blockers(
         )
 
     rows = _sideinfo_effect_curve_rows(curve)
+    malformed_cells: list[str] = []
+    duplicate_cells: list[str] = []
+    seen_cells: set[tuple[str, str]] = set()
+    for idx, row in enumerate(rows):
+        axis = str(row.get("axis") or row.get("device_axis") or "").strip()
+        variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()
+        if not axis or not variant:
+            malformed_cells.append(f"{idx}:{axis or '?'}:{variant or '?'}")
+            continue
+        key = (axis, variant)
+        if key in seen_cells:
+            duplicate_cells.append(f"{axis}/{variant}")
+        seen_cells.add(key)
+    if malformed_cells:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_cells_malformed:"
+            + ",".join(malformed_cells)
+        )
+    if duplicate_cells:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_cells_duplicate:"
+            + ",".join(sorted(duplicate_cells))
+        )
     observed = {
         (
             str(row.get("axis") or row.get("device_axis") or "").strip(),

@@ -26,7 +26,7 @@
   ],
   "dispatch_attempted": false,
   "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
-  "plan_id": "l5_v2_paired_measurement_dispatch_ff923cdedaeb1e5e",
+  "plan_id": "l5_v2_paired_measurement_dispatch_244c26f82d119112",
   "planning_only": true,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
@@ -41,7 +41,7 @@
   "score_claim_valid": false,
   "source_schedule_path": ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json",
   "source_schedule_schema": "l5_v2_lattice_measurement_schedule_v1",
-  "source_schedule_sha256": "04fa2d159dd241cb4bacad2c3e9fc531c58ba3e7049bae9a45a510c2e42602dc",
+  "source_schedule_sha256": "4c84c366dfa82f3930c37c9666811b35152f373a040dd0c6d086a0969689d14d",
   "tool": "tools/build_l5_v2_paired_measurement_dispatch_plan.py",
   "work_unit_count": 3,
   "work_units": [

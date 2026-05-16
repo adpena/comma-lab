@@ -52,6 +52,17 @@ def _complete_sideinfo_effect_curve() -> dict[str, object]:
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        "effect_blockers": [],
+        "axis_effects": {
+            axis: {
+                "trained_score": 0.1,
+                "best_control_variant": "zero",
+                "best_control_score": 0.2,
+                "delta_vs_best_control": 0.1,
+                "trained_beats_or_ties_best_control": True,
+            }
+            for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        },
         "observed_cells": [
             {
                 "axis": axis,
@@ -229,6 +240,55 @@ def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants() -> None:
     )
     assert (
         "tt5l_sideinfo_effect_curve_observed_variants_extra:oracle"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_duplicate_and_malformed_sideinfo_cells() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    observed_cells = curve["observed_cells"]
+    assert isinstance(observed_cells, list)
+    observed_cells.append(dict(observed_cells[0]))
+    observed_cells.append({"axis": "contest_cpu", "score_claim": False})
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cells_duplicate:contest_cpu/zero"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+    assert any(
+        str(blocker).startswith("tt5l_sideinfo_effect_curve_cells_malformed:")
+        for blocker in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_predicate_true_with_effect_blockers() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    curve["effect_blockers"] = ["trained_not_best_or_tied:contest_cuda"]
+    axis_effects = curve["axis_effects"]
+    assert isinstance(axis_effects, dict)
+    cuda_effect = axis_effects["contest_cuda"]
+    assert isinstance(cuda_effect, dict)
+    cuda_effect["trained_beats_or_ties_best_control"] = False
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_effect_blocked:"
+        "trained_not_best_or_tied:contest_cuda"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda"
         in schedule["sideinfo_effect_curve_blockers"]
     )
 

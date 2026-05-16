@@ -58,7 +58,7 @@ ATW_CODEC_V2_CONTRACT = SubstrateContract(
     hook_autopilot_ranker_class_shift_token="atw_codec_v2_cooperative_receiver",
     hook_continual_learning_anchor_kind=NOT_APPLICABLE_WITH_RATIONALE,
     hook_probe_disambiguator=(
-        "tools/probe_latent_conditional_entropy_h_latent_given_scorer_class.py"
+        "tools/run_atw_v2_d4_probe_from_a1.py"
     ),
     catalog_compliance_declarations=(
         "catalog_124_archive_grammar_8_fields_declared",
@@ -73,10 +73,14 @@ ATW_CODEC_V2_CONTRACT = SubstrateContract(
     ),
     hook_not_applicable_rationale={
         "hook_continual_learning_anchor_kind": (
-            "No empirical paired-axis anchor exists at scaffold landing; the "
-            "posterior update fires from the trainer's _full_main only when "
-            "the D4 probe verdict + Phase 2 council approval lift the "
-            "research_only flag and a paired CPU+CUDA exact eval lands."
+            "No empirical paired-axis anchor exists at scaffold landing. The "
+            "2026-05-16 D4 probe at "
+            ".omx/research/atw_codec_v2_d4_probe_verdict_20260516_codex.json "
+            "returned INDEPENDENT (MI=0.006385502752 bits/symbol), so the "
+            "measured A1-latent/class-conditioning surface is deferred and "
+            "ATW v2 remains research_only. The posterior update fires only "
+            "after a richer side-info reactivation probe plus Phase 2 council "
+            "approval and paired CPU+CUDA exact eval custody land."
         ),
     },
 )

@@ -33,6 +33,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 TOOLS = REPO_ROOT / "tools"
+REPO_VENV_PYTHON = REPO_ROOT / ".venv" / "bin" / "python"
 
 PARETO = TOOLS / "apogee_intN_pareto.py"
 DASHBOARD = TOOLS / "score_dashboard.py"
@@ -61,6 +62,9 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
 )
 
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
+from tac.optimization.atw_v2_phase2_gate import (  # noqa: E402
+    atw_v2_phase2_gate_status,
+)
 from tac.optimization.l5_staircase_v2 import (  # noqa: E402
     L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
     L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH,
@@ -859,7 +863,8 @@ def _format_composition_lanes(
 
 
 def _run(script: Path, extra_args: list[str] | None = None) -> str:
-    args = [sys.executable, str(script)]
+    python = str(REPO_VENV_PYTHON) if REPO_VENV_PYTHON.is_file() else sys.executable
+    args = [python, str(script)]
     if extra_args:
         args.extend(extra_args)
     proc = subprocess.run(args, capture_output=True, text=True, check=False)
@@ -1393,6 +1398,7 @@ def _l5_v2_frontier_readiness(
     gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
     readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
     architecture_lock_packet = l5_v2_architecture_lock_packet(repo_root=REPO_ROOT)
+    atw_v2_gate_status = atw_v2_phase2_gate_status(repo_root=REPO_ROOT)
     matrix = _load_l5_v2_packetir_matrix()
     section_entropy_matrix = _load_l5_v2_section_entropy_matrix()
     paired_measurement_plan = _load_l5_v2_paired_measurement_dispatch_plan()
@@ -1599,6 +1605,15 @@ def _l5_v2_frontier_readiness(
             architecture_lock_packet.get("architecture_lock_allowed")
         ),
         "architecture_lock_packet_blockers": architecture_lock_packet_blockers,
+        "atw_v2_phase2_gate_status": atw_v2_gate_status,
+        "atw_v2_phase2_d4_verdict": atw_v2_gate_status.get("d4_verdict"),
+        "atw_v2_phase2_dispatch_allowed": bool(
+            atw_v2_gate_status.get("dispatch_allowed")
+        ),
+        "atw_v2_phase2_lift_allowed": bool(
+            atw_v2_gate_status.get("phase2_lift_allowed")
+        ),
+        "atw_v2_phase2_next_action": atw_v2_gate_status.get("next_action"),
         "tt5l_first_anchor_timing_smoke_allowed": bool(
             tt5l_campaign.get("first_anchor_timing_smoke_allowed")
         ),
@@ -1708,6 +1723,8 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  TT5L architecture lock allowed: {payload['tt5l_architecture_lock_allowed']}",
         f"  architecture lock packet:       {payload['architecture_lock_packet_artifact_path']}",
         f"  architecture lock packet ok:    {payload['architecture_lock_packet_allowed']}",
+        f"  ATW v2 D4 verdict:              {payload['atw_v2_phase2_d4_verdict']}",
+        f"  ATW v2 Phase-2 lift allowed:    {payload['atw_v2_phase2_lift_allowed']}",
         f"  TT5L timing smoke allowed:      {payload['tt5l_first_anchor_timing_smoke_allowed']}",
         f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",

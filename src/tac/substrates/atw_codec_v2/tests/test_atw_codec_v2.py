@@ -759,6 +759,58 @@ def test_substrate_contract_registers() -> None:
     assert "wz_head_blob" in sm
     assert "distill_head_blob" in sm
     assert "cdf_table_blob" in sm
+    assert ATW_CODEC_V2_CONTRACT.hook_probe_disambiguator == (
+        "tools/run_atw_v2_d4_probe_from_a1.py"
+    )
+    assert "returned INDEPENDENT" in ATW_CODEC_V2_CONTRACT.hook_not_applicable_rationale[
+        "hook_continual_learning_anchor_kind"
+    ]
+
+
+def test_atw_v2_phase2_gate_consumes_d4_verdict_fail_closed() -> None:
+    """Current D4 verdict is durable evidence, but not dispatch authority."""
+    from tac.substrates.atw_codec_v2 import (
+        D4_PROBE_MUTUAL_INFORMATION_BITS,
+        D4_PROBE_NEXT_ACTION,
+        D4_PROBE_PHASE2_STATUS,
+        D4_PROBE_VERDICT,
+        atw_v2_phase2_gate_status,
+    )
+
+    status = atw_v2_phase2_gate_status(repo_root=REPO_ROOT)
+
+    assert D4_PROBE_VERDICT == "INDEPENDENT"
+    assert D4_PROBE_PHASE2_STATUS == (
+        "defer_measured_a1_latent_class_conditioning_surface"
+    )
+    assert D4_PROBE_NEXT_ACTION == "do_not_dispatch_atw_v2_phase2_from_this_signal"
+    assert 0.001 <= D4_PROBE_MUTUAL_INFORMATION_BITS < 0.5
+    assert status["d4_verdict"] == "INDEPENDENT"
+    assert status["phase2_status"] == D4_PROBE_PHASE2_STATUS
+    assert status["mutual_information_bits"] == D4_PROBE_MUTUAL_INFORMATION_BITS
+    assert status["score_claim"] is False
+    assert status["promotion_eligible"] is False
+    assert status["rank_or_kill_eligible"] is False
+    assert status["ready_for_exact_eval_dispatch"] is False
+    assert status["dispatch_allowed"] is False
+    assert status["phase2_lift_allowed"] is False
+    assert "atw_v2_phase2_deferred_by_d4_verdict:INDEPENDENT" in status["blockers"]
+
+
+def test_atw_v2_phase2_gate_missing_verdict_blocks_dispatch(tmp_path: Path) -> None:
+    """A missing D4 verdict cannot silently authorize Phase-2 work."""
+    from tac.optimization.atw_v2_phase2_gate import (
+        atw_v2_phase2_gate_status,
+    )
+
+    status = atw_v2_phase2_gate_status(repo_root=tmp_path)
+
+    assert status["d4_verdict"] == "MISSING"
+    assert status["phase2_status"] == "blocked_missing_d4_probe_verdict"
+    assert status["dispatch_allowed"] is False
+    assert status["phase2_lift_allowed"] is False
+    assert status["ready_for_exact_eval_dispatch"] is False
+    assert status["blockers"] == ["atw_v2_d4_probe_verdict_missing"]
 
 
 # ---------------------------------------------------------------------------

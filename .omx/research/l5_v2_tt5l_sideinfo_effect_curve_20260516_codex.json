@@ -17,6 +17,10 @@
   },
   "contract_blockers": [
     "tt5l_sideinfo_effect_curve_predicate_not_passed",
+    "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cpu",
+    "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cuda",
+    "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
+    "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
     "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero"
   ],
   "effect_blockers": [
