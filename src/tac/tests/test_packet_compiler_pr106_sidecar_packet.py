@@ -35,6 +35,10 @@ from tac.packet_compiler import (
     read_single_stored_member_archive,
     recode_pr106_hdm8_hlm2_packet_to_hdm9,
 )
+from tac.packet_compiler.pr106_sidecar_packet import (
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
+    decode_pr106_sidecar_packet_correction_passes,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PR106_R2_ARCHIVE = REPO_ROOT / "submissions/pr106_latent_sidecar_r2/archive.zip"
@@ -43,6 +47,10 @@ PR106_R2_PR101_ARCHIVE = (
 )
 PR106_HDM8_FORMAT07_ARCHIVE = (
     REPO_ROOT / "src/tac/tests/fixtures/pr106_hdm8_format07.archive.zip"
+)
+PR106_FORMAT0D_ARCHIVE = (
+    REPO_ROOT
+    / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip"
 )
 
 
@@ -854,6 +862,35 @@ def test_pr106_sidecar_hdm8_hlm2_inner_headerless_mutation_is_valid() -> None:
     assert mutation.old_delta_q != mutation.new_delta_q
     assert reparsed.pr106_bytes == inner_headerless_packet.pr106_bytes
     assert reparsed.sidecar_payload != inner_headerless_packet.sidecar_payload
+
+
+def test_pr106_sidecar_format0d_base_and_extra_mutations_are_section_local() -> None:
+    member = read_single_stored_member_archive(PR106_FORMAT0D_ARCHIVE.read_bytes())
+    packet = parse_pr106_sidecar_packet(member.payload)
+
+    base_mutated, base_mutation = mutate_pr106_sidecar_semantic_correction(
+        packet,
+        section_name="base_format0c_sidecar_payload",
+    )
+    extra_mutated, extra_mutation = mutate_pr106_sidecar_semantic_correction(
+        packet,
+        section_name="extra_pr101_ranked_no_op_payload",
+    )
+
+    assert packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+    assert base_mutation.section_name == "base_format0c_sidecar_payload"
+    assert extra_mutation.section_name == "extra_pr101_ranked_no_op_payload"
+    assert base_mutated.sidecar_payload != packet.sidecar_payload
+    assert base_mutated.extra_sidecar_payload == packet.extra_sidecar_payload
+    assert base_mutated.extra_framing_meta == packet.extra_framing_meta
+    assert extra_mutated.sidecar_payload == packet.sidecar_payload
+    assert extra_mutated.extra_sidecar_payload != packet.extra_sidecar_payload
+    assert extra_mutated.extra_framing_meta == packet.extra_framing_meta
+
+    base_reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(base_mutated))
+    extra_reparsed = parse_pr106_sidecar_packet(emit_pr106_sidecar_packet(extra_mutated))
+    assert len(decode_pr106_sidecar_packet_correction_passes(base_reparsed)) == 2
+    assert len(decode_pr106_sidecar_packet_correction_passes(extra_reparsed)) == 2
 
 
 def test_pr106_sidecar_fixed_meta_rank_elided_rejects_bad_payload_length() -> None:

@@ -513,6 +513,101 @@ def runtime_framing_meta_consumption_probe(
     }
 
 
+def _runtime_digest_changed(
+    baseline_digest: dict[str, object],
+    mutated_digest: dict[str, object],
+) -> bool:
+    return (
+        baseline_digest.get("combined_sha256") != mutated_digest.get("combined_sha256")
+        or baseline_digest.get("corrected_latents_sha256")
+        != mutated_digest.get("corrected_latents_sha256")
+    )
+
+
+def _runtime_sidecar_section_consumption_probe(
+    runtime_module: ModuleType,
+    packet: Any,
+    *,
+    section_name: str,
+    baseline_digest: dict[str, object],
+) -> dict[str, object]:
+    try:
+        mutated_packet, mutation = mutate_pr106_sidecar_semantic_correction(
+            packet,
+            section_name=section_name,
+        )
+        mutated_payload = emit_pr106_sidecar_packet(mutated_packet)
+        mutated_digest = runtime_sidecar_correction_digest(runtime_module, mutated_payload)
+    except Exception as exc:
+        return {
+            "section": section_name,
+            "format_id": f"0x{packet.format_id:02X}",
+            "runtime_consumption_claim": False,
+            "observation": "runtime_rejected_valid_section_mutation",
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+        }
+    changed = _runtime_digest_changed(baseline_digest, mutated_digest)
+    return {
+        "section": section_name,
+        "format_id": f"0x{packet.format_id:02X}",
+        "runtime_consumption_claim": changed,
+        "observation": "runtime_digest_changed" if changed else "runtime_digest_unchanged",
+        "mutation": mutation.__dict__,
+        "mutated_runtime_correction_digest": mutated_digest,
+    }
+
+
+def runtime_sidecar_section_consumption_probes(
+    runtime_module: ModuleType,
+    member_payload: bytes,
+    baseline_digest: dict[str, object],
+) -> dict[str, dict[str, object]]:
+    """Probe each runtime-visible score-affecting sidecar section independently."""
+
+    packet = parse_pr106_sidecar_packet(member_payload)
+    probes: dict[str, dict[str, object]] = {
+        "pr106_payload": {
+            "section": "pr106_payload",
+            "format_id": f"0x{packet.format_id:02X}",
+            "runtime_consumption_claim": True,
+            "observation": "inner_pr106_payload_parsed_by_runtime_digest",
+        }
+    }
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        section_names = (
+            "base_format0c_sidecar_payload",
+            "extra_pr101_ranked_no_op_payload",
+        )
+    else:
+        section_names = ("sidecar_payload",)
+    for section_name in section_names:
+        probes[section_name] = _runtime_sidecar_section_consumption_probe(
+            runtime_module,
+            packet,
+            section_name=section_name,
+            baseline_digest=baseline_digest,
+        )
+    framing_probe = runtime_framing_meta_consumption_probe(
+        runtime_module,
+        member_payload,
+        baseline_digest,
+    )
+    probes[str(framing_probe["section"])] = framing_probe
+    return probes
+
+
+def _section_probe_claim(
+    probes: dict[str, dict[str, object]],
+    section_name: str,
+) -> bool | None:
+    probe = probes.get(section_name)
+    if probe is None:
+        return None
+    claim = probe.get("runtime_consumption_claim")
+    return claim if isinstance(claim, bool) else None
+
+
 def runtime_full_frame_streaming_digest(
     runtime_module: ModuleType,
     member_payload: bytes,
@@ -858,12 +953,12 @@ def prove_pr106_sidecar_runtime_decode_consumption(
 
     runtime = load_pr106_sidecar_runtime(runtime_dir)
     source_digest = runtime_sidecar_correction_digest(runtime, member.payload)
-    mutated_digest = runtime_sidecar_correction_digest(runtime, mutated_payload)
-    framing_meta_probe = runtime_framing_meta_consumption_probe(
+    section_probes = runtime_sidecar_section_consumption_probes(
         runtime,
         member.payload,
         source_digest,
     )
+    mutated_digest = runtime_sidecar_correction_digest(runtime, mutated_payload)
     semantic_changed = (
         source_digest["combined_sha256"] != mutated_digest["combined_sha256"]
     )
@@ -881,6 +976,12 @@ def prove_pr106_sidecar_runtime_decode_consumption(
         blockers.append("runtime_semantic_digest_not_changed")
     if not corrected_latents_changed:
         blockers.append("runtime_corrected_latents_digest_not_changed")
+    framing_meta_section = (
+        "extra_framing_meta"
+        if source_packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+        else "framing_meta"
+    )
+    framing_meta_probe = section_probes.get(framing_meta_section, {})
     framing_meta_claim = framing_meta_probe.get("runtime_consumption_claim")
     if (
         source_packet.format_id == PR106_SIDECAR_FORMAT_PR101_GRAMMAR
@@ -892,19 +993,37 @@ def prove_pr106_sidecar_runtime_decode_consumption(
         and framing_meta_claim is not True
     ):
         blockers.append("runtime_extra_framing_meta_consumption_not_proven")
-    decode_claim = semantic_changed and packet_accounting_passed
-    apply_claim = decode_claim and corrected_latents_changed
+    if source_packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        base_claim = _section_probe_claim(section_probes, "base_format0c_sidecar_payload")
+        extra_claim = _section_probe_claim(section_probes, "extra_pr101_ranked_no_op_payload")
+        if base_claim is not True:
+            blockers.append("runtime_base_format0c_sidecar_payload_consumption_not_proven")
+        if extra_claim is not True:
+            blockers.append("runtime_extra_pr101_ranked_no_op_payload_consumption_not_proven")
+        decode_claim = bool(base_claim is True and extra_claim is True and packet_accounting_passed)
+    else:
+        sidecar_claim = _section_probe_claim(section_probes, "sidecar_payload")
+        if sidecar_claim is not True:
+            blockers.append("runtime_sidecar_payload_consumption_not_proven")
+        decode_claim = bool(sidecar_claim is True and packet_accounting_passed)
+    apply_claim = bool(decode_claim and corrected_latents_changed)
     runtime_consumed_sections = (
         {
             "pr106_payload": True,
-            "sidecar_payload": decode_claim,
+            "sidecar_payload": _section_probe_claim(section_probes, "sidecar_payload"),
             "framing_meta": framing_meta_claim,
         }
         if source_packet.format_id != PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
         else {
             "pr106_payload": True,
-            "base_format0c_sidecar_payload": decode_claim,
-            "extra_pr101_ranked_no_op_payload": decode_claim,
+            "base_format0c_sidecar_payload": _section_probe_claim(
+                section_probes,
+                "base_format0c_sidecar_payload",
+            ),
+            "extra_pr101_ranked_no_op_payload": _section_probe_claim(
+                section_probes,
+                "extra_pr101_ranked_no_op_payload",
+            ),
             "extra_framing_meta": framing_meta_claim,
         }
     )
@@ -958,6 +1077,7 @@ def prove_pr106_sidecar_runtime_decode_consumption(
             "mutated_packet_ir_consumed_byte_proof": mutated_proof,
             "packet_ir_consumed_byte_accounting_passed": packet_accounting_passed,
             "runtime_framing_meta_consumption_probe": framing_meta_probe,
+            "runtime_section_consumption_probes": section_probes,
             "runtime_consumed_score_affecting_sections": runtime_consumed_sections,
             "runtime_consumed_score_affecting_section_identities": (
                 runtime_section_identities

@@ -780,6 +780,44 @@ def test_packetir_exact_closure_rejects_format0d_without_runtime_extra_identity(
     assert extra["identity_valid"] is False
 
 
+def test_packetir_exact_closure_rejects_format0d_runtime_offset_mismatch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    candidate_result = _candidate_result_format0d_shape(archive)
+    runtime_consumption = _runtime_consumption_format0d(archive)
+    for row in runtime_consumption["runtime_consumed_score_affecting_section_identities"]:
+        if row["name"] == "extra_pr101_ranked_no_op_payload":
+            row["offset"] = row["offset"] + 1
+            row["offset_start"] = row["offset"]
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane_format0d_offset_mismatch",
+        candidate_result=candidate_result,
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert "runtime_consumption_proof_binds_candidate_and_score_affecting_sections" in (
+        closure["blockers"]
+    )
+    identity = closure["packetir"]["runtime_consumption_proof"][
+        "score_affecting_section_match_evidence"
+    ]["format0d_closure_identity"]
+    extra = identity["sections"]["extra_pr101_ranked_no_op_payload"]
+    assert extra["sha256_matches"] is True
+    assert extra["length_matches"] is True
+    assert extra["offset_matches"] is False
+    assert extra["identity_valid"] is False
+
+
 @pytest.mark.parametrize("inner_unchanged", [False, None])
 def test_packetir_exact_closure_rejects_format0b_alias_without_inner_identity(
     tmp_path: Path,
@@ -1188,6 +1226,8 @@ def _runtime_consumption_format0d(archive: Path) -> dict:
             "name": row["name"],
             "sha256": row["sha256"],
             "bytes": row["bytes"],
+            "offset": row["offset"],
+            "offset_start": row["offset_start"],
             "consumed": True,
         }
         for row in _format0d_section_rows()

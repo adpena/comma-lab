@@ -2762,6 +2762,7 @@ def mutate_pr106_sidecar_semantic_correction(
     packet: PR106SidecarPacket,
     *,
     pair_index: int | None = None,
+    section_name: str | None = None,
     schema: RankedSidecarSchema = PR106_PR101_RANKED_SCHEMA,
 ) -> tuple[PR106SidecarPacket, PR106SidecarMutation]:
     """Return a valid packet with one runtime-visible sidecar correction changed.
@@ -2773,7 +2774,19 @@ def mutate_pr106_sidecar_semantic_correction(
     change before any exact-eval score is claimed.
     """
 
+    if section_name not in (
+        None,
+        "sidecar_payload",
+        "base_format0c_sidecar_payload",
+        "extra_pr101_ranked_no_op_payload",
+    ):
+        raise ValueError(f"unsupported mutation section_name={section_name!r}")
+
     if packet.format_id == PR106_SIDECAR_FORMAT_BROTLI:
+        if section_name not in (None, "sidecar_payload"):
+            raise ValueError(
+                f"format_id=0x{packet.format_id:02X} cannot mutate {section_name}"
+            )
         dim_arr, delta_q_arr = _decode_brotli_sidecar_payload(packet.sidecar_payload)
         idx = (
             _first_corrected_pair(dim_arr, no_op_dim=PR106_NO_OP_DIM)
@@ -2816,6 +2829,10 @@ def mutate_pr106_sidecar_semantic_correction(
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_FIXED_META_NOOP_RANK_ELIDED,
         PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     ):
+        if section_name not in (None, "sidecar_payload"):
+            raise ValueError(
+                f"format_id=0x{packet.format_id:02X} cannot mutate {section_name}"
+            )
         if packet.framing_meta is None:
             if packet.format_id not in (
                 PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
@@ -2965,9 +2982,58 @@ def mutate_pr106_sidecar_semantic_correction(
             raise ValueError("format_id=0x0D must not carry base framing_meta")
         if packet.extra_framing_meta is None:
             raise ValueError("format_id=0x0D requires extra_framing_meta")
+        if section_name == "sidecar_payload":
+            section_name = "extra_pr101_ranked_no_op_payload"
+        if section_name in (None, "extra_pr101_ranked_no_op_payload"):
+            dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
+                packet.extra_sidecar_payload,
+                packet.extra_framing_meta,
+                schema=schema,
+            )
+            idx = (
+                _first_corrected_pair(dims, no_op_dim=schema.no_op_sentinel)
+                if pair_index is None
+                else int(pair_index)
+            )
+            if not (0 <= idx < dims.size):
+                raise ValueError(f"pair_index out of range: {idx} not in [0, {dims.size})")
+            if int(dims[idx]) == schema.no_op_sentinel:
+                raise ValueError(f"pair_index {idx} is a no-op correction")
+            old_delta_index = int(delta_indices[idx])
+            new_delta_index = (old_delta_index + 1) % len(schema.deltas)
+            mutated_delta_indices = delta_indices.copy()
+            mutated_delta_indices[idx] = new_delta_index
+            mutated_extra_payload = encode_ranked_no_op_sidecar(
+                dims=dims,
+                delta_indices=mutated_delta_indices,
+                schema=schema,
+            )
+            mutated_packet = PR106SidecarPacket(
+                format_id=packet.format_id,
+                pr106_bytes=packet.pr106_bytes,
+                sidecar_payload=packet.sidecar_payload,
+                framing_meta=None,
+                extra_sidecar_payload=mutated_extra_payload,
+                extra_framing_meta=packet.extra_framing_meta,
+            )
+            return mutated_packet, PR106SidecarMutation(
+                section_name="extra_pr101_ranked_no_op_payload",
+                pair_index=idx,
+                format_id=packet.format_id,
+                old_dim=int(dims[idx]),
+                new_dim=int(dims[idx]),
+                old_delta_q=int(schema.deltas[old_delta_index]),
+                new_delta_q=int(schema.deltas[new_delta_index]),
+                old_delta_index=old_delta_index,
+                new_delta_index=new_delta_index,
+            )
+        if section_name != "base_format0c_sidecar_payload":
+            raise ValueError(f"format_id=0x0D cannot mutate {section_name}")
         dims, delta_indices = _decode_pr101_ranked_sidecar_payload(
-            packet.extra_sidecar_payload,
-            packet.extra_framing_meta,
+            *reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+                packet.sidecar_payload,
+                schema=schema,
+            ),
             schema=schema,
         )
         idx = (
@@ -2983,21 +3049,25 @@ def mutate_pr106_sidecar_semantic_correction(
         new_delta_index = (old_delta_index + 1) % len(schema.deltas)
         mutated_delta_indices = delta_indices.copy()
         mutated_delta_indices[idx] = new_delta_index
-        mutated_extra_payload = encode_ranked_no_op_sidecar(
-            dims=dims,
-            delta_indices=mutated_delta_indices,
+        mutated_deltas = np.array(
+            [schema.deltas[int(delta_index)] for delta_index in mutated_delta_indices],
+            dtype=np.int8,
+        )
+        mutated_base_payload = encode_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload(
+            dims.astype(np.uint8, copy=False),
+            mutated_deltas,
             schema=schema,
         )
         mutated_packet = PR106SidecarPacket(
             format_id=packet.format_id,
             pr106_bytes=packet.pr106_bytes,
-            sidecar_payload=packet.sidecar_payload,
+            sidecar_payload=mutated_base_payload,
             framing_meta=None,
-            extra_sidecar_payload=mutated_extra_payload,
+            extra_sidecar_payload=packet.extra_sidecar_payload,
             extra_framing_meta=packet.extra_framing_meta,
         )
         return mutated_packet, PR106SidecarMutation(
-            section_name="extra_pr101_ranked_no_op_payload",
+            section_name="base_format0c_sidecar_payload",
             pair_index=idx,
             format_id=packet.format_id,
             old_dim=int(dims[idx]),

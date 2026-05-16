@@ -949,6 +949,10 @@ def _format0d_closure_identity(
             candidate_section["length"] is not None
             and candidate_section["length"] == runtime_section["length"]
         )
+        offset_match = (
+            candidate_section["offset"] is not None
+            and candidate_section["offset"] == runtime_section["offset"]
+        )
         section_evidence[section_name] = {
             "candidate_section_found": candidate_section["found"],
             "candidate_section_sha256": candidate_section["sha256"],
@@ -959,8 +963,10 @@ def _format0d_closure_identity(
             "runtime_section_consumed": runtime_section["consumed"],
             "runtime_section_sha256": runtime_section["sha256"],
             "runtime_section_length": runtime_section["length"],
+            "runtime_section_offset": runtime_section["offset"],
             "sha256_matches": sha_match,
             "length_matches": length_match,
+            "offset_matches": offset_match,
             "identity_valid": (
                 candidate_section["found"] is True
                 and candidate_section["score_affecting"] is True
@@ -968,6 +974,7 @@ def _format0d_closure_identity(
                 and runtime_section["consumed"] is True
                 and sha_match
                 and length_match
+                and offset_match
             ),
         }
 
@@ -1062,6 +1069,7 @@ def _runtime_consumed_section_identity(
         "consumed": direct is True,
         "sha256": None,
         "length": None,
+        "offset": None,
     }
 
 
@@ -1109,6 +1117,12 @@ def _runtime_section_identity_from_row(
             row.get("byte_count"),
             row.get("length"),
             row.get("runtime_bytes"),
+        ),
+        "offset": _first_int(
+            row.get("offset"),
+            row.get("offset_start"),
+            row.get("start"),
+            row.get("runtime_offset"),
         ),
         "name": row.get("name", expected_section),
     }

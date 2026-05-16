@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 import torch
 
+import tac.packet_compiler.pr106_runtime_consumption as runtime_consumption_mod
 from tac.packet_compiler import (
     PR106_SIDECAR_FORMAT_PR101_FIXED_META_RANK_ELIDED,
     PR106_SIDECAR_FORMAT_PR101_HDM8_HLM2_INNER_HEADERLESS_FIXED_META_RANK_ELIDED,
@@ -929,12 +930,71 @@ def test_pr106_runtime_consumption_proves_format0d_stacked_sidecars() -> None:
     assert isinstance(probe, dict)
     assert probe["section"] == "extra_framing_meta"
     assert probe["runtime_consumption_claim"] is True
+    section_probes = manifest["runtime_section_consumption_probes"]
+    assert set(section_probes) == {
+        "pr106_payload",
+        "base_format0c_sidecar_payload",
+        "extra_pr101_ranked_no_op_payload",
+        "extra_framing_meta",
+    }
+    assert section_probes["base_format0c_sidecar_payload"][
+        "runtime_consumption_claim"
+    ] is True
+    assert section_probes["extra_pr101_ranked_no_op_payload"][
+        "runtime_consumption_claim"
+    ] is True
+    assert section_probes["base_format0c_sidecar_payload"]["mutation"][
+        "section_name"
+    ] == "base_format0c_sidecar_payload"
+    assert section_probes["extra_pr101_ranked_no_op_payload"]["mutation"][
+        "section_name"
+    ] == "extra_pr101_ranked_no_op_payload"
     assert manifest["mutation"]["section_name"] == "extra_pr101_ranked_no_op_payload"
     assert manifest["sidecar_payload_sha256_changed"] is False
     assert manifest["extra_sidecar_payload_sha256_changed"] is True
     assert manifest["extra_framing_meta_sha256_changed"] is False
     assert manifest["contest_axis_claim"] is False
     assert manifest["score_claim"] is False
+
+
+def test_pr106_runtime_consumption_rejects_format0d_without_base_section_probe(
+    monkeypatch,
+) -> None:
+    real_probe = runtime_consumption_mod.runtime_sidecar_section_consumption_probes
+
+    def fake_probe(runtime_module, member_payload, baseline_digest):
+        probes = real_probe(runtime_module, member_payload, baseline_digest)
+        probes["base_format0c_sidecar_payload"] = {
+            **probes["base_format0c_sidecar_payload"],
+            "runtime_consumption_claim": False,
+            "observation": "test_runtime_ignored_base_stream",
+        }
+        return probes
+
+    monkeypatch.setattr(
+        runtime_consumption_mod,
+        "runtime_sidecar_section_consumption_probes",
+        fake_probe,
+    )
+
+    manifest = runtime_consumption_mod.prove_pr106_sidecar_runtime_decode_consumption(
+        archive_path=PR106_FORMAT0D_ARCHIVE,
+        runtime_dir=PR106_R2_PR101_RUNTIME,
+        expected_archive_sha256=PR106_FORMAT0D_SHA,
+    )
+
+    assert (
+        "runtime_base_format0c_sidecar_payload_consumption_not_proven"
+        in manifest["blockers"]
+    )
+    assert manifest["runtime_all_score_affecting_sections_consumed"] is False
+    assert manifest["runtime_sidecar_decode_consumption_claim"] is False
+    assert manifest["runtime_consumed_score_affecting_sections"][
+        "base_format0c_sidecar_payload"
+    ] is False
+    assert manifest["runtime_consumed_score_affecting_sections"][
+        "extra_pr101_ranked_no_op_payload"
+    ] is True
 
 
 class _ReturningSidecarDecoder(torch.nn.Module):
