@@ -189,6 +189,8 @@ def _write_inflate_provenance(
     file_list: Path,
     frame_nbytes: int = 1,
 ) -> Path:
+    log_path = output_dir.parent / f"{label}_inflate.log"
+    log_path.write_text(f"{label} TT5L inflate exit_code=0\n", encoding="utf-8")
     result = build_tt5l_inflate_provenance_manifest(
         archive_path=archive_path,
         output_dir=output_dir,
@@ -199,6 +201,7 @@ def _write_inflate_provenance(
             "tac.substrates.time_traveler_l5_autonomy.inflate "
             "<archive_dir> <output_dir> <file_list>"
         ),
+        log_path=log_path,
         frame_nbytes=frame_nbytes,
         repo_root=root,
     )
@@ -221,6 +224,8 @@ def test_tt5l_inflate_provenance_builder_binds_archive_runtime_outputs(
         archive = artifact_root / "0.bin"
         archive.write_bytes(_contest_shape_tt5l_archive(np.zeros((600, 45), dtype=np.int8)))
         file_list, output_dir, _ = _write_contest_file_list_and_outputs(artifact_root)
+        log_path = artifact_root / "inflate.log"
+        log_path.write_text("TT5L inflate completed with exit_code=0\n", encoding="utf-8")
 
         result = build_tt5l_inflate_provenance_manifest(
             archive_path=archive,
@@ -232,6 +237,7 @@ def test_tt5l_inflate_provenance_builder_binds_archive_runtime_outputs(
                 "tac.substrates.time_traveler_l5_autonomy.inflate "
                 "archive_dir output_dir file_list.txt"
             ),
+            log_path=log_path,
             repo_root=root,
             frame_nbytes=1,
         )
@@ -243,6 +249,9 @@ def test_tt5l_inflate_provenance_builder_binds_archive_runtime_outputs(
         assert payload["file_list_sha256"] == _sha256_file(file_list)
         assert payload["runtime_tree_sha256"]
         assert payload["output_aggregate_sha256"]
+        assert payload["log_path"] == str(log_path.relative_to(root))
+        assert payload["log_sha256"] == _sha256_file(log_path)
+        assert payload["log_bytes"] == log_path.stat().st_size
         assert payload["total_frames"] == 1200
         assert payload["score_claim"] is False
         assert payload["promotion_eligible"] is False
@@ -464,6 +473,146 @@ def test_tt5l_contest_sideinfo_proof_requires_inflate_provenance(
             "inflate_provenance_blockers"
         ]
         assert "mutated_output_provenance_missing" in proof[
+            "inflate_provenance_blockers"
+        ]
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
+
+
+def test_tt5l_contest_sideinfo_proof_rejects_logless_inflate_provenance(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_contest_sideinfo_logless_provenance_{tmp_path.name}"
+    )
+    zero_side = np.zeros((600, 45), dtype=np.int8)
+    mutated_side = zero_side.copy()
+    mutated_side[17, 36:45] = 64
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        baseline_archive = artifact_root / "baseline_0.bin"
+        mutated_archive = artifact_root / "mutated_0.bin"
+        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
+        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
+        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
+            artifact_root
+        )
+        baseline_provenance = _write_inflate_provenance(
+            root,
+            label="baseline",
+            archive_path=baseline_archive,
+            output_dir=baseline_dir,
+            file_list=file_list,
+        )
+        mutated_provenance = _write_inflate_provenance(
+            root,
+            label="mutated",
+            archive_path=mutated_archive,
+            output_dir=mutated_dir,
+            file_list=file_list,
+        )
+        for provenance_path in (baseline_provenance, mutated_provenance):
+            payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+            payload.pop("log_path")
+            payload.pop("log_sha256")
+            payload.pop("log_bytes")
+            provenance_path.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+        result = build_tt5l_contest_full_frame_sideinfo_consumption_proof(
+            baseline_archive_path=baseline_archive,
+            mutated_archive_path=mutated_archive,
+            baseline_output_dir=baseline_dir,
+            mutated_output_dir=mutated_dir,
+            file_list_path=file_list,
+            artifact_path=artifact_root / "proof.json",
+            manifest_path=artifact_root / "manifest.json",
+            baseline_inflate_provenance_path=baseline_provenance,
+            mutated_inflate_provenance_path=mutated_provenance,
+            repo_root=root,
+            frame_nbytes=1,
+        )
+
+        proof = result.proof["byte_mutation_proof"]
+        assert result.proof["predicate_passed"] is False
+        assert proof["inflate_provenance_valid"] is False
+        assert "baseline_output_provenance_log_path_missing" in proof[
+            "inflate_provenance_blockers"
+        ]
+        assert "mutated_output_provenance_log_path_missing" in proof[
+            "inflate_provenance_blockers"
+        ]
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
+
+
+def test_tt5l_contest_sideinfo_proof_rejects_stale_inflate_log_hash(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_contest_sideinfo_log_hash_{tmp_path.name}"
+    )
+    zero_side = np.zeros((600, 45), dtype=np.int8)
+    mutated_side = zero_side.copy()
+    mutated_side[17, 36:45] = 64
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        baseline_archive = artifact_root / "baseline_0.bin"
+        mutated_archive = artifact_root / "mutated_0.bin"
+        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
+        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
+        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
+            artifact_root
+        )
+        baseline_provenance = _write_inflate_provenance(
+            root,
+            label="baseline",
+            archive_path=baseline_archive,
+            output_dir=baseline_dir,
+            file_list=file_list,
+        )
+        mutated_provenance = _write_inflate_provenance(
+            root,
+            label="mutated",
+            archive_path=mutated_archive,
+            output_dir=mutated_dir,
+            file_list=file_list,
+        )
+        (artifact_root / "baseline_inflate.log").write_text(
+            "TT5L inflate log changed after provenance capture\n",
+            encoding="utf-8",
+        )
+
+        result = build_tt5l_contest_full_frame_sideinfo_consumption_proof(
+            baseline_archive_path=baseline_archive,
+            mutated_archive_path=mutated_archive,
+            baseline_output_dir=baseline_dir,
+            mutated_output_dir=mutated_dir,
+            file_list_path=file_list,
+            artifact_path=artifact_root / "proof.json",
+            manifest_path=artifact_root / "manifest.json",
+            baseline_inflate_provenance_path=baseline_provenance,
+            mutated_inflate_provenance_path=mutated_provenance,
+            repo_root=root,
+            frame_nbytes=1,
+        )
+
+        proof = result.proof["byte_mutation_proof"]
+        assert result.proof["predicate_passed"] is False
+        assert proof["inflate_provenance_valid"] is False
+        assert "baseline_output_provenance_log_sha256_mismatch" in proof[
             "inflate_provenance_blockers"
         ]
     finally:

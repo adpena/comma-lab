@@ -1,0 +1,175 @@
+{
+  "active_measurement_ids": [
+    "measure_c1_world_model_foveation_paired_exact",
+    "measure_z5_predictive_coding_paired_exact",
+    "measure_tt5l_autonomy_paired_exact"
+  ],
+  "active_rule_id": "fill_missing_c1_z5_tt5l_probe_observations",
+  "eligible_candidates": [],
+  "first_match_wins": true,
+  "measurements": [
+    {
+      "blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda"
+      ],
+      "candidate_id": "c1_world_model_foveation",
+      "estimated_cost_usd": 2.0,
+      "expected_information_gain_nats": 0.25,
+      "measurement_id": "measure_c1_world_model_foveation_paired_exact",
+      "output_artifact": "experiments/results/l5_v2_probe/c1_world_model_foveation_paired_exact.json",
+      "promotion_eligible": false,
+      "purpose": "fill C1 paired CPU/CUDA exact probe observation",
+      "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "l5_v2_probe_artifact_path_missing",
+        "l5_v2_probe_artifact_sha_invalid",
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_byte_closed_archive_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_archive_sha_invalid",
+        "l5_v2_probe_runtime_tree_sha_invalid",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_evidence_missing:contest_cuda"
+      ],
+      "candidate_id": "z5_predictive_coding_world_model",
+      "estimated_cost_usd": 5.0,
+      "expected_information_gain_nats": 0.35,
+      "measurement_id": "measure_z5_predictive_coding_paired_exact",
+      "output_artifact": "experiments/results/l5_v2_probe/z5_predictive_coding_world_model_paired_exact.json",
+      "promotion_eligible": false,
+      "purpose": "fill Z5 paired CPU/CUDA exact probe observation",
+      "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "l5_v2_probe_predicate_failed",
+        "l5_v2_probe_paired_exact_axes_missing",
+        "l5_v2_probe_sideinfo_consumption_missing",
+        "l5_v2_probe_runtime_tree_sha_by_axis_invalid:contest_cpu",
+        "l5_v2_probe_contest_evidence_grade_missing",
+        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_inflate_device_missing:contest_cuda",
+        "l5_v2_probe_axis_log_path_missing:contest_cuda",
+        "l5_v2_probe_axis_score_delta_missing:contest_cuda"
+      ],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "estimated_cost_usd": 7.5,
+      "expected_information_gain_nats": 0.55,
+      "measurement_id": "measure_tt5l_autonomy_paired_exact",
+      "output_artifact": "experiments/results/l5_v2_probe/time_traveler_l5_autonomy_paired_exact.json",
+      "promotion_eligible": false,
+      "purpose": "fill TT5L paired CPU/CUDA exact probe observation",
+      "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "tt5l_sideinfo_effect_curve_missing",
+        "consumption_proof_is_not_yet_usefulness_proof"
+      ],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "estimated_cost_usd": 1.0,
+      "expected_information_gain_nats": 0.4,
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "output_artifact": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl",
+      "promotion_eligible": false,
+      "purpose": "separate side-info consumption from causal usefulness via zero, random-LSB, shuffled, trained, and ablated side-info",
+      "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cuda"
+      ],
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "requires_probe_disambiguator_architecture_lock",
+        "requires_terminal_claim_templates"
+      ],
+      "candidate_id": "time_traveler_l5_autonomy",
+      "estimated_cost_usd": 0.0,
+      "expected_information_gain_nats": 0.1,
+      "measurement_id": "prepare_l5_v2_paired_anchor_packet",
+      "output_artifact": "experiments/results/l5_v2_probe/tt5l_paired_anchor_packet_manifest.json",
+      "promotion_eligible": false,
+      "purpose": "materialize paired-axis anchor packet only after C1/Z5/TT5L probe observations and side-info effect curve are present",
+      "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "score_claim": false
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_reward_allowed": false,
+  "ready_for_exact_eval_dispatch": false,
+  "required_candidates": [
+    "c1_world_model_foveation",
+    "z5_predictive_coding_world_model",
+    "time_traveler_l5_autonomy"
+  ],
+  "rules": [
+    {
+      "condition": "any required candidate lacks paired exact probe eligibility",
+      "matches": true,
+      "measurement_ids": [
+        "measure_c1_world_model_foveation_paired_exact",
+        "measure_z5_predictive_coding_paired_exact",
+        "measure_tt5l_autonomy_paired_exact"
+      ],
+      "missing_or_blocked_candidates": [
+        "c1_world_model_foveation",
+        "z5_predictive_coding_world_model",
+        "time_traveler_l5_autonomy"
+      ],
+      "rule_id": "fill_missing_c1_z5_tt5l_probe_observations"
+    },
+    {
+      "condition": "all required probes eligible but TT5L causal usefulness curve missing",
+      "matches": false,
+      "measurement_ids": [
+        "measure_tt5l_sideinfo_effect_curve"
+      ],
+      "missing_or_blocked_candidates": [],
+      "rule_id": "measure_tt5l_sideinfo_effect_curve"
+    },
+    {
+      "condition": "probe lock and side-info effect curve are both present",
+      "matches": false,
+      "measurement_ids": [
+        "prepare_l5_v2_paired_anchor_packet"
+      ],
+      "missing_or_blocked_candidates": [],
+      "rule_id": "prepare_paired_anchor_packet"
+    }
+  ],
+  "schema": "l5_v2_lattice_measurement_schedule_v1",
+  "score_claim": false,
+  "tool": "tools/build_l5_v2_lattice_measurement_schedule.py"
+}

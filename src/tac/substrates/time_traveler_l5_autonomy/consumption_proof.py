@@ -121,6 +121,10 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _is_sha256_hex(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value)
+
+
 def _canonical_json_bytes(payload: dict[str, Any]) -> bytes:
     return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
@@ -511,6 +515,8 @@ def _validate_inflate_provenance(
         provenance_path,
         label=f"{label}_inflate_provenance",
     )
+    if provenance.get("schema") != "tt5l_inflate_provenance_v1":
+        blockers.append(f"{label}_output_provenance_schema_mismatch")
     expected_pairs = {
         "archive_sha256": archive_sha256,
         "runtime_tree_sha256": runtime_tree_sha256,
@@ -547,6 +553,31 @@ def _validate_inflate_provenance(
         actual = str(provenance.get(key) or "")
         if actual != _display_path(expected_path, repo_root):
             blockers.append(f"{label}_output_provenance_{key}_mismatch")
+    log_path_value = str(provenance.get("log_path") or "")
+    log_sha256 = str(provenance.get("log_sha256") or "").strip().lower()
+    if not log_path_value:
+        blockers.append(f"{label}_output_provenance_log_path_missing")
+    else:
+        try:
+            log_path = _resolve_existing_repo_path(
+                log_path_value,
+                repo_root=repo_root,
+                label=f"{label}_output_provenance_log_path",
+            )
+        except (FileNotFoundError, ValueError):
+            blockers.append(f"{label}_output_provenance_log_path_invalid")
+        else:
+            if log_path_value != _display_path(log_path, repo_root):
+                blockers.append(f"{label}_output_provenance_log_path_mismatch")
+            if log_path.stat().st_size <= 0:
+                blockers.append(f"{label}_output_provenance_log_empty")
+            if not _is_sha256_hex(log_sha256):
+                blockers.append(f"{label}_output_provenance_log_sha256_missing")
+            elif _sha256_file(log_path) != log_sha256:
+                blockers.append(f"{label}_output_provenance_log_sha256_mismatch")
+            log_bytes = provenance.get("log_bytes")
+            if log_bytes is not None and log_bytes != log_path.stat().st_size:
+                blockers.append(f"{label}_output_provenance_log_bytes_mismatch")
     return provenance, blockers
 
 
@@ -557,6 +588,7 @@ def build_tt5l_inflate_provenance_manifest(
     file_list_path: str | Path,
     artifact_path: str | Path,
     command: str,
+    log_path: str | Path | None = None,
     exit_code: int = 0,
     repo_root: str | Path | None = None,
     frame_nbytes: int = TT5L_CONTEST_FRAME_NBYTES,
@@ -585,6 +617,15 @@ def build_tt5l_inflate_provenance_manifest(
         file_list_path,
         repo_root=root,
         label="file_list_path",
+    )
+    log_file = (
+        _resolve_existing_repo_path(
+            log_path,
+            repo_root=root,
+            label="log_path",
+        )
+        if log_path is not None
+        else None
     )
     provenance_path = _resolve_repo_custody_path(
         artifact_path,
@@ -628,6 +669,14 @@ def build_tt5l_inflate_provenance_manifest(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    if log_file is not None:
+        provenance.update(
+            {
+                "log_path": _display_path(log_file, root),
+                "log_sha256": _sha256_file(log_file),
+                "log_bytes": log_file.stat().st_size,
+            }
+        )
     provenance_path.parent.mkdir(parents=True, exist_ok=True)
     provenance_path.write_bytes(_canonical_json_bytes(provenance))
     return TT5LInflateProvenanceResult(
