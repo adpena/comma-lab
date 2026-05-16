@@ -1,0 +1,206 @@
+{
+  "artifact_path": ".omx/research/l5_v2_asymptotic_candidate_surface_20260516_codex.json",
+  "authority": "planning_only_no_score_rank_promotion_or_dispatch_authority",
+  "blockers": [
+    "requires_z6_l1_scaffold_before_paid_dispatch",
+    "requires_identity_predictor_disambiguator_before_paradigm_claim",
+    "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
+    "requires_t3_ratification_before_l1_scaffold_dispatch",
+    "requires_dykstra_feasibility_intersection_before_paid_smoke",
+    "requires_byte_mutation_proof_before_score_or_rank_authority",
+    "requires_d4_probe_verdict_before_tishby_scaffold",
+    "requires_variational_ib_tractability_before_path_vib_or_mine",
+    "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
+  ],
+  "campaign_id": "campaign_time_traveler_l5_v2_staircase_20260516",
+  "candidate_count": 3,
+  "candidate_ids": [
+    "z6_z7_z8_predictive_coding_world_models",
+    "rudin_floor_interpretable_ml_substrate",
+    "tishby_ib_pure_substrate"
+  ],
+  "candidates": [
+    {
+      "blockers": [
+        "requires_z6_l1_scaffold_before_paid_dispatch",
+        "requires_identity_predictor_disambiguator_before_paradigm_claim",
+        "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
+      ],
+      "candidate_id": "z6_z7_z8_predictive_coding_world_models",
+      "cost_band_usd": [
+        1.0,
+        12.5
+      ],
+      "dependency_blockers": [
+        "requires_z6_l1_scaffold_before_paid_dispatch",
+        "requires_identity_predictor_disambiguator_before_paradigm_claim",
+        "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
+      ],
+      "expected_first_artifact_status": [
+        {
+          "path": "src/tac/substrates/z6_predictive_coding_world_model/",
+          "present": false
+        },
+        {
+          "path": "experiments/train_substrate_z6_predictive_coding_world_model.py",
+          "present": false
+        },
+        {
+          "path": ".omx/operator_authorize_recipes/substrate_z6_predictive_coding_modal_t4_dispatch.yaml",
+          "present": false
+        }
+      ],
+      "expected_first_artifacts": [
+        "src/tac/substrates/z6_predictive_coding_world_model/",
+        "experiments/train_substrate_z6_predictive_coding_world_model.py",
+        ".omx/operator_authorize_recipes/substrate_z6_predictive_coding_modal_t4_dispatch.yaml"
+      ],
+      "expected_first_artifacts_all_present": false,
+      "horizon_class": "asymptotic_pursuit",
+      "l1_build_blockers": [],
+      "lane_id": "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_scoping_design_20260516",
+      "lane_registry_registered": true,
+      "local_ledger_path": ".omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md",
+      "local_ledger_present": true,
+      "local_ledger_sha256": "ad07c1a032078fefafbafc2a910522e75ea5479bbac15d7cab4569f43ca5e334",
+      "primary_axis": "scorer_relationship_class_shift_predictive_coding",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_l1_build": true,
+      "ready_for_l1_build_semantics": "ready_to_start_l1_scaffold_work_only_not_scaffold_ready",
+      "ready_for_l1_scaffold_dispatch": false,
+      "ready_for_paid_dispatch": false,
+      "ready_for_recommended_next_action": true,
+      "recommended_next_action": "Build Z6 L1 scaffold first: package, trainer, recipe, identity-predictor disambiguator, and smoke-before-full gate.",
+      "recommended_next_action_id": "build_z6_l1_scaffold_first",
+      "score_claim": false,
+      "title": "Z6/Z7/Z8 predictive-coding world-model staircase"
+    },
+    {
+      "blockers": [
+        "requires_t3_ratification_before_l1_scaffold_dispatch",
+        "requires_dykstra_feasibility_intersection_before_paid_smoke",
+        "requires_byte_mutation_proof_before_score_or_rank_authority"
+      ],
+      "candidate_id": "rudin_floor_interpretable_ml_substrate",
+      "cost_band_usd": [
+        3.0,
+        15.0
+      ],
+      "dependency_blockers": [
+        "requires_t3_ratification_before_l1_scaffold_dispatch",
+        "requires_dykstra_feasibility_intersection_before_paid_smoke",
+        "requires_byte_mutation_proof_before_score_or_rank_authority"
+      ],
+      "expected_first_artifact_status": [
+        {
+          "path": "src/tac/substrates/rudin_floor/",
+          "present": false
+        },
+        {
+          "path": "experiments/train_substrate_rudin_floor.py",
+          "present": false
+        },
+        {
+          "path": ".omx/operator_authorize_recipes/substrate_rudin_floor_modal_a100_dispatch.yaml",
+          "present": false
+        }
+      ],
+      "expected_first_artifacts": [
+        "src/tac/substrates/rudin_floor/",
+        "experiments/train_substrate_rudin_floor.py",
+        ".omx/operator_authorize_recipes/substrate_rudin_floor_modal_a100_dispatch.yaml"
+      ],
+      "expected_first_artifacts_all_present": false,
+      "horizon_class": "asymptotic_pursuit",
+      "l1_build_blockers": [
+        "requires_pre_l1_gate:ratify_and_build_rudin_k8_l1_scaffold"
+      ],
+      "lane_id": "lane_rudin_floor_interpretable_ml_substrate_scoping_design_20260516",
+      "lane_registry_registered": true,
+      "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
+      "local_ledger_present": true,
+      "local_ledger_sha256": "0d055666f173be38d674603a90587b31b1d97c237e1a59e5d01dd3e5b1b064c0",
+      "primary_axis": "architecture_decode_contract_scorer_relationship_class_shift",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_l1_build": false,
+      "ready_for_l1_build_semantics": "ready_to_start_l1_scaffold_work_only_not_scaffold_ready",
+      "ready_for_l1_scaffold_dispatch": false,
+      "ready_for_paid_dispatch": false,
+      "ready_for_recommended_next_action": true,
+      "recommended_next_action": "Run T3 ratification and build K=8 Rudin L1 scaffold with RDIF archive grammar, pure-Python inflate, and byte-mutation proof.",
+      "recommended_next_action_id": "ratify_and_build_rudin_k8_l1_scaffold",
+      "score_claim": false,
+      "title": "Rudin floor interpretable-ML compositional decoder"
+    },
+    {
+      "blockers": [
+        "requires_d4_probe_verdict_before_tishby_scaffold",
+        "requires_variational_ib_tractability_before_path_vib_or_mine",
+        "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
+      ],
+      "candidate_id": "tishby_ib_pure_substrate",
+      "cost_band_usd": [
+        3.0,
+        60.0
+      ],
+      "dependency_blockers": [
+        "requires_d4_probe_verdict_before_tishby_scaffold",
+        "requires_variational_ib_tractability_before_path_vib_or_mine",
+        "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
+      ],
+      "expected_first_artifact_status": [
+        {
+          "path": ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+          "present": false
+        },
+        {
+          "path": "tools/check_variational_ib_tractability.py",
+          "present": false
+        },
+        {
+          "path": ".omx/state/variational_ib_tractability_tishby_ib_pure.json",
+          "present": false
+        }
+      ],
+      "expected_first_artifacts": [
+        ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+        "tools/check_variational_ib_tractability.py",
+        ".omx/state/variational_ib_tractability_tishby_ib_pure.json"
+      ],
+      "expected_first_artifacts_all_present": false,
+      "horizon_class": "asymptotic_pursuit",
+      "l1_build_blockers": [
+        "requires_pre_l1_gate:run_d4_probe_and_build_variational_ib_tractability_tool"
+      ],
+      "lane_id": "lane_tishby_ib_pure_substrate_scoping_design_20260516",
+      "lane_registry_registered": true,
+      "local_ledger_path": ".omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md",
+      "local_ledger_present": true,
+      "local_ledger_sha256": "f8e11f15a006b23fdfc18aad5528d679029da267109f067d36809847b205e61f",
+      "primary_axis": "training_paradigm_scorer_relationship_class_shift",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_l1_build": false,
+      "ready_for_l1_build_semantics": "ready_to_start_l1_scaffold_work_only_not_scaffold_ready",
+      "ready_for_l1_scaffold_dispatch": false,
+      "ready_for_paid_dispatch": false,
+      "ready_for_recommended_next_action": true,
+      "recommended_next_action": "Run D4 H(latent|scorer_class) probe and build the canonical Variational-IB tractability checker before any substrate scaffold.",
+      "recommended_next_action_id": "run_d4_probe_and_build_variational_ib_tractability_tool",
+      "score_claim": false,
+      "title": "Tishby IB-pure primary Lagrangian substrate"
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "schema": "l5_v2_asymptotic_pursuit_candidates_v1",
+  "score_claim": false,
+  "subject_id": "time_traveler_l5_autonomy"
+}

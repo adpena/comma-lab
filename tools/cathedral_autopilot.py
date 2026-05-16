@@ -2453,6 +2453,9 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
     packetir_evidence = readiness.get("packetir_stack_evidence")
     if not isinstance(packetir_evidence, dict):
         packetir_evidence = {}
+    asymptotic_candidates = readiness.get("asymptotic_pursuit_candidates")
+    if not isinstance(asymptotic_candidates, dict):
+        asymptotic_candidates = {}
     stack_payload = readiness.get("pr106_stack_cell_candidates")
     if not isinstance(stack_payload, dict):
         stack_payload = {}
@@ -2514,6 +2517,55 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
             "dispatch_recipe_path": tt5l_campaign.get("dispatch_recipe_path"),
         }
     )
+    for candidate in asymptotic_candidates.get("candidates", []):
+        if not isinstance(candidate, dict):
+            continue
+        rows.append(
+            {
+                "technique": candidate.get("candidate_id"),
+                "queue_source": "l5_v2_asymptotic_pursuit_candidate",
+                "validation_status": (
+                    candidate.get("recommended_next_action_id")
+                    or "blocked_until_asymptotic_candidate_action_materialized"
+                ),
+                "archive_bytes_if_validated": None,
+                "potential_score_delta_if_validated": 0.0,
+                "evidence_grade": EVIDENCE_GRADE,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "dispatch_blockers": [
+                    str(blocker)
+                    for blocker in candidate.get("blockers", [])
+                    if str(blocker)
+                ]
+                or ["l5_v2_asymptotic_candidate_action_pending"],
+                "lane_id": candidate.get("lane_id"),
+                "campaign_id": L5_V2_CAMPAIGN_ID,
+                "subject_id": L5_V2_SUBJECT_ID,
+                "horizon_class": candidate.get("horizon_class"),
+                "primary_axis": candidate.get("primary_axis"),
+                "local_ledger_path": candidate.get("local_ledger_path"),
+                "local_ledger_sha256": candidate.get("local_ledger_sha256"),
+                "recommended_next_action": candidate.get("recommended_next_action"),
+                "recommended_next_action_id": candidate.get(
+                    "recommended_next_action_id"
+                ),
+                "ready_for_recommended_next_action": bool(
+                    candidate.get("ready_for_recommended_next_action")
+                ),
+                "ready_for_l1_build": bool(candidate.get("ready_for_l1_build")),
+                "l1_build_blockers": candidate.get("l1_build_blockers", []),
+                "expected_first_artifacts": candidate.get(
+                    "expected_first_artifacts",
+                    [],
+                ),
+                "cost_band_usd": candidate.get("cost_band_usd", []),
+                "non_pr106_staircase_priority": True,
+                "asymptotic_pursuit": True,
+            }
+        )
     if isinstance(candidates, list):
         for candidate in candidates:
             if not isinstance(candidate, dict):
@@ -2566,7 +2618,10 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
                     "selection_basis": candidate.get("selection_basis"),
                 }
             )
-    if len(rows) > 1:
+    if any(
+        row.get("queue_source") == "l5_v2_pr106_packetir_stack_cell"
+        for row in rows
+    ):
         return rows
     rows.append(
         {

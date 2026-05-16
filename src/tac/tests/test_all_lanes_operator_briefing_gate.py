@@ -56,6 +56,24 @@ def _base_briefing_payload() -> dict[str, object]:
             "measurement_schedule_score_claim": False,
             "measurement_schedule_promotion_eligible": False,
             "measurement_schedule_ready_for_exact_eval_dispatch": False,
+            "asymptotic_pursuit_candidate_count": 1,
+            "asymptotic_pursuit_candidates": [
+                {
+                    "candidate_id": "z6_z7_z8_predictive_coding_world_models",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "ready_for_paid_dispatch": False,
+                    "ready_for_l1_scaffold_dispatch": False,
+                    "ready_for_l1_build": True,
+                    "ready_for_l1_build_semantics": (
+                        "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+                    ),
+                    "local_ledger_present": True,
+                    "lane_registry_registered": True,
+                }
+            ],
             "tt5l_campaign_readiness": {
                 "schema": "l5_v2_tt5l_campaign_readiness_v1",
                 "non_pr106_staircase_priority": True,
@@ -568,6 +586,42 @@ def test_operator_briefing_dispatch_gate_checks_full_l5_target_list() -> None:
     assert (
         "l5_v2_frontier_readiness:target_1:paired_dispatch_command_missing:"
         "tools/dispatch_modal_paired_auth_eval.py"
+    ) in failures
+
+
+def test_operator_briefing_dispatch_gate_rejects_asymptotic_false_authority() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])
+    bad = dict(l5["asymptotic_pursuit_candidates"][0])
+    bad["ready_for_exact_eval_dispatch"] = True
+    bad["lane_registry_registered"] = False
+    bad["ready_for_l1_build_semantics"] = "ambiguous"
+    l5["asymptotic_pursuit_candidates"] = [bad]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:"
+        "ready_for_exact_eval_dispatch_not_false"
+    ) in failures
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:lane_registry_missing"
+    ) in failures
+    assert (
+        "l5_v2_frontier_readiness:asymptotic_candidate:"
+        "z6_z7_z8_predictive_coding_world_models:l1_semantics_missing"
     ) in failures
 
 

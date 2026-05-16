@@ -815,6 +815,66 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
             failures.append(
                 "l5_v2_frontier_readiness:l5_v2_packetir_matrix_artifact_sha_mismatch"
             )
+        asymptotic_candidates = l5.get("asymptotic_pursuit_candidates")
+        try:
+            asymptotic_count = int(
+                l5.get("asymptotic_pursuit_candidate_count") or 0
+            )
+        except (TypeError, ValueError):
+            failures.append(
+                "l5_v2_frontier_readiness:asymptotic_candidate_count_not_integer"
+            )
+            asymptotic_count = 0
+        if not isinstance(asymptotic_candidates, list):
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                "asymptotic_pursuit_candidates_missing_or_not_list"
+            )
+            asymptotic_candidates = []
+        if len(asymptotic_candidates) != asymptotic_count:
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                f"asymptotic_candidate_count_mismatch:{len(asymptotic_candidates)}"
+                f"!={asymptotic_count}"
+            )
+        for idx, candidate in enumerate(asymptotic_candidates):
+            if not isinstance(candidate, dict):
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate_{idx}:not_object"
+                )
+                continue
+            candidate_id = str(candidate.get("candidate_id") or idx)
+            for flag in (
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "ready_for_exact_eval_dispatch",
+                "ready_for_paid_dispatch",
+                "ready_for_l1_scaffold_dispatch",
+            ):
+                if candidate.get(flag) is not False:
+                    failures.append(
+                        "l5_v2_frontier_readiness:"
+                        f"asymptotic_candidate:{candidate_id}:{flag}_not_false"
+                    )
+            if candidate.get("local_ledger_present") is not True:
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:ledger_missing"
+                )
+            if candidate.get("lane_registry_registered") is not True:
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:lane_registry_missing"
+                )
+            if candidate.get("ready_for_l1_build") is True and candidate.get(
+                "ready_for_l1_build_semantics"
+            ) != "ready_to_start_l1_scaffold_work_only_not_scaffold_ready":
+                failures.append(
+                    "l5_v2_frontier_readiness:"
+                    f"asymptotic_candidate:{candidate_id}:l1_semantics_missing"
+                )
         tt5l = l5.get("tt5l_campaign_readiness")
         if not isinstance(tt5l, dict):
             failures.append("l5_v2_frontier_readiness:tt5l_campaign_missing_or_not_object")

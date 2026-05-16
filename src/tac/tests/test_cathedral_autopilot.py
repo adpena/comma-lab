@@ -476,6 +476,30 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
                 "blockers": ["l5_v2_pr106_stack_cell_candidates_missing"],
                 "candidates": [],
             },
+            "asymptotic_pursuit_candidates": {
+                "candidates": [
+                    {
+                        "candidate_id": "z6_z7_z8_predictive_coding_world_models",
+                        "lane_id": "lane_z6_z7_z8",
+                        "horizon_class": "asymptotic_pursuit",
+                        "primary_axis": "predictive_coding",
+                        "local_ledger_path": ".omx/research/z6.md",
+                        "local_ledger_sha256": "a" * 64,
+                        "recommended_next_action_id": "build_z6_l1_scaffold_first",
+                        "recommended_next_action": "Build Z6 first",
+                        "expected_first_artifacts": [
+                            "src/tac/substrates/z6_predictive_coding_world_model/",
+                        ],
+                        "cost_band_usd": [1.0, 12.5],
+                            "blockers": [
+                                "requires_z6_l1_scaffold_before_paid_dispatch",
+                            ],
+                            "ready_for_recommended_next_action": True,
+                            "ready_for_l1_build": True,
+                            "l1_build_blockers": [],
+                        }
+                    ],
+                },
             "tt5l_campaign_readiness": {
                 "next_non_pr106_l5_action": {
                     "action_id": (
@@ -546,6 +570,24 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
     assert tt5l_row["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
     )
+    asymptotic_row = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"] == "l5_v2_asymptotic_pursuit_candidate"
+    )
+    assert asymptotic_row["technique"] == "z6_z7_z8_predictive_coding_world_models"
+    assert asymptotic_row["validation_status"] == "build_z6_l1_scaffold_first"
+    assert asymptotic_row["horizon_class"] == "asymptotic_pursuit"
+    assert asymptotic_row["score_claim"] is False
+    assert asymptotic_row["promotion_eligible"] is False
+    assert asymptotic_row["ready_for_exact_eval_dispatch"] is False
+    assert asymptotic_row["rank_or_kill_eligible"] is False
+    assert asymptotic_row["ready_for_recommended_next_action"] is True
+    assert asymptotic_row["ready_for_l1_build"] is True
+    assert asymptotic_row["l1_build_blockers"] == []
+    assert "requires_z6_l1_scaffold_before_paid_dispatch" in asymptotic_row[
+        "dispatch_blockers"
+    ]
     queued = next(
         r
         for r in plan.validation_queue

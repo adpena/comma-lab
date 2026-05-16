@@ -903,6 +903,92 @@ def test_l5_v2_research_basis_is_explicit_and_canonical() -> None:
     )
 
 
+def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
+    payload = l5_v2.l5_v2_asymptotic_pursuit_candidates()
+
+    assert payload["schema"] == (
+        l5_v2.L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA
+    )
+    assert payload["candidate_ids"] == [
+        "z6_z7_z8_predictive_coding_world_models",
+        "rudin_floor_interpretable_ml_substrate",
+        "tishby_ib_pure_substrate",
+    ]
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["ready_for_paid_dispatch"] is False
+
+    rows = {row["candidate_id"]: row for row in payload["candidates"]}
+    z6 = rows["z6_z7_z8_predictive_coding_world_models"]
+    assert z6["recommended_next_action_id"] == "build_z6_l1_scaffold_first"
+    assert z6["ready_for_recommended_next_action"] is True
+    assert z6["ready_for_l1_build"] is True
+    assert z6["local_ledger_present"] is True
+    assert z6["lane_registry_registered"] is True
+    assert z6["local_ledger_sha256"]
+    assert z6["expected_first_artifacts_all_present"] is False
+    assert z6["ready_for_l1_scaffold_dispatch"] is False
+    assert z6["ready_for_l1_build_semantics"] == (
+        "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+    )
+    assert "z6_predictive_coding_world_model" in "\n".join(
+        z6["expected_first_artifacts"]
+    )
+    assert "requires_z6_l1_scaffold_before_paid_dispatch" in z6["blockers"]
+
+    rudin = rows["rudin_floor_interpretable_ml_substrate"]
+    assert rudin["ready_for_recommended_next_action"] is True
+    assert rudin["ready_for_l1_build"] is False
+    assert "requires_pre_l1_gate:ratify_and_build_rudin_k8_l1_scaffold" in rudin[
+        "l1_build_blockers"
+    ]
+
+    tishby = rows["tishby_ib_pure_substrate"]
+    assert tishby["ready_for_recommended_next_action"] is True
+    assert tishby["ready_for_l1_build"] is False
+    assert (
+        "requires_pre_l1_gate:"
+        "run_d4_probe_and_build_variational_ib_tractability_tool"
+    ) in tishby["l1_build_blockers"]
+
+    for row in rows.values():
+        assert row["horizon_class"] == "asymptotic_pursuit"
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["rank_or_kill_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        assert row["ready_for_paid_dispatch"] is False
+
+
+def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
+    tmp_path: Path,
+) -> None:
+    payload = l5_v2.l5_v2_asymptotic_pursuit_candidates(repo_root=tmp_path)
+
+    assert payload["candidate_count"] == 3
+    assert payload["ready_for_paid_dispatch"] is False
+    assert all(row["local_ledger_present"] is False for row in payload["candidates"])
+    assert all(
+        row["lane_registry_registered"] is False for row in payload["candidates"]
+    )
+    assert all(
+        row["ready_for_recommended_next_action"] is False
+        for row in payload["candidates"]
+    )
+    assert all(row["ready_for_l1_build"] is False for row in payload["candidates"])
+    assert (
+        "l5_v2_asymptotic_pursuit_ledger_missing:"
+        "z6_z7_z8_predictive_coding_world_models"
+    ) in payload["blockers"]
+    assert (
+        "l5_v2_asymptotic_pursuit_lane_registry_missing:"
+        "z6_z7_z8_predictive_coding_world_models:"
+        "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
+        "scoping_design_20260516"
+    ) in payload["blockers"]
+
+
 def test_l5_v2_staircase_steps_are_ordered_and_fail_closed() -> None:
     steps = l5_v2_staircase_steps()
     gate_ids = {gate.gate_id for gate in l5_v2_required_gates()}
@@ -1078,8 +1164,14 @@ def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action(
 ) -> None:
     readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
     tt5l = readiness["tt5l_campaign_readiness"]
+    asymptotic = readiness["asymptotic_pursuit_candidates"]
 
     assert tt5l["schema"] == "l5_v2_tt5l_campaign_readiness_v1"
+    assert asymptotic["schema"] == (
+        l5_v2.L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA
+    )
+    assert asymptotic["candidate_count"] == 3
+    assert asymptotic["ready_for_exact_eval_dispatch"] is False
     assert tt5l["non_pr106_staircase_priority"] is True
     assert tt5l["packetir_is_optional_stack_evidence"] is True
     assert tt5l["score_claim"] is False

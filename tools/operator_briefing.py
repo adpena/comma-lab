@@ -1495,6 +1495,14 @@ def _l5_v2_frontier_readiness(
     tt5l_campaign = readiness.get("tt5l_campaign_readiness")
     if not isinstance(tt5l_campaign, dict):
         tt5l_campaign = {}
+    asymptotic_payload = readiness.get("asymptotic_pursuit_candidates")
+    if not isinstance(asymptotic_payload, dict):
+        asymptotic_payload = {}
+    asymptotic_candidates = [
+        candidate
+        for candidate in asymptotic_payload.get("candidates", [])
+        if isinstance(candidate, dict)
+    ]
     architecture_lock_packet_blockers = architecture_lock_packet.get(
         "architecture_lock_blockers",
     )
@@ -1518,6 +1526,9 @@ def _l5_v2_frontier_readiness(
         "primary_staircase": "tt5l_first_non_pr106_l5_v2",
         "tt5l_campaign_readiness": tt5l_campaign,
         "next_non_pr106_l5_action": next_non_pr106_l5_action,
+        "asymptotic_pursuit_candidate_count": len(asymptotic_candidates),
+        "asymptotic_pursuit_candidates": asymptotic_candidates,
+        "asymptotic_pursuit_candidate_sample": asymptotic_candidates[:3],
         "measurement_schedule_tool_path": measurement_schedule_tool_path,
         "measurement_schedule_artifact_path": measurement_schedule_artifact_path,
         "measurement_schedule_report_path": measurement_schedule_report_path,
@@ -1714,10 +1725,30 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"{payload['packetir_section_entropy_rate_positive_derived_prefix_adaptive_prototype_row_count']}",
         f"  runtime-bound paired candidates: {payload['packetir_paired_candidate_count']}",
         f"  stack-cell candidates:           {payload['pr106_stack_cell_candidate_count']}",
+        "  asymptotic candidate count:      "
+        f"{payload['asymptotic_pursuit_candidate_count']}",
         f"  next exact-eval targets:         {payload['next_exact_eval_target_count']}",
         "",
-        "  Sample fail-fast targets:",
+        "  Asymptotic candidates:",
     ]
+    asymptotic_sample = payload.get("asymptotic_pursuit_candidate_sample")
+    if isinstance(asymptotic_sample, list) and asymptotic_sample:
+        for candidate in asymptotic_sample:
+            if not isinstance(candidate, dict):
+                continue
+            lines.append(
+                "    - "
+                f"{candidate.get('candidate_id')} -> "
+                f"{candidate.get('recommended_next_action_id')}"
+            )
+    else:
+        lines.append("    - none")
+    lines.extend(
+        [
+            "",
+            "  Sample fail-fast targets:",
+        ]
+    )
     sample = payload.get("next_exact_eval_targets_sample")
     if isinstance(sample, list) and sample:
         for target in sample:

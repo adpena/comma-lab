@@ -58,6 +58,8 @@ def test_briefing_runs_all_three_phases():
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
     assert "Phase 9 — L5-v2 TT5L-first frontier readiness" in proc.stdout
     assert "next non-PR106 L5 action:" in proc.stdout
+    assert "asymptotic candidate count:" in proc.stdout
+    assert "Asymptotic candidates:" in proc.stdout
     assert "paired measurement plan:" in proc.stdout
     assert "next exact-eval targets:" in proc.stdout
 
@@ -135,6 +137,19 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["promotion_eligible"] is False
     assert l5["rank_or_kill_eligible"] is False
     assert l5["ready_for_exact_eval_dispatch"] is False
+    assert l5["asymptotic_pursuit_candidate_count"] == 3
+    assert {
+        row["candidate_id"]
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    } == {
+        "z6_z7_z8_predictive_coding_world_models",
+        "rudin_floor_interpretable_ml_substrate",
+        "tishby_ib_pure_substrate",
+    }
+    assert all(
+        row["ready_for_exact_eval_dispatch"] is False
+        for row in l5["asymptotic_pursuit_candidate_sample"]
+    )
     assert l5["measurement_schedule_score_claim"] is False
     assert l5["measurement_schedule_promotion_eligible"] is False
     assert l5["measurement_schedule_ready_for_exact_eval_dispatch"] is False

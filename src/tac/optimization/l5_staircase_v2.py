@@ -177,6 +177,9 @@ L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH = (
 L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH = (
     "tools/build_l5_v2_architecture_lock_packet.py"
 )
+L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA = (
+    "l5_v2_asymptotic_pursuit_candidates_v1"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -227,10 +230,263 @@ class L5V2Step:
     promotion_eligible: bool = False
 
 
+@dataclass(frozen=True)
+class L5V2AsymptoticPursuitCandidate:
+    """One design-only asymptotic candidate for the L5 v2 frontier queue."""
+
+    candidate_id: str
+    lane_id: str
+    title: str
+    horizon_class: str
+    primary_axis: str
+    local_ledger_path: str
+    recommended_next_action_id: str
+    recommended_next_action: str
+    expected_first_artifacts: tuple[str, ...]
+    dependency_blockers: tuple[str, ...]
+    cost_band_usd: tuple[float, float]
+
+
+_L5_V2_ASYMPTOTIC_READY_FOR_L1_BUILD_IDS = frozenset({
+    "z6_z7_z8_predictive_coding_world_models",
+})
+
+
+_L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
+    L5V2AsymptoticPursuitCandidate, ...
+] = (
+    L5V2AsymptoticPursuitCandidate(
+        candidate_id="z6_z7_z8_predictive_coding_world_models",
+        lane_id=(
+            "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
+            "scoping_design_20260516"
+        ),
+        title="Z6/Z7/Z8 predictive-coding world-model staircase",
+        horizon_class="asymptotic_pursuit",
+        primary_axis="scorer_relationship_class_shift_predictive_coding",
+        local_ledger_path=(
+            ".omx/research/"
+            "time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
+            "asymptotic_pursuit_scoping_design_20260516.md"
+        ),
+        recommended_next_action_id="build_z6_l1_scaffold_first",
+        recommended_next_action=(
+            "Build Z6 L1 scaffold first: package, trainer, recipe, identity-"
+            "predictor disambiguator, and smoke-before-full gate."
+        ),
+        expected_first_artifacts=(
+            "src/tac/substrates/z6_predictive_coding_world_model/",
+            "experiments/train_substrate_z6_predictive_coding_world_model.py",
+            (
+                ".omx/operator_authorize_recipes/"
+                "substrate_z6_predictive_coding_modal_t4_dispatch.yaml"
+            ),
+        ),
+        dependency_blockers=(
+            "requires_z6_l1_scaffold_before_paid_dispatch",
+            "requires_identity_predictor_disambiguator_before_paradigm_claim",
+            "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
+        ),
+        cost_band_usd=(1.0, 12.5),
+    ),
+    L5V2AsymptoticPursuitCandidate(
+        candidate_id="rudin_floor_interpretable_ml_substrate",
+        lane_id="lane_rudin_floor_interpretable_ml_substrate_scoping_design_20260516",
+        title="Rudin floor interpretable-ML compositional decoder",
+        horizon_class="asymptotic_pursuit",
+        primary_axis="architecture_decode_contract_scorer_relationship_class_shift",
+        local_ledger_path=(
+            ".omx/research/"
+            "rudin_floor_interpretable_ml_substrate_"
+            "asymptotic_pursuit_scoping_design_20260516.md"
+        ),
+        recommended_next_action_id="ratify_and_build_rudin_k8_l1_scaffold",
+        recommended_next_action=(
+            "Run T3 ratification and build K=8 Rudin L1 scaffold with RDIF "
+            "archive grammar, pure-Python inflate, and byte-mutation proof."
+        ),
+        expected_first_artifacts=(
+            "src/tac/substrates/rudin_floor/",
+            "experiments/train_substrate_rudin_floor.py",
+            (
+                ".omx/operator_authorize_recipes/"
+                "substrate_rudin_floor_modal_a100_dispatch.yaml"
+            ),
+        ),
+        dependency_blockers=(
+            "requires_t3_ratification_before_l1_scaffold_dispatch",
+            "requires_dykstra_feasibility_intersection_before_paid_smoke",
+            "requires_byte_mutation_proof_before_score_or_rank_authority",
+        ),
+        cost_band_usd=(3.0, 15.0),
+    ),
+    L5V2AsymptoticPursuitCandidate(
+        candidate_id="tishby_ib_pure_substrate",
+        lane_id="lane_tishby_ib_pure_substrate_scoping_design_20260516",
+        title="Tishby IB-pure primary Lagrangian substrate",
+        horizon_class="asymptotic_pursuit",
+        primary_axis="training_paradigm_scorer_relationship_class_shift",
+        local_ledger_path=(
+            ".omx/research/"
+            "tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_"
+            "20260516.md"
+        ),
+        recommended_next_action_id=(
+            "run_d4_probe_and_build_variational_ib_tractability_tool"
+        ),
+        recommended_next_action=(
+            "Run D4 H(latent|scorer_class) probe and build the canonical "
+            "Variational-IB tractability checker before any substrate scaffold."
+        ),
+        expected_first_artifacts=(
+            ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+            "tools/check_variational_ib_tractability.py",
+            ".omx/state/variational_ib_tractability_tishby_ib_pure.json",
+        ),
+        dependency_blockers=(
+            "requires_d4_probe_verdict_before_tishby_scaffold",
+            "requires_variational_ib_tractability_before_path_vib_or_mine",
+            "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim",
+        ),
+        cost_band_usd=(3.0, 60.0),
+    ),
+)
+
+
 def l5_v2_research_basis_ids() -> tuple[str, ...]:
     """Return the source stack that anchors L5 v2 planning claims."""
 
     return tuple(research_basis_ids_for_family("time_traveler_l5_v2"))
+
+
+def l5_v2_asymptotic_pursuit_candidates(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return fail-closed design-only L5 v2 asymptotic candidate rows."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    lane_registry_ids, lane_registry_blockers = _l5_v2_lane_registry_ids(
+        repo_root=resolved_repo_root,
+    )
+    rows: list[dict[str, Any]] = []
+    aggregate_blockers: list[str] = list(lane_registry_blockers)
+    for candidate in _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES:
+        ledger_path = resolved_repo_root / candidate.local_ledger_path
+        ledger_present = ledger_path.is_file()
+        ledger_sha256 = _sha256_file(ledger_path) if ledger_present else ""
+        lane_registry_registered = candidate.lane_id in lane_registry_ids
+        expected_first_artifact_status = []
+        for artifact_path in candidate.expected_first_artifacts:
+            expected_path = resolved_repo_root / artifact_path
+            expected_first_artifact_status.append(
+                {
+                    "path": artifact_path,
+                    "present": expected_path.exists(),
+                }
+            )
+        expected_first_artifacts_all_present = all(
+            bool(row["present"]) for row in expected_first_artifact_status
+        )
+        blockers = list(candidate.dependency_blockers)
+        if not ledger_present:
+            blockers.append(
+                "l5_v2_asymptotic_pursuit_ledger_missing:"
+                f"{candidate.candidate_id}"
+            )
+        if not lane_registry_registered:
+            blockers.append(
+                "l5_v2_asymptotic_pursuit_lane_registry_missing:"
+                f"{candidate.candidate_id}:{candidate.lane_id}"
+            )
+        ready_for_l1_build = (
+            ledger_present
+            and lane_registry_registered
+            and candidate.candidate_id in _L5_V2_ASYMPTOTIC_READY_FOR_L1_BUILD_IDS
+        )
+        l1_build_blockers = []
+        if not ready_for_l1_build:
+            if not ledger_present:
+                l1_build_blockers.append(
+                    "requires_l5_v2_asymptotic_pursuit_source_ledger"
+                )
+            if not lane_registry_registered:
+                l1_build_blockers.append(
+                    "requires_l5_v2_asymptotic_pursuit_lane_registry_entry"
+                )
+            l1_build_blockers.append(
+                f"requires_pre_l1_gate:{candidate.recommended_next_action_id}"
+            )
+        aggregate_blockers.extend(blockers)
+        rows.append(
+            {
+                **candidate.__dict__,
+                "cost_band_usd": list(candidate.cost_band_usd),
+                "expected_first_artifacts": list(candidate.expected_first_artifacts),
+                "expected_first_artifact_status": expected_first_artifact_status,
+                "expected_first_artifacts_all_present": (
+                    expected_first_artifacts_all_present
+                ),
+                "dependency_blockers": list(candidate.dependency_blockers),
+                "local_ledger_present": ledger_present,
+                "local_ledger_sha256": ledger_sha256,
+                "lane_registry_registered": lane_registry_registered,
+                "blockers": blockers,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "ready_for_paid_dispatch": False,
+                "ready_for_recommended_next_action": (
+                    ledger_present and lane_registry_registered
+                ),
+                "ready_for_l1_build": ready_for_l1_build,
+                "ready_for_l1_build_semantics": (
+                    "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
+                ),
+                "ready_for_l1_scaffold_dispatch": False,
+                "l1_build_blockers": l1_build_blockers,
+            }
+        )
+    return {
+        "schema": L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA,
+        "campaign_id": CAMPAIGN_ID,
+        "subject_id": SUBJECT_ID,
+        "candidate_count": len(rows),
+        "candidate_ids": [str(row["candidate_id"]) for row in rows],
+        "candidates": rows,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "blockers": list(dict.fromkeys(aggregate_blockers)),
+    }
+
+
+def _l5_v2_lane_registry_ids(*, repo_root: Path) -> tuple[set[str], list[str]]:
+    """Return lane ids from the canonical registry without raising on drift."""
+
+    registry_path = repo_root / ".omx/state/lane_registry.json"
+    if not registry_path.is_file():
+        return set(), ["l5_v2_lane_registry_missing"]
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return set(), ["l5_v2_lane_registry_json_invalid"]
+    if not isinstance(registry, Mapping):
+        return set(), ["l5_v2_lane_registry_not_object"]
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        return set(), ["l5_v2_lane_registry_lanes_not_list"]
+    lane_ids = {
+        str(lane.get("id"))
+        for lane in lanes
+        if isinstance(lane, Mapping) and str(lane.get("id") or "")
+    }
+    return lane_ids, []
 
 
 def l5_v2_required_gates() -> tuple[L5V2Gate, ...]:
@@ -3691,6 +3947,9 @@ def l5_v2_dispatch_readiness(
         "blockers": blockers + evidence_blockers + score_dispatch_blockers,
         "gates": gates,
         "steps": [step.__dict__ for step in l5_v2_staircase_steps()],
+        "asymptotic_pursuit_candidates": l5_v2_asymptotic_pursuit_candidates(
+            repo_root=resolved_repo_root,
+        ),
         "prediction_band_verdict": prediction_band_verdict,
         "prediction_band_rank_ready": prediction_band_rank_ready,
         "packetir_stack_evidence": l5_v2_packetir_stack_evidence_payload(
@@ -3891,6 +4150,7 @@ __all__ = [
     "L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH",
     "L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA",
     "L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH",
+    "L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256",
@@ -3931,10 +4191,12 @@ __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
     "TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH",
+    "L5V2AsymptoticPursuitCandidate",
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
     "l5_v2_architecture_lock_packet",
+    "l5_v2_asymptotic_pursuit_candidates",
     "l5_v2_canonical_probe_gate_evidence",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
