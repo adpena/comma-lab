@@ -29,6 +29,9 @@ L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA = "l5_v2_sideinfo_effect_curve_v1"
 L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH = (
     "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl"
 )
+L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH = (
+    "tools/build_l5_v2_sideinfo_effect_curve.py"
+)
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES = ("contest_cpu", "contest_cuda")
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS = (
     "zero",

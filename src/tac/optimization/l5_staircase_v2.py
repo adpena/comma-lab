@@ -30,6 +30,7 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
     L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+    L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH,
     validate_l5_v2_sideinfo_effect_curve,
 )
 from tac.optimization.l5_v2_probe_disambiguator import (
@@ -165,6 +166,16 @@ L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
 )
 L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA = (
     "l5_v2_packetir_section_entropy_evidence_v1"
+)
+L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA = "l5_v2_architecture_lock_packet_v1"
+L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json"
+)
+L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH = (
+    ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.md"
+)
+L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH = (
+    "tools/build_l5_v2_architecture_lock_packet.py"
 )
 
 GateStatus = Literal["required", "satisfied", "blocked"]
@@ -2152,6 +2163,10 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "command_template": (
                 "run paired CPU/CUDA TT5L side-info variants "
                 "zero, random_lsb, shuffled, trained, and ablated; then "
+                f".venv/bin/python {L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH} "
+                "--cell-json <paired_tt5l_sideinfo_cells.json> "
+                f"--output-json {TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH} "
+                "&& "
                 f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
                 f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
                 f"--sideinfo-effect-curve-json {TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH} "
@@ -2163,6 +2178,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
                 L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
             ],
+            "sideinfo_effect_curve_tool_path": L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH,
             "required_axes": list(_REQUIRED_EXACT_AXES),
             "required_variants": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS),
             "architecture_lock_blocker": (
@@ -3719,11 +3735,162 @@ def l5_v2_dispatch_readiness(
     return payload
 
 
+def l5_v2_architecture_lock_packet(
+    gate_evidence: (
+        Mapping[str, L5V2GateEvidence | Mapping[str, Any]]
+        | Iterable[L5V2GateEvidence | Mapping[str, Any]]
+        | None
+    ) = None,
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return the canonical TT5L L5-v2 architecture lock/no-lock packet.
+
+    The packet is stricter than the intermediate readiness boolean: architecture
+    lock requires all gate evidence plus side-info effect curve, first-anchor
+    timing-smoke custody, and exact/diagnostic anchor custody.
+    """
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=gate_evidence,
+        repo_root=resolved_repo_root,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+    required_checks = {
+        "all_gate_evidence_valid": readiness.get("all_gate_evidence_valid") is True,
+        "dykstra_score_axis_sanity_valid": (
+            tt5l.get("dykstra_score_axis_sanity_valid") is True
+        ),
+        "move_level_feasibility_artifact_valid": (
+            tt5l.get("move_level_feasibility_artifact_valid") is True
+        ),
+        "sideinfo_gate_evidence_valid": (
+            tt5l.get("sideinfo_gate_evidence_valid") is True
+        ),
+        "probe_gate_evidence_valid": tt5l.get("probe_gate_evidence_valid") is True,
+        "paired_axis_plan_evidence_valid": (
+            tt5l.get("paired_axis_plan_evidence_valid") is True
+        ),
+        "sideinfo_effect_curve_artifact_valid": (
+            tt5l.get("sideinfo_effect_curve_artifact_valid") is True
+        ),
+        "first_anchor_timing_smoke_artifact_valid": (
+            tt5l.get("first_anchor_timing_smoke_artifact_valid") is True
+        ),
+        "anchor_pair_evidence_valid": tt5l.get("anchor_pair_evidence_valid") is True,
+    }
+    blocker_by_check = {
+        "all_gate_evidence_valid": "requires_all_l5_v2_gate_evidence_valid",
+        "dykstra_score_axis_sanity_valid": "requires_tt5l_dykstra_score_axis_sanity",
+        "move_level_feasibility_artifact_valid": (
+            "requires_tt5l_move_level_feasibility_artifact"
+        ),
+        "sideinfo_gate_evidence_valid": "requires_tt5l_sideinfo_gate_evidence",
+        "probe_gate_evidence_valid": "requires_c1_z5_tt5l_probe_gate_evidence",
+        "paired_axis_plan_evidence_valid": "requires_paired_cpu_cuda_axis_plan",
+        "sideinfo_effect_curve_artifact_valid": (
+            "requires_paired_cpu_cuda_sideinfo_effect_curve"
+        ),
+        "first_anchor_timing_smoke_artifact_valid": (
+            "requires_tt5l_first_anchor_timing_smoke_artifact"
+        ),
+        "anchor_pair_evidence_valid": "requires_exact_or_diagnostic_anchor_pair",
+    }
+    architecture_lock_blockers = [
+        blocker_by_check[check_id]
+        for check_id, passed in required_checks.items()
+        if passed is not True
+    ]
+    architecture_lock_allowed = not architecture_lock_blockers
+    return {
+        "schema": L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA,
+        "subject_id": SUBJECT_ID,
+        "lane_id": LANE_ID,
+        "campaign_id": CAMPAIGN_ID,
+        "artifact_path": L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
+        "report_path": L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH,
+        "tool_path": L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH,
+        "planning_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "architecture_lock_allowed": architecture_lock_allowed,
+        "readiness_architecture_lock_allowed": (
+            tt5l.get("architecture_lock_allowed") is True
+        ),
+        "required_checks": required_checks,
+        "architecture_lock_blockers": architecture_lock_blockers,
+        "next_non_pr106_l5_action": tt5l.get("next_non_pr106_l5_action", {}),
+        "tt5l_campaign_readiness": tt5l,
+        "readiness_blockers": list(readiness.get("blockers", [])),
+        "authority_semantics": (
+            "lock/no-lock planning packet only; no score, rank, promotion, "
+            "or exact-dispatch authority"
+        ),
+    }
+
+
+def render_l5_v2_architecture_lock_packet_markdown(
+    packet: Mapping[str, Any],
+) -> str:
+    """Render the architecture lock/no-lock packet for .omx review."""
+
+    checks = packet.get("required_checks")
+    next_action = packet.get("next_non_pr106_l5_action")
+    if not isinstance(checks, Mapping):
+        checks = {}
+    if not isinstance(next_action, Mapping):
+        next_action = {}
+    lines = [
+        "# L5 v2 architecture lock packet",
+        "",
+        f"- schema: `{packet.get('schema')}`",
+        f"- subject_id: `{packet.get('subject_id')}`",
+        f"- lane_id: `{packet.get('lane_id')}`",
+        f"- architecture_lock_allowed: `{packet.get('architecture_lock_allowed')}`",
+        (
+            "- readiness_architecture_lock_allowed: "
+            f"`{packet.get('readiness_architecture_lock_allowed')}`"
+        ),
+        f"- next_action: `{next_action.get('action_id', 'missing')}`",
+        "- score_claim: `false`",
+        "- promotion_eligible: `false`",
+        "- ready_for_exact_eval_dispatch: `false`",
+        "",
+        "## Required Checks",
+    ]
+    for check_id, passed in checks.items():
+        lines.append(f"- `{check_id}`: `{passed}`")
+    blockers = packet.get("architecture_lock_blockers")
+    lines.extend(["", "## Blockers"])
+    if isinstance(blockers, list) and blockers:
+        lines.extend(f"- `{blocker}`" for blocker in blockers)
+    else:
+        lines.append("- none")
+    lines.extend(
+        [
+            "",
+            "## Authority",
+            "",
+            str(packet.get("authority_semantics") or ""),
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
 __all__ = [
     "CAMPAIGN_ID",
     "L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH",
     "L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH",
     "L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH",
+    "L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH",
+    "L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH",
+    "L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA",
+    "L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH",
     "L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256",
@@ -3767,6 +3934,7 @@ __all__ = [
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
+    "l5_v2_architecture_lock_packet",
     "l5_v2_canonical_probe_gate_evidence",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
@@ -3779,6 +3947,7 @@ __all__ = [
     "l5_v2_research_basis_ids",
     "l5_v2_staircase_steps",
     "l5_v2_tt5l_campaign_readiness",
+    "render_l5_v2_architecture_lock_packet_markdown",
     "tt5l_first_anchor_timing_smoke_status",
     "tt5l_move_level_feasibility_status",
     "tt5l_sideinfo_effect_curve_status",

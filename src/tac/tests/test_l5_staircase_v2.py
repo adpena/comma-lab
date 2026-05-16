@@ -4,6 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -19,6 +22,7 @@ from tac.optimization.l5_staircase_v2 import (
     PREDICTED_DELTA_BAND,
     SUBJECT_ID,
     L5V2GateEvidence,
+    l5_v2_architecture_lock_packet,
     l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
     l5_v2_packetir_section_entropy_evidence_payload,
@@ -29,6 +33,7 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_required_gates,
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
+    render_l5_v2_architecture_lock_packet_markdown,
 )
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
@@ -46,6 +51,8 @@ from tac.optimization.substrate_composition_matrix import (
     build_composition_matrix,
     per_substrate_pareto_rows,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _sha(seed: int) -> str:
@@ -1795,6 +1802,12 @@ def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
     assert tt5l["next_non_pr106_l5_action"]["artifact_path"] == (
         l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
     )
+    assert tt5l["next_non_pr106_l5_action"]["sideinfo_effect_curve_tool_path"] == (
+        "tools/build_l5_v2_sideinfo_effect_curve.py"
+    )
+    assert "build_l5_v2_sideinfo_effect_curve.py" in tt5l[
+        "next_non_pr106_l5_action"
+    ]["command_template"]
     assert (
         tt5l["next_non_pr106_l5_action"]["architecture_lock_blocker"]
         == "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
@@ -1881,6 +1894,102 @@ def test_l5_v2_tt5l_first_anchor_timing_rejects_mismatched_result_hash(
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_first_anchor_timing_smoke_artifact"
     )
+
+
+def test_l5_v2_architecture_lock_packet_requires_timing_and_anchor(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    packet = l5_v2_architecture_lock_packet(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+
+    assert packet["schema"] == l5_v2.L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA
+    assert packet["architecture_lock_allowed"] is False
+    assert packet["readiness_architecture_lock_allowed"] is True
+    assert packet["required_checks"]["sideinfo_effect_curve_artifact_valid"] is True
+    assert packet["required_checks"]["first_anchor_timing_smoke_artifact_valid"] is False
+    assert packet["required_checks"]["anchor_pair_evidence_valid"] is False
+    assert "requires_tt5l_first_anchor_timing_smoke_artifact" in packet[
+        "architecture_lock_blockers"
+    ]
+    assert "requires_exact_or_diagnostic_anchor_pair" in packet[
+        "architecture_lock_blockers"
+    ]
+    assert packet["score_claim"] is False
+    assert packet["promotion_eligible"] is False
+    assert packet["ready_for_exact_eval_dispatch"] is False
+
+
+def test_l5_v2_architecture_lock_packet_allows_only_after_full_custody(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
+    _write_tt5l_first_anchor_timing_smoke_artifact(tmp_path)
+    packet = l5_v2_architecture_lock_packet(
+        gate_evidence=_valid_gate_evidence_payloads(tmp_path),
+        repo_root=tmp_path,
+    )
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert packet["architecture_lock_allowed"] is True
+    assert all(packet["required_checks"].values())
+    assert packet["architecture_lock_blockers"] == []
+    assert "architecture_lock_allowed: `True`" in report
+    assert "- none" in report
+    assert "score, rank, promotion" in report
+
+
+def test_l5_v2_architecture_lock_packet_cli_writes_no_lock_packet(
+    tmp_path: Path,
+) -> None:
+    fake_repo_root = (
+        REPO_ROOT
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_arch_lock_packet_{tmp_path.name}"
+    )
+    output_json = fake_repo_root / ".omx/research/architecture_lock_packet.json"
+    output_md = fake_repo_root / ".omx/research/architecture_lock_packet.md"
+
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "tools/build_l5_v2_architecture_lock_packet.py",
+                "--repo-root",
+                str(fake_repo_root),
+                "--output-json",
+                str(output_json.relative_to(fake_repo_root)),
+                "--output-md",
+                str(output_md.relative_to(fake_repo_root)),
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        packet = json.loads(output_json.read_text(encoding="utf-8"))
+        report = output_md.read_text(encoding="utf-8")
+        assert packet["architecture_lock_allowed"] is False
+        assert "architecture_lock_allowed=false" in proc.stdout
+        assert "score_claim=false" in proc.stdout
+        assert "requires_all_l5_v2_gate_evidence_valid" in packet[
+            "architecture_lock_blockers"
+        ]
+        assert "L5 v2 architecture lock packet" in report
+    finally:
+        if fake_repo_root.exists():
+            shutil.rmtree(fake_repo_root)
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(

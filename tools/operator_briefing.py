@@ -62,8 +62,11 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
 
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.l5_staircase_v2 import (  # noqa: E402
+    L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
+    L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH,
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
+    l5_v2_architecture_lock_packet,
     l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
 )
@@ -1348,6 +1351,7 @@ def _l5_v2_frontier_readiness(
     sideinfo_evidence = l5_v2_canonical_sideinfo_gate_evidence()
     gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
     readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
+    architecture_lock_packet = l5_v2_architecture_lock_packet(repo_root=REPO_ROOT)
     matrix = _load_l5_v2_packetir_matrix()
     section_entropy_matrix = _load_l5_v2_section_entropy_matrix()
     paired_measurement_plan = _load_l5_v2_paired_measurement_dispatch_plan()
@@ -1450,6 +1454,11 @@ def _l5_v2_frontier_readiness(
     tt5l_campaign = readiness.get("tt5l_campaign_readiness")
     if not isinstance(tt5l_campaign, dict):
         tt5l_campaign = {}
+    architecture_lock_packet_blockers = architecture_lock_packet.get(
+        "architecture_lock_blockers",
+    )
+    if not isinstance(architecture_lock_packet_blockers, list):
+        architecture_lock_packet_blockers = []
     next_non_pr106_l5_action = tt5l_campaign.get("next_non_pr106_l5_action")
     if not isinstance(next_non_pr106_l5_action, dict):
         next_non_pr106_l5_action = {}
@@ -1510,6 +1519,16 @@ def _l5_v2_frontier_readiness(
         "tt5l_architecture_lock_allowed": bool(
             tt5l_campaign.get("architecture_lock_allowed")
         ),
+        "architecture_lock_packet_artifact_path": (
+            L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH
+        ),
+        "architecture_lock_packet_report_path": (
+            L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH
+        ),
+        "architecture_lock_packet_allowed": bool(
+            architecture_lock_packet.get("architecture_lock_allowed")
+        ),
+        "architecture_lock_packet_blockers": architecture_lock_packet_blockers,
         "tt5l_first_anchor_timing_smoke_allowed": bool(
             tt5l_campaign.get("first_anchor_timing_smoke_allowed")
         ),
@@ -1617,6 +1636,8 @@ def _format_l5_v2_frontier_readiness() -> str:
         "  TT5L side-info curve artifact:  "
         f"{payload['tt5l_sideinfo_effect_curve_artifact_valid']}",
         f"  TT5L architecture lock allowed: {payload['tt5l_architecture_lock_allowed']}",
+        f"  architecture lock packet:       {payload['architecture_lock_packet_artifact_path']}",
+        f"  architecture lock packet ok:    {payload['architecture_lock_packet_allowed']}",
         f"  TT5L timing smoke allowed:      {payload['tt5l_first_anchor_timing_smoke_allowed']}",
         f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",
