@@ -10,6 +10,9 @@ import pytest
 
 import tac.optimization.l5_staircase_v2 as l5_v2
 from tac.optimization.l5_staircase_v2 import (
+    L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA,
+    L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH,
+    L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256,
     L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA,
     L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA,
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
@@ -17,6 +20,7 @@ from tac.optimization.l5_staircase_v2 import (
     SUBJECT_ID,
     L5V2GateEvidence,
     l5_v2_dispatch_readiness,
+    l5_v2_packetir_section_entropy_evidence_payload,
     l5_v2_packetir_stack_evidence_payload,
     l5_v2_pr106_stack_cell_candidates,
     l5_v2_prediction_band_payload,
@@ -461,6 +465,65 @@ def test_l5_v2_packetir_matrix_sha_pin_matches_committed_artifact() -> None:
 
     assert matrix_path.is_file()
     assert _file_sha256(matrix_path) == PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
+
+
+def test_l5_v2_packetir_section_entropy_evidence_is_nonpromotional() -> None:
+    payload = l5_v2_packetir_section_entropy_evidence_payload()
+
+    assert payload["schema"] == L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA
+    assert payload["source_matrix_artifact_sha256"] == (
+        L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256
+    )
+    assert payload["profiled_candidate_count"] == 2
+    assert payload["prototype_row_count"] == 12
+    assert payload["rate_positive_prototype_row_count"] == 0
+    assert payload["best_rate_positive_prototype"] is None
+    assert payload["best_charged_prototype"]["delta_bytes_vs_source_section"] == (
+        58284.0
+    )
+    assert "l5_v2_packetir_static_context_recode_no_rate_positive_prototypes" in (
+        payload["blockers"]
+    )
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_l5_v2_packetir_section_entropy_matrix_sha_pin_matches_artifact() -> None:
+    matrix_path = Path(L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH)
+
+    assert matrix_path.is_file()
+    assert (
+        _file_sha256(matrix_path)
+        == L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256
+    )
+
+
+def test_l5_v2_packetir_section_entropy_evidence_fails_closed_without_matrix(
+    tmp_path: Path,
+) -> None:
+    payload = l5_v2_packetir_section_entropy_evidence_payload(repo_root=tmp_path)
+
+    assert payload["profiled_candidate_count"] == 0
+    assert payload["prototype_row_count"] == 0
+    assert payload["rate_positive_prototype_row_count"] == 0
+    assert "l5_v2_packetir_section_entropy_matrix_artifact_missing" in payload[
+        "blockers"
+    ]
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_l5_v2_dispatch_readiness_surfaces_section_entropy_evidence() -> None:
+    readiness = l5_v2_dispatch_readiness()
+    entropy = readiness["packetir_section_entropy_evidence"]
+
+    assert entropy["schema"] == L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA
+    assert entropy["score_claim"] is False
+    assert entropy["promotion_eligible"] is False
+    assert entropy["ready_for_exact_eval_dispatch"] is False
+    assert entropy["rate_positive_prototype_row_count"] == 0
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(

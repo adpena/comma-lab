@@ -63,9 +63,18 @@ PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = (
     "cda1219fb880cc0513a5d0706af1b95fe74e7a8a52391588e054dba2c24ad93c"
 )
+L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_packetir_section_entropy_matrix_20260516_codex.json"
+)
+L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256 = (
+    "bc5786c8d59d9ec97360e3fd7938dc5c0db103ad87d5f66510d2f9cd099468d1"
+)
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
     "l5_v2_pr106_packetir_stack_cell_candidates_v1"
+)
+L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA = (
+    "l5_v2_packetir_section_entropy_evidence_v1"
 )
 
 GateStatus = Literal["required", "satisfied", "blocked"]
@@ -563,6 +572,137 @@ def l5_v2_packetir_stack_evidence_payload(
         "evidence_semantics": (
             "PR106 PacketIR exact rows are stack-planning evidence only; "
             "they are not TT5L score evidence and do not unlock promotion"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
+def l5_v2_packetir_section_entropy_evidence_payload(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return charged PR106 PacketIR section-entropy evidence.
+
+    The section matrix is a negative/redirect signal for L5 v2 PacketIR work:
+    real PR106 Format0C/0D streams have large unpriced context floors, but the
+    charged static-context prototypes are byte-negative after model overhead.
+    Keep it visible to the staircase planner without granting score authority.
+    """
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    matrix_path = (
+        resolved_repo_root / L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH
+    )
+    blockers: list[str] = []
+    matrix: Mapping[str, Any] = {}
+    artifact_sha = ""
+    if not matrix_path.is_file():
+        blockers.append("l5_v2_packetir_section_entropy_matrix_artifact_missing")
+    else:
+        artifact_sha = _sha256_file(matrix_path)
+        if artifact_sha != L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256:
+            blockers.append(
+                "l5_v2_packetir_section_entropy_matrix_artifact_sha_mismatch"
+            )
+        try:
+            loaded = json.loads(matrix_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append("l5_v2_packetir_section_entropy_matrix_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                matrix = loaded
+            else:
+                blockers.append("l5_v2_packetir_section_entropy_matrix_not_object")
+
+    if matrix:
+        if matrix.get("schema") != "l5_v2_packetir_section_entropy_matrix_v1":
+            blockers.append("l5_v2_packetir_section_entropy_matrix_schema_mismatch")
+        if matrix.get("score_claim") is not False:
+            blockers.append("l5_v2_packetir_section_entropy_score_claim_not_false")
+        if matrix.get("promotion_eligible") is not False:
+            blockers.append(
+                "l5_v2_packetir_section_entropy_promotion_eligible_not_false"
+            )
+        if matrix.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append(
+                "l5_v2_packetir_section_entropy_dispatch_ready_not_false"
+            )
+
+    prototype_rows = [
+        prototype
+        for row in _mapping_items(matrix.get("rows"))
+        for prototype in _mapping_items(row.get("prototype_rows"))
+    ]
+    profiled_candidate_count = matrix.get("profiled_candidate_count", 0)
+    prototype_row_count = matrix.get("prototype_row_count", 0)
+    rate_positive_count = matrix.get("rate_positive_prototype_row_count", 0)
+    if not isinstance(profiled_candidate_count, int) or isinstance(
+        profiled_candidate_count, bool
+    ):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_profiled_candidate_count_not_int"
+        )
+        profiled_candidate_count = 0
+    if not isinstance(prototype_row_count, int) or isinstance(
+        prototype_row_count, bool
+    ):
+        blockers.append("l5_v2_packetir_section_entropy_prototype_row_count_not_int")
+        prototype_row_count = 0
+    if not isinstance(rate_positive_count, int) or isinstance(rate_positive_count, bool):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_rate_positive_count_not_int"
+        )
+        rate_positive_count = 0
+    if prototype_rows and prototype_row_count != len(prototype_rows):
+        blockers.append("l5_v2_packetir_section_entropy_prototype_count_mismatch")
+
+    best_charged_prototype = None
+    best_delta = None
+    for prototype in prototype_rows:
+        delta = _json_float(prototype.get("delta_bytes_vs_source_section"))
+        if delta is None:
+            continue
+        if best_delta is None or delta < best_delta:
+            best_delta = delta
+            best_charged_prototype = {
+                "section_name": prototype.get("section_name"),
+                "context_order": prototype.get("context_order"),
+                "source_section_bytes": prototype.get("source_section_bytes"),
+                "encoded_section_bytes": prototype.get("encoded_section_bytes"),
+                "delta_bytes_vs_source_section": delta,
+                "context_model_bytes": prototype.get("context_model_bytes"),
+                "range_stream_bytes": prototype.get("range_stream_bytes"),
+                "blockers": list(prototype.get("blockers", [])),
+            }
+    if matrix and rate_positive_count == 0:
+        blockers.append(
+            "l5_v2_packetir_static_context_recode_no_rate_positive_prototypes"
+        )
+
+    return {
+        "schema": L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA,
+        "source_matrix_artifact_path": (
+            L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH
+        ),
+        "source_matrix_artifact_sha256": artifact_sha,
+        "source_matrix_expected_sha256": (
+            L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256
+        ),
+        "source_matrix_schema": matrix.get("schema"),
+        "profiled_candidate_count": profiled_candidate_count,
+        "prototype_row_count": prototype_row_count,
+        "rate_positive_prototype_row_count": rate_positive_count,
+        "best_rate_positive_prototype": matrix.get("best_rate_positive_prototype"),
+        "best_charged_prototype": best_charged_prototype,
+        "evidence_semantics": (
+            "Charged static-context PacketIR section recodes are planning "
+            "evidence only; zero rate-positive rows redirects L5 v2 toward "
+            "lower-overhead, derivable, or runtime-integrated entropy models."
         ),
         "score_claim": False,
         "promotion_eligible": False,
@@ -1968,6 +2108,11 @@ def l5_v2_dispatch_readiness(
         "packetir_stack_evidence": l5_v2_packetir_stack_evidence_payload(
             repo_root=resolved_repo_root,
         ),
+        "packetir_section_entropy_evidence": (
+            l5_v2_packetir_section_entropy_evidence_payload(
+                repo_root=resolved_repo_root,
+            )
+        ),
         "pr106_stack_cell_candidates": l5_v2_pr106_stack_cell_candidates(
             repo_root=resolved_repo_root,
         ),
@@ -1976,6 +2121,9 @@ def l5_v2_dispatch_readiness(
 
 __all__ = [
     "CAMPAIGN_ID",
+    "L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA",
+    "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH",
+    "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256",
     "L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA",
     "L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA",
     "LANE_ID",
@@ -1992,6 +2140,7 @@ __all__ = [
     "L5V2Step",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
+    "l5_v2_packetir_section_entropy_evidence_payload",
     "l5_v2_packetir_stack_evidence_payload",
     "l5_v2_pr106_stack_cell_candidates",
     "l5_v2_prediction_band_payload",
