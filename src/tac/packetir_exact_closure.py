@@ -753,10 +753,12 @@ def _runtime_score_affecting_sections_match(
     alias = headerless_aliases.get(str(proof.get("format_id")))
     if alias is not None:
         expected_headerless_section, mode = alias
+        identity = _headerless_alias_identity(proof)
         if (
             expected_sections == {expected_headerless_section, "sidecar_payload"}
             and actual_sections == generic_actual
             and proof.get("inner_pr106_payload_sha256_unchanged") is True
+            and identity["valid"] is True
         ):
             return {
                 "matched": True,
@@ -767,12 +769,64 @@ def _runtime_score_affecting_sections_match(
                     "inner_pr106_payload_sha256_unchanged": proof.get(
                         "inner_pr106_payload_sha256_unchanged"
                     ),
+                    "headerless_alias_identity": identity,
                 },
             }
     return {
         "matched": False,
         "mode": "mismatch",
         "evidence": {},
+    }
+
+
+def _headerless_alias_identity(proof: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate SHA-bound identity for reconstructed PR106 payload aliases."""
+    byte_exact_identity = _as_mapping(proof.get("byte_exact_identity"))
+    source_sha = _first_str(
+        proof.get("source_inner_pr106_payload_sha256"),
+        proof.get("expected_inner_pr106_payload_sha256"),
+        proof.get("source_payload_sha256"),
+        byte_exact_identity.get("source_payload_sha256"),
+    )
+    runtime_sha = _first_str(
+        proof.get("runtime_inner_pr106_payload_sha256"),
+        proof.get("reconstructed_inner_pr106_payload_sha256"),
+        proof.get("runtime_reconstructed_pr106_payload_sha256"),
+        proof.get("source_payload_sha256"),
+        byte_exact_identity.get("source_payload_sha256"),
+    )
+    candidate_section_sha = _first_str(
+        proof.get("candidate_headerless_section_sha256"),
+        proof.get("candidate_pr106_payload_without_inner_header_sha256"),
+        proof.get("candidate_section_sha256"),
+    )
+    candidate_section_offset = _first_int(
+        proof.get("candidate_headerless_section_offset"),
+        proof.get("candidate_section_offset"),
+        proof.get("candidate_headerless_section_start"),
+    )
+    candidate_section_length = _first_int(
+        proof.get("candidate_headerless_section_length"),
+        proof.get("candidate_section_length"),
+        proof.get("candidate_headerless_section_bytes"),
+    )
+    valid = (
+        isinstance(source_sha, str)
+        and isinstance(runtime_sha, str)
+        and source_sha == runtime_sha
+        and isinstance(candidate_section_sha, str)
+        and candidate_section_offset is not None
+        and candidate_section_offset >= 0
+        and candidate_section_length is not None
+        and candidate_section_length > 0
+    )
+    return {
+        "valid": valid,
+        "source_inner_pr106_payload_sha256": source_sha,
+        "runtime_inner_pr106_payload_sha256": runtime_sha,
+        "candidate_headerless_section_sha256": candidate_section_sha,
+        "candidate_headerless_section_offset": candidate_section_offset,
+        "candidate_headerless_section_length": candidate_section_length,
     }
 
 
