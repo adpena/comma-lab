@@ -98,6 +98,13 @@ TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
 )
+TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH = (
+    ".omx/state/tt5l_move_level_feasibility.json"
+)
+TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA = "tt5l_move_level_feasibility_v1"
+TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID = (
+    "tt5l_move_level_constraint_feasibility_v1"
+)
 TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
 TT5L_DYKSTRA_SCORE_FORMULA = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
@@ -1346,6 +1353,103 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _tt5l_move_level_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return the TT5L move-level feasibility artifact status.
+
+    The Dykstra artifact is only score-axis sanity. This artifact is the
+    separate proof that the TT5L move-level constraints have a non-empty,
+    residual-bounded intersection before side-info curves or timing smokes
+    can advance.
+    """
+
+    artifact_path = repo_root / TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        blockers.append("tt5l_move_level_feasibility_artifact_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("tt5l_move_level_feasibility_artifact_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+                if not payload:
+                    blockers.append("tt5l_move_level_feasibility_artifact_empty")
+            else:
+                blockers.append("tt5l_move_level_feasibility_artifact_not_object")
+
+    schema = str(payload.get("schema") or "")
+    if payload and schema != TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA:
+        blockers.append("tt5l_move_level_feasibility_schema_mismatch")
+    subject_id = str(payload.get("subject_id") or payload.get("substrate_id") or "")
+    if payload and subject_id not in {TT5L_DYKSTRA_SUBSTRATE_ID, SUBJECT_ID, LANE_ID}:
+        blockers.append("tt5l_move_level_feasibility_subject_id_mismatch")
+    predicate_id = str(payload.get("predicate_id") or "")
+    if payload and predicate_id != TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID:
+        blockers.append("tt5l_move_level_feasibility_predicate_id_mismatch")
+    if payload and payload.get("predicate_passed") is not True:
+        blockers.append("tt5l_move_level_feasibility_predicate_not_passed")
+    if payload and payload.get("move_level_constraint_proof") is not True:
+        blockers.append("tt5l_move_level_feasibility_proof_not_true")
+
+    residual_max = _json_float(payload.get("residual_max"))
+    residual_tolerance = _json_float(payload.get("residual_tolerance"))
+    if payload and residual_max is None:
+        blockers.append("tt5l_move_level_feasibility_residual_max_missing")
+    if payload and residual_tolerance is None:
+        blockers.append("tt5l_move_level_feasibility_residual_tolerance_missing")
+    if (
+        payload
+        and residual_max is not None
+        and residual_tolerance is not None
+        and residual_max > residual_tolerance
+    ):
+        blockers.append("tt5l_move_level_feasibility_residual_exceeds_tolerance")
+
+    constraint_ids_payload = payload.get("constraint_set_ids")
+    if isinstance(constraint_ids_payload, list):
+        constraint_ids = {str(item) for item in constraint_ids_payload}
+    else:
+        constraint_ids = set()
+    if payload and constraint_ids != TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS:
+        blockers.append("tt5l_move_level_feasibility_constraint_set_ids_not_exact")
+    constraint_set_count = _non_bool_int(payload.get("constraint_set_count"))
+    if (
+        payload
+        and constraint_set_count != len(TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS)
+    ):
+        blockers.append("tt5l_move_level_feasibility_constraint_set_count_mismatch")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"tt5l_move_level_feasibility_{field}_not_false")
+
+    valid = not blockers
+    return {
+        "schema": "l5_v2_tt5l_move_level_feasibility_status_v1",
+        "artifact_path": TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": valid,
+        "subject_id": subject_id or None,
+        "predicate_id": predicate_id or None,
+        "predicate_passed": payload.get("predicate_passed"),
+        "move_level_constraint_proof": payload.get("move_level_constraint_proof"),
+        "residual_max": residual_max,
+        "residual_tolerance": residual_tolerance,
+        "constraint_set_ids": sorted(constraint_ids),
+        "constraint_set_count": constraint_set_count,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -1377,7 +1481,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     ).is_file()
     dykstra_status = _tt5l_dykstra_feasibility_status(repo_root=repo_root)
     dykstra_valid = dykstra_status["artifact_valid"] is True
-    sideinfo_effect_curve_allowed = dykstra_valid and sideinfo_valid
+    move_level_status = _tt5l_move_level_feasibility_status(repo_root=repo_root)
+    move_level_valid = move_level_status["artifact_valid"] is True
+    sideinfo_effect_curve_allowed = dykstra_valid and move_level_valid and sideinfo_valid
     first_anchor_timing_smoke_allowed = (
         sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid
     )
@@ -1394,6 +1500,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     if not probe_tool_exists:
         blockers.append("l5_v2_probe_disambiguator_tool_missing")
     blockers.extend(str(blocker) for blocker in dykstra_status["blockers"])
+    if dykstra_valid:
+        blockers.extend(str(blocker) for blocker in move_level_status["blockers"])
 
     if not dykstra_valid:
         next_action = {
@@ -1414,6 +1522,20 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 "through the Dykstra feasibility artifact before side-info "
                 "proofs, timing smokes, or dispatch planning"
             ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not move_level_valid:
+        next_action = {
+            "action_id": "materialize_tt5l_move_level_feasibility_proof",
+            "phase": "cargo_cult_unwind_move_level_feasibility",
+            "artifact_path": TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH,
+            "predicate_id": TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID,
+            "required_constraint_set_ids": sorted(TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS),
+            "expected_artifacts": [TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH],
+            "score_axis_sanity_artifact_path": TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH,
+            "score_axis_sanity_is_not_move_level_proof": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1579,7 +1701,10 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dykstra_feasibility_artifact_valid": dykstra_valid,
+        "dykstra_score_axis_sanity_valid": dykstra_valid,
         "dykstra_feasibility_status": dykstra_status,
+        "move_level_feasibility_artifact_valid": move_level_valid,
+        "move_level_feasibility_status": move_level_status,
         "sideinfo_gate_evidence_valid": sideinfo_valid,
         "probe_gate_evidence_valid": probe_valid,
         "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
@@ -3036,6 +3161,9 @@ __all__ = [
     "TT5L_DYKSTRA_SCORE_FORMULA",
     "TT5L_DYKSTRA_VERDICT_AUTHORITY_SCOPE",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
+    "TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH",
+    "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",
+    "TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
     "TT5L_PROBE_GATE_ARTIFACT_PATH",
     "TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH",
