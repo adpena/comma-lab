@@ -1861,6 +1861,279 @@ def test_l5_v2_tt5l_probe_action_uses_existing_fail_closed_intake(
     assert action["ready_for_exact_eval_dispatch"] is False
 
 
+def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_path.write_bytes(b"tt5l materialized archive fixture")
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    pair_group_id = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+    cpu_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu"
+    cuda_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
+    work_unit_path.write_text(
+        json.dumps(
+            {
+                "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+                "pair_group_id": pair_group_id,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "archive": {
+                    "path": archive_rel,
+                    "sha256": archive_sha,
+                    "bytes": archive_path.stat().st_size,
+                },
+                "runtime": {
+                    "submission_dir": runtime_rel,
+                    "expected_runtime_tree_sha256_by_axis": {
+                        "contest_cpu": "b" * 64,
+                        "contest_cuda": "c" * 64,
+                    },
+                    "expected_runtime_content_tree_sha256_by_axis": {
+                        "contest_cpu": "d" * 64,
+                        "contest_cuda": "d" * 64,
+                    },
+                },
+                "required_axes": ["contest_cpu", "contest_cuda"],
+                "lanes": {
+                    "contest_cpu": cpu_lane,
+                    "contest_cuda": cuda_lane,
+                },
+                "commands": {
+                    "contest_cpu": [
+                        ".venv/bin/modal",
+                        "run",
+                        "--detach",
+                        "experiments/modal_auth_eval_cpu.py",
+                        "--archive",
+                        archive_rel,
+                        "--expected-archive-sha256",
+                        archive_sha,
+                        "--submission-dir",
+                        runtime_rel,
+                        "--pair-group-id",
+                        pair_group_id,
+                        "--lane-id",
+                        cpu_lane,
+                        "--expected-runtime-tree-sha256",
+                        "b" * 64,
+                        "--provider-detach-ack",
+                    ],
+                    "contest_cuda": [
+                        ".venv/bin/modal",
+                        "run",
+                        "--detach",
+                        "experiments/modal_auth_eval.py",
+                        "--archive",
+                        archive_rel,
+                        "--expected-archive-sha256",
+                        archive_sha,
+                        "--submission-dir",
+                        runtime_rel,
+                        "--pair-group-id",
+                        pair_group_id,
+                        "--lane-id",
+                        cuda_lane,
+                        "--expected-runtime-tree-sha256",
+                        "c" * 64,
+                        "--provider-detach-ack",
+                    ],
+                },
+                "axes_skipped_due_to_existing_anchor": {
+                    "contest_cpu": False,
+                    "contest_cuda": False,
+                },
+                "existing_anchors_reused": {
+                    "contest_cpu": None,
+                    "contest_cuda": None,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    action = readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"]
+    materialized = readiness["tt5l_campaign_readiness"][
+        "materialized_tt5l_paired_work_unit_status"
+    ]
+
+    assert (
+        action["action_id"]
+        == "review_and_execute_l5_v2_tt5l_materialized_paired_measurement"
+    )
+    assert materialized["artifact_valid"] is True
+    assert action["ready_for_operator_dispatch"] is True
+    assert action["ready_for_provider_dispatch"] is False
+    assert action["score_claim"] is False
+    assert action["ready_for_exact_eval_dispatch"] is False
+    assert "tools/dispatch_modal_paired_auth_eval.py" in action[
+        "operator_execute_command_template_after_review"
+    ]
+    assert "--execute" in action["operator_execute_command_template_after_review"]
+    assert "experiments/modal_auth_eval.py" not in action[
+        "operator_execute_command_template_after_review"
+    ]
+
+
+def test_l5_v2_tt5l_materialized_work_unit_rejects_weak_axis_commands(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_path.write_bytes(b"tt5l archive")
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    work_unit_path.write_text(
+        json.dumps(
+            {
+                "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+                "pair_group_id": "wrong_pair_group",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "archive": {
+                    "path": archive_rel,
+                    "sha256": _file_sha256(archive_path),
+                    "bytes": archive_path.stat().st_size,
+                },
+                "runtime": {
+                    "submission_dir": runtime_rel,
+                    "expected_runtime_tree_sha256_by_axis": {
+                        "contest_cpu": "b" * 64,
+                        "contest_cuda": "c" * 64,
+                    },
+                    "expected_runtime_content_tree_sha256_by_axis": {
+                        "contest_cpu": "d" * 64,
+                        "contest_cuda": "d" * 64,
+                    },
+                },
+                "required_axes": ["contest_cpu", "contest_cuda"],
+                "lanes": {
+                    "contest_cpu": "wrong_cpu_lane",
+                    "contest_cuda": "wrong_cuda_lane",
+                },
+                "commands": {
+                    "contest_cpu": ["modal", "run", "cpu"],
+                    "contest_cuda": ["modal", "run", "cuda"],
+                },
+                "axes_skipped_due_to_existing_anchor": {
+                    "contest_cpu": False,
+                    "contest_cuda": False,
+                },
+                "existing_anchors_reused": {
+                    "contest_cpu": None,
+                    "contest_cuda": None,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    materialized = readiness["tt5l_campaign_readiness"][
+        "materialized_tt5l_paired_work_unit_status"
+    ]
+
+    assert materialized["artifact_valid"] is False
+    assert (
+        "l5_v2_tt5l_materialized_paired_work_unit_pair_group_id_mismatch"
+        in materialized["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_materialized_paired_work_unit_axis_command_not_modal_run:"
+        "contest_cpu"
+        in materialized["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_materialized_paired_work_unit_axis_command_wrong_wrapper:"
+        "contest_cuda"
+        in materialized["blockers"]
+    )
+    assert readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"][
+        "action_id"
+    ] == "materialize_l5_v2_paired_probe_measurements"
+
+
 def test_l5_v2_tt5l_readiness_surfaces_measurement_schedule_without_authority(
     tmp_path: Path,
 ) -> None:

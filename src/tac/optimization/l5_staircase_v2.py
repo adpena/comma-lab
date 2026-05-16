@@ -105,6 +105,16 @@ TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH = (
 TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH = (
     ".omx/research/l5_v2_probe_observation_intake_20260516_codex.md"
 )
+TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json"
+)
+TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID = (
+    "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+)
+TT5L_MATERIALIZED_PAIRED_WORK_UNIT_LANES = {
+    "contest_cpu": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+    "contest_cuda": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda",
+}
 TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
@@ -2316,6 +2326,290 @@ def _tt5l_probe_observation_intake_status(*, repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+
+    if not artifact_path.is_file():
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("l5_v2_tt5l_materialized_paired_work_unit_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+            else:
+                blockers.append("l5_v2_tt5l_materialized_paired_work_unit_not_object")
+
+    if payload and payload.get("schema") != "modal_paired_auth_eval_dispatch_plan_v2":
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_schema_mismatch")
+    if payload and payload.get("score_claim") is not False:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_score_claim_not_false")
+    if payload and payload.get("promotion_eligible") is not False:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_promotion_not_false")
+    if payload and payload.get("pair_group_id") != (
+        TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID
+    ):
+        blockers.append(
+            "l5_v2_tt5l_materialized_paired_work_unit_pair_group_id_mismatch"
+        )
+
+    archive = payload.get("archive") if payload else None
+    archive_path = ""
+    archive_sha256 = ""
+    archive_bytes = 0
+    if payload and not isinstance(archive, Mapping):
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_archive_missing")
+    elif isinstance(archive, Mapping):
+        archive_path = str(archive.get("path") or "").strip()
+        archive_sha256 = str(archive.get("sha256") or "").strip()
+        try:
+            archive_bytes = int(archive.get("bytes") or 0)
+        except (TypeError, ValueError):
+            archive_bytes = 0
+        if not archive_path:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_archive_path_missing"
+            )
+        if archive_path.startswith("/"):
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_archive_path_absolute"
+            )
+        if not _SHA256_HEX_RE.fullmatch(archive_sha256):
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_archive_sha_invalid"
+            )
+        if archive_bytes <= 0:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_archive_bytes_invalid"
+            )
+        if archive_path:
+            archive_file = repo_root / archive_path
+            if not archive_file.is_file():
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_archive_file_missing"
+                )
+            else:
+                observed_archive_bytes = archive_file.stat().st_size
+                observed_archive_sha256 = hashlib.sha256(
+                    archive_file.read_bytes()
+                ).hexdigest()
+                if observed_archive_bytes != archive_bytes:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_archive_bytes_mismatch"
+                    )
+                if observed_archive_sha256 != archive_sha256:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_archive_sha_mismatch"
+                    )
+
+    runtime = payload.get("runtime") if payload else None
+    submission_dir = ""
+    runtime_tree_by_axis: Mapping[str, Any] = {}
+    runtime_content_by_axis: Mapping[str, Any] = {}
+    if payload and not isinstance(runtime, Mapping):
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_runtime_missing")
+    elif isinstance(runtime, Mapping):
+        submission_dir = str(runtime.get("submission_dir") or "").strip()
+        if not submission_dir:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_submission_dir_missing"
+            )
+        if submission_dir.startswith("/"):
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_submission_dir_absolute"
+            )
+        if submission_dir:
+            runtime_dir = repo_root / submission_dir
+            if not runtime_dir.is_dir():
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_submission_dir_missing_on_disk"
+                )
+            elif not (runtime_dir / "inflate.sh").is_file():
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_inflate_sh_missing"
+                )
+        trees = runtime.get("expected_runtime_tree_sha256_by_axis")
+        contents = runtime.get("expected_runtime_content_tree_sha256_by_axis")
+        if isinstance(trees, Mapping):
+            runtime_tree_by_axis = trees
+        else:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_runtime_tree_by_axis_missing"
+            )
+        if isinstance(contents, Mapping):
+            runtime_content_by_axis = contents
+        else:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_runtime_content_by_axis_missing"
+            )
+        for axis in ("contest_cpu", "contest_cuda"):
+            if not _SHA256_HEX_RE.fullmatch(str(runtime_tree_by_axis.get(axis) or "")):
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_runtime_tree_missing:"
+                    + axis
+                )
+            if not _SHA256_HEX_RE.fullmatch(
+                str(runtime_content_by_axis.get(axis) or "")
+            ):
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_runtime_content_missing:"
+                    + axis
+                )
+
+    required_axes = payload.get("required_axes") if payload else None
+    if isinstance(required_axes, list):
+        missing = [axis for axis in ("contest_cpu", "contest_cuda") if axis not in required_axes]
+        if missing:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_required_axes_missing:"
+                + ",".join(missing)
+            )
+    elif payload:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_required_axes_missing")
+
+    commands = payload.get("commands") if payload else None
+    if not isinstance(commands, Mapping):
+        commands = {}
+        if payload:
+            blockers.append("l5_v2_tt5l_materialized_paired_work_unit_commands_missing")
+    lanes = payload.get("lanes") if payload else None
+    if not isinstance(lanes, Mapping):
+        lanes = {}
+        if payload:
+            blockers.append("l5_v2_tt5l_materialized_paired_work_unit_lanes_missing")
+    for axis, expected_lane in TT5L_MATERIALIZED_PAIRED_WORK_UNIT_LANES.items():
+        if str(lanes.get(axis) or "") != expected_lane:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_lane_mismatch:" + axis
+            )
+
+    def _flag_value(command: list[object], flag: str) -> str:
+        try:
+            index = command.index(flag)
+        except ValueError:
+            return ""
+        next_index = index + 1
+        if next_index >= len(command):
+            return ""
+        return str(command[next_index])
+
+    for axis in ("contest_cpu", "contest_cuda"):
+        command = commands.get(axis)
+        if not isinstance(command, list) or not command:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_axis_command_missing:" + axis
+            )
+            continue
+        expected_script = (
+            "experiments/modal_auth_eval_cpu.py"
+            if axis == "contest_cpu"
+            else "experiments/modal_auth_eval.py"
+        )
+        expected_lane = TT5L_MATERIALIZED_PAIRED_WORK_UNIT_LANES[axis]
+        expected_runtime_sha = str(runtime_tree_by_axis.get(axis) or "")
+        if ".venv/bin/modal" not in command or "run" not in command:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_axis_command_not_modal_run:"
+                + axis
+            )
+        if expected_script not in command:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_axis_command_wrong_wrapper:"
+                + axis
+            )
+        if "--detach" not in command or "--provider-detach-ack" not in command:
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_axis_command_detach_missing:"
+                + axis
+            )
+        expected_values = {
+            "--archive": archive_path,
+            "--expected-archive-sha256": archive_sha256,
+            "--submission-dir": submission_dir,
+            "--pair-group-id": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
+            "--lane-id": expected_lane,
+            "--expected-runtime-tree-sha256": expected_runtime_sha,
+        }
+        for flag, expected_value in expected_values.items():
+            if _flag_value(command, flag) != expected_value:
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_axis_command_flag_mismatch:"
+                    + axis
+                    + ":"
+                    + flag.lstrip("-").replace("-", "_")
+                )
+
+    axes_skipped = payload.get("axes_skipped_due_to_existing_anchor") if payload else None
+    existing_anchors = payload.get("existing_anchors_reused") if payload else None
+    if isinstance(axes_skipped, Mapping):
+        for axis in ("contest_cpu", "contest_cuda"):
+            if axes_skipped.get(axis) is not False:
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_axis_skip_unexpected:"
+                    + axis
+                )
+    elif payload:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_axis_skip_missing")
+    if isinstance(existing_anchors, Mapping):
+        for axis in ("contest_cpu", "contest_cuda"):
+            if existing_anchors.get(axis) is not None:
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_anchor_reuse_unexpected:"
+                    + axis
+                )
+
+    operator_plan_command = (
+        ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+        f"--archive {archive_path} "
+        f"--submission-dir {submission_dir} "
+        "--inflate-sh inflate.sh "
+        "--label l5_v2_time_traveler_l5_autonomy "
+        f"--expected-archive-sha256 {archive_sha256} "
+        "--run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement "
+        "--pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda "
+        "--lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact "
+        "--output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact "
+        "--modal-bin .venv/bin/modal "
+        "--gpu T4 "
+        "--claim-agent codex:l5_v2_paired_measurement_dispatch "
+        "--claim-notes "
+        "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda "
+        "--expected-runtime-tree-sha256 auto "
+        "--skip-axis-if-promotable-anchor-exists"
+    )
+
+    return {
+        "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",
+        "artifact_path": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": not blockers,
+        "archive_path": archive_path,
+        "archive_sha256": archive_sha256,
+        "archive_bytes": archive_bytes,
+        "submission_dir": submission_dir,
+        "runtime_tree_sha256_by_axis": {
+            axis: str(runtime_tree_by_axis.get(axis) or "")
+            for axis in ("contest_cpu", "contest_cuda")
+        },
+        "runtime_content_tree_sha256_by_axis": {
+            axis: str(runtime_content_by_axis.get(axis) or "")
+            for axis in ("contest_cpu", "contest_cuda")
+        },
+        "operator_plan_command_template": operator_plan_command,
+        "operator_execute_command_template_after_review": operator_plan_command
+        + " --execute",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "dispatch_attempted": False,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -2352,6 +2646,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     timing_smoke_status = _tt5l_first_anchor_timing_smoke_status(repo_root=repo_root)
     timing_smoke_valid = timing_smoke_status["artifact_valid"] is True
     probe_intake_status = _tt5l_probe_observation_intake_status(repo_root=repo_root)
+    materialized_work_unit_status = _tt5l_materialized_paired_work_unit_status(
+        repo_root=repo_root
+    )
     sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
         repo_root=repo_root
     )
@@ -2523,6 +2820,39 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+        }
+    elif (
+        not probe_valid
+        and materialized_work_unit_status["artifact_valid"] is True
+    ):
+        next_action = {
+            "action_id": "review_and_execute_l5_v2_tt5l_materialized_paired_measurement",
+            "phase": "probe_disambiguator_paired_measurements",
+            "probe_status": "tt5l_work_unit_materialized_fail_closed",
+            "materialized_work_unit_status": materialized_work_unit_status,
+            "operator_plan_command_template": materialized_work_unit_status[
+                "operator_plan_command_template"
+            ],
+            "operator_execute_command_template_after_review": materialized_work_unit_status[
+                "operator_execute_command_template_after_review"
+            ],
+            "execution_order": [
+                "review_materialized_tt5l_archive_runtime_custody",
+                "execute_canonical_paired_modal_auth_eval_command",
+                "harvest_both_axes_through_recover_modal_auth_eval",
+                "convert_returned_results_into_l5_v2_probe_observations",
+            ],
+            "score_lowering_unblocker": (
+                "TT5L has a byte-closed archive/runtime work unit; the next "
+                "material L5 v2 evidence is paired CPU/CUDA execution under "
+                "one runtime contract"
+            ),
+            "ready_for_operator_dispatch": True,
+            "ready_for_provider_dispatch": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
         }
     elif not probe_valid:
         measurement_schedule_command = (
@@ -2770,6 +3100,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "probe_tool_path": L5V2_PROBE_TOOL_PATH,
         "probe_tool_exists": probe_tool_exists,
         "probe_observation_intake_status": probe_intake_status,
+        "materialized_tt5l_paired_work_unit_status": materialized_work_unit_status,
         "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
         "measurement_schedule_artifact_path": L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
         "measurement_schedule_report_path": L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
@@ -4404,6 +4735,7 @@ __all__ = [
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID",
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA",
     "TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH",
+    "TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH",
     "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_ARTIFACT_PATH",
     "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",

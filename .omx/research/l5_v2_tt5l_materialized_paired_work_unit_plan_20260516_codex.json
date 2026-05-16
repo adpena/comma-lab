@@ -1,0 +1,137 @@
+{
+  "archive": {
+    "bytes": 34603,
+    "expected_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+    "expected_sha256_match": true,
+    "path": "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+    "sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a"
+  },
+  "axes_skipped_due_to_existing_anchor": {
+    "contest_cpu": false,
+    "contest_cuda": false
+  },
+  "commands": {
+    "contest_cpu": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval_cpu.py",
+      "--archive",
+      "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+      "--expected-archive-sha256",
+      "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+      "--lane-id",
+      "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+      "--instance-job-id",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+      "--claim-agent",
+      "codex:l5_v2_paired_measurement_dispatch",
+      "--claim-notes",
+      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cpu; archive_sha=2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a; bytes=34603",
+      "--submission-dir",
+      "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "--expected-runtime-tree-sha256",
+      "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584"
+    ],
+    "contest_cuda": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval.py",
+      "--archive",
+      "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+      "--expected-archive-sha256",
+      "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda",
+      "--gpu",
+      "T4",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+      "--lane-id",
+      "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda",
+      "--instance-job-id",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda",
+      "--claim-agent",
+      "codex:l5_v2_paired_measurement_dispatch",
+      "--claim-notes",
+      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cuda; archive_sha=2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a; bytes=34603",
+      "--submission-dir",
+      "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "--expected-runtime-tree-sha256",
+      "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
+    ]
+  },
+  "created_at_utc": "2026-05-16T23:23:35Z",
+  "existing_anchors_reused": {
+    "contest_cpu": null,
+    "contest_cuda": null
+  },
+  "lanes": {
+    "contest_cpu": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+    "contest_cuda": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
+  },
+  "notes": [
+    "This tool is the default Modal auth-eval entry point for score-bearing archives.",
+    "Both commands carry the same pair_group_id and exact archive SHA.",
+    "Single-axis Modal wrapper use requires an explicit waiver reason.",
+    "skip_axis_if_promotable_anchor_exists=True; per-axis dispatch skipped if a promotable anchor already exists for the archive sha and expected runtime tree (anchor_lookup.find_promotable_anchor_for_axis_and_sha)."
+  ],
+  "outputs": {
+    "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+    "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda"
+  },
+  "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+  "promotion_eligible": false,
+  "required_axes": [
+    "contest_cuda",
+    "contest_cpu"
+  ],
+  "runtime": {
+    "expected_runtime_content_tree_sha256_by_axis": {
+      "contest_cpu": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+      "contest_cuda": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718"
+    },
+    "expected_runtime_tree_sha256": null,
+    "expected_runtime_tree_sha256_by_axis": {
+      "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+      "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
+    },
+    "inflate_sh": "inflate.sh",
+    "inflate_sh_original": null,
+    "modal_uploaded_runtime_manifest_by_axis": {
+      "contest_cpu": {
+        "runtime_content_tree_sha256": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+        "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584"
+      },
+      "contest_cuda": {
+        "runtime_content_tree_sha256": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+        "runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
+      }
+    },
+    "submission_dir": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime"
+  },
+  "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+  "score_claim": false,
+  "skip_axis_if_promotable_anchor_exists": true,
+  "planning_only": true,
+  "score_claim_valid": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rank_or_kill_eligible": false,
+  "dispatch_attempted": false,
+  "ready_for_operator_dispatch": true,
+  "ready_for_provider_dispatch": false,
+  "operator_execute_required": true
+}
