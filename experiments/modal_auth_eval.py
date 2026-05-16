@@ -892,8 +892,8 @@ def run_auth_eval_h100(
 @app.local_entrypoint()
 def main(
     archive: str = "/tmp/modal_submission/archive.zip",
-    expected_archive_sha256: str = "",
     output_dir: str = "",
+    expected_archive_sha256: str = "",
     inflate_sh: str = "submissions/robust_current/inflate.sh",
     submission_dir: str = "",
     gpu: str = "T4",

@@ -147,6 +147,64 @@ def test_paired_modal_plan_relativizes_inflate_sh_under_submission_dir(
         assert cmd[cmd.index("--inflate-sh") + 1] == "inflate.sh"
 
 
+def test_cli_defaults_inflate_sh_to_uploaded_submission_runtime_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    submission_dir = tmp_path / "submission"
+    submission_dir.mkdir()
+    (submission_dir / "inflate.sh").write_text("#!/bin/sh\n")
+    json_out = tmp_path / "plan.json"
+
+    monkeypatch.setattr(
+        mod,
+        "find_promotable_anchor_for_axis_and_sha",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": "",
+            "contest_cpu": "",
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": None,
+        },
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "dispatch_modal_paired_auth_eval.py",
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission_dir),
+            "--run-id",
+            "unit_pair_run",
+            "--pair-group-id",
+            "unit_pair_group",
+            "--lane-id-base",
+            "lane_unit_pair",
+            "--json-out",
+            str(json_out),
+        ],
+    )
+
+    assert mod.main() == 0
+    plan = json.loads(json_out.read_text(encoding="utf-8"))
+    assert plan["runtime"]["submission_dir"] == str(submission_dir)
+    assert plan["runtime"]["inflate_sh"] == "inflate.sh"
+    assert plan["runtime"]["inflate_sh_original"] is None
+    for cmd in (plan["commands"]["contest_cuda"], plan["commands"]["contest_cpu"]):
+        assert cmd[cmd.index("--inflate-sh") + 1] == "inflate.sh"
+        assert mod.DEFAULT_REPO_INFLATE_SH not in cmd
+
+
 def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -56,6 +56,8 @@ from tac.deploy.modal.paired_dispatch import (  # noqa: E402
 CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
 CPU_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval_cpu/submission_dir"
 AUTO_RUNTIME_TREE = "auto"
+DEFAULT_REPO_INFLATE_SH = "submissions/robust_current/inflate.sh"
+DEFAULT_UPLOADED_SUBMISSION_INFLATE_SH = "inflate.sh"
 
 
 def _utc_now_compact() -> str:
@@ -121,6 +123,22 @@ def _normalize_inflate_sh_for_submission_dir(
         except ValueError:
             return inflate_sh
     return rel.as_posix()
+
+
+def _resolve_cli_inflate_sh_default(*, submission_dir: str, inflate_sh: str | None) -> str:
+    """Resolve the context-aware CLI default for ``--inflate-sh``.
+
+    With ``--submission-dir``, Modal uploads that directory as the runtime root
+    and the Modal wrappers interpret ``--inflate-sh`` relative to it. The safe
+    default is therefore ``inflate.sh`` inside the uploaded tree, not the repo's
+    robust-current runtime.
+    """
+
+    if inflate_sh:
+        return str(inflate_sh)
+    if submission_dir:
+        return DEFAULT_UPLOADED_SUBMISSION_INFLATE_SH
+    return DEFAULT_REPO_INFLATE_SH
 
 
 def _modal_uploaded_runtime_hashes_for_axis(
@@ -524,7 +542,15 @@ def main() -> int:
     parser.add_argument("--archive", type=Path, required=True)
     parser.add_argument("--expected-archive-sha256", default="")
     parser.add_argument("--submission-dir", default="")
-    parser.add_argument("--inflate-sh", default="submissions/robust_current/inflate.sh")
+    parser.add_argument(
+        "--inflate-sh",
+        default=None,
+        help=(
+            "Inflate entrypoint. Defaults to inflate.sh when --submission-dir "
+            "uploads a runtime tree; otherwise defaults to "
+            f"{DEFAULT_REPO_INFLATE_SH}."
+        ),
+    )
     parser.add_argument("--label", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--pair-group-id", default="")
@@ -588,11 +614,15 @@ def main() -> int:
     pair_group_id = _safe_slug(args.pair_group_id or run_id)
     lane_id_base = _safe_slug(args.lane_id_base or f"lane_{pair_group_id}")
     resolved_repo_root = (args.repo_root or Path.cwd()).resolve()
+    inflate_sh = _resolve_cli_inflate_sh_default(
+        submission_dir=args.submission_dir,
+        inflate_sh=args.inflate_sh,
+    )
     try:
         plan = build_plan(
             archive=args.archive,
             submission_dir=args.submission_dir,
-            inflate_sh=args.inflate_sh,
+            inflate_sh=inflate_sh,
             run_id=run_id,
             pair_group_id=pair_group_id,
             lane_id_base=lane_id_base,
