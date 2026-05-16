@@ -45,3 +45,50 @@ This closes the immediate discoverability gap where the default Tier C runner
 only covered the stale C6 5ep control. The next unblocked action is executing
 the real-scorer Tier C runner for the 100ep archive and then classifying the
 result under the usual no-score-claim, pair-sampled CPU evidence axis.
+
+## 64-Pair Real-Scorer Probe
+
+Executed locally after the runner integration:
+
+```bash
+PYTHONPATH=src:upstream .venv/bin/python tools/run_tier_c_with_real_scorer.py \
+  --execute \
+  --output-dir experiments/results/tier_c_real_scorer_c6_100ep_codex_20260516T140014Z \
+  --pair-samples 64 \
+  --scorer-batch-size 4 \
+  --archive ibps1_c6_100ep_a10g_advisory=experiments/results/lane_substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260515T100257Z__smoke__100ep_modal/harvested_artifacts/archive.zip,grammar=ibps1,role=ib_bottleneck_control_100ep_a10g_advisory
+```
+
+Result artifact directory:
+`experiments/results/tier_c_real_scorer_c6_100ep_codex_20260516T140014Z/`
+
+Key fields:
+
+- evidence_axis: `[real-scorer CPU Tier-C delta curves; pair-sampled; no score claim]`
+- hardware_axis: `[macOS-CPU advisory only]`
+- score_claim: `false`
+- promotion_eligible: `false`
+- pair_samples: `64`
+- elapsed_seconds: `1364.653979063034`
+- baseline_seg: `0.2509330874308944`
+- baseline_pose: `0.16412035573739558`
+- mdl_tier_c_density_estimate: `0.6107912711463205`
+- mdl_tier_c_substrate_class_verdict: `indeterminate`
+- mdl_tier_c_curve_knee_signal: `1.2657731618153776`
+- mdl_tier_c_latent_sigma1_delta: `0.6153786550257436`
+
+Classification:
+
+- This does not promote C6, retire C6, or claim a contest score.
+- The 100ep C6 archive is now real-scorer-probed, but the Tier C density remains
+  too high for a clean across-class verdict under this 64-pair macOS CPU advisory
+  probe.
+- The measured runtime is about `21.32s/pair` for this local CPU path, so a full
+  600-pair local sweep should be budgeted at roughly `3.55h` for one archive on
+  this machine before overhead.
+
+Next action:
+
+- Run the same 100ep C6 archive under the contest-compliant Linux CPU or CUDA
+  axis before using the result to rank, kill, promote, or schedule paid full
+  training.
