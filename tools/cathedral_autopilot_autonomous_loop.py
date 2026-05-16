@@ -887,14 +887,16 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     # or contradict (across-class evidence already captured by Tier C
     # alone, even without a literature_anchor).
     d = adjust_predicted_delta_for_mdl_tier_c_density(d, c.mdl_tier_c_density)
+    lane_class = c.lane_class
     literature_anchor = c.literature_anchor
     literature_notes = c.notes
     if _candidate_literature_anchor_rank_reward_suppressed(c):
+        lane_class = None
         literature_anchor = ""
         literature_notes = ""
     d = adjust_predicted_delta_for_class_shift(
         d,
-        lane_class=c.lane_class,
+        lane_class=lane_class,
         literature_anchor=literature_anchor,
         notes=literature_notes,
     )

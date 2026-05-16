@@ -307,6 +307,7 @@ def test_load_ranking_blocks_unscoped_literature_rank_reward(tmp_path):
                 "[predicted; substrate composition matrix v1] "
                 "unscoped literature-anchor regression fixture"
             ),
+            "lane_class": "substrate_class_shift predictive_receiver",
             "literature_anchor": "Rao-Ballard predictive coding",
             "blockers": [],
             "fits_per_dispatch_cap": True,

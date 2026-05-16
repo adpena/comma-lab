@@ -630,6 +630,7 @@ def test_load_candidates_from_jsonl_blocks_unscoped_literature_rank_reward(tmp_p
             "predicted_score_delta": -0.005,
             "expected_information_gain": 1.0,
             "estimated_dispatch_cost_usd": 1.0,
+            "lane_class": "substrate_class_shift predictive_receiver",
             "literature_anchor": "Rao-Ballard predictive coding",
         })
         + "\n",
@@ -656,6 +657,7 @@ def test_load_candidates_from_jsonl_preserves_scoped_literature_rank_reward(tmp_
             "predicted_score_delta": -0.005,
             "expected_information_gain": 1.0,
             "estimated_dispatch_cost_usd": 1.0,
+            "lane_class": "substrate_class_shift predictive_receiver",
             "literature_anchor": "Rao-Ballard predictive coding",
             "source_supports": "Predictive error feedback as a neuroscience model.",
             "paper_claim_scope": "Analogy for planning, not Pact score evidence.",
@@ -673,7 +675,7 @@ def test_load_candidates_from_jsonl_preserves_scoped_literature_rank_reward(tmp_
         for blocker in row.blockers
     )
     assert loop.apply_z1_empirical_revision_to_candidate_delta(row) == pytest.approx(
-        -0.015
+        -0.035
     )
 
 
@@ -951,6 +953,7 @@ def test_load_probe_disambiguator_blocks_unscoped_literature_rank_reward(tmp_pat
     raw.pop("decode_complexity_evidence")
     raw.pop("mdl_tier_c_density")
     raw.pop("composition_alpha")
+    raw["lane_class"] = "substrate_class_shift predictive_receiver"
     p.write_text(json.dumps(payload), encoding="utf-8")
 
     row = loop.load_candidates_from_probe_disambiguator_output(p)[0]
