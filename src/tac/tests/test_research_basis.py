@@ -69,6 +69,10 @@ def test_family_lookup_prefers_latest_family_specific_sources() -> None:
         "dreamerv3_2023",
         "ha_schmidhuber_world_models_2018",
         "pnvc_2025",
+        "dcvc_rt_2025",
+        "unified_intra_inter_nvc_2025",
+        "glvc_2025",
+        "gnvc_vd_2025",
         "snerv_spectra_2025",
         "metanerv_2025",
         "c3_neural_compression_2024",
@@ -100,6 +104,10 @@ def test_legacy_research_basis_aliases_resolve_to_canonical_ids() -> None:
     assert canonical_research_basis_id("pnvc") == "pnvc_2025"
     assert canonical_research_basis_id("snerv_spectra") == "snerv_spectra_2025"
     assert canonical_research_basis_id("metanerv") == "metanerv_2025"
+    assert canonical_research_basis_id("dcvc_rt") == "dcvc_rt_2025"
+    assert canonical_research_basis_id("unified_intra_inter") == "unified_intra_inter_nvc_2025"
+    assert canonical_research_basis_id("glvc") == "glvc_2025"
+    assert canonical_research_basis_id("gnvc_vd") == "gnvc_vd_2025"
     manifest = research_basis_manifest(["balle_2018", "balle_hyperprior_2018"])
     assert manifest["source_count"] == 1
     assert manifest["sources"][0]["basis_id"] == "balle_hyperprior_2018"
@@ -118,6 +126,10 @@ def test_all_registered_research_sources_satisfy_required_contract() -> None:
     assert "geometric_visual_servo_ot_2026" in by_id
     assert "lu_dvc_2019" in by_id
     assert "pnvc_2025" in by_id
+    assert "dcvc_rt_2025" in by_id
+    assert "unified_intra_inter_nvc_2025" in by_id
+    assert "glvc_2025" in by_id
+    assert "gnvc_vd_2025" in by_id
     for basis_id, source in by_id.items():
         for field in REQUIRED_SOURCE_FIELDS:
             assert field in source, f"{basis_id} missing {field}"
