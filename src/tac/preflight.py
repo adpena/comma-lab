@@ -2351,6 +2351,31 @@ def preflight_all(
         check_substrate_landing_memo_has_9_dim_checklist_evidence_section(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #295 - SUBMISSION INFLATE.PY WORKS WITH EMPTY
+        # PYTHONPATH. Empirical anchor: NSCS06 v5 Modal dispatch
+        # fc-01KRQMAQ7V41AFYMJH5HRK9P10 failed at runtime because
+        # `submissions/nscs06_carmack_hotz_strip_everything/inflate.py` used
+        # the PYTHONPATH-shim pattern (`sys.path.insert(0, str(HERE / "src"))`
+        # then `from tac.substrates...`) which worked locally but FAILED on
+        # the Modal worker because the `src/tac/...` tree was never vendored
+        # into the submission directory. The v6 fix (commit 90bca47ff)
+        # vendored the codec package alongside as
+        # `submissions/<id>/_nscs06_codec/` and removed the PYTHONPATH shim.
+        # Per CLAUDE.md HNeRV parity discipline lesson 9 (Runtime closure):
+        # a submission `inflate.py` MUST be self-contained. Sister of
+        # Catalog #205 (`check_inflate_py_uses_canonical_select_inflate_device`)
+        # scoped to the same `submissions/*/inflate.py` surface (Catalog
+        # #205 catches inline device-fork; Catalog #295 catches PYTHONPATH-
+        # shim self-containment violations). Initial wire-in is WARN-ONLY
+        # per CLAUDE.md "Strict-flip atomicity rule" - live count at landing
+        # is N > 0 (several legacy submissions ship with PYTHONPATH shims
+        # pointing to sibling submissions or to the operator's working tree);
+        # sister-subagent backfill wave is the follow-on op-routable;
+        # strict-flip planned alongside that wave's final commit. Memory:
+        # feedback_catalog_295_submission_inflate_empty_pythonpath_strict_gate_landed_20260516.md.
+        check_submission_inflate_works_with_empty_pythonpath(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -62498,6 +62523,462 @@ def check_substrate_landing_memo_has_9_dim_checklist_evidence_section(
             "against' non-negotiable. Catalog #294 (sister of Catalog #290 "
             "Dimension 5 + Catalog #291 per-session cadence + Catalog #292 "
             "per-deliberation discipline).\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #295 - check_submission_inflate_works_with_empty_pythonpath
+# ============================================================================
+# Empirical anchor 2026-05-16: NSCS06 v5 Modal dispatch
+# fc-01KRQMAQ7V41AFYMJH5HRK9P10 failed at runtime because
+# submissions/nscs06_carmack_hotz_strip_everything/inflate.py used the
+# PYTHONPATH-shim pattern
+#
+#     sys.path.insert(0, str(HERE / "src"))
+#     from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate ...
+#
+# which worked during local development (the operator's working tree had
+# the repo `src/` resolvable on sys.path) but FAILED on the Modal worker
+# because the `src/tac/...` tree was never vendored into the submission
+# directory. The Modal worker mount only saw the submission_dir contents,
+# not the repo `src/`, so the `from tac...` import raised
+# ModuleNotFoundError before any inflate work could happen. The v6 fix
+# (commit 90bca47ff) vendored the codec package alongside as
+# `submission/_nscs06_codec/` and removed the PYTHONPATH shim.
+#
+# Per CLAUDE.md HNeRV parity discipline lesson 9 (Runtime closure): "Run
+# the exact contest inflate.sh signature in a clean environment BEFORE
+# dispatch. Dependency closure failures (missing brotli, wrong wrapper
+# signatures, hidden sidecars, local paths, CPU/CUDA mismatches) are
+# runtime blockers, not method negatives." A PYTHONPATH shim that resolves
+# only on the operator's local tree is the same bug class as a hidden
+# sidecar -- the submission is not self-contained.
+#
+# This gate scans every `submissions/*/inflate.py` (excluding the pinned
+# upstream `submissions/exact_current/` per CLAUDE.md mutation frontier)
+# and refuses any file that:
+#   1. Calls sys.path.insert(...) AND imports `from tac....` / `import tac....`
+#      WITHOUT the imported package being vendored as a sibling directory
+#      of inflate.py (e.g. NSCS06 v6 ships `submissions/<id>/_nscs06_codec/`
+#      OR the NSCS01 pattern would require `submissions/<id>/src/tac/...`).
+#   2. Calls sys.path.insert(...) pointing OUTSIDE the submission directory
+#      tree (e.g. sibling submission's src/, repo root, $HOME) without an
+#      explicit declared dependency manifest.
+#
+# Acceptance:
+#   (a) No sys.path.insert at all (the canonical NSCS06 v6 pattern with
+#       vendored sibling package + direct import).
+#   (b) sys.path.insert resolves entirely WITHIN the submission directory
+#       tree AND every `from tac....` import resolves to a vendored sibling
+#       directory (e.g. `submissions/<id>/src/tac/<...>/`).
+#   (c) sys.path.insert(HERE / "src") AND no `from tac.` imports (the
+#       NSCS06 v6 pattern of vendoring non-tac codec packages alongside).
+#   (d) Same-line waiver `# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>`
+#       on the sys.path.insert line (placeholder `<rationale>` / `<reason>`
+#       literal rejected).
+#
+# Sister of Catalog #205 (`check_inflate_py_uses_canonical_select_inflate_device`)
+# scoped to the same `submissions/*/inflate.py` surface (Catalog #205 catches
+# inline device-fork; Catalog #295 catches PYTHONPATH-shim self-containment
+# violations).
+# ============================================================================
+
+
+_CHECK_295_WAIVER_TOKEN = "SUBMISSION_PYTHONPATH_SHIM_OK:"
+_CHECK_295_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+
+def _check_295_iter_target_files(repo_root: Path) -> list[Path]:
+    """List every ``submissions/*/inflate.py`` under repo_root.
+
+    Excludes ``submissions/exact_current/`` since CLAUDE.md mutation
+    frontier marks the pinned upstream snapshot as off-limits without
+    explicit human approval.
+    """
+
+    submissions_root = repo_root / "submissions"
+    if not submissions_root.is_dir():
+        return []
+    targets: list[Path] = []
+    for child in sorted(submissions_root.iterdir()):
+        if not child.is_dir():
+            continue
+        if child.name == "exact_current":
+            continue
+        if "_intake_" in child.name:
+            continue
+        candidate = child / "inflate.py"
+        if candidate.is_file():
+            targets.append(candidate)
+    return targets
+
+
+def _check_295_collect_sys_path_inserts(
+    tree: ast.AST,
+) -> list[tuple[int, ast.AST]]:
+    """Return (lineno, argument-AST) tuples for every ``sys.path.insert(...)`` call.
+
+    AST-aware so docstring/comment mentions of the literal text are NOT
+    flagged.
+    """
+    out: list[tuple[int, ast.AST]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not isinstance(func, ast.Attribute):
+            continue
+        if func.attr != "insert":
+            continue
+        value = func.value
+        # Match `sys.path.insert(...)`
+        if (
+            isinstance(value, ast.Attribute)
+            and value.attr == "path"
+            and isinstance(value.value, ast.Name)
+            and value.value.id == "sys"
+            and len(node.args) >= 2
+        ):
+            out.append((node.lineno, node.args[1]))
+    return out
+
+
+def _check_295_collect_tac_imports(tree: ast.AST) -> list[tuple[int, str]]:
+    """Return (lineno, dotted-name) tuples for every ``from tac.*`` or ``import tac.*``.
+
+    AST-aware so docstring/comment mentions are NOT flagged.
+    """
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.module and (node.module == "tac" or node.module.startswith("tac.")):
+                out.append((node.lineno, node.module))
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "tac" or alias.name.startswith("tac."):
+                    out.append((node.lineno, alias.name))
+    return out
+
+
+def _check_295_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries the canonical same-line waiver.
+
+    Placeholder literals are rejected so the gate's own documentation
+    example cannot self-waive a real violation.
+    """
+    if _CHECK_295_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_295_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_295_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_295_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    return True
+
+
+def _check_295_tac_module_is_vendored(
+    submission_dir: Path, dotted_module: str
+) -> bool:
+    """Check whether ``dotted_module`` (e.g. ``tac.foo.bar``) is vendored
+    inside ``submission_dir`` as a real importable package tree.
+
+    Searches the standard vendoring locations:
+      - ``<submission_dir>/<dotted-path-as-dirs>.py``
+      - ``<submission_dir>/<dotted-path-as-dirs>/__init__.py``
+      - ``<submission_dir>/src/<dotted-path-as-dirs>.py``
+      - ``<submission_dir>/src/<dotted-path-as-dirs>/__init__.py``
+    """
+    parts = dotted_module.split(".")
+    for prefix in (submission_dir, submission_dir / "src"):
+        # Try the top-level package path (parts[0]) for an importable form.
+        # We accept either `<prefix>/tac/__init__.py` or `<prefix>/tac.py`.
+        top_pkg = prefix / parts[0]
+        top_mod = prefix / f"{parts[0]}.py"
+        if top_pkg.is_dir() and (top_pkg / "__init__.py").is_file():
+            return True
+        if top_mod.is_file():
+            return True
+    return False
+
+
+def _check_295_collect_module_level_assignments(
+    tree: ast.AST,
+) -> dict[str, ast.AST]:
+    """Return {name: value_AST} for every module-level ``Name = <expr>``.
+
+    Used to trace `SRC_DIR = HERE / "src"` style indirection so the
+    insert-target check can follow one level of variable binding.
+    Walks only the top-level body; nested function/class assigns are
+    out of scope (a submission inflate.py with deep nesting is a code
+    smell of its own).
+    """
+    bindings: dict[str, ast.AST] = {}
+    if not isinstance(tree, ast.Module):
+        return bindings
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    bindings[target.id] = node.value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.value is not None:
+                bindings[node.target.id] = node.value
+    return bindings
+
+
+def _check_295_path_insert_target_inside_submission(
+    arg_node: ast.AST,
+    submission_dir: Path,
+    bindings: dict[str, ast.AST] | None = None,
+) -> bool:
+    """Heuristic: does the sys.path.insert argument resolve INSIDE submission_dir?
+
+    Accepts the canonical patterns:
+        sys.path.insert(0, str(HERE))
+        sys.path.insert(0, str(HERE / "src"))
+        sys.path.insert(0, str(SRC_DIR))      # if SRC_DIR = HERE / "..."
+        sys.path.insert(0, str(vendored_src)) # if vendored_src = HERE / "..."
+
+    Rejects (returns False) patterns pointing to sibling submission or
+    outside the submission tree (e.g. ``HERE.parent / "apogee_intN" / "src"``
+    or ``HERE.parent.parent / "src"``).
+
+    One-level variable indirection is followed via ``bindings`` so the
+    canonical ``SRC_DIR = HERE / "src"`` pattern is accepted. Multi-level
+    chains and dynamic expressions remain conservatively rejected.
+    """
+    # Unwrap str(...) call
+    if isinstance(arg_node, ast.Call):
+        if (
+            isinstance(arg_node.func, ast.Name)
+            and arg_node.func.id == "str"
+            and len(arg_node.args) >= 1
+        ):
+            arg_node = arg_node.args[0]
+
+    def _expr_uses_parent_traversal(node: ast.AST) -> bool:
+        """Detect HERE.parent / ... / HERE.parent.parent / ... chains."""
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Attribute) and sub.attr == "parent":
+                return True
+        return False
+
+    def _expr_anchored_at_here(node: ast.AST) -> bool:
+        """Detect HERE-anchored expressions: bare HERE or HERE / "subdir" / ..."""
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name) and sub.id in {"HERE", "SUBMISSION_DIR"}:
+                return True
+        return False
+
+    if _expr_uses_parent_traversal(arg_node):
+        return False  # points outside submission_dir
+
+    if _expr_anchored_at_here(arg_node):
+        return True
+
+    # One-level variable indirection: SRC_DIR = HERE / "src"
+    if bindings is not None and isinstance(arg_node, ast.Name):
+        bound = bindings.get(arg_node.id)
+        if bound is not None:
+            # Recurse one level (no bindings to prevent infinite loops).
+            if _expr_uses_parent_traversal(bound):
+                return False
+            if _expr_anchored_at_here(bound):
+                return True
+
+    return False
+
+
+def _scan_inflate_for_pythonpath_shim_self_contained(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Find PYTHONPATH-shim self-containment violations in one inflate.py.
+
+    Returns one violation string per offending file (zero or one). Empty
+    list means the file is self-contained per the acceptance cascade.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    submission_dir = path.parent
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return []
+
+    text_lines = text.splitlines()
+    inserts = _check_295_collect_sys_path_inserts(tree)
+    tac_imports = _check_295_collect_tac_imports(tree)
+    bindings = _check_295_collect_module_level_assignments(tree)
+
+    # Acceptance path (a): No sys.path.insert at all = canonical
+    # NSCS06-v6-style or simple inflate without any path manipulation.
+    if not inserts:
+        # But: if there are `from tac....` imports without a path insert,
+        # the submission is implicitly depending on the operator's working
+        # tree -- the NSCS06 v5 bug class. Refuse.
+        if tac_imports:
+            first_import_line = tac_imports[0][0]
+            return [
+                f"{rel}:{first_import_line}: imports `from tac.*` / "
+                f"`import tac.*` WITHOUT any vendored `tac` package "
+                f"alongside inflate.py and WITHOUT any sys.path.insert. "
+                f"Per the NSCS06 v5 bug class (Modal dispatch "
+                f"fc-01KRQMAQ7V41AFYMJH5HRK9P10 ModuleNotFoundError on "
+                f"the worker): a submission `inflate.py` MUST be "
+                f"self-contained. Either vendor the codec package "
+                f"alongside as `submissions/{submission_dir.name}/"
+                f"_<id>_codec/` (NSCS06 v6 pattern @ commit 90bca47ff) "
+                f"OR add same-line "
+                f"`# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` waiver."
+            ]
+        return []
+
+    # If we have inserts but NO `from tac.*` imports, the inserts are
+    # harmless -- the submission vendors its codec under a non-tac name
+    # (e.g. `submissions/<id>/src/codec.py` + `model.py`, NSCS06-v6-style).
+    # Verify the waiver isn't masking a real violation.
+    if not tac_imports:
+        # Still verify any insert's target is inside the submission tree.
+        # If an insert points OUTSIDE the submission (e.g. sibling
+        # submission's src/), that's a fragile dependency requiring
+        # explicit declaration via waiver.
+        for lineno, arg in inserts:
+            line_text = text_lines[lineno - 1] if 0 < lineno <= len(text_lines) else ""
+            if _check_295_line_has_waiver(line_text):
+                continue
+            if not _check_295_path_insert_target_inside_submission(
+                arg, submission_dir, bindings=bindings,
+            ):
+                return [
+                    f"{rel}:{lineno}: `sys.path.insert(...)` points OUTSIDE "
+                    f"the submission directory `{submission_dir.name}/` "
+                    f"(detected `HERE.parent / ...` traversal OR unresolved "
+                    f"variable). Per the NSCS06 v5 bug class: a submission "
+                    f"MUST be self-contained. Either vendor required code "
+                    f"alongside inflate.py (NSCS06 v6 pattern @ commit "
+                    f"90bca47ff) OR add same-line "
+                    f"`# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` "
+                    f"waiver declaring the required sibling submission."
+                ]
+        return []
+
+    # We have BOTH sys.path.insert AND `from tac.*` imports. This is the
+    # NSCS06 v5 / NSCS01 pattern. The submission MUST vendor the imported
+    # `tac.*` packages alongside, OR carry a waiver.
+    for lineno, arg in inserts:
+        line_text = text_lines[lineno - 1] if 0 < lineno <= len(text_lines) else ""
+        if _check_295_line_has_waiver(line_text):
+            # Waived -- skip violation for THIS insert.
+            return []
+
+    # Check each `from tac.*` import: is the top-level `tac` package
+    # vendored as `<submission_dir>/tac/` or `<submission_dir>/src/tac/`?
+    unvendored: list[str] = []
+    for lineno, module_name in tac_imports:
+        if not _check_295_tac_module_is_vendored(submission_dir, module_name):
+            unvendored.append(f"line {lineno}: `{module_name}`")
+
+    if unvendored:
+        return [
+            f"{rel}: PYTHONPATH-shim pattern (sys.path.insert + "
+            f"`from tac.*` imports) BUT `tac` package is NOT vendored "
+            f"alongside inflate.py. Imports requiring vendoring: "
+            f"{', '.join(unvendored[:3])}. This is the NSCS06 v5 bug "
+            f"class (Modal dispatch fc-01KRQMAQ7V41AFYMJH5HRK9P10 "
+            f"ModuleNotFoundError on the worker because the repo `src/` "
+            f"was never copied into the submission). Fix: vendor the "
+            f"codec package alongside as `submissions/"
+            f"{submission_dir.name}/<vendored-name>/__init__.py + ...` "
+            f"(NSCS06 v6 pattern @ commit 90bca47ff) AND remove the "
+            f"`from tac.*` imports in favor of direct relative imports "
+            f"of the vendored package. OR add same-line "
+            f"`# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` waiver on "
+            f"the sys.path.insert(...) line declaring the dependency "
+            f"is intentional (e.g. NSCS01-style fail-closed-at-runtime "
+            f"research surface)."
+        ]
+
+    return []
+
+
+def check_submission_inflate_works_with_empty_pythonpath(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #295 - refuse PYTHONPATH-shim submissions that depend on the
+    operator's working tree to import `tac.*` at runtime.
+
+    Empirical anchor 2026-05-16: NSCS06 v5 Modal dispatch
+    ``fc-01KRQMAQ7V41AFYMJH5HRK9P10`` failed at runtime because
+    ``submissions/nscs06_carmack_hotz_strip_everything/inflate.py`` used
+    the PYTHONPATH-shim pattern
+    ``sys.path.insert(0, str(HERE / "src"))`` then
+    ``from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate ...``
+    which worked during local development (the operator's working tree
+    had the repo ``src/`` resolvable on sys.path) but FAILED on the Modal
+    worker because the ``src/tac/...`` tree was never vendored into the
+    submission directory. The v6 fix (commit ``90bca47ff``) vendored the
+    codec package alongside as ``submissions/<id>/_nscs06_codec/`` and
+    removed the PYTHONPATH shim.
+
+    Per CLAUDE.md HNeRV parity discipline lesson 9 (Runtime closure): a
+    submission ``inflate.py`` MUST be self-contained. A PYTHONPATH shim
+    that resolves only on the operator's local tree is the same bug
+    class as a hidden sidecar.
+
+    Sister of Catalog #205 (``check_inflate_py_uses_canonical_select_inflate_device``)
+    scoped to the same ``submissions/*/inflate.py`` surface (Catalog #205
+    catches inline device-fork; Catalog #295 catches PYTHONPATH-shim
+    self-containment violations).
+
+    Memory: ``feedback_catalog_295_submission_inflate_empty_pythonpath_strict_gate_landed_20260516.md``.
+    Lane: ``lane_check_submission_inflate_empty_pythonpath_strict_gate_20260516``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    targets = _check_295_iter_target_files(root)
+    violations: list[str] = []
+    for path in targets:
+        violations.extend(
+            _scan_inflate_for_pythonpath_shim_self_contained(path, root)
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_submission_inflate_works_with_empty_pythonpath] "
+                f"{len(violations)} violation(s) across {len(targets)} "
+                "submissions/inflate.py file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:280]}")
+        else:
+            print(
+                f"  [check_submission_inflate_works_with_empty_pythonpath] OK "
+                f"({len(targets)} submissions/inflate.py file(s) scanned, "
+                "0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_submission_inflate_works_with_empty_pythonpath found "
+            f"{len(violations)} violation(s). Per the NSCS06 v5 bug class "
+            "anchor (Modal dispatch fc-01KRQMAQ7V41AFYMJH5HRK9P10 "
+            "ModuleNotFoundError because submission was not self-contained): "
+            "submission `inflate.py` files MUST vendor required code "
+            "alongside (NSCS06 v6 pattern @ commit 90bca47ff) OR carry an "
+            "explicit `# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` "
+            "waiver:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
