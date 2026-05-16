@@ -1847,9 +1847,15 @@ def run_one_loop_iteration(
             "race-mode active per operator opt-in; ranking trimmed to "
             "smallest-credible-bolt-on subset"
         )
-        # smallest credible bolt-on: |predicted_delta| > 0 AND lowest cost
+        # smallest credible bolt-on: post-gate predicted_delta < 0 AND lowest cost
         candidates = sorted(
-            [c for c in candidates if c.predicted_score_delta < 0.0],
+            [
+                c for c in candidates
+                if _candidate_has_effective_negative_delta_for_race_mode(
+                    c,
+                    continual_posterior=continual_posterior,
+                )
+            ],
             key=lambda c: c.estimated_dispatch_cost_usd,
         )
 
@@ -2186,6 +2192,22 @@ def _candidate_prediction_band_rank_reward_suppressed(c: CandidateRow) -> bool:
         "prediction_band_rank_reward_suppressed" in blockers
         or "prediction_band_rank_reward_suppressed" in notes
     )
+
+
+def _candidate_has_effective_negative_delta_for_race_mode(
+    candidate: CandidateRow,
+    *,
+    continual_posterior: Any | None = None,
+) -> bool:
+    """Return true only for candidates with a post-gate negative prediction."""
+
+    if _candidate_prediction_band_rank_reward_suppressed(candidate):
+        return False
+    delta = apply_z1_empirical_revision_to_candidate_delta(candidate)
+    if continual_posterior is not None:
+        factor, _, _ = _posterior_correction_factor(candidate, continual_posterior)
+        delta *= factor
+    return delta < 0.0
 
 
 def _candidate_row_from_raw(

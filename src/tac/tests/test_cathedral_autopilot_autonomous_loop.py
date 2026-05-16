@@ -402,6 +402,30 @@ def test_one_iteration_race_mode_trims_to_negative_delta(tmp_path):
     assert ids == {"a"}
 
 
+def test_one_iteration_race_mode_applies_prediction_band_suppression_before_trim(
+    tmp_path,
+):
+    cands = [
+        _cand(
+            "blocked_l5",
+            predicted_delta=-0.050,
+            cost_usd=0.1,
+            blockers=["prediction_band_rank_reward_suppressed"],
+        ),
+        _cand("clean_small", predicted_delta=-0.001, cost_usd=2.0),
+    ]
+
+    rep = loop.run_one_loop_iteration(
+        cands,
+        race_mode=True,
+        claims_path=tmp_path / "n.md",
+    )
+
+    assert rep.n_candidates_seen == 1
+    assert rep.n_candidates_ranked == 1
+    assert {e.candidate_id for e in rep.halt_events} == {"clean_small"}
+
+
 def test_one_iteration_max_recommendations_cap(tmp_path):
     cands = [_cand(f"c{i}") for i in range(10)]
     rep = loop.run_one_loop_iteration(
