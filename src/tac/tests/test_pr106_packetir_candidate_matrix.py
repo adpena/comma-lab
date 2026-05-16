@@ -189,17 +189,24 @@ def _fake_exact_eval_artifact(
     *,
     axis: str = "contest_cuda",
     hardware: str = "Tesla T4",
+    device: str | None = None,
+    request_device: str | None = None,
     include_runtime_tree: bool = True,
     score_offset: float = 0.0,
 ) -> Path:
     artifact_dir = tmp_path / "exact"
     artifact_dir.mkdir(parents=True, exist_ok=True)
     (artifact_dir / "contest_auth_eval.stdout.log").write_text("ok\n", encoding="utf-8")
+    device = device or ("cuda" if axis == "contest_cuda" else "cpu")
+    request_device = request_device or device
     (artifact_dir / "modal_cuda_auth_eval_local_request.json").write_text(
         json.dumps(
             {
                 "axis": axis,
-                "canonical_path": f"archive.zip -> inflate.sh -> upstream/evaluate.py --device {'cuda' if axis == 'contest_cuda' else 'cpu'}",
+                "canonical_path": (
+                    "archive.zip -> inflate.sh -> upstream/evaluate.py "
+                    f"--device {request_device}"
+                ),
             },
             sort_keys=True,
         )
@@ -231,7 +238,7 @@ def _fake_exact_eval_artifact(
         "evidence_grade": "contest-CUDA" if axis == "contest_cuda" else "contest-CPU",
         "provenance": {
             "archive_sha256": archive_sha,
-            "device": "cuda" if axis == "contest_cuda" else "cpu",
+            "device": device,
             "gpu_model": hardware,
             "inflate_runtime_manifest": runtime_manifest,
         },
@@ -241,7 +248,11 @@ def _fake_exact_eval_artifact(
     return path
 
 
-def _format_0d_spec_with_exact(path: Path) -> PR106PacketIRCandidateSpec:
+def _format_0d_spec_with_exact(
+    path: Path,
+    *,
+    axis: str = "contest_cuda",
+) -> PR106PacketIRCandidateSpec:
     base = next(
         spec
         for spec in DEFAULT_PR106_PACKETIR_CANDIDATES
@@ -252,7 +263,7 @@ def _format_0d_spec_with_exact(path: Path) -> PR106PacketIRCandidateSpec:
         expected_format_id=base.expected_format_id,
         archive_path=str(Path(base.archive_path).resolve()),
         runtime_consumption_path=str(Path(base.runtime_consumption_path).resolve()),
-        exact_eval_paths={"contest_cuda": str(path)},
+        exact_eval_paths={axis: str(path)},
     )
 
 
@@ -269,6 +280,35 @@ def test_pr106_packetir_matrix_rejects_spoofed_cuda_hardware(tmp_path: Path) -> 
     assert isinstance(exact, dict)
     assert exact["contest_cuda"]["valid"] is False
     assert "exact_eval_hardware_not_cuda" in exact["contest_cuda"]["blockers"]
+
+
+def test_pr106_packetir_matrix_rejects_cpu_axis_cuda_command_leak(
+    tmp_path: Path,
+) -> None:
+    exact_path = _fake_exact_eval_artifact(
+        tmp_path,
+        axis="contest_cpu",
+        hardware="linux-x86_64",
+        device="cpu cuda",
+        request_device="cpu --scorer-device cuda",
+    )
+
+    matrix = build_pr106_packetir_candidate_matrix(
+        repo_root=tmp_path,
+        candidates=(_format_0d_spec_with_exact(exact_path, axis="contest_cpu"),),
+    )
+
+    row = _row_by_id(matrix, "spoofed_format_0x0d")
+    exact = row["exact_axis_evidence"]
+    assert isinstance(exact, dict)
+    assert exact["contest_cpu"]["valid"] is False
+    assert "exact_eval_hardware_not_contest_cpu" in exact["contest_cpu"]["blockers"]
+    assert "exact_eval_inflate_device_not_contest_cpu" in exact["contest_cpu"]["blockers"]
+    assert "exact_eval_eval_device_not_contest_cpu" in exact["contest_cpu"]["blockers"]
+    assert (
+        "exact_eval_auth_eval_command_not_contest_cpu"
+        in exact["contest_cpu"]["blockers"]
+    )
 
 
 def test_pr106_packetir_matrix_rejects_missing_runtime_tree(tmp_path: Path) -> None:

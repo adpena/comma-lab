@@ -181,6 +181,32 @@ def test_validate_exact_eval_evidence_rejects_cuda_devices_for_cpu_axis(
     assert "eval_device_not_cpu" in verdict.blockers
 
 
+def test_validate_exact_eval_evidence_rejects_mixed_cuda_cpu_axis(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path, axis="contest_cpu")
+    evidence["hardware"] = "linux-x86_64 T4 cuda"
+    evidence["inflate_device"] = "cpu cuda"
+    evidence["eval_device"] = "linux-x86_64 gpu"
+    evidence["auth_eval_command"] = (
+        "python experiments/contest_auth_eval.py --axis contest_cpu "
+        "--device cpu --scorer-device cuda"
+    )
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cpu",
+        require_artifact_path=True,
+        require_devices=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert "hardware_not_contest_cpu" in verdict.blockers
+    assert "inflate_device_not_contest_cpu" in verdict.blockers
+    assert "eval_device_not_contest_cpu" in verdict.blockers
+    assert "auth_eval_command_not_contest_cpu" in verdict.blockers
+
+
 def test_validate_exact_eval_evidence_accepts_linux_x86_cpu_axis(
     tmp_path: Path,
 ) -> None:

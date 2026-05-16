@@ -25,6 +25,9 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.deploy.modal.auth_eval import modal_uploaded_submission_dir_runtime_manifest  # noqa: E402
+from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    paired_auth_eval_dispatch_command_template,
+)
 from tac.hdm8_selector_cuda_gate import (  # noqa: E402
     DEFAULT_HDM8_CUDA_REFERENCE_RESULT,
     DEFAULT_MAX_POSE_DELTA,
@@ -474,8 +477,8 @@ def _write_markdown_manifest(manifest: dict[str, Any], path: Path) -> None:
         f"- research_only: `{manifest['research_only']}`",
         f"- positive_proxy_candidate_for_cuda_probe: "
         f"`{manifest['positive_proxy_candidate_for_cuda_probe']}`",
-        f"- ready_for_exact_cuda_after_positive_proxy: "
-        f"`{manifest['ready_for_exact_cuda_after_positive_proxy']}`",
+        f"- paired_auth_eval_plan_ready: "
+        f"`{manifest['paired_auth_eval_plan_ready']}`",
         f"- dispatch_attempted: `{manifest['dispatch_attempted']}`",
         f"- score_claim: `{manifest['score_claim']}`",
         "",
@@ -504,10 +507,10 @@ def _write_markdown_manifest(manifest: dict[str, Any], path: Path) -> None:
         "",
         transparency_report_markdown(manifest["source_transparency"]),
         "",
-        "## CUDA Command",
+        "## Paired Modal Auth-Eval Plan Command",
         "",
         "```bash",
-        " ".join(manifest["exact_cuda_auth_eval_command_template"]),
+        " ".join(manifest["paired_modal_auth_eval_plan_command_template_not_run"]),
         "```",
         "",
     ]
@@ -732,8 +735,11 @@ def build_packet(
     selector_cuda_gate_passed = bool(
         cuda_component_risk_gate and cuda_component_risk_gate.get("passed") is True
     )
-    ready_after_positive_proxy = bool(
-        selector_gate_required and positive_proxy_candidate and selector_cuda_gate_passed
+    paired_auth_eval_plan_ready = bool(
+        selector_gate_required
+        and positive_proxy_candidate
+        and selector_cuda_gate_passed
+        and pack_selector_into_archive
     )
     blockers: list[str] = []
     if mode == "none":
@@ -751,41 +757,20 @@ def build_packet(
     archive_manifest["dispatch_blockers"] = blockers
     write_json(output_dir / "archive_manifest.json", archive_manifest)
 
-    exact_cmd = [
-        ".venv/bin/modal",
-        "run",
-        "--detach",
-        "experiments/modal_auth_eval.py",
-        "--archive",
-        repo_relative(archive_out, REPO_ROOT),
-        "--submission-dir",
-        repo_relative(runtime_out, REPO_ROOT),
-        "--inflate-sh",
-        "inflate.sh",
-        "--gpu",
-        "T4",
-        "--expected-runtime-tree-sha256",
-        modal_runtime_manifest["runtime_tree_sha256"],
-        "--detach",
-        "--provider-detach-ack",
-    ]
-    claim_cmd = [
-        ".venv/bin/python",
-        "tools/claim_lane_dispatch.py",
-        "claim",
-        "--lane-id",
-        "hnerv_hdm8_film_grain_sidecar_exact_eval",
-        "--platform",
-        "modal",
-        "--instance-job-id",
-        "<job-id>",
-        "--agent",
-        "codex:gpt-5.5",
-        "--status",
-        "eval",
-        "--notes",
-        f"HDM8 postfilter mode={mode}; archive_sha256={archive_manifest['archive_sha256']}",
-    ]
+    paired_plan_cmd = paired_auth_eval_dispatch_command_template(
+        archive_path=repo_relative(archive_out, REPO_ROOT),
+        submission_dir=repo_relative(runtime_out, REPO_ROOT),
+        archive_sha256=archive_manifest["archive_sha256"],
+        lane_id_base="hnerv_hdm8_film_grain_sidecar_exact_eval",
+        execute=False,
+    )
+    paired_execute_cmd = paired_auth_eval_dispatch_command_template(
+        archive_path=repo_relative(archive_out, REPO_ROOT),
+        submission_dir=repo_relative(runtime_out, REPO_ROOT),
+        archive_sha256=archive_manifest["archive_sha256"],
+        lane_id_base="hnerv_hdm8_film_grain_sidecar_exact_eval",
+        execute=True,
+    )
     build_cmd = _packet_build_command_template(
         archive=archive,
         runtime_template=runtime_template,
@@ -821,11 +806,7 @@ def build_packet(
             runtime_out / "inflate.sh",
             runtime_out / "postfilter_config.json",
         ],
-        commands=[
-            build_cmd,
-            claim_cmd,
-            exact_cmd,
-        ],
+        commands=[build_cmd, paired_plan_cmd],
     )
     manifest: dict[str, Any] = {
         "schema": MANIFEST_SCHEMA,
@@ -880,15 +861,18 @@ def build_packet(
         "positive_proxy_candidate_for_cuda_probe": positive_proxy_candidate,
         "cuda_component_risk_gate_required": selector_gate_required,
         "cuda_component_risk_gate": cuda_component_risk_gate,
-        "ready_for_exact_cuda_after_positive_proxy": ready_after_positive_proxy,
+        "ready_for_exact_cuda_after_positive_proxy": False,
+        "paired_auth_eval_plan_ready": paired_auth_eval_plan_ready,
         "cuda_transfer_policy": {
             "schema": "hdm8_proxy_to_cuda_transfer_policy_v1",
             "proxy_axis": proxy.get("axis"),
             "positive_proxy_candidate_for_cuda_probe": positive_proxy_candidate,
-            "rankable_on_cuda": selector_cuda_gate_passed,
+            "cuda_component_risk_gate_passed": selector_cuda_gate_passed,
+            "rankable_on_cuda": False,
             "score_claim": False,
             "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": selector_cuda_gate_passed,
+            "paired_auth_eval_plan_ready": paired_auth_eval_plan_ready,
+            "ready_for_exact_eval_dispatch": False,
             "cuda_component_risk_gate": cuda_component_risk_gate,
             "required_before_ranking": [
                 "cuda_component_risk_gate_passed",
@@ -910,8 +894,8 @@ def build_packet(
         "dispatch_blockers": blockers,
         "source_transparency": source_transparency,
         "packet_build_command_template": build_cmd,
-        "claim_command_template": claim_cmd,
-        "exact_cuda_auth_eval_command_template": exact_cmd,
+        "paired_modal_auth_eval_plan_command_template_not_run": paired_plan_cmd,
+        "paired_modal_auth_eval_execute_command_template_after_plan_review": paired_execute_cmd,
         "risks": [
             "current local CPU proxy artifacts do not show a positive postfilter mode",
             "film-grain modes must be judged on contest-CUDA, not CPU proxy alone",

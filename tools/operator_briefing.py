@@ -60,6 +60,7 @@ EXACT_READY_SUPPRESSION_MANIFEST = (
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.l5_staircase_v2 import (  # noqa: E402
     PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+    PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
     l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
 )
@@ -1094,27 +1095,53 @@ def _load_l5_v2_packetir_matrix() -> dict[str, object]:
     """Load the committed PR106 PacketIR matrix for L5-v2 operator routing."""
 
     path = REPO_ROOT / PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH
+    base: dict[str, object] = {
+        "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+        "expected_artifact_sha256": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
+    }
     if not path.is_file():
         return {
+            **base,
             "exists": False,
-            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+            "artifact_sha256": "",
             "load_blockers": ["pr106_packetir_candidate_matrix_missing"],
         }
+    artifact_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    load_blockers: list[str] = []
+    if artifact_sha256 != PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256:
+        load_blockers.append("l5_v2_packetir_matrix_artifact_sha_mismatch")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return {
+            **base,
             "exists": True,
-            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
-            "load_blockers": [f"pr106_packetir_candidate_matrix_json_invalid:{exc.msg}"],
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": [
+                *load_blockers,
+                f"pr106_packetir_candidate_matrix_json_invalid:{exc.msg}",
+            ],
         }
     if not isinstance(payload, dict):
         return {
+            **base,
             "exists": True,
-            "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
-            "load_blockers": ["pr106_packetir_candidate_matrix_not_object"],
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": [
+                *load_blockers,
+                "pr106_packetir_candidate_matrix_not_object",
+            ],
         }
-    return {"exists": True, "path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH, **payload}
+    existing_blockers = [
+        str(blocker) for blocker in payload.get("load_blockers", []) if str(blocker)
+    ]
+    return {
+        **base,
+        **payload,
+        "exists": True,
+        "artifact_sha256": artifact_sha256,
+        "load_blockers": list(dict.fromkeys(load_blockers + existing_blockers)),
+    }
 
 
 def _l5_v2_frontier_readiness() -> dict[str, object]:
@@ -1130,9 +1157,13 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
     gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
     readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
     matrix = _load_l5_v2_packetir_matrix()
+    matrix_blockers = [
+        str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
+    ]
+    matrix_fresh = not matrix_blockers
     targets = [
         target
-        for target in matrix.get("next_exact_eval_targets", [])
+        for target in (matrix.get("next_exact_eval_targets", []) if matrix_fresh else [])
         if isinstance(target, dict)
     ]
     normalized_targets = [
@@ -1160,9 +1191,6 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
         for target in targets
     ]
     summarized_targets = normalized_targets[:5]
-    matrix_blockers = [
-        str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
-    ]
     blockers = [str(blocker) for blocker in readiness.get("blockers", [])]
     for section in ("packetir_stack_evidence", "pr106_stack_cell_candidates"):
         section_payload = readiness.get(section)
@@ -1173,7 +1201,7 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
                 if str(blocker)
             )
     blockers.extend(matrix_blockers)
-    target_count = int(matrix.get("next_exact_eval_target_count") or len(targets))
+    target_count = len(normalized_targets)
     status_counts = matrix.get("status_counts") if isinstance(matrix, dict) else {}
     if not isinstance(status_counts, dict):
         status_counts = {}
@@ -1182,6 +1210,9 @@ def _l5_v2_frontier_readiness() -> dict[str, object]:
         "subject_id": "time_traveler_l5_autonomy",
         "packetir_matrix_path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
         "packetir_matrix_exists": matrix.get("exists") is True,
+        "packetir_matrix_artifact_sha256": matrix.get("artifact_sha256", ""),
+        "packetir_matrix_expected_sha256": matrix.get("expected_artifact_sha256", ""),
+        "packetir_matrix_dispatch_targets_suppressed": bool(matrix_blockers),
         "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
         "packetir_status_counts": status_counts,
         "next_exact_eval_target_count": target_count,

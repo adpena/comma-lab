@@ -6,6 +6,7 @@
   "canonical_decoded_raw_sha256": "a38778c6304bacba39705cd9c45af337d73bc90c6b7b4ccf2563febfc312328e",
   "full_frame_inflate_output_parity_claim": false,
   "latent_section_bytes": 15780,
+  "latent_section_codec": "hlm1",
   "latent_section_sha256": "c5a6bfc157fcef474a21a3bbbb687e2bea2e99ad3d6195f78563a397e8f21ee4",
   "member_name": "0.bin",
   "mutated_runtime_decoded_raw_sha256": "6487ebb019110fdb87a43edf2efb93f4645a481014afdb1bfaef26b4497f1e86",
@@ -29,6 +30,19 @@
     "old_byte": 53
   },
   "runtime_hlm1_valid_mutation_changes_raw": true,
+  "runtime_hlm_decode_consumption_claim": true,
+  "runtime_hlm_decode_matches_canonical": true,
+  "runtime_hlm_valid_mutation": {
+    "hi_count": 73,
+    "hi_delta_len": 113,
+    "lo_brotli_len": 15545,
+    "metadata_bytes": 112,
+    "mutation_kind": "hlm1_meta_byte_xor_0x01",
+    "new_byte": 52,
+    "offset": 15555,
+    "old_byte": 53
+  },
+  "runtime_hlm_valid_mutation_changes_raw": true,
   "schema": "pr106_hlm1_runtime_consumption_proof_v1",
   "score_claim": false
 }

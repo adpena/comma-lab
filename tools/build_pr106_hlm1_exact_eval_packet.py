@@ -3,8 +3,9 @@
 """Build a fail-closed exact-eval operator packet for PR106 HLM1 recodes.
 
 The packet is dispatch authority only for the static handoff shape: archive
-custody, runtime-tree custody, static compliance, and the canonical Modal CUDA
-auth-eval command. It never runs remote work and never claims a score.
+custody, runtime-tree custody, static compliance, and the canonical paired
+Modal CPU/CUDA auth-eval command. It never runs remote work and never claims a
+score.
 """
 
 from __future__ import annotations
@@ -15,7 +16,6 @@ import hashlib
 import importlib.util
 import shlex
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -32,12 +32,15 @@ from tac.deploy.modal.auth_eval import (  # noqa: E402
     sha256_bytes,
     submission_dir_zip_bytes,
 )
-from tac.packet_compiler.pr106_hlm1_runtime_consumption import (  # noqa: E402
-    prove_pr106_hlm1_runtime_consumption,
+from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    paired_auth_eval_dispatch_command_template,
 )
 from tac.optimizer.exact_readiness import (  # noqa: E402
     ACTIVE_FLOOR_SCORE,
     terminal_claim_result_conflicts,
+)
+from tac.packet_compiler.pr106_hlm1_runtime_consumption import (  # noqa: E402
+    prove_pr106_hlm1_runtime_consumption,
 )
 from tac.repo_io import read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
@@ -70,6 +73,8 @@ DEFAULT_CPU_OUTPUT_DIR = (
     "hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513"
 )
 DEFAULT_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
+PAIRED_RUN_ID = "hnerv_hlm1_fixed_latent_recode_paired_modal_20260513"
+PAIRED_LANE_ID_BASE = "hnerv_hlm1_fixed_latent_recode_exact_eval"
 REQUIRED_ARTIFACTS = (
     "manifest",
     "packetir_identity",
@@ -189,7 +194,7 @@ def _contest_auth_eval_module() -> Any:
 
 def _runtime_manifest(*, static_release_surface: Path, upstream_dir: Path) -> dict[str, Any]:
     module = _contest_auth_eval_module()
-    manifest_fn = getattr(module, "_runtime_dependency_manifest")
+    manifest_fn = module._runtime_dependency_manifest
     return manifest_fn(
         _repo_path(static_release_surface) / "inflate.sh",
         _repo_path(upstream_dir),
@@ -449,6 +454,41 @@ def _refresh_packet_command(args: argparse.Namespace) -> str:
     return _one_liner(parts)
 
 
+def _paired_modal_output_dirs(run_id: str) -> tuple[str, str]:
+    return (
+        f"experiments/results/modal_auth_eval/{run_id}_cuda",
+        f"experiments/results/modal_auth_eval_cpu/{run_id}_cpu",
+    )
+
+
+def _paired_modal_dispatch_command(
+    *,
+    archive_path: Path,
+    static_release_surface: Path,
+    args: argparse.Namespace,
+    archive: dict[str, Any],
+    transport: dict[str, Any],
+    execute: bool,
+) -> str:
+    claim_notes = (
+        "PR106 HDM4+HLM1 paired Modal CPU/CUDA auth eval; "
+        f"archive_sha256={archive['sha256']}; bytes={archive['bytes']}; "
+        f"submission_dir_zip_sha256={transport['transport_zip_sha256']}"
+    )
+    parts = paired_auth_eval_dispatch_command_template(
+        archive_path=archive_path,
+        submission_dir=static_release_surface,
+        lane_id_base=PAIRED_LANE_ID_BASE,
+        archive_sha256=str(archive["sha256"]),
+        execute=execute,
+        run_id=PAIRED_RUN_ID,
+        gpu=args.modal_gpu,
+        claim_agent=args.claim_agent,
+        claim_notes=claim_notes,
+    )
+    return "PYTHONPATH=src:upstream:$PWD " + _one_liner(parts)
+
+
 def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     payloads = _load_inputs(args)
     manifest = payloads["manifest"]
@@ -506,77 +546,21 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         block_runtime_mismatch_for_same_archive=True,
     )
     source_repo_commit = _git_commit()
-    modal_submit = "PYTHONPATH=src:upstream:$PWD " + _one_liner(
-        [
-            ".venv/bin/modal",
-            "run",
-            "--detach",
-            "experiments/modal_auth_eval.py",
-            "--archive",
-            archive_path,
-            "--output-dir",
-            args.modal_output_dir,
-            "--inflate-sh",
-            "inflate.sh",
-            "--submission-dir",
-            args.static_release_surface,
-            "--gpu",
-            args.modal_gpu,
-            "--scorer-device",
-            "cuda",
-            "--inflate-device",
-            "auto",
-            "--detach",
-            "--provider-detach-ack",
-            "--lane-id",
-            args.lane_id,
-            "--instance-job-id",
-            args.job_name,
-            "--claim-agent",
-            args.claim_agent,
-            "--expected-runtime-tree-sha256",
-            runtime_manifest.get("runtime_tree_sha256", ""),
-            "--claim-notes",
-            (
-                f"PR106 HDM4+HLM1 exact CUDA auth eval; archive_sha256={archive['sha256']}; "
-                f"bytes={archive['bytes']}; runtime_tree_sha256="
-                f"{runtime_manifest.get('runtime_tree_sha256')}; "
-                f"submission_dir_zip_sha256={transport['transport_zip_sha256']}"
-            ),
-        ]
+    paired_modal_plan = _paired_modal_dispatch_command(
+        archive_path=archive_path,
+        static_release_surface=args.static_release_surface,
+        args=args,
+        archive=archive,
+        transport=transport,
+        execute=False,
     )
-    modal_cpu_submit = "PYTHONPATH=src:upstream:$PWD " + _one_liner(
-        [
-            ".venv/bin/modal",
-            "run",
-            "--detach",
-            "experiments/modal_auth_eval_cpu.py",
-            "--archive",
-            archive_path,
-            "--output-dir",
-            args.modal_cpu_output_dir,
-            "--inflate-sh",
-            "inflate.sh",
-            "--submission-dir",
-            args.static_release_surface,
-            "--detach",
-            "--provider-detach-ack",
-            "--lane-id",
-            args.cpu_lane_id,
-            "--instance-job-id",
-            args.cpu_job_name,
-            "--claim-agent",
-            args.claim_agent,
-            "--expected-runtime-tree-sha256",
-            runtime_manifest.get("modal_cpu_runtime_tree_sha256", ""),
-            "--claim-notes",
-            (
-                f"PR106 HDM4+HLM1 exact CPU closure; archive_sha256={archive['sha256']}; "
-                f"bytes={archive['bytes']}; runtime_tree_sha256="
-                f"{runtime_manifest.get('modal_cpu_runtime_tree_sha256')}; "
-                f"submission_dir_zip_sha256={transport['transport_zip_sha256']}"
-            ),
-        ]
+    paired_modal_submit = _paired_modal_dispatch_command(
+        archive_path=archive_path,
+        static_release_surface=args.static_release_surface,
+        args=args,
+        archive=archive,
+        transport=transport,
+        execute=True,
     )
     local_cuda_smoke = _one_liner(
         [
@@ -596,12 +580,13 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             args.result_dir / "contest_auth_eval.cuda.json",
         ]
     )
+    paired_cuda_output_dir, paired_cpu_output_dir = _paired_modal_output_dirs(PAIRED_RUN_ID)
     recover = _one_liner(
         [
             ".venv/bin/python",
             "tools/recover_modal_auth_eval.py",
             "--output-dir",
-            args.modal_output_dir,
+            paired_cuda_output_dir,
         ]
     )
     recover_cpu = _one_liner(
@@ -609,14 +594,14 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
             ".venv/bin/python",
             "tools/recover_modal_auth_eval.py",
             "--output-dir",
-            args.modal_cpu_output_dir,
+            paired_cpu_output_dir,
         ]
     )
     source_tree = _source_tree_custody()
 
     remaining_required = [
-        "modal_cuda_auth_eval_dispatch",
-        "modal_auth_eval_harvest",
+        "modal_paired_auth_eval_dispatch",
+        "modal_paired_auth_eval_harvest",
         "contest_auth_eval_adjudication",
         "operator_score_claim_review",
     ]
@@ -632,7 +617,7 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
         "packet_path": _repo_rel(args.json_out),
         "current_submit_blockers": local_blockers
         + ([] if args.operator_approved_exact_cuda else ["operator_exact_cuda_approval_required"]),
-        "first_remote_gpu_step": "submit_modal_exact_cuda",
+        "first_remote_gpu_step": "submit_modal_paired_cpu_cuda",
         "steps": [
             {
                 "id": "refresh_static_packet_no_dispatch",
@@ -651,28 +636,28 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
                 "copy_safe_command": local_cuda_smoke,
             },
             {
-                "id": "submit_modal_exact_cuda",
+                "id": "plan_modal_paired_cpu_cuda",
                 "order": 3,
+                "dispatches_remote_gpu": False,
+                "writes_repo_state": True,
+                "purpose": "plan paired Modal CPU/CUDA auth eval; no provider launch without --execute",
+                "copy_safe_command": paired_modal_plan,
+            },
+            {
+                "id": "submit_modal_paired_cpu_cuda",
+                "order": 4,
                 "dispatches_remote_gpu": True,
                 "writes_repo_state": True,
-                "purpose": "canonical Modal T4 exact CUDA auth eval; wrapper records the Level-2 claim before spawn",
-                "copy_safe_command": modal_submit,
+                "purpose": "canonical paired Modal CPU/CUDA auth eval; wrapper records both Level-2 claims before spawn",
+                "copy_safe_command": paired_modal_submit,
             },
             {
                 "id": "harvest_modal_exact_cuda",
-                "order": 4,
-                "dispatches_remote_gpu": False,
-                "writes_repo_state": True,
-                "purpose": "recover detached Modal artifacts before any score or promotion claim",
-                "copy_safe_command": recover,
-            },
-            {
-                "id": "submit_modal_exact_cpu",
                 "order": 5,
                 "dispatches_remote_gpu": False,
                 "writes_repo_state": True,
-                "purpose": "canonical Modal Linux x86_64 exact CPU closure; never convert CUDA to CPU",
-                "copy_safe_command": modal_cpu_submit,
+                "purpose": "recover detached Modal CUDA artifacts before any score or promotion claim",
+                "copy_safe_command": recover,
             },
             {
                 "id": "harvest_modal_exact_cpu",
@@ -686,11 +671,12 @@ def build_packet(args: argparse.Namespace) -> dict[str, Any]:
     }
     candidate_commands = {
         "claim": (
-            "Modal wrapper records the Level-2 active lane claim before provider spawn; "
-            "do not pre-claim separately unless using a different provider actuator."
+            "Paired Modal wrapper records both Level-2 active lane claims before provider "
+            "spawn; do not pre-claim separately unless using a different provider actuator."
         ),
-        "submit": modal_submit,
-        "submit_contest_cpu": modal_cpu_submit,
+        "paired_dispatch_plan": paired_modal_plan,
+        "submit": paired_modal_submit,
+        "submit_paired_cpu_cuda": paired_modal_submit,
         "harvest": recover,
         "harvest_contest_cpu": recover_cpu,
         "local_cuda_exact_eval": local_cuda_smoke,

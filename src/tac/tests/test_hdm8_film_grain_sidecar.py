@@ -21,6 +21,10 @@ HDM8_ARCHIVE = (
 )
 CURRENT_PROXY = REPO / "experiments/results/hdm8_postfilter_sweep_20260514_codex/proxy_4pairs_cpu.json"
 N_SELECTOR_PAIRS = 600
+DIRECT_MODAL_WRAPPER_TOKENS = {
+    "experiments/modal_auth_eval.py",
+    "experiments/modal_auth_eval_cpu.py",
+}
 
 
 def _load_module(path: Path, name: str):
@@ -71,6 +75,53 @@ def _selector_proxy_payload(
             },
         ],
     }
+
+
+def _iter_strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from _iter_strings(item)
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            yield from _iter_strings(key)
+            yield from _iter_strings(item)
+
+
+def _iter_lists(value):
+    if isinstance(value, list):
+        yield value
+        for item in value:
+            yield from _iter_lists(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _iter_lists(item)
+
+
+def _assert_no_direct_modal_wrapper_leakage(manifest: dict[str, object]) -> None:
+    strings = list(_iter_strings(manifest))
+    for token in DIRECT_MODAL_WRAPPER_TOKENS:
+        assert token not in strings
+    for command in _iter_lists(manifest):
+        if len(command) >= 2 and all(isinstance(item, str) for item in command[:2]):
+            assert command[:2] != [".venv/bin/modal", "run"]
+
+
+def _assert_paired_modal_plan_command(manifest: dict[str, object]) -> None:
+    plan = manifest["paired_modal_auth_eval_plan_command_template_not_run"]
+    execute = manifest["paired_modal_auth_eval_execute_command_template_after_plan_review"]
+    assert isinstance(plan, list)
+    assert isinstance(execute, list)
+    assert plan[0:2] == [".venv/bin/python", "tools/dispatch_modal_paired_auth_eval.py"]
+    expected_index = plan.index("--expected-runtime-tree-sha256") + 1
+    assert plan[expected_index] == "auto"
+    assert "--skip-axis-if-promotable-anchor-exists" in plan
+    assert "--execute" not in plan
+    assert execute[:-1] == plan
+    assert execute[-1] == "--execute"
+    assert plan[plan.index("--archive") + 1] == manifest["archive"]["path"]
+    assert plan[plan.index("--submission-dir") + 1] == manifest["runtime"]["path"]
 
 
 def test_postfilter_config_is_fixed_runtime_contract(tmp_path: Path) -> None:
@@ -260,6 +311,8 @@ def test_builder_materializes_non_dispatchable_packet_for_nonpositive_proxy(tmp_
         ".venv/bin/python",
         "tools/build_hdm8_film_grain_sidecar_packet.py",
     ]
+    _assert_paired_modal_plan_command(manifest)
+    _assert_no_direct_modal_wrapper_leakage(manifest)
     assert (tmp_path / "packet" / "archive.zip").exists()
     assert (tmp_path / "packet" / "submission_dir" / "inflate.sh").exists()
     assert (tmp_path / "packet" / "packet_manifest.json").exists()
@@ -322,7 +375,8 @@ def test_builder_accepts_synthetic_positive_proxy(tmp_path: Path) -> None:
     assert "positive_proxy_requires_cuda_transfer_confirmation" in manifest["dispatch_blockers"]
     assert manifest["proxy"]["positive"] is True
     assert manifest["postfilter_mode"] == "grain_luma:0.25"
-    assert "--expected-runtime-tree-sha256" in manifest["exact_cuda_auth_eval_command_template"]
+    _assert_paired_modal_plan_command(manifest)
+    _assert_no_direct_modal_wrapper_leakage(manifest)
 
 
 def test_builder_materializes_selector_from_pair_proxy(tmp_path: Path) -> None:
@@ -384,6 +438,7 @@ def test_builder_materializes_selector_from_pair_proxy(tmp_path: Path) -> None:
     assert manifest["proxy"]["positive"] is True
     assert manifest["positive_proxy_candidate_for_cuda_probe"] is True
     assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
+    assert manifest["paired_auth_eval_plan_ready"] is False
     assert manifest["cuda_transfer_policy"]["required_before_ranking"] == [
         "cuda_component_risk_gate_passed",
         "lane_dispatch_claim",
@@ -436,6 +491,7 @@ def test_builder_can_pack_selector_into_archive(tmp_path: Path) -> None:
     assert manifest["selector_packed_in_archive"] is True
     assert manifest["positive_proxy_candidate_for_cuda_probe"] is True
     assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
+    assert manifest["paired_auth_eval_plan_ready"] is False
     assert manifest["cuda_transfer_policy"]["ready_for_exact_eval_dispatch"] is False
     assert manifest["cuda_component_risk_gate_required"] is True
     assert manifest["cuda_component_risk_gate"]["passed"] is False
@@ -553,11 +609,18 @@ def test_builder_cuda_prefix_selector_component_gate_can_pass(tmp_path: Path) ->
     assert manifest["cuda_component_risk_gate_required"] is True
     assert manifest["cuda_component_risk_gate"]["passed"] is True
     assert manifest["cuda_component_risk_gate"]["status"] == "passed_cuda_prefix_component_check"
-    assert manifest["ready_for_exact_cuda_after_positive_proxy"] is True
-    assert manifest["cuda_transfer_policy"]["ready_for_exact_eval_dispatch"] is True
+    assert manifest["ready_for_exact_cuda_after_positive_proxy"] is False
+    assert manifest["paired_auth_eval_plan_ready"] is True
+    assert manifest["cuda_transfer_policy"]["cuda_component_risk_gate_passed"] is True
+    assert manifest["cuda_transfer_policy"]["rankable_on_cuda"] is False
+    assert manifest["cuda_transfer_policy"]["paired_auth_eval_plan_ready"] is True
+    assert manifest["cuda_transfer_policy"]["ready_for_exact_eval_dispatch"] is False
     assert "hdm8_selector_cuda_component_risk_gate_not_passed" not in manifest[
         "dispatch_blockers"
     ]
+    assert "exact_cuda_auth_eval_missing" in manifest["dispatch_blockers"]
+    _assert_paired_modal_plan_command(manifest)
+    _assert_no_direct_modal_wrapper_leakage(manifest)
     archive_manifest = json.loads(
         (tmp_path / "packet" / "archive_manifest.json").read_text(encoding="utf-8")
     )

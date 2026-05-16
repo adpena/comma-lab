@@ -304,6 +304,32 @@ def test_operator_briefing_dispatch_gate_rejects_l5_single_axis_modal_leak() -> 
     )
 
 
+def test_operator_briefing_dispatch_gate_rejects_l5_matrix_sha_mismatch() -> None:
+    module = _load_all_lanes_module()
+    payload = {
+        **_base_briefing_payload(),
+        "supplementary_lanes": [],
+        "active_supplementary_lanes": [],
+        "gated_lanes": [],
+        "active_gated_lanes": [],
+        "composition_lanes": [],
+        "active_composition_lanes": [],
+    }
+    l5 = dict(payload["l5_v2_frontier_readiness"])  # type: ignore[index]
+    l5["next_exact_eval_target_count"] = 0
+    l5["next_exact_eval_targets_sample"] = []
+    l5["packetir_matrix_dispatch_targets_suppressed"] = True
+    l5["blockers"] = ["l5_v2_packetir_matrix_artifact_sha_mismatch"]
+    payload["l5_v2_frontier_readiness"] = l5
+
+    failures = module._operator_briefing_dispatch_failures(payload)
+
+    assert (
+        "l5_v2_frontier_readiness:l5_v2_packetir_matrix_artifact_sha_mismatch"
+        in failures
+    )
+
+
 def test_operator_briefing_dispatch_gate_checks_full_l5_target_list() -> None:
     module = _load_all_lanes_module()
     payload = {

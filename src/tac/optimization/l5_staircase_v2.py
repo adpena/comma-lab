@@ -17,7 +17,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from tac.exact_eval_custody import validate_exact_eval_evidence
+from tac.exact_eval_custody import (
+    CUDA_DEVICE_TOKENS,
+    contains_non_negated_device_token,
+    is_contest_cpu_device_text,
+    validate_exact_eval_evidence,
+)
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -66,40 +71,6 @@ L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
-_CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
-_CPU_DEVICE_TOKENS = frozenset({"cpu", "x86", "x86_64"})
-_CONTEST_CPU_FORBIDDEN_TOKENS = frozenset({
-    "aarch64",
-    "ane",
-    "apple",
-    "arm",
-    "arm64",
-    "darwin",
-    "m1",
-    "m2",
-    "m3",
-    "m4",
-    "mac",
-    "macbook",
-    "macbookpro",
-    "macos",
-    "metal",
-    "mlx",
-    "mps",
-    "osx",
-})
-_NEGATED_DEVICE_TOKENS = frozenset({
-    "disabled",
-    "false",
-    "no",
-    "non",
-    "not",
-    "off",
-    "unavailable",
-    "without",
-})
-
-
 @dataclass(frozen=True)
 class L5V2Gate:
     """One non-negotiable gate before L5 v2 can dispatch or promote."""
@@ -744,31 +715,6 @@ def _axis_row_duplicate_blockers(
     return blockers
 
 
-def _contains_non_negated_token(value: str, tokens: frozenset[str]) -> bool:
-    parts = re.findall(r"[a-z0-9]+", value.lower())
-    for idx, part in enumerate(parts):
-        if part not in tokens:
-            continue
-        prev_token = parts[idx - 1] if idx > 0 else ""
-        next_token = parts[idx + 1] if idx + 1 < len(parts) else ""
-        if prev_token in _NEGATED_DEVICE_TOKENS or next_token in _NEGATED_DEVICE_TOKENS:
-            continue
-        return True
-    return False
-
-
-def _contains_any_token(value: str, tokens: frozenset[str]) -> bool:
-    parts = set(re.findall(r"[a-z0-9]+", value.lower()))
-    return bool(parts & tokens)
-
-
-def _contains_contest_cpu_token(value: str) -> bool:
-    return _contains_non_negated_token(
-        value,
-        _CPU_DEVICE_TOKENS,
-    ) and not _contains_any_token(value, _CONTEST_CPU_FORBIDDEN_TOKENS)
-
-
 def _non_bool_int(value: object) -> int | None:
     if isinstance(value, bool):
         return None
@@ -941,23 +887,23 @@ def _paired_row_identity_blockers(
         inflate_device = str(row.get("inflate_device") or "").lower()
         eval_device = str(row.get("eval_device") or "").lower()
         if axis == "contest_cpu":
-            if not _contains_contest_cpu_token(inflate_device):
+            if not is_contest_cpu_device_text(inflate_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_inflate_device"
                 )
-            if not _contains_contest_cpu_token(eval_device):
+            if not is_contest_cpu_device_text(eval_device):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cpu_eval_device"
                 )
         else:
-            if not _contains_non_negated_token(inflate_device, _CUDA_DEVICE_TOKENS):
+            if not contains_non_negated_device_token(inflate_device, CUDA_DEVICE_TOKENS):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cuda_inflate_device"
                 )
-            if not _contains_non_negated_token(eval_device, _CUDA_DEVICE_TOKENS):
+            if not contains_non_negated_device_token(eval_device, CUDA_DEVICE_TOKENS):
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:contest_cuda_eval_device"

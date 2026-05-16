@@ -796,6 +796,16 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
         except (TypeError, ValueError):
             failures.append("l5_v2_frontier_readiness:target_count_not_integer")
             target_count = 0
+        l5_blockers = [str(blocker) for blocker in l5.get("blockers", []) if str(blocker)]
+        if "l5_v2_packetir_matrix_artifact_sha_mismatch" in l5_blockers:
+            failures.append(
+                "l5_v2_frontier_readiness:l5_v2_packetir_matrix_artifact_sha_mismatch"
+            )
+        if l5.get("packetir_matrix_dispatch_targets_suppressed") is True and target_count:
+            failures.append(
+                "l5_v2_frontier_readiness:"
+                "packetir_matrix_targets_not_suppressed_after_blocker"
+            )
         if target_count and l5.get("target_rows_are_fail_fast_only") is not True:
             failures.append("l5_v2_frontier_readiness:target_rows_not_fail_fast_only")
         targets_all = l5.get("next_exact_eval_targets")

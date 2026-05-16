@@ -134,6 +134,8 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["ready_for_exact_eval_dispatch"] is False
     assert l5["target_rows_are_fail_fast_only"] is True
     assert l5["canonical_sideinfo_evidence_present"] is True
+    assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
+    assert l5["packetir_matrix_dispatch_targets_suppressed"] is False
     assert l5["next_exact_eval_target_count"] == 13
     assert len(l5["next_exact_eval_targets"]) == 13
     assert len(l5["next_exact_eval_targets_sample"]) == 5
@@ -294,33 +296,20 @@ def test_briefing_json_composite_has_all_three_keys():
         assert hlm1_packet["ready_for_submit"] is False
         assert hlm1_packet["commands"] == {}
         assert "submit" in hlm1_packet["suppressed_commands"]
-        assert "submit_contest_cpu" in hlm1_packet["suppressed_commands"]
-        assert (
-            "--expected-runtime-tree-sha256 "
-            + hlm1_packet["runtime_tree_sha256"]
-            in hlm1_packet["suppressed_commands"]["submit"]
-        )
-        assert (
-            "--expected-runtime-tree-sha256 "
-            + modal_cpu_runtime_sha
-            in hlm1_packet["suppressed_commands"]["submit_contest_cpu"]
-        )
-        assert (
-            "experiments/modal_auth_eval_cpu.py"
-            in hlm1_packet["suppressed_commands"]["submit_contest_cpu"]
-        )
+        command_surface = hlm1_packet["suppressed_commands"]
     else:
-        assert (
-            "--expected-runtime-tree-sha256 "
-            + hlm1_packet["runtime_tree_sha256"]
-            in hlm1_packet["commands"]["submit"]
-        )
-        assert (
-            "--expected-runtime-tree-sha256 "
-            + modal_cpu_runtime_sha
-            in hlm1_packet["commands"]["submit_contest_cpu"]
-        )
-        assert "experiments/modal_auth_eval_cpu.py" in hlm1_packet["commands"]["submit_contest_cpu"]
+        command_surface = hlm1_packet["commands"]
+    assert "submit_contest_cpu" not in command_surface
+    assert "paired_dispatch_plan" in command_surface
+    assert "submit_paired_cpu_cuda" in command_surface
+    assert command_surface["submit"] == command_surface["submit_paired_cpu_cuda"]
+    assert "tools/dispatch_modal_paired_auth_eval.py" in command_surface["submit"]
+    assert "--expected-runtime-tree-sha256 auto" in command_surface["submit"]
+    assert "--skip-axis-if-promotable-anchor-exists" in command_surface["submit"]
+    assert "--execute" in command_surface["submit"]
+    assert "--execute" not in command_surface["paired_dispatch_plan"]
+    assert "experiments/modal_auth_eval.py" not in command_surface["submit"]
+    assert "experiments/modal_auth_eval_cpu.py" not in command_surface["submit"]
     refresh_cmd = hlm1_packet["operator_next_steps"]["steps"][0]["copy_safe_command"]
     assert "--operator-approved-exact-cuda" not in refresh_cmd
     assert hlm1_packet["runtime_hlm1_decode_consumption_claim"] is True
@@ -431,6 +420,58 @@ def test_phase_worklist_active_rows_require_dispatch_ready_contract():
         }
 
 
+def test_l5_v2_briefing_suppresses_packetir_targets_on_matrix_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    mod = _load_briefing_module()
+    matrix_path = tmp_path / ".omx" / "research" / "matrix.json"
+    matrix_path.parent.mkdir(parents=True)
+    matrix_path.write_text(
+        json.dumps(
+            {
+                "candidate_count": 1,
+                "next_exact_eval_target_count": 1,
+                "next_exact_eval_targets": [
+                    {
+                        "candidate_id": "stale",
+                        "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                        "command_template": (
+                            ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
+                            "--expected-runtime-tree-sha256 auto "
+                            "--skip-axis-if-promotable-anchor-exists"
+                        ),
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    mod.REPO_ROOT = tmp_path
+    mod.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = ".omx/research/matrix.json"
+    mod.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = "0" * 64
+    mod.l5_v2_canonical_sideinfo_gate_evidence = lambda: None
+    mod.l5_v2_dispatch_readiness = lambda gate_evidence=None: {
+        "blockers": [],
+        "ready_for_gate_probe_dispatch": False,
+        "ready_for_score_or_rank_dispatch": False,
+        "ready_for_dispatch": False,
+        "packetir_stack_evidence": {"paired_candidate_count": 0},
+        "pr106_stack_cell_candidates": {"candidate_count": 0},
+    }
+
+    l5 = mod._l5_v2_frontier_readiness()
+
+    assert "l5_v2_packetir_matrix_artifact_sha_mismatch" in l5["blockers"]
+    assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
+    assert l5["next_exact_eval_target_count"] == 0
+    assert l5["next_exact_eval_targets"] == []
+
+
 def test_briefing_json_skip_pareto_still_surfaces_exact_ready_audit():
     proc = _run("--json", "--skip-pareto", "--top", "3")
     out = json.loads(proc.stdout)
@@ -494,7 +535,7 @@ def test_briefing_json_each_phase_has_n_total_or_n_configs():
             "choose_byte_different_successor_candidate",
         ]
     else:
-        assert "submit_modal_exact_cuda" in hlm1_step_ids
+        assert "submit_modal_paired_cpu_cuda" in hlm1_step_ids
     assert xmember_step_ids == [
         "review_terminal_cuda_result",
         "choose_byte_different_successor_candidate",
