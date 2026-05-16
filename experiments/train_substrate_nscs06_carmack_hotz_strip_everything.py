@@ -57,6 +57,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -100,6 +101,20 @@ DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 COST_BAND_TOOL = REPO_ROOT / "tools" / "append_cost_band_anchor.py"
+
+# Canonical codec-package source. `_write_runtime` vendors these 3 files into
+# the submission tree as `submission/_nscs06_codec/{archive,codec,inflate}.py`
+# so the submission directory is SELF-CONTAINED per HNeRV parity discipline
+# L4 + L9 (no `tac.*` import from the contest judge's runtime tree). The
+# previous `sys.path.insert(0, HERE / 'src')` + `from tac.substrates...` import
+# in submission/inflate.py only worked by accident on the Modal worker because
+# the source tree happened to be mounted; in a sealed contest environment the
+# import would `ModuleNotFoundError`. v6 fix: vendor the package.
+CODEC_PACKAGE_SOURCE = (
+    REPO_ROOT / "src" / "tac" / "substrates" / "nscs06_carmack_hotz_strip_everything"
+)
+VENDORED_CODEC_FILES = ("archive.py", "codec.py", "inflate.py")
+VENDORED_CODEC_SUBDIR = "_nscs06_codec"
 
 EVAL_HW = (384, 512)
 CONTEST_RAW_HW = (874, 1164)
@@ -244,7 +259,44 @@ def _rgb_to_grayscale_u8(rgb_bcwh: np.ndarray) -> np.ndarray:
 
 
 def _write_runtime(submission_dir: Path) -> None:
-    """Emit contest-compliant inflate.sh + inflate.py per Catalog #146."""
+    """Emit SELF-CONTAINED contest-compliant inflate.sh + inflate.py + vendored
+    codec package per Catalog #146 + HNeRV parity discipline L4 + L9.
+
+    The submission tree the contest judge unzips MUST be self-contained — it
+    has ZERO access to the PACT repo source tree. v5 dispatch
+    fc-01KRR... (Modal T4, 100ep smoke) shipped inflate.sh + inflate.py only;
+    the submission/inflate.py used `sys.path.insert(0, HERE/'src')` then
+    `from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate import
+    inflate_one_video` — which silently fell through to the mounted Modal
+    source tree, then produced 0 `.raw` files (rc=0 but no output; contest
+    auth_eval raised `RuntimeError: [inflate] PARTIAL inflate - missing .raw
+    for 1/1 videos: ['0.raw']`).
+
+    The v6 fix lands here per the operator's Path A directive: copy the 3
+    canonical codec files (`archive.py`, `codec.py`, `inflate.py`) verbatim
+    into `submission/_nscs06_codec/`. The submission `inflate.py` becomes a
+    thin CLI wrapper that imports `inflate_one_video` from the vendored
+    package via relative path (`from _nscs06_codec.inflate import ...`).
+
+    Path A rationale (vs Path B inline-everything-in-one-file):
+      - Inflate-side surface is ~315 LOC across 3 logical layers (arithmetic
+        decoder + archive parser + per-pair render). Inlining into a single
+        file would exceed the HNeRV parity L4 ≤200 LOC waiver budget AND
+        flatten the natural 3-layer separation that makes each layer
+        reviewable in 30 seconds per L12.
+      - The 3 canonical files already honor every HNeRV parity contract:
+        deterministic, numpy+Pillow only (NO torch, NO scorer per strict-
+        scorer-rule), reviewable per L12. Vendoring preserves byte-identical
+        behavior vs the canonical module — zero forking, single source of
+        truth.
+      - The `_nscs06_codec` subdir name uses an underscore prefix so the
+        contest evaluator's archive whitelist (which only inspects archive
+        zip contents, not the runtime tree) is unaffected, and the import
+        path is visually distinct from any first-party `tac.*` module.
+
+    Per Catalog #205 the submission inflate.py also exposes the canonical
+    `select_inflate_device` helper signature.
+    """
     submission_dir.mkdir(parents=True, exist_ok=True)
     inflate_sh = (
         "#!/usr/bin/env bash\n"
@@ -261,21 +313,91 @@ def _write_runtime(submission_dir: Path) -> None:
     )
     (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
     (submission_dir / "inflate.sh").chmod(0o755)
+
+    # ------------------------------------------------------------------
+    # Vendor the canonical codec package (3 files, byte-identical copy)
+    # ------------------------------------------------------------------
+    vendored_dir = submission_dir / VENDORED_CODEC_SUBDIR
+    vendored_dir.mkdir(parents=True, exist_ok=True)
+    # __init__.py: minimal re-exports (only inflate-side names; compress-side
+    # helpers exist in codec.py + archive.py as dead code at inflate time but
+    # are NEVER imported by the runtime — strict-scorer-rule preserved).
+    vendor_init = (
+        "# SPDX-License-Identifier: MIT\n"
+        '"""Vendored NSCS06 codec package — self-contained inflate-side bytes.\n'
+        "\n"
+        "Copied verbatim from\n"
+        "``src/tac/substrates/nscs06_carmack_hotz_strip_everything/{archive,codec,inflate}.py``\n"
+        "by ``experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py::_write_runtime``\n"
+        "so the submission tree is self-contained per HNeRV parity L4 + L9.\n"
+        "NO torch, NO scorer, NO PACT repo dependency at inflate time.\n"
+        '"""\n'
+        "from .inflate import inflate_one_video\n"
+        "\n"
+        '__all__ = ["inflate_one_video"]\n'
+    )
+    (vendored_dir / "__init__.py").write_text(vendor_init, encoding="utf-8")
+    for fname in VENDORED_CODEC_FILES:
+        src = CODEC_PACKAGE_SOURCE / fname
+        if not src.is_file():
+            raise FileNotFoundError(
+                f"NSCS06 vendoring failed: canonical codec source missing: {src}"
+            )
+        shutil.copy2(src, vendored_dir / fname)
+
     inflate_py = (
         "#!/usr/bin/env python\n"
-        '"""Carmack-Hotz contest-compliant inflate runtime (NO torch, NO scorer)."""\n'
+        "# SPDX-License-Identifier: MIT\n"
+        '"""Carmack-Hotz contest-compliant inflate runtime (NO torch, NO scorer).\n'
+        "\n"
+        "Self-contained per HNeRV parity discipline L4 + L9. The codec package\n"
+        "(archive parser + arithmetic decoder + per-pair render) is vendored into\n"
+        "the sibling ``_nscs06_codec/`` directory by\n"
+        "``experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py::_write_runtime``.\n"
+        "ZERO ``tac.*`` imports at inflate time; ZERO PACT repo dependency.\n"
+        "\n"
+        "Per Catalog #146 the contract is\n"
+        "``inflate.py <archive_dir> <output_dir> <file_list>``.\n"
+        "Per Catalog #205 the canonical ``select_inflate_device`` helper is\n"
+        "exposed even though the substrate is numpy+Pillow only (no torch).\n"
+        '"""\n'
+        "from __future__ import annotations\n"
+        "\n"
+        "import os\n"
         "import sys\n"
         "from pathlib import Path\n"
+        "\n"
         "HERE = Path(__file__).resolve().parent\n"
-        "sys.path.insert(0, str(HERE / 'src'))\n"
-        "from tac.substrates.nscs06_carmack_hotz_strip_everything.inflate import (\n"
-        "    inflate_one_video,\n"
-        ")\n"
+        "if str(HERE) not in sys.path:\n"
+        "    sys.path.insert(0, str(HERE))\n"
+        "\n"
+        "from _nscs06_codec.inflate import inflate_one_video  # noqa: E402\n"
+        "\n"
+        "\n"
+        "def select_inflate_device() -> str:\n"
+        '    """Catalog #205 canonical helper; Carmack-Hotz needs no torch.\n'
+        "\n"
+        "    The substrate has no neural primitives, so cuda vs cpu is a no-op.\n"
+        "    We still expose the canonical name + honor the env var to keep\n"
+        "    Catalog #205's strict gate green.\n"
+        '    """\n'
+        "    # INLINE_DEVICE_FORK_OK:carmack-hotz-substrate-has-no-torch-no-cuda-cpu-distinction\n"
+        '    pinned = os.environ.get("PACT_INFLATE_DEVICE", "auto").lower()\n'
+        '    if pinned not in {"auto", "cpu", "cuda"}:\n'
+        "        raise SystemExit(\n"
+        '            f"PACT_INFLATE_DEVICE must be auto|cpu|cuda; got {pinned!r}"\n'
+        "        )\n"
+        '    return "cpu"  # substrate is numpy-only; cuda is a no-op\n'
+        "\n"
+        "\n"
         "def main() -> int:\n"
         "    if len(sys.argv) != 4:\n"
-        "        print('usage: inflate.py <archive_dir> <output_dir> <file_list>',\n"
-        "              file=sys.stderr)\n"
+        "        print(\n"
+        "            'usage: inflate.py <archive_dir> <output_dir> <file_list>',\n"
+        "            file=sys.stderr,\n"
+        "        )\n"
         "        return 2\n"
+        "    select_inflate_device()\n"
         "    archive_dir = Path(sys.argv[1])\n"
         "    output_dir = Path(sys.argv[2])\n"
         "    file_list_path = Path(sys.argv[3])\n"
@@ -287,6 +409,8 @@ def _write_runtime(submission_dir: Path) -> None:
         "        base = line.rsplit('.', 1)[0]\n"
         "        inflate_one_video(archive_bytes, output_dir / base)\n"
         "    return 0\n"
+        "\n"
+        "\n"
         "if __name__ == '__main__':\n"
         "    sys.exit(main())\n"
     )
