@@ -33,6 +33,11 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH,
     validate_l5_v2_sideinfo_effect_curve,
 )
+from tac.optimization.l5_v2_paired_measurement_dispatch_plan import (
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH,
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_REPORT_PATH,
+    L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_TOOL_PATH,
+)
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -41,6 +46,7 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     observation_from_mapping,
 )
 from tac.optimization.l5_v2_probe_intake import (
+    L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA,
     L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH,
 )
 from tac.optimization.prediction_band import (
@@ -2235,6 +2241,81 @@ def tt5l_sideinfo_effect_curve_status(
     return _tt5l_sideinfo_effect_curve_status(repo_root=resolved_repo_root)
 
 
+def _tt5l_probe_observation_intake_status(*, repo_root: Path) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    evaluated_observation_count = 0
+    candidate_ids: list[str] = []
+
+    if not artifact_path.is_file():
+        blockers.append("l5_v2_probe_observation_intake_artifact_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("l5_v2_probe_observation_intake_artifact_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+                if not payload:
+                    blockers.append("l5_v2_probe_observation_intake_artifact_empty")
+            else:
+                blockers.append("l5_v2_probe_observation_intake_artifact_not_object")
+
+    if payload and payload.get("schema") != L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA:
+        blockers.append("l5_v2_probe_observation_intake_schema_mismatch")
+    for field in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"l5_v2_probe_observation_intake_{field}_not_false")
+
+    verdict = payload.get("verdict")
+    if payload and not isinstance(verdict, Mapping):
+        blockers.append("l5_v2_probe_observation_intake_verdict_missing_or_not_object")
+    elif isinstance(verdict, Mapping):
+        rows = verdict.get("evaluated_observations")
+        if not isinstance(rows, list):
+            blockers.append(
+                "l5_v2_probe_observation_intake_evaluated_observations_missing"
+            )
+        else:
+            evaluated_observation_count = len(rows)
+            seen: set[str] = set()
+            for row in rows:
+                if not isinstance(row, Mapping):
+                    blockers.append(
+                        "l5_v2_probe_observation_intake_observation_not_object"
+                    )
+                    continue
+                candidate_id = str(row.get("candidate_id") or "").strip()
+                if candidate_id:
+                    candidate_ids.append(candidate_id)
+                    seen.add(candidate_id)
+            missing = [candidate for candidate in L5V2_CANDIDATES if candidate not in seen]
+            if missing:
+                blockers.append(
+                    "l5_v2_probe_observation_intake_candidate_coverage_incomplete:"
+                    + ",".join(missing)
+                )
+
+    return {
+        "schema": "l5_v2_probe_observation_intake_status_v1",
+        "artifact_path": TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid_for_measurement_planning": not blockers,
+        "intake_schema": str(payload.get("schema") or "") if payload else None,
+        "evaluated_observation_count": evaluated_observation_count,
+        "candidate_ids": candidate_ids,
+        "architecture_lock_allowed": (
+            payload.get("architecture_lock_allowed") is True if payload else False
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -2270,6 +2351,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     move_level_valid = move_level_status["artifact_valid"] is True
     timing_smoke_status = _tt5l_first_anchor_timing_smoke_status(repo_root=repo_root)
     timing_smoke_valid = timing_smoke_status["artifact_valid"] is True
+    probe_intake_status = _tt5l_probe_observation_intake_status(repo_root=repo_root)
     sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
         repo_root=repo_root
     )
@@ -2402,7 +2484,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
-    elif not probe_valid:
+    elif not probe_valid and not probe_intake_status[
+        "artifact_valid_for_measurement_planning"
+    ]:
         measurement_schedule_command = (
             f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
             f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
@@ -2435,6 +2519,58 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 "planning-only first-match lattice; routes the next paired "
                 "C1/Z5/TT5L measurements without score, rank, promotion, or "
                 "dispatch authority"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not probe_valid:
+        measurement_schedule_command = (
+            f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
+            f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
+            f"--output-json {L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH} "
+            f"--output-md {L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH}"
+        )
+        paired_dispatch_plan_command = (
+            f".venv/bin/python {L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_TOOL_PATH} "
+            f"--schedule-json {L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH} "
+            f"--output-json {L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH} "
+            f"--output-md {L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_REPORT_PATH}"
+        )
+        next_action = {
+            "action_id": "materialize_l5_v2_paired_probe_measurements",
+            "phase": "probe_disambiguator_paired_measurements",
+            "probe_status": "observation_intake_present_fail_closed",
+            "probe_observation_intake_status": probe_intake_status,
+            "input_template": TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH,
+            "probe_observation_intake_artifact_path": (
+                TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+            ),
+            "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+            "measurement_schedule_command_template": measurement_schedule_command,
+            "measurement_schedule_expected_artifacts": [
+                L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+                L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+            ],
+            "paired_measurement_dispatch_plan_tool_path": (
+                L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_TOOL_PATH
+            ),
+            "paired_measurement_dispatch_plan_command_template": (
+                paired_dispatch_plan_command
+            ),
+            "paired_measurement_dispatch_plan_expected_artifacts": [
+                L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_ARTIFACT_PATH,
+                L5V2_PAIRED_MEASUREMENT_DISPATCH_PLAN_REPORT_PATH,
+            ],
+            "execution_order": [
+                "build_l5_v2_lattice_measurement_schedule",
+                "build_l5_v2_paired_measurement_dispatch_plan",
+                "fill_each_work_unit_archive_runtime_sha_and_operator_execute_flag",
+            ],
+            "score_lowering_unblocker": (
+                "paired exact C1/Z5/TT5L observations are the next material "
+                "L5 v2 staircase evidence; re-running intake without new source "
+                "artifacts is a retread"
             ),
             "score_claim": False,
             "promotion_eligible": False,
@@ -2633,6 +2769,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "proof_tool_exists": proof_tool_exists,
         "probe_tool_path": L5V2_PROBE_TOOL_PATH,
         "probe_tool_exists": probe_tool_exists,
+        "probe_observation_intake_status": probe_intake_status,
         "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
         "measurement_schedule_artifact_path": L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
         "measurement_schedule_report_path": L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,

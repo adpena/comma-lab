@@ -1791,6 +1791,76 @@ def test_l5_v2_tt5l_probe_action_advances_after_template_exists(
     assert "planning-only" in action["measurement_schedule_semantics"]
 
 
+def test_l5_v2_tt5l_probe_action_uses_existing_fail_closed_intake(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "architecture_lock_allowed": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {
+                            "candidate_id": candidate_id,
+                            "eligible_for_architecture_lock": False,
+                            "blockers": [
+                                f"l5_v2_probe_required_candidate_ineligible:{candidate_id}"
+                            ],
+                        }
+                        for candidate_id in L5V2_CANDIDATES
+                    ],
+                    "architecture_lock_allowed": False,
+                    "blockers": ["l5_v2_probe_no_eligible_candidate"],
+                },
+                "blockers": ["l5_v2_probe_no_eligible_candidate"],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    action = readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"]
+    intake_status = readiness["tt5l_campaign_readiness"][
+        "probe_observation_intake_status"
+    ]
+
+    assert action["action_id"] == "materialize_l5_v2_paired_probe_measurements"
+    assert action["probe_status"] == "observation_intake_present_fail_closed"
+    assert intake_status["artifact_valid_for_measurement_planning"] is True
+    assert intake_status["evaluated_observation_count"] == len(L5V2_CANDIDATES)
+    assert "command_template" not in action
+    assert "tools/build_l5_v2_lattice_measurement_schedule.py" in action[
+        "measurement_schedule_command_template"
+    ]
+    assert "tools/build_l5_v2_paired_measurement_dispatch_plan.py" in action[
+        "paired_measurement_dispatch_plan_command_template"
+    ]
+    assert action["execution_order"] == [
+        "build_l5_v2_lattice_measurement_schedule",
+        "build_l5_v2_paired_measurement_dispatch_plan",
+        "fill_each_work_unit_archive_runtime_sha_and_operator_execute_flag",
+    ]
+    assert action["score_claim"] is False
+    assert action["ready_for_exact_eval_dispatch"] is False
+
+
 def test_l5_v2_tt5l_readiness_surfaces_measurement_schedule_without_authority(
     tmp_path: Path,
 ) -> None:
