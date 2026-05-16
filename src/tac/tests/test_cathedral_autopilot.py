@@ -453,6 +453,84 @@ def test_validation_queue_preserves_unknown_cross_paradigm_rows() -> None:
     assert queued["score_claim"] is False
 
 
+def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> None:
+    """Cathedral must see L5-v2 stack blockers without promoting them."""
+    autopilot = _load_autopilot()
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_dispatch_readiness",
+        lambda repo_root: {
+            "blockers": ["requires_sideinfo_proof"],
+            "packetir_stack_evidence": {
+                "blockers": ["l5_v2_packetir_no_runtime_bound_paired_exact_candidates"],
+                "paired_candidate_count": 0,
+                "source_status_counts": {"runtime_consumption_blocked": 3},
+                "axis_semantics": {
+                    "contest_cpu": "kept separate",
+                    "contest_cuda": "kept separate",
+                },
+            },
+            "pr106_stack_cell_candidates": {
+                "blockers": ["l5_v2_pr106_stack_cell_candidates_missing"],
+                "candidates": [],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        autopilot,
+        "_load_l5_v2_packetir_matrix_for_cathedral",
+        lambda: {
+            "load_blockers": [],
+            "status_counts": {"runtime_consumption_blocked": 3},
+            "next_exact_eval_targets": [
+                {
+                    "candidate_id": "format_0x0c_exact_radix",
+                    "lane_id": "lane_pr106_packetir_0x0c",
+                    "pair_group_id": "pair_sha",
+                    "missing_axes": ["contest_cpu"],
+                    "recommended_provider": "modal_paired_cpu_cuda",
+                    "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                    "command_template": "python dispatch.py --plan",
+                    "execute_command_template": "python dispatch.py --execute",
+                    "archive_path": "experiments/candidates/archive.zip",
+                    "archive_sha256": "a" * 64,
+                    "runtime_dir": "submissions/runtime",
+                }
+            ],
+        },
+    )
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        target_score=0.190,
+    )
+
+    queued = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"].startswith("l5_v2_pr106_packetir_stack")
+    )
+    assert queued["lane_id"] == autopilot.L5_V2_LANE_ID
+    assert queued["campaign_id"] == autopilot.L5_V2_CAMPAIGN_ID
+    assert queued["subject_id"] == autopilot.L5_V2_SUBJECT_ID
+    assert queued["score_claim"] is False
+    assert queued["promotion_eligible"] is False
+    assert queued["ready_for_exact_eval_dispatch"] is False
+    assert queued["rank_or_kill_eligible"] is False
+    assert queued["potential_score_delta_if_validated"] == 0.0
+    assert "contest_cpu" in queued["axis_semantics"]
+    assert "contest_cuda" in queued["axis_semantics"]
+    assert queued["packetir_status_counts"]["runtime_consumption_blocked"] == 3
+    assert "l5_v2_packetir_no_runtime_bound_paired_exact_candidates" in queued[
+        "dispatch_blockers"
+    ]
+    assert queued["validation_status"] == "blocked_until_runtime_bound_packetir_evidence"
+    assert queued["exact_eval_targets"]["format_0x0c_exact_radix"][0][
+        "score_claim"
+    ] is False
+
+
 def test_validation_queue_does_not_reward_zero_byte_proxy_rows() -> None:
     """A missing/no-finalizer artifact encoded as 0 bytes is not a rate win."""
     autopilot = _load_autopilot()

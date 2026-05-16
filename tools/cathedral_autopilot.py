@@ -62,6 +62,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.authority_contract import normalize_score_authority_fields  # noqa: E402
+from tac.optimization import l5_staircase_v2 as l5v2  # noqa: E402
 from tac.optimization.candidate_evidence_contract import (  # noqa: E402
     has_positive_exact_cuda_evidence_marker,
     promotable_exact_cuda_evidence_blockers,
@@ -86,6 +87,10 @@ from tac.score_geometry import (  # noqa: E402
 TOOL_NAME = "tools/cathedral_autopilot.py"
 SCHEMA_VERSION = "cathedral_autopilot.v1"
 EVIDENCE_GRADE = "[CPU-prep planning-only]"
+L5_V2_CAMPAIGN_ID = l5v2.CAMPAIGN_ID
+L5_V2_LANE_ID = l5v2.LANE_ID
+L5_V2_PACKETIR_MATRIX_PATH = l5v2.PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH
+L5_V2_SUBJECT_ID = l5v2.SUBJECT_ID
 
 
 # Empirically-anchored substrate baselines (from session memory)
@@ -2291,6 +2296,191 @@ def build_validation_queue(
     return rows
 
 
+def _load_l5_v2_packetir_matrix_for_cathedral() -> dict[str, Any]:
+    path = REPO_ROOT / L5_V2_PACKETIR_MATRIX_PATH
+    base: dict[str, Any] = {
+        "path": str(L5_V2_PACKETIR_MATRIX_PATH),
+        "exists": path.is_file(),
+        "load_blockers": [],
+    }
+    if not path.is_file():
+        base["load_blockers"].append("l5_v2_packetir_matrix_missing")
+        return base
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        base["load_blockers"].append(f"l5_v2_packetir_matrix_json_invalid:{exc.msg}")
+        return base
+    if not isinstance(payload, dict):
+        base["load_blockers"].append("l5_v2_packetir_matrix_not_object")
+        return base
+    return {**base, **payload}
+
+
+def _l5_v2_exact_targets_by_candidate(
+    matrix: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    targets_by_candidate: dict[str, list[dict[str, Any]]] = {}
+    targets = matrix.get("next_exact_eval_targets", [])
+    if not isinstance(targets, list):
+        return targets_by_candidate
+    for target in targets:
+        if not isinstance(target, dict):
+            continue
+        candidate_id = str(target.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        targets_by_candidate.setdefault(candidate_id, []).append(
+            {
+                "candidate_id": candidate_id,
+                "lane_id": target.get("lane_id"),
+                "pair_group_id": target.get("pair_group_id"),
+                "missing_axes": target.get("missing_axes"),
+                "recommended_provider": target.get("recommended_provider"),
+                "paired_dispatch_tool": target.get("paired_dispatch_tool"),
+                "command_template": target.get("command_template"),
+                "execute_command_template": target.get("execute_command_template"),
+                "archive_path": target.get("archive_path"),
+                "archive_sha256": target.get("archive_sha256"),
+                "runtime_dir": target.get("runtime_dir"),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return targets_by_candidate
+
+
+def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
+    """Expose L5-v2/PR106 stack state to Cathedral without dispatch authority."""
+
+    try:
+        readiness = l5v2.l5_v2_dispatch_readiness(repo_root=REPO_ROOT)
+    except Exception as exc:  # pragma: no cover - defensive visibility surface
+        return [
+            {
+                "technique": "time_traveler_l5_v2_pr106_packetir_stack",
+                "queue_source": "l5_v2_staircase",
+                "validation_status": "l5_v2_readiness_load_failed",
+                "archive_bytes_if_validated": None,
+                "potential_score_delta_if_validated": 0.0,
+                "evidence_grade": EVIDENCE_GRADE,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "dispatch_blockers": [f"l5_v2_readiness_exception:{type(exc).__name__}"],
+                "lane_id": L5_V2_LANE_ID,
+                "campaign_id": L5_V2_CAMPAIGN_ID,
+                "subject_id": L5_V2_SUBJECT_ID,
+            }
+        ]
+
+    matrix = _load_l5_v2_packetir_matrix_for_cathedral()
+    targets_by_candidate = _l5_v2_exact_targets_by_candidate(matrix)
+    packetir_evidence = readiness.get("packetir_stack_evidence")
+    if not isinstance(packetir_evidence, dict):
+        packetir_evidence = {}
+    stack_payload = readiness.get("pr106_stack_cell_candidates")
+    if not isinstance(stack_payload, dict):
+        stack_payload = {}
+    common_blockers = [
+        str(blocker)
+        for source in (
+            readiness.get("blockers", []),
+            packetir_evidence.get("blockers", []),
+            stack_payload.get("blockers", []),
+            matrix.get("load_blockers", []),
+        )
+        for blocker in (source if isinstance(source, list) else [])
+        if str(blocker)
+    ]
+    common_blockers = list(dict.fromkeys(common_blockers))
+    candidates = stack_payload.get("candidates", [])
+    rows: list[dict[str, Any]] = []
+    if isinstance(candidates, list):
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            packetir_candidate_id = str(candidate.get("packetir_candidate_id") or "")
+            source_max_bytes = candidate.get("source_max_archive_size_bytes")
+            try:
+                archive_bytes_if_validated = (
+                    int(source_max_bytes) if source_max_bytes is not None else None
+                )
+            except (TypeError, ValueError):
+                archive_bytes_if_validated = None
+            rows.append(
+                {
+                    "technique": candidate.get("cell_id"),
+                    "queue_source": "l5_v2_pr106_packetir_stack_cell",
+                    "validation_status": "blocked_until_l5_v2_composite_materialized",
+                    "archive_bytes_if_validated": archive_bytes_if_validated,
+                    "potential_score_delta_if_validated": 0.0,
+                    "evidence_grade": EVIDENCE_GRADE,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "dispatch_blockers": list(
+                        dict.fromkeys(
+                            [
+                                *common_blockers,
+                                *[
+                                    str(blocker)
+                                    for blocker in candidate.get("blockers", [])
+                                    if str(blocker)
+                                ],
+                            ]
+                        )
+                    ),
+                    "lane_id": L5_V2_LANE_ID,
+                    "campaign_id": L5_V2_CAMPAIGN_ID,
+                    "subject_id": L5_V2_SUBJECT_ID,
+                    "packetir_candidate_id": packetir_candidate_id,
+                    "packetir_format_id": candidate.get("packetir_format_id"),
+                    "axis_semantics": packetir_evidence.get("axis_semantics", {}),
+                    "source_axis_scores": candidate.get("source_axis_scores", {}),
+                    "source_worst_axis_score": candidate.get("source_worst_axis_score"),
+                    "source_archive_sha256": candidate.get("source_archive_sha256"),
+                    "exact_eval_targets": targets_by_candidate.get(
+                        packetir_candidate_id,
+                        [],
+                    ),
+                    "selection_basis": candidate.get("selection_basis"),
+                }
+            )
+    if rows:
+        return rows
+    return [
+        {
+            "technique": "time_traveler_l5_v2_pr106_packetir_stack",
+            "queue_source": "l5_v2_pr106_packetir_stack_cell_generation",
+            "validation_status": "blocked_until_runtime_bound_packetir_evidence",
+            "archive_bytes_if_validated": None,
+            "potential_score_delta_if_validated": 0.0,
+            "evidence_grade": EVIDENCE_GRADE,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "dispatch_blockers": common_blockers
+            or ["l5_v2_pr106_stack_cell_candidates_missing"],
+            "lane_id": L5_V2_LANE_ID,
+            "campaign_id": L5_V2_CAMPAIGN_ID,
+            "subject_id": L5_V2_SUBJECT_ID,
+            "packetir_matrix_path": str(L5_V2_PACKETIR_MATRIX_PATH),
+            "packetir_status_counts": packetir_evidence.get(
+                "source_status_counts",
+                matrix.get("status_counts", {}),
+            ),
+            "paired_candidate_count": packetir_evidence.get("paired_candidate_count", 0),
+            "axis_semantics": packetir_evidence.get("axis_semantics", {}),
+            "exact_eval_targets": targets_by_candidate,
+        }
+    ]
+
+
 def _maybe_axis_priorities(
     d_seg: float, d_pose: float, archive_bytes: int,
     target_score: float | None,
@@ -2461,6 +2651,7 @@ def build_plan(
         current_archive_bytes=archive_bytes,
         current_score=score,
     )
+    validation_queue.extend(_l5_v2_stack_validation_queue())
 
     # Target-score gap analysis
     gap = {}
