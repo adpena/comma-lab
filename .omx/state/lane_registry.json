@@ -31044,11 +31044,11 @@
       "id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
       "name": "NSCS06 Carmack-Hotz Strip-Everything",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scaffold + _full_main landed; smoke green; 28 dedicated tests pass; ~1820 LOC across 6 files (package 1057 + trainer 510 + recipe + remote driver + submission + tests 350)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -31071,12 +31071,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_carmack_hotz_strip_everything_scaffold_plus_full_main_landed_20260515.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh + heartbeat + Catalog #244 NVML block + Catalog #163 bootstrap sentinel"
         }
       },
       "notes": ""
@@ -31130,5 +31130,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T01:51:52Z"
+  "updated_at": "2026-05-16T01:56:13Z"
 }

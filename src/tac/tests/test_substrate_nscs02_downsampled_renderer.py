@@ -381,8 +381,38 @@ def test_trainer_smoke_runs_and_writes_smoke_stats(tmp_path):
     assert (out_dir / "smoke_stats.json").is_file()
 
 
-def test_trainer_full_main_raises_not_implemented_pending_council():
-    """Catalog #240: full path council-gated; smoke recipe ships first."""
+def test_trainer_full_main_is_callable_pr95_paradigm():
+    """UNIQUE-AND-COMPLETE-PER-METHOD: ``_full_main`` is implemented per the
+    PR 95 paradigm (10-stage pipeline; canonical helpers shared where they
+    serve, forked where they suppress — see module docstring's
+    canonical-vs-unique decision per layer).
+
+    The actual full-path run requires CUDA + a real video + scorer load,
+    so this test only verifies the symbol exists and is callable; the
+    end-to-end run lives in the operator-authorize Modal recipe (lifted by
+    a follow-up smoke-before-full review per Catalog #167).
+    """
+    sys.path.insert(0, str(REPO_ROOT / "experiments"))
+    try:
+        import importlib
+
+        import train_substrate_nscs02_downsampled_renderer as trainer
+
+        importlib.reload(trainer)
+
+        assert callable(trainer._full_main)
+        # No NotImplementedError raise — full path is implemented.
+        # Verify the symbol's docstring documents the 10-stage pipeline.
+        doc = trainer._full_main.__doc__ or ""
+        assert "Pipeline" in doc or "pipeline" in doc, (
+            f"_full_main docstring missing pipeline documentation: {doc!r}"
+        )
+    finally:
+        sys.path.remove(str(REPO_ROOT / "experiments"))
+
+
+def test_trainer_full_cpu_paired_flag_validation_catalog_197():
+    """Catalog #197: --full-cpu requires --advisory-cpu-explicitly-waived."""
     sys.path.insert(0, str(REPO_ROOT / "experiments"))
     try:
         import importlib
@@ -392,9 +422,20 @@ def test_trainer_full_main_raises_not_implemented_pending_council():
         importlib.reload(trainer)
 
         parser = trainer._build_parser()
-        args = parser.parse_args(["--output-dir", "/tmp/nscs02_test_full"])
-        with pytest.raises(NotImplementedError, match="council-gated"):
-            trainer._full_main(args)
+        # --full-cpu without paired waiver flag must raise SystemExit
+        args = parser.parse_args([
+            "--output-dir", "/tmp/nscs02_test_full",
+            "--full-cpu",
+        ])
+        with pytest.raises(SystemExit, match="advisory-cpu-explicitly-waived"):
+            trainer._validate_full_cpu_flags(args)
+        # Paired flags must NOT raise
+        args_ok = parser.parse_args([
+            "--output-dir", "/tmp/nscs02_test_full",
+            "--full-cpu",
+            "--advisory-cpu-explicitly-waived",
+        ])
+        trainer._validate_full_cpu_flags(args_ok)  # no raise
     finally:
         sys.path.remove(str(REPO_ROOT / "experiments"))
 

@@ -5,9 +5,9 @@ smoke_only: true
 research_only: true
 dispatch_enabled: false
 dispatch_blockers:
-  - full_main_raises_NotImplementedError_until_smoke_review_and_export_auth_eval_path_lands
-  - remote_driver_missing_or_unverified
-summary: NSCS02 downsampled-renderer + inflate-upsample research-only scaffold on Modal T4 (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; score movement unranked until resizing-chain ablation and paired smoke evidence land).
+  - resizing_chain_ablation_pending_before_promotion_per_audit_reactivation_criterion
+  - paired_cpu_cuda_auth_eval_custody_required_before_promotion_per_CLAUDE_md_submission_auth_eval
+summary: NSCS02 downsampled-renderer + inflate-upsample scaffold on Modal T4 with UNIQUE-AND-COMPLETE-PER-METHOD _full_main implemented 2026-05-15 per PR 95 paradigm (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; score movement unranked until resizing-chain ablation and paired CPU+CUDA exact-eval custody land).
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"

@@ -69,10 +69,33 @@ NSCS02_DOWNSAMPLED_RENDERER_CONTRACT = SubstrateContract(
 
 @register_substrate(NSCS02_DOWNSAMPLED_RENDERER_CONTRACT)
 def main(argv: list[str] | None = None) -> int:
-    raise NotImplementedError(
-        "NSCS02 is research-only until the resizing-chain ablation and paired "
-        "CPU+CUDA exact-eval custody land."
+    """Package-level entry: delegates to the canonical trainer's main().
+
+    Per the UNIQUE-AND-COMPLETE-PER-METHOD operating mode (2026-05-15), the
+    trainer's ``_full_main`` is now implemented. Promotion remains gated by
+    the resizing-chain ablation + paired CPU+CUDA exact-eval custody per
+    the recipe's ``research_only=true`` flag; the trainer-side full path is
+    available for operator-approved dispatches.
+    """
+    # Import the trainer lazily so package-side construction does not pull
+    # the heavy torch + scorer + pyav dependency graph into every importer.
+    from pathlib import Path
+    import importlib.util
+    import sys
+
+    repo_root = Path(__file__).resolve().parents[4]
+    trainer_path = repo_root / "experiments" / "train_substrate_nscs02_downsampled_renderer.py"
+    if not trainer_path.is_file():
+        raise FileNotFoundError(f"NSCS02 trainer missing: {trainer_path}")
+    spec = importlib.util.spec_from_file_location(
+        "_nscs02_trainer", trainer_path,
     )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load NSCS02 trainer spec from {trainer_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["_nscs02_trainer"] = module
+    spec.loader.exec_module(module)
+    return int(module.main(argv))
 
 
 __all__ = ["NSCS02_DOWNSAMPLED_RENDERER_CONTRACT", "main"]
