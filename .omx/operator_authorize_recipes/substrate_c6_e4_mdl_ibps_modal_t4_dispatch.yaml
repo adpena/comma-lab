@@ -60,10 +60,20 @@ cost_band:
   gpu_key: A10G
 
 predicted_score_target: null
-predicted_band: [0.113, 0.163]
+# 2026-05-16 CARGO-CULT-UNWIND: predicted_band REVISED from [0.113, 0.163] to null
+# pending Dykstra-feasibility polytope + Tier C anchor reconciliation.
+# Per Catalog #219 Z1 ablation + Catalog #227 Tier C: C6 5ep IBPS1 anchor classified
+# WITHIN-CLASS; old band is structurally inconsistent with Z1 within-class plateau.
+predicted_band: null
 smoke_score_band: [0.10, 0.30]
-predicted_delta: "-0.030 to -0.080 vs PR101 0.193 [mathematical-derivation; first-principles-bound]"
-predicted_delta_basis: ".omx/research/adjusted_theoretical_floor_v3_post_pr106_falsification_20260513.md (#3 in TOP-3 dispatch queue; zen-Z1 LARGEST single bet)"
+predicted_delta: "NULL pending Dykstra-feasibility polytope + Tier C anchor reconciliation [prediction] per cargo-cult-unwind 2026-05-16; OLD band [0.113, 0.163] retired as carried-forward-post-Z1 without within-class haircut"
+predicted_delta_basis: ".omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.2 + Catalog #219 Z1 ablation citation"
+# CARGO-CULT-UNWIND reactivation criteria (per design memo §Reactivation criteria):
+dispatch_blockers:
+  - tools_check_substrate_dykstra_feasibility_polytope_emitted_at_omx_state_dykstra_feasibility_c6_e4_mdl_ibps_json
+  - predicted_band_revised_in_both_unwind_memo_and_this_recipe_to_polytope_distortion_axis_intersection
+  - tier_c_anchor_reconciliation_landed_post_smoke_mdl_ablation_classifies_within_or_across_class_per_catalog_227
+  - grand_council_consensus_sextet_pact_sign_off_on_revised_band_per_CLAUDE_md_design_decisions_non_negotiable
 literature_anchor: |
   Tishby & Zaslavsky (2015) "Deep Learning and the Information Bottleneck Principle"
     IEEE Info. Theory Workshop DOI 10.1109/ITW.2015.7133169;
@@ -153,6 +163,11 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
+  unwind_landed: true (2026-05-16 per .omx/research/c6_e4_mdl_ibps_cargo_cult_unwind_design_20260516.md)
+  unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.2
+  cargo_cult_unwound: 3 cargo-cults classified (CC-3 HIGH; CC-1 + CC-2 MEDIUM); Z1 within-class haircut required
+  reactivation_criteria: 4 criteria pinned in dispatch_blockers above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+
   C6 MDL-IBPS substrate first-anchor dispatch recipe.
 
   The substrate is a single-archive IBPS1 packet at ~100-200 KB target.

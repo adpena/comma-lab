@@ -7,6 +7,12 @@ dispatch_enabled: false
 dispatch_blockers:
   - resizing_chain_ablation_pending_before_promotion_per_audit_reactivation_criterion
   - paired_cpu_cuda_auth_eval_custody_required_before_promotion_per_CLAUDE_md_submission_auth_eval
+  # 2026-05-16 CARGO-CULT-UNWIND landed per .omx/research/nscs02_downsampled_renderer_cargo_cult_unwind_design_20260516.md
+  # Reactivation criteria (all MUST clear before dispatch_enabled flip):
+  - probe_nscs02_paired_downsample_ratio_smoke_returns_score_lt_1_0_and_seg_pose_regression_lt_2x_pr101_baseline
+  - probe_nscs02_eval_roundtrip_chain_disambiguator_passes_lt_1e_3_rms_divergence
+  - recipe_field_min_downsample_ratio_2_landed_below
+  - predicted_delta_band_dykstra_feasibility_intersection_section_landed_in_unwind_design_memo
 summary: NSCS02 downsampled-renderer + inflate-upsample scaffold on Modal T4 with UNIQUE-AND-COMPLETE-PER-METHOD _full_main implemented 2026-05-15 per PR 95 paradigm (ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 entry; score movement unranked until resizing-chain ablation and paired CPU+CUDA exact-eval custody land).
 
 platform: modal
@@ -28,8 +34,12 @@ cost_band:
   estimated_cost_usd_band: [5, 15]
 
 predicted_score_target: null
-predicted_delta: "unranked until no-train A1 resizing-chain ablation compares direct 192->384, 192->874/1164->384, bilinear/bicubic, and paired component deltas"
-predicted_delta_basis: ".omx/research/assumptions_challenge_audit_shared_assumptions_matrix_20260515.json#NSCS02_DOWNSAMPLED_RENDERER_INFLATE_UPSAMPLE required_probe"
+predicted_delta: "NULL pending Dykstra-feasibility check + paired-downsample-ratio probe [prediction] per cargo-cult-unwind 2026-05-16; R=1 band [0.193, 0.197] / R=2 [0.20, 0.35] / R=4 [1.0, 60.0] NSCS06-class-destruction risk"
+predicted_delta_basis: ".omx/research/nscs02_downsampled_renderer_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.1"
+# Tier 2 hardware-correctness contract (CC-2 unwind from cargo-cult unwind design memo 2026-05-16):
+# Refuse archive build at downsample ratio R > 2 unless same-line waiver
+# `# DOWNSAMPLE_RATIO_OVERRIDE_OK:<rationale>` is present in the trainer.
+min_downsample_ratio: 2
 literature_anchor: "Audit math basis: SegNet stride-2 stem (upstream/modules.py:103-109) discards half resolution before scoring; PoseNet preprocess interpolates to (384, 512); rendering at (192, 256) is the SCORE-INVISIBLE downscale floor."
 
 risk: |
@@ -109,6 +119,11 @@ sentinel_files:
   - submissions/nscs02_downsampled_renderer/src/model.py
 
 notes: |
+  unwind_landed: true (2026-05-16 per .omx/research/nscs02_downsampled_renderer_cargo_cult_unwind_design_20260516.md)
+  unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.1
+  cargo_cult_unwound: 4 cargo-cults classified (CC-1 + CC-4 HIGH; CC-2 + CC-3 MEDIUM); structural NSCS06 analog
+  reactivation_criteria: 4 criteria pinned in dispatch_blockers above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+
   ASSUMPTIONS-CHALLENGE-AUDIT NSCS02 first-anchor hypothesis. It remains
   unranked until the resizing-chain ablation and paired component deltas
   verify that the SegNet/PoseNet preprocessing assumptions survive the actual

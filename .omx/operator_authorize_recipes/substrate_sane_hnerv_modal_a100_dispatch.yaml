@@ -30,8 +30,14 @@ cost_band:
   platform_key: modal
   gpu_key: A100
 
-predicted_delta: "-0.030 to -0.050 [predicted; council substrate design memo]"
-predicted_delta_basis: ".omx/research/grand_council_fields_medal_substrate_design_20260512.md"
+predicted_delta: "REVISED to [0.195, 0.197] (HNeRV-core only) [prediction; pending paired probe] per cargo-cult-unwind 2026-05-16; OLD [-0.030 to -0.050] retired as mixed-claim conflating HNeRV-core target with PR101 bolt-on-stacked frontier"
+predicted_delta_basis: ".omx/research/sane_hnerv_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND necessary-vs-sufficient decomposition) + .omx/research/grand_council_fields_medal_substrate_design_20260512.md + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.5"
+# CARGO-CULT-UNWIND reactivation criteria for paid full-100ep dispatch (per design memo §Reactivation criteria):
+dispatch_blockers:
+  - five_failure_mode_forensics_landed_at_omx_state_sane_hnerv_5_failure_mode_forensics_20260516_json
+  - necessary_vs_sufficient_decomposition_landed_in_unwind_memo_with_revised_predicted_band_citation
+  - paired_scorer_loss_routing_probe_emits_per_variant_scores_at_experiments_results_probe_sane_hnerv_scorer_routing
+  - winning_routing_variant_identified_and_any_required_trainer_changes_operator_approved
 risk: |
   Phase 1 first-anchor research dispatch on Modal A100. The shared
   modal_train_lane.py wrapper forces AUTH_EVAL_DEVICE=cpu and marks that
@@ -74,6 +80,13 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
 
 notes: |
+  unwind_landed: true (2026-05-16 per .omx/research/sane_hnerv_cargo_cult_unwind_design_20260516.md)
+  unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.5
+  cargo_cult_unwound: 4 cargo-cults classified (CC-1 + CC-3 MEDIUM; CC-2 confirmed HARD-EARNED; CC-4 LOW under probe)
+  reactivation_criteria: 4 criteria pinned in dispatch_blockers above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+  empirical_signal: 5 failed first-anchor attempts on 2026-05-12 ARE empirical fragility data (NOT integration-bug noise); 5-failure-mode forensic classification required before any kill discussion
+  necessary_vs_sufficient: HNeRV-core embeddings NECESSARY (PR95/PR100/PR101 all use them) BUT NOT SUFFICIENT (PR101/PR103/PR102 all stacked bolt-ons); sane_hnerv target 0.195 [HNeRV-core] + bolt-on-delta -0.002 = PR101 0.193 floor
+
   Per operator directive 2026-05-12: "reroute all to modal and lightning free
   tier" + "all are approved".
 

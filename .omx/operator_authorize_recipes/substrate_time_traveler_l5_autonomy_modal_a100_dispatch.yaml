@@ -52,10 +52,21 @@ cost_band:
   gpu_key: A100
 
 predicted_score_target: null
-predicted_band: [0.150, 0.170]
+# 2026-05-16 CARGO-CULT-UNWIND: predicted_band REVISED from [0.150, 0.170] to null
+# pending Dykstra-feasibility 5-move polytope. Per Boyd's convex-feasibility lens +
+# Z1 within-class haircut (Catalog #219): 5-move composition is SUBADDITIVE in
+# convex-intersection regime, NOT additive (old band was additive sum of per-move
+# improvements; structural over-estimate).
+predicted_band: null
 smoke_score_band: [0.10, 0.30]
-predicted_delta: "time-traveler-prediction only; no score claim until paired CPU/CUDA auth eval lands"
-predicted_delta_basis: ".omx/research/time_traveler_architecture_reverse_engineered_20260513.md"
+predicted_delta: "NULL pending Dykstra-feasibility 5-move polytope + Z1 within-class haircut application [prediction] per cargo-cult-unwind 2026-05-16; OLD band [0.150, 0.170] retired as additive-composition cargo-cult per Boyd's convex-feasibility lens"
+predicted_delta_basis: ".omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/time_traveler_architecture_reverse_engineered_20260513.md + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.4 + Catalog #219 Z1 ablation"
+# CARGO-CULT-UNWIND reactivation criteria (per design memo §Reactivation criteria):
+dispatch_blockers:
+  - tools_check_substrate_dykstra_feasibility_polytope_emitted_at_omx_state_dykstra_feasibility_time_traveler_l5_json
+  - predicted_target_revised_to_polytope_intersection_lower_bound_not_5_move_sum_in_both_unwind_memo_and_this_recipe
+  - z1_within_class_haircut_applied_per_catalog_219_if_tier_c_classifies_within_class
+  - sextet_pact_council_consensus_on_revised_composition_arithmetic_per_CLAUDE_md_design_decisions_non_negotiable
 literature_anchor: |
   Atick & Redlich (1990) Neural Computation 2:308-320 (cooperative-receiver);
   Rao & Ballard (1999) Nature Neuroscience 2:79-87 (predictive coding);
@@ -136,6 +147,12 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py (Catalog #152)
 
 notes: |
+  unwind_landed: true (2026-05-16 per .omx/research/time_traveler_l5_cargo_cult_unwind_design_20260516.md)
+  unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.4
+  cargo_cult_unwound: 3 cargo-cults classified (CC-2 HIGH composition-additive; CC-1 MEDIUM byte-budget; CC-3 LOW confirmed HARD-EARNED)
+  reactivation_criteria: 4 criteria pinned in dispatch_blockers above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+  composition_arithmetic_revision: OLD additive 5-move sum -> NEW Dykstra-polytope projection per Boyd's convex-feasibility lens
+
   PAIR T Time-Traveler L5 Autonomy substrate dispatch recipe.
 
   The substrate is a single-archive TT5L packet at 95-110 KB target. World

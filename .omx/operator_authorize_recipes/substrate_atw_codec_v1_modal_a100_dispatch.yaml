@@ -72,8 +72,16 @@ cost_band:
 predicted_score_target: null
 predicted_band: null
 smoke_score_band: null  # research-only at landing; no smoke score band claimed
-predicted_delta: "unranked; grounded latent-only rate-side bound is approximately [-0.0027, -0.005] if H(latent | scorer_class) probe confirms 30-50% latent-byte savings"
-predicted_delta_basis: ".omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md §1 (requires H(latent | scorer_class) probe before paid lift)"
+predicted_delta: "NULL pending H(latent|scorer_class) probe + Dykstra-feasibility check [prediction] per cargo-cult-unwind 2026-05-16; grounded latent-only rate-side bound approximately [-0.0027, -0.005] if probe confirms 30-50% latent-byte savings; [0.18, 0.21] remains exploratory planning envelope only"
+predicted_delta_basis: ".omx/research/atw_codec_v1_cargo_cult_unwind_design_20260516.md (CARGO-CULT-UNWIND) + .omx/research/atw_codec_atick_tishby_wyner_v1_design_20260515.md §1 + .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md §1.3"
+# CARGO-CULT-UNWIND reactivation criteria (per design memo §Reactivation criteria):
+# Note: dispatch_enabled:false at top-level already keeps this research-only; these are SISTER unwind criteria
+# DISTINCT from the Phase 2 council lift criteria (which remain in notes §below).
+unwind_reactivation_criteria:
+  - canonical_vs_unique_decision_per_layer_section_landed_in_unwind_design_memo
+  - predicted_delta_band_rewritten_to_null_pending_probe_in_both_unwind_memo_and_this_recipe
+  - prediction_axis_tags_applied_to_every_numeric_claim_per_catalog_287_docstring_discipline
+  - shared_h_latent_given_scorer_class_probe_emits_empirical_bit_savings_posterior_at_omx_state
 literature_anchor: |
   Atick & Redlich (1990) "Towards a theory of early visual processing"
     Neural Computation 2(3):308-320 (cooperative-receiver theorem);
@@ -167,6 +175,12 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
+  unwind_landed: true (2026-05-16 per .omx/research/atw_codec_v1_cargo_cult_unwind_design_20260516.md)
+  unwind_audit_source: .omx/research/high_risk_substrate_cargo_cult_unwind_audit_20260516.md (commit 3768a4f3d) §1.3
+  cargo_cult_unwound: 3 cargo-cults classified (CC-2 + CC-3 HIGH honestly-acknowledged; CC-1 LOW structurally HARD-EARNED)
+  unwind_reactivation_criteria: 4 criteria pinned in unwind_reactivation_criteria above; per CLAUDE.md "Forbidden premature KILL" NO kill verdict
+  phase_2_council_lift_criteria_independent_of_unwind: see existing 4 criteria below
+
   ATW codec V1 design-time research-only recipe — Phase 2 council approval
   REQUIRED to lift research_only:true + dispatch_enabled:false flags.
 
