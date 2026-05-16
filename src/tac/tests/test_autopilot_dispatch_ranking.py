@@ -515,6 +515,12 @@ def test_time_traveler_l5_source_scope_flows_to_autopilot_candidate_row():
     row = CandidateRow(**tt5l.as_candidate_row_kwargs())
     assert row.lane_id == "lane_time_traveler_l5_autonomy_substrate_20260513"
     assert "lane_time_traveler_l5_autonomy_substrate_20260513" in row.dispatch_claim_keys()
+    assert "campaign_id=campaign_time_traveler_l5_v2_staircase_20260516" in (
+        tt5l.campaign_metadata
+    )
+    assert "campaign_id=campaign_time_traveler_l5_v2_staircase_20260516" in (
+        tt5l.composition_notes
+    )
     assert row.literature_anchor == tt5l.literature_anchor
     assert row.source_supports == tt5l.source_supports
     assert row.paper_claim_scope == tt5l.paper_claim_scope

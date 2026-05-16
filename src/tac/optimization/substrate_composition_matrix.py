@@ -70,7 +70,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from tac.optimization.l5_staircase_v2 import l5_v2_prediction_band_payload
+from tac.optimization.l5_staircase_v2 import (
+    CAMPAIGN_ID as L5_V2_CAMPAIGN_ID,
+)
+from tac.optimization.l5_staircase_v2 import (
+    l5_v2_prediction_band_payload,
+)
 from tac.optimization.prediction_band import (
     validate_optional_prediction_band,
     verdict_to_dict,
@@ -1118,7 +1123,7 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             landed_at="2026-05-16",
             landing_memo="time_traveler_architecture_reverse_engineered_20260513",
             lane_id="lane_time_traveler_l5_autonomy_substrate_20260513",
-            campaign_id="campaign_time_traveler_l5_autonomy_20260516",
+            campaign_id=L5_V2_CAMPAIGN_ID,
             campaign_stage="L5 staircase predictive-receiver packet",
             campaign_priority="long_term_campaign_l5",
             lane_class="substrate_engineering substrate_class_shift predictive_receiver",
