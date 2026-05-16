@@ -49,6 +49,10 @@ if str(TOOLS_DIR) not in sys.path:
 import cathedral_autopilot_autonomous_loop as loop  # noqa: E402
 
 
+def _sha(seed: str) -> str:
+    return (seed * 64)[:64]
+
+
 def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           predicted_delta: float = -0.005,
           eig: float = 0.5,
@@ -57,7 +61,9 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
           dispatch_packet_ready: bool = True,
           lane_id: str | None = None,
           target_modes: list[str] | None = None,
-          dispatch_packet_sha256: str | None = None) -> loop.CandidateRow:
+          dispatch_packet_sha256: str | None = None,
+          archive_sha256: str = "",
+          runtime_tree_sha256: str = "") -> loop.CandidateRow:
     return loop.CandidateRow(
         candidate_id=cid,
         family=family,
@@ -75,8 +81,10 @@ def _cand(cid: str = "c1", *, family: str = "hnerv_lc_v2",
         dispatch_packet_sha256=(
             dispatch_packet_sha256
             if dispatch_packet_sha256 is not None
-            else f"dispatch_packet_sha256_for_{cid}"
+            else _sha("a")
         ),
+        archive_sha256=archive_sha256,
+        runtime_tree_sha256=runtime_tree_sha256,
     )
 
 
@@ -810,6 +818,43 @@ def test_can_authorize_refuses_planning_row_without_dispatch_packet(tmp_path):
     assert "contest_exact_eval_target_mode_required" in reason
 
 
+def test_can_authorize_refuses_malformed_dispatch_packet_hash(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(cost_usd=1.0, dispatch_packet_sha256="not-a-sha256")
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "dispatch_packet_sha256_malformed" in reason
+    assert "dispatch_packet_or_archive_runtime_hash_required" in reason
+
+
+def test_can_authorize_accepts_valid_archive_runtime_hash_pair(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256="",
+        archive_sha256=_sha("b"),
+        runtime_tree_sha256=_sha("c"),
+    )
+    ok, reason = cfg.can_authorize(c)
+    assert ok is True
+    assert reason == ""
+
+
+def test_can_authorize_refuses_malformed_archive_runtime_hash_pair(tmp_path):
+    cfg = _auth_mode(tmp_path)
+    c = _cand(
+        cost_usd=1.0,
+        dispatch_packet_sha256="",
+        archive_sha256=_sha("b"),
+        runtime_tree_sha256="runtime-tree-sha-placeholder",
+    )
+    c.ready_for_exact_eval_dispatch = True
+    ok, reason = cfg.can_authorize(c)
+    assert ok is False
+    assert "runtime_tree_sha256_malformed" in reason
+    assert "ready_for_exact_eval_dispatch_requires_archive_and_runtime_hash" in reason
+
+
 def test_can_authorize_approves_within_caps(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand(cost_usd=4.5)
@@ -1038,7 +1083,7 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
             "expected_information_gain": 0.5,
             "estimated_dispatch_cost_usd": 2.0,
             "dispatch_packet_ready": True,
-            "dispatch_packet_sha256": "dispatch_packet_sha256_for_test_auth_mode_uniq_abc123",
+            "dispatch_packet_sha256": _sha("d"),
             "lane_id": "lane_test_auth_mode_uniq_abc123",
             "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
         }) + "\n",

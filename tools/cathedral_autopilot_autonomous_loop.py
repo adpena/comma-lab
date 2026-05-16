@@ -155,6 +155,12 @@ AUTOPILOT_CLAIM_PLATFORM = "cathedral_autopilot"
 AUTOPILOT_CLAIM_STATUS = "active_autopilot_authorized_dispatch"
 AUTOPILOT_CLAIM_AGENT = "cathedral_autopilot_autonomous_loop"
 AUTOPILOT_CLAIM_TTL_HOURS = 24.0
+_SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def _is_sha256_hex(value: object) -> bool:
+    """Return True only for concrete 64-hex SHA-256 strings."""
+    return bool(_SHA256_HEX_RE.fullmatch(str(value or "").strip()))
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -302,10 +308,16 @@ class CandidateRow:
             blockers.append("lane_id_required_for_dispatch_packet")
         if AUTOPILOT_CONTEST_TARGET_MODE not in set(self.target_modes):
             blockers.append("contest_exact_eval_target_mode_required")
-        has_dispatch_packet_hash = bool(self.dispatch_packet_sha256.strip())
-        has_exact_packet_hashes = bool(
-            self.archive_sha256.strip() and self.runtime_tree_sha256.strip()
-        )
+        has_dispatch_packet_hash = _is_sha256_hex(self.dispatch_packet_sha256)
+        has_archive_hash = _is_sha256_hex(self.archive_sha256)
+        has_runtime_hash = _is_sha256_hex(self.runtime_tree_sha256)
+        has_exact_packet_hashes = has_archive_hash and has_runtime_hash
+        if self.dispatch_packet_sha256.strip() and not has_dispatch_packet_hash:
+            blockers.append("dispatch_packet_sha256_malformed")
+        if self.archive_sha256.strip() and not has_archive_hash:
+            blockers.append("archive_sha256_malformed")
+        if self.runtime_tree_sha256.strip() and not has_runtime_hash:
+            blockers.append("runtime_tree_sha256_malformed")
         if not (has_dispatch_packet_hash or has_exact_packet_hashes):
             blockers.append("dispatch_packet_or_archive_runtime_hash_required")
         if self.ready_for_exact_eval_dispatch and not has_exact_packet_hashes:
