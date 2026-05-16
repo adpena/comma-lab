@@ -159,12 +159,20 @@ SUBSTRATE_SCAFFOLDS: dict[str, str] = {
     "ff_nerv": "ff_nerv_substrate",
     "ds_nerv": "ds_nerv_substrate",
     "hi_nerv": "hi_nerv_substrate",
+    "z3_balle_hyperprior_bolton": "z3_balle_hyperprior_bolton",
+    "z4_cooperative_receiver_loss": "z4_cooperative_receiver_loss",
+    "z5_predictive_coding_world_model": "z5_predictive_coding_world_model",
+    "c1_world_model_foveation": "c1_world_model_foveation",
+    "c6_e4_mdl_ibps": "c6_e4_mdl_ibps",
+    "time_traveler_l5_autonomy": "time_traveler_l5_autonomy",
 }
 
 __all__ = [
     "SUBSTRATE_SCAFFOLDS",
     "balle_renderer",
     "block_nerv",
+    "c1_world_model_foveation",
+    "c6_e4_mdl_ibps",
     "cool_chic",
     "ds_nerv",
     "ff_nerv",
@@ -176,6 +184,10 @@ __all__ = [
     "self_compress_nn",
     "siren",
     "tc_nerv",
+    "time_traveler_l5_autonomy",
     "vq_vae",
     "wavelet",
+    "z3_balle_hyperprior_bolton",
+    "z4_cooperative_receiver_loss",
+    "z5_predictive_coding_world_model",
 ]

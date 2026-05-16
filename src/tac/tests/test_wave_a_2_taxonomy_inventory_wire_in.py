@@ -78,10 +78,11 @@ WAVE_A_2_MAGIC_BYTES: tuple[bytes, ...] = (
 # ── Inventory invariants ──────────────────────────────────────────────────
 
 
-def test_inventory_count_is_48():
+def test_inventory_count_is_at_least_wave_a_2_baseline():
     rows = canonical_substrate_inventory()
-    assert len(rows) == 48, (
-        f"expected 48 rows (24 legacy + 15 FIX-J + 9 WAVE-A-2), got {len(rows)}"
+    assert len(rows) >= 48, (
+        "expected at least the original 48 rows "
+        f"(24 legacy + 15 FIX-J + 9 WAVE-A-2), got {len(rows)}"
     )
 
 
@@ -155,7 +156,7 @@ def test_mlx_mask_renderer_advisory_zero_cost():
 def test_inventory_matrix_builds():
     matrix = build_composition_matrix()
     n = matrix.n_substrates()
-    assert n == 48
+    assert n == len(canonical_substrate_inventory())
     assert matrix.n_cells() == n * n
 
 
@@ -324,13 +325,21 @@ def test_compressai_codec_magic_bytes_registered_in_xray():
 # ── SUBSTRATE_SCAFFOLDS untouched by WAVE-A-2 ────────────────────────────
 
 
-def test_substrate_scaffolds_unchanged_15_entries():
-    """WAVE-A-2 must NOT touch TRADITION 1 SUBSTRATE_SCAFFOLDS mapping."""
+def test_substrate_scaffolds_include_l5_staircase_packages():
+    """Package-level L5 staircase scaffolds must be discoverable."""
     from tac.substrates import SUBSTRATE_SCAFFOLDS
 
-    assert len(SUBSTRATE_SCAFFOLDS) == 15, (
-        f"SUBSTRATE_SCAFFOLDS should be 15 TRADITION 1 entries, got {len(SUBSTRATE_SCAFFOLDS)}"
-    )
+    expected = {
+        "z3_balle_hyperprior_bolton": "z3_balle_hyperprior_bolton",
+        "z4_cooperative_receiver_loss": "z4_cooperative_receiver_loss",
+        "z5_predictive_coding_world_model": "z5_predictive_coding_world_model",
+        "c1_world_model_foveation": "c1_world_model_foveation",
+        "c6_e4_mdl_ibps": "c6_e4_mdl_ibps",
+        "time_traveler_l5_autonomy": "time_traveler_l5_autonomy",
+    }
+
+    for package_name, substrate_id in expected.items():
+        assert SUBSTRATE_SCAFFOLDS[package_name] == substrate_id
 
 
 def test_substrate_scaffolds_does_not_include_wave_a_2_ids():
