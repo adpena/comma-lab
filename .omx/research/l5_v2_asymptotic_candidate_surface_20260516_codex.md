@@ -7,7 +7,7 @@
 `promotion_eligible=false`, `rank_or_kill_eligible=false`,
 `ready_for_exact_eval_dispatch=false`, `ready_for_paid_dispatch=false`.
 **Structured artifact:** `.omx/research/l5_v2_asymptotic_candidate_surface_20260516_codex.json`
-(`sha256=7b56d94f03e6a2c023beea103427ba8152e650464dab3f9aaffa876d5379c9c4`).
+(`sha256=03e513a0fc90f3aad94c24a12d435d11874138f8c0bec962a76593c4cae7b4b0`).
 
 ## Why this landed
 
