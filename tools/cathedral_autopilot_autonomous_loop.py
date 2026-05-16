@@ -3206,12 +3206,16 @@ def filter_composition_incompatible_dispatches(
 # explicitly.
 
 DEFAULT_RUDIN_DAUBECHIES_SLIM_STORE = Path(".omx/state/rudin_daubechies_slim_anchors.jsonl")
+RUDIN_DAUBECHIES_PANEL_AXES = frozenset(
+    {"contest_cuda", "contest_cpu", "macos_cpu_advisory"}
+)
 
 
 def rerank_candidates_via_rudin_daubechies(
     candidates: list[CandidateRow],
     *,
     slim_store_path: Path | None = None,
+    panel_axis: str = "contest_cuda",
     use_rashomon_ensemble: bool = False,
     rashomon_ensemble_size: int = 8,
 ) -> list[tuple[CandidateRow, float, str]]:
@@ -3231,10 +3235,13 @@ def rerank_candidates_via_rudin_daubechies(
     transparency layer; calling it produces an auditable ranking decision.
 
     Per CLAUDE.md "Apples-to-apples evidence discipline": the predicted
-    score carries the SLIMRanker's ``confidence_tag()`` in the explanation
-    so the operator distinguishes first-principles bounds from N-anchor
-    posteriors.
+    score carries the SLIMRanker's ``confidence_tag()`` and an explicit
+    ``panel_axis`` in the explanation so the operator distinguishes
+    contest-CUDA, contest-CPU, and macOS advisory prediction surfaces.
     """
+    if panel_axis not in RUDIN_DAUBECHIES_PANEL_AXES:
+        allowed = ", ".join(sorted(RUDIN_DAUBECHIES_PANEL_AXES))
+        raise ValueError(f"unsupported Rudin-Daubechies panel_axis={panel_axis!r}; expected one of {allowed}")
     # Lazy import to avoid hard dep at module import time.
     from tac.autopilot_rudin_daubechies import (
         ProxyPanel,
@@ -3260,7 +3267,7 @@ def rerank_candidates_via_rudin_daubechies(
         # already-available signals on CandidateRow.
         panel = ProxyPanel(
             candidate_id=c.candidate_id,
-            panel_axis="macos_cpu_advisory",
+            panel_axis=panel_axis,
         )
         if use_rashomon_ensemble:
             consensus, disagreement = ranker.predict_with_disagreement(panel)
@@ -3272,6 +3279,7 @@ def rerank_candidates_via_rudin_daubechies(
         else:
             pred = ranker.predict(panel)
             expl = explain_slim_prediction(ranker, panel)
+        expl = f"panel_axis={panel_axis}; {expl}"
         out.append((c, pred, expl))
     out.sort(key=lambda t: t[1])
     return out

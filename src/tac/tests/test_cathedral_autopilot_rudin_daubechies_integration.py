@@ -66,8 +66,33 @@ def test_rerank_explanation_includes_intercept_and_proxies(tmp_path):
     )
     expl = out[0][2]
     # SLIM ranker explanation pattern.
+    assert "panel_axis=contest_cuda" in expl
     assert "predicted_score" in expl
     assert "intercept" in expl
+
+
+def test_rerank_allows_explicit_cpu_axis(tmp_path):
+    store = tmp_path / "anchors.jsonl"
+    candidates = [_make_candidate("c1")]
+    out = rerank_candidates_via_rudin_daubechies(
+        candidates,
+        slim_store_path=store,
+        panel_axis="contest_cpu",
+    )
+
+    assert "panel_axis=contest_cpu" in out[0][2]
+
+
+def test_rerank_refuses_unknown_axis(tmp_path):
+    store = tmp_path / "anchors.jsonl"
+    candidates = [_make_candidate("c1")]
+
+    with pytest.raises(ValueError, match="unsupported Rudin-Daubechies panel_axis"):
+        rerank_candidates_via_rudin_daubechies(
+            candidates,
+            slim_store_path=store,
+            panel_axis="gpuish",
+        )
 
 
 def test_rerank_with_rashomon_ensemble_includes_disagreement(tmp_path):
@@ -77,6 +102,7 @@ def test_rerank_with_rashomon_ensemble_includes_disagreement(tmp_path):
         candidates, slim_store_path=store, use_rashomon_ensemble=True
     )
     expl = out[0][2]
+    assert "panel_axis=contest_cuda" in expl
     assert "consensus" in expl
     assert "disagreement_stddev" in expl
     assert "rashomon-K=8" in expl
@@ -104,7 +130,7 @@ def test_update_then_rerank_produces_smarter_predictions(tmp_path):
     out_cold = rerank_candidates_via_rudin_daubechies(
         candidates, slim_store_path=store
     )
-    cold_pred = out_cold[0][1]
+    assert isinstance(out_cold[0][1], float)
     # Land an empirical anchor.
     update_rudin_daubechies_from_dispatch_outcome(
         candidates[0], 0.25, axis="contest_cuda", slim_store_path=store
@@ -113,11 +139,11 @@ def test_update_then_rerank_produces_smarter_predictions(tmp_path):
     out_warm = rerank_candidates_via_rudin_daubechies(
         candidates, slim_store_path=store
     )
-    warm_pred = out_warm[0][1]
+    assert isinstance(out_warm[0][1], float)
     # The cold and warm predictions need not be identical (warm uses the
     # intercept fitted to the anchor); the contract is that the loop runs.
     # Confidence tag in the warm explanation must reflect the anchor.
-    warm_expl = out_warm[0][2]
+    assert "panel_axis=contest_cuda" in out_warm[0][2]
     # The cold explanation does NOT include a posterior count tag.
     # (This test asserts the loop runs; the precise tag inclusion depends
     # on the SLIM explain format which omits the tag — what matters is the
