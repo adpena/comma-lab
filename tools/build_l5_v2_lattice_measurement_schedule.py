@@ -21,12 +21,12 @@ from tac.optimization.l5_v2_measurement_schedule import (  # noqa: E402
 )
 
 
-def _read_json(path: Path | None) -> dict[str, object] | None:
+def _read_json(path: Path | None, *, label: str) -> dict[str, object] | None:
     if path is None:
         return None
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError(f"probe intake JSON must be an object: {path}")
+        raise ValueError(f"{label} JSON must be an object: {path}")
     return payload
 
 
@@ -51,6 +51,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Optional l5_v2_probe_observation_intake JSON artifact.",
     )
     parser.add_argument(
+        "--sideinfo-effect-curve-json",
+        type=Path,
+        default=None,
+        help="Optional paired TT5L side-info effect-curve summary JSON artifact.",
+    )
+    parser.add_argument(
         "--output-json",
         type=Path,
         default=Path(L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH),
@@ -68,8 +74,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        intake = _read_json(args.probe_intake_json)
-        schedule = build_l5_v2_lattice_measurement_schedule(probe_intake=intake)
+        intake = _read_json(args.probe_intake_json, label="probe intake")
+        sideinfo_effect_curve = _read_json(
+            args.sideinfo_effect_curve_json,
+            label="side-info effect curve",
+        )
+        schedule = build_l5_v2_lattice_measurement_schedule(
+            probe_intake=intake,
+            sideinfo_effect_curve=sideinfo_effect_curve,
+        )
         _write(args.output_json, schedule_json(schedule))
         _write(args.output_md, render_l5_v2_lattice_measurement_schedule_markdown(schedule))
     except (OSError, ValueError, json.JSONDecodeError) as exc:

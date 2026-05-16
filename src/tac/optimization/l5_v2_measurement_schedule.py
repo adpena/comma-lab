@@ -25,6 +25,15 @@ L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH = (
 L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH = (
     ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md"
 )
+L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA = "l5_v2_sideinfo_effect_curve_v1"
+L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES = ("contest_cpu", "contest_cuda")
+L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS = (
+    "zero",
+    "random_lsb",
+    "shuffled",
+    "trained",
+    "ablated",
+)
 
 
 def _candidate_rows_from_intake(intake: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -60,6 +69,94 @@ def _candidate_blockers(intake: Mapping[str, Any] | None, candidate_id: str) -> 
     if not isinstance(blockers, list):
         return ["l5_v2_probe_observation_missing"]
     return [str(item) for item in blockers]
+
+
+def _as_text_set(value: object) -> set[str]:
+    if not isinstance(value, list | tuple | set):
+        return set()
+    return {str(item).strip() for item in value if str(item).strip()}
+
+
+def _sideinfo_effect_curve_rows(curve: Mapping[str, Any] | None) -> list[Mapping[str, Any]]:
+    if not isinstance(curve, Mapping):
+        return []
+    for key in ("observed_cells", "rows", "measurements"):
+        rows = curve.get(key)
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, Mapping)]
+    return []
+
+
+def _sideinfo_effect_curve_blockers(
+    curve: Mapping[str, Any] | None,
+) -> list[str]:
+    """Return blockers for the paired TT5L side-info effect-curve contract."""
+
+    if not isinstance(curve, Mapping):
+        return ["tt5l_sideinfo_effect_curve_missing"]
+
+    blockers: list[str] = []
+    if curve.get("schema") != L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA:
+        blockers.append("tt5l_sideinfo_effect_curve_schema_mismatch")
+    for field in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if curve.get(field) is True:
+            blockers.append(f"tt5l_sideinfo_effect_curve_{field}_true")
+    if curve.get("predicate_passed") is not True:
+        blockers.append("tt5l_sideinfo_effect_curve_predicate_not_passed")
+
+    required_axes = set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+    axes = _as_text_set(curve.get("required_axes")) or _as_text_set(
+        curve.get("paired_axes_evaluated")
+    )
+    missing_axes = sorted(required_axes - axes)
+    extra_axes = sorted(axes - required_axes)
+    if missing_axes:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_axes_missing:" + ",".join(missing_axes)
+        )
+    if extra_axes:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_axes_extra:" + ",".join(extra_axes)
+        )
+
+    required_variants = set(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    variants = _as_text_set(curve.get("required_variants"))
+    missing_variants = sorted(required_variants - variants)
+    if missing_variants:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_variants_missing:"
+            + ",".join(missing_variants)
+        )
+
+    rows = _sideinfo_effect_curve_rows(curve)
+    observed = {
+        (
+            str(row.get("axis") or row.get("device_axis") or "").strip(),
+            str(row.get("variant") or row.get("sideinfo_variant") or "").strip(),
+        )
+        for row in rows
+    }
+    missing_cells = sorted(
+        f"{axis}/{variant}"
+        for axis in required_axes
+        for variant in required_variants
+        if (axis, variant) not in observed
+    )
+    if missing_cells:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_cells_missing:" + ",".join(missing_cells)
+        )
+    for row in rows:
+        axis = str(row.get("axis") or row.get("device_axis") or "").strip()
+        variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()
+        cell = f"{axis or '?'}:{variant or '?'}"
+        for field in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+            if row.get(field) is True:
+                blockers.append(f"tt5l_sideinfo_effect_curve_cell_{field}_true:{cell}")
+        row_blockers = row.get("blockers")
+        if isinstance(row_blockers, list) and row_blockers:
+            blockers.append(f"tt5l_sideinfo_effect_curve_cell_blocked:{cell}")
+    return list(dict.fromkeys(blockers))
 
 
 def _measurement(
@@ -104,6 +201,7 @@ def _probe_measurement_ids_for_missing(candidate_ids: list[str]) -> list[str]:
 def build_l5_v2_lattice_measurement_schedule(
     *,
     probe_intake: Mapping[str, Any] | None = None,
+    sideinfo_effect_curve: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the first-match L5 v2 measurement schedule.
 
@@ -116,6 +214,8 @@ def build_l5_v2_lattice_measurement_schedule(
     missing_or_blocked = [
         candidate_id for candidate_id in L5V2_CANDIDATES if candidate_id not in eligible
     ]
+    sideinfo_curve_blockers = _sideinfo_effect_curve_blockers(sideinfo_effect_curve)
+    sideinfo_curve_valid = not sideinfo_curve_blockers
     measurements = [
         _measurement(
             measurement_id="measure_c1_world_model_foveation_paired_exact",
@@ -169,11 +269,20 @@ def build_l5_v2_lattice_measurement_schedule(
                 "experiments/results/l5_v2_probe/"
                 "tt5l_sideinfo_effect_curve.jsonl"
             ),
-            blockers=[
-                "tt5l_sideinfo_effect_curve_missing",
-                "consumption_proof_is_not_yet_usefulness_proof",
-                "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock",
-            ],
+            blockers=(
+                []
+                if sideinfo_curve_valid
+                else list(
+                    dict.fromkeys([
+                        *sideinfo_curve_blockers,
+                        "consumption_proof_is_not_yet_usefulness_proof",
+                        (
+                            "requires_paired_cpu_cuda_sideinfo_effect_curve_"
+                            "before_architecture_lock"
+                        ),
+                    ])
+                )
+            ),
         ),
         _measurement(
             measurement_id="prepare_l5_v2_paired_anchor_packet",
@@ -206,16 +315,18 @@ def build_l5_v2_lattice_measurement_schedule(
         {
             "rule_id": "measure_tt5l_sideinfo_effect_curve",
             "condition": "all required probes eligible but TT5L causal usefulness curve missing",
-            "matches": not missing_or_blocked,
+            "matches": not missing_or_blocked and not sideinfo_curve_valid,
             "measurement_ids": ["measure_tt5l_sideinfo_effect_curve"],
             "missing_or_blocked_candidates": [],
+            "sideinfo_effect_curve_blockers": sideinfo_curve_blockers,
         },
         {
             "rule_id": "prepare_paired_anchor_packet",
             "condition": "probe lock and side-info effect curve are both present",
-            "matches": False,
+            "matches": not missing_or_blocked and sideinfo_curve_valid,
             "measurement_ids": ["prepare_l5_v2_paired_anchor_packet"],
             "missing_or_blocked_candidates": [],
+            "sideinfo_effect_curve_blockers": [],
         },
     ]
     active_rule = next((rule for rule in rules if rule["matches"]), rules[-1])
@@ -227,6 +338,8 @@ def build_l5_v2_lattice_measurement_schedule(
         "active_measurement_ids": list(active_rule["measurement_ids"]),
         "required_candidates": list(L5V2_CANDIDATES),
         "eligible_candidates": sorted(eligible),
+        "sideinfo_effect_curve_valid": sideinfo_curve_valid,
+        "sideinfo_effect_curve_blockers": sideinfo_curve_blockers,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -247,6 +360,11 @@ def render_l5_v2_lattice_measurement_schedule_markdown(
         f"- schema: `{schedule.get('schema')}`",
         f"- active_rule_id: `{schedule.get('active_rule_id')}`",
         f"- active_measurement_ids: `{schedule.get('active_measurement_ids')}`",
+        f"- sideinfo_effect_curve_valid: `{schedule.get('sideinfo_effect_curve_valid')}`",
+        (
+            "- sideinfo_effect_curve_blockers: "
+            f"`{schedule.get('sideinfo_effect_curve_blockers')}`"
+        ),
         "- score_claim: `false`",
         "- promotion_eligible: `false`",
         "- ready_for_exact_eval_dispatch: `false`",
