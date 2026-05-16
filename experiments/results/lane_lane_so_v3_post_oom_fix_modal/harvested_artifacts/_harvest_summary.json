@@ -3,5 +3,10 @@
   "elapsed_seconds": 28800.007886009,
   "timed_out": true,
   "n_artifacts": 52,
-  "crash_kind": "TIMEOUT"
+  "crash_kind": "TIMEOUT",
+  "archive_sha256": "93e3ccad7b616898eb4db7a901d3f15adaff9e53371b08e61389c8313f8dc423",
+  "archive_bytes": 686321,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false
 }

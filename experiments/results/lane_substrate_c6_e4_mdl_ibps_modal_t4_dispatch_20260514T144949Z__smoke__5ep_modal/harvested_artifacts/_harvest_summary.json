@@ -107,5 +107,10 @@
     "lane_id": "lane_c6_e4_mdl_ibps_substrate_20260514",
     "instance_job_id": "substrate_c6_e4_mdl_ibps_modal_t4_dispatch_20260514T144949Z__smoke__5ep",
     "status": "completed_modal_training_recovered_no_score_claim"
-  }
+  },
+  "archive_sha256": "a27328ce02211f1c8ee0cfb4318ace29c438a62cf09a42358481d0273a204607",
+  "archive_bytes": 224481,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false
 }

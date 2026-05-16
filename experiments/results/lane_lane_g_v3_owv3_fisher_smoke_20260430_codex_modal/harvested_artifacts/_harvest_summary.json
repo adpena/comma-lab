@@ -3,5 +3,8 @@
   "elapsed_seconds": 46.994304066000005,
   "timed_out": false,
   "n_artifacts": 60,
-  "crash_kind": "OK"
+  "crash_kind": "OK",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false
 }

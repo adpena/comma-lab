@@ -80,11 +80,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.774784Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -123,11 +122,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.780114Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -206,11 +204,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.789107Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -249,11 +246,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.796662Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -292,11 +288,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.804370Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -335,11 +330,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.811618Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -378,11 +372,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.822485Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -421,11 +414,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.829886Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -464,11 +456,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.836814Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -507,11 +498,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.841840Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -550,11 +540,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.846734Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -593,11 +582,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD090GDA30NFM325M0M20PB",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.853657Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -636,11 +624,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.860720Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -716,11 +703,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.868304Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -759,11 +745,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.873341Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -802,11 +787,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.878386Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -845,11 +829,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.883417Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -925,11 +908,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.890637Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -968,11 +950,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.895526Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1048,11 +1029,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.903212Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1091,11 +1071,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.910055Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1134,11 +1113,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.915100Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1177,11 +1155,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.920033Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1257,11 +1234,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.929565Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1300,11 +1276,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.936626Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1380,11 +1355,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRE4YCY88E8H6XEY0F9BVG7N",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.943584Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1603,11 +1577,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKFEQARQX6BC4EDPNHN1E74",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.956978Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -1667,11 +1640,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKG566Z2F48CVCGF8JFA0S1",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.960916Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1742,11 +1714,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKGVFRWR0SXX1V067DSZJPT",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.965010Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -1867,11 +1838,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNHEAJAG4NHR9AECWY6XCXS",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.972503Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -1992,11 +1962,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRK9Z80YXAWMKPFEQM2YE889",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.980256Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2056,11 +2025,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKABYAC9C6MA161NKSGH9PY",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.984395Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2120,11 +2088,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKBF28G2M3N73FS7PDCB6AZ",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.988412Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2184,11 +2151,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNBXVYS345TDFW33BA4E77P",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.992410Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2248,11 +2214,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNQVJWJH5AFV5W3TCGGTEFG",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:29.996831Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -2556,11 +2521,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRN0ZTJ14WHG94C4VDXXTMR7",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.015886Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2620,11 +2584,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRN2FFCZAYKJ85Q9W7GQV0QW",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.020181Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2684,11 +2647,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRN4AAM138RHZT6WXKXK464B",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.024381Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -2748,11 +2710,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNYZ6HN53HGHGC44XGAGJZ3",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.028774Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -2812,11 +2773,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRPJZ9FY7N1HJH6HMEK6TX6C",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.034064Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -2874,11 +2834,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRQDTA70GEXSZ2CEEYGWQNSR",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.038167Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -2938,11 +2897,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRQESD492907EF4X7HSSMX0W",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.043666Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3002,11 +2960,156 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRQMAQ7V41AFYMJH5HRK9P10",
-      "status": "failed",
+      "latest_status": "failed"
+    }
+  },
+  {
+    "label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
+    "call_id": "fc-01KRRBHZZR7RWBVH4PN65VX1M1",
+    "rc": 0,
+    "elapsed_seconds": 1041.336232605,
+    "timed_out": false,
+    "n_artifacts": 17,
+    "artifact_files": [
+      {
+        "relative_path": "results/substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep/modal_worker_head_ledger.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/results/substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep/modal_worker_head_ledger.json",
+        "bytes": 1740
+      },
+      {
+        "relative_path": "modal_worker_head_ledger.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_worker_head_ledger.json",
+        "bytes": 1740
+      },
+      {
+        "relative_path": "modal_lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep.log",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep.log",
+        "bytes": 2958
+      },
+      {
+        "relative_path": "modal_live_metadata.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/modal_live_metadata.json",
+        "bytes": 519
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/run.log",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/run.log",
+        "bytes": 2137
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/provenance.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/provenance.json",
+        "bytes": 728
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/heartbeat.log",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/heartbeat.log",
+        "bytes": 380
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/0.bin",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/0.bin",
+        "bytes": 2954741
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/archive.zip",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/archive.zip",
+        "bytes": 2939158
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu.json",
+        "bytes": 10396
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/provenance.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/provenance.json",
+        "bytes": 2753
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/submission/0.bin",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/submission/0.bin",
+        "bytes": 2954741
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/archive.zip",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/archive.zip",
+        "bytes": 2939158
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/provenance.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/provenance.json",
+        "bytes": 8422
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/inflated_outputs_manifest.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/inflated_outputs_manifest.json",
+        "bytes": 608
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/contest_auth_eval.json",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/contest_auth_eval.json",
+        "bytes": 10395
+      },
+      {
+        "relative_path": "lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/extracted/0.bin",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal/harvested_artifacts/lane_nscs06_carmack_hotz_results/output/contest_auth_eval_cpu_work/extracted/0.bin",
+        "bytes": 2954741
+      }
+    ],
+    "crash_kind": "OK",
+    "outcome_classification": "successful_dispatch",
+    "cost_band_anchor": {
+      "schema": "modal_training_cost_anchor_append_v1",
+      "appended": true,
+      "already_appended": false,
+      "score_claim": false,
+      "promotion_eligible": false,
+      "cost_estimate": true,
+      "cost_estimate_source": "modal_elapsed_seconds_x_configured_hourly_rate",
+      "dispatch_label": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
+      "trainer": "experiments/train_substrate_nscs06_carmack_hotz_strip_everything.py",
+      "platform": "modal",
+      "gpu": "T4",
+      "epochs": 100,
+      "batch_size": 1,
+      "all_flags_on": true,
+      "elapsed_seconds": 1041.336232605,
+      "estimated_cost_usd": 0.170663438121375,
+      "hourly_rate_usd": 0.59,
+      "outcome": "successful_dispatch",
+      "returncode": 0,
+      "posterior_path": null,
+      "notes": "cost_estimate_source=modal_elapsed_seconds_x_configured_hourly_rate; hourly_rate_usd=0.59; returncode=0; timed_out=False; metadata_only_until_modal_recovery_appends_elapsed_cost_anchor"
+    },
+    "terminal_claim": {
+      "schema": "modal_training_terminal_claim_v1",
+      "appended": true,
+      "already_appended": false,
+      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
+      "platform": "modal",
+      "status": "completed_modal_training_recovered_no_score_claim",
+      "score_claim": false,
+      "promotion_eligible": false,
+      "notes": "Modal training terminal recovery; score_claim=false; promotion_eligible=false; rc=0; timed_out=False; elapsed_seconds=1041.336232605; out_dir=/Users/adpena/Projects/pact/experiments/results/lane_substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep_modal"
+    },
+    "terminal_evidence": {
+      "appended": true,
+      "evidence_path": "/Users/adpena/Projects/pact/reports/cathedral_autopilot_evidence.jsonl",
+      "lane_id": "lane_nscs06_carmack_hotz_strip_everything_20260515",
+      "instance_job_id": "substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch_20260516T121743Z__smoke__100ep",
+      "status": "completed_modal_training_recovered_no_score_claim"
+    },
+    "call_id_ledger": {
+      "appended": true,
+      "call_id": "fc-01KRRBHZZR7RWBVH4PN65VX1M1",
+      "status": "harvested",
       "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.049191Z"
+      "written_at_utc": "2026-05-16T12:52:39.130771Z"
     }
   },
   {
@@ -3217,11 +3320,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJ0VN7W7DDFB276QD9AR0NH",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.064478Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3281,11 +3383,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJ15E7NYVDF77VF1ED1XBKS",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.068628Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3345,11 +3446,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJ52PP723KBG6QE4JSERQGM",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.072766Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -3409,11 +3509,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KREXK209TRX7ED5ZRVXHY1VT",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.078778Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3473,11 +3572,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KREXXSKGTDCF61QXQNBF6SX3",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.084992Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3537,11 +3635,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNGA39QD7X7ER2R5JZN5N7E",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.089516Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3599,11 +3696,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJZC3XA853B808JF211JDZN",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.093705Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3787,11 +3883,10 @@
       "status": "failed_modal_training_timeout"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRK0WV9RQJBYQ2KKG4V319N7",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.109060Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3851,11 +3946,10 @@
       "status": "failed_modal_training_timeout"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRGTEM56EXCV94Q7DC1HF0PB",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.117468Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -3976,11 +4070,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJZAH6QNHZ5M4M690EVDXA7",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.125684Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -4038,11 +4131,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRJZYEK9JWSCA0XEGD0Q90T3",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.129773Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -4102,11 +4194,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRK04BWJH82G819TD1HF81GA",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.134333Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -4166,11 +4257,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRKJWW2X53QNAA9BRCSYQ6MJ",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.138804Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4230,11 +4320,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRMX6A5DPHYXG77JYQZ6RBPQ",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.143223Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4294,11 +4383,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNHEGC9ZE48Y68GGJHP7FXN",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.147629Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4358,11 +4446,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNHWD6AEMWGDJXBEY8GM0P3",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.152138Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4422,11 +4509,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNPJM15X4NH28375SCE954M",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.156638Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4486,11 +4572,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNQ2B8ZH6ASSAHCXMH0AMZX",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.161835Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4550,11 +4635,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRPKCXARWP7NBGJCXB2P9QEP",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.166634Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4734,11 +4818,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRNRAAAMPXRSBYDTEFK0X765",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.179457Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -4920,11 +5003,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRPJVEMQ5S7Q8EKGKQWKCS93",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.192561Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5019,11 +5101,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KREJST89QHFRWJXHAKXD850C",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.203987Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5062,11 +5143,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KRE4XPREYGDHQ80XR2H2T54J",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.209497Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5208,11 +5288,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR93KESQB87VSD2WKE4GYZEC",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.223624Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5255,11 +5334,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR8ZNESYP42EP7928ZK94ZQB",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.229114Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5346,11 +5424,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR8YCW8F12KACG5TKWSNZ7A7",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.238691Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5571,11 +5648,10 @@
       "status": "failed_modal_training_rc_6"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR4SBZ24K5DP3WXAV8M39H0R",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.260108Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5662,11 +5738,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR4X449H99NB1MQXJC0QN52S",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.269423Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5710,11 +5785,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR5MQ0WYS8TQWDN7HCYBZZ3B",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.274507Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5758,11 +5832,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR55GH98QW3J3QDGQB1EG4CR",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.279820Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5848,11 +5921,10 @@
       "status": "failed_modal_training_rc_1"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR5B4JKGXQWZ4452G7JJ23J1",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.289162Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -5896,11 +5968,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR8D302GXGKGT49ETYMA0BZC",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.294742Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5944,11 +6015,10 @@
       "status": "completed_modal_training_recovered_no_score_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR5K3V8VT735P73ZV881ZQA2",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.299795Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -5992,11 +6062,10 @@
       "status": "failed_modal_training_unknown_returncode"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KR4T5E7RYA2MY4487TSY4Q4V",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.304609Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6035,11 +6104,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.312561Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6078,11 +6146,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.320396Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6121,11 +6188,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.328175Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6164,11 +6230,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.335944Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6207,11 +6272,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG",
-      "status": "failed",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.343843Z"
+      "latest_status": "failed"
     }
   },
   {
@@ -6250,11 +6314,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.352016Z"
+      "latest_status": "harvested"
     }
   },
   {
@@ -6293,11 +6356,10 @@
       "reason": "incomplete_terminal_claim"
     },
     "call_id_ledger": {
-      "appended": true,
+      "appended": false,
+      "already_terminal": true,
       "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY",
-      "status": "harvested",
-      "ledger_path": "/Users/adpena/Projects/pact/.omx/state/modal_call_id_ledger.jsonl",
-      "written_at_utc": "2026-05-16T09:01:30.360504Z"
+      "latest_status": "harvested"
     }
   }
 ]
