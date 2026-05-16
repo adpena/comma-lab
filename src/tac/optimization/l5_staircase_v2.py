@@ -57,6 +57,16 @@ TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256 = (
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
 )
+TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH = (
+    "tools/build_tt5l_contest_sideinfo_consumption_proof.py"
+)
+TT5L_MODAL_A100_DISPATCH_RECIPE_PATH = (
+    ".omx/operator_authorize_recipes/"
+    "substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml"
+)
+TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH = (
+    "experiments/results/time_traveler_l5_v2/l5_v2_probe_template.json"
+)
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
     ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
 )
@@ -86,6 +96,8 @@ _TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES = frozenset({
 })
 _TT5L_CONTEST_N_PAIRS = 600
 _TT5L_CONTEST_TOTAL_FRAMES = 1200
+
+
 @dataclass(frozen=True)
 class L5V2Gate:
     """One non-negotiable gate before L5 v2 can dispatch or promote."""
@@ -1027,6 +1039,199 @@ def l5_v2_canonical_sideinfo_gate_evidence(
         predicate_id=TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
         predicate_passed=True,
         evidence_grade="local_no_gpu_parser_and_inflate_consumption_proof",
+    )
+
+
+def _gate_payload_by_id(readiness: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    gates = readiness.get("gates", [])
+    if not isinstance(gates, list):
+        return {}
+    out: dict[str, Mapping[str, Any]] = {}
+    for gate in gates:
+        if not isinstance(gate, Mapping):
+            continue
+        gate_id = str(gate.get("gate_id") or "")
+        if gate_id:
+            out[gate_id] = gate
+    return out
+
+
+def _gate_evidence_valid(readiness: Mapping[str, Any], gate_id: str) -> bool:
+    gate = _gate_payload_by_id(readiness).get(gate_id)
+    return bool(gate and gate.get("evidence_valid") is True)
+
+
+def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
+    readiness: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Return the non-PR106 TT5L campaign action visible to operators."""
+
+    sideinfo_valid = _gate_evidence_valid(
+        readiness,
+        "byte_closed_temporal_sideinfo_consumption",
+    )
+    probe_valid = _gate_evidence_valid(
+        readiness,
+        "c1_z5_tt5l_probe_disambiguator",
+    )
+    paired_axis_plan_valid = _gate_evidence_valid(
+        readiness,
+        "paired_cpu_cuda_axis_plan",
+    )
+    anchor_pair_valid = _gate_evidence_valid(
+        readiness,
+        "exact_anchor_or_diagnostic_pair",
+    )
+    proof_tool_exists = (repo_root / TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH).is_file()
+    dispatch_recipe_exists = (repo_root / TT5L_MODAL_A100_DISPATCH_RECIPE_PATH).is_file()
+    probe_tool_exists = (repo_root / L5V2_PROBE_TOOL_PATH).is_file()
+
+    blockers = [
+        str(blocker)
+        for blocker in readiness.get("blockers", [])
+        if str(blocker)
+    ]
+    if not proof_tool_exists:
+        blockers.append("tt5l_contest_sideinfo_proof_tool_missing")
+    if not dispatch_recipe_exists:
+        blockers.append("tt5l_modal_a100_dispatch_recipe_missing")
+    if not probe_tool_exists:
+        blockers.append("l5_v2_probe_disambiguator_tool_missing")
+
+    if not sideinfo_valid:
+        next_action = {
+            "action_id": "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof",
+            "phase": "sideinfo_consumption_proof",
+            "command_template": (
+                f".venv/bin/python {TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH} "
+                "--baseline-archive <tt5l_baseline_archive_0.bin> "
+                "--mutated-archive <tt5l_sideinfo_mutated_archive_0.bin> "
+                "--baseline-output-dir <baseline_inflated_raw_dir> "
+                "--mutated-output-dir <mutated_inflated_raw_dir> "
+                "--file-list <contest_file_list.txt> "
+                "--artifact-out "
+                "experiments/results/time_traveler_l5_v2/"
+                "tt5l_contest_sideinfo_consumption_proof.json "
+                "--manifest-out "
+                "experiments/results/time_traveler_l5_v2/"
+                "tt5l_contest_sideinfo_outputs_manifest.json"
+            ),
+            "expected_artifacts": [
+                "experiments/results/time_traveler_l5_v2/"
+                "tt5l_contest_sideinfo_consumption_proof.json",
+                "experiments/results/time_traveler_l5_v2/"
+                "tt5l_contest_sideinfo_outputs_manifest.json",
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not probe_valid:
+        next_action = {
+            "action_id": "emit_c1_z5_tt5l_probe_template",
+            "phase": "probe_disambiguator",
+            "command_template": (
+                f".venv/bin/python {L5V2_PROBE_TOOL_PATH} "
+                f"--emit-template --output-json {TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH}"
+            ),
+            "expected_artifacts": [TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not paired_axis_plan_valid:
+        next_action = {
+            "action_id": "prepare_tt5l_paired_cpu_cuda_axis_plan",
+            "phase": "paired_axis_plan",
+            "recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
+            "claim_lane_before_dispatch": True,
+            "lane_id": LANE_ID,
+            "command_template": (
+                ".venv/bin/python tools/claim_lane_dispatch.py claim "
+                f"--lane-id {LANE_ID} --notes tt5l_l5_v2_first_anchor && "
+                "<run TT5L CPU/CUDA paired timing smoke from recipe>"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    elif not anchor_pair_valid:
+        next_action = {
+            "action_id": "materialize_tt5l_exact_or_diagnostic_anchor_pair",
+            "phase": "first_anchor_pair",
+            "recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
+            "claim_lane_before_dispatch": True,
+            "lane_id": LANE_ID,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    else:
+        next_action = {
+            "action_id": "build_tt5l_stack_of_stacks_candidate",
+            "phase": "stack_of_stacks",
+            "command_template": (
+                "compose TT5L with the strongest byte-closed orthogonal "
+                "winner after component anchors exist"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    tt5l_blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema": "l5_v2_tt5l_campaign_readiness_v1",
+        "subject_id": SUBJECT_ID,
+        "lane_id": LANE_ID,
+        "campaign_id": CAMPAIGN_ID,
+        "priority": "tt5l_first_non_pr106_l5_v2_staircase",
+        "non_pr106_staircase_priority": True,
+        "packetir_is_optional_stack_evidence": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "sideinfo_gate_evidence_valid": sideinfo_valid,
+        "probe_gate_evidence_valid": probe_valid,
+        "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
+        "anchor_pair_evidence_valid": anchor_pair_valid,
+        "first_anchor_timing_smoke_allowed": sideinfo_valid,
+        "architecture_lock_allowed": probe_valid and paired_axis_plan_valid,
+        "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
+        "proof_tool_exists": proof_tool_exists,
+        "probe_tool_path": L5V2_PROBE_TOOL_PATH,
+        "probe_tool_exists": probe_tool_exists,
+        "dispatch_recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
+        "dispatch_recipe_exists": dispatch_recipe_exists,
+        "next_non_pr106_l5_action": next_action,
+        "blockers": tt5l_blockers,
+    }
+
+
+def l5_v2_tt5l_campaign_readiness(
+    gate_evidence: (
+        Mapping[str, L5V2GateEvidence | Mapping[str, Any]]
+        | Iterable[L5V2GateEvidence | Mapping[str, Any]]
+        | None
+    ) = None,
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return the TT5L-first L5 v2 campaign status, separate from PR106."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=gate_evidence,
+        repo_root=resolved_repo_root,
+    )
+    return _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
+        readiness,
+        repo_root=resolved_repo_root,
     )
 
 
@@ -2164,7 +2369,7 @@ def l5_v2_dispatch_readiness(
     ready_for_score_or_rank_dispatch = (
         all_gate_evidence_valid and prediction_band_rank_ready
     )
-    return {
+    payload = {
         "subject_id": SUBJECT_ID,
         "lane_id": LANE_ID,
         "campaign_id": CAMPAIGN_ID,
@@ -2195,6 +2400,13 @@ def l5_v2_dispatch_readiness(
             repo_root=resolved_repo_root,
         ),
     }
+    payload["tt5l_campaign_readiness"] = (
+        _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
+            payload,
+            repo_root=resolved_repo_root,
+        )
+    )
+    return payload
 
 
 __all__ = [
@@ -2210,6 +2422,9 @@ __all__ = [
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
+    "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
+    "TT5L_MODAL_A100_DISPATCH_RECIPE_PATH",
+    "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
@@ -2226,4 +2441,5 @@ __all__ = [
     "l5_v2_required_gates",
     "l5_v2_research_basis_ids",
     "l5_v2_staircase_steps",
+    "l5_v2_tt5l_campaign_readiness",
 ]

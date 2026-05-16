@@ -483,7 +483,8 @@ def test_uncustodied_prediction_bands_do_not_receive_autopilot_rank_reward():
     assert tt5l.predicted_score_delta < 0.0
     assert tt5l.prediction_band_verdict is not None
     assert tt5l.prediction_band_verdict["valid_for_rank_reward"] is False
-    assert tt5l.sideinfo_consumed is True
+    assert tt5l.sideinfo_consumed is False
+    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in tt5l.blockers
     assert "prediction_band_baseline_missing" in tt5l.blockers
     assert "prediction_band_empirical_anchor_missing" in tt5l.blockers
     assert tt5l.expected_information_gain == 0.0
@@ -500,6 +501,7 @@ def test_time_traveler_l5_source_scope_flows_to_autopilot_candidate_row():
     assert "temporal residual" in tt5l.source_supports
     assert "does not validate TT5L byte budget" in tt5l.paper_claim_scope
     assert "paired CPU/CUDA exact eval" in tt5l.pact_must_prove
+    assert "contest-full-frame side-info mutation proof" in tt5l.decode_complexity_evidence
     assert "no measured full-runtime T4 decode cost" in tt5l.decode_complexity_evidence
     assert "not range/ANS entropy decoding" in tt5l.decode_complexity_evidence
     assert any(

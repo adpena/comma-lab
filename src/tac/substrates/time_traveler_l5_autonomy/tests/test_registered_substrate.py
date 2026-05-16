@@ -55,6 +55,11 @@ def test_time_traveler_l5_contract_registered_from_package() -> None:
         assert contract.hook_probe_disambiguator == L5V2_PROBE_TOOL_PATH
         assert contract.score_improvement_mechanism_status == "OPERATIONAL"
         assert contract.runtime_overlay_consumed is True
+        assert contract.target_modes == (
+            "contest_exact_eval",
+            "contest_one_video_replay",
+            "research_substrate",
+        )
         assert contract.recipe_research_only is True
         assert contract.hook_continual_learning_anchor_kind == "paired_axis"
         assert Path(L5V2_PROBE_TOOL_PATH).is_file()
@@ -79,8 +84,8 @@ def test_time_traveler_l5_visible_to_inventory_and_ranker() -> None:
     )
     assert tt5l.runtime_dep_closure == ("torch", "brotli", "numpy")
     assert "av" not in tt5l.runtime_dep_closure
-    assert tt5l.sideinfo_consumed is True
-    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" not in (
+    assert tt5l.sideinfo_consumed is False
+    assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in (
         tt5l.dispatch_blockers
     )
 

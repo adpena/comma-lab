@@ -548,6 +548,25 @@ def test_l5_v2_dispatch_readiness_surfaces_section_entropy_evidence() -> None:
     )
 
 
+def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action() -> None:
+    readiness = l5_v2_dispatch_readiness()
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["schema"] == "l5_v2_tt5l_campaign_readiness_v1"
+    assert tt5l["non_pr106_staircase_priority"] is True
+    assert tt5l["packetir_is_optional_stack_evidence"] is True
+    assert tt5l["score_claim"] is False
+    assert tt5l["promotion_eligible"] is False
+    assert tt5l["ready_for_exact_eval_dispatch"] is False
+    assert tt5l["proof_tool_path"] == (
+        "tools/build_tt5l_contest_sideinfo_consumption_proof.py"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
+    )
+    assert "PR106" not in tt5l["next_non_pr106_l5_action"]["action_id"]
+
+
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
     tmp_path: Path,
 ) -> None:

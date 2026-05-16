@@ -476,6 +476,21 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
                 "blockers": ["l5_v2_pr106_stack_cell_candidates_missing"],
                 "candidates": [],
             },
+            "tt5l_campaign_readiness": {
+                "next_non_pr106_l5_action": {
+                    "action_id": (
+                        "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
+                    )
+                },
+                "first_anchor_timing_smoke_allowed": False,
+                "blockers": ["requires_sideinfo_proof"],
+                "proof_tool_path": "tools/build_tt5l_contest_sideinfo_consumption_proof.py",
+                "probe_tool_path": "tools/probe_l5_v2_staircase_disambiguator.py",
+                "dispatch_recipe_path": (
+                    ".omx/operator_authorize_recipes/"
+                    "substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml"
+                ),
+            },
         }
 
     monkeypatch.setattr(
@@ -518,6 +533,19 @@ def test_validation_queue_surfaces_l5_v2_packetir_stack_state(monkeypatch) -> No
         target_score=0.190,
     )
 
+    tt5l_row = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"] == "l5_v2_tt5l_campaign_readiness"
+    )
+    assert tt5l_row["technique"] == "time_traveler_l5_v2_tt5l_first_anchor"
+    assert tt5l_row["non_pr106_staircase_priority"] is True
+    assert tt5l_row["packetir_is_optional_stack_evidence"] is True
+    assert tt5l_row["score_claim"] is False
+    assert tt5l_row["ready_for_exact_eval_dispatch"] is False
+    assert tt5l_row["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_tt5l_contest_full_frame_sideinfo_consumption_proof"
+    )
     queued = next(
         r
         for r in plan.validation_queue

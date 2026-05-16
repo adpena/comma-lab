@@ -8,11 +8,11 @@ from typing import Any
 import pytest
 
 from tac.substrate_registry import (
+    _REGISTERED_SUBSTRATES,
     NOT_APPLICABLE_WITH_RATIONALE,
     SubstrateContract,
     SubstrateContractError,
     _clear_registry_for_tests,
-    _REGISTERED_SUBSTRATES,
     get_registered_substrates,
     query_substrates_by_compliance_token,
     query_substrates_for_autopilot_ranker,
@@ -27,52 +27,60 @@ from tac.substrate_registry import (
 
 
 def _baseline_kwargs(**overrides: Any) -> dict[str, Any]:
-    base: dict[str, Any] = dict(
-        id="reg_test",
-        lane_id="lane_reg_test_20260515",
-        target_modes=("research_substrate",),
-        deployment_target="desktop_research",
-        council_verdict_provenance=None,
-        archive_grammar="g",
-        parser_section_manifest={"h": "magic"},
-        inflate_runtime_loc_budget=80,
-        runtime_dep_closure=("torch",),
-        export_format="fp16_brotli",
-        score_aware_loss="scorer_loss_terms_btchw",
-        bolt_on_loc_budget=200,
-        no_op_detector_planned=True,
-        archive_bytes_added=None,
-        score_improvement_mechanism_status="RESEARCH_ONLY",
-        runtime_overlay_consumed=False,
-        recipe_smoke_only=True,
-        recipe_research_only=True,
-        recipe_min_smoke_gpu="T4",
-        recipe_min_vram_gb=16,
-        recipe_pyav_decode_strategy="cpu_thread_async_upload",
-        recipe_canary_status="independent_substrate",
-        recipe_video_input_strategy="per_dispatch_local_copy",
-        recipe_canary_dependency=None,
-        cost_band_epochs=10,
-        cost_band_gpu_key="T4",
-        cost_band_platform_key="modal",
-        cost_band_p50_usd=0.10,
-        hook_sensitivity_contribution=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_pareto_constraint=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_bit_allocator_class=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_autopilot_ranker_class_shift_token=None,
-        hook_continual_learning_anchor_kind=NOT_APPLICABLE_WITH_RATIONALE,
-        hook_probe_disambiguator=None,
-        catalog_compliance_declarations=("catalog_205_select_inflate_device_used",),
-        hook_not_applicable_rationale={
+    base: dict[str, Any] = {
+        "id": "reg_test",
+        "lane_id": "lane_reg_test_20260515",
+        "target_modes": ("research_substrate",),
+        "deployment_target": "desktop_research",
+        "council_verdict_provenance": None,
+        "archive_grammar": "g",
+        "parser_section_manifest": {"h": "magic"},
+        "inflate_runtime_loc_budget": 80,
+        "runtime_dep_closure": ("torch",),
+        "export_format": "fp16_brotli",
+        "score_aware_loss": "scorer_loss_terms_btchw",
+        "bolt_on_loc_budget": 200,
+        "no_op_detector_planned": True,
+        "archive_bytes_added": None,
+        "score_improvement_mechanism_status": "RESEARCH_ONLY",
+        "runtime_overlay_consumed": False,
+        "recipe_smoke_only": True,
+        "recipe_research_only": True,
+        "recipe_min_smoke_gpu": "T4",
+        "recipe_min_vram_gb": 16,
+        "recipe_pyav_decode_strategy": "cpu_thread_async_upload",
+        "recipe_canary_status": "independent_substrate",
+        "recipe_video_input_strategy": "per_dispatch_local_copy",
+        "recipe_canary_dependency": None,
+        "cost_band_epochs": 10,
+        "cost_band_gpu_key": "T4",
+        "cost_band_platform_key": "modal",
+        "cost_band_p50_usd": 0.10,
+        "hook_sensitivity_contribution": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_pareto_constraint": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_bit_allocator_class": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_autopilot_ranker_class_shift_token": None,
+        "hook_continual_learning_anchor_kind": NOT_APPLICABLE_WITH_RATIONALE,
+        "hook_probe_disambiguator": None,
+        "catalog_compliance_declarations": ("catalog_205_select_inflate_device_used",),
+        "hook_not_applicable_rationale": {
             "hook_sensitivity_contribution": "test",
             "hook_pareto_constraint": "test",
             "hook_bit_allocator_class": "test",
             "hook_continual_learning_anchor_kind": "test",
             "hook_probe_disambiguator": "test",
         },
-    )
+    }
     base.update(overrides)
     return base
+
+
+def test_contest_exact_eval_is_legal_target_mode() -> None:
+    contract = SubstrateContract(
+        **_baseline_kwargs(target_modes=("contest_exact_eval", "research_substrate"))
+    )
+
+    assert contract.target_modes == ("contest_exact_eval", "research_substrate")
 
 
 @pytest.fixture(autouse=True)

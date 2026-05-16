@@ -62,6 +62,7 @@ class SubstrateContractError(ValueError):
 
 LEGAL_TARGET_MODES: frozenset[str] = frozenset(
     {
+        "contest_exact_eval",
         "contest_one_video_replay",
         "contest_generalized",
         "production_generalized",

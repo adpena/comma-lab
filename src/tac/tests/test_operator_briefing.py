@@ -56,7 +56,8 @@ def test_briefing_runs_all_three_phases():
     assert "Copy-safe next steps" in proc.stdout
     assert "assert_packet_ready_for_submit" in proc.stdout
     assert "refresh_with_operator_exact_cuda_approval" in proc.stdout
-    assert "Phase 9 — L5-v2 / PR106 PacketIR frontier readiness" in proc.stdout
+    assert "Phase 9 — L5-v2 TT5L-first frontier readiness" in proc.stdout
+    assert "next non-PR106 L5 action:" in proc.stdout
     assert "next exact-eval targets:" in proc.stdout
 
 
@@ -507,6 +508,10 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_matrix_sha_mismatch(
         "ready_for_gate_probe_dispatch": False,
         "ready_for_score_or_rank_dispatch": False,
         "ready_for_dispatch": False,
+        "tt5l_campaign_readiness": {
+            "next_non_pr106_l5_action": {"action_id": "materialize_tt5l_proof"},
+            "first_anchor_timing_smoke_allowed": False,
+        },
         "packetir_stack_evidence": {"paired_candidate_count": 0},
         "pr106_stack_cell_candidates": {"candidate_count": 0},
     }
@@ -515,6 +520,8 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_matrix_sha_mismatch(
 
     assert "l5_v2_packetir_matrix_artifact_sha_mismatch" in l5["blockers"]
     assert l5["packetir_matrix_dispatch_targets_suppressed"] is True
+    assert l5["primary_staircase"] == "tt5l_first_non_pr106_l5_v2"
+    assert l5["next_non_pr106_l5_action"]["action_id"] == "materialize_tt5l_proof"
     assert l5["next_exact_eval_target_count"] == 0
     assert l5["next_exact_eval_targets"] == []
 
@@ -565,6 +572,10 @@ def test_l5_v2_briefing_suppresses_packetir_targets_on_active_claims(
         "ready_for_gate_probe_dispatch": False,
         "ready_for_score_or_rank_dispatch": False,
         "ready_for_dispatch": False,
+        "tt5l_campaign_readiness": {
+            "next_non_pr106_l5_action": {"action_id": "materialize_tt5l_proof"},
+            "first_anchor_timing_smoke_allowed": False,
+        },
         "packetir_stack_evidence": {"paired_candidate_count": 0},
         "pr106_stack_cell_candidates": {"candidate_count": 0},
     }

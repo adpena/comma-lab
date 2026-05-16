@@ -23,7 +23,11 @@ TIME_TRAVELER_L5_AUTONOMY_SUBSTRATE_CONTRACT = SubstrateContract(
     # 2.1 Identity & lifecycle
     id="time_traveler_l5_autonomy",
     lane_id="lane_time_traveler_l5_autonomy_substrate_20260513",
-    target_modes=("contest_one_video_replay", "research_substrate"),
+    target_modes=(
+        "contest_exact_eval",
+        "contest_one_video_replay",
+        "research_substrate",
+    ),
     deployment_target="comma_ai_production",
     council_verdict_provenance=(
         ".omx/research/grand_council_omnibus_design_decisions_20260514.md"

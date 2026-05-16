@@ -2379,7 +2379,7 @@ def _l5_v2_exact_targets_by_candidate(
 
 
 def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
-    """Expose L5-v2/PR106 stack state to Cathedral without dispatch authority."""
+    """Expose L5-v2 TT5L-first state to Cathedral without dispatch authority."""
 
     try:
         sideinfo_evidence = l5v2.l5_v2_canonical_sideinfo_gate_evidence(
@@ -2393,7 +2393,7 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
     except Exception as exc:  # pragma: no cover - defensive visibility surface
         return [
             {
-                "technique": "time_traveler_l5_v2_pr106_packetir_stack",
+                "technique": "time_traveler_l5_v2_tt5l_campaign",
                 "queue_source": "l5_v2_staircase",
                 "validation_status": "l5_v2_readiness_load_failed",
                 "archive_bytes_if_validated": None,
@@ -2412,6 +2412,12 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
 
     matrix = _load_l5_v2_packetir_matrix_for_cathedral()
     targets_by_candidate = _l5_v2_exact_targets_by_candidate(matrix)
+    tt5l_campaign = readiness.get("tt5l_campaign_readiness")
+    if not isinstance(tt5l_campaign, dict):
+        tt5l_campaign = {}
+    tt5l_next_action = tt5l_campaign.get("next_non_pr106_l5_action")
+    if not isinstance(tt5l_next_action, dict):
+        tt5l_next_action = {}
     packetir_evidence = readiness.get("packetir_stack_evidence")
     if not isinstance(packetir_evidence, dict):
         packetir_evidence = {}
@@ -2432,6 +2438,47 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
     common_blockers = list(dict.fromkeys(common_blockers))
     candidates = stack_payload.get("candidates", [])
     rows: list[dict[str, Any]] = []
+    rows.append(
+        {
+            "technique": "time_traveler_l5_v2_tt5l_first_anchor",
+            "queue_source": "l5_v2_tt5l_campaign_readiness",
+            "validation_status": (
+                tt5l_next_action.get("action_id")
+                or "blocked_until_tt5l_campaign_action_materialized"
+            ),
+            "archive_bytes_if_validated": None,
+            "potential_score_delta_if_validated": 0.0,
+            "evidence_grade": EVIDENCE_GRADE,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "dispatch_blockers": list(
+                dict.fromkeys(
+                    [
+                        *[
+                            str(blocker)
+                            for blocker in tt5l_campaign.get("blockers", [])
+                            if str(blocker)
+                        ],
+                    ]
+                )
+            )
+            or ["tt5l_l5_v2_campaign_action_pending"],
+            "lane_id": L5_V2_LANE_ID,
+            "campaign_id": L5_V2_CAMPAIGN_ID,
+            "subject_id": L5_V2_SUBJECT_ID,
+            "non_pr106_staircase_priority": True,
+            "packetir_is_optional_stack_evidence": True,
+            "first_anchor_timing_smoke_allowed": bool(
+                tt5l_campaign.get("first_anchor_timing_smoke_allowed")
+            ),
+            "next_non_pr106_l5_action": tt5l_next_action,
+            "proof_tool_path": tt5l_campaign.get("proof_tool_path"),
+            "probe_tool_path": tt5l_campaign.get("probe_tool_path"),
+            "dispatch_recipe_path": tt5l_campaign.get("dispatch_recipe_path"),
+        }
+    )
     if isinstance(candidates, list):
         for candidate in candidates:
             if not isinstance(candidate, dict):
@@ -2484,9 +2531,9 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
                     "selection_basis": candidate.get("selection_basis"),
                 }
             )
-    if rows:
+    if len(rows) > 1:
         return rows
-    return [
+    rows.append(
         {
             "technique": "time_traveler_l5_v2_pr106_packetir_stack",
             "queue_source": "l5_v2_pr106_packetir_stack_cell_generation",
@@ -2512,7 +2559,8 @@ def _l5_v2_stack_validation_queue() -> list[dict[str, Any]]:
             "axis_semantics": packetir_evidence.get("axis_semantics", {}),
             "exact_eval_targets": targets_by_candidate,
         }
-    ]
+    )
+    return rows
 
 
 def _maybe_axis_priorities(

@@ -58,6 +58,8 @@ TT5L_SIDEINFO_CONSUMPTION_DEFAULT_WORK_DIR = (
     "experiments/results/time_traveler_l5_v2/"
     "tt5l_sideinfo_consumption_proof_20260516_codex"
 )
+TT5L_CONTEST_PAIR_COUNT = 600
+TT5L_CONTEST_FRAME_COUNT = 1200
 
 _RUNTIME_TREE_FILES: tuple[str, ...] = (
     "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
@@ -128,6 +130,28 @@ def _resolve_repo_custody_path(
         resolved.relative_to(repo_root.resolve())
     except ValueError as exc:
         raise ValueError(f"{label} must be inside repo root: {resolved}") from exc
+    return resolved
+
+
+def _resolve_existing_repo_path(
+    value: str | Path,
+    *,
+    repo_root: Path,
+    label: str,
+    expect_dir: bool = False,
+) -> Path:
+    raw_path = Path(value)
+    resolved = raw_path if raw_path.is_absolute() else repo_root / raw_path
+    resolved = resolved.resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ValueError(f"{label} must be inside repo root: {resolved}") from exc
+    if expect_dir:
+        if not resolved.is_dir():
+            raise FileNotFoundError(f"{label} directory not found: {resolved}")
+    elif not resolved.is_file():
+        raise FileNotFoundError(f"{label} file not found: {resolved}")
     return resolved
 
 
@@ -275,6 +299,55 @@ def _inflate_and_hash(
         "frames": frames,
         "bytes": output_path.stat().st_size,
         "sha256": raw_sha,
+    }
+
+
+def _file_list_entries(path: Path) -> tuple[str, ...]:
+    entries = tuple(
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    )
+    if not entries:
+        raise ValueError("file_list is empty")
+    for entry in entries:
+        rel = Path(entry)
+        if rel.is_absolute() or ".." in rel.parts:
+            raise ValueError(f"file_list entry must be repo-relative safe path: {entry!r}")
+    return entries
+
+
+def _raw_outputs_aggregate(
+    *,
+    output_dir: Path,
+    file_list_entries: tuple[str, ...],
+    repo_root: Path,
+) -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    for entry in file_list_entries:
+        path = (output_dir / entry).resolve()
+        try:
+            path.relative_to(output_dir.resolve())
+        except ValueError as exc:
+            raise ValueError(f"output path escapes output_dir: {entry!r}") from exc
+        if not path.is_file():
+            raise FileNotFoundError(f"raw output listed in file_list not found: {path}")
+        records.append(
+            {
+                "file_list_entry": entry,
+                "path": _display_path(path, repo_root),
+                "bytes": path.stat().st_size,
+                "sha256": _sha256_file(path),
+            }
+        )
+    aggregate_payload = {
+        "schema": "tt5l_contest_raw_output_aggregate_v1",
+        "files": records,
+    }
+    return {
+        "aggregate_sha256": _sha256_bytes(_canonical_json_bytes(aggregate_payload)),
+        "total_frames": len(records),
+        "files": records,
     }
 
 
@@ -502,6 +575,222 @@ def build_tt5l_sideinfo_consumption_proof(
     )
 
 
+def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
+    *,
+    baseline_archive_path: str | Path,
+    mutated_archive_path: str | Path,
+    baseline_output_dir: str | Path,
+    mutated_output_dir: str | Path,
+    file_list_path: str | Path,
+    artifact_path: str | Path,
+    manifest_path: str | Path,
+    repo_root: str | Path | None = None,
+) -> TT5LConsumptionProofResult:
+    """Build the real L5-v2 gate artifact from contest-shaped TT5L outputs.
+
+    This is the operational counterpart to the local toy proof above. It does
+    not run inflate itself; it consumes two already-inflated TT5L output trees
+    plus their shared contest file list, verifies the TT5L side-info section
+    changed and parses, and emits the contest-full-frame proof shape accepted by
+    the L5 v2 staircase gate.
+    """
+
+    root = Path(repo_root).resolve() if repo_root is not None else _repo_root()
+    baseline_archive = _resolve_existing_repo_path(
+        baseline_archive_path,
+        repo_root=root,
+        label="baseline_archive_path",
+    )
+    mutated_archive = _resolve_existing_repo_path(
+        mutated_archive_path,
+        repo_root=root,
+        label="mutated_archive_path",
+    )
+    baseline_outputs = _resolve_existing_repo_path(
+        baseline_output_dir,
+        repo_root=root,
+        label="baseline_output_dir",
+        expect_dir=True,
+    )
+    mutated_outputs = _resolve_existing_repo_path(
+        mutated_output_dir,
+        repo_root=root,
+        label="mutated_output_dir",
+        expect_dir=True,
+    )
+    file_list = _resolve_existing_repo_path(
+        file_list_path,
+        repo_root=root,
+        label="file_list_path",
+    )
+    proof_path = _resolve_repo_custody_path(
+        artifact_path,
+        str(artifact_path),
+        repo_root=root,
+        label="artifact_path",
+    )
+    manifest_out = _resolve_repo_custody_path(
+        manifest_path,
+        str(manifest_path),
+        repo_root=root,
+        label="manifest_path",
+    )
+
+    entries = _file_list_entries(file_list)
+    baseline_blob = baseline_archive.read_bytes()
+    mutated_blob = mutated_archive.read_bytes()
+    parsed_baseline = parse_archive(baseline_blob)
+    parsed_mutated = parse_archive(mutated_blob)
+    baseline_aggregate = _raw_outputs_aggregate(
+        output_dir=baseline_outputs,
+        file_list_entries=entries,
+        repo_root=root,
+    )
+    mutated_aggregate = _raw_outputs_aggregate(
+        output_dir=mutated_outputs,
+        file_list_entries=entries,
+        repo_root=root,
+    )
+    runtime_sha = _runtime_tree_sha256(root)
+    pair_aggregate_payload = {
+        "baseline_raw_output_aggregate_sha256": baseline_aggregate[
+            "aggregate_sha256"
+        ],
+        "mutated_raw_output_aggregate_sha256": mutated_aggregate[
+            "aggregate_sha256"
+        ],
+        "file_list_sha256": _sha256_file(file_list),
+    }
+    pair_aggregate_sha = _sha256_bytes(_canonical_json_bytes(pair_aggregate_payload))
+    n_pairs_hashed = parsed_baseline.num_pairs
+    total_frames = len(entries)
+    parser_consumed = bool(
+        parsed_baseline.num_pairs == parsed_mutated.num_pairs
+        and parsed_baseline.per_pair_bytes == parsed_mutated.per_pair_bytes
+        and parsed_baseline.per_pair_side_info.shape
+        == parsed_mutated.per_pair_side_info.shape
+        and not np.array_equal(
+            parsed_baseline.per_pair_side_info,
+            parsed_mutated.per_pair_side_info,
+        )
+    )
+    output_changed = (
+        baseline_aggregate["aggregate_sha256"] != mutated_aggregate["aggregate_sha256"]
+    )
+    section_offset, section_payload = _archive_section_payload(
+        baseline_blob,
+        "per_pair_side_info_blob",
+    )
+    mutated_section_offset, mutated_section_payload = _archive_section_payload(
+        mutated_blob,
+        "per_pair_side_info_blob",
+    )
+    byte_mutation_proof = {
+        "section": "tt5l_temporal_sideinfo",
+        "archive_section_name": "per_pair_side_info_blob",
+        "consumption_mode": "contest_full_frame_sideinfo_mutation",
+        "parser_consumed_bytes": parser_consumed,
+        "output_changed": output_changed,
+        "mutated_byte_offsets": _differing_offsets_within_section(
+            baseline_blob,
+            mutated_blob,
+            section_name="per_pair_side_info_blob",
+        ),
+        "section_offset": section_offset,
+        "section_nbytes": len(section_payload),
+        "section_sha256": _sha256_bytes(section_payload),
+        "mutated_section_offset": mutated_section_offset,
+        "mutated_section_nbytes": len(mutated_section_payload),
+        "mutated_section_sha256": _sha256_bytes(mutated_section_payload),
+        "baseline_archive_path": _display_path(baseline_archive, root),
+        "mutated_archive_path": _display_path(mutated_archive, root),
+        "baseline_archive_sha256": _sha256_bytes(baseline_blob),
+        "mutated_archive_sha256": _sha256_bytes(mutated_blob),
+        "runtime_tree_sha256": runtime_sha,
+        "baseline_inflate_sha256": baseline_aggregate["aggregate_sha256"],
+        "mutated_inflate_sha256": mutated_aggregate["aggregate_sha256"],
+        "inflated_outputs_manifest_path": _display_path(manifest_out, root),
+        "inflated_raw_output_aggregate_sha256": pair_aggregate_sha,
+        "baseline_raw_output_aggregate_sha256": baseline_aggregate[
+            "aggregate_sha256"
+        ],
+        "mutated_raw_output_aggregate_sha256": mutated_aggregate[
+            "aggregate_sha256"
+        ],
+        "source_raw_output_aggregate_sha256": baseline_aggregate[
+            "aggregate_sha256"
+        ],
+        "candidate_raw_output_aggregate_sha256": mutated_aggregate[
+            "aggregate_sha256"
+        ],
+        "file_list_path": _display_path(file_list, root),
+        "file_list_sha256": _sha256_file(file_list),
+        "n_pairs_hashed": n_pairs_hashed,
+        "total_frames": total_frames,
+        "inflate_command": (
+            "src/tac/substrates/time_traveler_l5_autonomy/inflate.sh "
+            "<archive_dir> <output_dir> <file_list>"
+        ),
+    }
+    predicate_passed = bool(
+        parser_consumed
+        and output_changed
+        and n_pairs_hashed == TT5L_CONTEST_PAIR_COUNT
+        and total_frames == TT5L_CONTEST_FRAME_COUNT
+    )
+    manifest = {
+        "schema": "tt5l_contest_full_frame_sideinfo_outputs_manifest_v1",
+        "raw_output_aggregate_sha256": pair_aggregate_sha,
+        "aggregate_sha256": pair_aggregate_sha,
+        "baseline_raw_output_aggregate_sha256": baseline_aggregate[
+            "aggregate_sha256"
+        ],
+        "mutated_raw_output_aggregate_sha256": mutated_aggregate[
+            "aggregate_sha256"
+        ],
+        "source_raw_output_aggregate_sha256": baseline_aggregate[
+            "aggregate_sha256"
+        ],
+        "candidate_raw_output_aggregate_sha256": mutated_aggregate[
+            "aggregate_sha256"
+        ],
+        "file_list_path": _display_path(file_list, root),
+        "file_list_sha256": _sha256_file(file_list),
+        "n_pairs_hashed": n_pairs_hashed,
+        "total_frames": total_frames,
+        "baseline_outputs": baseline_aggregate,
+        "mutated_outputs": mutated_aggregate,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    proof = {
+        "schema": TT5L_SIDEINFO_CONSUMPTION_PROOF_SCHEMA,
+        "gate_id": TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
+        "predicate_id": TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
+        "predicate_passed": predicate_passed,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "proof_scope": "contest_full_frame_sideinfo_consumption_proof",
+        "byte_mutation_proof": byte_mutation_proof,
+        "component_proofs": {"per_pair_side_info": byte_mutation_proof},
+        "runtime_tree_files": list(_RUNTIME_TREE_FILES),
+        "runtime_tree_sha256": runtime_sha,
+    }
+
+    manifest_out.parent.mkdir(parents=True, exist_ok=True)
+    proof_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_out.write_bytes(_canonical_json_bytes(manifest))
+    proof_path.write_bytes(_canonical_json_bytes(proof))
+    return TT5LConsumptionProofResult(
+        proof=proof,
+        manifest=manifest,
+        proof_path=proof_path,
+        manifest_path=manifest_out,
+    )
+
+
 __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_DEFAULT_ARTIFACT",
     "TT5L_SIDEINFO_CONSUMPTION_DEFAULT_MANIFEST",
@@ -510,5 +799,6 @@ __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_SCHEMA",
     "TT5LConsumptionProofResult",
+    "build_tt5l_contest_full_frame_sideinfo_consumption_proof",
     "build_tt5l_sideinfo_consumption_proof",
 ]

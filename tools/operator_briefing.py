@@ -1201,12 +1201,13 @@ def _load_l5_v2_section_entropy_matrix() -> dict[str, object]:
 def _l5_v2_frontier_readiness(
     dispatch_claim_summary: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    """Read-only L5-v2/PR106 frontier status for operator briefing.
+    """Read-only L5-v2 frontier status for operator briefing.
 
     This is intentionally a visibility surface, not a dispatch actuator. The
-    PR106 next-target rows are fail-fast exact-eval targets only; every launch
-    still needs lane claim, axis-specific runtime-tree custody, Modal recovery,
-    and adversarial result review.
+    TT5L-first staircase action is the primary row; PacketIR/PR106 rows are
+    optional stack evidence only. Every launch still needs lane claim,
+    axis-specific runtime-tree custody, Modal recovery, and adversarial result
+    review.
     """
 
     sideinfo_evidence = l5_v2_canonical_sideinfo_gate_evidence()
@@ -1299,9 +1300,21 @@ def _l5_v2_frontier_readiness(
         dict,
     ):
         section_entropy_best_rate_positive_derived_prefix_adaptive = None
+    tt5l_campaign = readiness.get("tt5l_campaign_readiness")
+    if not isinstance(tt5l_campaign, dict):
+        tt5l_campaign = {}
+    next_non_pr106_l5_action = tt5l_campaign.get("next_non_pr106_l5_action")
+    if not isinstance(next_non_pr106_l5_action, dict):
+        next_non_pr106_l5_action = {}
     return {
         "schema": "pact.l5_v2_frontier_readiness.v1",
         "subject_id": "time_traveler_l5_autonomy",
+        "primary_staircase": "tt5l_first_non_pr106_l5_v2",
+        "tt5l_campaign_readiness": tt5l_campaign,
+        "next_non_pr106_l5_action": next_non_pr106_l5_action,
+        "tt5l_first_anchor_timing_smoke_allowed": bool(
+            tt5l_campaign.get("first_anchor_timing_smoke_allowed")
+        ),
         "packetir_matrix_path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
         "packetir_matrix_exists": matrix.get("exists") is True,
         "packetir_matrix_artifact_sha256": matrix.get("artifact_sha256", ""),
@@ -1385,22 +1398,29 @@ def _l5_v2_frontier_readiness(
         "target_rows_are_fail_fast_only": True,
         "blockers": blockers,
         "recommendation": (
-            "Close runtime-bound paired CPU/CUDA custody for PR106 PacketIR "
-            "targets before L5-v2 stack selection; no score/rank claim from "
-            "this briefing surface."
+            "Advance the TT5L-first L5-v2 staircase action before optional "
+            "PacketIR/PR106 stack evidence; no score/rank claim from this "
+            "briefing surface."
         ),
     }
 
 
 def _format_l5_v2_frontier_readiness() -> str:
     payload = _l5_v2_frontier_readiness()
+    next_action = payload.get("next_non_pr106_l5_action")
+    if not isinstance(next_action, dict):
+        next_action = {}
     lines = [
-        "L5-v2 / PR106 frontier status (read-only; no score claim):",
+        "L5-v2 frontier status (TT5L-first; read-only; no score claim):",
+        f"  primary staircase:             {payload['primary_staircase']}",
+        "  next non-PR106 L5 action:      "
+        f"{next_action.get('action_id', 'missing')}",
+        f"  TT5L timing smoke allowed:      {payload['tt5l_first_anchor_timing_smoke_allowed']}",
         f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",
         f"  L5 score/rank dispatch ready:   {payload['l5_ready_for_score_or_rank_dispatch']}",
         f"  exact dispatch authority:        {payload['ready_for_exact_eval_dispatch']}",
-        f"  PacketIR matrix:                 {payload['packetir_matrix_path']}",
+        f"  optional PacketIR matrix:        {payload['packetir_matrix_path']}",
         f"  PacketIR candidates:             {payload['packetir_candidate_count']}",
         f"  PacketIR status counts:          {payload['packetir_status_counts']}",
         f"  section entropy matrix:          {payload['packetir_section_entropy_matrix_path']}",
@@ -2144,7 +2164,7 @@ def main(argv: list[str] | None = None) -> int:
         _format_dispatch_readiness(),
     ))
     parts.append(_section(
-        "Phase 9 — L5-v2 / PR106 PacketIR frontier readiness",
+        "Phase 9 — L5-v2 TT5L-first frontier readiness",
         _format_l5_v2_frontier_readiness(),
     ))
     print("\n".join(parts))

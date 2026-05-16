@@ -6,20 +6,29 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
+import torch
 
 from tac.optimization.l5_staircase_v2 import (
-    TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID,
     TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH,
     TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256,
     L5V2GateEvidence,
     l5_v2_canonical_sideinfo_gate_evidence,
     l5_v2_dispatch_readiness,
 )
+from tac.substrates.time_traveler_l5_autonomy.architecture import (
+    TimeTravelerConfig,
+    TimeTravelerSubstrate,
+)
+from tac.substrates.time_traveler_l5_autonomy.archive import pack_archive
 from tac.substrates.time_traveler_l5_autonomy.consumption_proof import (
     TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
+    build_tt5l_contest_full_frame_sideinfo_consumption_proof,
     build_tt5l_sideinfo_consumption_proof,
 )
 
@@ -83,7 +92,7 @@ def test_tt5l_sideinfo_consumption_proof_rejects_outside_repo_outputs(
         )
 
 
-def test_committed_tt5l_sideinfo_consumption_proof_satisfies_l5_gate() -> None:
+def test_committed_tt5l_sideinfo_consumption_proof_is_toy_scope_not_gate_final() -> None:
     proof_path = Path(TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH)
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     assert _sha256_file(proof_path) == TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256
@@ -104,20 +113,199 @@ def test_committed_tt5l_sideinfo_consumption_proof_satisfies_l5_gate() -> None:
         gate for gate in readiness["gates"]
         if gate["gate_id"] == TT5L_SIDEINFO_CONSUMPTION_GATE_ID
     )
-    assert sideinfo_gate["evidence_valid"] is True
-    assert all(
-        "byte_closed_temporal_sideinfo_consumption" not in blocker
+    assert sideinfo_gate["evidence_valid"] is False
+    assert any(
+        "proof_scope_not_contest_full_frame" in blocker
         for blocker in readiness["blockers"]
     )
     assert readiness["ready_for_dispatch"] is False
 
 
-def test_l5_v2_canonical_sideinfo_gate_evidence_is_sha_bound() -> None:
+def test_l5_v2_canonical_sideinfo_gate_evidence_rejects_toy_scope() -> None:
     evidence = l5_v2_canonical_sideinfo_gate_evidence()
 
-    assert evidence is not None
-    assert evidence.gate_id == TT5L_SIDEINFO_CONSUMPTION_GATE_ID
-    assert evidence.artifact_path == TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH
-    assert evidence.artifact_sha256 == TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256
-    assert evidence.predicate_id == TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID
-    assert evidence.predicate_passed is True
+    assert evidence is None
+
+
+def _contest_shape_tt5l_archive(side_info: np.ndarray) -> bytes:
+    torch.manual_seed(0)
+    cfg = TimeTravelerConfig(
+        hidden_dim=16,
+        num_hidden_layers=2,
+        output_height=64,
+        output_width=96,
+        num_pairs=600,
+    )
+    substrate = TimeTravelerSubstrate(cfg)
+    state_dict = {
+        key: value.detach().cpu().clone()
+        for key, value in substrate.state_dict().items()
+    }
+    return pack_archive(
+        world_model_state_dict=state_dict,
+        per_pair_side_info=side_info,
+        meta={
+            "coord_dim": cfg.coord_dim,
+            "coord_feature_freqs": cfg.coord_feature_freqs,
+            "first_omega": cfg.first_omega,
+            "hidden_omega": cfg.hidden_omega,
+            "int8_scale": 64.0,
+            "markov_transition_band": cfg.markov_transition_band,
+        },
+        num_pairs=cfg.num_pairs,
+        hidden_dim=cfg.hidden_dim,
+        num_hidden_layers=cfg.num_hidden_layers,
+        output_height=cfg.output_height,
+        output_width=cfg.output_width,
+        foveation_grid_h=cfg.foveation_grid_h,
+        foveation_grid_w=cfg.foveation_grid_w,
+        pose_dim=cfg.pose_dim,
+        per_pair_bytes=cfg.per_pair_side_info_bytes,
+        ac_state=b"contest-sideinfo-proof",
+    )
+
+
+def _write_contest_file_list_and_outputs(root: Path) -> tuple[Path, Path, Path]:
+    baseline_dir = root / "baseline_outputs"
+    mutated_dir = root / "mutated_outputs"
+    baseline_dir.mkdir(parents=True)
+    mutated_dir.mkdir(parents=True)
+    entries = [f"{idx:06d}.raw" for idx in range(1200)]
+    file_list = root / "file_list.txt"
+    file_list.write_text("\n".join(entries) + "\n", encoding="utf-8")
+    for idx, entry in enumerate(entries):
+        (baseline_dir / entry).write_bytes(bytes([idx % 251]))
+        (mutated_dir / entry).write_bytes(bytes([(idx + (1 if idx == 17 else 0)) % 251]))
+    return file_list, baseline_dir, mutated_dir
+
+
+def test_tt5l_contest_full_frame_sideinfo_proof_satisfies_l5_gate(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_contest_sideinfo_gate_{tmp_path.name}"
+    )
+    zero_side = np.zeros((600, 45), dtype=np.int8)
+    mutated_side = zero_side.copy()
+    mutated_side[17, 36:45] = 64
+    try:
+        artifact_root.mkdir(parents=True, exist_ok=True)
+        baseline_archive = artifact_root / "baseline_0.bin"
+        mutated_archive = artifact_root / "mutated_0.bin"
+        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
+        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
+        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
+            artifact_root
+        )
+        proof_path = artifact_root / "tt5l_contest_sideinfo_proof.json"
+        manifest_path = artifact_root / "tt5l_contest_outputs_manifest.json"
+
+        result = build_tt5l_contest_full_frame_sideinfo_consumption_proof(
+            baseline_archive_path=baseline_archive,
+            mutated_archive_path=mutated_archive,
+            baseline_output_dir=baseline_dir,
+            mutated_output_dir=mutated_dir,
+            file_list_path=file_list,
+            artifact_path=proof_path,
+            manifest_path=manifest_path,
+            repo_root=root,
+        )
+
+        proof = result.proof
+        assert proof["proof_scope"] == "contest_full_frame_sideinfo_consumption_proof"
+        assert proof["predicate_passed"] is True
+        assert proof["score_claim"] is False
+        assert proof["byte_mutation_proof"]["parser_consumed_bytes"] is True
+        assert proof["byte_mutation_proof"]["output_changed"] is True
+        assert proof["byte_mutation_proof"]["n_pairs_hashed"] == 600
+        assert proof["byte_mutation_proof"]["total_frames"] == 1200
+        assert result.manifest["n_pairs_hashed"] == 600
+        assert result.manifest["total_frames"] == 1200
+
+        readiness = l5_v2_dispatch_readiness(
+            gate_evidence=[
+                L5V2GateEvidence(
+                    gate_id=TT5L_SIDEINFO_CONSUMPTION_GATE_ID,
+                    artifact_path=str(proof_path.relative_to(root)),
+                    artifact_sha256=_sha256_file(proof_path),
+                    predicate_id=proof["predicate_id"],
+                    predicate_passed=True,
+                    evidence_grade="contest_full_frame_sideinfo_consumption_proof",
+                )
+            ],
+            repo_root=root,
+        )
+        sideinfo_gate = next(
+            gate
+            for gate in readiness["gates"]
+            if gate["gate_id"] == TT5L_SIDEINFO_CONSUMPTION_GATE_ID
+        )
+        assert sideinfo_gate["evidence_valid"] is True
+        assert all(
+            "byte_closed_temporal_sideinfo_consumption" not in blocker
+            for blocker in readiness["blockers"]
+        )
+    finally:
+        shutil.rmtree(artifact_root, ignore_errors=True)
+
+
+def test_tt5l_contest_full_frame_sideinfo_proof_cli(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    output_root = (
+        root
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_contest_sideinfo_cli_{tmp_path.name}"
+    )
+    zero_side = np.zeros((600, 45), dtype=np.int8)
+    mutated_side = zero_side.copy()
+    mutated_side[0, 36:45] = 32
+    try:
+        output_root.mkdir(parents=True, exist_ok=True)
+        baseline_archive = output_root / "baseline_0.bin"
+        mutated_archive = output_root / "mutated_0.bin"
+        baseline_archive.write_bytes(_contest_shape_tt5l_archive(zero_side))
+        mutated_archive.write_bytes(_contest_shape_tt5l_archive(mutated_side))
+        file_list, baseline_dir, mutated_dir = _write_contest_file_list_and_outputs(
+            output_root
+        )
+        proof_path = output_root / "proof.json"
+        manifest_path = output_root / "manifest.json"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "tools/build_tt5l_contest_sideinfo_consumption_proof.py",
+                "--baseline-archive",
+                str(baseline_archive.relative_to(root)),
+                "--mutated-archive",
+                str(mutated_archive.relative_to(root)),
+                "--baseline-output-dir",
+                str(baseline_dir.relative_to(root)),
+                "--mutated-output-dir",
+                str(mutated_dir.relative_to(root)),
+                "--file-list",
+                str(file_list.relative_to(root)),
+                "--artifact-out",
+                str(proof_path.relative_to(root)),
+                "--manifest-out",
+                str(manifest_path.relative_to(root)),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        assert "predicate_passed=true" in result.stdout
+        assert proof_path.is_file()
+        assert manifest_path.is_file()
+    finally:
+        shutil.rmtree(output_root, ignore_errors=True)
