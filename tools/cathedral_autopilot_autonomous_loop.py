@@ -553,6 +553,11 @@ class HaltEvent:
     runtime_tree_sha256: str = ""
     timing_smoke_command: str = ""
     ready_for_exact_eval_dispatch: bool = False
+    literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
     decision: OperatorDecision | None = None
     decision_at_utc: str | None = None
     decision_notes: str = ""
@@ -1588,6 +1593,11 @@ def make_dispatch_halt_event(
         runtime_tree_sha256=candidate.runtime_tree_sha256,
         timing_smoke_command=candidate.timing_smoke_command,
         ready_for_exact_eval_dispatch=candidate.ready_for_exact_eval_dispatch,
+        literature_anchor=candidate.literature_anchor,
+        source_supports=candidate.source_supports,
+        paper_claim_scope=candidate.paper_claim_scope,
+        pact_must_prove=candidate.pact_must_prove,
+        decode_complexity_evidence=candidate.decode_complexity_evidence,
         autopilot_authorized=autopilot_authorized,
         autopilot_tag=autopilot_tag,
         autopilot_authorized_reason=autopilot_reason,
@@ -1626,6 +1636,11 @@ def append_autopilot_journal_row(
         "archive_sha256": event.archive_sha256,
         "runtime_tree_sha256": event.runtime_tree_sha256,
         "ready_for_exact_eval_dispatch": event.ready_for_exact_eval_dispatch,
+        "literature_anchor": event.literature_anchor,
+        "source_supports": event.source_supports,
+        "paper_claim_scope": event.paper_claim_scope,
+        "pact_must_prove": event.pact_must_prove,
+        "decode_complexity_evidence": event.decode_complexity_evidence,
         "predicted_score_delta": event.predicted_score_delta,
         "estimated_cost_usd": event.estimated_cost_usd,
         "halt_at_utc": event.halt_at_utc,
@@ -2040,6 +2055,23 @@ def _require_finite_positive_float(
     return out
 
 
+def _require_finite_nonnegative_float(
+    value: object,
+    *,
+    field: str,
+    context: str,
+) -> float:
+    try:
+        out = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{context} has non-numeric {field}={value!r}") from exc
+    if not math.isfinite(out) or out < 0.0:
+        raise ValueError(
+            f"{context} must carry finite nonnegative {field}; got {value!r}"
+        )
+    return out
+
+
 def _coerce_str_list(value: object) -> list[str]:
     """Return a normalized string list for JSONL/JSON candidate metadata."""
     if value is None:
@@ -2295,7 +2327,7 @@ def load_candidates_from_substrate_composition_ranking(
             family=str(raw["family"]),
             predicted_score_delta=float(raw["predicted_score_delta"]),
             expected_information_gain=float(raw["expected_information_gain"]),
-            estimated_dispatch_cost_usd=_require_finite_positive_float(
+            estimated_dispatch_cost_usd=_require_finite_nonnegative_float(
                 raw["estimated_dispatch_cost_usd"],
                 field="estimated_dispatch_cost_usd",
                 context=(
@@ -2515,7 +2547,7 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
                 family=str(raw.get("family", "probe_disambiguator")),
                 predicted_score_delta=float(raw.get("predicted_score_delta", 0.0)),
                 expected_information_gain=float(raw.get("expected_information_gain", 0.0)),
-                estimated_dispatch_cost_usd=_require_finite_positive_float(
+                estimated_dispatch_cost_usd=_require_finite_nonnegative_float(
                     raw.get("estimated_dispatch_cost_usd", 0.0),
                     field="estimated_dispatch_cost_usd",
                     context=f"probe-disambiguator row {cid!r}",

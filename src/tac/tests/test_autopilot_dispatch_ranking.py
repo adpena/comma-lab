@@ -244,12 +244,20 @@ def test_as_candidate_row_kwargs_carries_z1_metadata_to_autopilot_loop():
         composition_notes="test",
         lane_class="substrate_class_shift",
         literature_anchor="balle_2018",
+        source_supports="Scale hyperpriors support learned compression.",
+        paper_claim_scope="Natural-image compression, not Pact score evidence.",
+        pact_must_prove="Byte-closed contest archive score.",
+        decode_complexity_evidence="T4 inflate timing required.",
         campaign_metadata=("lane_id=lane_z3_balle_hyperprior_bolton_recover_20260514",),
     )
     from tools.cathedral_autopilot_autonomous_loop import CandidateRow
     row = CandidateRow(**cand.as_candidate_row_kwargs())
     assert row.lane_class == "substrate_class_shift"
     assert row.literature_anchor == "balle_2018"
+    assert row.source_supports.startswith("Scale hyperpriors")
+    assert row.paper_claim_scope.startswith("Natural-image")
+    assert row.pact_must_prove.startswith("Byte-closed")
+    assert row.decode_complexity_evidence.startswith("T4")
 
 
 def test_as_candidate_row_kwargs_carries_frontier_risk_metadata_to_autopilot_loop():
@@ -283,12 +291,24 @@ def test_z3_singleton_registered_with_balle_2018_anchor_and_campaign_metadata():
     by_id = {c.candidate_id: c for c in result.ranked_dispatches}
     z3 = by_id["singleton__z3_balle_hyperprior_bolton"]
     assert z3.literature_anchor == "balle_2018"
+    assert z3.source_supports.startswith("Scale-hyperprior")
+    assert "not frozen-A1 contest latent replacement" in z3.paper_claim_scope
+    assert "paired contest CPU/CUDA eval" in z3.pact_must_prove
+    assert "T4 inflate-cost anchor" in z3.decode_complexity_evidence
+    assert any(
+        item.startswith("source_supports=Scale-hyperprior")
+        for item in z3.source_fidelity_metadata
+    )
     assert "substrate_class_shift" in z3.lane_class
     assert any(
         item == "campaign_id=lane_z3_balle_hyperprior_bolton_campaign_20260514"
         for item in z3.campaign_metadata
     )
     assert "literature_anchor=balle_2018" in z3.composition_notes
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+
+    row = CandidateRow(**z3.as_candidate_row_kwargs())
+    assert row.source_supports == z3.source_supports
 
 
 def test_campaign_rows_carry_dispatch_blockers_to_autopilot():
@@ -363,6 +383,7 @@ def test_orthogonal_pair_unions_campaign_dispatch_blockers():
     ]
     assert pairs
     assert "phase2_council_required_before_full_dispatch" in pairs[0].blockers
+    assert "z3_balle_hyperprior_bolton:" in pairs[0].source_supports
 
 
 # ── Serialization ────────────────────────────────────────────────────────
@@ -383,6 +404,7 @@ def test_serialize_candidate_jsonable():
     json.dumps(payload)  # Must not raise.
     assert payload["score_claim"] is False
     assert isinstance(payload["substrate_ids"], list)
+    assert isinstance(payload["source_fidelity_metadata"], list)
 
 
 def test_serialize_ranking_jsonable():
@@ -396,6 +418,13 @@ def test_serialize_ranking_jsonable():
     assert parsed["ready_for_exact_eval_dispatch"] is False
     assert "claude_md_compliance_tags" in parsed
     assert isinstance(parsed["ranked_dispatches"], list)
+
+    z3 = next(
+        row for row in parsed["ranked_dispatches"]
+        if row["candidate_id"] == "singleton__z3_balle_hyperprior_bolton"
+    )
+    assert z3["source_supports"].startswith("Scale-hyperprior")
+    assert z3["source_fidelity_metadata"]
 
 
 def test_write_ranking_json_refuses_tmp_path(tmp_path):

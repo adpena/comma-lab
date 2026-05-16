@@ -101,6 +101,11 @@ class RankedDispatchCandidate:
     composition_notes: str
     lane_class: str = ""
     literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
+    source_fidelity_metadata: tuple[str, ...] = ()
     campaign_metadata: tuple[str, ...] = ()
     prediction_band: dict[str, Any] | None = None
     prediction_band_verdict: dict[str, Any] | None = None
@@ -128,6 +133,10 @@ class RankedDispatchCandidate:
             "notes": self.composition_notes,
             "lane_class": self.lane_class or None,
             "literature_anchor": self.literature_anchor,
+            "source_supports": self.source_supports,
+            "paper_claim_scope": self.paper_claim_scope,
+            "pact_must_prove": self.pact_must_prove,
+            "decode_complexity_evidence": self.decode_complexity_evidence,
             "license_ok": self.license_ok,
             "inflate_dep_count": self.inflate_dep_count,
             "sideinfo_consumed": self.sideinfo_consumed,
@@ -164,6 +173,23 @@ class RankingResult:
 # ── Ranking algorithm ────────────────────────────────────────────────────
 
 
+def _source_fidelity_metadata(row: ParetoRow, *, prefix: str = "") -> tuple[str, ...]:
+    return tuple(
+        part
+        for part in (
+            f"{prefix}source_supports={row.source_supports}" if row.source_supports else "",
+            f"{prefix}paper_claim_scope={row.paper_claim_scope}" if row.paper_claim_scope else "",
+            f"{prefix}pact_must_prove={row.pact_must_prove}" if row.pact_must_prove else "",
+            (
+                f"{prefix}decode_complexity_evidence={row.decode_complexity_evidence}"
+                if row.decode_complexity_evidence
+                else ""
+            ),
+        )
+        if part
+    )
+
+
 def _build_singleton_dispatch_candidates(
     pareto_rows: list[ParetoRow],
     matrix: CompositionMatrix,
@@ -171,6 +197,7 @@ def _build_singleton_dispatch_candidates(
     """One RankedDispatchCandidate per substrate (the simplest dispatch unit)."""
     out: list[RankedDispatchCandidate] = []
     for r in pareto_rows:
+        source_fidelity_metadata = _source_fidelity_metadata(r)
         campaign_metadata = tuple(
             part for part in (
                 f"lane_id={r.lane_id}" if r.lane_id else "",
@@ -179,6 +206,7 @@ def _build_singleton_dispatch_candidates(
                 f"campaign_priority={r.campaign_priority}" if r.campaign_priority else "",
                 f"lane_class={r.lane_class}" if r.lane_class else "",
                 f"literature_anchor={r.literature_anchor}" if r.literature_anchor else "",
+                *source_fidelity_metadata,
                 f"license_ok={r.license_ok}",
                 f"inflate_dep_count={r.inflate_dep_count}",
                 f"sideinfo_consumed={r.sideinfo_consumed}",
@@ -215,6 +243,11 @@ def _build_singleton_dispatch_candidates(
                 ),
                 lane_class=r.lane_class,
                 literature_anchor=r.literature_anchor,
+                source_supports=r.source_supports,
+                paper_claim_scope=r.paper_claim_scope,
+                pact_must_prove=r.pact_must_prove,
+                decode_complexity_evidence=r.decode_complexity_evidence,
+                source_fidelity_metadata=source_fidelity_metadata,
                 campaign_metadata=campaign_metadata,
                 prediction_band=r.prediction_band,
                 prediction_band_verdict=r.prediction_band_verdict,
@@ -275,6 +308,34 @@ def _build_orthogonal_pair_candidates(
             literature_anchor = "; ".join(
                 part for part in (ri.literature_anchor, rj.literature_anchor) if part
             )
+            source_supports = "; ".join(
+                f"{row.substrate_id}: {row.source_supports}"
+                for row in (ri, rj)
+                if row.source_supports
+            )
+            paper_claim_scope = "; ".join(
+                f"{row.substrate_id}: {row.paper_claim_scope}"
+                for row in (ri, rj)
+                if row.paper_claim_scope
+            )
+            pact_must_prove = "; ".join(
+                f"{row.substrate_id}: {row.pact_must_prove}"
+                for row in (ri, rj)
+                if row.pact_must_prove
+            )
+            decode_complexity_evidence = "; ".join(
+                f"{row.substrate_id}: {row.decode_complexity_evidence}"
+                for row in (ri, rj)
+                if row.decode_complexity_evidence
+            )
+            source_fidelity_metadata = tuple(
+                part
+                for row in (ri, rj)
+                for part in _source_fidelity_metadata(
+                    row,
+                    prefix=f"{row.substrate_id}:",
+                )
+            )
             blockers = tuple(dict.fromkeys(
                 list(ri.dispatch_blockers) + list(rj.dispatch_blockers)
             ))
@@ -288,6 +349,7 @@ def _build_orthogonal_pair_candidates(
                     f"{row.substrate_id}:campaign_priority={row.campaign_priority}" if row.campaign_priority else "",
                     f"{row.substrate_id}:lane_class={row.lane_class}" if row.lane_class else "",
                     f"{row.substrate_id}:literature_anchor={row.literature_anchor}" if row.literature_anchor else "",
+                    *_source_fidelity_metadata(row, prefix=f"{row.substrate_id}:"),
                     f"{row.substrate_id}:license_ok={row.license_ok}",
                     f"{row.substrate_id}:inflate_dep_count={row.inflate_dep_count}",
                     f"{row.substrate_id}:sideinfo_consumed={row.sideinfo_consumed}",
@@ -332,6 +394,11 @@ def _build_orthogonal_pair_candidates(
                     ),
                     lane_class=lane_class,
                     literature_anchor=literature_anchor,
+                    source_supports=source_supports,
+                    paper_claim_scope=paper_claim_scope,
+                    pact_must_prove=pact_must_prove,
+                    decode_complexity_evidence=decode_complexity_evidence,
+                    source_fidelity_metadata=source_fidelity_metadata,
                     campaign_metadata=campaign_metadata,
                     prediction_band_verdict={
                         "components": list(prediction_band_verdicts),
@@ -514,6 +581,7 @@ def serialize_candidate(c: RankedDispatchCandidate) -> dict[str, Any]:
     d["substrate_ids"] = list(c.substrate_ids)
     d["blockers"] = list(c.blockers)
     d["campaign_metadata"] = list(c.campaign_metadata)
+    d["source_fidelity_metadata"] = list(c.source_fidelity_metadata)
     return d
 
 

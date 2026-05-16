@@ -1177,6 +1177,10 @@ def test_kill_event_never_auto_authorized(tmp_path):
 def test_loop_iteration_journal_row_written_on_authorization(tmp_path):
     cfg = _auth_mode(tmp_path)
     c = _cand("a", cost_usd=2.0)
+    c.source_supports = "Paper supports the planning hypothesis only."
+    c.paper_claim_scope = "Literature scope, not Pact score evidence."
+    c.pact_must_prove = "Byte-closed contest eval."
+    c.decode_complexity_evidence = "T4 timing smoke required."
     rep = loop.run_one_loop_iteration(
         [c],
         claims_path=tmp_path / "no_claims.md",
@@ -1191,6 +1195,10 @@ def test_loop_iteration_journal_row_written_on_authorization(tmp_path):
     assert row["candidate_id"] == "a"
     assert row["autopilot_authorized"] is True
     assert row["autopilot_tag"] == loop.AUTOPILOT_AUTHORIZED_TAG
+    assert row["source_supports"].startswith("Paper supports")
+    assert row["paper_claim_scope"].startswith("Literature scope")
+    assert row["pact_must_prove"].startswith("Byte-closed")
+    assert row["decode_complexity_evidence"].startswith("T4")
 
 
 def test_loop_iteration_journal_appends_one_row_per_authorization(tmp_path):
