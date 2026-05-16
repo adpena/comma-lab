@@ -16,6 +16,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 
 def _load_module():
     """Load the CLI module without executing main()."""
@@ -42,13 +44,15 @@ def test_helper_module_loads():
     assert hasattr(mod, "DykstraFeasibilityVerdict")
     assert hasattr(mod, "CONTEST_RATE_DENOM_BYTES")
     assert mod.CONTEST_RATE_DENOM_BYTES == 37_545_489
+    assert mod.CONTEST_SEG_MULTIPLIER == 100.0
+    assert mod.CONTEST_SCORE_FORMULA.startswith("100*seg_dist")
 
 
 def test_feasible_band_inside_polytope():
     mod = _load_module()
     # Archive size 200,000 B -> rate_contribution = 25 * 200000 / 37545489
     # ~= 0.1331. With S=0.001 and P=0.011 the feasible upper bound is
-    # 0.1331 + 0.001 + sqrt(0.11) ~= 0.467. A band [0.15, 0.20] sits
+    # 0.1331 + 100*0.001 + sqrt(0.11) ~= 0.565. A band [0.15, 0.20] sits
     # comfortably inside the polytope.
     verdict = mod.check_substrate_dykstra_feasibility(
         substrate_id="test_feasible",
@@ -61,6 +65,10 @@ def test_feasible_band_inside_polytope():
     assert verdict.blocker_axis is None
     assert verdict.feasibility_band_lo <= verdict.feasibility_band_hi
     assert verdict.dykstra_iteration_count >= 1
+    assert verdict.score_formula == mod.CONTEST_SCORE_FORMULA
+    assert verdict.contest_seg_multiplier == 100.0
+    assert verdict.constraint_set_ids == mod.BASE_CONSTRAINT_SET_IDS
+    assert verdict.score_claim is False
 
 
 def test_infeasible_band_below_rate_contribution_flags_rate_blocker():
@@ -104,6 +112,24 @@ def test_band_outside_rate_polytope_when_band_far_below_rate():
     )
     assert verdict.verdict == "INFEASIBLE"
     assert verdict.rate_contribution > 0.2
+
+
+def test_contest_seg_multiplier_is_used_in_feasible_upper_bound():
+    mod = _load_module()
+    # If the helper forgot the contest 100x seg multiplier, this band would
+    # be outside the feasible projection when pose_budget=0.0. With the real
+    # contest formula, 100*0.001 makes the upper bound roughly 0.1.
+    verdict = mod.check_substrate_dykstra_feasibility(
+        substrate_id="test_seg_multiplier",
+        predicted_band_lo=0.099,
+        predicted_band_hi=0.101,
+        archive_size_bytes=1,
+        pose_budget=0.0,
+    )
+    assert verdict.verdict == "FEASIBLE"
+    assert verdict.feasibility_band_hi == pytest.approx(
+        verdict.rate_contribution + 0.1
+    )
 
 
 def test_invalid_inputs_raise_value_error():
@@ -169,6 +195,7 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
             "--predicted-band-lo", "0.15",
             "--predicted-band-hi", "0.20",
             "--archive-size-bytes", "200000",
+            "--tt5l-five-move-polytope",
             "--output-json", str(out_path),
         ],
         capture_output=True, text=True, timeout=30,
@@ -179,6 +206,10 @@ def test_cli_writes_json_and_returns_zero_on_feasible(tmp_path):
     assert data["verdict"] == "FEASIBLE"
     assert data["substrate_id"] == "test_cli_feasible"
     assert data["archive_size_bytes"] == 200_000
+    assert data["score_formula"].startswith("100*seg_dist")
+    assert "tt5l_predictive_coding_hierarchy" in data["constraint_set_ids"]
+    assert data["constraint_set_count"] == 8
+    assert data["score_claim"] is False
 
 
 def test_cli_returns_nonzero_on_infeasible(tmp_path):

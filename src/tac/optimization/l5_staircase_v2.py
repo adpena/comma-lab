@@ -72,6 +72,20 @@ TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
 )
 TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
+TT5L_DYKSTRA_SCORE_FORMULA = (
+    "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
+)
+TT5L_DYKSTRA_PROJECTION_KIND = "score_axis_projection_with_declared_constraints"
+TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS = frozenset({
+    "contest_rate_budget",
+    "contest_seg_dist_budget",
+    "contest_pose_dist_budget",
+    "tt5l_predictive_coding_hierarchy",
+    "tt5l_cooperative_receiver",
+    "tt5l_ego_motion_foveation",
+    "tt5l_differentiable_world_model",
+    "tt5l_tikhonov_rate_regularization",
+})
 PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
     ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
 )
@@ -1109,6 +1123,22 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         value = _json_float(payload.get(field))
         if payload and value is None:
             blockers.append(f"tt5l_dykstra_feasibility_{field}_missing")
+    score_formula = str(payload.get("score_formula") or "")
+    if payload and score_formula != TT5L_DYKSTRA_SCORE_FORMULA:
+        blockers.append("tt5l_dykstra_feasibility_score_formula_missing_or_stale")
+    contest_seg_multiplier = _json_float(payload.get("contest_seg_multiplier"))
+    if payload and contest_seg_multiplier != 100.0:
+        blockers.append("tt5l_dykstra_feasibility_seg_multiplier_missing_or_stale")
+    projection_kind = str(payload.get("polytope_projection_kind") or "")
+    if payload and projection_kind != TT5L_DYKSTRA_PROJECTION_KIND:
+        blockers.append("tt5l_dykstra_feasibility_projection_kind_missing_or_stale")
+    constraint_ids_payload = payload.get("constraint_set_ids")
+    if isinstance(constraint_ids_payload, list):
+        constraint_ids = {str(item) for item in constraint_ids_payload}
+    else:
+        constraint_ids = set()
+    if payload and not TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS.issubset(constraint_ids):
+        blockers.append("tt5l_dykstra_feasibility_five_move_constraints_missing")
     if payload.get("score_claim") is True:
         blockers.append("tt5l_dykstra_feasibility_score_claim_true")
     if payload.get("promotion_eligible") is True:
@@ -1130,6 +1160,10 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
         "feasibility_band_lo": payload.get("feasibility_band_lo"),
         "feasibility_band_hi": payload.get("feasibility_band_hi"),
         "feasibility_rationale": payload.get("feasibility_rationale"),
+        "score_formula": score_formula or None,
+        "contest_seg_multiplier": contest_seg_multiplier,
+        "polytope_projection_kind": projection_kind or None,
+        "constraint_set_ids": sorted(constraint_ids),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

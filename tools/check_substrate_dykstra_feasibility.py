@@ -27,10 +27,10 @@ CLI contract:
         --archive-size-bytes 280000 \\
         --output-json .omx/state/dykstra_feasibility_nscs02.json
 
-The 3 convex constraints follow the upstream contest scorer
-`upstream/evaluate.py`:
+The contest-axis constraints follow the canonical scorer in `src/tac/scorer.py`:
 
-    score = seg_avg + sqrt(10 * pose_avg) + 25 * archive_bytes / N_video_bytes
+    score = 100 * seg_avg + sqrt(10 * pose_avg)
+          + 25 * archive_bytes / N_video_bytes
 
 with N_video_bytes = 37,545,489 fixed by `upstream/videos/0.mkv`. The feasible
 region is the intersection of three half-spaces (rate <= R_budget, seg <= S,
@@ -64,6 +64,27 @@ from typing import Literal
 # per CLAUDE.md "Apples-to-apples evidence discipline" — the byte total of
 # the canonical scored video; do not infer from filesystem at runtime.
 CONTEST_RATE_DENOM_BYTES: int = 37_545_489
+CONTEST_SEG_MULTIPLIER: float = 100.0
+CONTEST_SCORE_FORMULA: str = (
+    "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
+)
+BASE_CONSTRAINT_SET_IDS: tuple[str, ...] = (
+    "contest_rate_budget",
+    "contest_seg_dist_budget",
+    "contest_pose_dist_budget",
+)
+TT5L_FIVE_MOVE_CONSTRAINT_SET_IDS: tuple[str, ...] = (
+    "tt5l_predictive_coding_hierarchy",
+    "tt5l_cooperative_receiver",
+    "tt5l_ego_motion_foveation",
+    "tt5l_differentiable_world_model",
+    "tt5l_tikhonov_rate_regularization",
+)
+POLYTOPE_PROJECTION_KIND: str = "score_axis_projection_with_declared_constraints"
+PROJECTION_LIMITATIONS: str = (
+    "score-axis projection only; not a contest score, not a full-frame "
+    "side-info proof, and not promotion evidence"
+)
 
 # Default standing-floor distortion anchors observed on the A1 reference
 # packet (contest-CUDA T4 2026-05-13 `0.19285` baseline). Operators may
@@ -96,6 +117,15 @@ class DykstraFeasibilityVerdict:
     feasibility_rationale: str
     blocker_axis: Literal["rate", "seg", "pose"] | None
     dykstra_iteration_count: int
+    score_formula: str
+    contest_seg_multiplier: float
+    constraint_set_ids: tuple[str, ...]
+    constraint_set_count: int
+    polytope_projection_kind: str
+    projection_limitations: str
+    score_claim: bool
+    promotion_eligible: bool
+    ready_for_exact_eval_dispatch: bool
 
 
 def _project_onto_rate(score: float, rate_contribution: float) -> float:
@@ -108,15 +138,24 @@ def _project_onto_rate(score: float, rate_contribution: float) -> float:
     return max(score, rate_contribution)
 
 
-def _project_onto_seg(score: float, rate_contribution: float, seg_budget: float, pose_budget: float) -> float:
+def _project_onto_seg(
+    score: float,
+    rate_contribution: float,
+    seg_budget: float,
+    pose_budget: float,
+) -> float:
     """Project score onto seg <= S half-space.
 
     Lowest feasible score given (rate, seg<=S, pose<=P) is rate_contribution
     + 0 (seg=0) + sqrt(10*0) (pose=0) = rate_contribution. Highest feasible
-    score is rate_contribution + seg_budget + sqrt(10*pose_budget). We clip
-    to that interval.
+    score is rate_contribution + 100*seg_budget + sqrt(10*pose_budget). We
+    clip to that interval.
     """
-    upper = rate_contribution + seg_budget + math.sqrt(10.0 * pose_budget)
+    upper = (
+        rate_contribution
+        + CONTEST_SEG_MULTIPLIER * seg_budget
+        + math.sqrt(10.0 * pose_budget)
+    )
     return min(max(score, rate_contribution), upper)
 
 
@@ -127,8 +166,24 @@ def _project_onto_pose(score: float, rate_contribution: float, seg_budget: float
     between the two projections is in the budget-floor accounting used by
     the alternating sweep.
     """
-    upper = rate_contribution + seg_budget + math.sqrt(10.0 * pose_budget)
+    upper = (
+        rate_contribution
+        + CONTEST_SEG_MULTIPLIER * seg_budget
+        + math.sqrt(10.0 * pose_budget)
+    )
     return min(max(score, rate_contribution), upper)
+
+
+def _normalize_constraint_set_ids(
+    constraint_set_ids: tuple[str, ...] | None,
+) -> tuple[str, ...]:
+    """Return stable, de-duplicated constraint ids with contest axes first."""
+    normalized: list[str] = []
+    for item in [*BASE_CONSTRAINT_SET_IDS, *(constraint_set_ids or ())]:
+        token = str(item).strip()
+        if token and token not in normalized:
+            normalized.append(token)
+    return tuple(normalized)
 
 
 def _dykstra_feasibility(
@@ -148,13 +203,17 @@ def _dykstra_feasibility(
     projection onto the score axis.
     """
     # The feasibility polytope's score-axis projection is the closed interval
-    # ``[rate_contribution, rate_contribution + seg_budget + sqrt(10*pose_budget)]``.
+    # ``[rate_contribution, rate_contribution + 100*seg_budget + sqrt(10*pose_budget)]``.
     # Alternating projections converge in one sweep for a single scalar; we
     # still loop to make the iteration count meaningful for the audit ledger
     # and to expose extension points (additional constraints) without changing
     # the public contract.
     feasible_lo = rate_contribution
-    feasible_hi = rate_contribution + seg_budget + math.sqrt(10.0 * pose_budget)
+    feasible_hi = (
+        rate_contribution
+        + CONTEST_SEG_MULTIPLIER * seg_budget
+        + math.sqrt(10.0 * pose_budget)
+    )
     if feasible_hi < feasible_lo:
         # Degenerate budgets — fail-closed; caller must tighten budgets.
         return (feasible_lo, feasible_lo, 0)
@@ -219,6 +278,7 @@ def check_substrate_dykstra_feasibility(
     pose_budget: float = DEFAULT_POSE_BUDGET,
     max_iter: int = DEFAULT_MAX_ITER,
     tolerance: float = DEFAULT_TOLERANCE,
+    constraint_set_ids: tuple[str, ...] | None = None,
 ) -> DykstraFeasibilityVerdict:
     """Compute the Dykstra-feasibility verdict for a substrate's claimed band.
 
@@ -241,8 +301,13 @@ def check_substrate_dykstra_feasibility(
             f"seg_budget={seg_budget} and pose_budget={pose_budget} must be >= 0"
         )
 
+    constraint_ids = _normalize_constraint_set_ids(constraint_set_ids)
     rate_contribution = 25.0 * float(archive_size_bytes) / float(CONTEST_RATE_DENOM_BYTES)
-    feasible_hi = rate_contribution + seg_budget + math.sqrt(10.0 * pose_budget)
+    feasible_hi = (
+        rate_contribution
+        + CONTEST_SEG_MULTIPLIER * seg_budget
+        + math.sqrt(10.0 * pose_budget)
+    )
 
     feas_lo, feas_hi, iter_count = _dykstra_feasibility(
         rate_contribution=rate_contribution,
@@ -310,6 +375,15 @@ def check_substrate_dykstra_feasibility(
         feasibility_rationale=rationale,
         blocker_axis=blocker,
         dykstra_iteration_count=int(iter_count),
+        score_formula=CONTEST_SCORE_FORMULA,
+        contest_seg_multiplier=CONTEST_SEG_MULTIPLIER,
+        constraint_set_ids=constraint_ids,
+        constraint_set_count=len(constraint_ids),
+        polytope_projection_kind=POLYTOPE_PROJECTION_KIND,
+        projection_limitations=PROJECTION_LIMITATIONS,
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
     )
 
 
@@ -356,12 +430,33 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--tolerance", type=float, default=DEFAULT_TOLERANCE,
         help="convergence tolerance",
     )
+    parser.add_argument(
+        "--constraint-set-id",
+        action="append",
+        default=None,
+        help=(
+            "extra convex/design constraint id to preserve in the emitted "
+            "artifact; may be repeated. Contest rate/seg/pose ids are always "
+            "included."
+        ),
+    )
+    parser.add_argument(
+        "--tt5l-five-move-polytope",
+        action="store_true",
+        help=(
+            "append the five TT5L design-move constraint ids so the artifact "
+            "cannot be mistaken for a scalar-only feasibility interval"
+        ),
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
+        constraint_ids = tuple(args.constraint_set_id or ())
+        if args.tt5l_five_move_polytope:
+            constraint_ids = (*constraint_ids, *TT5L_FIVE_MOVE_CONSTRAINT_SET_IDS)
         verdict = check_substrate_dykstra_feasibility(
             substrate_id=args.substrate_id,
             predicted_band_lo=args.predicted_band_lo,
@@ -371,6 +466,7 @@ def main(argv: list[str] | None = None) -> int:
             pose_budget=args.pose_budget,
             max_iter=args.max_iter,
             tolerance=args.tolerance,
+            constraint_set_ids=constraint_ids,
         )
     except ValueError as exc:
         print(f"[dykstra-feasibility] FATAL: {exc}", file=sys.stderr)

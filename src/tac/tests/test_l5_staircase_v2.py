@@ -383,6 +383,18 @@ def _write_tt5l_dykstra_artifact(repo_root: Path) -> Path:
                 ),
                 "blocker_axis": None,
                 "dykstra_iteration_count": 1,
+                "score_formula": l5_v2.TT5L_DYKSTRA_SCORE_FORMULA,
+                "contest_seg_multiplier": 100.0,
+                "constraint_set_ids": sorted(
+                    l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                ),
+                "constraint_set_count": len(
+                    l5_v2.TT5L_DYKSTRA_REQUIRED_CONSTRAINT_IDS
+                ),
+                "polytope_projection_kind": l5_v2.TT5L_DYKSTRA_PROJECTION_KIND,
+                "projection_limitations": (
+                    "test fixture: score-axis projection only; not score authority"
+                ),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -589,8 +601,10 @@ def test_l5_v2_dispatch_readiness_surfaces_section_entropy_evidence() -> None:
     )
 
 
-def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action() -> None:
-    readiness = l5_v2_dispatch_readiness()
+def test_l5_v2_dispatch_readiness_prioritizes_tt5l_campaign_action(
+    tmp_path: Path,
+) -> None:
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
     tt5l = readiness["tt5l_campaign_readiness"]
 
     assert tt5l["schema"] == "l5_v2_tt5l_campaign_readiness_v1"
@@ -671,6 +685,33 @@ def test_l5_v2_tt5l_dykstra_artifact_requires_archive_size_basis(
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "run_tt5l_dykstra_feasibility_polytope"
     )
+
+
+def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    for key in (
+        "score_formula",
+        "contest_seg_multiplier",
+        "constraint_set_ids",
+        "constraint_set_count",
+        "polytope_projection_kind",
+    ):
+        payload.pop(key, None)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert "tt5l_dykstra_feasibility_score_formula_missing_or_stale" in tt5l[
+        "blockers"
+    ]
+    assert "tt5l_dykstra_feasibility_five_move_constraints_missing" in tt5l[
+        "blockers"
+    ]
 
 
 def test_l5_v2_valid_gates_do_not_unlock_tt5l_timing_without_dykstra(
