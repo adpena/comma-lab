@@ -9,6 +9,7 @@ from pathlib import Path
 
 from tac.exact_eval_custody import contest_score
 from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     validate_l5_v2_sideinfo_effect_curve,
@@ -161,6 +162,12 @@ def test_sideinfo_effect_curve_builder_keeps_invalid_custody_blockers(
         str(blocker).startswith("tt5l_sideinfo_effect_curve_cell_blocked")
         for blocker in validate_l5_v2_sideinfo_effect_curve(payload)
     )
+
+
+def test_sideinfo_effect_curve_default_artifact_is_tracked_research_surface() -> None:
+    assert L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH.startswith(".omx/research/")
+    assert L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH.endswith(".json")
+    assert "experiments/results/" not in L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
 
 
 def test_sideinfo_effect_curve_cli_writes_schedule_consumable_artifact(

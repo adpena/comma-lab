@@ -1,0 +1,25 @@
+[
+  {
+    "axis": "contest_cuda",
+    "variant": "trained",
+    "evidence": {
+      "archive_bytes": 34603,
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+      "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+      "axis": "contest_cuda",
+      "eval_device": "cuda",
+      "hardware": "Tesla T4",
+      "inflate_device": "auto",
+      "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+      "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
+      "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+      "n_samples": 600,
+      "pose_dist": 0.18563657,
+      "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
+      "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+      "score": 3.9007398365396795,
+      "seg_dist": 0.02515214
+    }
+  }
+]

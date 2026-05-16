@@ -27,7 +27,7 @@ L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH = (
 )
 L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA = "l5_v2_sideinfo_effect_curve_v1"
 L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH = (
-    "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl"
+    ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json"
 )
 L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH = (
     "tools/build_l5_v2_sideinfo_effect_curve.py"

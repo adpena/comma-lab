@@ -49,15 +49,15 @@ This is a causal usefulness gate, not a score promotion gate.
 ```bash
 .venv/bin/python tools/build_l5_v2_sideinfo_effect_curve.py \
   --cell-json <paired_tt5l_sideinfo_cells.json> \
-  --output-json experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl
+  --output-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json
 ```
 
 Then feed the output into:
 
 ```bash
 .venv/bin/python tools/build_l5_v2_lattice_measurement_schedule.py \
-  --probe-intake-json experiments/results/l5_v2_probe/observation_intake.json \
-  --sideinfo-effect-curve-json experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl
+  --probe-intake-json .omx/research/l5_v2_probe_observation_intake_20260516_codex.json \
+  --sideinfo-effect-curve-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json
 ```
 
 ## Verification

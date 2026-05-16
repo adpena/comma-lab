@@ -86,7 +86,8 @@
     },
     {
       "blockers": [
-        "tt5l_sideinfo_effect_curve_missing",
+        "tt5l_sideinfo_effect_curve_predicate_not_passed",
+        "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
         "consumption_proof_is_not_yet_usefulness_proof",
         "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
       ],
@@ -94,7 +95,7 @@
       "estimated_cost_usd": 1.0,
       "expected_information_gain_nats": 0.4,
       "measurement_id": "measure_tt5l_sideinfo_effect_curve",
-      "output_artifact": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl",
+      "output_artifact": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",
       "promotion_eligible": false,
       "purpose": "separate side-info consumption from causal usefulness with paired CPU/CUDA zero, random-LSB, shuffled, trained, and ablated side-info",
       "ready_for_exact_eval_dispatch": false,
@@ -157,7 +158,8 @@
       "missing_or_blocked_candidates": [],
       "rule_id": "measure_tt5l_sideinfo_effect_curve",
       "sideinfo_effect_curve_blockers": [
-        "tt5l_sideinfo_effect_curve_missing"
+        "tt5l_sideinfo_effect_curve_predicate_not_passed",
+        "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero"
       ]
     },
     {
@@ -174,7 +176,8 @@
   "schema": "l5_v2_lattice_measurement_schedule_v1",
   "score_claim": false,
   "sideinfo_effect_curve_blockers": [
-    "tt5l_sideinfo_effect_curve_missing"
+    "tt5l_sideinfo_effect_curve_predicate_not_passed",
+    "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero"
   ],
   "sideinfo_effect_curve_valid": false,
   "tool": "tools/build_l5_v2_lattice_measurement_schedule.py"

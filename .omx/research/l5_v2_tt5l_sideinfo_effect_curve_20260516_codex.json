@@ -1,0 +1,66 @@
+{
+  "axis_effects": {
+    "contest_cpu": {
+      "best_control_score": null,
+      "best_control_variant": "",
+      "delta_vs_best_control": null,
+      "trained_beats_or_ties_best_control": false,
+      "trained_score": null
+    },
+    "contest_cuda": {
+      "best_control_score": null,
+      "best_control_variant": "",
+      "delta_vs_best_control": null,
+      "trained_beats_or_ties_best_control": false,
+      "trained_score": 3.9007398365396795
+    }
+  },
+  "contract_blockers": [
+    "tt5l_sideinfo_effect_curve_predicate_not_passed",
+    "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero"
+  ],
+  "effect_blockers": [
+    "trained_not_best_or_tied:contest_cpu",
+    "trained_not_best_or_tied:contest_cuda"
+  ],
+  "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+  "observed_cells": [
+    {
+      "archive_bytes": 34603,
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+      "axis": "contest_cuda",
+      "blockers": [],
+      "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
+      "inflated_outputs_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
+      "log_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/contest_auth_eval.stdout.log",
+      "n_samples": 600,
+      "pose_dist": 0.18563657,
+      "promotion_eligible": false,
+      "raw_output_aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
+      "score": 3.9007398365396795,
+      "score_claim": false,
+      "seg_dist": 0.02515214,
+      "variant": "trained"
+    }
+  ],
+  "predicate_id": "tt5l_paired_sideinfo_effect_curve_v1",
+  "predicate_passed": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "required_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "required_variants": [
+    "zero",
+    "random_lsb",
+    "shuffled",
+    "trained",
+    "ablated"
+  ],
+  "schema": "l5_v2_sideinfo_effect_curve_v1",
+  "score_claim": false
+}
