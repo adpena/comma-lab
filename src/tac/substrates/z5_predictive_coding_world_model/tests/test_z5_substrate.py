@@ -25,35 +25,38 @@ from pathlib import Path
 import pytest
 import torch
 
+import tac.substrates.z5_predictive_coding_world_model as z5_module
 from tac.substrates.z5_predictive_coding_world_model import (
-    EVAL_HW,
-    NUM_PAIRS,
+    Z5PCWM1_MAGIC,
+    Z5PCWM1_SCHEMA_VERSION,
     HierarchicalPredictor,
-    PredictiveCodingArchive,
     PredictiveCodingConfig,
     PredictiveCodingLossWeights,
     PredictiveCodingScoreAwareLoss,
     PredictiveCodingSubstrate,
-    Z5PCWM1_MAGIC,
-    Z5PCWM1_SCHEMA_VERSION,
     pack_archive,
     parse_archive,
-)
-from tac.substrates.z5_predictive_coding_world_model.archive import (
-    Z5PCWM1_HEADER_FMT,
-    Z5PCWM1_HEADER_SIZE,
-    _dequantize_from_int8,
-    _quantize_to_int8,
 )
 from tac.substrates.z5_predictive_coding_world_model.architecture import (
     _Z5Decoder,
     _Z5Encoder,
 )
-
+from tac.substrates.z5_predictive_coding_world_model.archive import (
+    Z5PCWM1_HEADER_FMT,
+    Z5PCWM1_HEADER_SIZE,
+)
 
 # ===========================================================================
 # (A) HierarchicalPredictor — 5 tests
 # ===========================================================================
+
+
+def test_z5_module_declares_research_only_until_full_main_lands() -> None:
+    """The substrate-level status must match the operator recipe gate."""
+    doc = z5_module.__doc__ or ""
+    assert "research_only: true" in doc
+    assert "research_only: false" not in doc
+    assert "NotImplementedError" in doc
 
 def test_predictor_output_shape_2_layer() -> None:
     p = HierarchicalPredictor(
@@ -209,7 +212,7 @@ def test_substrate_pair_index_out_of_range() -> None:
 def test_substrate_pair_index_wrong_dtype() -> None:
     s = PredictiveCodingSubstrate(_make_tiny_config())
     idx = torch.arange(3, dtype=torch.float32)
-    with pytest.raises(ValueError, match="must be torch.long"):
+    with pytest.raises(ValueError, match=r"must be torch\.long"):
         s.reconstruct_pair(idx)
 
 
@@ -308,7 +311,7 @@ def test_archive_parse_bad_magic_raises() -> None:
 def test_archive_parse_truncated_raises() -> None:
     enc, dec, pred, li, r, e, meta, _ = _make_archive_inputs()
     blob = pack_archive(enc, dec, pred, li, r, e, meta)
-    with pytest.raises(ValueError, match="too short|archive size"):
+    with pytest.raises(ValueError, match=r"too short|archive size"):
         parse_archive(blob[:20])
 
 
@@ -350,6 +353,7 @@ def test_inflate_main_cli_3_arg_contract() -> None:
 def test_inflate_no_scorer_imports() -> None:
     """Per CLAUDE.md 'Strict scorer rule' + Catalog #6: inflate.py must NOT import scorer code."""
     import inspect
+
     from tac.substrates.z5_predictive_coding_world_model import inflate
     src = inspect.getsource(inflate)
     forbidden = ("posenet", "segnet", "from upstream.modules", "import upstream.modules",

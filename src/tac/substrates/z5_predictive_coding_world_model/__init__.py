@@ -74,8 +74,8 @@ Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes th
 target_modes: ``contest_one_video_replay``, ``contest_generalized``,
 ``research_substrate``
 lane_class: ``substrate_engineering``
-research_only: false (export-first; Phase 2 council approval required to
-lift _full_main NotImplementedError)
+research_only: true (Phase 2 council approval required to lift _full_main
+NotImplementedError before score-bearing dispatch authority)
 canary_status: ``post_canary_dependent``
 canary_dependency: ``lane_z4_cooperative_receiver_loss_step2_20260514``
 
@@ -178,13 +178,7 @@ from tac.substrates.z5_predictive_coding_world_model.score_aware_loss import (
 
 __all__ = [
     "EVAL_HW",
-    "HierarchicalPredictor",
     "NUM_PAIRS",
-    "PredictiveCodingArchive",
-    "PredictiveCodingConfig",
-    "PredictiveCodingLossWeights",
-    "PredictiveCodingScoreAwareLoss",
-    "PredictiveCodingSubstrate",
     "TOTAL_ARCHIVE_TARGET_BYTES_MAX",
     "TOTAL_ARCHIVE_TARGET_BYTES_MIN",
     "Z5PCWM1_HEADER_FMT",
@@ -192,6 +186,12 @@ __all__ = [
     "Z5PCWM1_MAGIC",
     "Z5PCWM1_SCHEMA_VERSION",
     "Z5PCWM1_SECTION_ROLES",
+    "HierarchicalPredictor",
+    "PredictiveCodingArchive",
+    "PredictiveCodingConfig",
+    "PredictiveCodingLossWeights",
+    "PredictiveCodingScoreAwareLoss",
+    "PredictiveCodingSubstrate",
     "pack_archive",
     "parse_archive",
     "parse_z5pcwm1_archive_bytes",
