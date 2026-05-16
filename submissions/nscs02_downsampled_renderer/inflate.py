@@ -1,18 +1,9 @@
 #!/usr/bin/env python
-"""NSCS02 standalone inflate (substrate-engineering, ~95 LOC).
+"""NSCS02 standalone inflate: render at (192,256), bicubic-upsample to (1164,874).
 
-Renders 1200 frames at (192, 256), upsamples to camera-native (1164, 874)
-via canonical bicubic, writes raw uint8 RGB to ``dst.raw``.
-
-Per HNeRV parity discipline:
-- L3 monolithic single-file 0.bin (NSCS02 wire format).
-- L4 inflate.py <= 100 LOC reviewable in 30 seconds.
-- L9 runtime closure: only ``torch`` + ``torch.nn.functional`` +
-  ``brotli`` + ``numpy``.
-
-Per CLAUDE.md "Strict scorer rule": no contest scorer loaded at inflate.
-Per A1 council Round 1 finding F1/F11 + Catalog #205: device pinned
-via ``PACT_INFLATE_DEVICE`` env var; MPS forbidden.
+HNeRV parity L3 (single ``0.bin``) + L4 (<=100 LOC) + L9 (torch + brotli +
+numpy only). Strict-scorer-rule: no scorer at inflate. Catalog #205: device
+pinned via ``PACT_INFLATE_DEVICE``; MPS forbidden.
 """
 import os
 import struct
@@ -39,16 +30,7 @@ RENDER_H, RENDER_W = 192, 256
 
 
 def select_inflate_device() -> torch.device:
-    """Honor ``PACT_INFLATE_DEVICE`` (auto/cpu/cuda); MPS forbidden.
-
-    Mirrors the canonical
-    ``tac.substrates._shared.inflate_runtime.select_inflate_device``
-    body byte-for-byte (modulo the ``torch.device`` return-type wrap).
-    Per CLAUDE.md "Contest runtime closure" non-negotiable the inflate
-    tree must be self-contained so we cannot import the canonical
-    helper at inflate time. Parity is enforced by
-    ``src/tac/tests/test_inflate_select_device_parity.py``.
-    """
+    """Catalog #205 canonical body inlined (runtime closure forbids tac import)."""
     value = (os.environ.get("PACT_INFLATE_DEVICE") or "auto").strip().lower()
     if value == "auto":
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
