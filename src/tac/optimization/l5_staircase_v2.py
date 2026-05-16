@@ -28,6 +28,9 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
     L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
     L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+    L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+    validate_l5_v2_sideinfo_effect_curve,
 )
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
@@ -124,6 +127,7 @@ TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA = "tt5l_first_anchor_timing_smoke_v1"
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID = (
     "tt5l_first_anchor_timing_smoke_rate_v1"
 )
+TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH = L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
 TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
 TT5L_DYKSTRA_SCORE_FORMULA = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
@@ -1854,6 +1858,48 @@ def tt5l_first_anchor_timing_smoke_status(
     return _tt5l_first_anchor_timing_smoke_status(repo_root=resolved_repo_root)
 
 
+def _tt5l_sideinfo_effect_curve_status(*, repo_root: Path) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+    blockers: list[str] = []
+    loaded: object | None = None
+
+    if not artifact_path.is_file():
+        blockers.append("tt5l_sideinfo_effect_curve_artifact_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append("tt5l_sideinfo_effect_curve_artifact_json_invalid")
+        if loaded is not None and not isinstance(loaded, Mapping):
+            blockers.append("tt5l_sideinfo_effect_curve_artifact_not_object")
+        if isinstance(loaded, Mapping):
+            blockers.extend(validate_l5_v2_sideinfo_effect_curve(loaded))
+
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_effect_curve_status_v1",
+        "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+        "artifact_present": artifact_path.is_file(),
+        "artifact_valid": not blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
+def tt5l_sideinfo_effect_curve_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return public TT5L side-info effect-curve custody status."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    return _tt5l_sideinfo_effect_curve_status(repo_root=resolved_repo_root)
+
+
 def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     readiness: Mapping[str, Any],
     *,
@@ -1889,12 +1935,25 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     move_level_valid = move_level_status["artifact_valid"] is True
     timing_smoke_status = _tt5l_first_anchor_timing_smoke_status(repo_root=repo_root)
     timing_smoke_valid = timing_smoke_status["artifact_valid"] is True
+    sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
+        repo_root=repo_root
+    )
+    sideinfo_effect_curve_valid = (
+        sideinfo_effect_curve_status["artifact_valid"] is True
+    )
     sideinfo_effect_curve_allowed = dykstra_valid and move_level_valid and sideinfo_valid
     first_anchor_timing_smoke_allowed = (
         sideinfo_effect_curve_allowed
+        and sideinfo_effect_curve_valid
         and probe_valid
         and paired_axis_plan_valid
         and timing_smoke_valid
+    )
+    architecture_lock_allowed = (
+        sideinfo_effect_curve_allowed
+        and sideinfo_effect_curve_valid
+        and probe_valid
+        and paired_axis_plan_valid
     )
 
     blockers = [
@@ -1912,7 +1971,11 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     if dykstra_valid:
         blockers.extend(str(blocker) for blocker in move_level_status["blockers"])
     if sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid:
-        blockers.extend(str(blocker) for blocker in timing_smoke_status["blockers"])
+        blockers.extend(
+            str(blocker) for blocker in sideinfo_effect_curve_status["blockers"]
+        )
+        if sideinfo_effect_curve_valid:
+            blockers.extend(str(blocker) for blocker in timing_smoke_status["blockers"])
 
     if not dykstra_valid:
         next_action = {
@@ -2080,6 +2143,36 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+    elif not sideinfo_effect_curve_valid:
+        next_action = {
+            "action_id": "measure_tt5l_sideinfo_effect_curve",
+            "phase": "sideinfo_causal_effect_curve",
+            "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+            "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
+            "command_template": (
+                "run paired CPU/CUDA TT5L side-info variants "
+                "zero, random_lsb, shuffled, trained, and ablated; then "
+                f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
+                f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
+                f"--sideinfo-effect-curve-json {TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH} "
+                f"--output-json {L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH} "
+                f"--output-md {L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH}"
+            ),
+            "expected_artifacts": [
+                TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+                L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
+                L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
+            ],
+            "required_axes": list(_REQUIRED_EXACT_AXES),
+            "required_variants": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS),
+            "architecture_lock_blocker": (
+                "requires_paired_cpu_cuda_sideinfo_effect_curve_before_"
+                "architecture_lock"
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     elif not timing_smoke_valid:
         next_action = {
             "action_id": "materialize_tt5l_first_anchor_timing_smoke_artifact",
@@ -2170,10 +2263,12 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
         "anchor_pair_evidence_valid": anchor_pair_valid,
         "sideinfo_effect_curve_allowed": sideinfo_effect_curve_allowed,
+        "sideinfo_effect_curve_artifact_valid": sideinfo_effect_curve_valid,
+        "sideinfo_effect_curve_status": sideinfo_effect_curve_status,
         "first_anchor_timing_smoke_artifact_valid": timing_smoke_valid,
         "first_anchor_timing_smoke_status": timing_smoke_status,
         "first_anchor_timing_smoke_allowed": first_anchor_timing_smoke_allowed,
-        "architecture_lock_allowed": probe_valid and paired_axis_plan_valid,
+        "architecture_lock_allowed": architecture_lock_allowed,
         "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
         "proof_tool_exists": proof_tool_exists,
         "probe_tool_path": L5V2_PROBE_TOOL_PATH,
@@ -3668,6 +3763,7 @@ __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
+    "TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH",
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
@@ -3685,4 +3781,5 @@ __all__ = [
     "l5_v2_tt5l_campaign_readiness",
     "tt5l_first_anchor_timing_smoke_status",
     "tt5l_move_level_feasibility_status",
+    "tt5l_sideinfo_effect_curve_status",
 ]

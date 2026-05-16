@@ -30,6 +30,11 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
 )
+from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+    L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
+)
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -721,6 +726,44 @@ def _write_tt5l_first_anchor_timing_smoke_artifact(repo_root: Path) -> Path:
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
+def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
+    artifact_path = repo_root / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
+                "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+                "predicate_id": "tt5l_paired_sideinfo_effect_curve_v1",
+                "predicate_passed": True,
+                "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+                "required_variants": list(
+                    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "observed_cells": [
+                    {
+                        "axis": axis,
+                        "variant": variant,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                        "blockers": [],
+                    }
+                    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+                    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ],
             },
             sort_keys=True,
         )
@@ -1725,7 +1768,7 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
     assert "failed_paired_axis_plan" in action["terminal_claim_failure_template"]
 
 
-def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
+def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
     tmp_path: Path,
 ) -> None:
     _write_tt5l_dykstra_artifact(tmp_path)
@@ -1740,6 +1783,46 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
     assert tt5l["probe_gate_evidence_valid"] is True
     assert tt5l["paired_axis_plan_evidence_valid"] is True
     assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["sideinfo_effect_curve_artifact_valid"] is False
+    assert tt5l["sideinfo_effect_curve_status"]["artifact_valid"] is False
+    assert tt5l["architecture_lock_allowed"] is False
+    assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert "tt5l_sideinfo_effect_curve_artifact_missing" in tt5l["blockers"]
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "measure_tt5l_sideinfo_effect_curve"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["artifact_path"] == (
+        l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+    )
+    assert (
+        tt5l["next_non_pr106_l5_action"]["architecture_lock_blocker"]
+        == "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["required_axes"] == [
+        "contest_cpu",
+        "contest_cuda",
+    ]
+
+
+def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is True
+    assert tt5l["sideinfo_gate_evidence_valid"] is True
+    assert tt5l["probe_gate_evidence_valid"] is True
+    assert tt5l["paired_axis_plan_evidence_valid"] is True
+    assert tt5l["sideinfo_effect_curve_allowed"] is True
+    assert tt5l["sideinfo_effect_curve_artifact_valid"] is True
+    assert tt5l["architecture_lock_allowed"] is True
     assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert "tt5l_first_anchor_timing_smoke_artifact_missing" in tt5l["blockers"]
@@ -1756,6 +1839,7 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_custody_artifact(
     tmp_path: Path,
 ) -> None:
     _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
     _write_tt5l_first_anchor_timing_smoke_artifact(tmp_path)
     evidence = _valid_gate_evidence_payloads(tmp_path)
     evidence.pop("exact_anchor_or_diagnostic_pair")
@@ -1782,6 +1866,7 @@ def test_l5_v2_tt5l_first_anchor_timing_rejects_mismatched_result_hash(
     payload["result_artifact_sha256"] = _sha(999)
     artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
     _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
     evidence = _valid_gate_evidence_payloads(tmp_path)
     evidence.pop("exact_anchor_or_diagnostic_pair")
 

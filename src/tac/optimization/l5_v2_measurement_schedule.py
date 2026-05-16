@@ -26,6 +26,9 @@ L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH = (
     ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md"
 )
 L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA = "l5_v2_sideinfo_effect_curve_v1"
+L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH = (
+    "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl"
+)
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES = ("contest_cpu", "contest_cuda")
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS = (
     "zero",
@@ -159,6 +162,14 @@ def _sideinfo_effect_curve_blockers(
     return list(dict.fromkeys(blockers))
 
 
+def validate_l5_v2_sideinfo_effect_curve(
+    curve: Mapping[str, Any] | None,
+) -> list[str]:
+    """Return blockers for the public TT5L side-info effect-curve contract."""
+
+    return _sideinfo_effect_curve_blockers(curve)
+
+
 def _measurement(
     *,
     measurement_id: str,
@@ -266,8 +277,7 @@ def build_l5_v2_lattice_measurement_schedule(
             estimated_cost_usd=1.0,
             expected_information_gain_nats=0.40,
             output_artifact=(
-                "experiments/results/l5_v2_probe/"
-                "tt5l_sideinfo_effect_curve.jsonl"
+                L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
             ),
             blockers=(
                 []

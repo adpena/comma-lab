@@ -23796,8 +23796,8 @@
           "status": false
         },
         "deploy_runbook": {
-          "evidence": "scripts/remote_lane_substrate_time_traveler_l5_autonomy.sh + scripts/operator_authorize_substrate_time_traveler_l5_autonomy_modal_a100_dispatch.sh + .omx/operator_authorize_recipes/substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml",
-          "status": true
+          "status": true,
+          "evidence": "TT5L remote driver deploy runbook hardened: active claim still verified, cleanup trap now appends terminal claim on success, claim-verification failure, and remote-driver failure; verified by bash-n plus pytest 2 passed."
         },
         "impl_complete": {
           "evidence": "src/tac/substrates/time_traveler_l5_autonomy/ (architecture+archive+inflate+score_aware_loss + 63 tests pass + CPU smoke produces valid 7KB archive + inflate.sh end-to-end roundtrip writes 4-frame .raw)",
@@ -31795,5 +31795,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-16T20:01:15Z"
+  "updated_at": "2026-05-16T20:04:41Z"
 }

@@ -87,6 +87,46 @@ fi
 if [ -z "$CLAIM_PYTHON" ]; then
     CLAIM_PYTHON="python3"
 fi
+
+CLAIM_VERIFIED=0
+append_terminal_claim() {
+    local rc="$1"
+    if [ ! -f "$WORKSPACE/tools/claim_lane_dispatch.py" ]; then
+        log "WARN: claim helper missing; cannot append terminal dispatch claim"
+        return 0
+    fi
+    local status
+    if [ "$rc" -eq 0 ]; then
+        status="completed_tt5l_remote_driver"
+    elif [ "${CLAIM_VERIFIED:-0}" != "1" ]; then
+        status="failed_tt5l_claim_verification_rc_${rc}"
+    else
+        status="failed_tt5l_remote_driver_rc_${rc}"
+    fi
+    "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" claim \
+        --claims-path "$DISPATCH_CLAIMS_PATH" \
+        --force \
+        --lane-id "$LANE_ID" \
+        --platform "$DISPATCH_PLATFORM" \
+        --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
+        --agent "remote_lane_substrate_time_traveler_l5_autonomy" \
+        --status "$status" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$TT5L_OUTPUT_DIR" \
+        >> "$LOG_DIR/run.log" 2>&1 || {
+        log "WARN: failed to append terminal dispatch claim status=$status"
+    }
+}
+
+cleanup() {
+    local rc="$?"
+    if [ -n "$HEARTBEAT_PID" ]; then
+        kill "$HEARTBEAT_PID" 2>/dev/null || true
+    fi
+    append_terminal_claim "$rc"
+    exit "$rc"
+}
+trap cleanup EXIT
+
 CLAIM_SUMMARY_JSON="$LOG_DIR/dispatch_claim_summary.json"
 "$CLAIM_PYTHON" "$WORKSPACE/tools/claim_lane_dispatch.py" summary \
     --claims-path "$DISPATCH_CLAIMS_PATH" \
@@ -109,6 +149,7 @@ if [ "$CLAIM_MATCH_RC" -ne 0 ]; then
     log "FATAL: no active dispatch claim for lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
     exit 21
 fi
+CLAIM_VERIFIED=1
 log "stage_0_dispatch_claim_verified lane=$LANE_ID job=$DISPATCH_INSTANCE_JOB_ID"
 
 # Stage 0b: NVDEC probe.
@@ -215,7 +256,6 @@ log "stage_2_provenance_done"
     done
 ) &
 HEARTBEAT_PID=$!
-trap 'if [ -n "$HEARTBEAT_PID" ]; then kill "$HEARTBEAT_PID" 2>/dev/null || true; fi' EXIT
 
 # Stage 4: invoke trainer.
 log "stage_4_trainer_invoke_begin video=$TT5L_VIDEO_PATH epochs=$TT5L_EPOCHS device=$TT5L_DEVICE"

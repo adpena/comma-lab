@@ -1504,6 +1504,12 @@ def _l5_v2_frontier_readiness(
         "tt5l_sideinfo_effect_curve_allowed": bool(
             tt5l_campaign.get("sideinfo_effect_curve_allowed")
         ),
+        "tt5l_sideinfo_effect_curve_artifact_valid": bool(
+            tt5l_campaign.get("sideinfo_effect_curve_artifact_valid")
+        ),
+        "tt5l_architecture_lock_allowed": bool(
+            tt5l_campaign.get("architecture_lock_allowed")
+        ),
         "tt5l_first_anchor_timing_smoke_allowed": bool(
             tt5l_campaign.get("first_anchor_timing_smoke_allowed")
         ),
@@ -1608,6 +1614,9 @@ def _format_l5_v2_frontier_readiness() -> str:
         "  next non-PR106 L5 action:      "
         f"{next_action.get('action_id', 'missing')}",
         f"  TT5L side-info curve allowed:   {payload['tt5l_sideinfo_effect_curve_allowed']}",
+        "  TT5L side-info curve artifact:  "
+        f"{payload['tt5l_sideinfo_effect_curve_artifact_valid']}",
+        f"  TT5L architecture lock allowed: {payload['tt5l_architecture_lock_allowed']}",
         f"  TT5L timing smoke allowed:      {payload['tt5l_first_anchor_timing_smoke_allowed']}",
         f"  side-info proof present:        {payload['canonical_sideinfo_evidence_present']}",
         f"  L5 gate-probe dispatch ready:   {payload['l5_ready_for_gate_probe_dispatch']}",
