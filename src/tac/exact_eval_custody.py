@@ -22,6 +22,26 @@ SCORE_FORMULA_TOLERANCE = 1e-9
 CONTEST_EXACT_AXES = frozenset({"contest_cpu", "contest_cuda"})
 CUDA_DEVICE_TOKENS = frozenset({"a10", "a100", "cuda", "gpu", "h100", "l4", "t4"})
 CPU_DEVICE_TOKENS = frozenset({"cpu", "x86", "x86_64"})
+CONTEST_CPU_FORBIDDEN_TOKENS = frozenset({
+    "aarch64",
+    "ane",
+    "apple",
+    "arm",
+    "arm64",
+    "darwin",
+    "m1",
+    "m2",
+    "m3",
+    "m4",
+    "mac",
+    "macbook",
+    "macbookpro",
+    "macos",
+    "metal",
+    "mlx",
+    "mps",
+    "osx",
+})
 NEGATED_DEVICE_TOKENS = frozenset({
     "disabled",
     "false",
@@ -105,6 +125,11 @@ def _contains_token(value: str, tokens: frozenset[str]) -> bool:
             continue
         return True
     return False
+
+
+def _contains_any_token(value: str, tokens: frozenset[str]) -> bool:
+    parts = set(re.findall(r"[a-z0-9]+", value.lower()))
+    return bool(parts & tokens)
 
 
 def _auth_eval_command_has_expected_shape(command: str, semantic_axis: str) -> bool:
@@ -311,6 +336,12 @@ def validate_exact_eval_evidence(
         hardware, CUDA_DEVICE_TOKENS
     ):
         blockers.append("hardware_not_cuda")
+    elif semantic_axis == "contest_cpu" and hardware:
+        if not _contains_token(hardware, CPU_DEVICE_TOKENS) or _contains_any_token(
+            hardware,
+            CONTEST_CPU_FORBIDDEN_TOKENS,
+        ):
+            blockers.append("hardware_not_contest_cpu")
     if require_devices:
         if not inflate_device:
             blockers.append("inflate_device_missing")
@@ -318,20 +349,22 @@ def validate_exact_eval_evidence(
             inflate_device, CUDA_DEVICE_TOKENS
         ):
             blockers.append("inflate_device_not_cuda")
-        elif semantic_axis == "contest_cpu" and not _contains_token(
-            inflate_device, CPU_DEVICE_TOKENS
-        ):
-            blockers.append("inflate_device_not_cpu")
+        elif semantic_axis == "contest_cpu":
+            if not _contains_token(inflate_device, CPU_DEVICE_TOKENS):
+                blockers.append("inflate_device_not_cpu")
+            elif _contains_any_token(inflate_device, CONTEST_CPU_FORBIDDEN_TOKENS):
+                blockers.append("inflate_device_not_contest_cpu")
         if not eval_device:
             blockers.append("eval_device_missing")
         elif semantic_axis == "contest_cuda" and not _contains_token(
             eval_device, CUDA_DEVICE_TOKENS
         ):
             blockers.append("eval_device_not_cuda")
-        elif semantic_axis == "contest_cpu" and not _contains_token(
-            eval_device, CPU_DEVICE_TOKENS
-        ):
-            blockers.append("eval_device_not_cpu")
+        elif semantic_axis == "contest_cpu":
+            if not _contains_token(eval_device, CPU_DEVICE_TOKENS):
+                blockers.append("eval_device_not_cpu")
+            elif _contains_any_token(eval_device, CONTEST_CPU_FORBIDDEN_TOKENS):
+                blockers.append("eval_device_not_contest_cpu")
     if require_auth_eval_command:
         auth_eval_command = _clean_text(evidence.get("auth_eval_command"))
         if not auth_eval_command:
@@ -341,6 +374,11 @@ def validate_exact_eval_evidence(
             semantic_axis,
         ):
             blockers.append("auth_eval_command_unrecognized")
+        elif semantic_axis == "contest_cpu" and _contains_any_token(
+            auth_eval_command,
+            CONTEST_CPU_FORBIDDEN_TOKENS,
+        ):
+            blockers.append("auth_eval_command_not_contest_cpu")
     if require_log_path and not _clean_text(evidence.get("log_path")):
         blockers.append("log_path_missing")
     if require_artifact_path and not _clean_text(evidence.get("artifact_path")):
