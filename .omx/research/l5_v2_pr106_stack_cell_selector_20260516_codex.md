@@ -30,8 +30,8 @@ Generated with `l5_v2_pr106_stack_cell_candidates(top_k=3)`:
    - source max axis score: `0.22712591739832488`
 2. `time_traveler_l5_autonomy+format_0x0c_exact_radix`
    - source max axis score: `0.22776488386973992`
-3. `time_traveler_l5_autonomy+format_0x02_pr101_grammar`
-   - source max axis score: `0.22806463271134514`
+3. `time_traveler_l5_autonomy+prefix_top_16_pr101grammar`
+   - source max axis score: `0.23010997767094082`
 
 These values are sorting keys from source PR106 paired rows, not composite
 score claims.

@@ -22,18 +22,18 @@ The matrix is explicitly not a promotion surface:
 ## Artifacts
 
 - JSON: `.omx/research/pr106_packetir_candidate_matrix_20260516_codex.json`
-  - SHA-256: `4a13dbf3f79a311acd9b05911b777f6a9e3e199a05aa8bd0bf4da900141cd870`
+  - SHA-256: `03889d2af21468a752fb031375b040cce00fa78a934e1224c217e1c6f64bdd23`
 - Markdown: `.omx/research/pr106_packetir_candidate_matrix_20260516_codex.md`
-  - SHA-256: `e14c9dee316cf9148eb642e4a0388314d30fbb9da4338a627fcbaed3eab861a8`
+  - SHA-256: `9fb06495194f1db9fd6aad5c2a059b00eb88f2ece0f8c0ead503654dc621ffd8`
 
 ## Current Matrix Summary
 
 - Schema: `pr106_packetir_candidate_matrix_v1`
 - Candidate count: 16
 - Status counts:
-  - `paired_exact_measured`: 5
+  - `paired_exact_measured`: 3
   - `single_axis_exact_measured_needs_pair`: 9
-  - `runtime_consumed_needs_paired_exact_eval`: 2
+  - `runtime_consumed_needs_paired_exact_eval`: 4
 
 The paired rows are candidates with both valid `contest_cpu` and
 `contest_cuda` exact evidence under the same archive SHA. Single-axis rows are
@@ -62,7 +62,7 @@ Commands run from repo root:
 
 Observed results:
 
-- `3 passed`
+- `6 passed`
 - `All checks passed!`
 - generator emitted the artifact paths and SHA-256 values listed above.
 

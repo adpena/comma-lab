@@ -14,6 +14,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.exact_eval_custody import (
+    contest_score,
+    extract_runtime_tree_sha256,
+    validate_exact_eval_evidence,
+)
 from tac.packet_compiler.pr106_sidecar_packet import (
     prove_pr106_sidecar_packet_ir_identity,
 )
@@ -28,6 +33,7 @@ PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_MD = (
 )
 
 ContestAxis = Literal["contest_cpu", "contest_cuda"]
+_REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 
 
 @dataclass(frozen=True)
@@ -418,6 +424,88 @@ def _exact_score(payload: Mapping[str, Any]) -> float | None:
     return None
 
 
+def _runtime_manifest(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        manifest = provenance.get("inflate_runtime_manifest")
+        if isinstance(manifest, Mapping):
+            return manifest
+    return {}
+
+
+def _runtime_content_tree_sha(payload: Mapping[str, Any]) -> str:
+    value = str(_runtime_manifest(payload).get("runtime_content_tree_sha256") or "")
+    return value.strip().lower()
+
+
+def _provenance_text(payload: Mapping[str, Any], key: str) -> str:
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        return str(provenance.get(key) or "").strip()
+    return ""
+
+
+def _load_adjacent_request(path: Path, axis: ContestAxis) -> Mapping[str, Any]:
+    fallback: Mapping[str, Any] = {}
+    for request_path in sorted(path.parent.glob("*auth_eval_local_request.json")):
+        try:
+            payload = read_json(request_path)
+        except Exception:  # pragma: no cover - defensive malformed request sidecar
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        if not fallback:
+            fallback = payload
+        request_axis = str(payload.get("axis") or payload.get("score_axis") or "")
+        if request_axis == axis:
+            return payload
+    return fallback
+
+
+def _adjacent_log_path(path: Path, repo_root: Path) -> str:
+    for name in ("contest_auth_eval.stdout.log", "contest_auth_eval.stderr.log"):
+        candidate = path.parent / name
+        if candidate.is_file():
+            return repo_relative(candidate, repo_root)
+    return ""
+
+
+def _exact_eval_validation_row(
+    *,
+    axis: ContestAxis,
+    path: Path,
+    payload: Mapping[str, Any],
+    repo_root: Path,
+) -> dict[str, Any]:
+    request = _load_adjacent_request(path, axis)
+    score = _exact_score(payload)
+    return {
+        "axis": axis,
+        "archive_sha256": _exact_archive_sha(payload),
+        "runtime_tree_sha256": extract_runtime_tree_sha256(payload),
+        "score": score,
+        "seg_dist": payload.get("avg_segnet_dist"),
+        "pose_dist": payload.get("avg_posenet_dist"),
+        "archive_bytes": payload.get("archive_size_bytes"),
+        "n_samples": payload.get("n_samples"),
+        "hardware": _provenance_text(payload, "device")
+        if axis == "contest_cpu"
+        else _provenance_text(payload, "gpu_model") or _provenance_text(payload, "device"),
+        "inflate_device": _provenance_text(payload, "device"),
+        "eval_device": _provenance_text(payload, "device"),
+        "auth_eval_command": request.get("canonical_path", ""),
+        "log_path": _adjacent_log_path(path, repo_root),
+        "artifact_path": repo_relative(path, repo_root),
+        "expected_score_recomputed": contest_score(
+            float(payload.get("avg_segnet_dist") or 0.0),
+            float(payload.get("avg_posenet_dist") or 0.0),
+            int(payload.get("archive_size_bytes") or 0),
+        )
+        if score is not None
+        else None,
+    }
+
+
 def _load_runtime_consumption(
     *,
     path_text: str,
@@ -453,8 +541,25 @@ def _load_runtime_consumption(
     archive_payload = payload.get("archive")
     if not source_archive_sha and isinstance(archive_payload, Mapping):
         source_archive_sha = str(archive_payload.get("sha256") or "").strip().lower()
-    if source_archive_sha and source_archive_sha != expected_archive_sha256:
+    if not source_archive_sha:
+        blockers.append("runtime_consumption_source_archive_sha_missing")
+    elif source_archive_sha != expected_archive_sha256:
         blockers.append("runtime_consumption_source_archive_sha_mismatch")
+    runtime_source_manifest = payload.get("runtime_source_manifest")
+    runtime_source_tree_sha = ""
+    runtime_content_tree_sha = ""
+    if isinstance(runtime_source_manifest, Mapping):
+        runtime_source_tree_sha = str(
+            runtime_source_manifest.get("runtime_source_tree_sha256") or ""
+        ).strip().lower()
+        runtime_content_tree_sha = str(
+            runtime_source_manifest.get("runtime_content_tree_sha256") or ""
+        ).strip().lower()
+    if not runtime_source_tree_sha or len(runtime_source_tree_sha) != 64:
+        blockers.append("runtime_consumption_runtime_source_tree_sha_missing")
+    for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
+        if payload.get(key) is not False:
+            blockers.append(f"runtime_consumption_{key}_not_false")
     for key in (
         "runtime_sidecar_decode_consumption_claim",
         "runtime_sidecar_apply_consumption_claim",
@@ -474,11 +579,8 @@ def _load_runtime_consumption(
         "source_archive_sha256": source_archive_sha,
         "runtime_dir": payload.get("runtime_dir"),
         "runtime_inflate_py_sha256": payload.get("runtime_inflate_py_sha256"),
-        "runtime_source_tree_sha256": (
-            payload.get("runtime_source_manifest", {}) or {}
-        ).get("runtime_source_tree_sha256")
-        if isinstance(payload.get("runtime_source_manifest"), Mapping)
-        else None,
+        "runtime_source_tree_sha256": runtime_source_tree_sha,
+        "runtime_content_tree_sha256": runtime_content_tree_sha,
         "runtime_sidecar_decode_consumption_claim": payload.get(
             "runtime_sidecar_decode_consumption_claim"
         ),
@@ -529,16 +631,30 @@ def _load_exact_eval(
         }
     blockers: list[str] = []
     observed_axis = str(payload.get("score_axis") or "").strip()
-    if observed_axis != axis:
-        blockers.append("exact_eval_axis_mismatch")
     archive_sha = _exact_archive_sha(payload)
-    if archive_sha != expected_archive_sha256:
-        blockers.append("exact_eval_archive_sha_mismatch")
-    if int(payload.get("n_samples") or 0) != 600:
-        blockers.append("exact_eval_n_samples_not_600")
     score = _exact_score(payload)
-    if score is None:
-        blockers.append("exact_eval_score_missing")
+    validation_row = _exact_eval_validation_row(
+        axis=axis,
+        path=path,
+        payload=payload,
+        repo_root=repo_root,
+    )
+    validation = validate_exact_eval_evidence(
+        validation_row,
+        expected_axis=axis,
+        expected_archive_sha256=expected_archive_sha256,
+        require_artifact_path=True,
+        require_hardware=True,
+        require_auth_eval_command=True,
+        require_log_path=True,
+        require_devices=True,
+        artifact_base_dir=repo_root,
+        annotation_prefix=f"pr106_packetir_{axis}",
+    )
+    blockers.extend(f"exact_eval_{blocker}" for blocker in validation.blockers)
+    runtime_content_tree_sha = _runtime_content_tree_sha(payload)
+    if not runtime_content_tree_sha or len(runtime_content_tree_sha) != 64:
+        blockers.append("exact_eval_runtime_content_tree_sha_invalid")
     return {
         "axis": axis,
         "path": repo_relative(path, repo_root),
@@ -550,7 +666,16 @@ def _load_exact_eval(
         "evidence_grade": payload.get("evidence_grade"),
         "evidence_semantics": payload.get("evidence_semantics"),
         "canonical_score": score,
+        "score_formula_recomputed": validation_row["expected_score_recomputed"],
         "archive_sha256": archive_sha,
+        "runtime_tree_sha256": validation.runtime_tree_sha256,
+        "runtime_content_tree_sha256": runtime_content_tree_sha,
+        "auth_eval_command": validation_row["auth_eval_command"],
+        "log_path": validation_row["log_path"],
+        "artifact_path": validation_row["artifact_path"],
+        "hardware": validation_row["hardware"],
+        "inflate_device": validation_row["inflate_device"],
+        "eval_device": validation_row["eval_device"],
         "archive_size_bytes": payload.get("archive_size_bytes"),
         "n_samples": payload.get("n_samples"),
         "avg_segnet_dist": payload.get("avg_segnet_dist"),
@@ -589,6 +714,28 @@ def _candidate_status(
     if valid_axes:
         return "single_axis_exact_measured_needs_pair"
     return "runtime_consumed_needs_paired_exact_eval"
+
+
+def _paired_exact_status_blockers(
+    exact_evidence: Mapping[str, Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    valid_axes = {
+        axis
+        for axis, row in exact_evidence.items()
+        if row.get("exists") is True and row.get("valid") is True
+    }
+    missing_axes = [axis for axis in _REQUIRED_EXACT_AXES if axis not in valid_axes]
+    if missing_axes:
+        blockers.append("paired_exact_eval_missing:" + ",".join(missing_axes))
+    if valid_axes == set(_REQUIRED_EXACT_AXES):
+        runtime_content_shas = {
+            str(exact_evidence[axis].get("runtime_content_tree_sha256") or "")
+            for axis in _REQUIRED_EXACT_AXES
+        }
+        if len(runtime_content_shas) != 1 or len(next(iter(runtime_content_shas))) != 64:
+            blockers.append("paired_exact_eval_runtime_content_tree_sha_mismatch")
+    return blockers
 
 
 def _row_for_candidate(
@@ -687,18 +834,23 @@ def _row_for_candidate(
         )
         for axis, path in sorted(spec.exact_eval_paths.items())
     }
+    status = _candidate_status(
+        archive_exists=archive_path.is_file(),
+        identity_passed=identity.get("passed") is True,
+        identity_blockers=identity_blockers,
+        runtime=runtime,
+        exact_evidence=exact_evidence,
+    )
+    status_blockers = _paired_exact_status_blockers(exact_evidence)
+    if status == "paired_exact_measured" and status_blockers:
+        status = "paired_exact_blocked"
     row.update(
         {
             "packet_ir_identity": identity,
             "runtime_consumption": runtime,
             "exact_axis_evidence": exact_evidence,
-            "status": _candidate_status(
-                archive_exists=archive_path.is_file(),
-                identity_passed=identity.get("passed") is True,
-                identity_blockers=identity_blockers,
-                runtime=runtime,
-                exact_evidence=exact_evidence,
-            ),
+            "status": status,
+            "status_blockers": status_blockers,
             "format_id": packet_format_id,
             "archive_sha256": archive_sha,
         }
@@ -764,6 +916,7 @@ def render_pr106_packetir_candidate_matrix_markdown(matrix: Mapping[str, Any]) -
             blockers.extend(str(item) for item in identity.get("blockers", []))
         if isinstance(runtime, Mapping):
             blockers.extend(str(item) for item in runtime.get("blockers", []))
+        blockers.extend(str(item) for item in row.get("status_blockers", []))
         axes: list[str] = []
         if isinstance(exact, Mapping):
             for axis, evidence in exact.items():

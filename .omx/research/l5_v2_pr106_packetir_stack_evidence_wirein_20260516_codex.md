@@ -26,12 +26,10 @@ The L5 v2 payload reads:
 
 - `.omx/research/pr106_packetir_candidate_matrix_20260516_codex.json`
 - expected SHA-256:
-  `4a13dbf3f79a311acd9b05911b777f6a9e3e199a05aa8bd0bf4da900141cd870`
+  `03889d2af21468a752fb031375b040cce00fa78a934e1224c217e1c6f64bdd23`
 
 Current extracted paired candidates:
 
-- `format_0x01_r2_release`
-- `format_0x02_pr101_grammar`
 - `format_0x0c_exact_radix`
 - `format_0x0d_latent_score_table`
 - `prefix_top_16_pr101grammar`
@@ -63,9 +61,9 @@ PY
 Observed results:
 
 - `All checks passed!`
-- `46 passed`
+- `49 passed`
 - payload schema `l5_v2_packetir_stack_evidence_v1`
-- paired candidate count `5`
+- paired candidate count `3`
 - blockers `[]`
 
 ## Follow-Up

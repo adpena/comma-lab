@@ -410,7 +410,7 @@ def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> 
         PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
     )
     assert payload["source_candidate_count"] == 16
-    assert payload["paired_candidate_count"] == 5
+    assert payload["paired_candidate_count"] == 3
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
@@ -422,6 +422,7 @@ def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> 
     }
     assert "format_0x0c_exact_radix" in paired
     assert "format_0x0d_latent_score_table" in paired
+    assert "prefix_top_16_pr101grammar" in paired
     for row in paired.values():
         assert row["score_claim"] is False
         assert row["promotion_eligible"] is False
@@ -449,8 +450,8 @@ def test_l5_v2_pr106_stack_cell_candidates_are_blocked_proposals() -> None:
     payload = l5_v2_pr106_stack_cell_candidates()
 
     assert payload["schema"] == L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA
-    assert payload["source_packetir_paired_candidate_count"] == 5
-    assert payload["candidate_count"] == 5
+    assert payload["source_packetir_paired_candidate_count"] == 3
+    assert payload["candidate_count"] == 3
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
@@ -520,9 +521,9 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     )
     assert all(gate["status"] == "required" for gate in boolean_only["gates"])
     assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
-    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 5
+    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 3
     assert blocked["packetir_stack_evidence"]["score_claim"] is False
-    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 5
+    assert blocked["pr106_stack_cell_candidates"]["candidate_count"] == 3
     assert blocked["pr106_stack_cell_candidates"]["promotion_eligible"] is False
 
 
