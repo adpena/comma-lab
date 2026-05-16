@@ -25,7 +25,7 @@ The 4-stage grammar (from the design memo):
     PER_PAIR_BYTES(1)         u8
     WORLD_MODEL_LEN(4)        u32   brotli(state_dict, fp16)
     PER_PAIR_SIDE_INFO_LEN(4) u32   brotli(int8-quantized side info)
-    AC_STATE_LEN(4)           u32   brotli(arithmetic-coder probability tables)
+    AC_STATE_LEN(4)           u32   brotli(residual-calibration state)
     META_LEN(4)               u32   utf-8 JSON of float meta + per-pair scales
     WORLD_MODEL_BLOB          ...
     PER_PAIR_SIDE_INFO_BLOB   ...
@@ -40,10 +40,10 @@ Sections:
 * **PER_PAIR_SIDE_INFO_BLOB** (Stage 2): brotli-compressed int8 sequence;
   ``num_pairs * per_pair_bytes`` raw int8s before brotli. Layout per pair:
   ``[se3_lie(12 B) | seg_boundary(18 B) | hf_residual(6 B) | predict_residual(9 B)]``.
-* **AC_STATE_BLOB** (Stage 3): brotli-compressed arithmetic-coder state for
-  the per-pair side info. v1 consumes it as deterministic residual-calibration
-  state; a later range/ANS decoder can replace this without changing section
-  custody.
+* **AC_STATE_BLOB** (Stage 3): brotli-compressed deterministic
+  residual-calibration state for the per-pair side info. v1 does not range- or
+  ANS-decode this stream; a later entropy decoder can replace it without
+  changing section custody.
 * **META_BLOB** (Stage 4): JSON ``{"int8_scale", "first_omega", "hidden_omega",
   "coord_feature_freqs", ...}`` — the floats that don't fit in u8/u16 header
   fields.
@@ -102,7 +102,7 @@ class TimeTravelerArchive:
     """Int8 array shape ``(num_pairs, per_pair_bytes)`` — Stage 2 side info."""
 
     ac_state: bytes
-    """Raw arithmetic-coder / residual-calibration state."""
+    """Raw residual-calibration state; not a range/ANS entropy stream in v1."""
 
     meta: dict[str, object]
     """Sidecar JSON meta with hparams (omega, freqs, int8 scales, ...)."""
@@ -426,9 +426,9 @@ def parse_tt5l_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]
     - ``per_pair_side_info_blob`` — brotli q=9 compressed int8 per-pair
       side info (sidecar_or_correction_stream — DISCUS-style Stage-2
       side info: SE(3) lie + segboundary + hf-residual + predict-residual)
-    - ``ac_state_blob`` — brotli q=9 compressed arithmetic-coder state
-      (entropy_model_or_range_stream — consumed by v1 inflate as residual
-      calibration state; future Stage-3 arithmetic-decode path can replace it)
+    - ``ac_state_blob`` — brotli q=9 compressed residual-calibration state
+      (sidecar_or_correction_stream — consumed by v1 inflate as calibration
+      bytes; future Stage-3 arithmetic-decode path can replace it)
     - ``meta_blob`` — sorted-keys JSON utf-8 (control_or_metadata)
 
     The byte ranges returned here MUST agree with the writer in
@@ -503,12 +503,13 @@ def parse_tt5l_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]
 # Note: world_model_blob is decoder_weight_stream because the Time-Traveler
 # world-model IS the substrate decoder in the predictive-receiver class.
 # Per-pair side info is sidecar (DISCUS-style Wyner-Ziv-correlated correction
-# stream). AC state is entropy_model_or_range_stream (arithmetic-coder).
+# stream). AC state is also a consumed sidecar in v1: residual calibration
+# bytes, not a real range/ANS entropy decoder.
 TT5L_SECTION_ROLES: dict[str, str] = {
     "tt5l_header": "control_or_metadata",
     "world_model_blob": "decoder_weight_stream",
     "per_pair_side_info_blob": "sidecar_or_correction_stream",
-    "ac_state_blob": "entropy_model_or_range_stream",
+    "ac_state_blob": "sidecar_or_correction_stream",
     "meta_blob": "control_or_metadata",
 }
 

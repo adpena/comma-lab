@@ -159,6 +159,19 @@ def test_literature_anchors_carry_source_fidelity_scope():
         assert row.decode_complexity_evidence, row.substrate_id
 
 
+def test_tt5l_composition_row_demotes_ac_state_entropy_claim():
+    row = next(
+        r
+        for r in canonical_substrate_inventory()
+        if r.substrate_id == "time_traveler_l5_autonomy"
+    )
+
+    evidence = row.decode_complexity_evidence.lower()
+    assert "ac-state" in evidence
+    assert "residual calibration" in evidence
+    assert "not range/ans entropy decoding" in evidence
+
+
 def test_substrate_row_predicted_delta_alone_midpoint():
     r = SubstrateRow(
         substrate_id="t",

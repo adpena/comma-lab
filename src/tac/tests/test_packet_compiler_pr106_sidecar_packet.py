@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import io
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
@@ -56,6 +58,21 @@ PR106_FORMAT0D_ARCHIVE = (
 
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def test_hnerv_lowlevel_packer_import_does_not_cycle_through_package_init() -> None:
+    code = (
+        "import tac.hnerv_lowlevel_packer; "
+        "from tac.packet_compiler import emit_pr106_context_source_payload; "
+        "assert callable(emit_pr106_context_source_payload)"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def _single_member_zip(

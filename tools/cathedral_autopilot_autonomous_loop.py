@@ -2807,7 +2807,12 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
         raise ValueError(f"probe-disambiguator JSON must be an object: {path}")
     for key in ("score_claim", "promotion_eligible", "ready_for_exact_eval_dispatch"):
         _require_planning_only_flag(payload, key, context="probe-disambiguator JSON")
-    if payload.get("dispatch_attempted", False):
+    if _json_bool_field(
+        payload,
+        "dispatch_attempted",
+        default=False,
+        context="probe-disambiguator JSON",
+    ):
         raise ValueError(
             "probe-disambiguator JSON has dispatch_attempted=True; refusing "
             "to consume it as an autopilot planning source"
@@ -2829,7 +2834,12 @@ def load_candidates_from_probe_disambiguator_output(path: Path) -> list[Candidat
             _require_planning_only_flag(
                 raw, key, context=f"probe-disambiguator row {cid!r}"
             )
-        if raw.get("dispatch_attempted", False):
+        if _json_bool_field(
+            raw,
+            "dispatch_attempted",
+            default=False,
+            context=f"probe-disambiguator row {cid!r}",
+        ):
             raise ValueError(
                 f"probe-disambiguator row {cid!r} has dispatch_attempted=True; "
                 "refusing to consume it as an autopilot planning row"

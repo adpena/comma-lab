@@ -174,11 +174,6 @@ from tac.packet_compiler.pr106_sidecar_packet import (
     reexpand_pr101_exact_radix_fixed_meta_noop_rank_elided_sidecar_payload,
     reexpand_pr101_rank_elided_sidecar_payload,
 )
-from tac.packet_compiler.pr106_context_recode import (
-    emit_pr106_context_source_payload,
-    prove_pr106_context_archive_identity,
-    prove_pr106_context_source_identity,
-)
 from tac.packet_compiler.pr106_latent_sidecar_selection import (
     build_latent_candidate_grid as build_pr106_latent_candidate_grid,
     choose_latent_corrections_from_score_table_file,
@@ -401,6 +396,32 @@ from tac.packet_compiler.deterministic_compiler import (
     compile_packet as compile_deterministic_packet,
     inspect_packet_oracle as inspect_deterministic_packet,
 )
+
+_LAZY_EXPORTS = {
+    "emit_pr106_context_source_payload": "tac.packet_compiler.pr106_context_recode",
+    "prove_pr106_context_archive_identity": "tac.packet_compiler.pr106_context_recode",
+    "prove_pr106_context_source_identity": "tac.packet_compiler.pr106_context_recode",
+}
+
+
+def __getattr__(name: str):
+    """Lazily expose context-recode helpers without importing HNeRV packers.
+
+    ``pr106_context_recode`` imports ``tac.hnerv_lowlevel_packer`` for source
+    archive parsing. Importing it from this package initializer creates a cycle
+    for callers that need only ``pr106_sidecar_packet``. Keep package-level
+    compatibility while making the dependency edge explicit and lazy.
+    """
+
+    module_name = _LAZY_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    value = getattr(import_module(module_name), name)
+    globals()[name] = value
+    return value
+
 
 __all__ = [
     # Canonical deterministic submission-packet compiler (2026-05-12, Catalog #158)

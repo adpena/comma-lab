@@ -166,7 +166,8 @@ def test_tt5l_world_model_is_decoder_weight_stream() -> None:
     """Time-Traveler world-model IS substrate decoder in predictive-receiver class."""
     assert TT5L_SECTION_ROLES["world_model_blob"] == "decoder_weight_stream"
     assert TT5L_SECTION_ROLES["per_pair_side_info_blob"] == "sidecar_or_correction_stream"
-    assert TT5L_SECTION_ROLES["ac_state_blob"] == "entropy_model_or_range_stream"
+    assert TT5L_SECTION_ROLES["ac_state_blob"] == "sidecar_or_correction_stream"
+    assert "entropy_model_or_range_stream" not in TT5L_SECTION_ROLES.values()
 
 
 def test_tt5l_constants_pinned() -> None:

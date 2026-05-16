@@ -1135,8 +1135,9 @@ def canonical_substrate_inventory() -> list[SubstrateRow]:
             pact_must_prove="Provide byte-closed temporal sideinfo consumption, identity/capacity ablations, and paired CPU/CUDA exact eval.",
             decode_complexity_evidence=(
                 "Local no-GPU toy TT5L parser+inflate proof shows temporal "
-                "side-info and AC-state bytes are consumed; no measured "
-                "full-runtime T4 decode cost yet."
+                "side-info and AC-state bytes are consumed. AC-state is v1 "
+                "residual calibration, not range/ANS entropy decoding; no "
+                "measured full-runtime T4 decode cost yet."
             ),
             prediction_band=l5_v2_prediction_band_payload(),
             dispatch_blockers=(

@@ -916,6 +916,34 @@ def test_load_probe_disambiguator_refuses_score_claim(tmp_path):
         loop.load_candidates_from_probe_disambiguator_output(p)
 
 
+@pytest.mark.parametrize("bad_value", ["false", "", 0, 1])
+def test_load_probe_disambiguator_refuses_malformed_top_level_dispatch_attempted(
+    tmp_path,
+    bad_value,
+):
+    p = _write_probe_payload(tmp_path)
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    payload["dispatch_attempted"] = bad_value
+    p.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-boolean dispatch_attempted"):
+        loop.load_candidates_from_probe_disambiguator_output(p)
+
+
+@pytest.mark.parametrize("bad_value", ["false", "", 0, 1])
+def test_load_probe_disambiguator_refuses_malformed_row_dispatch_attempted(
+    tmp_path,
+    bad_value,
+):
+    p = _write_probe_payload(tmp_path)
+    payload = json.loads(p.read_text(encoding="utf-8"))
+    payload["autopilot_rows"][0]["dispatch_attempted"] = bad_value
+    p.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-boolean dispatch_attempted"):
+        loop.load_candidates_from_probe_disambiguator_output(p)
+
+
 @pytest.mark.parametrize("field", ["license_ok", "sideinfo_consumed", "exact_duplicate"])
 def test_load_probe_disambiguator_refuses_string_review_bools(tmp_path, field):
     p = _write_probe_payload(tmp_path)

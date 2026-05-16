@@ -62,7 +62,6 @@ from tac.substrates.z5_predictive_coding_world_model.archive import (
     Z5PCWM1_SCHEMA_VERSION,
 )
 
-
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
@@ -367,9 +366,9 @@ def test_tt5l_manifest_records_world_model_side_info_ac_state_sections(tmp_path:
         "ac_state_blob",
         "meta_blob",
     ]
-    # AC state is entropy_model_or_range_stream
+    # AC state is consumed in TT5L v1 as residual calibration, not range/ANS.
     ac = next(s for s in manifest["sections"] if s["name"] == "ac_state_blob")
-    assert ac["optimization_role"] == "entropy_model_or_range_stream"
+    assert ac["optimization_role"] == "sidecar_or_correction_stream"
     assert validate_packet_section_manifest(manifest) == []
 
 
