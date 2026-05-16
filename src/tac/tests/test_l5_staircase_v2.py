@@ -1954,7 +1954,7 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(
     assert tt5l["paired_axis_plan_evidence_valid"] is True
     assert tt5l["sideinfo_effect_curve_allowed"] is True
     assert tt5l["sideinfo_effect_curve_artifact_valid"] is True
-    assert tt5l["architecture_lock_allowed"] is True
+    assert tt5l["architecture_lock_allowed"] is False
     assert tt5l["first_anchor_timing_smoke_artifact_valid"] is False
     assert tt5l["first_anchor_timing_smoke_allowed"] is False
     assert "tt5l_first_anchor_timing_smoke_artifact_missing" in tt5l["blockers"]
@@ -1985,6 +1985,8 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_custody_artifact(
         "fc-test-tt5l"
     )
     assert tt5l["first_anchor_timing_smoke_status"]["seconds_per_epoch"] == 12.3
+    assert tt5l["architecture_lock_allowed"] is False
+    assert tt5l["anchor_pair_evidence_valid"] is False
     assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
         "materialize_tt5l_exact_or_diagnostic_anchor_pair"
     )
@@ -2030,7 +2032,7 @@ def test_l5_v2_architecture_lock_packet_requires_timing_and_anchor(
 
     assert packet["schema"] == l5_v2.L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA
     assert packet["architecture_lock_allowed"] is False
-    assert packet["readiness_architecture_lock_allowed"] is True
+    assert packet["readiness_architecture_lock_allowed"] is False
     assert packet["required_checks"]["sideinfo_effect_curve_artifact_valid"] is True
     assert packet["required_checks"]["first_anchor_timing_smoke_artifact_valid"] is False
     assert packet["required_checks"]["anchor_pair_evidence_valid"] is False

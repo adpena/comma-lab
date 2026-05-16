@@ -2250,6 +2250,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         and sideinfo_effect_curve_valid
         and probe_valid
         and paired_axis_plan_valid
+        and timing_smoke_valid
+        and anchor_pair_valid
     )
 
     blockers = [
@@ -4034,9 +4036,10 @@ def l5_v2_architecture_lock_packet(
 ) -> dict[str, Any]:
     """Return the canonical TT5L L5-v2 architecture lock/no-lock packet.
 
-    The packet is stricter than the intermediate readiness boolean: architecture
-    lock requires all gate evidence plus side-info effect curve, first-anchor
-    timing-smoke custody, and exact/diagnostic anchor custody.
+    The packet and intermediate readiness boolean intentionally share the same
+    authority threshold: architecture lock requires all gate evidence plus
+    side-info effect curve, first-anchor timing-smoke custody, and
+    exact/diagnostic anchor custody.
     """
 
     resolved_repo_root = (
