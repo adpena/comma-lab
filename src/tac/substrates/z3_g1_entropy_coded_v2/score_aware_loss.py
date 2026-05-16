@@ -48,7 +48,10 @@ def g1_v2_residual_rate_bits_per_sample(
         class_indices: ``(N,)`` long tensor of per-pair dominant SegNet class.
         latent_offset: ``(A1_LATENT_DIM,)`` centered affine offset.
         latent_scale: ``(A1_LATENT_DIM,)`` per-dim scale (must be > eps).
-        quantization_step: Δ for the conditional-Gaussian AC coder.
+        quantization_step: Δ for the residual rate model. The current export
+            path stores Brotli-compressed int8 residual bytes; this rate model
+            is a training surrogate, not proof that an arithmetic residual
+            coder ships in the packet.
         eps: numerical guard added to ``latent_scale`` to avoid div-by-zero.
 
     Returns:

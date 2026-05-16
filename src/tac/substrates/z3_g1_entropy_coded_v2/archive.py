@@ -14,7 +14,9 @@ entropy-coded streams:
 
 These bytes ARE consumed by the inflate path (see `inflate_consumer.py`)
 to reconstruct per-pair sigmas + class indices and feed them into the
-conditional Gaussian AC decoder for the residual.
+decode-time residual reconstruction. The current packet does not ship an
+arithmetic/range residual coder; it ships Brotli-compressed int8 residual
+bytes and uses the class-conditioned sigma table as the reconstruction scale.
 
 Per Catalog #220 the score_improvement_mechanism is OPERATIONAL because
 the bytes flow through the inflate runtime and produce different inflate
@@ -40,7 +42,7 @@ Z3G2 wire format (the bytes between offset 162168 and the trailing A1 sidecar)::
     class_prior_blob    : 5 * uint16 LE = 10 B (frequency counts)
     class_index_len     : uint32 LE (4 B; constriction-encoded class index byte length)
     class_index_blob    : <class_index_len> bytes
-    residual_blob_len   : uint32 LE (4 B; brotli-compressed AC-coded latent residual)
+    residual_blob_len   : uint32 LE (4 B; brotli-compressed int8 latent residual)
     residual_blob       : <residual_blob_len> bytes
     latent_offset_blob  : 28 * float32 = 112 B
     latent_scale_blob   : 28 * float32 = 112 B
@@ -170,10 +172,11 @@ def _encode_class_indices_huffman(
 ) -> bytes:
     """Encode class indices via constriction's Huffman QueueEncoder.
 
-    Uses Huffman coding (not range coding) since constriction.symbol.QueueEncoder
-    + huffman.EncoderHuffmanTree is the simplest stable AC API in constriction
-    0.4.x. Class entropy is small (5 symbols × 600 pairs) so Huffman near-optimal
-    matches arithmetic to within ~5%.
+    Uses Huffman coding (not range/arithmetic coding) since
+    constriction.symbol.QueueEncoder + huffman.EncoderHuffmanTree is the
+    simplest stable entropy-coder API in constriction 0.4.x. Class entropy is
+    small (5 symbols × 600 pairs), but any arithmetic/ANS claim requires a
+    separate measured implementation.
 
     The encoded bytes are the uint32 word array packed as little-endian bytes
     plus a 4-byte uint32 prefix giving the original class index count (so

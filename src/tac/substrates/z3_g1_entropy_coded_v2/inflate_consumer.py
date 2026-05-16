@@ -3,10 +3,9 @@
 
 Reads a Z3G2 payload (decoder_section + Z3G2 section + A1 sidecar) and
 RECONSTRUCTS the per-pair sigma + class-index streams from the
-entropy-coded bytes shipped in the archive. The inflate path then uses
-those reconstructed sigmas (per-pair, indexed by class) as the
-class-conditional Gaussian std for the residual AC decoder, exactly
-as the encoder did.
+entropy-coded bytes shipped in the archive. The current production packet
+uses constriction-Huffman for class indices and Brotli-compressed int8
+residual bytes; no arithmetic/range residual coder ships yet.
 
 Per Catalog #220 + the design memo §6: this module IS the OPERATIONAL
 mechanism that consumes the distinguishing v2 bytes (sigma_table_blob,
@@ -80,7 +79,7 @@ def _unpack_class_prior_cdf(
     return counts_f / counts_f.sum()
 
 
-def _class_conditional_arithmetic_decode(
+def _class_index_bytes_to_tensor(
     class_indices_uint8: bytes,
     class_prior_cdf: torch.Tensor,
     *,
@@ -94,9 +93,8 @@ def _class_conditional_arithmetic_decode(
     This helper validates and converts to torch tensor for downstream use.
 
     The ``class_prior_cdf`` is accepted to match the Catalog #272
-    distinguishing-feature contract (the function signature documents
-    that the CDF IS the prior used at decode-time) and to allow a future
-    range-coded variant to use it.
+    distinguishing-feature contract and to document the prior that was used
+    by the Huffman decoder in ``decode_z3g2_section``.
     """
     if len(class_indices_uint8) != n_pairs:
         raise ValueError(
@@ -138,7 +136,7 @@ def reconstruct_class_indices_and_sigma_table_from_z3g2_payload(
         sigma_table_int8, meta.int8_sigma_scale, min_sigma=meta.min_sigma
     )
     class_prior_cdf = _unpack_class_prior_cdf(class_prior_counts)
-    class_indices_long = _class_conditional_arithmetic_decode(
+    class_indices_long = _class_index_bytes_to_tensor(
         class_indices_uint8, class_prior_cdf, n_pairs=meta.n_pairs
     )
     residual_arr = np.frombuffer(residual_int8, dtype=np.int8).reshape(
@@ -148,12 +146,10 @@ def reconstruct_class_indices_and_sigma_table_from_z3g2_payload(
     # Per-pair sigma lookup. The reconstructed sigma_table is consumed here
     # to influence inflate-time output (Catalog #220 OPERATIONAL contract).
     sigmas_per_pair = sigma_table_fp32[class_indices_long, :]  # (n_pairs, latent_dim)
-    # In a future entropy-coded residual variant the sigmas shape the AC
-    # decoder; in the current direct-residual production form the residual
-    # is already int8 and we re-affine into A1's q-grid space. Multiply by
-    # sigmas_per_pair to materialize the OPERATIONAL byte consumption that
-    # Catalog #220 + the byte-mutation smoke verifies (small mutations to
-    # sigma_table_blob CHANGE the per-pair latent magnitude).
+    # The current packet stores Brotli-compressed int8 residual bytes. The
+    # shipped sigma table is consumed here as a per-pair multiplicative scale;
+    # small mutations to sigma_table_blob change latent magnitude and bounded
+    # frame bytes, but this is not an arithmetic/range residual decoder.
     latents = (residual_q * sigmas_per_pair) * latent_scale.unsqueeze(
         0
     ) + latent_offset.unsqueeze(0)
@@ -168,7 +164,7 @@ def reconstruct_class_indices_and_sigma_table_from_z3g2_payload(
 
 
 __all__ = [
-    "_class_conditional_arithmetic_decode",
+    "_class_index_bytes_to_tensor",
     "_unpack_class_prior_cdf",
     "_unpack_sigma_table_entropy_coded",
     "reconstruct_class_indices_and_sigma_table_from_z3g2_payload",

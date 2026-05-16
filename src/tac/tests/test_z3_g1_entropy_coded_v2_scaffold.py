@@ -38,7 +38,7 @@ from tac.substrates.z3_g1_entropy_coded_v2 import (  # noqa: E402
     Z3G2_VERSION,
     Z3G2EntropyCodedScorerClassGatingHead,
     Z3G2EntropyCodedSectionMeta,
-    _class_conditional_arithmetic_decode,
+    _class_index_bytes_to_tensor,
     _unpack_class_prior_cdf,
     _unpack_sigma_table_entropy_coded,
     build_z3g2_composition_archive_contract,
@@ -614,19 +614,19 @@ def test_unpack_class_prior_cdf_normalizes():
     assert abs(cdf.sum().item() - 1.0) < 1e-5
 
 
-def test_class_conditional_arithmetic_decode_shape():
+def test_class_index_bytes_to_tensor_shape():
     indices_bytes = bytes(A1_N_PAIRS * [0])
     cdf = torch.ones(G1_NUM_SCORER_CLASSES) / G1_NUM_SCORER_CLASSES
-    decoded = _class_conditional_arithmetic_decode(indices_bytes, cdf)
+    decoded = _class_index_bytes_to_tensor(indices_bytes, cdf)
     assert decoded.shape == (A1_N_PAIRS,)
     assert decoded.dtype == torch.long
 
 
-def test_class_conditional_arithmetic_decode_rejects_wrong_length():
+def test_class_index_bytes_to_tensor_rejects_wrong_length():
     indices_bytes = bytes((A1_N_PAIRS - 1) * [0])
     cdf = torch.ones(G1_NUM_SCORER_CLASSES) / G1_NUM_SCORER_CLASSES
     with pytest.raises(ValueError, match="length"):
-        _class_conditional_arithmetic_decode(indices_bytes, cdf)
+        _class_index_bytes_to_tensor(indices_bytes, cdf)
 
 
 # ---------------------------------------------------------------------------
@@ -761,7 +761,70 @@ def test_substrate_contract_main_raises_not_implemented():
 
 
 # ---------------------------------------------------------------------------
-# 10. Byte-mutation smoke verifier (Catalog #139) end-to-end
+# 10. Full export research packet
+# ---------------------------------------------------------------------------
+
+
+def test_full_export_emits_byte_closed_research_packet(tmp_path: Path):
+    """Non-smoke trainer path emits a byte-closed packet without score authority."""
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    trainer_path = repo_root / "experiments" / "train_substrate_z3_g1_entropy_coded_v2.py"
+    a1_archive_path = repo_root / "submissions" / "a1" / "archive.zip"
+    video_path = repo_root / "upstream" / "videos" / "0.mkv"
+    venv_python = repo_root / ".venv" / "bin" / "python"
+    if not venv_python.is_file():
+        pytest.skip("no .venv/bin/python; skip subprocess test")
+    if not a1_archive_path.is_file() or not video_path.is_file():
+        pytest.skip("A1 archive or contest video missing")
+
+    out_dir = tmp_path / "z3g2_export"
+    result = subprocess.run(
+        [
+            str(venv_python),
+            str(trainer_path),
+            "--a1-archive-path",
+            str(a1_archive_path),
+            "--video-path",
+            str(video_path),
+            "--upstream-dir",
+            str(repo_root / "upstream"),
+            "--output-dir",
+            str(out_dir),
+            "--epochs",
+            "1",
+            "--device",
+            "cpu",
+            "--skip-frame-proof",
+        ],
+        env={
+            "PYTHONPATH": f"{repo_root / 'src'}:{repo_root / 'upstream'}:{repo_root}",
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+        },
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert result.returncode == 0, (
+        f"full export failed rc={result.returncode}\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    stats = json.loads((out_dir / "stats.json").read_text(encoding="utf-8"))
+    assert stats["schema_version"] == "z3_g1_entropy_coded_v2_full_export_research_v1"
+    assert stats["implementation_status"] == "byte_closed_research_export_no_auth_eval"
+    assert stats["score_claim"] is False
+    assert stats["promotion_eligible"] is False
+    assert stats["ready_for_exact_eval_dispatch"] is False
+    assert stats["bounded_frame_mutation_proof"]["verdict"] == "skipped"
+    assert stats["packet_manifest"]["payload_sha256"]
+    assert stats["packet_manifest"]["archive_contract"]["distinguishing_feature_bytes"] > 0
+    assert (out_dir / "archive.zip").is_file()
+    assert (out_dir / "submission_dir" / "inflate.sh").is_file()
+    assert (out_dir / "submission_dir" / "inflate.py").is_file()
+    assert (out_dir / "submission_dir" / "submission_runtime_manifest.json").is_file()
+
+
+# ---------------------------------------------------------------------------
+# 11. Byte-mutation smoke verifier (Catalog #139) end-to-end
 # ---------------------------------------------------------------------------
 
 
@@ -847,7 +910,7 @@ def test_byte_mutation_smoke_verifier_separates_parser_bound_from_semantic(tmp_p
 
 
 # ---------------------------------------------------------------------------
-# 11. HNeRV parity discipline lessons (per CLAUDE.md)
+# 12. HNeRV parity discipline lessons (per CLAUDE.md)
 # ---------------------------------------------------------------------------
 
 

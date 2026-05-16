@@ -18,23 +18,24 @@ slots with TWO entropy-coded streams shipped at the wire-byte level:
    (5 * uint16 counts = 10B) ships alongside the encoded stream.
 
 Score movement is unranked until full-frame ``inflate.sh`` mutation proof and
-paired CPU+CUDA exact eval exist. The rate-side calculation remains a planning
-hypothesis: section ~1986B vs A1 latent_blob 15387B ⇒ ~13.4 KB savings ⇒ rate
-contribution -0.0089 before any distortion-axis measurement.
+paired CPU+CUDA exact eval exist. The current deterministic full export
+selects a 14933B section against A1's 15387B latent slot (454 inner-payload
+bytes saved) before distortion-axis measurement; older synthetic-smoke
+section estimates are not promotion evidence.
 
 Architecture (v2 entropy-coded grammar):
 
     For each pair p in range(600):
         class_p = mode of SegNet(GT_frame_p).argmax(1) per pixel  (in [0, 4])
         sigma_p = sigma_table[class_p, :]   (28-dim per-dim scale)
-        AC-encode residual_p under N(0, sigma_p^2)
+        quantize residual_p with sigma_p as a shipped per-pair scale
 
     Archive payload (Z3G2):
         - Z3G2 header (~40B fixed)
         - sigma_table_blob: brotli(140 int8 sigma) (~300B)
         - class_prior_cdf_blob: 5 * uint16 = 10B (frequency counts)
-        - class_index_blob: AC-coded class indices (~200-400B)
-        - residual_blob: brotli(600*28 int8 residual) (~1200B)
+        - class_index_blob: constriction-Huffman class indices (~200-400B)
+        - residual_blob: brotli(600*28 int8 residual)
         - per_dim_affine: 2 * 28 * float32 = 224B (offset + scale)
 
 The v2 substitution is contest-legal at the compress-side only:
@@ -42,9 +43,9 @@ The v2 substitution is contest-legal at the compress-side only:
   rule" rule #2 — compress-side scorer use is FREE). Class indices ship
   via the Z3G2 sidecar.
 - INFLATE-SIDE: NO scorer load. The 4-byte magic Z3G2 distinguishes from
-  Z3HV2 (Z3V2); decoder unpacks sigma table + class prior CDF + AC-decodes
-  class indices + AC-decodes per-pair residual under class-conditional
-  Gaussian prior.
+  Z3HV2 (Z3V2); decoder unpacks sigma table, class prior counts,
+  Huffman-decodes class indices, decompresses int8 residuals, and applies
+  shipped class-conditional scales.
 
 Per Catalog #220 this remains ``score_improvement_mechanism_status=RESEARCH_ONLY``
 with ``runtime_overlay_consumed=False`` until full-frame ``inflate.sh``
@@ -60,7 +61,7 @@ intermediate structural consumption:
 3. Archive grammar parser symmetry (split_z3g2_payload_bytes round-trip).
 
 Per Catalog #240: dispatch_enabled=true requires implementation_complete; v2
-stays research-only while `_full_main` raises NotImplementedError.
+stays research-only until learned class export and paired exact eval land.
 
 NO score claim until paired CUDA + CPU auth eval lands per CLAUDE.md
 "Submission auth eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE".
@@ -94,7 +95,7 @@ from tac.substrates.z3_g1_entropy_coded_v2.archive import (
     split_z3g2_payload_bytes,
 )
 from tac.substrates.z3_g1_entropy_coded_v2.inflate_consumer import (
-    _class_conditional_arithmetic_decode,
+    _class_index_bytes_to_tensor,
     _unpack_class_prior_cdf,
     _unpack_sigma_table_entropy_coded,
     reconstruct_class_indices_and_sigma_table_from_z3g2_payload,
@@ -122,7 +123,7 @@ __all__ = [
     "Z3G2EntropyCodedCompositionArchiveContract",
     "Z3G2EntropyCodedScorerClassGatingHead",
     "Z3G2EntropyCodedSectionMeta",
-    "_class_conditional_arithmetic_decode",
+    "_class_index_bytes_to_tensor",
     "_unpack_class_prior_cdf",
     "_unpack_sigma_table_entropy_coded",
     "build_z3g2_composition_archive_contract",

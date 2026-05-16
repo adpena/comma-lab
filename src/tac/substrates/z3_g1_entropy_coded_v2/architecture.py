@@ -6,7 +6,8 @@ v2 introduces a NEW magic + grammar (`Z3G2`) that REPLACES the empty Z3HV2
 slots with TWO entropy-coded streams shipped at the wire-byte level. The
 training-side architecture remains a 5x28 sigma table + per-pair class
 index lookup (same as v1) but the EXPORT path now actually ships those
-bytes via brotli (sigma table) + arithmetic coding (class indices).
+bytes via Brotli (sigma table and residual bytes) plus constriction-Huffman
+coding (class indices).
 
 Key insight (v2 wire grammar):
 
@@ -19,8 +20,8 @@ Key insight (v2 wire grammar):
     v2 (Z3G2 entropy-coded):
         - sigma_table_blob = brotli(140 int8 sigma)   ~300B
         - class_prior_cdf_blob = 5*uint16 = 10B fixed
-        - class_index_blob = constriction-AC encoded   ~200-400B
-        - residual_blob = brotli(600*28 int8 residual) ~1200B
+        - class_index_blob = constriction-Huffman encoded ~200-400B
+        - residual_blob = brotli(600*28 int8 residual)
         => 510-710B of distinguishing G1 bytes SHIP
 
 The training-time architecture is identical to v1's
@@ -57,8 +58,8 @@ G1_NUM_SCORER_CLASSES = 5
 class Z3G1EntropyCodedV2Config:
     """Static design-time parameters for Z3-G1 entropy-coded v2.
 
-    Mirrors v1's ``Z3G1Config`` plus an explicit AC-coder bit-precision
-    field for the class-index stream.
+    Mirrors v1's ``Z3G1Config`` plus an explicit entropy-coder precision
+    field reserved for future class-index stream variants.
     """
 
     num_scorer_classes: int = G1_NUM_SCORER_CLASSES
@@ -70,7 +71,7 @@ class Z3G1EntropyCodedV2Config:
     sigma_real = sigma_int8 * int8_sigma_scale / 127."""
 
     min_sigma: float = 1e-3
-    """Lower clamp for sigma outputs to avoid div-by-zero in AC coder."""
+    """Lower clamp for sigma outputs to avoid div-by-zero in residual scaling."""
 
     max_sigma: float = 16.0
     """Upper clamp for sigma outputs (codable range bound)."""
@@ -83,10 +84,9 @@ class Z3G1EntropyCodedV2Config:
     Training learns class-specific sigma values from data."""
 
     ac_precision_bits: int = 24
-    """Bit-precision for the constriction QueueEncoder used on class indices.
-    Default 24 mirrors constriction's typical AC-coder precision; class index
-    entropy is small (~1.8 bits/pair x 600 = 1080 bits ~= 135B raw) so the
-    overhead is dominated by length prefix + small CDF encoding."""
+    """Reserved precision field for future range/ANS class-index coders.
+    The current implementation uses constriction-Huffman and records measured
+    byte length instead of claiming arithmetic precision."""
 
 
 class Z3G2EntropyCodedScorerClassGatingHead(nn.Module):
@@ -99,7 +99,7 @@ class Z3G2EntropyCodedScorerClassGatingHead(nn.Module):
 
     The export path is what's NEW in v2: see ``archive.py`` for the v2
     Z3G2 wire grammar that ACTUALLY ships the int8 sigma table + class
-    indices via brotli + arithmetic coding.
+    indices via Brotli + constriction-Huffman coding.
 
     Inputs:
         class_indices: (N_pairs,) long tensor in [0, num_scorer_classes)
@@ -215,14 +215,14 @@ def compute_class_prior_cdf(
     num_classes: int = G1_NUM_SCORER_CLASSES,
     smoothing: int = 1,
 ) -> torch.Tensor:
-    """Compute per-class frequency counts for use as the AC-coder prior.
+    """Compute per-class frequency counts for use as the entropy-coder prior.
 
     Args:
         class_indices: (N,) long tensor of class indices in [0, num_classes).
         num_classes: Number of distinct classes.
         smoothing: Add-one smoothing constant to avoid zero-frequency classes
-            (which would produce infinite codeword length under arithmetic
-            coding). Default 1 (Laplace smoothing).
+            (which would produce invalid zero-probability symbols under
+            entropy coding). Default 1 (Laplace smoothing).
 
     Returns:
         (num_classes,) int64 tensor of frequency counts (uint16-compatible

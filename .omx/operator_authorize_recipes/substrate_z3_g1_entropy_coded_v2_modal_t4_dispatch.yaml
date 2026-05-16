@@ -5,10 +5,12 @@ smoke_only: true
 research_only: true
 dispatch_enabled: false
 dispatch_blockers:
-  - full_main_raises_NotImplementedError_until_real_training_export_auth_eval_path_lands
   - remote_driver_missing_or_unverified
+  - compress_side_segnet_class_export_not_implemented
+  - deterministic_modulo_class_indices_are_placeholder_not_learned
   - predicted_cuda_band_unknown_until_same_archive_cuda_anchor_exists
-  - full_frame_inflate_byte_mutation_proof_missing
+  - paired_cpu_cuda_exact_eval_missing
+  - bounded_frame_proof_is_not_full_600_pair_exact_eval
 smoke_validation_contract: parser_and_synthetic_latent_smoke_v1
 summary: |
   Z3-G1 entropy-coded v2 substrate — operator-approved 2026-05-15
@@ -25,17 +27,21 @@ summary: |
 
   These bytes are parser/intermediate-consumed by the Z3G2 consumer (verified structurally by
   ``tools/verify_z3_g1_entropy_coded_v2_byte_mutation.py`` per Catalog
-  #139; PASSED locally pre-dispatch). This is not a full-frame `inflate.sh`
-  mutation proof and must not be promoted as semantic frame-output evidence.
+  #139; PASSED locally pre-dispatch). The full trainer surface now also emits
+  a byte-closed research packet and a bounded 16-pair `inflate.sh`
+  frame-output mutation proof. This is still not a full 600-pair exact eval
+  and must not be promoted as score evidence.
 
   Score movement is unranked until a full-frame `inflate.sh` mutation proof
   and paired CPU+CUDA exact eval exist. The byte-side rate calculation remains
   a planning hypothesis only, not a dispatch-ranking claim.
 
   Per Catalog #240 dispatch_enabled=true requires implementation_complete.
-  The current trainer full path is intentionally council-gated and raises
-  NotImplementedError, so this recipe is fail-closed as research_only=true
-  and dispatch_enabled=false until the real train/export/auth-eval path lands.
+  The current trainer full path is intentionally research-only: it exports a
+  deterministic Z3G2 packet with placeholder modulo class indices and bounded
+  frame proof, but no learned compress-side SegNet class export, no remote
+  driver, and no paired CPU/CUDA exact eval. This recipe remains fail-closed
+  as research_only=true and dispatch_enabled=false.
 
 platform: modal
 gpu: "${MODAL_GPU:-T4}"
@@ -77,18 +83,21 @@ predicted_delta_basis: |
   with entropy-coded sigma table + class-index slots that ACTUALLY ship.
 
   Math sanity:
-  - v2 section size estimate: 1986B (vs A1 latent_blob 15387B)
-  - Bytes saved: ~13.4 KB
-  - Rate term reduction: 25 * 13400 / 37545489 ≈ -0.0089 rate-axis
+  - Current deterministic export selected residual_peak_target=80.
+  - Current Z3G2 section size: 14933B (vs A1 latent_blob 15387B)
+  - Current bytes saved: 454B before ZIP container effects
+  - Current rate term reduction: 25 * 454 / 37545489 ≈ -0.000302 rate-axis
   - Distortion-axis impact: unknown until paired exact eval; the current
     implementation is a lossy latent transform because sigma affects the
     reconstructed latent at inflate time.
-  - Predicted band [-0.005, -0.015] (haircut for distillation imperfection
-    + non-stationary class statistics + sigma table quantization)
+  - The prior [-0.005, -0.015] band is superseded for this deterministic
+    placeholder export. Re-open only after the compress-side SegNet class
+    exporter and learned entropy statistics exist.
 
-  Smoke section size verified locally: 479B for synthetic inputs (well
-  within predicted band; full training will produce class-correlated
-  sigma table → similar section size).
+  Smoke section size verified locally: 479B for synthetic inputs. Full A1
+  export is materially larger because the residual stream must carry real
+  latents. The rate-distortion sweep is now recorded in stats.json so future
+  work cannot overclaim synthetic-smoke byte savings.
 
 literature_anchor: |
   Wunderkind G1 SUBSTITUTION-1:1 spec
@@ -112,8 +121,9 @@ risk: |
     statistics. If class membership is uncorrelated with residual entropy,
     delta will be at the LOW end of the predicted band (~0).
   - The byte-mutation smoke per Catalog #139 PASSED LOCALLY on synthetic
-    inputs at the parser/intermediate tensor layer. Full-frame `inflate.sh`
-    byte-mutation and paired auth-eval custody are still required.
+    inputs at the parser/intermediate tensor layer. A bounded 16-pair
+    `inflate.sh` frame-output mutation proof also passes for the exported
+    research packet. Full 600-pair paired auth-eval custody is still required.
   - F1-class regression (v1's empty-slot trap) is structurally extincted
     by the Z3G2 wire grammar (sigma_table_blob_len > 0 enforced at encode
     time; distinguishing_feature_bytes > 0 reported in archive contract).
@@ -191,11 +201,13 @@ notes: |
       multiplies into latent reconstruction at line ~120 of inflate_consumer.py);
   (c) SubstrateContract remains RESEARCH_ONLY until full-frame proof lands.
 
-  Dispatch remains BLOCKED until _full_main stops raising NotImplementedError,
-  the remote driver exists and passes strict predeploy, and the archive
-  promotion path emits paired CPU+CUDA auth-eval custody.
+  Dispatch remains BLOCKED until the placeholder class-index exporter is
+  replaced by the real compress-side SegNet class path, the remote driver
+  exists and passes strict predeploy, and the archive promotion path emits
+  paired CPU+CUDA auth-eval custody.
 
-  Predicted contest-CPU band: 0.178-0.190 [prediction; first-principles-bound].
+  Current deterministic placeholder packet is not a frontier claim.
+  Predicted contest-CPU band: null until learned class export + exact eval.
   Predicted contest-CUDA band: unknown until same-archive CUDA anchor exists.
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py
