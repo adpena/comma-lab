@@ -190,6 +190,9 @@ _prepend_pythonpath(REPO / "src", REPO)
 ensure_repo_imports(REPO)
 
 from tac.deploy.claims import is_terminal_status as is_dispatch_claim_terminal_status  # noqa: E402
+from tac.deploy.modal.paired_dispatch_contract import (  # noqa: E402
+    paired_auth_eval_dispatch_command_blockers,
+)
 from tac.geometry_feedback_readiness import (  # noqa: E402
     GEOMETRY_FEEDBACK_ROADMAP_KEYS,
     geometry_feedback_contract_failures,
@@ -951,39 +954,13 @@ def _operator_briefing_dispatch_failures(payload: dict[str, object]) -> list[str
                         f"target_{idx}:dispatch_status_not_claim_gated"
                     )
                 command_template = str(target.get("command_template") or "")
-                if target_count and target.get("paired_dispatch_tool") != (
-                    "tools/dispatch_modal_paired_auth_eval.py"
+                for blocker in paired_auth_eval_dispatch_command_blockers(
+                    paired_dispatch_tool=target.get("paired_dispatch_tool"),
+                    command_template=command_template,
                 ):
                     failures.append(
-                        "l5_v2_frontier_readiness:"
-                        f"target_{idx}:paired_dispatch_tool_not_canonical"
+                        f"l5_v2_frontier_readiness:target_{idx}:{blocker}"
                     )
-                if "<AXIS_SPECIFIC_MODAL_UPLOADED_RUNTIME_TREE_SHA256>" in command_template:
-                    failures.append(
-                        "l5_v2_frontier_readiness:"
-                        f"target_{idx}:axis_specific_runtime_tree_placeholder_leak"
-                    )
-                if (
-                    "experiments/modal_auth_eval.py" in command_template
-                    or "experiments/modal_auth_eval_cpu.py" in command_template
-                ):
-                    failures.append(
-                        "l5_v2_frontier_readiness:"
-                        f"target_{idx}:single_axis_modal_entrypoint_leak"
-                    )
-                if target_count and command_template:
-                    required_fragments = (
-                        "tools/dispatch_modal_paired_auth_eval.py",
-                        "--expected-runtime-tree-sha256 auto",
-                        "--skip-axis-if-promotable-anchor-exists",
-                    )
-                    for fragment in required_fragments:
-                        if fragment not in command_template:
-                            failures.append(
-                                "l5_v2_frontier_readiness:"
-                                f"target_{idx}:paired_dispatch_command_missing:"
-                                f"{fragment}"
-                            )
     groups = (
         ("supplementary_lanes", "active_supplementary_lanes"),
         ("gated_lanes", "active_gated_lanes"),

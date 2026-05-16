@@ -63,6 +63,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.authority_contract import normalize_score_authority_fields  # noqa: E402
+from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    PAIRED_AUTH_EVAL_DISPATCH_TOOL,
+)
+from tac.deploy.modal.paired_dispatch_contract import (  # noqa: E402
+    paired_auth_eval_dispatch_command_blockers,
+)
 from tac.optimization import l5_staircase_v2 as l5v2  # noqa: E402
 from tac.optimization.candidate_evidence_contract import (  # noqa: E402
     has_positive_exact_cuda_evidence_marker,
@@ -2357,6 +2363,22 @@ def _l5_v2_exact_targets_by_candidate(
         candidate_id = str(target.get("candidate_id") or "")
         if not candidate_id:
             continue
+        paired_dispatch_tool = target.get("paired_dispatch_tool")
+        command_template = target.get("command_template")
+        execute_command_template = target.get("execute_command_template")
+        command_blockers = paired_auth_eval_dispatch_command_blockers(
+            paired_dispatch_tool=paired_dispatch_tool,
+            command_template=command_template,
+        )
+        if execute_command_template:
+            for blocker in paired_auth_eval_dispatch_command_blockers(
+                paired_dispatch_tool=paired_dispatch_tool,
+                command_template=execute_command_template,
+            ):
+                blocker = f"execute_command_template:{blocker}"
+                if blocker not in command_blockers:
+                    command_blockers.append(blocker)
+        executable_target_suppressed = bool(command_blockers)
         targets_by_candidate.setdefault(candidate_id, []).append(
             {
                 "candidate_id": candidate_id,
@@ -2364,15 +2386,25 @@ def _l5_v2_exact_targets_by_candidate(
                 "pair_group_id": target.get("pair_group_id"),
                 "missing_axes": target.get("missing_axes"),
                 "recommended_provider": target.get("recommended_provider"),
-                "paired_dispatch_tool": target.get("paired_dispatch_tool"),
-                "command_template": target.get("command_template"),
-                "execute_command_template": target.get("execute_command_template"),
+                "paired_dispatch_tool": (
+                    paired_dispatch_tool
+                    if paired_dispatch_tool == PAIRED_AUTH_EVAL_DISPATCH_TOOL
+                    else None
+                ),
+                "command_template": None
+                if executable_target_suppressed
+                else command_template,
+                "execute_command_template": None
+                if executable_target_suppressed
+                else execute_command_template,
                 "archive_path": target.get("archive_path"),
                 "archive_sha256": target.get("archive_sha256"),
                 "runtime_dir": target.get("runtime_dir"),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
+                "executable_target_suppressed": executable_target_suppressed,
+                "exact_eval_command_blockers": command_blockers,
             }
         )
     return targets_by_candidate

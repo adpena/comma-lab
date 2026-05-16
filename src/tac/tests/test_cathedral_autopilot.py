@@ -647,6 +647,91 @@ def test_l5_v2_validation_queue_suppresses_targets_when_matrix_blocked(
     assert queued["score_claim"] is False
 
 
+def test_l5_v2_validation_queue_suppresses_single_axis_exact_target_commands(
+    monkeypatch,
+) -> None:
+    """PacketIR exact targets must not leak executable single-axis commands."""
+    autopilot = _load_autopilot()
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_canonical_sideinfo_gate_evidence",
+        lambda repo_root: None,
+    )
+    monkeypatch.setattr(
+        autopilot.l5v2,
+        "l5_v2_dispatch_readiness",
+        lambda *, gate_evidence=None, repo_root=None: {
+            "blockers": [],
+            "packetir_stack_evidence": {
+                "blockers": [],
+                "paired_candidate_count": 1,
+                "source_status_counts": {"paired_exact_measured": 1},
+                "axis_semantics": {
+                    "contest_cpu": "kept separate",
+                    "contest_cuda": "kept separate",
+                },
+            },
+            "pr106_stack_cell_candidates": {
+                "blockers": [],
+                "candidates": [
+                    {
+                        "cell_id": "l5_v2_pr106_format_0x0c_stack",
+                        "packetir_candidate_id": "format_0x0c_exact_radix",
+                        "source_max_archive_size_bytes": 185_578,
+                        "blockers": [],
+                    }
+                ],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        autopilot,
+        "_load_l5_v2_packetir_matrix_for_cathedral",
+        lambda: {
+            "load_blockers": [],
+            "next_exact_eval_targets": [
+                {
+                    "candidate_id": "format_0x0c_exact_radix",
+                    "lane_id": "lane_pr106_packetir_0x0c",
+                    "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+                    "command_template": (
+                        ".venv/bin/modal run experiments/modal_auth_eval.py "
+                        "--archive a.zip"
+                    ),
+                    "execute_command_template": (
+                        ".venv/bin/modal run experiments/modal_auth_eval.py "
+                        "--archive a.zip --execute"
+                    ),
+                }
+            ],
+        },
+    )
+
+    plan = autopilot.build_plan(
+        d_seg=0.00067082,
+        d_pose=0.0000336,
+        archive_bytes=185_578,
+        target_score=0.190,
+    )
+
+    queued = next(
+        r
+        for r in plan.validation_queue
+        if r["queue_source"] == "l5_v2_pr106_packetir_stack_cell"
+    )
+    target = queued["exact_eval_targets"][0]
+    assert target["command_template"] is None
+    assert target["execute_command_template"] is None
+    assert target["executable_target_suppressed"] is True
+    assert "single_axis_modal_entrypoint_leak" in target["exact_eval_command_blockers"]
+    assert (
+        "execute_command_template:single_axis_modal_entrypoint_leak"
+        in target["exact_eval_command_blockers"]
+    )
+    assert target["ready_for_exact_eval_dispatch"] is False
+    assert target["score_claim"] is False
+
+
 def test_validation_queue_does_not_reward_zero_byte_proxy_rows() -> None:
     """A missing/no-finalizer artifact encoded as 0 bytes is not a rate win."""
     autopilot = _load_autopilot()
