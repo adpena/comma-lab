@@ -52,6 +52,13 @@ TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256 = (
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
 )
+PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH = (
+    ".omx/research/pr106_packetir_candidate_matrix_20260516_codex.json"
+)
+PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256 = (
+    "4a13dbf3f79a311acd9b05911b777f6a9e3e199a05aa8bd0bf4da900141cd870"
+)
+L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -346,6 +353,122 @@ def l5_v2_prediction_band_verdict() -> dict[str, Any]:
             artifact_base_dir=_default_repo_root(),
         )
     )
+
+
+def l5_v2_packetir_stack_evidence_payload(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return PR106 PacketIR rows as axis-labelled stack evidence only.
+
+    PR106/R2 PacketIR rows can inform stack-of-stacks planning, but they are not
+    TT5L score evidence. This surface keeps that distinction machine-readable.
+    """
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    matrix_path = resolved_repo_root / PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH
+    blockers: list[str] = []
+    matrix: Mapping[str, Any] = {}
+    artifact_sha = ""
+    if not matrix_path.is_file():
+        blockers.append("l5_v2_packetir_matrix_artifact_missing")
+    else:
+        artifact_sha = _sha256_file(matrix_path)
+        if artifact_sha != PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256:
+            blockers.append("l5_v2_packetir_matrix_artifact_sha_mismatch")
+        try:
+            loaded = json.loads(matrix_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append("l5_v2_packetir_matrix_artifact_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                matrix = loaded
+            else:
+                blockers.append("l5_v2_packetir_matrix_artifact_not_object")
+
+    if matrix:
+        if matrix.get("score_claim") is not False:
+            blockers.append("l5_v2_packetir_matrix_score_claim_not_false")
+        if matrix.get("promotion_eligible") is not False:
+            blockers.append("l5_v2_packetir_matrix_promotion_eligible_not_false")
+        if matrix.get("ready_for_exact_eval_dispatch") is not False:
+            blockers.append("l5_v2_packetir_matrix_dispatch_ready_not_false")
+
+    paired_candidates: list[dict[str, Any]] = []
+    for row in _mapping_items(matrix.get("rows")):
+        if row.get("status") != "paired_exact_measured":
+            continue
+        exact_axis_evidence = row.get("exact_axis_evidence")
+        if not isinstance(exact_axis_evidence, Mapping):
+            blockers.append(
+                "l5_v2_packetir_matrix_paired_row_exact_axis_evidence_missing:"
+                f"{row.get('candidate_id')}"
+            )
+            continue
+        axis_payload: dict[str, Any] = {}
+        axis_blockers: list[str] = []
+        for axis in _REQUIRED_EXACT_AXES:
+            evidence = exact_axis_evidence.get(axis)
+            if not isinstance(evidence, Mapping):
+                axis_blockers.append(f"axis_missing:{axis}")
+                continue
+            if evidence.get("valid") is not True:
+                axis_blockers.append(f"axis_invalid:{axis}")
+            axis_payload[axis] = {
+                "valid": evidence.get("valid") is True,
+                "canonical_score": evidence.get("canonical_score"),
+                "archive_sha256": evidence.get("archive_sha256"),
+                "archive_size_bytes": evidence.get("archive_size_bytes"),
+                "avg_segnet_dist": evidence.get("avg_segnet_dist"),
+                "avg_posenet_dist": evidence.get("avg_posenet_dist"),
+                "evidence_grade": evidence.get("evidence_grade"),
+                "path": evidence.get("path"),
+            }
+        if axis_blockers:
+            blockers.append(
+                "l5_v2_packetir_matrix_paired_row_axis_blocked:"
+                f"{row.get('candidate_id')}:{','.join(axis_blockers)}"
+            )
+        paired_candidates.append(
+            {
+                "candidate_id": row.get("candidate_id"),
+                "format_id": row.get("format_id"),
+                "archive_sha256": row.get("archive_sha256"),
+                "archive_path": row.get("archive_path"),
+                "axis_evidence": axis_payload,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+
+    return {
+        "schema": L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA,
+        "source_matrix_artifact_path": PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH,
+        "source_matrix_artifact_sha256": artifact_sha,
+        "source_matrix_expected_sha256": (
+            PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
+        ),
+        "source_matrix_schema": matrix.get("schema"),
+        "source_candidate_count": matrix.get("candidate_count", 0),
+        "source_status_counts": matrix.get("status_counts", {}),
+        "paired_candidate_count": len(paired_candidates),
+        "paired_candidates": paired_candidates,
+        "axis_semantics": {
+            "contest_cpu": "kept separate from contest_cuda; no conversion",
+            "contest_cuda": "kept separate from contest_cpu; no conversion",
+        },
+        "evidence_semantics": (
+            "PR106 PacketIR exact rows are stack-planning evidence only; "
+            "they are not TT5L score evidence and do not unlock promotion"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
 
 
 def _coerce_gate_evidence(
@@ -1410,12 +1533,18 @@ def l5_v2_dispatch_readiness(
         "steps": [step.__dict__ for step in l5_v2_staircase_steps()],
         "prediction_band_verdict": prediction_band_verdict,
         "prediction_band_rank_ready": prediction_band_rank_ready,
+        "packetir_stack_evidence": l5_v2_packetir_stack_evidence_payload(
+            repo_root=resolved_repo_root,
+        ),
     }
 
 
 __all__ = [
     "CAMPAIGN_ID",
+    "L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA",
     "LANE_ID",
+    "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_PATH",
+    "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256",
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
@@ -1427,6 +1556,7 @@ __all__ = [
     "L5V2Step",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",
+    "l5_v2_packetir_stack_evidence_payload",
     "l5_v2_prediction_band_payload",
     "l5_v2_prediction_band_verdict",
     "l5_v2_required_gates",

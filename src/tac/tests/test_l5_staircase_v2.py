@@ -8,10 +8,13 @@ from pathlib import Path
 import pytest
 
 from tac.optimization.l5_staircase_v2 import (
+    L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA,
+    PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256,
     PREDICTED_DELTA_BAND,
     SUBJECT_ID,
     L5V2GateEvidence,
     l5_v2_dispatch_readiness,
+    l5_v2_packetir_stack_evidence_payload,
     l5_v2_prediction_band_payload,
     l5_v2_prediction_band_verdict,
     l5_v2_required_gates,
@@ -397,6 +400,49 @@ def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
     assert "prediction_band_research_basis_missing" not in verdict["blockers"]
 
 
+def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> None:
+    payload = l5_v2_packetir_stack_evidence_payload()
+
+    assert payload["schema"] == L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA
+    assert payload["source_matrix_artifact_sha256"] == (
+        PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256
+    )
+    assert payload["source_candidate_count"] == 16
+    assert payload["paired_candidate_count"] == 5
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["blockers"] == []
+    paired = {
+        row["candidate_id"]: row
+        for row in payload["paired_candidates"]
+        if isinstance(row, dict)
+    }
+    assert "format_0x0c_exact_radix" in paired
+    assert "format_0x0d_latent_score_table" in paired
+    for row in paired.values():
+        assert row["score_claim"] is False
+        assert row["promotion_eligible"] is False
+        assert row["ready_for_exact_eval_dispatch"] is False
+        axis_evidence = row["axis_evidence"]
+        assert isinstance(axis_evidence, dict)
+        assert set(axis_evidence) == {"contest_cpu", "contest_cuda"}
+        assert axis_evidence["contest_cpu"]["valid"] is True
+        assert axis_evidence["contest_cuda"]["valid"] is True
+
+
+def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
+    tmp_path: Path,
+) -> None:
+    payload = l5_v2_packetir_stack_evidence_payload(repo_root=tmp_path)
+
+    assert payload["paired_candidate_count"] == 0
+    assert "l5_v2_packetir_matrix_artifact_missing" in payload["blockers"]
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
 def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> None:
     blocked = l5_v2_dispatch_readiness()
     all_gate_ids = {gate.gate_id for gate in l5_v2_required_gates()}
@@ -430,6 +476,8 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans() -> N
     )
     assert all(gate["status"] == "required" for gate in boolean_only["gates"])
     assert all(gate["evidence_valid"] is False for gate in boolean_only["gates"])
+    assert blocked["packetir_stack_evidence"]["paired_candidate_count"] == 5
+    assert blocked["packetir_stack_evidence"]["score_claim"] is False
 
 
 def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) -> None:
