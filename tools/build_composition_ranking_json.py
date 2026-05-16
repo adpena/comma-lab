@@ -339,6 +339,26 @@ def _enforce_envelope(
         ]
         if campaign_metadata:
             composition_notes_lines.append(f"campaign_metadata: {campaign_metadata!r}")
+        source_fidelity_metadata = [
+            part for part in (
+                f"source_supports={getattr(substrate, 'source_supports', '')}"
+                if getattr(substrate, "source_supports", "") else "",
+                f"paper_claim_scope={getattr(substrate, 'paper_claim_scope', '')}"
+                if getattr(substrate, "paper_claim_scope", "") else "",
+                f"pact_must_prove={getattr(substrate, 'pact_must_prove', '')}"
+                if getattr(substrate, "pact_must_prove", "") else "",
+                (
+                    "decode_complexity_evidence="
+                    f"{getattr(substrate, 'decode_complexity_evidence', '')}"
+                )
+                if getattr(substrate, "decode_complexity_evidence", "") else "",
+            )
+            if part
+        ]
+        if source_fidelity_metadata:
+            composition_notes_lines.append(
+                f"source_fidelity_metadata: {source_fidelity_metadata!r}"
+            )
         if cell.notes:
             composition_notes_lines.append(f"notes: {cell.notes}")
         if cell.semantic_compatibility_warning is not None:
@@ -359,7 +379,16 @@ def _enforce_envelope(
                 "composition_notes": "\n".join(composition_notes_lines),
                 "lane_class": getattr(substrate, "lane_class", ""),
                 "literature_anchor": getattr(substrate, "literature_anchor", ""),
+                "source_supports": getattr(substrate, "source_supports", ""),
+                "paper_claim_scope": getattr(substrate, "paper_claim_scope", ""),
+                "pact_must_prove": getattr(substrate, "pact_must_prove", ""),
+                "decode_complexity_evidence": getattr(
+                    substrate,
+                    "decode_complexity_evidence",
+                    "",
+                ),
                 "campaign_metadata": campaign_metadata,
+                "source_fidelity_metadata": source_fidelity_metadata,
                 "blockers": list(plan.blockers),
                 "semantic_compatibility_warning": cell.semantic_compatibility_warning,
                 "operator_review_required": bool(plan.blockers),

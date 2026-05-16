@@ -107,6 +107,10 @@ def _canonical_ranking_payload() -> dict:
                 "composition_notes": "[predicted; substrate composition matrix v1] singleton dispatch of z3",
                 "lane_class": "substrate_engineering substrate_class_shift",
                 "literature_anchor": "balle_2018",
+                "source_supports": "Scale hyperpriors support learned image-compression rate-distortion.",
+                "paper_claim_scope": "Natural-image learned compression, not Pact score evidence.",
+                "pact_must_prove": "Byte-closed contest archive score and runtime custody.",
+                "decode_complexity_evidence": "T4 inflate timing required before promotion.",
                 "campaign_metadata": [
                     "campaign_id=lane_z3_balle_hyperprior_bolton_campaign_20260514"
                 ],
@@ -276,6 +280,14 @@ def test_load_ranking_carries_lane_class_literature_and_campaign_metadata(tmp_pa
     z3 = by_id["singleton__z3_balle_hyperprior_bolton"]
     assert z3.lane_class == "substrate_engineering substrate_class_shift"
     assert z3.literature_anchor == "balle_2018"
+    assert z3.source_supports.startswith("Scale hyperpriors")
+    assert "not Pact score evidence" in z3.paper_claim_scope
+    assert "Byte-closed contest archive" in z3.pact_must_prove
+    assert "T4 inflate timing" in z3.decode_complexity_evidence
+    assert "source_supports:" in z3.notes
+    assert "paper_claim_scope:" in z3.notes
+    assert "pact_must_prove:" in z3.notes
+    assert "decode_complexity_evidence:" in z3.notes
     assert "campaign_metadata:" in z3.notes
     assert "lane_z3_balle_hyperprior_bolton_campaign_20260514" in z3.notes
 

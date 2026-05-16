@@ -245,6 +245,10 @@ class CandidateRow:
         "Tishby-Zaslavsky", "Wyner-Ziv"). Used by
         :func:`adjust_score_for_class_shift` to reward known class-shift
         primitives.
+      - ``source_supports`` / ``paper_claim_scope`` / ``pact_must_prove`` /
+        ``decode_complexity_evidence`` — source-fidelity scope fields carried
+        from the composition matrix so literature anchors cannot silently become
+        empirical Pact score claims.
     """
 
     candidate_id: str
@@ -258,6 +262,10 @@ class CandidateRow:
     mdl_density: float | None = None
     lane_class: str | None = None
     literature_anchor: str = ""
+    source_supports: str = ""
+    paper_claim_scope: str = ""
+    pact_must_prove: str = ""
+    decode_complexity_evidence: str = ""
     # Catalog #227 Tier C empirical revision wire-in (2026-05-14):
     # Tier C-derived substrate-class density estimate (0..1). HIGH (>= 0.70) =
     # within-class; LOW (<= 0.30) = across-class. The signal OVERRIDES Tier A
@@ -2048,6 +2056,12 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
                 mdl_density=mdl_density,
                 lane_class=lane_class,
                 literature_anchor=str(raw.get("literature_anchor", "")),
+                source_supports=str(raw.get("source_supports", "")),
+                paper_claim_scope=str(raw.get("paper_claim_scope", "")),
+                pact_must_prove=str(raw.get("pact_must_prove", "")),
+                decode_complexity_evidence=str(
+                    raw.get("decode_complexity_evidence", "")
+                ),
                 mdl_tier_c_density=mdl_tier_c_density,
                 composition_alpha=composition_alpha,
                 license_ok=bool(raw.get("license_ok", True)),
@@ -2158,6 +2172,16 @@ def load_candidates_from_substrate_composition_ranking(
             notes_lines.append(f"lane_class: {raw.get('lane_class')}")
         if raw.get("literature_anchor"):
             notes_lines.append(f"literature_anchor: {raw.get('literature_anchor')}")
+        if raw.get("source_supports"):
+            notes_lines.append(f"source_supports: {raw.get('source_supports')}")
+        if raw.get("paper_claim_scope"):
+            notes_lines.append(f"paper_claim_scope: {raw.get('paper_claim_scope')}")
+        if raw.get("pact_must_prove"):
+            notes_lines.append(f"pact_must_prove: {raw.get('pact_must_prove')}")
+        if raw.get("decode_complexity_evidence"):
+            notes_lines.append(
+                f"decode_complexity_evidence: {raw.get('decode_complexity_evidence')}"
+            )
         if raw.get("campaign_metadata"):
             notes_lines.append(f"campaign_metadata: {raw.get('campaign_metadata')!r}")
         lane_class_raw = raw.get("lane_class")
@@ -2184,6 +2208,12 @@ def load_candidates_from_substrate_composition_ranking(
             mdl_density=_coerce_optional_float(raw.get("mdl_density")),
             lane_class=str(lane_class_raw) if lane_class_raw is not None else None,
             literature_anchor=str(raw.get("literature_anchor", "")),
+            source_supports=str(raw.get("source_supports", "")),
+            paper_claim_scope=str(raw.get("paper_claim_scope", "")),
+            pact_must_prove=str(raw.get("pact_must_prove", "")),
+            decode_complexity_evidence=str(
+                raw.get("decode_complexity_evidence", "")
+            ),
             composition_alpha=composition_alpha,
             license_ok=bool(raw.get("license_ok", True)),
             inflate_dep_count=int(raw.get("inflate_dep_count", 0) or 0),

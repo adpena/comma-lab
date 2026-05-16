@@ -249,6 +249,18 @@ def test_campaign_metadata_emitted_for_z3_bare_cell(bridge):
         "campaign_metadata"
     ]
     assert "literature_anchor=balle_2018" in z3["composition_notes"]
+    assert z3["source_supports"].startswith("Scale-hyperprior")
+    assert "not frozen-A1 contest latent replacement" in z3["paper_claim_scope"]
+    assert "paired contest CPU/CUDA eval" in z3["pact_must_prove"]
+    assert "T4 inflate-cost anchor" in z3["decode_complexity_evidence"]
+    assert "source_supports=" in z3["composition_notes"]
+    assert "paper_claim_scope=" in z3["composition_notes"]
+    assert "pact_must_prove=" in z3["composition_notes"]
+    assert "decode_complexity_evidence=" in z3["composition_notes"]
+    assert any(
+        item.startswith("source_supports=Scale-hyperprior")
+        for item in z3["source_fidelity_metadata"]
+    )
 
 
 def test_blockers_propagate_from_cell(bridge):
