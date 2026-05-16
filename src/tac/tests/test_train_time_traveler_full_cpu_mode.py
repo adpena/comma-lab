@@ -167,6 +167,36 @@ def test_full_trainer_side_info_initializes_at_quantized_lsb(trainer_module):
     assert quantized.abs().max().item() < 8
 
 
+def test_export_side_info_liveness_stats_reject_all_zero_int8(trainer_module):
+    """TT5L export must not silently emit another all-zero side-info packet."""
+
+    zero_side_info = torch.zeros((8, 45), dtype=torch.int8)
+    live_side_info = zero_side_info.clone()
+    live_side_info[0, 0] = 1
+
+    with pytest.raises(RuntimeError, match="tt5l_side_info_all_zero_export"):
+        trainer_module._require_live_quantized_side_info_for_export(zero_side_info)
+
+    stats = trainer_module._require_live_quantized_side_info_for_export(
+        live_side_info
+    )
+    assert stats["checked"] is True
+    assert stats["dtype"] == "torch.int8"
+    assert stats["shape"] == [8, 45]
+    assert stats["total_values"] == 360
+    assert stats["nonzero_values"] == 1
+    assert stats["nonzero_fraction"] == pytest.approx(1 / 360)
+    assert stats["min"] == 0
+    assert stats["max"] == 1
+
+
+def test_export_side_info_liveness_rejects_empty_int8(trainer_module):
+    with pytest.raises(RuntimeError, match="tt5l_side_info_empty_export"):
+        trainer_module._require_live_quantized_side_info_for_export(
+            torch.zeros((0, 45), dtype=torch.int8)
+        )
+
+
 def test_skip_archive_build_provenance_is_non_promoting(trainer_module):
     """``--skip-archive-build`` must not leave a promotable phantom packet."""
 

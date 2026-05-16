@@ -411,6 +411,140 @@ def _initialize_per_pair_side_info_float(
     return torch.nn.Parameter(values)
 
 
+_TT5L_SIDE_INFO_SECTION_WIDTHS: tuple[tuple[str, int], ...] = (
+    ("se3_lie", 12),
+    ("seg_boundary", 18),
+    ("hf_residual", 6),
+    ("predict_residual", 9),
+)
+
+
+def _side_info_section_liveness(side_info: Any) -> dict[str, Any]:
+    """Return per-section side-info coverage for the TT5L 45-byte layout."""
+
+    import torch
+
+    tensor = torch.as_tensor(side_info).detach()
+    if tensor.ndim != 2:
+        return {
+            "checked": False,
+            "reason": "side_info_not_rank2",
+            "sections": {},
+        }
+    section_stats: dict[str, Any] = {}
+    offset = 0
+    per_pair_bytes = int(tensor.shape[1])
+    for name, width in _TT5L_SIDE_INFO_SECTION_WIDTHS:
+        end = min(offset + width, per_pair_bytes)
+        if end <= offset:
+            break
+        section = tensor[:, offset:end]
+        total_values = int(section.numel())
+        nonzero_values = int(torch.count_nonzero(section).item()) if total_values else 0
+        section_stats[name] = {
+            "offset": offset,
+            "width": int(end - offset),
+            "total_values": total_values,
+            "nonzero_values": nonzero_values,
+            "nonzero_fraction": (
+                float(nonzero_values / total_values) if total_values else 0.0
+            ),
+        }
+        offset = end
+    if offset < per_pair_bytes:
+        section = tensor[:, offset:per_pair_bytes]
+        total_values = int(section.numel())
+        nonzero_values = int(torch.count_nonzero(section).item()) if total_values else 0
+        section_stats["extra"] = {
+            "offset": offset,
+            "width": int(per_pair_bytes - offset),
+            "total_values": total_values,
+            "nonzero_values": nonzero_values,
+            "nonzero_fraction": (
+                float(nonzero_values / total_values) if total_values else 0.0
+            ),
+        }
+    return {
+        "checked": True,
+        "per_pair_bytes": per_pair_bytes,
+        "sections": section_stats,
+    }
+
+
+def _quantized_side_info_liveness_stats(per_pair_side_info_int8: Any) -> dict[str, Any]:
+    """Return export-time liveness stats for the TT5L temporal side channel."""
+
+    import torch
+
+    side_info = torch.as_tensor(per_pair_side_info_int8).detach()
+    total_values = int(side_info.numel())
+    nonzero_values = int(torch.count_nonzero(side_info).item()) if total_values else 0
+    if side_info.ndim >= 2:
+        pair_view = side_info.reshape(int(side_info.shape[0]), -1)
+        total_pairs = int(pair_view.shape[0])
+        per_pair_nonzero = torch.count_nonzero(pair_view, dim=1)
+        nonzero_pair_count = int(torch.count_nonzero(per_pair_nonzero).item())
+        min_nonzero_per_pair = int(per_pair_nonzero.min().item()) if total_pairs else 0
+        max_nonzero_per_pair = int(per_pair_nonzero.max().item()) if total_pairs else 0
+        mean_nonzero_per_pair = (
+            float(per_pair_nonzero.float().mean().item()) if total_pairs else 0.0
+        )
+    else:
+        total_pairs = 1 if total_values else 0
+        nonzero_pair_count = 1 if nonzero_values else 0
+        min_nonzero_per_pair = nonzero_values
+        max_nonzero_per_pair = nonzero_values
+        mean_nonzero_per_pair = float(nonzero_values)
+    all_zero_pair_count = int(total_pairs - nonzero_pair_count)
+    liveness_warnings: list[str] = []
+    if total_pairs and nonzero_pair_count < total_pairs:
+        liveness_warnings.append("tt5l_side_info_some_pairs_all_zero")
+    if nonzero_values and nonzero_values <= total_pairs:
+        liveness_warnings.append("tt5l_side_info_at_most_one_nonzero_per_pair_on_average")
+    return {
+        "checked": True,
+        "dtype": str(side_info.dtype),
+        "shape": [int(dim) for dim in side_info.shape],
+        "total_values": total_values,
+        "nonzero_values": nonzero_values,
+        "nonzero_fraction": (
+            float(nonzero_values / total_values) if total_values else 0.0
+        ),
+        "total_pairs": total_pairs,
+        "nonzero_pair_count": nonzero_pair_count,
+        "all_zero_pair_count": all_zero_pair_count,
+        "nonzero_pair_fraction": (
+            float(nonzero_pair_count / total_pairs) if total_pairs else 0.0
+        ),
+        "min_nonzero_values_per_pair": min_nonzero_per_pair,
+        "max_nonzero_values_per_pair": max_nonzero_per_pair,
+        "mean_nonzero_values_per_pair": mean_nonzero_per_pair,
+        "section_liveness": _side_info_section_liveness(side_info),
+        "liveness_warnings": liveness_warnings,
+        "min": int(side_info.min().item()) if total_values else None,
+        "max": int(side_info.max().item()) if total_values else None,
+    }
+
+
+def _require_live_quantized_side_info_for_export(
+    per_pair_side_info_int8: Any,
+) -> dict[str, Any]:
+    """Fail closed before exporting a TT5L packet with a dead side channel."""
+
+    stats = _quantized_side_info_liveness_stats(per_pair_side_info_int8)
+    if int(stats["total_values"]) <= 0:
+        raise RuntimeError(
+            "tt5l_side_info_empty_export: refusing to emit TT5L archive with "
+            "no quantized per-pair side-info values"
+        )
+    if int(stats["nonzero_values"]) <= 0:
+        raise RuntimeError(
+            "tt5l_side_info_all_zero_export: refusing to emit TT5L archive "
+            "with an all-zero quantized per-pair side-info stream"
+        )
+    return stats
+
+
 def _byte_proxy_calibration(
     *,
     proxy_bytes: int,
@@ -1068,6 +1202,7 @@ def _full_main(args: argparse.Namespace) -> int:
     byte_proxy_calibration: dict[str, Any] = {
         "archive_build_skipped": archive_build_skipped
     }
+    per_pair_side_info_liveness: dict[str, Any] = {"checked": False}
 
     def _stage(name: str) -> None:
         msg = {"stage": name, "at": _utc_now_iso()}
@@ -1389,6 +1524,14 @@ def _full_main(args: argparse.Namespace) -> int:
             per_pair_side_info_int8 = quantize_per_pair_residual_int8(
                 per_pair_side_info_float_final, scale=args.int8_scale
             )
+            per_pair_side_info_liveness = _require_live_quantized_side_info_for_export(
+                per_pair_side_info_int8
+            )
+            _stage(
+                "side_info_liveness_nonzero_"
+                f"{per_pair_side_info_liveness['nonzero_values']}_of_"
+                f"{per_pair_side_info_liveness['total_values']}"
+            )
 
             meta = {
                 "int8_scale": float(args.int8_scale),
@@ -1505,6 +1648,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "archive_zip_bytes": archive_zip_size,
         "archive_bytes_proxy": archive_bytes_proxy_int,
         "byte_proxy_calibration": byte_proxy_calibration,
+        "per_pair_side_info_liveness": per_pair_side_info_liveness,
         "shape_readiness": shape_readiness,
         "n_params": n_params,
         "world_model_bytes_estimate": wm_bytes,
