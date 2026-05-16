@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from tac.exact_eval_custody import validate_exact_eval_evidence
 from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
@@ -410,6 +411,7 @@ def _paired_row_identity_blockers(
     rows: dict[str, Mapping[str, Any]],
     section: str,
     require_anchor_type: bool = False,
+    repo_root: Path | None = None,
 ) -> list[str]:
     blockers: list[str] = []
     missing_axes = [axis for axis in _REQUIRED_EXACT_AXES if axis not in rows]
@@ -427,15 +429,19 @@ def _paired_row_identity_blockers(
         str(row.get("runtime_tree_sha256") or "").strip().lower()
         for row in rows.values()
     }
-    if len(archive_shas) != 1 or not _SHA256_HEX_RE.fullmatch(next(iter(archive_shas))):
+    archive_sha = next(iter(archive_shas)) if len(archive_shas) == 1 else ""
+    runtime_sha = next(iter(runtime_shas)) if len(runtime_shas) == 1 else ""
+    if len(archive_shas) != 1 or not _SHA256_HEX_RE.fullmatch(archive_sha):
         blockers.append(
             f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:{section}:archive_sha256"
         )
-    if len(runtime_shas) != 1 or not _SHA256_HEX_RE.fullmatch(next(iter(runtime_shas))):
+        archive_sha = ""
+    if len(runtime_shas) != 1 or not _SHA256_HEX_RE.fullmatch(runtime_sha):
         blockers.append(
             "l5_v2_gate_artifact_semantics_invalid:"
             f"{gate_id}:{section}:runtime_tree_sha256"
         )
+        runtime_sha = ""
 
     for axis, row in rows.items():
         inflate_device = str(row.get("inflate_device") or "").lower()
@@ -493,6 +499,36 @@ def _paired_row_identity_blockers(
                     "l5_v2_gate_artifact_semantics_invalid:"
                     f"{gate_id}:{section}:{axis}:evidence_grade"
                 )
+            if anchor_type == "exact":
+                if repo_root is None:
+                    blockers.append(
+                        "l5_v2_gate_artifact_semantics_missing:"
+                        f"{gate_id}:{section}:{axis}:artifact_base_dir"
+                    )
+                validation = validate_exact_eval_evidence(
+                    row,
+                    expected_axis=axis,
+                    expected_archive_sha256=archive_sha or None,
+                    expected_runtime_tree_sha256=runtime_sha or None,
+                    require_artifact_path=True,
+                    require_hardware=True,
+                    require_auth_eval_command=True,
+                    require_log_path=True,
+                    require_devices=True,
+                    artifact_base_dir=repo_root,
+                    annotation_prefix=f"{gate_id}_{section}_{axis}",
+                )
+                for validation_blocker in validation.blockers:
+                    kind = (
+                        "missing"
+                        if "missing" in validation_blocker
+                        else "invalid"
+                    )
+                    blockers.append(
+                        f"l5_v2_gate_artifact_semantics_{kind}:"
+                        f"{gate_id}:{section}:{axis}:exact_eval:"
+                        f"{validation_blocker}"
+                    )
             if anchor_type == "diagnostic":
                 if "diagnostic" not in evidence_grade:
                     blockers.append(
@@ -507,7 +543,12 @@ def _paired_row_identity_blockers(
     return blockers
 
 
-def _gate_semantic_blockers(gate_id: str, artifact_payload: Mapping[str, Any]) -> list[str]:
+def _gate_semantic_blockers(
+    gate_id: str,
+    artifact_payload: Mapping[str, Any],
+    *,
+    repo_root: Path,
+) -> list[str]:
     blockers: list[str] = []
     if gate_id == "byte_closed_temporal_sideinfo_consumption":
         proof = artifact_payload.get("byte_mutation_proof")
@@ -608,6 +649,7 @@ def _gate_semantic_blockers(gate_id: str, artifact_payload: Mapping[str, Any]) -
             rows=rows,
             section="anchor_pair",
             require_anchor_type=True,
+            repo_root=repo_root,
         )
 
     return blockers
@@ -693,7 +735,11 @@ def _gate_evidence_blockers(
                             f"l5_v2_gate_artifact_predicate_missing:{gate.gate_id}"
                         )
                     blockers.extend(
-                        _gate_semantic_blockers(gate.gate_id, artifact_payload)
+                        _gate_semantic_blockers(
+                            gate.gate_id,
+                            artifact_payload,
+                            repo_root=repo_root,
+                        )
                     )
     if not _SHA256_HEX_RE.fullmatch(evidence.artifact_sha256.strip()):
         blockers.append(f"l5_v2_gate_artifact_sha256_invalid:{gate.gate_id}")

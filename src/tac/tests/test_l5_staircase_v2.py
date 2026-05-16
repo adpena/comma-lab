@@ -40,6 +40,7 @@ def _file_sha256(path: Path) -> str:
 def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for axis in ("contest_cpu", "contest_cuda"):
+        archive_bytes = 1
         row: dict[str, object] = {
             "axis": axis,
             "archive_sha256": _sha(11),
@@ -62,6 +63,22 @@ def _axis_rows(*, anchor_type: str | None = None) -> list[dict[str, object]]:
             )
             if anchor_type == "diagnostic":
                 row["diagnostic_reason"] = "diagnostic anchor, not promotion evidence"
+            if anchor_type == "exact":
+                row["score"] = 25.0 * archive_bytes / 37_545_489
+                row["seg_dist"] = 0.0
+                row["pose_dist"] = 0.0
+                row["archive_bytes"] = archive_bytes
+                row["n_samples"] = 600
+                row["hardware"] = "cpu" if axis == "contest_cpu" else "modal-t4"
+                row["auth_eval_command"] = f"contest_auth_eval --axis {axis}"
+                row["artifact_path"] = (
+                    "experiments/results/time_traveler_l5_v2/"
+                    f"{axis}_anchor.json"
+                )
+                row["log_path"] = (
+                    "experiments/results/time_traveler_l5_v2/"
+                    f"{axis}_anchor.log"
+                )
         rows.append(row)
     return rows
 
@@ -101,8 +118,18 @@ def _valid_gate_evidence(repo_root: Path) -> dict[str, L5V2GateEvidence]:
     artifact_root.mkdir(parents=True, exist_ok=True)
     for gate in l5_v2_required_gates():
         artifact_path = artifact_root / f"{gate.gate_id}.json"
+        payload = _gate_artifact_payload(gate.gate_id)
+        rows = payload.get("anchor_pair")
+        if isinstance(rows, list):
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                for key in ("artifact_path", "log_path"):
+                    custody_path = repo_root / str(row[key])
+                    custody_path.parent.mkdir(parents=True, exist_ok=True)
+                    custody_path.write_text(f"{key}\n", encoding="utf-8")
         artifact_path.write_text(
-            json.dumps(_gate_artifact_payload(gate.gate_id), sort_keys=True) + "\n",
+            json.dumps(payload, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         out[gate.gate_id] = L5V2GateEvidence(
@@ -452,6 +479,38 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
     assert (
         "l5_v2_gate_artifact_semantics_missing:"
         "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cpu:diagnostic_reason"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_dispatch_readiness_requires_exact_anchor_eval_custody(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "exact_anchor_or_diagnostic_pair"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    rows = payload["anchor_pair"]
+    assert isinstance(rows, list)
+    cuda_row = next(row for row in rows if row["axis"] == "contest_cuda")
+    cuda_row.pop("n_samples", None)
+    cuda_row["log_path"] = "experiments/results/time_traveler_l5_v2/missing.log"
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:"
+        "exact_eval:n_samples_missing"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_missing:"
+        "exact_anchor_or_diagnostic_pair:anchor_pair:contest_cuda:"
+        "exact_eval:log_path_file_missing"
         in readiness["blockers"]
     )
 
