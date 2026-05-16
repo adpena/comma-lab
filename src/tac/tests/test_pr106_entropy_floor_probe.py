@@ -32,7 +32,9 @@ from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
     encode_hlm1_fixed_latents_from_brotli,
 )
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     PR106_SIDECAR_FORMAT_PR101_GRAMMAR,
+    PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED,
     PR106SidecarPacket,
     emit_pr106_sidecar_packet,
 )
@@ -224,6 +226,72 @@ def test_hdm8_decoder_section_is_decoded_for_entropy_probe(tmp_path: Path) -> No
     assert report["source"]["decoder_raw_bytes"] == len(parsed.to_raw())
     assert report["groups"][0]["current_storage_label"] == "decoder_section_encoded"
     assert report["score_claim"] is False
+
+
+def test_format0c_magicless_packetir_archive_is_unwrapped_for_entropy_probe() -> None:
+    archive = (
+        REPO
+        / "experiments/results/pr106_format0c_exact_radix_candidate_20260515_codex/"
+        "candidates/"
+        "pr101_hdm9_hlm3_magicless_exact_radix_dim_fixed_meta_noop_rank_elided_sidecar_format_0x0c.archive.zip"
+    )
+    if not archive.exists():
+        pytest.skip("Format0C exact-radix candidate artifact is not present")
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert (
+        report["source"]["sidecar_format_id"]
+        == PR106_SIDECAR_FORMAT_PR101_HDM9_HLM3_MAGICLESS_EXACT_RADIX_DIM_FIXED_META_NOOP_RANK_ELIDED
+    )
+    assert report["source"]["wrapper_unwrapped_for_entropy_model"] is True
+    assert report["source"]["payload_magic"] == "ff_packed_hnerv"
+    assert (
+        report["source"]["decoder_section_codec"]
+        == "hdm9_q_brotli_scale_tail_expanded_to_hdm8"
+    )
+    assert (
+        report["source"]["latents_section_codec"]
+        == "hlm3_hlm2_len_elided_sparse_hi_delta_positions"
+    )
+
+
+def test_format0d_stacked_packetir_archive_is_unwrapped_for_entropy_probe() -> None:
+    archive = (
+        REPO
+        / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/"
+        "sidecar_archive.zip"
+    )
+    if not archive.exists():
+        pytest.skip("Format0D stacked PacketIR candidate artifact is not present")
+
+    report = probe.build_report_from_archive(
+        archive,
+        pr101_reference_archive_bytes=None,
+        active_floor_archive_bytes=None,
+        active_floor_label=None,
+    )
+
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["source"]["sidecar_format_id"] == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA
+    assert report["source"]["extra_sidecar_payload_bytes"] > 0
+    assert report["source"]["extra_framing_meta_bytes"] == 6
+    assert (
+        report["source"]["decoder_section_codec"]
+        == "hdm9_q_brotli_scale_tail_expanded_to_hdm8"
+    )
+    assert (
+        report["source"]["latents_section_codec"]
+        == "hlm3_hlm2_len_elided_sparse_hi_delta_positions"
+    )
 
 
 def test_hlm1_latent_section_is_decoded_for_entropy_probe(tmp_path: Path) -> None:

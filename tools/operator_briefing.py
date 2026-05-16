@@ -56,6 +56,9 @@ EXACT_READY_SCAN_ROOTS = (
 EXACT_READY_SUPPRESSION_MANIFEST = (
     REPO_ROOT / ".omx/research/exact_ready_queue_retraction_manifest_20260510_codex.json"
 )
+L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_packetir_section_entropy_matrix_20260516_codex.json"
+)
 
 from tac.authority_contract import apply_false_authority_contract  # noqa: E402
 from tac.optimization.l5_staircase_v2 import (  # noqa: E402
@@ -1151,6 +1154,50 @@ def _load_l5_v2_packetir_matrix() -> dict[str, object]:
     }
 
 
+def _load_l5_v2_section_entropy_matrix() -> dict[str, object]:
+    """Load the planning-only L5-v2 PacketIR section entropy matrix."""
+
+    path = REPO_ROOT / L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH
+    base: dict[str, object] = {
+        "path": L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH,
+    }
+    if not path.is_file():
+        return {
+            **base,
+            "exists": False,
+            "artifact_sha256": "",
+            "load_blockers": ["l5_v2_packetir_section_entropy_matrix_missing"],
+        }
+    artifact_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            **base,
+            "exists": True,
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": [
+                f"l5_v2_packetir_section_entropy_matrix_json_invalid:{exc.msg}"
+            ],
+        }
+    if not isinstance(payload, dict):
+        return {
+            **base,
+            "exists": True,
+            "artifact_sha256": artifact_sha256,
+            "load_blockers": ["l5_v2_packetir_section_entropy_matrix_not_object"],
+        }
+    return {
+        **base,
+        **payload,
+        "exists": True,
+        "artifact_sha256": artifact_sha256,
+        "load_blockers": [
+            str(blocker) for blocker in payload.get("matrix_blockers", []) if str(blocker)
+        ],
+    }
+
+
 def _l5_v2_frontier_readiness(
     dispatch_claim_summary: dict[str, object] | None = None,
 ) -> dict[str, object]:
@@ -1166,6 +1213,7 @@ def _l5_v2_frontier_readiness(
     gate_evidence = [sideinfo_evidence] if sideinfo_evidence is not None else None
     readiness = l5_v2_dispatch_readiness(gate_evidence=gate_evidence)
     matrix = _load_l5_v2_packetir_matrix()
+    section_entropy_matrix = _load_l5_v2_section_entropy_matrix()
     matrix_blockers = [
         str(blocker) for blocker in matrix.get("load_blockers", []) if str(blocker)
     ]
@@ -1225,6 +1273,9 @@ def _l5_v2_frontier_readiness(
     status_counts = matrix.get("status_counts") if isinstance(matrix, dict) else {}
     if not isinstance(status_counts, dict):
         status_counts = {}
+    section_entropy_best = section_entropy_matrix.get("best_rate_positive_prototype")
+    if not isinstance(section_entropy_best, dict):
+        section_entropy_best = None
     return {
         "schema": "pact.l5_v2_frontier_readiness.v1",
         "subject_id": "time_traveler_l5_autonomy",
@@ -1233,6 +1284,23 @@ def _l5_v2_frontier_readiness(
         "packetir_matrix_artifact_sha256": matrix.get("artifact_sha256", ""),
         "packetir_matrix_expected_sha256": matrix.get("expected_artifact_sha256", ""),
         "packetir_matrix_dispatch_targets_suppressed": bool(dispatch_blockers),
+        "packetir_section_entropy_matrix_path": section_entropy_matrix.get("path", ""),
+        "packetir_section_entropy_matrix_exists": (
+            section_entropy_matrix.get("exists") is True
+        ),
+        "packetir_section_entropy_matrix_artifact_sha256": (
+            section_entropy_matrix.get("artifact_sha256", "")
+        ),
+        "packetir_section_entropy_profiled_candidate_count": int(
+            section_entropy_matrix.get("profiled_candidate_count") or 0
+        ),
+        "packetir_section_entropy_prototype_row_count": int(
+            section_entropy_matrix.get("prototype_row_count") or 0
+        ),
+        "packetir_section_entropy_rate_positive_prototype_row_count": int(
+            section_entropy_matrix.get("rate_positive_prototype_row_count") or 0
+        ),
+        "packetir_section_entropy_best_rate_positive_prototype": section_entropy_best,
         "active_dispatch_claim_count": active_dispatch_claim_count,
         "dispatch_claim_gate_blocked": active_dispatch_claim_count > 0,
         "packetir_candidate_count": int(matrix.get("candidate_count") or 0),
@@ -1283,6 +1351,9 @@ def _format_l5_v2_frontier_readiness() -> str:
         f"  PacketIR matrix:                 {payload['packetir_matrix_path']}",
         f"  PacketIR candidates:             {payload['packetir_candidate_count']}",
         f"  PacketIR status counts:          {payload['packetir_status_counts']}",
+        f"  section entropy matrix:          {payload['packetir_section_entropy_matrix_path']}",
+        f"  charged prototype rows:          {payload['packetir_section_entropy_prototype_row_count']}",
+        f"  rate-positive prototypes:        {payload['packetir_section_entropy_rate_positive_prototype_row_count']}",
         f"  runtime-bound paired candidates: {payload['packetir_paired_candidate_count']}",
         f"  stack-cell candidates:           {payload['pr106_stack_cell_candidate_count']}",
         f"  next exact-eval targets:         {payload['next_exact_eval_target_count']}",

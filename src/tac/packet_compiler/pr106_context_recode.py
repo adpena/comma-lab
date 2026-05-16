@@ -220,6 +220,14 @@ def parse_pr106_context_source(
     inner = payload
     if payload[0] == PR106_SIDECAR_MAGIC:
         packet = parse_pr106_sidecar_packet(payload)
+    elif payload[0] != 0xFF:
+        try:
+            packet = parse_pr106_sidecar_packet(payload)
+        except ValueError:
+            packet = None
+    else:
+        packet = None
+    if packet is not None:
         inner = packet.pr106_bytes
         wrapper = {
             "format_id": f"0x{packet.format_id:02X}",

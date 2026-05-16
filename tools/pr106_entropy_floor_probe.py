@@ -55,7 +55,11 @@ from tac.packet_compiler.pr106_fixed_latent_recode import (  # noqa: E402
     decode_pr106_fixed_latent_raw,
 )
 from tac.packet_compiler.pr106_sidecar_packet import (  # noqa: E402
+    PR106_HEADERLESS_INNER_FIRST_BYTE,
+    PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA,
     PR106_SIDECAR_MAGIC,
+    decode_hdm9_decoder_to_hdm8_payload,
+    decode_hlm3_latents_to_hlm2_payload,
     parse_pr106_sidecar_packet,
 )
 
@@ -442,19 +446,8 @@ def build_report_from_payload(
     parsed_decoder, decoder_raw, decoder_section_codec = _decode_decoder_section(
         packed.decoder_packed_brotli
     )
-    latents_raw = decode_pr106_fixed_latent_raw(packed.latents_and_sidecar_brotli)
-    latents_section_codec = (
-        "hlm1_sparse_hi_delta_positions"
-        if packed.latents_and_sidecar_brotli.startswith(HLM1_MAGIC)
-        else (
-            "hlm2_sparse_hi_delta_positions"
-            if packed.latents_and_sidecar_brotli.startswith(HLM2_MAGIC)
-            else (
-                "hlm3_pr103_range_coded_hi_bytes"
-                if packed.latents_and_sidecar_brotli.startswith(HLM3_MAGIC)
-                else "brotli_fixed_latents_raw"
-            )
-        )
+    latents_raw, latents_section_codec = _decode_latents_section(
+        packed.latents_and_sidecar_brotli
     )
 
     decoder_streams = [
@@ -542,8 +535,34 @@ def _decode_decoder_section(decoder_section: bytes) -> tuple[Any, bytes, str]:
     if decoder_section.startswith(b"HDM8"):
         parsed = decode_hdm8_q_brotli_recipe_elided_fixture(decoder_section)
         return parsed, parsed.to_raw(), "hdm8_q_brotli_fixed_lengths_split"
+    if decoder_section.startswith(b"HDM9"):
+        hdm8_equivalent = decode_hdm9_decoder_to_hdm8_payload(decoder_section)
+        parsed = decode_hdm8_q_brotli_recipe_elided_fixture(hdm8_equivalent)
+        return parsed, parsed.to_raw(), "hdm9_q_brotli_scale_tail_expanded_to_hdm8"
     parsed = parse_packed_decoder_brotli(decoder_section)
     return parsed, parsed.to_raw(), "brotli_packed_decoder_raw"
+
+
+def _decode_latents_section(latents_section: bytes) -> tuple[bytes, str]:
+    """Decode current frontier latent-section variants into raw fixed latents."""
+
+    if latents_section.startswith(HLM3_MAGIC):
+        try:
+            hlm2_equivalent = decode_hlm3_latents_to_hlm2_payload(latents_section)
+        except ValueError:
+            return (
+                decode_pr106_fixed_latent_raw(latents_section),
+                "hlm3_pr103_range_coded_hi_bytes",
+            )
+        return (
+            decode_pr106_fixed_latent_raw(hlm2_equivalent),
+            "hlm3_hlm2_len_elided_sparse_hi_delta_positions",
+        )
+    if latents_section.startswith(HLM2_MAGIC):
+        return decode_pr106_fixed_latent_raw(latents_section), "hlm2_sparse_hi_delta_positions"
+    if latents_section.startswith(HLM1_MAGIC):
+        return decode_pr106_fixed_latent_raw(latents_section), "hlm1_sparse_hi_delta_positions"
+    return decode_pr106_fixed_latent_raw(latents_section), "brotli_fixed_latents_raw"
 
 
 def _unwrap_pr106_sidecar_if_present(
@@ -552,12 +571,21 @@ def _unwrap_pr106_sidecar_if_present(
 ) -> tuple[bytes, dict[str, Any]]:
     """Preserve PR106 wrapper custody while modeling inner HNeRV streams."""
 
-    if not payload or payload[0] != PR106_SIDECAR_MAGIC:
+    if not payload:
         return payload, source
+    if payload[0] == PR106_HEADERLESS_INNER_FIRST_BYTE:
+        return payload, source
+    if payload[0] != PR106_SIDECAR_MAGIC:
+        try:
+            packet = parse_pr106_sidecar_packet(payload)
+        except ValueError:
+            return payload, source
+    else:
+        packet = parse_pr106_sidecar_packet(payload)
 
-    packet = parse_pr106_sidecar_packet(payload)
     framing_meta = packet.framing_meta or b""
-    return packet.pr106_bytes, {
+    extra_framing_meta = packet.extra_framing_meta or b""
+    out = {
         **source,
         "outer_payload_magic": "pr106_sidecar_wrapper",
         "outer_payload_bytes": len(payload),
@@ -572,6 +600,20 @@ def _unwrap_pr106_sidecar_if_present(
         "pr106_inner_payload_sha256": sha256_bytes(packet.pr106_bytes),
         "wrapper_unwrapped_for_entropy_model": True,
     }
+    if packet.format_id == PR106_SIDECAR_FORMAT_FORMAT0C_PLUS_PR101_EXTRA:
+        out.update(
+            {
+                "extra_sidecar_payload_bytes": len(packet.extra_sidecar_payload),
+                "extra_sidecar_payload_sha256": sha256_bytes(
+                    packet.extra_sidecar_payload
+                ),
+                "extra_framing_meta_bytes": len(extra_framing_meta),
+                "extra_framing_meta_sha256": (
+                    sha256_bytes(extra_framing_meta) if extra_framing_meta else None
+                ),
+            }
+        )
+    return packet.pr106_bytes, out
 
 
 def build_report_from_state_dict(

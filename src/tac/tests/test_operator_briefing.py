@@ -137,6 +137,10 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["canonical_sideinfo_evidence_present"] is False
     assert "requires_byte_closed_temporal_sideinfo_consumption_proof" in l5["blockers"]
     assert l5["packetir_matrix_artifact_sha256"] == l5["packetir_matrix_expected_sha256"]
+    assert l5["packetir_section_entropy_matrix_exists"] is True
+    assert l5["packetir_section_entropy_profiled_candidate_count"] >= 2
+    assert l5["packetir_section_entropy_prototype_row_count"] >= 1
+    assert l5["packetir_section_entropy_rate_positive_prototype_row_count"] == 0
     active_claim_count = int(out["dispatch_claim_summary"].get("active_count") or 0)
     assert l5["active_dispatch_claim_count"] == active_claim_count
     assert l5["dispatch_claim_gate_blocked"] == (active_claim_count > 0)
