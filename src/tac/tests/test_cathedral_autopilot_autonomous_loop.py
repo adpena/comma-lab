@@ -551,6 +551,31 @@ def test_load_candidates_from_jsonl_preserves_valid_prediction_band_rank_reward(
     assert "prediction_band_rank_reward_suppressed" not in rows[0].blockers
 
 
+def test_load_candidates_from_jsonl_requires_literal_true_prediction_rank_reward(
+    tmp_path,
+):
+    p = tmp_path / "string_false_prediction.jsonl"
+    p.write_text(
+        json.dumps({
+            "candidate_id": "rank_string_false",
+            "family": "exact_anchor_family",
+            "predicted_score_delta": -0.010,
+            "expected_information_gain": 0.7,
+            "estimated_dispatch_cost_usd": 10.0,
+            "notes": "[prediction; malformed structured band verdict]",
+            "prediction_band_verdict": {"valid_for_rank_reward": "false"},
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    rows = loop.load_candidates_from_jsonl(p)
+
+    assert rows[0].expected_information_gain == 0.0
+    assert "prediction_band_rank_reward_suppressed" in rows[0].blockers
+    assert "prediction_band_rank_reward_suppressed" in rows[0].notes
+
+
 def test_load_candidates_from_jsonl_carries_timing_smoke_to_halt_event(tmp_path):
     p = tmp_path / "timing_smoke.jsonl"
     command = ".venv/bin/python tools/smoke_time_traveler_l5_autonomy_macos_cpu.py --epochs 1"

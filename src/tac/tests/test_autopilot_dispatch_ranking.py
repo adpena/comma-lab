@@ -19,11 +19,18 @@ from tac.optimization.autopilot_dispatch_ranking import (
     SCHEMA_VERSION,
     RankedDispatchCandidate,
     RankingResult,
+    _build_singleton_dispatch_candidates,
     rank_dispatches,
     serialize_candidate,
     serialize_ranking,
     synthetic_l2_encoder_dispatch_candidates,
     write_ranking_json,
+)
+from tac.optimization.substrate_composition_matrix import (
+    ParetoRow,
+    ScoreAxis,
+    SubstrateClass,
+    build_composition_matrix,
 )
 
 # ── Smoke test the ranker on the canonical inventory ────────────────────
@@ -346,6 +353,29 @@ def test_uncustodied_prediction_bands_do_not_receive_autopilot_rank_reward():
     assert tt5l.expected_information_gain == 0.0
     assert tt5l.eig_per_dollar == 0.0
     assert "prediction_band_rank_reward_suppressed" in tt5l.composition_notes
+
+
+def test_prediction_band_rank_reward_requires_literal_true_verdict():
+    row = ParetoRow(
+        substrate_id="malformed_prediction_band_verdict",
+        name="Malformed prediction-band verdict",
+        substrate_class=SubstrateClass.RENDERER_REPLACEMENT,
+        target_axis=ScoreAxis.MIXED,
+        predicted_delta_alone_midpoint=-0.010,
+        estimated_dispatch_cost_usd=1.0,
+        expected_information_gain=0.7,
+        eig_per_dollar=0.7,
+        prediction_band_verdict={"valid_for_rank_reward": "false"},
+    )
+
+    candidates = _build_singleton_dispatch_candidates(
+        [row],
+        build_composition_matrix(),
+    )
+
+    assert candidates[0].expected_information_gain == 0.0
+    assert candidates[0].eig_per_dollar == 0.0
+    assert "prediction_band_rank_reward_suppressed" in candidates[0].composition_notes
 
 
 def test_campaign_blockers_prevent_autopilot_self_authorization(tmp_path):

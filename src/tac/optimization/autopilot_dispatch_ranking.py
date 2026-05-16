@@ -190,6 +190,16 @@ def _source_fidelity_metadata(row: ParetoRow, *, prefix: str = "") -> tuple[str,
     )
 
 
+def _prediction_band_verdict_allows_rank_reward(
+    verdict: dict[str, Any] | None,
+) -> bool:
+    """Prediction-band rank reward requires a typed literal JSON true."""
+
+    if verdict is None:
+        return True
+    return verdict.get("valid_for_rank_reward") is True
+
+
 def _build_singleton_dispatch_candidates(
     pareto_rows: list[ParetoRow],
     matrix: CompositionMatrix,
@@ -221,19 +231,24 @@ def _build_singleton_dispatch_candidates(
         )
         rank_reward_note = (
             "; prediction_band_rank_reward_suppressed"
-            if r.prediction_band_verdict is not None
-            and not bool(r.prediction_band_verdict.get("valid_for_rank_reward"))
+            if not _prediction_band_verdict_allows_rank_reward(
+                r.prediction_band_verdict
+            )
             else ""
         )
+        expected_information_gain = (
+            r.expected_information_gain if not rank_reward_note else 0.0
+        )
+        eig_per_dollar = r.eig_per_dollar if not rank_reward_note else 0.0
         out.append(
             RankedDispatchCandidate(
                 candidate_id=f"singleton__{r.substrate_id}",
                 family=r.substrate_class.value,
                 substrate_ids=(r.substrate_id,),
                 predicted_score_delta=r.predicted_delta_alone_midpoint,  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
-                expected_information_gain=r.expected_information_gain,
+                expected_information_gain=expected_information_gain,
                 estimated_dispatch_cost_usd=r.estimated_dispatch_cost_usd,
-                eig_per_dollar=r.eig_per_dollar,
+                eig_per_dollar=eig_per_dollar,
                 composition_notes=(
                     f"[predicted; substrate composition matrix v1] "
                     f"singleton dispatch of {r.substrate_id}; "
@@ -363,16 +378,20 @@ def _build_orthogonal_pair_candidates(
                 for verdict in (ri.prediction_band_verdict, rj.prediction_band_verdict)
                 if verdict is not None
             )
+            rank_reward_allowed = all(
+                _prediction_band_verdict_allows_rank_reward(verdict)
+                for verdict in prediction_band_verdicts
+            )
+            if not rank_reward_allowed:
+                joint_eig = 0.0
+                joint_eig_per_dollar = 0.0
             metadata_note = (
                 f"; metadata={list(campaign_metadata)!r}"
                 if campaign_metadata else ""
             )
             rank_reward_note = (
                 "; prediction_band_rank_reward_suppressed"
-                if any(
-                    not bool(verdict.get("valid_for_rank_reward"))
-                    for verdict in prediction_band_verdicts
-                )
+                if not rank_reward_allowed
                 else ""
             )
             out.append(

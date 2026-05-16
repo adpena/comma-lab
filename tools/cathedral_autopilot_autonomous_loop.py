@@ -2106,7 +2106,7 @@ def _prediction_band_allows_rank_reward(raw: dict[str, Any]) -> bool:
 
     verdict = raw.get("prediction_band_verdict")
     if isinstance(verdict, dict) and "valid_for_rank_reward" in verdict:
-        return bool(verdict.get("valid_for_rank_reward"))
+        return verdict.get("valid_for_rank_reward") is True
     notes = str(raw.get("notes", "")).lower()
     if raw.get("prediction_band") is not None:
         return False
