@@ -71,16 +71,30 @@ were unaffected, but the positional API was fragile. The CUDA and CPU
 entrypoints now use `archive, output_dir, expected_archive_sha256` ordering,
 while generated Modal commands still pass all custody-critical values by name.
 
+Adversarial review found three additional custody/reporting issues and all are
+now patched:
+
+- Anchor reuse now refuses to skip an axis when that axis lacks a nonempty
+  expected runtime tree SHA-256. Empty runtime expectation no longer degrades
+  to archive-only anchor reuse.
+- Paired plan generation now rejects absolute `--inflate-sh` paths outside
+  `--submission-dir` before plan emission, matching the Modal wrappers'
+  fail-closed runtime-tree contract.
+- Modal CPU recovery summaries now report a valid `contest-CPU` canonical
+  artifact as `score_claim=true` while preserving `promotion_eligible=false`.
+
 Verification:
 
 ```bash
 .venv/bin/python -m ruff check tools/dispatch_modal_paired_auth_eval.py src/tac/tests/test_dispatch_modal_paired_auth_eval.py
 PYTHONPATH=src:. .venv/bin/pytest src/tac/tests/test_dispatch_modal_paired_auth_eval.py -q
 PYTHONPATH=src:. .venv/bin/pytest src/tac/tests/test_modal_auth_eval.py src/tac/tests/test_paired_dispatch_anchor_lookup.py src/tac/tests/test_dispatch_modal_paired_auth_eval.py -q
+PYTHONPATH=src:. .venv/bin/pytest src/tac/tests/test_modal_auth_eval.py src/tac/tests/test_paired_dispatch_anchor_lookup.py src/tac/tests/test_dispatch_modal_paired_auth_eval.py src/tac/tests/test_modal_auth_eval_recovery.py -q
 ```
 
 Result: `ruff` clean; focused dispatcher tests `9 passed`; Modal auth-eval
-paired-dispatch suite `77 passed`.
+paired-dispatch suite `77 passed`; post-review Modal auth-eval/recovery suite
+`89 passed`.
 
 ## Plan Regeneration
 

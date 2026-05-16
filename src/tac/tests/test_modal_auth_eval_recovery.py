@@ -203,7 +203,7 @@ def test_recover_refuses_diagnostic_axis_even_if_artifact_claims_score(
     ]
 
 
-def test_recover_accepts_contest_cpu_leaderboard_artifact_without_score_claim(
+def test_recover_accepts_contest_cpu_leaderboard_artifact_as_cpu_score_claim(
     tmp_path: Path,
 ) -> None:
     write_spawn_metadata(
@@ -230,7 +230,7 @@ def test_recover_accepts_contest_cpu_leaderboard_artifact_without_score_claim(
     )
 
     assert summary["status"] == "recovered"
-    assert summary["score_claim"] is False
+    assert summary["score_claim"] is True
     assert summary["promotion_eligible"] is False
     assert summary["score_axis"] == "contest_cpu"
 

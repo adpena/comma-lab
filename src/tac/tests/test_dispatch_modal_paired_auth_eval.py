@@ -205,6 +205,35 @@ def test_cli_defaults_inflate_sh_to_uploaded_submission_runtime_root(
         assert mod.DEFAULT_REPO_INFLATE_SH not in cmd
 
 
+def test_paired_modal_plan_rejects_absolute_inflate_sh_outside_submission_dir(
+    tmp_path: Path,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    submission_dir = tmp_path / "submission"
+    submission_dir.mkdir()
+    outside = tmp_path / "outside" / "inflate.sh"
+    outside.parent.mkdir()
+    outside.write_text("#!/bin/sh\n")
+
+    with pytest.raises(ValueError, match="inside --submission-dir"):
+        mod.build_plan(
+            archive=archive,
+            submission_dir=str(submission_dir),
+            inflate_sh=str(outside),
+            run_id="unit_pair_run",
+            pair_group_id="unit_pair_group",
+            lane_id_base="lane_unit_pair",
+            output_root=Path("experiments/results"),
+            modal_bin=".venv/bin/modal",
+            gpu="T4",
+            claim_agent="codex:test",
+            claim_notes="unit test",
+        )
+
+
 def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -267,6 +296,70 @@ def test_paired_modal_plan_can_skip_existing_cuda_anchor(
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
     assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
     assert plan["existing_anchors_reused"]["contest_cuda"]["score"] == 0.2
+
+
+def test_paired_modal_plan_does_not_skip_axis_without_runtime_custody_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mod = _load_tool()
+    archive = tmp_path / "archive.zip"
+    with ZipFile(archive, "w") as zf:
+        zf.writestr("x", b"payload")
+    calls: list[str] = []
+
+    def fake_anchor(
+        axis: str,
+        archive_sha256: str,
+        *,
+        repo_root: Path,
+        expected_runtime_tree_sha256: str = "",
+    ):
+        calls.append(axis)
+        assert expected_runtime_tree_sha256 == "a" * 64
+        assert axis == "cuda"
+        return {
+            "axis": "contest_cuda",
+            "archive_sha256": archive_sha256,
+            "score": 0.2,
+            "runtime_tree_sha256": expected_runtime_tree_sha256,
+            "result_path": "existing/cuda.json",
+            "source": "filesystem_scan",
+            "custody_match": True,
+        }
+
+    monkeypatch.setattr(mod, "find_promotable_anchor_for_axis_and_sha", fake_anchor)
+    monkeypatch.setattr(
+        mod,
+        "_resolve_axis_runtime_expectations",
+        lambda **_kwargs: {
+            "contest_cuda": "a" * 64,
+            "contest_cpu": "",
+            "observed_uploaded_runtime": {},
+            "common_expected_runtime_tree_sha256": None,
+        },
+    )
+
+    plan = mod.build_plan(
+        archive=archive,
+        submission_dir="submissions/pr106_latent_sidecar_r2_pr101_grammar",
+        inflate_sh="inflate.sh",
+        run_id="unit_pair_run",
+        pair_group_id="unit_pair_group",
+        lane_id_base="lane_unit_pair",
+        output_root=Path("experiments/results"),
+        modal_bin=".venv/bin/modal",
+        gpu="T4",
+        claim_agent="codex:test",
+        claim_notes="unit test",
+        skip_axis_if_promotable_anchor_exists=True,
+        repo_root=tmp_path,
+    )
+
+    assert calls == ["cuda"]
+    assert plan["axes_skipped_due_to_existing_anchor"]["contest_cuda"] is True
+    assert plan["axes_skipped_due_to_existing_anchor"]["contest_cpu"] is False
+    assert plan["existing_anchors_reused"]["contest_cpu"] is None
 
 
 def test_execute_skip_records_terminal_claims_and_repointer_manifests(

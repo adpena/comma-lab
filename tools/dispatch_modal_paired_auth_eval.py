@@ -113,15 +113,35 @@ def _normalize_inflate_sh_for_submission_dir(
     """
     if not submission_dir or not inflate_sh:
         return inflate_sh
-    submission_path = Path(submission_dir)
+    submission_path = Path(submission_dir).resolve()
+    if not submission_path.is_dir():
+        raise ValueError(f"--submission-dir is not a directory: {submission_path}")
     inflate_path = Path(inflate_sh)
-    try:
-        rel = inflate_path.resolve().relative_to(submission_path.resolve())
-    except ValueError:
+    if inflate_path.is_absolute():
         try:
-            rel = inflate_path.relative_to(submission_path)
-        except ValueError:
-            return inflate_sh
+            rel = inflate_path.resolve().relative_to(submission_path)
+        except ValueError as exc:
+            raise ValueError(
+                "absolute --inflate-sh must be inside --submission-dir "
+                f"when uploading a runtime tree: {inflate_path}"
+            ) from exc
+    else:
+        rel = inflate_path
+    if ".." in rel.parts:
+        raise ValueError(f"--inflate-sh must not contain parent traversal: {rel}")
+    local_inflate = (submission_path / rel).resolve()
+    try:
+        local_inflate.relative_to(submission_path)
+    except ValueError as exc:
+        raise ValueError(
+            "--inflate-sh resolves outside --submission-dir when uploading "
+            f"a runtime tree: {inflate_sh}"
+        ) from exc
+    if not local_inflate.is_file():
+        raise ValueError(
+            f"--inflate-sh {rel.as_posix()!r} not found under --submission-dir "
+            f"{submission_path}"
+        )
     return rel.as_posix()
 
 
@@ -153,7 +173,20 @@ def _modal_uploaded_runtime_hashes_for_axis(
     from experiments.contest_auth_eval import _runtime_dependency_manifest
 
     submission_path = Path(submission_dir).resolve()
+    inflate_rel_path = Path(inflate_sh_rel)
+    if inflate_rel_path.is_absolute() or ".." in inflate_rel_path.parts:
+        raise ValueError(
+            "--inflate-sh for uploaded --submission-dir must be a relative path "
+            f"inside the runtime tree: {inflate_sh_rel}"
+        )
     local_inflate_sh = (submission_path / inflate_sh_rel).resolve()
+    try:
+        local_inflate_sh.relative_to(submission_path)
+    except ValueError as exc:
+        raise ValueError(
+            "--inflate-sh resolves outside --submission-dir when computing "
+            f"Modal runtime hashes: {inflate_sh_rel}"
+        ) from exc
     local_manifest = _runtime_dependency_manifest(local_inflate_sh, REPO_ROOT / "upstream")
     projected = modal_uploaded_submission_dir_runtime_manifest(
         local_manifest,
@@ -312,17 +345,25 @@ def _resolve_skipped_axes(
     if not cuda_runtime and not cpu_runtime:
         return {"contest_cuda": None, "contest_cpu": None}
     return {
-        "contest_cuda": find_promotable_anchor_for_axis_and_sha(
-            "cuda",
-            archive_sha256,
-            repo_root=repo_root,
-            expected_runtime_tree_sha256=cuda_runtime,
+        "contest_cuda": (
+            find_promotable_anchor_for_axis_and_sha(
+                "cuda",
+                archive_sha256,
+                repo_root=repo_root,
+                expected_runtime_tree_sha256=cuda_runtime,
+            )
+            if cuda_runtime
+            else None
         ),
-        "contest_cpu": find_promotable_anchor_for_axis_and_sha(
-            "cpu",
-            archive_sha256,
-            repo_root=repo_root,
-            expected_runtime_tree_sha256=cpu_runtime,
+        "contest_cpu": (
+            find_promotable_anchor_for_axis_and_sha(
+                "cpu",
+                archive_sha256,
+                repo_root=repo_root,
+                expected_runtime_tree_sha256=cpu_runtime,
+            )
+            if cpu_runtime
+            else None
         ),
     }
 

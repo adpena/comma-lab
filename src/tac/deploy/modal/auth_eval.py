@@ -627,6 +627,9 @@ def _recovered_claim_flags(
             flags["diagnostic_blockers"] = [
                 "canonical_auth_eval_not_valid_contest_cpu_leaderboard_artifact"
             ]
+        else:
+            flags["score_claim"] = True
+            flags["promotion_eligible"] = False
     else:
         flags["diagnostic_blockers"] = [
             f"unsupported_modal_auth_eval_recovery_axis:{score_axis or '<missing>'}"
