@@ -230,3 +230,43 @@ def test_cli_returns_nonzero_on_infeasible(tmp_path):
     data = json.loads(proc.stdout)
     assert data["verdict"] == "INFEASIBLE"
     assert data["blocker_axis"] == "rate"
+
+
+def test_cli_returns_nonzero_on_indeterminate_without_explicit_allowance(tmp_path):
+    repo_root = Path(__file__).resolve().parent.parent.parent.parent
+    tool = repo_root / "tools" / "check_substrate_dykstra_feasibility.py"
+    out_path = tmp_path / "verdict.json"
+    base_args = [
+        sys.executable,
+        str(tool),
+        "--substrate-id",
+        "test_cli_indeterminate",
+        "--predicted-band-lo",
+        "0.1",
+        "--predicted-band-hi",
+        "0.2",
+        "--archive-size-bytes",
+        "0",
+        "--pose-budget",
+        "0",
+        "--output-json",
+        str(out_path),
+    ]
+    proc = subprocess.run(
+        base_args,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert proc.returncode == 3, (proc.returncode, proc.stdout, proc.stderr)
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert data["verdict"] == "INDETERMINATE"
+
+    allowed = subprocess.run(
+        [*base_args, "--allow-indeterminate-exit-zero"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert allowed.returncode == 0, allowed.stderr

@@ -65,11 +65,11 @@ PACT_INFLATE_DEVICE=cpu .venv/bin/python -m tac.substrates.time_traveler_l5_auto
 - Proof artifact:
   `.omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json`
 - Proof artifact SHA-256:
-  `3116303f7897e8606d5f3ec9b8105182a41ba973b21ddb0bca50c3e5ff23f361`
+  `7efdac0ed0ac026d7adb7eb706b1a8f844ec6e15422b7defbb34114db5ef775a`
 - Output manifest:
   `.omx/research/tt5l_contest_sideinfo_outputs_manifest_20260516_codex.json`
 - Output manifest SHA-256:
-  `7963845cefc5b3d46bdda2f9de8f3c9fe2abdd5fe92c70b85fc8df57511cf03f`
+  `00e121969d8f03876dfc84c31f742b720d95be93b60e3dd93170a672ad3ffcb2`
 - Runtime tree SHA-256:
   `4f4f5d2e090386d90962145727ea3bfc74f417e3d034ecea4a81d43de3b81ff4`
 - Inflated raw-output aggregate SHA-256:
@@ -85,9 +85,16 @@ proof and manifest are committed under `.omx/research/`.
 - `parser_consumed_bytes=true`
 - `output_changed=true`
 - `raw_output_shape_compatible=true`
+- `non_target_sections_identical=true`
 - `n_pairs_hashed=600`
 - `total_frames=1200`
 - `raw_output_frame_nbytes=3052008`
+
+The proof records per-section baseline/mutated hashes and requires all
+non-target payload sections (`world_model_blob`, `ac_state_blob`, `meta_blob`)
+to remain identical. This closes the false-causality hole where a side-info
+proof could pass while a simultaneous decoder/meta/AC-state mutation actually
+caused the output change.
 
 After this artifact is present, `l5_v2_dispatch_readiness()` reports:
 

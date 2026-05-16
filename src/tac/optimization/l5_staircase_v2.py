@@ -61,6 +61,9 @@ TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH = (
 TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH = (
     ".omx/research/tt5l_contest_sideinfo_consumption_proof_20260516_codex.json"
 )
+TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256 = (
+    "7efdac0ed0ac026d7adb7eb706b1a8f844ec6e15422b7defbb34114db5ef775a"
+)
 TT5L_SIDEINFO_CONSUMPTION_PREDICATE_ID = (
     "tt5l_byte_closed_temporal_sideinfo_consumption_v1"
 )
@@ -72,7 +75,7 @@ TT5L_MODAL_A100_DISPATCH_RECIPE_PATH = (
     "substrate_time_traveler_l5_autonomy_modal_a100_dispatch.yaml"
 )
 TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH = (
-    "experiments/results/time_traveler_l5_v2/l5_v2_probe_template.json"
+    ".omx/research/l5_v2_probe_template_20260516_codex.json"
 )
 TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
@@ -1060,7 +1063,7 @@ def l5_v2_canonical_sideinfo_gate_evidence(
     candidates = (
         (
             TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH,
-            None,
+            TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256,
             "contest_full_frame_inflate_consumption_proof_committed_custody",
         ),
         (
@@ -1161,6 +1164,10 @@ def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
     verdict = str(payload.get("verdict") or "")
     if payload and verdict not in {"FEASIBLE", "INFEASIBLE", "INDETERMINATE"}:
         blockers.append("tt5l_dykstra_feasibility_verdict_invalid")
+    elif payload and verdict == "INDETERMINATE":
+        blockers.append("tt5l_dykstra_feasibility_verdict_indeterminate")
+    elif payload and verdict == "INFEASIBLE":
+        blockers.append("tt5l_dykstra_feasibility_verdict_infeasible")
     archive_size_bytes = _non_bool_int(payload.get("archive_size_bytes"))
     if payload and (archive_size_bytes is None or archive_size_bytes <= 0):
         blockers.append("tt5l_dykstra_feasibility_archive_size_bytes_missing")
@@ -1321,12 +1328,35 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "ready_for_exact_eval_dispatch": False,
         }
     elif not paired_axis_plan_valid:
+        pair_group_id = f"{LANE_ID}_paired_cpu_cuda_first_anchor"
         next_action = {
             "action_id": "prepare_tt5l_paired_cpu_cuda_axis_plan",
             "phase": "paired_axis_plan",
             "recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
             "claim_lane_before_dispatch": True,
+            "terminal_claim_required": True,
             "lane_id": LANE_ID,
+            "pair_group_id": pair_group_id,
+            "required_axes": list(_REQUIRED_EXACT_AXES),
+            "per_axis_job_id_fields": {
+                "contest_cpu": "contest_cpu_job_id",
+                "contest_cuda": "contest_cuda_job_id",
+            },
+            "harvest_command_template": (
+                ".venv/bin/python tools/recover_modal_auth_eval.py "
+                f"--lane-id {LANE_ID} --pair-group-id {pair_group_id} "
+                "--axis <contest_cpu|contest_cuda> --call-id <modal_call_id>"
+            ),
+            "terminal_claim_success_template": (
+                ".venv/bin/python tools/claim_lane_dispatch.py claim --force "
+                f"--lane-id {LANE_ID} --status completed_paired_axis_plan "
+                f"--notes {pair_group_id}:<cpu_job_id>:<cuda_job_id>"
+            ),
+            "terminal_claim_failure_template": (
+                ".venv/bin/python tools/claim_lane_dispatch.py claim --force "
+                f"--lane-id {LANE_ID} --status failed_paired_axis_plan "
+                f"--notes {pair_group_id}:<failure_class>:<job_id>"
+            ),
             "command_template": (
                 ".venv/bin/python tools/claim_lane_dispatch.py claim "
                 f"--lane-id {LANE_ID} --notes tt5l_l5_v2_first_anchor && "
@@ -1342,7 +1372,10 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "phase": "first_anchor_pair",
             "recipe_path": TT5L_MODAL_A100_DISPATCH_RECIPE_PATH,
             "claim_lane_before_dispatch": True,
+            "terminal_claim_required": True,
             "lane_id": LANE_ID,
+            "pair_group_id": f"{LANE_ID}_exact_or_diagnostic_anchor_pair",
+            "required_axes": list(_REQUIRED_EXACT_AXES),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1681,6 +1714,56 @@ def _contest_full_frame_sideinfo_blockers(
             "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
             "raw_output_shape_compatible"
         )
+    if proof.get("non_target_sections_identical") is not True:
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_invalid:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "non_target_sections_identical"
+        )
+    section_hashes = proof.get("section_hashes")
+    if not isinstance(section_hashes, Mapping):
+        blockers.append(
+            "l5_v2_gate_artifact_semantics_missing:"
+            "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+            "section_hashes"
+        )
+    else:
+        for section_name in ("world_model_blob", "ac_state_blob", "meta_blob"):
+            section = section_hashes.get(section_name)
+            if not isinstance(section, Mapping):
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_missing:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    f"section_hashes:{section_name}"
+                )
+                continue
+            baseline_sha = str(section.get("baseline_sha256") or "").strip().lower()
+            mutated_sha = str(section.get("mutated_sha256") or "").strip().lower()
+            if (
+                not _SHA256_HEX_RE.fullmatch(baseline_sha)
+                or not _SHA256_HEX_RE.fullmatch(mutated_sha)
+                or baseline_sha != mutated_sha
+                or section.get("identical") is not True
+                or section.get("target_section") is True
+            ):
+                blockers.append(
+                    "l5_v2_gate_artifact_semantics_invalid:"
+                    "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                    f"section_hashes:{section_name}"
+                )
+        target_section = section_hashes.get("per_pair_side_info_blob")
+        if not isinstance(target_section, Mapping):
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_missing:"
+                "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                "section_hashes:per_pair_side_info_blob"
+            )
+        elif target_section.get("target_section") is not True:
+            blockers.append(
+                "l5_v2_gate_artifact_semantics_invalid:"
+                "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+                "section_hashes:per_pair_side_info_blob"
+            )
     frame_nbytes = _non_bool_int(
         _first_present(
             proof,
@@ -2648,6 +2731,7 @@ __all__ = [
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
     "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH",
+    "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256",
     "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH",
     "TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH",

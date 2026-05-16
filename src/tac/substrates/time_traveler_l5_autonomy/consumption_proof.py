@@ -264,6 +264,50 @@ def _archive_section_payload(blob: bytes, section_name: str) -> tuple[int, bytes
     return start, blob[start : start + length]
 
 
+def _section_hash_records(
+    baseline_blob: bytes,
+    mutated_blob: bytes,
+    *,
+    target_section_name: str,
+) -> tuple[dict[str, dict[str, object]], bool]:
+    baseline_sections = parse_tt5l_archive_bytes(baseline_blob)
+    mutated_sections = parse_tt5l_archive_bytes(mutated_blob)
+    records: dict[str, dict[str, object]] = {}
+    for section_name in sorted(set(baseline_sections) | set(mutated_sections)):
+        baseline_start, baseline_len = baseline_sections.get(section_name, (-1, -1))
+        mutated_start, mutated_len = mutated_sections.get(section_name, (-1, -1))
+        baseline_payload = (
+            baseline_blob[baseline_start : baseline_start + baseline_len]
+            if baseline_start >= 0 and baseline_len >= 0
+            else b""
+        )
+        mutated_payload = (
+            mutated_blob[mutated_start : mutated_start + mutated_len]
+            if mutated_start >= 0 and mutated_len >= 0
+            else b""
+        )
+        records[section_name] = {
+            "target_section": section_name == target_section_name,
+            "baseline_offset": baseline_start,
+            "baseline_nbytes": baseline_len,
+            "baseline_sha256": _sha256_bytes(baseline_payload),
+            "mutated_offset": mutated_start,
+            "mutated_nbytes": mutated_len,
+            "mutated_sha256": _sha256_bytes(mutated_payload),
+            "identical": baseline_payload == mutated_payload,
+        }
+    non_target_sections = (
+        "world_model_blob",
+        "ac_state_blob",
+        "meta_blob",
+    )
+    non_target_identical = all(
+        records.get(section_name, {}).get("identical") is True
+        for section_name in non_target_sections
+    )
+    return records, bool(non_target_identical)
+
+
 def _differing_offsets_within_section(
     baseline_blob: bytes,
     mutated_blob: bytes,
@@ -711,6 +755,11 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         mutated_blob,
         "per_pair_side_info_blob",
     )
+    section_hashes, non_target_sections_identical = _section_hash_records(
+        baseline_blob,
+        mutated_blob,
+        target_section_name="per_pair_side_info_blob",
+    )
     byte_mutation_proof = {
         "section": "tt5l_temporal_sideinfo",
         "archive_section_name": "per_pair_side_info_blob",
@@ -718,6 +767,8 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         "parser_consumed_bytes": parser_consumed,
         "output_changed": output_changed,
         "raw_output_shape_compatible": raw_output_shape_compatible,
+        "non_target_sections_identical": non_target_sections_identical,
+        "section_hashes": section_hashes,
         "mutated_byte_offsets": _differing_offsets_within_section(
             baseline_blob,
             mutated_blob,
@@ -765,6 +816,7 @@ def build_tt5l_contest_full_frame_sideinfo_consumption_proof(
         parser_consumed
         and output_changed
         and raw_output_shape_compatible
+        and non_target_sections_identical
         and n_pairs_hashed == TT5L_CONTEST_PAIR_COUNT
         and total_frames == TT5L_CONTEST_FRAME_COUNT
     )

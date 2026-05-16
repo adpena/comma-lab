@@ -37,6 +37,7 @@ _reexec_repo_venv_if_available(REPO_ROOT)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.substrates.time_traveler_l5_autonomy.consumption_proof import (  # noqa: E402
+    TT5L_CONTEST_FRAME_NBYTES,
     build_tt5l_contest_full_frame_sideinfo_consumption_proof,
 )
 
@@ -50,6 +51,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--file-list", required=True, type=Path)
     parser.add_argument("--artifact-out", required=True, type=Path)
     parser.add_argument("--manifest-out", required=True, type=Path)
+    parser.add_argument(
+        "--frame-nbytes",
+        default=TT5L_CONTEST_FRAME_NBYTES,
+        type=int,
+        help=(
+            "raw output bytes per frame; defaults to contest camera size. "
+            "Non-default values are for tests and remain non-promotional."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -64,11 +74,13 @@ def main(argv: list[str] | None = None) -> int:
         artifact_path=args.artifact_out,
         manifest_path=args.manifest_out,
         repo_root=REPO_ROOT,
+        frame_nbytes=args.frame_nbytes,
     )
     print(f"wrote {result.proof_path}")
     print(f"wrote {result.manifest_path}")
-    print(f"predicate_passed={str(result.proof['predicate_passed']).lower()}")
-    return 0
+    predicate_passed = result.proof["predicate_passed"] is True
+    print(f"predicate_passed={str(predicate_passed).lower()}")
+    return 0 if predicate_passed else 1
 
 
 if __name__ == "__main__":

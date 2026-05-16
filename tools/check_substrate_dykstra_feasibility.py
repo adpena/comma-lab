@@ -448,6 +448,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "cannot be mistaken for a scalar-only feasibility interval"
         ),
     )
+    parser.add_argument(
+        "--allow-indeterminate-exit-zero",
+        action="store_true",
+        help=(
+            "return 0 for an INDETERMINATE artifact; default is nonzero so "
+            "automation cannot treat ambiguous feasibility as a TT5L unlock"
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -481,6 +489,8 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(payload, sort_keys=True, indent=2))
     if verdict.verdict == "INFEASIBLE":
         return 1
+    if verdict.verdict == "INDETERMINATE":
+        return 0 if args.allow_indeterminate_exit_zero else 3
     return 0
 
 

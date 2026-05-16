@@ -160,10 +160,11 @@ notes: |
   ~25-35 KB at 45 B/pair) + AC state (Stage 3, ~10 KB) + header (Stage 4,
   ~2 KB).
 
-  Predicted contest-CPU score: 0.150-0.170 [time-traveler-prediction]
-  (NOT a score claim — score authority requires CUDA + CPU paired auth eval
-  on 1:1 contest-CI hardware per CLAUDE.md "Submission auth eval — BOTH CPU
-  AND CUDA").
+  Retired additive contest-CPU band: 0.150-0.170 [time-traveler-prediction]
+  is NOT an active prediction and NOT a score claim. Current TT5L dispatch
+  authority requires Dykstra feasibility, full-frame side-info proof, probe
+  disambiguation, and paired CUDA + CPU auth eval on 1:1 contest-CI hardware
+  per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
 
   Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
   .spawn(); harvest within 24h via tools/harvest_modal_calls.py or

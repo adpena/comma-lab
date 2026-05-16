@@ -1,0 +1,182 @@
+{
+  "observations": [
+    {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "artifact_sha256": "",
+      "axis_evidence": [
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cpu",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        },
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cuda",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        }
+      ],
+      "byte_closed_archive": false,
+      "candidate_id": "c1_world_model_foveation",
+      "evidence_grade": "contest_cpu_and_cuda_required",
+      "exact_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "notes": "fill from paired exact probe artifacts",
+      "predicate_id": "",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {
+        "contest_cpu": "",
+        "contest_cuda": ""
+      },
+      "sideinfo_consumed": false
+    },
+    {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "artifact_sha256": "",
+      "axis_evidence": [
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cpu",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        },
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cuda",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        }
+      ],
+      "byte_closed_archive": false,
+      "candidate_id": "z5_predictive_coding_world_model",
+      "evidence_grade": "contest_cpu_and_cuda_required",
+      "exact_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "notes": "fill from paired exact probe artifacts",
+      "predicate_id": "",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {
+        "contest_cpu": "",
+        "contest_cuda": ""
+      },
+      "sideinfo_consumed": false
+    },
+    {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "artifact_sha256": "",
+      "axis_evidence": [
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cpu",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        },
+        {
+          "archive_bytes": null,
+          "archive_sha256": "",
+          "artifact_path": "",
+          "auth_eval_command": "",
+          "axis": "contest_cuda",
+          "eval_device": "",
+          "hardware": "",
+          "inflate_device": "",
+          "log_path": "",
+          "n_samples": null,
+          "pose_dist": null,
+          "runtime_tree_sha256": "",
+          "score": null,
+          "score_delta": null,
+          "seg_dist": null
+        }
+      ],
+      "byte_closed_archive": false,
+      "candidate_id": "time_traveler_l5_autonomy",
+      "evidence_grade": "contest_cpu_and_cuda_required",
+      "exact_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "notes": "fill from paired exact probe artifacts",
+      "predicate_id": "",
+      "predicate_passed": false,
+      "predicted_or_measured_delta": 0.0,
+      "runtime_tree_sha256": "",
+      "runtime_tree_sha256_by_axis": {
+        "contest_cpu": "",
+        "contest_cuda": ""
+      },
+      "sideinfo_consumed": false
+    }
+  ],
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "tac_l5_v2_probe_disambiguator_v1",
+  "score_claim": false
+}

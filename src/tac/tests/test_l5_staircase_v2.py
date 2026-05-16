@@ -244,6 +244,33 @@ def _gate_artifact_payload(gate_id: str, *, repo_root: Path | None = None) -> di
             "parser_consumed_bytes": True,
             "output_changed": True,
             "raw_output_shape_compatible": True,
+            "non_target_sections_identical": True,
+            "section_hashes": {
+                "world_model_blob": {
+                    "target_section": False,
+                    "baseline_sha256": _sha(51),
+                    "mutated_sha256": _sha(51),
+                    "identical": True,
+                },
+                "ac_state_blob": {
+                    "target_section": False,
+                    "baseline_sha256": _sha(52),
+                    "mutated_sha256": _sha(52),
+                    "identical": True,
+                },
+                "meta_blob": {
+                    "target_section": False,
+                    "baseline_sha256": _sha(53),
+                    "mutated_sha256": _sha(53),
+                    "identical": True,
+                },
+                "per_pair_side_info_blob": {
+                    "target_section": True,
+                    "baseline_sha256": _sha(54),
+                    "mutated_sha256": _sha(55),
+                    "identical": False,
+                },
+            },
             "section_offset": 1024,
             "section_nbytes": 16,
             "section_sha256": _sha(24),
@@ -803,6 +830,44 @@ def test_l5_v2_tt5l_dykstra_artifact_rejects_stale_scalar_projection(
     ]
 
 
+@pytest.mark.parametrize(
+    ("verdict", "blocker"),
+    [
+        ("INDETERMINATE", "tt5l_dykstra_feasibility_verdict_indeterminate"),
+        ("INFEASIBLE", "tt5l_dykstra_feasibility_verdict_infeasible"),
+    ],
+)
+def test_l5_v2_tt5l_dykstra_artifact_only_feasible_unlocks(
+    tmp_path: Path,
+    verdict: str,
+    blocker: str,
+) -> None:
+    artifact_path = _write_tt5l_dykstra_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    payload["verdict"] = verdict
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+
+    assert tt5l["dykstra_feasibility_artifact_valid"] is False
+    assert blocker in tt5l["blockers"]
+    assert tt5l["first_anchor_timing_smoke_allowed"] is False
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "run_tt5l_dykstra_feasibility_polytope"
+    )
+
+
+def test_tt5l_recipe_labels_retired_band_as_non_authority() -> None:
+    recipe = Path(l5_v2.TT5L_MODAL_A100_DISPATCH_RECIPE_PATH).read_text(
+        encoding="utf-8"
+    )
+
+    assert "Predicted contest-CPU score:" not in recipe
+    assert "Retired additive contest-CPU band:" in recipe
+    assert "NOT an active prediction" in recipe
+
+
 def test_l5_v2_valid_gates_do_not_unlock_tt5l_timing_without_dykstra(
     tmp_path: Path,
 ) -> None:
@@ -853,10 +918,16 @@ def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
 
 def test_l5_v2_canonical_sideinfo_prefers_committed_full_frame_artifact(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     live_artifact_path = _write_contest_sideinfo_proof_artifact(tmp_path)
     committed_artifact_path = _write_committed_contest_sideinfo_proof_artifact(
         tmp_path
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256",
+        _file_sha256(committed_artifact_path),
     )
 
     evidence = l5_v2_canonical_sideinfo_gate_evidence(repo_root=tmp_path)
@@ -884,6 +955,35 @@ def test_l5_v2_dispatch_readiness_auto_consumes_canonical_sideinfo_artifact(
     assert tt5l["dykstra_feasibility_artifact_valid"] is True
     assert tt5l["sideinfo_gate_evidence_valid"] is True
     assert tt5l["first_anchor_timing_smoke_allowed"] is True
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "emit_c1_z5_tt5l_probe_template"
+    )
+    assert tt5l["next_non_pr106_l5_action"]["expected_artifacts"] == [
+        l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    ]
+
+
+def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("paired_cpu_cuda_axis_plan")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    action = readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"]
+
+    assert action["action_id"] == "prepare_tt5l_paired_cpu_cuda_axis_plan"
+    assert action["claim_lane_before_dispatch"] is True
+    assert action["terminal_claim_required"] is True
+    assert action["required_axes"] == ["contest_cpu", "contest_cuda"]
+    assert action["per_axis_job_id_fields"] == {
+        "contest_cpu": "contest_cpu_job_id",
+        "contest_cuda": "contest_cuda_job_id",
+    }
+    assert "tools/recover_modal_auth_eval.py" in action["harvest_command_template"]
+    assert "completed_paired_axis_plan" in action["terminal_claim_success_template"]
+    assert "failed_paired_axis_plan" in action["terminal_claim_failure_template"]
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(
@@ -1847,6 +1947,42 @@ def test_l5_v2_sideinfo_consumption_binds_mutation_to_parsed_section_range(
         "l5_v2_gate_artifact_semantics_invalid:"
         "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
         "mutated_byte_offsets_outside_section"
+        in readiness["blockers"]
+    )
+
+
+def test_l5_v2_sideinfo_consumption_requires_non_target_section_identity(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    gate_id = "byte_closed_temporal_sideinfo_consumption"
+    artifact_path = tmp_path / str(evidence[gate_id]["artifact_path"])
+    payload = _gate_artifact_payload(gate_id)
+    proof = payload["byte_mutation_proof"]
+    assert isinstance(proof, dict)
+    proof["non_target_sections_identical"] = False
+    section_hashes = proof["section_hashes"]
+    assert isinstance(section_hashes, dict)
+    world = section_hashes["world_model_blob"]
+    assert isinstance(world, dict)
+    world["mutated_sha256"] = _sha(99)
+    world["identical"] = False
+    artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert readiness["all_gate_evidence_valid"] is False
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "non_target_sections_identical"
+        in readiness["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "byte_closed_temporal_sideinfo_consumption:byte_mutation_proof:"
+        "section_hashes:world_model_blob"
         in readiness["blockers"]
     )
 
