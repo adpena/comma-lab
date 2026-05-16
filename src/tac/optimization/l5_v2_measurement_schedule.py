@@ -93,6 +93,77 @@ def _sideinfo_effect_curve_rows(curve: Mapping[str, Any] | None) -> list[Mapping
     return []
 
 
+def _looks_sha256(value: object) -> bool:
+    text = str(value or "").strip()
+    return len(text) == 64 and all(char in "0123456789abcdefABCDEF" for char in text)
+
+
+def _sha_field(row: Mapping[str, Any], key: str) -> str:
+    value = row.get(key)
+    return str(value).strip().lower() if _looks_sha256(value) else ""
+
+
+def _sideinfo_variant_pair_identity_blockers(
+    rows: list[Mapping[str, Any]],
+) -> list[str]:
+    """Return blockers when CPU/CUDA cells for one variant are not paired.
+
+    The Modal CPU and CUDA wrappers may hash the runtime tree differently
+    because the uploaded submission root differs. In that case the runtime
+    content tree is the pairing identity. If neither the tree nor content-tree
+    identity can prove the two axes used one runtime contract, fail closed.
+    """
+
+    blockers: list[str] = []
+    by_variant_axis: dict[str, dict[str, Mapping[str, Any]]] = {}
+    for row in rows:
+        axis = str(row.get("axis") or row.get("device_axis") or "").strip()
+        variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()
+        if not axis or not variant:
+            continue
+        by_variant_axis.setdefault(variant, {})[axis] = row
+
+    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+        axis_rows = by_variant_axis.get(variant, {})
+        if any(axis not in axis_rows for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
+            continue
+        archive_shas = {
+            axis: _sha_field(axis_rows[axis], "archive_sha256")
+            for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        }
+        if any(not digest for digest in archive_shas.values()):
+            blockers.append(
+                f"tt5l_sideinfo_effect_curve_variant_archive_sha_missing:{variant}"
+            )
+        elif len(set(archive_shas.values())) != 1:
+            blockers.append(
+                f"tt5l_sideinfo_effect_curve_variant_archive_sha_mismatch:{variant}"
+            )
+
+        runtime_trees = {
+            axis: _sha_field(axis_rows[axis], "runtime_tree_sha256")
+            for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        }
+        runtime_content_trees = {
+            axis: _sha_field(axis_rows[axis], "runtime_content_tree_sha256")
+            for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        }
+        if all(runtime_content_trees.values()):
+            if len(set(runtime_content_trees.values())) != 1:
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_variant_"
+                    f"runtime_content_tree_mismatch:{variant}"
+                )
+        elif all(runtime_trees.values()) and len(set(runtime_trees.values())) == 1:
+            continue
+        else:
+            blockers.append(
+                "tt5l_sideinfo_effect_curve_variant_"
+                f"runtime_identity_unpaired:{variant}"
+            )
+    return blockers
+
+
 def _sideinfo_effect_curve_blockers(
     curve: Mapping[str, Any] | None,
 ) -> list[str]:
@@ -152,6 +223,7 @@ def _sideinfo_effect_curve_blockers(
         blockers.append(
             "tt5l_sideinfo_effect_curve_cells_missing:" + ",".join(missing_cells)
         )
+    blockers.extend(_sideinfo_variant_pair_identity_blockers(rows))
     for row in rows:
         axis = str(row.get("axis") or row.get("device_axis") or "").strip()
         variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()

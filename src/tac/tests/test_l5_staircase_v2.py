@@ -742,6 +742,28 @@ def _write_tt5l_first_anchor_timing_smoke_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _tt5l_sideinfo_effect_curve_cells() -> list[dict[str, object]]:
+    cells: list[dict[str, object]] = []
+    for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        archive_sha = _sha(50_000 + variant_idx)
+        runtime_content_sha = _sha(60_000 + variant_idx)
+        for axis_idx, axis in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
+            cells.append(
+                {
+                    "axis": axis,
+                    "variant": variant,
+                    "archive_sha256": archive_sha,
+                    "runtime_tree_sha256": _sha(70_000 + variant_idx * 10 + axis_idx),
+                    "runtime_content_tree_sha256": runtime_content_sha,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "blockers": [],
+                }
+            )
+    return cells
+
+
 def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
     artifact_path = repo_root / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
     artifact_path.parent.mkdir(parents=True, exist_ok=True)
@@ -759,18 +781,7 @@ def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
-                "observed_cells": [
-                    {
-                        "axis": axis,
-                        "variant": variant,
-                        "score_claim": False,
-                        "promotion_eligible": False,
-                        "ready_for_exact_eval_dispatch": False,
-                        "blockers": [],
-                    }
-                    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
-                    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
-                ],
+                "observed_cells": _tt5l_sideinfo_effect_curve_cells(),
             },
             sort_keys=True,
         )

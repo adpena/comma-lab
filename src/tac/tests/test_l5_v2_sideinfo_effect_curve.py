@@ -42,6 +42,9 @@ def _cell(
     seg_dist: float,
     seed: int,
     hardware: str | None = None,
+    archive_sha256: str | None = None,
+    runtime_tree_sha256: str | None = None,
+    runtime_content_tree_sha256: str | None = None,
 ) -> dict[str, object]:
     base = repo_root / "evidence" / axis / variant
     base.mkdir(parents=True, exist_ok=True)
@@ -61,8 +64,9 @@ def _cell(
         "variant": variant,
         "evidence": {
             "axis": axis,
-            "archive_sha256": _sha(seed),
-            "runtime_tree_sha256": _sha(seed + 1),
+            "archive_sha256": archive_sha256 or _sha(seed),
+            "runtime_tree_sha256": runtime_tree_sha256 or _sha(seed + 1),
+            "runtime_content_tree_sha256": runtime_content_tree_sha256 or _sha(seed + 2),
             "score": score,
             "seg_dist": seg_dist,
             "pose_dist": pose_dist,
@@ -89,8 +93,10 @@ def _cell(
 def _complete_cells(repo_root: Path, *, trained_seg: float = 0.001) -> list[dict[str, object]]:
     cells: list[dict[str, object]] = []
     seed = 10
-    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
-        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+    for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        archive_sha = _sha(10_000 + variant_idx)
+        runtime_content_sha = _sha(20_000 + variant_idx)
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
             seg = trained_seg if variant == "trained" else 0.002
             cells.append(
                 _cell(
@@ -99,6 +105,8 @@ def _complete_cells(repo_root: Path, *, trained_seg: float = 0.001) -> list[dict
                     variant=variant,
                     seg_dist=seg,
                     seed=seed,
+                    archive_sha256=archive_sha,
+                    runtime_content_tree_sha256=runtime_content_sha,
                 )
             )
             seed += 1
@@ -123,6 +131,11 @@ def test_sideinfo_effect_curve_builder_passes_only_with_paired_trained_win(
     assert validate_l5_v2_sideinfo_effect_curve(payload) == []
     for effect in payload["axis_effects"].values():
         assert effect["trained_beats_or_ties_best_control"] is True
+    trained_rows = [
+        row for row in payload["observed_cells"] if row["variant"] == "trained"
+    ]
+    assert len({row["runtime_tree_sha256"] for row in trained_rows}) == 2
+    assert len({row["runtime_content_tree_sha256"] for row in trained_rows}) == 1
 
 
 def test_sideinfo_effect_curve_builder_fails_when_trained_loses(tmp_path: Path) -> None:
@@ -161,6 +174,46 @@ def test_sideinfo_effect_curve_builder_keeps_invalid_custody_blockers(
     assert any(
         str(blocker).startswith("tt5l_sideinfo_effect_curve_cell_blocked")
         for blocker in validate_l5_v2_sideinfo_effect_curve(payload)
+    )
+
+
+def test_sideinfo_effect_curve_rejects_unpaired_variant_runtime_contract(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    for cell in cells:
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained":
+            evidence = cell["evidence"]
+            assert isinstance(evidence, dict)
+            evidence["runtime_content_tree_sha256"] = _sha(99_999)
+            break
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_runtime_content_tree_mismatch:trained"
+        in payload["contract_blockers"]
+    )
+
+
+def test_sideinfo_effect_curve_rejects_unpaired_variant_archive(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    for cell in cells:
+        if cell["axis"] == "contest_cpu" and cell["variant"] == "zero":
+            evidence = cell["evidence"]
+            assert isinstance(evidence, dict)
+            evidence["archive_sha256"] = _sha(88_888)
+            break
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_archive_sha_mismatch:zero"
+        in payload["contract_blockers"]
     )
 
 

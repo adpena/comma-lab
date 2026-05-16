@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -36,6 +37,10 @@ def _eligible_probe_intake() -> dict[str, object]:
     }
 
 
+def _sha(seed: str) -> str:
+    return hashlib.sha256(seed.encode()).hexdigest()
+
+
 def _complete_sideinfo_effect_curve() -> dict[str, object]:
     return {
         "schema": L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
@@ -51,6 +56,9 @@ def _complete_sideinfo_effect_curve() -> dict[str, object]:
             {
                 "axis": axis,
                 "variant": variant,
+                "archive_sha256": _sha(f"archive:{variant}"),
+                "runtime_tree_sha256": _sha(f"runtime-tree:{axis}:{variant}"),
+                "runtime_content_tree_sha256": _sha(f"runtime-content:{variant}"),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -141,6 +149,46 @@ def test_l5_v2_schedule_rejects_unpaired_sideinfo_curve() -> None:
     assert any(
         str(blocker).startswith("tt5l_sideinfo_effect_curve_axes_missing:contest_cuda")
         for blocker in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_mixed_sideinfo_runtime_identity() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cuda" and row["variant"] == "trained":
+            row["runtime_content_tree_sha256"] = _sha("runtime-content:wrong")
+            break
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert schedule["active_rule_id"] == "measure_tt5l_sideinfo_effect_curve"
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_runtime_content_tree_mismatch:trained"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cpu" and row["variant"] == "zero":
+            row["archive_sha256"] = _sha("archive:wrong")
+            break
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert schedule["active_rule_id"] == "measure_tt5l_sideinfo_effect_curve"
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_archive_sha_mismatch:zero"
+        in schedule["sideinfo_effect_curve_blockers"]
     )
 
 

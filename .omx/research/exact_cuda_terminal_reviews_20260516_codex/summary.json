@@ -1,0 +1,195 @@
+{
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "review_count": 31,
+  "rows": [
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_format0d_latent_score_table_paired_modal_auth_20260516T071622Z_cuda/contest_auth_eval.json",
+      "job_id": "pr106_format0d_latent_score_table_paired_modal_auth_20260516T071622Z_cuda",
+      "lane_id": "lane_pr106_format0d_latent_score_table_20260516_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_format0d_latent_score_table_paired_modal_auth_20260516T071622Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda/modal_cuda_auth_eval_result.json",
+      "job_id": "d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda",
+      "lane_id": "lane_d1_paired_cpu_cuda_modal_dispatch_20260515_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_component_prefix16_pr101grammar_paired_20260515T191614Z_cuda/contest_auth_eval.json",
+      "job_id": "pr106_component_prefix16_pr101grammar_paired_20260515T191614Z_cuda",
+      "lane_id": "lane_pr106_component_prefix16_pr101grammar_20260515T191614Z_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_component_prefix16_pr101grammar_paired_20260515T191614Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_cert_sparse96_b3k_L2_red_payload_paired_auth_20260515T1820Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_cert_sparse96_b3k_L2_red_payload_paired_auth_20260515T1820Z_cuda",
+      "lane_id": "d1_cert_sparse96_b3k_L2_red_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_cert_sparse96_b3k_L2_red_payload_paired_auth_20260515T1820Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_cert_sparse96_b3k_L2_blue_payload_paired_auth_20260515T1820Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_cert_sparse96_b3k_L2_blue_payload_paired_auth_20260515T1820Z_cuda",
+      "lane_id": "d1_cert_sparse96_b3k_L2_blue_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_cert_sparse96_b3k_L2_blue_payload_paired_auth_20260515T1820Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_cert_sparse96_b3k_L2_green_payload_paired_auth_20260515T1820Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_cert_sparse96_b3k_L2_green_payload_paired_auth_20260515T1820Z_cuda",
+      "lane_id": "d1_cert_sparse96_b3k_L2_green_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_cert_sparse96_b3k_L2_green_payload_paired_auth_20260515T1820Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_sparse96_b5k_L2_green_alternating_paired_auth_20260515T1815Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_sparse96_b5k_L2_green_alternating_paired_auth_20260515T1815Z_cuda",
+      "lane_id": "d1_sparse96_b5k_L2_green_alternating_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_sparse96_b5k_L2_green_alternating_paired_auth_20260515T1815Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_sparse96_b5k_L2_green_payload_paired_auth_20260515T1810Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_sparse96_b5k_L2_green_payload_paired_auth_20260515T1810Z_cuda",
+      "lane_id": "d1_sparse96_b5k_L2_green_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_sparse96_b5k_L2_green_payload_paired_auth_20260515T1810Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_sparse96_b5k_L2_green_negate_paired_auth_20260515T1810Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_sparse96_b5k_L2_green_negate_paired_auth_20260515T1810Z_cuda",
+      "lane_id": "d1_sparse96_b5k_L2_green_negate_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_sparse96_b5k_L2_green_negate_paired_auth_20260515T1810Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_shrunk96_b100k_L2_green_payload_paired_auth_20260515T1800Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_shrunk96_b100k_L2_green_payload_paired_auth_20260515T1800Z_cuda",
+      "lane_id": "d1_shrunk96_b100k_L2_green_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_shrunk96_b100k_L2_green_payload_paired_auth_20260515T1800Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_shrunk96_b100k_L2_rgb_payload_paired_auth_20260515T1800Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_shrunk96_b100k_L2_rgb_payload_paired_auth_20260515T1800Z_cuda",
+      "lane_id": "d1_shrunk96_b100k_L2_rgb_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_shrunk96_b100k_L2_rgb_payload_paired_auth_20260515T1800Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_b100k_L2_green_payload_paired_auth_20260515T1755Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_b100k_L2_green_payload_paired_auth_20260515T1755Z_cuda",
+      "lane_id": "d1_b100k_L2_green_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_b100k_L2_green_payload_paired_auth_20260515T1755Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/d1_b50k_L2_rgb_payload_paired_auth_20260515T1755Z_cuda/contest_auth_eval.json",
+      "job_id": "d1_b50k_L2_rgb_payload_paired_auth_20260515T1755Z_cuda",
+      "lane_id": "d1_b50k_L2_rgb_payload_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/d1_b50k_L2_rgb_payload_paired_auth_20260515T1755Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/z3_v2_full_paired_cpu_20260515_paired_modal_auth_20260515T142723Z_cuda/contest_auth_eval.json",
+      "job_id": "z3_v2_full_paired_cpu_20260515_paired_modal_auth_20260515T142723Z_cuda",
+      "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514_paired_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/z3_v2_full_paired_cpu_20260515_paired_modal_auth_20260515T142723Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_latent_score_table_topk8_20260515_cuda_runtimefix1/contest_auth_eval.json",
+      "job_id": "pr106_latent_topk8_cuda_modal_t4_20260515_runtimefix1",
+      "lane_id": "lane_pr106_latent_topk8_cuda_eval_20260515_runtimefix1",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_latent_topk8_cuda_modal_t4_20260515_runtimefix1_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_format0c_exact_radix_paired_20260515T0918Z_cuda/contest_auth_eval.json",
+      "job_id": "pr106_format0c_exact_radix_paired_20260515T0918Z_cuda",
+      "lane_id": "lane_pr106_format0c_exact_radix_paired_20260515_contest_cuda",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_format0c_exact_radix_paired_20260515T0918Z_cuda_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm12_hlm3_fmt0c_t4_20260515T090445Z/contest_auth_eval.json",
+      "job_id": "pr106_hdm12_hlm3_fmt0c_t4_20260515T090445Z",
+      "lane_id": "lane_pr106_hdm12_hlm3_magicless_exact_radix_format0c_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_hdm12_hlm3_fmt0c_t4_20260515T090445Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z/contest_auth_eval.json",
+      "job_id": "pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z",
+      "lane_id": "lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_hdm11_hlm3_fmt0b_t4_20260515T073414Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm10_hlm3_fmt0a_t4_20260515T055017Z/contest_auth_eval.json",
+      "job_id": "pr106_hdm10_hlm3_fmt0a_t4_20260515T055017Z",
+      "lane_id": "lane_pr106_hdm10_hlm3_packetir_format0a_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_hdm10_hlm3_fmt0a_t4_20260515T055017Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_fixed_even_grain_chroma_1_t4_20260515T052735Z/contest_auth_eval.json",
+      "job_id": "hdm8_fixed_even_grain_chroma_1_t4_20260515T052735Z",
+      "lane_id": "lane_hdm8_fixed_even_grain_chroma_1_positive_control_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/hdm8_fixed_even_grain_chroma_1_t4_20260515T052735Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_fixed_even_rgb_bias_m05_p05_0_t4_20260515T052717Z/contest_auth_eval.json",
+      "job_id": "hdm8_fixed_even_rgb_bias_m05_p05_0_t4_20260515T052717Z",
+      "lane_id": "lane_hdm8_fixed_even_rgb_bias_m05_p05_0_positive_control_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/hdm8_fixed_even_rgb_bias_m05_p05_0_t4_20260515T052717Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_fixed_even_rgb_bias_0_p05_m05_t4_20260515T052659Z/contest_auth_eval.json",
+      "job_id": "hdm8_fixed_even_rgb_bias_0_p05_m05_t4_20260515T052659Z",
+      "lane_id": "lane_hdm8_fixed_even_rgb_bias_0_p05_m05_positive_control_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/hdm8_fixed_even_rgb_bias_0_p05_m05_t4_20260515T052659Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_fixed_even_rgb_bias_m1_p05_p05_t4_20260515T052542Z/contest_auth_eval.json",
+      "job_id": "hdm8_fixed_even_rgb_bias_m1_p05_p05_t4_20260515T052542Z",
+      "lane_id": "lane_hdm8_fixed_even_rgb_bias_positive_control_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/hdm8_fixed_even_rgb_bias_m1_p05_p05_t4_20260515T052542Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm9_fmt09_t4_20260515T043733Z/contest_auth_eval.json",
+      "job_id": "pr106_hdm9_fmt09_t4_20260515T043733Z",
+      "lane_id": "lane_pr106_hdm9_packetir_format09_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/pr106_hdm9_fmt09_t4_20260515T043733Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm8_fmt08_t4_20260515T033731Z/contest_auth_eval.json",
+      "job_id": "modal_pr106_hdm8_fmt08_t4_20260515T033731Z",
+      "lane_id": "lane_pr106_hdm8_inner_headerless_fmt08_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal_pr106_hdm8_fmt08_t4_20260515T033731Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_cuda_selector_sparse_budget128_t4_20260515T031500Z/contest_auth_eval.json",
+      "job_id": "modal_hdm8_cuda_selector_sparse_budget128_t4_20260515T031500Z",
+      "lane_id": "lane_hdm8_cuda_selector_sparse_budget128_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal_hdm8_cuda_selector_sparse_budget128_t4_20260515T031500Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z/contest_auth_eval.json",
+      "job_id": "modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z",
+      "lane_id": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z/contest_auth_eval.json",
+      "job_id": "modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z",
+      "lane_id": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal_hdm8_cuda_selector_sparse_top001_t4_20260515T030736Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/pr106_hdm8_fmt07_t4_20260515T025608Z/contest_auth_eval.json",
+      "job_id": "modal_pr106_hdm8_fmt07_t4_20260515T025608Z",
+      "lane_id": "lane_pr106_hdm8_headerless_fmt07_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal_pr106_hdm8_fmt07_t4_20260515T025608Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/hdm8_selector_cuda_full_aggressive_v1_clean_20260515T023845Z/contest_auth_eval.json",
+      "job_id": "hdm8_selector_cuda_full_aggressive_exact_t4_20260515T023845Z",
+      "lane_id": "lane_hdm8_selector_cuda_full_aggressive_exact_t4_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/hdm8_selector_cuda_full_aggressive_exact_t4_20260515T023845Z_review.json"
+    },
+    {
+      "auth_eval_json": "experiments/results/modal_auth_eval/archive_6bae0201fb08/contest_auth_eval.json",
+      "job_id": "modal-cuda-pr101-fec6-k16-20260515T020612Z",
+      "lane_id": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+      "review_packet": ".omx/research/exact_cuda_terminal_reviews_20260516_codex/modal-cuda-pr101-fec6-k16-20260515T020612Z_review.json"
+    }
+  ],
+  "schema": "exact_cuda_terminal_review_backfill_summary_v1",
+  "score_claim": false
+}

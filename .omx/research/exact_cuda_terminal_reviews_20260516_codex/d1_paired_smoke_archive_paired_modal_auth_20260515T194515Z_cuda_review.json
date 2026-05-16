@@ -1,0 +1,104 @@
+{
+  "baseline_score": null,
+  "canonical_score": 0.23128813459939868,
+  "cpu_leaderboard_reproduction_eligible": false,
+  "custody": {
+    "archive_bytes": 185675,
+    "archive_sha256": "",
+    "command": [],
+    "device": "",
+    "gpu_model": "",
+    "inflate_script": "",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:provider_custody_closeout",
+      "instance_job_id": "d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda",
+      "lane_id": "lane_d1_paired_cpu_cuda_modal_dispatch_20260515_contest_cuda",
+      "notes": "D1 per-axis closure only; result_json=experiments/results/modal_auth_eval/d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda/modal_cuda_auth_eval_result.json; archive_sha=c4f40c055e5e1ba721dcc492f05008abd39e9220e6f3d93700ed436716f17c6e; archive_bytes=185675; score_recomputed=0.23128813459939868; axis=contest_cuda; evidence_grade=contest-CUDA; hardware_substrate=linux_x86_64_t4; score_claim=true; promotion_eligible=false; adjudication_required=true",
+      "platform": "modal",
+      "predicted_eta_utc": "",
+      "status": "completed_contest_cuda_modal_auth_eval_recovered",
+      "timestamp_utc": "2026-05-16T01:09:10Z"
+    },
+    "latest_status": "completed_contest_cuda_modal_auth_eval_recovered",
+    "matching_claim_count": 3,
+    "terminal_status_recorded": true
+  },
+  "engineering_forensic_audit": {
+    "archive_runtime_closure_reviewed": true,
+    "audit_blockers": [
+      "runtime_manifest_missing",
+      "runtime_payload_closure_missing"
+    ],
+    "axis_reviewed": true,
+    "classification_after_audit": "exact_cuda_result_reviewed_no_negative_status_change",
+    "custody_reviewed": true,
+    "dead_or_family_falsification_allowed": false,
+    "dispatch_claim_reviewed": true,
+    "engineering_or_config_bug_found": true,
+    "measured_config_retirement_allowed": false,
+    "runtime_config_reviewed": true,
+    "schema": "engineering_forensic_audit_v1",
+    "score_formula_reviewed": true
+  },
+  "exact_cpu_evidence": false,
+  "exact_cuda_evidence": true,
+  "failure_class": "exact_cuda_result_reviewed_baseline_missing",
+  "family_falsified": false,
+  "job_id": "d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda",
+  "lane_id": "lane_d1_paired_cpu_cuda_modal_dispatch_20260515_contest_cuda",
+  "measured_config_status": "exact_cuda_result_reviewed",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "supply a matching contest-CUDA baseline archive/runtime score for apples-to-apples comparison",
+    "record component deltas and current-frontier comparison before promotion or retirement"
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "inflate_script_sha256": "",
+    "inflated_output_aggregate_sha256": "",
+    "inflated_output_manifest_sha256": "",
+    "payload_closure_fields_present": false,
+    "runtime_content_tree_sha256": "",
+    "runtime_file_count": null,
+    "runtime_manifest_present": false,
+    "runtime_tree_sha256": ""
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_axis": "contest_cuda",
+  "score_claim": false,
+  "score_claim_valid": true,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 0.0,
+    "archive_bytes": 185675,
+    "available": true,
+    "avg_posenet_dist": 0.00017103,
+    "avg_segnet_dist": 0.00066299,
+    "matches_reported": true,
+    "rate_term": 0.12363336112095917,
+    "recomputed_score": 0.23128813459939868,
+    "reported_score": 0.23128813459939868
+  },
+  "source_json_path": "experiments/results/modal_auth_eval/d1_paired_smoke_archive_paired_modal_auth_20260515T194515Z_cuda/modal_cuda_auth_eval_result.json",
+  "source_json_sha256": "e9a133421e1e760cc2e22f24d062ff4b41e8a0f0c2e91059a1d8b788cea5ed68",
+  "technique": "lane_d1_paired_cpu_cuda_modal_dispatch_20260515_contest_cuda",
+  "tool": "tools/build_result_review_packet.py"
+}

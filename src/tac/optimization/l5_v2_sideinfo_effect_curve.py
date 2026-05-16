@@ -15,7 +15,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from tac.exact_eval_custody import validate_exact_eval_evidence
+from tac.exact_eval_custody import normalize_sha256, validate_exact_eval_evidence
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
@@ -53,6 +53,37 @@ def _score_from_validation(
         return validation_score
     value = evidence.get("score")
     return float(value) if isinstance(value, int | float) and not isinstance(value, bool) else None
+
+
+def _runtime_content_tree_sha256(evidence: Mapping[str, Any]) -> str:
+    for key in (
+        "runtime_content_tree_sha256",
+        "expected_runtime_content_tree_sha256",
+        "inflate_runtime_content_tree_sha256",
+    ):
+        digest = normalize_sha256(evidence.get(key))
+        if digest:
+            return digest
+    for outer_key in (
+        "runtime_manifest",
+        "inflate_runtime_manifest",
+        "runtime_custody",
+        "provenance",
+    ):
+        nested = evidence.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        digest = normalize_sha256(nested.get("runtime_content_tree_sha256"))
+        if digest:
+            return digest
+        inflate_manifest = nested.get("inflate_runtime_manifest")
+        if isinstance(inflate_manifest, Mapping):
+            digest = normalize_sha256(
+                inflate_manifest.get("runtime_content_tree_sha256")
+            )
+            if digest:
+                return digest
+    return ""
 
 
 def _normalize_cell(
@@ -93,6 +124,7 @@ def _normalize_cell(
         "n_samples": validation.n_samples,
         "archive_sha256": validation.archive_sha256,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
+        "runtime_content_tree_sha256": _runtime_content_tree_sha256(evidence),
         "raw_output_aggregate_sha256": str(
             evidence.get("raw_output_aggregate_sha256")
             or evidence.get("inflated_raw_output_aggregate_sha256")
