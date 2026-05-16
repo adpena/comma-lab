@@ -6,7 +6,7 @@ This file IS the export-first grammar (HNeRV parity discipline lesson L2).
 
 **Schema v2** (Path A redesign 2026-05-16; symposium commit 4292c8ce2): adds
 per-class CHROMA palette + per-cell CLASS-LABEL stream so the inflate runtime
-can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::
+can synthesize RGB from grayscale+class instead of Y=R=G=B replication.::  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
 
     MAGIC(4)             b"CH06"   Carmack-Hotz strip-everything substrate v06
     VERSION(1)           u8        schema version (2 = Path A chroma+optical-flow)
@@ -44,7 +44,7 @@ Path A cargo-cult unwinding (per grand council symposium 2026-05-16 commit
 - Cargo-cult #1 (closed-form-argmax-allocator) UNWOUND: per-class CDF is now
   ACTUALLY consumed at inflate via the CLS_STREAM; previously the inflate
   used class=0 uniformly making the CDF effectively dead.
-- Cargo-cult #2 (Y=R=G=B chroma destruction) UNWOUND: per-class RGB anchors
+- Cargo-cult #2 (Y=R=G=B chroma destruction) UNWOUND: per-class RGB anchors  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
   provide chroma at inflate; SegNet now sees coloured frames.
 - Cargo-cult #4 (2-of-6-pose-warp) UNWOUND in inflate.py via 6-dim affine warp.
 
@@ -77,7 +77,7 @@ CH06_MAGIC: bytes = b"CH06"
 CH06_SCHEMA_VERSION: int = 2
 """Schema version byte. v2 (Path A 2026-05-16): adds chroma palette + class
 labels stream so the inflate runtime can synthesize per-pixel RGB instead of
-Y=R=G=B replication. Symposium commit 4292c8ce2 ratifies the bump."""
+Y=R=G=B replication. Symposium commit 4292c8ce2 ratifies the bump."""  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
 
 # Header layout per docstring above. v2 format string:
 #   < 4s B H B H H H H H H I I H H I  ->  4+1+2+1+2+2+2+2+2+2+4+4+2+2+4 = 36 bytes
@@ -104,7 +104,7 @@ class CarmackHotzArchive:
 
     Path A v2 fields (`chroma_rgb`, `cls_arith_bytes`) carry the per-class
     chroma anchors + per-cell class labels so the inflate runtime can render
-    per-pixel RGB instead of Y=R=G=B replication.
+    per-pixel RGB instead of Y=R=G=B replication.  # SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:docstring-references-the-cargo-cult-that-was-already-unwound-by-v7-path-A-per-class-RGB-anchors-and-v8-DB4-DWT-decorrelation-per-symposium-commit-4292c8ce2
     """
 
     palette: GrayscalePalette

@@ -65,6 +65,13 @@ deferred_substrate_retrospective_due_utc: "2026-06-15T19:30:00+00:00"
 parent_id_or_session: wunderkind-g1-pivot-validation-t2-council-20260516
 memory_path: .omx/research/grand_council_t2_wunderkind_g1_v2_pivot_validation_v3_cpu_competitiveness_20260516.md
 notes: "T2 council per Catalog #300 v2 + mission-alignment; SPLIT_VERDICT = Q1 RATIFY (reducer-specific) + REQUEST-REINVESTIGATION (paradigm class); Q2 CONDITIONAL on CPU-axis probe."
+council_dissent:
+  - voice: Contrarian
+    position: "v3 predicted CPU band [0.1893, 0.1963] CARGO-CULTED — derived via PR102-drift subtraction without independent Dykstra-feasibility on the CPU axis (CPU decode path, CPU pose-head numerics, CPU SegNet stride-2 stem). The implied band may be wider OR shifted on the CPU axis specifically; A1's 0.192848 is a real anchor while v3's CPU band is a prediction."
+    rationale: "The PR102 drift constant -0.0330 is one data point; extrapolating it as a universal CUDA-CPU translation for v3's distinct architecture is unjustified absent paired CPU/CUDA empirical anchors on v3 itself."
+  - voice: Assumption-Adversary
+    position: "v2 falsification reach contested — the per-pair-dominant SegNet argmax reducer's failure is HARD-EARNED for THAT REDUCER specifically, but generalizing to 'the v2 design class is falsified' is over-generalization. Alternative reducers (per-pixel class distribution, multi-label encoding, spatial-region-conditional, per-frame argmax) were NOT probed. The probe-disambiguator queue for these alternatives is the gating evidence."
+    rationale: "MI(class; residual) = 0 bits/symbol IS a mathematical identity when class is a constant, but the constant-class outcome is the per-pair-dominant reducer's failure mode, not the SegNet-conditioning paradigm's failure. Per Catalog #220 + Catalog #272 the operational mechanism class is still open until the alternative reducers are empirically tested."
 ```
 
 ---
