@@ -1137,7 +1137,8 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
         encoding="utf-8",
     )
     helper = TOOLS_DIR / "claim_lane_dispatch.py"
-    journal = tmp_path / "journal.jsonl"
+    monkeypatch.setattr(loop, "REPO_ROOT", tmp_path)
+    journal = tmp_path / ".omx" / "state" / "journal.jsonl"
     claims_path = tmp_path / "claims.md"
     monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
     rc = loop.main([
@@ -1157,6 +1158,41 @@ def test_main_authorized_mode_with_journal_succeeds(tmp_path, monkeypatch, capsy
     assert "lane_test_auth_mode_uniq_abc123" in claims_path.read_text(encoding="utf-8")
 
 
+def test_main_authorized_mode_refuses_tmp_journal_before_claim(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    cand_file = tmp_path / "c.jsonl"
+    cand_file.write_text(
+        json.dumps({
+            "candidate_id": "test_auth_mode_tmp_journal",
+            "family": "hnerv",
+            "predicted_score_delta": -0.005,
+            "expected_information_gain": 0.5,
+            "estimated_dispatch_cost_usd": 2.0,
+            "dispatch_packet_ready": True,
+            "dispatch_packet_sha256": _sha("e"),
+            "lane_id": "lane_test_auth_mode_tmp_journal",
+            "target_modes": [loop.AUTOPILOT_CONTEST_TARGET_MODE],
+        }) + "\n",
+        encoding="utf-8",
+    )
+    claims_path = tmp_path / "claims.md"
+    monkeypatch.setenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, "1")
+    rc = loop.main([
+        "--candidates-jsonl", str(cand_file),
+        "--iterations", "1",
+        "--operator-authorized-le-5-dollar-mode",
+        "--journal-path", str(tmp_path / "journal.jsonl"),
+        "--canonical-helper-script", str(TOOLS_DIR / "claim_lane_dispatch.py"),
+        "--claims-path", str(claims_path),
+    ])
+    assert rc == 2
+    assert "refusing transient path" in capsys.readouterr().err
+    assert not claims_path.exists()
+
+
 def test_main_authorized_mode_without_env_warns_but_still_runs(tmp_path, monkeypatch, capsys):
     cand_file = tmp_path / "c.jsonl"
     cand_file.write_text(
@@ -1171,7 +1207,8 @@ def test_main_authorized_mode_without_env_warns_but_still_runs(tmp_path, monkeyp
     )
     helper = tmp_path / "claim_lane_dispatch.py"
     helper.write_text("# canonical\n", encoding="utf-8")
-    journal = tmp_path / "journal.jsonl"
+    monkeypatch.setattr(loop, "REPO_ROOT", tmp_path)
+    journal = tmp_path / ".omx" / "state" / "journal.jsonl"
     monkeypatch.delenv(loop.OPERATOR_AUTHORIZED_MODE_ENV_VAR, raising=False)
     rc = loop.main([
         "--candidates-jsonl", str(cand_file),

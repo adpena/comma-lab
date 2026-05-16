@@ -95,6 +95,7 @@ import math
 import re
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
@@ -162,6 +163,38 @@ _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 def _is_sha256_hex(value: object) -> bool:
     """Return True only for concrete 64-hex SHA-256 strings."""
     return bool(_SHA256_HEX_RE.fullmatch(str(value or "").strip()))
+
+
+def _path_is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def validate_authorized_journal_path(journal_path: Path, *, repo_root: Path = REPO_ROOT) -> None:
+    """Refuse transient paths for self-authorized dispatch journals."""
+    allowed_roots = (repo_root / ".omx" / "state", repo_root / "reports")
+    if any(_path_is_relative_to(journal_path, root) for root in allowed_roots):
+        return
+
+    forbidden_roots = (
+        Path("/tmp"),
+        Path("/private/tmp"),
+        Path("/var/tmp"),
+        Path(tempfile.gettempdir()),
+    )
+    if any(_path_is_relative_to(journal_path, root) for root in forbidden_roots):
+        raise ValueError(
+            "--journal-path for authorized mode must be durable and repo-local "
+            "(.omx/state/ or reports/); refusing transient path "
+            f"{str(journal_path)!r}"
+        )
+    raise ValueError(
+        "--journal-path for authorized mode must be under repo-local .omx/state/ "
+        f"or reports/; got {str(journal_path)!r}"
+    )
 
 
 # ── Events / decisions / verdicts ──────────────────────────────────────────
@@ -2914,6 +2947,8 @@ def main(argv: list[str] | None = None) -> int:
                 "--operator-authorized-le-5-dollar-mode requires --journal-path "
                 "for the structured-row JSONL ledger (per CLAUDE.md no-/tmp-path)"
             )
+        if args.operator_authorized_le_5_dollar_mode and args.journal_path is not None:
+            validate_authorized_journal_path(args.journal_path, repo_root=REPO_ROOT)
     except (ValueError, FileNotFoundError) as exc:
         print(f"cathedral_autopilot_autonomous_loop: {exc}", file=sys.stderr)
         return 2
