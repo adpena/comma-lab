@@ -82,6 +82,16 @@ from tac.packet_compiler.pr105_packed_state_schema import (
     PackedStateSchemaEntry,
     pack_state_schema_size_sorted,
 )
+from tac.packet_compiler.pr106_candidate_matrix import (
+    DEFAULT_PR106_PACKETIR_CANDIDATES,
+    PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_JSON,
+    PR106_PACKETIR_CANDIDATE_MATRIX_DEFAULT_MD,
+    PR106_PACKETIR_CANDIDATE_MATRIX_SCHEMA,
+    PR106PacketIRCandidateSpec,
+    build_pr106_packetir_candidate_matrix,
+    render_pr106_packetir_candidate_matrix_markdown,
+    write_pr106_packetir_candidate_matrix,
+)
 from tac.packet_compiler.pr106_sidecar_packet import (
     PR106_ALLOWED_SINGLE_MEMBER_NAMES,
     PR106_DEFAULT_MEMBER_NAME,
