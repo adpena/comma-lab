@@ -222,6 +222,24 @@ def build_packetir_exact_closure(
             "candidate_archive_bytes": candidate_bytes,
         },
     )
+    cuda_authority_blockers = _axis_authority_blockers(cuda_summary)
+    _check(
+        checks,
+        "cuda_eval_promotion_and_rank_authority_blockers_absent",
+        not cuda_authority_blockers,
+        requirement=(
+            "CUDA auth-eval rows with promotion or rank/kill blockers must not "
+            "be summarized by a blocker-free top-level PacketIR closure"
+        ),
+        evidence={
+            "promotion_eligible": cuda_summary.get("promotion_eligible"),
+            "promotion_blockers": list(cuda_summary.get("promotion_blockers") or []),
+            "rank_or_kill_blockers": list(
+                cuda_summary.get("rank_or_kill_blockers") or []
+            ),
+            "cuda_authority_blockers": cuda_authority_blockers,
+        },
+    )
 
     cpu_summary: dict[str, Any] | None = None
     if cpu_eval is not None:
@@ -299,6 +317,12 @@ def build_packetir_exact_closure(
             "runtime_consumption_runtime_source_tree_sha256": runtime_consumption_summary.get(
                 "runtime_source_tree_sha256"
             ),
+            "full_frame_runtime_content_tree_sha256": full_frame_parity_summary.get(
+                "runtime_content_tree_sha256"
+            ),
+            "runtime_consumption_runtime_content_tree_sha256": runtime_consumption_summary.get(
+                "runtime_content_tree_sha256"
+            ),
             "cuda_runtime_inflate_py_sha256": cuda_summary.get("runtime_inflate_py_sha256"),
             "cuda_runtime_content_tree_sha256": cuda_summary.get(
                 "runtime_content_tree_sha256"
@@ -345,7 +369,7 @@ def build_packetir_exact_closure(
 
     return {
         "schema": SCHEMA,
-        "schema_version": 2,
+        "schema_version": 3,
         "tool": TOOL_NAME,
         "lane_id": lane_id,
         "classification": classification,
@@ -355,6 +379,7 @@ def build_packetir_exact_closure(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
+        "closure_authority_blockers": cuda_authority_blockers,
         "duplicate_dispatch_blockers": _duplicate_dispatch_blockers(classification),
         "archive": {
             "source_archive_sha256": source_sha,
@@ -442,7 +467,9 @@ def render_packetir_exact_closure_markdown(closure: Mapping[str, Any]) -> str:
         "",
         f"- runtime_consumption_valid: `{_bool_text(runtime_proof.get('valid') is True)}`",
         f"- runtime_all_score_affecting_sections_consumed: `{runtime_proof.get('runtime_all_score_affecting_sections_consumed')}`",
+        f"- runtime_consumption_runtime_content_tree_sha256: `{runtime_proof.get('runtime_content_tree_sha256')}`",
         f"- same_runtime_full_frame_parity_valid: `{_bool_text(full_frame_parity.get('valid') is True)}`",
+        f"- full_frame_runtime_content_tree_sha256: `{full_frame_parity.get('runtime_content_tree_sha256')}`",
         f"- full_frame_streaming_raw_sha256: `{full_frame_parity.get('candidate_streaming_raw_sha256')}`",
         "",
         "## Comparisons",
@@ -535,8 +562,8 @@ def _eval_summary(payload: Mapping[str, Any], *, required_axis: str) -> dict[str
         "score_claim_valid": payload.get("score_claim_valid"),
         "exact_cuda_eval_complete": payload.get("exact_cuda_eval_complete"),
         "promotion_eligible": payload.get("promotion_eligible"),
-        "rank_or_kill_blockers": list(payload.get("rank_or_kill_blockers") or []),
-        "promotion_blockers": list(payload.get("promotion_blockers") or []),
+        "rank_or_kill_blockers": _str_list(payload.get("rank_or_kill_blockers")),
+        "promotion_blockers": _str_list(payload.get("promotion_blockers")),
         "runtime_tree_sha256": _first_str(runtime_manifest.get("runtime_tree_sha256")),
         "runtime_content_tree_sha256": _first_str(
             runtime_manifest.get("runtime_content_tree_sha256")
@@ -562,6 +589,15 @@ def _mark_non_cuda_axis_diagnostic(summary: dict[str, Any]) -> None:
     for key in ("promotion_blockers", "rank_or_kill_blockers"):
         existing = [str(item) for item in summary.get(key) or []]
         summary[key] = [*existing, *[item for item in blockers if item not in existing]]
+
+
+def _axis_authority_blockers(summary: Mapping[str, Any]) -> list[str]:
+    """Return exact-axis blockers that must be visible at closure top level."""
+
+    blockers: list[str] = []
+    for key in ("promotion_blockers", "rank_or_kill_blockers"):
+        blockers.extend(_str_list(summary.get(key)))
+    return list(dict.fromkeys(blockers))
 
 
 def _runtime_consumption_summary(
@@ -598,6 +634,10 @@ def _runtime_consumption_summary(
         proof=data,
     )
     runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
+    runtime_content_tree_sha = _first_str(
+        data.get("runtime_content_tree_sha256"),
+        runtime_source_manifest.get("runtime_content_tree_sha256"),
+    )
     valid = (
         bool(data)
         and data.get("schema") == "pr106_sidecar_runtime_decode_consumption_proof_v1"
@@ -632,6 +672,7 @@ def _runtime_consumption_summary(
         "runtime_source_tree_sha256": runtime_source_manifest.get(
             "runtime_source_tree_sha256"
         ),
+        "runtime_content_tree_sha256": runtime_content_tree_sha,
         "runtime_source_files": [
             {
                 "path": file.get("path"),
@@ -762,6 +803,10 @@ def _full_frame_parity_summary(
         if file.get("path") and _first_str(file.get("sha256"))
     }
     runtime_inflate_py_sha = _first_str(data.get("runtime_inflate_py_sha256"))
+    runtime_content_tree_sha = _first_str(
+        data.get("runtime_content_tree_sha256"),
+        runtime_source_manifest.get("runtime_content_tree_sha256"),
+    )
     candidate_n_pairs_hashed = _first_int(candidate.get("n_pairs_hashed"))
     candidate_n_pairs_total = _first_int(candidate.get("n_pairs_total"))
     source_n_pairs_hashed = _first_int(source.get("n_pairs_hashed"))
@@ -811,6 +856,7 @@ def _full_frame_parity_summary(
         "runtime_source_tree_sha256": runtime_source_manifest.get(
             "runtime_source_tree_sha256"
         ),
+        "runtime_content_tree_sha256": runtime_content_tree_sha,
         "runtime_source_files": [
             {
                 "path": file.get("path"),
@@ -870,6 +916,13 @@ def _runtime_identity_matches_eval(
     consumption_runtime_files = _as_mapping(
         runtime_consumption_summary.get("runtime_file_sha256s")
     )
+    cuda_runtime_content_tree = cuda_summary.get("runtime_content_tree_sha256")
+    parity_runtime_content_tree = full_frame_parity_summary.get(
+        "runtime_content_tree_sha256"
+    )
+    consumption_runtime_content_tree = runtime_consumption_summary.get(
+        "runtime_content_tree_sha256"
+    )
     parity_files_match_consumption = bool(parity_runtime_files) and all(
         parity_runtime_files.get(path) == sha
         for path, sha in consumption_runtime_files.items()
@@ -892,7 +945,10 @@ def _runtime_identity_matches_eval(
         and parity_files_match_consumption
         and parity_files_match_cuda
         and consumption_files_match_cuda
-        and isinstance(cuda_summary.get("runtime_content_tree_sha256"), str)
+        and isinstance(cuda_runtime_content_tree, str)
+        and bool(cuda_runtime_content_tree)
+        and parity_runtime_content_tree == cuda_runtime_content_tree
+        and consumption_runtime_content_tree == cuda_runtime_content_tree
     )
 
 
@@ -1081,6 +1137,14 @@ def _first_float(*values: Any) -> float | None:
             if math.isfinite(out):
                 return out
     return None
+
+
+def _str_list(value: Any) -> list[str]:
+    if isinstance(value, (str, bytes)):
+        return [value.decode() if isinstance(value, bytes) else value] if value else []
+    if isinstance(value, Sequence):
+        return [str(item) for item in value if item]
+    return []
 
 
 def _is_number(value: Any) -> bool:

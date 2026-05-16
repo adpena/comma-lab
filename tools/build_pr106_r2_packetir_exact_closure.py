@@ -6,23 +6,25 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import sys
 from pathlib import Path
 from typing import Any
 
 try:
     from tools.tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
     from tool_bootstrap import ensure_repo_imports, repo_root_from_tool
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.hnerv_frontier_defaults import (  # noqa: E402
+    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_EVAL,
+)
 from tac.packetir_exact_closure import (  # noqa: E402
     build_packetir_exact_closure,
     render_packetir_exact_closure_markdown,
-)
-from tac.hnerv_frontier_defaults import (  # noqa: E402
-    ACTIVE_NONPROMOTIONAL_EXACT_CUDA_REFERENCE_EVAL,
 )
 from tac.repo_io import read_json, write_json  # noqa: E402
 

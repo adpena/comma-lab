@@ -111,6 +111,36 @@ def test_packetir_exact_closure_rejects_score_recompute_mismatch(tmp_path: Path)
     assert "cuda_eval_is_valid_contest_cuda_score_claim" in closure["blockers"]
 
 
+def test_packetir_exact_closure_surfaces_cuda_promotion_rank_blockers_top_level(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    cuda_eval = _eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True)
+    cuda_eval["promotion_blockers"] = ["runtime_tree_not_submission_ready"]
+    cuda_eval["rank_or_kill_blockers"] = ["needs_adversarial_review"]
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane",
+        candidate_result=_candidate_result(archive),
+        candidate_archive_path=archive,
+        cuda_eval=cuda_eval,
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=_runtime_consumption(archive),
+        full_frame_parity_proof=_full_frame_parity(archive),
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "blocked_inconsistent_or_missing_evidence"
+    assert "cuda_eval_promotion_and_rank_authority_blockers_absent" in closure["blockers"]
+    assert closure["closure_authority_blockers"] == [
+        "runtime_tree_not_submission_ready",
+        "needs_adversarial_review",
+    ]
+
+
 def test_packetir_exact_closure_requires_runtime_and_full_frame_proofs(tmp_path: Path) -> None:
     archive = tmp_path / "candidate.zip"
     _write_zip(archive, b"x" * BYTES_CANDIDATE)
@@ -135,6 +165,40 @@ def test_packetir_exact_closure_requires_runtime_and_full_frame_proofs(tmp_path:
         in closure["blockers"]
     )
     assert "runtime_identity_matches_cuda_eval_runtime" in closure["blockers"]
+
+
+def test_packetir_exact_closure_rejects_runtime_proofs_without_exact_cuda_content_tree(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    _write_zip(archive, b"x" * BYTES_CANDIDATE)
+    runtime_consumption = _runtime_consumption(archive)
+    full_frame_parity = _full_frame_parity(archive)
+    runtime_consumption["runtime_source_manifest"].pop("runtime_content_tree_sha256")
+    full_frame_parity["runtime_source_manifest"].pop("runtime_content_tree_sha256")
+    source_eval = _eval(SHA_SOURCE, archive.stat().st_size + 100, "contest_cuda", claim=True)
+
+    closure = build_packetir_exact_closure(
+        lane_id="lane",
+        candidate_result=_candidate_result(archive),
+        candidate_archive_path=archive,
+        cuda_eval=_eval(_sha256_file(archive), archive.stat().st_size, "contest_cuda", claim=True),
+        source_cuda_eval=source_eval,
+        current_best_cuda_eval=source_eval,
+        runtime_consumption_proof=runtime_consumption,
+        full_frame_parity_proof=full_frame_parity,
+        repo_root=tmp_path,
+    )
+
+    assert closure["classification"] == "blocked_inconsistent_or_missing_evidence"
+    assert "runtime_identity_matches_cuda_eval_runtime" in closure["blockers"]
+    assert closure["packetir"]["runtime_consumption_proof"]["valid"] is True
+    assert closure["packetir"]["runtime_consumption_proof"][
+        "runtime_content_tree_sha256"
+    ] is None
+    assert closure["packetir"]["same_runtime_full_frame_parity"][
+        "runtime_content_tree_sha256"
+    ] is None
 
 
 def test_packetir_exact_closure_rejects_runtime_consumption_runtime_mismatch(
@@ -710,6 +774,7 @@ def _runtime_consumption(archive: Path) -> dict:
         "runtime_inflate_py_sha256": RUNTIME_INFLATE_PY_SHA,
         "runtime_source_manifest": {
             "runtime_source_tree_sha256": "4" * 64,
+            "runtime_content_tree_sha256": RUNTIME_CONTENT_TREE_SHA,
             "files": [
                 {
                     "path": "inflate.py",
@@ -754,6 +819,7 @@ def _full_frame_parity(archive: Path) -> dict:
         "runtime_inflate_py_sha256": RUNTIME_INFLATE_PY_SHA,
         "runtime_source_manifest": {
             "runtime_source_tree_sha256": "4" * 64,
+            "runtime_content_tree_sha256": RUNTIME_CONTENT_TREE_SHA,
             "files": [
                 {
                     "path": "inflate.py",
