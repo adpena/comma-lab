@@ -126,6 +126,9 @@ MATERIALIZATION_DISPATCH_BLOCKERS = (
     "requires_runtime_decode_apply_proof_for_semantic_packetir_candidate",
     "requires_adjudicated_component_recompute_before_score_claim",
 )
+PACKET_IR_NOOP_DISPATCH_BLOCKER = (
+    "packet_ir_materialization_no_score_affecting_payload_change_without_rate_gain"
+)
 
 
 @dataclass(frozen=True)
@@ -452,6 +455,53 @@ def audit_builder_metadata(build_metadata: Mapping[str, Any]) -> dict[str, objec
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def packet_ir_score_affecting_payload_changed(build_metadata: Mapping[str, Any]) -> bool | None:
+    """Return whether PacketIR source/candidate score-affecting payload hashes differ."""
+
+    packet_ir = build_metadata.get("packet_ir")
+    if not isinstance(packet_ir, Mapping):
+        return None
+    source = packet_ir.get("source")
+    candidate = packet_ir.get("candidate")
+    if not isinstance(source, Mapping) or not isinstance(candidate, Mapping):
+        return None
+    source_sha = source.get("emitted_payload_sha256")
+    candidate_sha = candidate.get("emitted_payload_sha256")
+    if not isinstance(source_sha, str) or not isinstance(candidate_sha, str):
+        return None
+    return source_sha != candidate_sha
+
+
+def packet_ir_charged_archive_bytes_delta(build_metadata: Mapping[str, Any]) -> int | None:
+    """Return candidate-source archive byte delta when builder metadata binds both."""
+
+    source_bytes = build_metadata.get("source_archive_bytes")
+    candidate_bytes = build_metadata.get("archive_zip_bytes")
+    if isinstance(source_bytes, bool) or isinstance(candidate_bytes, bool):
+        return None
+    if not isinstance(source_bytes, int) or not isinstance(candidate_bytes, int):
+        return None
+    return candidate_bytes - source_bytes
+
+
+def packet_ir_materialization_noop_blockers(
+    build_metadata: Mapping[str, Any],
+) -> list[str]:
+    """Block exact-eval dispatch for PacketIR no-ops with no rate-axis gain.
+
+    A score-table materialization that preserves every score-affecting PacketIR
+    payload byte and is not byte-smaller than its source is only a proxy/control
+    artifact. Exact eval can be re-enabled by either proving score-affecting
+    payload movement or by producing a true rate-only archive shrink.
+    """
+
+    payload_changed = packet_ir_score_affecting_payload_changed(build_metadata)
+    byte_delta = packet_ir_charged_archive_bytes_delta(build_metadata)
+    if payload_changed is False and byte_delta is not None and byte_delta >= 0:
+        return [PACKET_IR_NOOP_DISPATCH_BLOCKER]
+    return []
 
 
 PACKET_IR_NATIVE_SCORE_TABLE_FORMATS = {
@@ -924,11 +974,15 @@ def materialize_candidate(
     if build_metadata.get("score_table", {}).get("score_table_manifest_validated") is not True:
         raise RuntimeError("builder did not validate the score-table manifest")
     builder_metadata_audit = audit_builder_metadata(build_metadata)
+    packet_ir_payload_changed = packet_ir_score_affecting_payload_changed(build_metadata)
+    packet_ir_byte_delta = packet_ir_charged_archive_bytes_delta(build_metadata)
+    packet_ir_noop_blockers = packet_ir_materialization_noop_blockers(build_metadata)
     audit_blockers = ordered_unique(
         [
             *MATERIALIZATION_DISPATCH_BLOCKERS,
             *[str(item) for item in score_table_manifest_audit["blockers"]],
             *[str(item) for item in builder_metadata_audit["blockers"]],
+            *packet_ir_noop_blockers,
         ]
     )
     audit_warnings = ordered_unique(
@@ -960,18 +1014,12 @@ def materialize_candidate(
         "score_table_manifest": _artifact(manifest_path),
         "delta_radius": int(delta_radius),
         "top_k": int(top_k),
-        "packet_ir_score_affecting_payload_changed": (
-            build_metadata.get("packet_ir", {})
-            .get("source", {})
-            .get("emitted_payload_sha256")
-            != build_metadata.get("packet_ir", {})
-            .get("candidate", {})
-            .get("emitted_payload_sha256")
-        ),
+        "packet_ir_score_affecting_payload_changed": packet_ir_payload_changed,
+        "packet_ir_charged_archive_bytes_delta": packet_ir_byte_delta,
         "packet_ir_charged_archive_bytes_changed": (
-            build_metadata.get("source_archive_bytes")
-            != build_metadata.get("archive_zip_bytes")
+            None if packet_ir_byte_delta is None else packet_ir_byte_delta != 0
         ),
+        "packet_ir_noop_dispatch_blockers": packet_ir_noop_blockers,
         "builder": {
             "path": repo_relative(BUILDER, REPO_ROOT),
             "command": command,

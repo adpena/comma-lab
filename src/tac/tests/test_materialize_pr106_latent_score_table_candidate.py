@@ -626,7 +626,7 @@ def test_format0c_materializer_keeps_noop_score_table_as_format0c_noop(
     monkeypatch.setattr(module.subprocess, "run", fail_run)
 
     output_dir = tmp_path / "out"
-    module.materialize_candidate(
+    materialization = module.materialize_candidate(
         source_archive=source_archive,
         output_dir=output_dir,
         score_table_root=tmp_path,
@@ -646,6 +646,31 @@ def test_format0c_materializer_keeps_noop_score_table_as_format0c_noop(
     assert metadata["diagnostics"]["unfiltered_strict_improvement_pair_count"] == 0
     assert metadata["semantic_materialization"]["changed_pair_count"] == 0
     assert member.payload == source_payload
+    assert materialization["packet_ir_score_affecting_payload_changed"] is False
+    assert materialization["packet_ir_charged_archive_bytes_delta"] == 0
+    assert (
+        module.PACKET_IR_NOOP_DISPATCH_BLOCKER
+        in materialization["exact_eval_dispatch_blockers"]
+    )
+    assert materialization["packet_ir_noop_dispatch_blockers"] == [
+        module.PACKET_IR_NOOP_DISPATCH_BLOCKER
+    ]
+
+
+def test_packet_ir_noop_blocker_allows_rate_only_shrink() -> None:
+    module = _load_tool()
+    build_metadata = {
+        "source_archive_bytes": 1000,
+        "archive_zip_bytes": 990,
+        "packet_ir": {
+            "source": {"emitted_payload_sha256": "a" * 64},
+            "candidate": {"emitted_payload_sha256": "a" * 64},
+        },
+    }
+
+    assert module.packet_ir_score_affecting_payload_changed(build_metadata) is False
+    assert module.packet_ir_charged_archive_bytes_delta(build_metadata) == -10
+    assert module.packet_ir_materialization_noop_blockers(build_metadata) == []
 
 
 def test_format0c_materializer_routes_incompatible_strict_score_table_dims_to_format0d(
