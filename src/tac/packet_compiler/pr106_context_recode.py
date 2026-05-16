@@ -56,6 +56,10 @@ ALWAYS_BLOCKERS = (
     "exact_cuda_auth_eval_missing",
     "contest_auth_eval_adjudication_missing",
 )
+DERIVABLE_SECTION_PREFIXES = {
+    "decoder_packed_brotli": b"HDM9",
+    "latents_and_sidecar_brotli": b"HLM3",
+}
 
 
 class PR106ContextRecodeError(ValueError):
@@ -179,6 +183,8 @@ class AdaptiveContextRecodeSection:
     integrated_bytes: bytes
     decoded_bytes: bytes
     prefix_bytes: int
+    decoder_seed_prefix_bytes: int
+    prefix_source: str
     range_stream_bytes: int
     initial_count: int
     update_step: int
@@ -219,6 +225,8 @@ class AdaptiveContextRecodeSection:
             "lossless_roundtrip_proven": roundtrip,
             "no_op_detector_passed": changed and roundtrip,
             "prefix_bytes": self.prefix_bytes,
+            "decoder_seed_prefix_bytes": self.decoder_seed_prefix_bytes,
+            "prefix_source": self.prefix_source,
             "range_stream_bytes": self.range_stream_bytes,
             "initial_count": self.initial_count,
             "update_step": self.update_step,
@@ -673,6 +681,7 @@ def encode_adaptive_context_recode_section(
     context_order: int,
     initial_count: int = 1,
     update_step: int = 1,
+    prefix_mode: str = "stored",
 ) -> AdaptiveContextRecodeSection:
     """Encode one section with an adaptive context model and no static table."""
 
@@ -682,15 +691,35 @@ def encode_adaptive_context_recode_section(
         raise PR106ContextRecodeError("initial_count must be positive")
     if update_step <= 0:
         raise PR106ContextRecodeError("update_step must be positive")
+    if prefix_mode not in {"stored", "section_magic"}:
+        raise PR106ContextRecodeError("prefix_mode must be stored or section_magic")
     prefix_len = min(context_order, len(section_bytes))
+    prefix_source = "stored_prefix_bytes"
     prefix = section_bytes[:prefix_len]
+    stored_prefix = prefix
+    if prefix_mode == "section_magic":
+        derivable = DERIVABLE_SECTION_PREFIXES.get(section_name)
+        if derivable is None:
+            raise PR106ContextRecodeError(
+                f"section {section_name!r} has no derivable prefix"
+            )
+        if prefix_len > len(derivable):
+            raise PR106ContextRecodeError(
+                "context_order exceeds derivable section magic prefix"
+            )
+        if section_bytes[:prefix_len] != derivable[:prefix_len]:
+            raise PR106ContextRecodeError(
+                "section bytes do not match derivable section magic prefix"
+            )
+        prefix_source = "derived_from_section_magic"
+        stored_prefix = b""
     stream = _encode_adaptive_range_stream(
         section_bytes,
         context_order,
         initial_count=initial_count,
         update_step=update_step,
     )
-    integrated = prefix + stream
+    integrated = stored_prefix + stream
     decoded = _decode_adaptive_range_stream(
         prefix,
         source_len=len(section_bytes),
@@ -705,7 +734,9 @@ def encode_adaptive_context_recode_section(
         source_bytes=section_bytes,
         integrated_bytes=integrated,
         decoded_bytes=decoded,
-        prefix_bytes=len(prefix),
+        prefix_bytes=len(stored_prefix),
+        decoder_seed_prefix_bytes=len(prefix),
+        prefix_source=prefix_source,
         range_stream_bytes=len(stream),
         initial_count=initial_count,
         update_step=update_step,

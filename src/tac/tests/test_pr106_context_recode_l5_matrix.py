@@ -72,6 +72,38 @@ def test_adaptive_context_recode_roundtrips_without_static_model_table() -> None
     assert prototype["ready_for_exact_eval_dispatch"] is False
 
 
+def test_derived_prefix_adaptive_context_recode_uses_packetir_section_magic() -> None:
+    if not FORMAT0C_ARCHIVE.exists():
+        pytest.skip("Format0C PacketIR artifact is not present")
+
+    source = load_pr106_context_source_from_archive(FORMAT0C_ARCHIVE)
+    section = source.section("latents_and_sidecar_brotli")
+
+    stored = encode_adaptive_context_recode_section(
+        section.name,
+        section.data,
+        context_order=2,
+    ).manifest()
+    derived = encode_adaptive_context_recode_section(
+        section.name,
+        section.data,
+        context_order=2,
+        prefix_mode="section_magic",
+    ).manifest()
+
+    assert section.data.startswith(b"HLM3")
+    assert derived["lossless_roundtrip_proven"] is True
+    assert derived["no_op_detector_passed"] is True
+    assert derived["prefix_source"] == "derived_from_section_magic"
+    assert derived["prefix_bytes"] == 0
+    assert derived["decoder_seed_prefix_bytes"] == 2
+    assert derived["range_stream_bytes"] == stored["range_stream_bytes"]
+    assert derived["integrated_section_bytes"] == stored["integrated_section_bytes"] - 2
+    assert derived["delta_bytes_vs_source_section"] == -1
+    assert derived["score_claim"] is False
+    assert derived["ready_for_exact_eval_dispatch"] is False
+
+
 def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
     tmp_path: Path,
 ) -> None:
@@ -94,6 +126,7 @@ def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
             "--build-adaptive-prototypes",
             "--adaptive-orders",
             "2",
+            "--build-derived-prefix-adaptive-prototypes",
             "--json-out",
             str(json_out),
             "--md-out",
@@ -113,7 +146,21 @@ def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
     assert matrix["rate_positive_prototype_row_count"] == 0
     assert matrix["adaptive_prototype_row_count"] == 4
     assert matrix["rate_positive_adaptive_prototype_row_count"] == 0
+    assert matrix["derived_prefix_adaptive_prototype_row_count"] == 4
+    assert matrix["rate_positive_derived_prefix_adaptive_prototype_row_count"] == 2
     assert matrix["best_adaptive_prototype"]["delta_bytes_vs_source_section"] == 1
+    assert (
+        matrix["best_rate_positive_derived_prefix_adaptive_prototype"][
+            "delta_bytes_vs_source_section"
+        ]
+        == -1
+    )
+    assert (
+        matrix["best_rate_positive_derived_prefix_adaptive_prototype"][
+            "prefix_source"
+        ]
+        == "derived_from_section_magic"
+    )
     assert all(
         "prototype_not_rate_positive_after_model_overhead"
         in prototype["blockers"]
@@ -125,5 +172,12 @@ def test_l5_v2_packetir_section_entropy_matrix_records_charged_prototype_floor(
         in prototype["blockers"]
         for row in matrix["rows"]
         for prototype in row["adaptive_prototype_rows"]
+    )
+    assert all(
+        prototype["score_claim"] is False
+        and prototype["promotion_eligible"] is False
+        and prototype["ready_for_exact_eval_dispatch"] is False
+        for row in matrix["rows"]
+        for prototype in row["derived_prefix_adaptive_prototype_rows"]
     )
     assert md_out.exists()

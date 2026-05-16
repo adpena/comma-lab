@@ -67,7 +67,7 @@ L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH = (
     ".omx/research/l5_v2_packetir_section_entropy_matrix_20260516_codex.json"
 )
 L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256 = (
-    "f7419201dcc4c8307d3451cbf26797669a39356488556721be31f5cd76796bf2"
+    "7bf0d1bd267a36d469f34b07c26ad5ddecff4603195d1d44462ae77eeef6efc7"
 )
 L5_V2_PACKETIR_STACK_EVIDENCE_SCHEMA = "l5_v2_packetir_stack_evidence_v1"
 L5_V2_PR106_STACK_CELL_CANDIDATES_SCHEMA = (
@@ -645,6 +645,12 @@ def l5_v2_packetir_section_entropy_evidence_payload(
     adaptive_rate_positive_count = matrix.get(
         "rate_positive_adaptive_prototype_row_count", 0
     )
+    derived_prefix_adaptive_row_count = matrix.get(
+        "derived_prefix_adaptive_prototype_row_count", 0
+    )
+    derived_prefix_adaptive_rate_positive_count = matrix.get(
+        "rate_positive_derived_prefix_adaptive_prototype_row_count", 0
+    )
     if not isinstance(profiled_candidate_count, int) or isinstance(
         profiled_candidate_count, bool
     ):
@@ -672,8 +678,43 @@ def l5_v2_packetir_section_entropy_evidence_payload(
             "l5_v2_packetir_section_entropy_adaptive_rate_positive_count_not_int"
         )
         adaptive_rate_positive_count = 0
+    if not isinstance(derived_prefix_adaptive_row_count, int) or isinstance(
+        derived_prefix_adaptive_row_count, bool
+    ):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_derived_prefix_adaptive_count_not_int"
+        )
+        derived_prefix_adaptive_row_count = 0
+    if not isinstance(
+        derived_prefix_adaptive_rate_positive_count, int
+    ) or isinstance(derived_prefix_adaptive_rate_positive_count, bool):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_derived_prefix_adaptive_rate_positive_count_not_int"
+        )
+        derived_prefix_adaptive_rate_positive_count = 0
     if prototype_rows and prototype_row_count != len(prototype_rows):
         blockers.append("l5_v2_packetir_section_entropy_prototype_count_mismatch")
+    adaptive_rows = [
+        prototype
+        for row in _mapping_items(matrix.get("rows"))
+        for prototype in _mapping_items(row.get("adaptive_prototype_rows"))
+    ]
+    derived_prefix_adaptive_rows = [
+        prototype
+        for row in _mapping_items(matrix.get("rows"))
+        for prototype in _mapping_items(
+            row.get("derived_prefix_adaptive_prototype_rows")
+        )
+    ]
+    if adaptive_rows and adaptive_row_count != len(adaptive_rows):
+        blockers.append("l5_v2_packetir_section_entropy_adaptive_count_mismatch")
+    if (
+        derived_prefix_adaptive_rows
+        and derived_prefix_adaptive_row_count != len(derived_prefix_adaptive_rows)
+    ):
+        blockers.append(
+            "l5_v2_packetir_section_entropy_derived_prefix_adaptive_count_mismatch"
+        )
 
     best_charged_prototype = None
     best_delta = None
@@ -697,6 +738,10 @@ def l5_v2_packetir_section_entropy_evidence_payload(
         blockers.append(
             "l5_v2_packetir_static_context_recode_no_rate_positive_prototypes"
         )
+    if matrix and adaptive_row_count and adaptive_rate_positive_count == 0:
+        blockers.append(
+            "l5_v2_packetir_adaptive_context_recode_no_rate_positive_prototypes"
+        )
 
     return {
         "schema": L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA,
@@ -713,16 +758,29 @@ def l5_v2_packetir_section_entropy_evidence_payload(
         "rate_positive_prototype_row_count": rate_positive_count,
         "adaptive_prototype_row_count": adaptive_row_count,
         "rate_positive_adaptive_prototype_row_count": adaptive_rate_positive_count,
+        "derived_prefix_adaptive_prototype_row_count": (
+            derived_prefix_adaptive_row_count
+        ),
+        "rate_positive_derived_prefix_adaptive_prototype_row_count": (
+            derived_prefix_adaptive_rate_positive_count
+        ),
         "best_rate_positive_prototype": matrix.get("best_rate_positive_prototype"),
         "best_adaptive_prototype": matrix.get("best_adaptive_prototype"),
         "best_rate_positive_adaptive_prototype": matrix.get(
             "best_rate_positive_adaptive_prototype"
         ),
+        "best_derived_prefix_adaptive_prototype": matrix.get(
+            "best_derived_prefix_adaptive_prototype"
+        ),
+        "best_rate_positive_derived_prefix_adaptive_prototype": matrix.get(
+            "best_rate_positive_derived_prefix_adaptive_prototype"
+        ),
         "best_charged_prototype": best_charged_prototype,
         "evidence_semantics": (
             "Charged static-context PacketIR section recodes are planning "
-            "evidence only; zero rate-positive rows redirects L5 v2 toward "
-            "lower-overhead, derivable, or runtime-integrated entropy models."
+            "evidence only; derived-prefix adaptive rows may be byte-positive "
+            "only when the section magic is recoverable from the PacketIR grammar, "
+            "and still require runtime decoder integration plus full-frame parity."
         ),
         "score_claim": False,
         "promotion_eligible": False,

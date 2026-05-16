@@ -144,12 +144,28 @@ def test_briefing_json_composite_has_all_three_keys():
     assert l5["packetir_section_entropy_adaptive_prototype_row_count"] >= 1
     assert l5["packetir_section_entropy_rate_positive_adaptive_prototype_row_count"] == 0
     assert (
+        l5["packetir_section_entropy_derived_prefix_adaptive_prototype_row_count"]
+        >= 1
+    )
+    assert (
+        l5[
+            "packetir_section_entropy_rate_positive_derived_prefix_adaptive_prototype_row_count"
+        ]
+        >= 1
+    )
+    assert (
         l5["packetir_section_entropy_best_adaptive_prototype"][
             "delta_bytes_vs_source_section"
         ]
         == 1
     )
     assert l5["packetir_section_entropy_best_rate_positive_adaptive_prototype"] is None
+    assert (
+        l5[
+            "packetir_section_entropy_best_rate_positive_derived_prefix_adaptive_prototype"
+        ]["delta_bytes_vs_source_section"]
+        == -1
+    )
     active_claim_count = int(out["dispatch_claim_summary"].get("active_count") or 0)
     assert l5["active_dispatch_claim_count"] == active_claim_count
     assert l5["dispatch_claim_gate_blocked"] == (active_claim_count > 0)

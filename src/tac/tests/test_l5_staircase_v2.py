@@ -479,9 +479,17 @@ def test_l5_v2_packetir_section_entropy_evidence_is_nonpromotional() -> None:
     assert payload["rate_positive_prototype_row_count"] == 0
     assert payload["adaptive_prototype_row_count"] == 4
     assert payload["rate_positive_adaptive_prototype_row_count"] == 0
+    assert payload["derived_prefix_adaptive_prototype_row_count"] == 4
+    assert payload["rate_positive_derived_prefix_adaptive_prototype_row_count"] == 2
     assert payload["best_rate_positive_prototype"] is None
     assert payload["best_adaptive_prototype"]["delta_bytes_vs_source_section"] == 1
     assert payload["best_rate_positive_adaptive_prototype"] is None
+    assert (
+        payload["best_rate_positive_derived_prefix_adaptive_prototype"][
+            "delta_bytes_vs_source_section"
+        ]
+        == -1
+    )
     assert payload["best_charged_prototype"]["delta_bytes_vs_source_section"] == (
         58284.0
     )
@@ -530,6 +538,14 @@ def test_l5_v2_dispatch_readiness_surfaces_section_entropy_evidence() -> None:
     assert entropy["rate_positive_prototype_row_count"] == 0
     assert entropy["adaptive_prototype_row_count"] == 4
     assert entropy["best_adaptive_prototype"]["delta_bytes_vs_source_section"] == 1
+    assert entropy["derived_prefix_adaptive_prototype_row_count"] == 4
+    assert entropy["rate_positive_derived_prefix_adaptive_prototype_row_count"] == 2
+    assert (
+        entropy["best_rate_positive_derived_prefix_adaptive_prototype"][
+            "delta_bytes_vs_source_section"
+        ]
+        == -1
+    )
 
 
 def test_l5_v2_packetir_stack_evidence_fails_closed_without_matrix(

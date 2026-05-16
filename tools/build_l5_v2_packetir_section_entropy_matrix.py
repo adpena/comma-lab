@@ -86,6 +86,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="emit adaptive no-static-table prototype rows for targetable sections",
     )
+    parser.add_argument(
+        "--build-derived-prefix-adaptive-prototypes",
+        action="store_true",
+        help=(
+            "emit adaptive rows that derive PR106 section-magic prefixes from "
+            "the PacketIR grammar instead of storing them per archive"
+        ),
+    )
     parser.add_argument("--json-out", type=Path, default=DEFAULT_JSON_OUT)
     parser.add_argument("--md-out", type=Path, default=DEFAULT_MD_OUT)
     return parser.parse_args(argv)
@@ -111,6 +119,7 @@ def build_matrix(
     adaptive_orders: tuple[int, ...] = (2,),
     build_prototypes: bool = False,
     build_adaptive_prototypes: bool = False,
+    build_derived_prefix_adaptive_prototypes: bool = False,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     blockers: list[str] = []
@@ -125,6 +134,9 @@ def build_matrix(
                 adaptive_orders=adaptive_orders,
                 build_prototypes=build_prototypes,
                 build_adaptive_prototypes=build_adaptive_prototypes,
+                build_derived_prefix_adaptive_prototypes=(
+                    build_derived_prefix_adaptive_prototypes
+                ),
             )
         )
     if candidate_ids is not None:
@@ -151,6 +163,17 @@ def build_matrix(
     adaptive_rate_positive = [
         proto for proto in adaptive_rows if proto.get("delta_bytes_vs_source_section", 1) < 0
     ]
+    derived_prefix_adaptive_rows = [
+        proto
+        for row in existing_rows
+        for proto in row.get("derived_prefix_adaptive_prototype_rows", [])
+        if isinstance(proto, dict)
+    ]
+    derived_prefix_adaptive_rate_positive = [
+        proto
+        for proto in derived_prefix_adaptive_rows
+        if proto.get("delta_bytes_vs_source_section", 1) < 0
+    ]
     return {
         "schema": SCHEMA,
         "tool": TOOL,
@@ -166,12 +189,21 @@ def build_matrix(
         "adaptive_orders": list(adaptive_orders),
         "prototype_rows_built": bool(build_prototypes),
         "adaptive_prototype_rows_built": bool(build_adaptive_prototypes),
+        "derived_prefix_adaptive_prototype_rows_built": bool(
+            build_derived_prefix_adaptive_prototypes
+        ),
         "candidate_count": len(rows),
         "profiled_candidate_count": len(existing_rows),
         "prototype_row_count": len(prototype_rows),
         "rate_positive_prototype_row_count": len(rate_positive),
         "adaptive_prototype_row_count": len(adaptive_rows),
         "rate_positive_adaptive_prototype_row_count": len(adaptive_rate_positive),
+        "derived_prefix_adaptive_prototype_row_count": len(
+            derived_prefix_adaptive_rows
+        ),
+        "rate_positive_derived_prefix_adaptive_prototype_row_count": len(
+            derived_prefix_adaptive_rate_positive
+        ),
         "best_rate_positive_prototype": min(
             rate_positive,
             key=lambda row: int(row["delta_bytes_vs_source_section"]),
@@ -184,6 +216,16 @@ def build_matrix(
         ),
         "best_rate_positive_adaptive_prototype": min(
             adaptive_rate_positive,
+            key=lambda row: int(row["delta_bytes_vs_source_section"]),
+            default=None,
+        ),
+        "best_derived_prefix_adaptive_prototype": min(
+            derived_prefix_adaptive_rows,
+            key=lambda row: int(row["delta_bytes_vs_source_section"]),
+            default=None,
+        ),
+        "best_rate_positive_derived_prefix_adaptive_prototype": min(
+            derived_prefix_adaptive_rate_positive,
             key=lambda row: int(row["delta_bytes_vs_source_section"]),
             default=None,
         ),
@@ -200,6 +242,7 @@ def _candidate_row(
     adaptive_orders: tuple[int, ...],
     build_prototypes: bool,
     build_adaptive_prototypes: bool,
+    build_derived_prefix_adaptive_prototypes: bool,
 ) -> dict[str, Any]:
     archive_path = REPO_ROOT / spec.archive_path
     base: dict[str, Any] = {
@@ -265,6 +308,19 @@ def _candidate_row(
                         context_order=order,
                     ).manifest()
                 )
+    derived_prefix_adaptive_prototype_rows: list[dict[str, Any]] = []
+    if build_derived_prefix_adaptive_prototypes:
+        for section_name in TARGETABLE_INNER_SECTIONS:
+            section = source.section(section_name)
+            for order in adaptive_orders:
+                derived_prefix_adaptive_prototype_rows.append(
+                    encode_adaptive_context_recode_section(
+                        section.name,
+                        section.data,
+                        context_order=order,
+                        prefix_mode="section_magic",
+                    ).manifest()
+                )
 
     return {
         **base,
@@ -280,6 +336,14 @@ def _candidate_row(
         "rate_positive_adaptive_prototype_rows": [
             row
             for row in adaptive_prototype_rows
+            if row.get("delta_bytes_vs_source_section", 1) < 0
+        ],
+        "derived_prefix_adaptive_prototype_rows": (
+            derived_prefix_adaptive_prototype_rows
+        ),
+        "rate_positive_derived_prefix_adaptive_prototype_rows": [
+            row
+            for row in derived_prefix_adaptive_prototype_rows
             if row.get("delta_bytes_vs_source_section", 1) < 0
         ],
         "blockers": list(DISPATCH_BLOCKERS),
@@ -318,12 +382,16 @@ def render_markdown(matrix: dict[str, Any]) -> str:
         f"- adaptive_prototype_row_count: `{matrix['adaptive_prototype_row_count']}`",
         "- rate_positive_adaptive_prototype_row_count: "
         f"`{matrix['rate_positive_adaptive_prototype_row_count']}`",
+        "- derived_prefix_adaptive_prototype_row_count: "
+        f"`{matrix['derived_prefix_adaptive_prototype_row_count']}`",
+        "- rate_positive_derived_prefix_adaptive_prototype_row_count: "
+        f"`{matrix['rate_positive_derived_prefix_adaptive_prototype_row_count']}`",
         f"- dispatch_blockers: `{', '.join(matrix['dispatch_blockers'])}`",
         "",
         "## Candidate Rows",
         "",
-        "| candidate | status | format | best target | floor delta | best static delta | best adaptive delta |",
-        "|---|---|---:|---|---:|---:|---:|",
+        "| candidate | status | format | best target | floor delta | best static delta | best adaptive delta | best derived-prefix adaptive delta |",
+        "|---|---|---:|---|---:|---:|---:|---:|",
     ]
     for row in matrix.get("rows", []):
         selected = row.get("selected_target") if isinstance(row, dict) else {}
@@ -341,8 +409,18 @@ def render_markdown(matrix: dict[str, Any]) -> str:
             key=lambda proto: int(proto.get("delta_bytes_vs_source_section", 10**18)),
             default={},
         )
+        derived_rows = (
+            row.get("derived_prefix_adaptive_prototype_rows")
+            if isinstance(row, dict)
+            else []
+        )
+        best_derived = min(
+            (proto for proto in derived_rows if isinstance(proto, dict)),
+            key=lambda proto: int(proto.get("delta_bytes_vs_source_section", 10**18)),
+            default={},
+        )
         lines.append(
-            "| {candidate} | `{status}` | `{fmt}` | `{target}` | {floor_delta} | {proto_delta} | {adaptive_delta} |".format(
+            "| {candidate} | `{status}` | `{fmt}` | `{target}` | {floor_delta} | {proto_delta} | {adaptive_delta} | {derived_delta} |".format(
                 candidate=row.get("candidate_id"),
                 status=row.get("status"),
                 fmt=row.get("expected_format_id"),
@@ -350,6 +428,7 @@ def render_markdown(matrix: dict[str, Any]) -> str:
                 floor_delta=selected.get("best_high_order_delta_vs_current_bytes", ""),
                 proto_delta=best_proto.get("delta_bytes_vs_source_section", ""),
                 adaptive_delta=best_adaptive.get("delta_bytes_vs_source_section", ""),
+                derived_delta=best_derived.get("delta_bytes_vs_source_section", ""),
             )
         )
     lines.append("")
@@ -369,6 +448,9 @@ def main(argv: list[str] | None = None) -> int:
         adaptive_orders=adaptive_orders,
         build_prototypes=args.build_prototypes,
         build_adaptive_prototypes=args.build_adaptive_prototypes,
+        build_derived_prefix_adaptive_prototypes=(
+            args.build_derived_prefix_adaptive_prototypes
+        ),
     )
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.write_text(json_text(matrix), encoding="utf-8")
