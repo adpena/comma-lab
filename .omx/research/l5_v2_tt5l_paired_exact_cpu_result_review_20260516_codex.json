@@ -1,0 +1,123 @@
+{
+  "baseline_score": null,
+  "canonical_score": 3.8987840060549908,
+  "cpu_leaderboard_reproduction_eligible": true,
+  "custody": {
+    "archive_bytes": 34603,
+    "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+    "command": [
+      "/workspace/pact/experiments/contest_auth_eval.py",
+      "--archive",
+      "/tmp/modal_auth_eval_cpu/archive.zip",
+      "--inflate-sh",
+      "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+      "--upstream-dir",
+      "/workspace/pact/upstream",
+      "--video-names-file",
+      "/workspace/pact/upstream/public_test_video_names.txt",
+      "--device",
+      "cpu",
+      "--keep-work-dir",
+      "--work-dir",
+      "/root/modal_auth_eval_cpu_work/eval_work",
+      "--inflate-timeout",
+      "1800",
+      "--evaluate-timeout",
+      "5400",
+      "--expected-runtime-tree-sha256",
+      "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584"
+    ],
+    "device": "cpu",
+    "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+    "inflate_script": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+    "n_samples": 600
+  },
+  "dispatch_claim_state": {
+    "claims_file_present": true,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "latest_claim": {
+      "agent": "codex:l5_v2_paired_measurement_dispatch",
+      "instance_job_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+      "lane_id": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+      "notes": "Modal auth eval recovered; passed=True; result_json=/Users/adpena/Projects/pact/experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/modal_cpu_auth_eval_result.json; archive_sha=2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a; archive_bytes=34603; score_recomputed=3.8987840060549908; axis=cpu; hardware_substrate=linux_x86_64_cpu; posterior_update=accepted; posterior_n=103; posterior_reason=accepted",
+      "platform": "modal",
+      "predicted_eta_utc": "2026-05-16T23:40:48Z",
+      "status": "completed_contest_cpu_modal_auth_eval_recovered",
+      "timestamp_utc": "2026-05-16T23:40:48Z"
+    },
+    "latest_status": "completed_contest_cpu_modal_auth_eval_recovered",
+    "matching_claim_count": 4,
+    "terminal_status_recorded": true
+  },
+  "engineering_forensic_audit": {
+    "archive_runtime_closure_reviewed": true,
+    "audit_blockers": [],
+    "axis_reviewed": true,
+    "classification_after_audit": "contest_cpu_axis_reviewed_cuda_pending",
+    "custody_reviewed": true,
+    "dead_or_family_falsification_allowed": false,
+    "dispatch_claim_reviewed": true,
+    "engineering_or_config_bug_found": false,
+    "measured_config_retirement_allowed": false,
+    "runtime_config_reviewed": true,
+    "schema": "engineering_forensic_audit_v1",
+    "score_formula_reviewed": true
+  },
+  "exact_cpu_evidence": true,
+  "exact_cuda_evidence": false,
+  "failure_class": "contest_cpu_public_leaderboard_anchor_cuda_pending",
+  "family_falsified": false,
+  "job_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+  "lane_id": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+  "measured_config_status": "contest_cpu_result_reviewed",
+  "method_family_retired": false,
+  "notes": [
+    "This packet can retire only the measured config unless the broader kill discipline is separately satisfied.",
+    "Exact CUDA evidence may update solver trust regions after adversarial review."
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "reactivation_criteria": [
+    "Treat CPU as paired evidence only; repair TT5L side-info training/export and rerun paired CPU/CUDA exact eval before any promotion, ranking, or retirement beyond this measured configuration."
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "review_requirements": {
+    "contest_compliance_review_required": true,
+    "engineering_review_required": true,
+    "geometry_review_required": true,
+    "math_review_required": true,
+    "optimization_review_required": true
+  },
+  "reviewer": "codex",
+  "runtime_custody": {
+    "external_dependency_roots": [],
+    "inflate_script_sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046",
+    "inflated_output_aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+    "inflated_output_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+    "payload_closure_fields_present": true,
+    "runtime_content_tree_sha256": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+    "runtime_file_count": 10,
+    "runtime_files_listed": true,
+    "runtime_manifest_present": true,
+    "runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584"
+  },
+  "schema": "tac_result_review_packet_v1",
+  "score_axis": "contest_cpu",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "score_recomputation": {
+    "abs_delta_vs_reported": 0.0,
+    "archive_bytes": 34603,
+    "available": true,
+    "avg_posenet_dist": 0.18508005,
+    "avg_segnet_dist": 0.02515302,
+    "matches_reported": true,
+    "rate_term": 0.023040717354886494,
+    "recomputed_score": 3.8987840060549908,
+    "reported_score": 3.8987840060549908
+  },
+  "source_json_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+  "source_json_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
+  "technique": "l5_v2_tt5l_paired_measurement_cpu",
+  "tool": "tools/build_result_review_packet.py"
+}
