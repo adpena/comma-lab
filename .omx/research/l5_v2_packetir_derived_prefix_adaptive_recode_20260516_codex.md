@@ -74,3 +74,31 @@ The next concrete L5 v2 PacketIR action is runtime binding: integrate the
 derived-prefix adaptive decoder into a candidate PacketIR runtime, prove
 full-frame same-runtime parity, then run paired exact CPU/CUDA eval. Until then
 the row is planning evidence only.
+
+## Runtime-Binding Primitive Follow-Up
+
+Added `decode_adaptive_context_recode_section(...)` in
+`src/tac/packet_compiler/pr106_context_recode.py`.
+
+The helper decodes both:
+
+- stored-prefix adaptive rows; and
+- derived-prefix adaptive rows where the decoder seed prefix is recovered from
+  PacketIR section grammar (`HDM9` / `HLM3`) instead of stored per archive.
+
+Focused verification:
+
+```bash
+.venv/bin/ruff check \
+  src/tac/packet_compiler/pr106_context_recode.py \
+  src/tac/tests/test_pr106_context_recode_l5_matrix.py
+
+PYTHONPATH=src .venv/bin/python -m pytest \
+  src/tac/tests/test_pr106_context_recode_l5_matrix.py \
+  -q
+```
+
+Result: `4 passed`.
+
+Status remains non-promotional. This is a reusable decoder primitive, not yet a
+submission runtime patch, full-frame parity proof, or exact-eval artifact.

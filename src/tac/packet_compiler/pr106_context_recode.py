@@ -720,13 +720,14 @@ def encode_adaptive_context_recode_section(
         update_step=update_step,
     )
     integrated = stored_prefix + stream
-    decoded = _decode_adaptive_range_stream(
-        prefix,
+    decoded = decode_adaptive_context_recode_section(
+        section_name,
+        integrated,
         source_len=len(section_bytes),
         context_order=context_order,
         initial_count=initial_count,
         update_step=update_step,
-        stream=stream,
+        prefix_mode=prefix_mode,
     )
     return AdaptiveContextRecodeSection(
         section_name=section_name,
@@ -740,6 +741,63 @@ def encode_adaptive_context_recode_section(
         range_stream_bytes=len(stream),
         initial_count=initial_count,
         update_step=update_step,
+    )
+
+
+def decode_adaptive_context_recode_section(
+    section_name: str,
+    integrated_bytes: bytes,
+    *,
+    source_len: int,
+    context_order: int,
+    initial_count: int = 1,
+    update_step: int = 1,
+    prefix_mode: str = "stored",
+) -> bytes:
+    """Decode an adaptive-context prototype section.
+
+    ``prefix_mode="section_magic"`` is the runtime-binding primitive for the
+    L5 v2 derived-prefix rows: the initial context is recovered from PacketIR
+    section grammar (`HDM9`/`HLM3`) rather than stored per archive.
+    """
+
+    if source_len < 0:
+        raise PR106ContextRecodeError("source_len must be non-negative")
+    if not (0 <= context_order <= 8):
+        raise PR106ContextRecodeError("context_order must be in range 0..8")
+    if initial_count <= 0:
+        raise PR106ContextRecodeError("initial_count must be positive")
+    if update_step <= 0:
+        raise PR106ContextRecodeError("update_step must be positive")
+    if prefix_mode not in {"stored", "section_magic"}:
+        raise PR106ContextRecodeError("prefix_mode must be stored or section_magic")
+
+    prefix_len = min(context_order, source_len)
+    if prefix_mode == "stored":
+        if len(integrated_bytes) < prefix_len:
+            raise PR106ContextRecodeError("adaptive stored-prefix payload truncated")
+        prefix = integrated_bytes[:prefix_len]
+        stream = integrated_bytes[prefix_len:]
+    else:
+        derivable = DERIVABLE_SECTION_PREFIXES.get(section_name)
+        if derivable is None:
+            raise PR106ContextRecodeError(
+                f"section {section_name!r} has no derivable prefix"
+            )
+        if prefix_len > len(derivable):
+            raise PR106ContextRecodeError(
+                "context_order exceeds derivable section magic prefix"
+            )
+        prefix = derivable[:prefix_len]
+        stream = integrated_bytes
+
+    return _decode_adaptive_range_stream(
+        prefix,
+        source_len=source_len,
+        context_order=context_order,
+        initial_count=initial_count,
+        update_step=update_step,
+        stream=stream,
     )
 
 

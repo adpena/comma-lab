@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tac.packet_compiler.pr106_context_recode import (
+    decode_adaptive_context_recode_section,
     encode_adaptive_context_recode_section,
     load_pr106_context_source_from_archive,
     prove_pr106_context_archive_identity,
@@ -55,13 +56,23 @@ def test_adaptive_context_recode_roundtrips_without_static_model_table() -> None
     source = load_pr106_context_source_from_archive(FORMAT0C_ARCHIVE)
     section = source.section("latents_and_sidecar_brotli")
 
-    prototype = encode_adaptive_context_recode_section(
+    recode = encode_adaptive_context_recode_section(
         section.name,
         section.data,
         context_order=2,
-    ).manifest()
+    )
+    prototype = recode.manifest()
 
     assert prototype["codec"] == "adaptive_section_local_context_range_prototype_v1"
+    assert (
+        decode_adaptive_context_recode_section(
+            section.name,
+            recode.integrated_bytes,
+            source_len=len(section.data),
+            context_order=2,
+        )
+        == section.data
+    )
     assert prototype["lossless_roundtrip_proven"] is True
     assert prototype["no_op_detector_passed"] is True
     assert prototype["range_stream_bytes"] + prototype["prefix_bytes"] == prototype[
@@ -84,12 +95,13 @@ def test_derived_prefix_adaptive_context_recode_uses_packetir_section_magic() ->
         section.data,
         context_order=2,
     ).manifest()
-    derived = encode_adaptive_context_recode_section(
+    derived_recode = encode_adaptive_context_recode_section(
         section.name,
         section.data,
         context_order=2,
         prefix_mode="section_magic",
-    ).manifest()
+    )
+    derived = derived_recode.manifest()
 
     assert section.data.startswith(b"HLM3")
     assert derived["lossless_roundtrip_proven"] is True
@@ -100,6 +112,16 @@ def test_derived_prefix_adaptive_context_recode_uses_packetir_section_magic() ->
     assert derived["range_stream_bytes"] == stored["range_stream_bytes"]
     assert derived["integrated_section_bytes"] == stored["integrated_section_bytes"] - 2
     assert derived["delta_bytes_vs_source_section"] == -1
+    assert (
+        decode_adaptive_context_recode_section(
+            section.name,
+            derived_recode.integrated_bytes,
+            source_len=len(section.data),
+            context_order=2,
+            prefix_mode="section_magic",
+        )
+        == section.data
+    )
     assert derived["score_claim"] is False
     assert derived["ready_for_exact_eval_dispatch"] is False
 
