@@ -41,7 +41,9 @@ Sections:
   ``num_pairs * per_pair_bytes`` raw int8s before brotli. Layout per pair:
   ``[se3_lie(12 B) | seg_boundary(18 B) | hf_residual(6 B) | predict_residual(9 B)]``.
 * **AC_STATE_BLOB** (Stage 3): brotli-compressed arithmetic-coder state for
-  the per-pair side info. Empty in v1 (placeholder).
+  the per-pair side info. v1 consumes it as deterministic residual-calibration
+  state; a later range/ANS decoder can replace this without changing section
+  custody.
 * **META_BLOB** (Stage 4): JSON ``{"int8_scale", "first_omega", "hidden_omega",
   "coord_feature_freqs", ...}`` — the floats that don't fit in u8/u16 header
   fields.
@@ -97,7 +99,7 @@ class TimeTravelerArchive:
     """Int8 array shape ``(num_pairs, per_pair_bytes)`` — Stage 2 side info."""
 
     ac_state: bytes
-    """Raw arithmetic-coder state (placeholder; empty in v1)."""
+    """Raw arithmetic-coder / residual-calibration state."""
 
     meta: dict[str, object]
     """Sidecar JSON meta with hparams (omega, freqs, int8 scales, ...)."""
@@ -181,12 +183,6 @@ def pack_archive(
     """
     if schema_version != TT5L_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {schema_version}")
-    if ac_state:
-        raise ValueError(
-            "non-empty TT5L ac_state is unsupported: inflate_one_video does "
-            "not consume AC state bytes yet"
-        )
-
     for name, v, max_v in (
         ("num_pairs", num_pairs, 0xFFFF),
         ("hidden_dim", hidden_dim, 0xFFFF),
@@ -362,8 +358,8 @@ def parse_tt5l_archive_bytes(archive_bytes: bytes) -> dict[str, tuple[int, int]]
       side info (sidecar_or_correction_stream — DISCUS-style Stage-2
       side info: SE(3) lie + segboundary + hf-residual + predict-residual)
     - ``ac_state_blob`` — brotli q=9 compressed arithmetic-coder state
-      (entropy_model_or_range_stream — placeholder in v1; consumed by
-      future Stage-3 arithmetic-decode path)
+      (entropy_model_or_range_stream — consumed by v1 inflate as residual
+      calibration state; future Stage-3 arithmetic-decode path can replace it)
     - ``meta_blob`` — sorted-keys JSON utf-8 (control_or_metadata)
 
     The byte ranges returned here MUST agree with the writer in

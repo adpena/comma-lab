@@ -101,6 +101,30 @@ def test_pack_archive_parse_roundtrip_preserves_state_dict_values_exactly() -> N
     assert parsed.meta == meta
 
 
+def test_pack_archive_parse_roundtrip_preserves_nonempty_ac_state() -> None:
+    """AC_STATE_BLOB is a charged consumed section, not a dead placeholder."""
+    sd = _toy_state_dict()
+    side_info = _toy_side_info()
+    ac_state = bytes(range(32))
+    blob = pack_archive(
+        world_model_state_dict=sd,
+        per_pair_side_info=side_info,
+        meta={"int8_scale": 64.0},
+        num_pairs=10,
+        hidden_dim=8,
+        num_hidden_layers=2,
+        output_height=384,
+        output_width=512,
+        foveation_grid_h=4,
+        foveation_grid_w=4,
+        pose_dim=6,
+        per_pair_bytes=45,
+        ac_state=ac_state,
+    )
+    parsed = parse_archive(blob)
+    assert parsed.ac_state == ac_state
+
+
 def test_parse_archive_restores_header_fields() -> None:
     """Parser populates every header u8/u16 field correctly."""
     sd = _toy_state_dict()
@@ -285,26 +309,27 @@ def test_pack_archive_with_empty_ac_state_produces_no_ac_blob() -> None:
     assert arc.ac_state == b""
 
 
-def test_pack_archive_rejects_nonempty_ac_state_until_inflate_consumes_it() -> None:
-    """Non-empty AC state is phantom until inflate has a decode path."""
+def test_pack_archive_accepts_nonempty_ac_state_after_inflate_consumes_it() -> None:
+    """Non-empty AC state is accepted once inflate has a consumption path."""
     sd = _toy_state_dict()
     side_info = _toy_side_info()
-    with pytest.raises(ValueError, match="does not consume AC state bytes"):
-        pack_archive(
-            world_model_state_dict=sd,
-            per_pair_side_info=side_info,
-            meta={},
-            num_pairs=10,
-            hidden_dim=8,
-            num_hidden_layers=2,
-            output_height=384,
-            output_width=512,
-            foveation_grid_h=4,
-            foveation_grid_w=4,
-            pose_dim=6,
-            per_pair_bytes=45,
-            ac_state=b"x",
-        )
+    blob = pack_archive(
+        world_model_state_dict=sd,
+        per_pair_side_info=side_info,
+        meta={},
+        num_pairs=10,
+        hidden_dim=8,
+        num_hidden_layers=2,
+        output_height=384,
+        output_width=512,
+        foveation_grid_h=4,
+        foveation_grid_w=4,
+        pose_dim=6,
+        per_pair_bytes=45,
+        ac_state=b"x",
+    )
+
+    assert parse_archive(blob).ac_state == b"x"
 
 
 def test_archive_size_in_target_band_for_default_config() -> None:

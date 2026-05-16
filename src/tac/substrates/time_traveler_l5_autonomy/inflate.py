@@ -46,6 +46,34 @@ _TT5L_SIDEINFO_SECTION_BOUNDS: tuple[tuple[str, int, int], ...] = (
     ("predict_residual", 36, 45),
 )
 
+_TT5L_AC_GAIN_COUNT = 5
+
+
+def _ac_state_section_gains(
+    ac_state: bytes,
+    *,
+    device: torch.device | str,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    """Map charged AC-state bytes to small deterministic residual gains.
+
+    TT5L v1 does not yet range-decode the side-info stream. To avoid dead
+    charged bytes, non-empty AC state is consumed as residual calibration:
+    every byte contributes to one of five section gains. The gain range is
+    deliberately narrow so the side-info stream remains the dominant signal.
+    """
+
+    if not ac_state:
+        return torch.ones(_TT5L_AC_GAIN_COUNT, device=device, dtype=dtype)
+    raw = torch.tensor(list(ac_state), device=device, dtype=dtype)
+    centered = (raw - 127.5) / 127.5
+    gains = torch.ones(_TT5L_AC_GAIN_COUNT, device=device, dtype=dtype)
+    for idx in range(_TT5L_AC_GAIN_COUNT):
+        values = centered[idx::_TT5L_AC_GAIN_COUNT]
+        if values.numel():
+            gains[idx] = gains[idx] + 0.015 * values.mean()
+    return gains.clamp(0.96, 1.04)
+
 
 def _build_substrate_from_archive(
     arc: TimeTravelerArchive, *, device: str
@@ -86,6 +114,7 @@ def _apply_per_pair_residual(
     side_info_pair: torch.Tensor,
     *,
     int8_scale: float,
+    ac_state: bytes = b"",
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Apply per-pair int8-quantized residual as additive RGB correction.
 
@@ -123,6 +152,7 @@ def _apply_per_pair_residual(
     xx = xx.unsqueeze(0).unsqueeze(0)
     yy = yy.unsqueeze(0).unsqueeze(0)
     checker = 0.25 + 0.75 * torch.sign(torch.sin(32.0 * xx) * torch.sin(32.0 * yy))
+    section_gains = _ac_state_section_gains(ac_state, device=device, dtype=dtype)
 
     def _section(start: int, end: int) -> torch.Tensor:
         out = torch.zeros(end - start, device=device, dtype=dtype)
@@ -180,19 +210,19 @@ def _apply_per_pair_residual(
 
     rgb_0_c = (
         rgb_0
-        + 0.006 * pose_0
-        + 0.012 * seg_0
-        + 0.010 * hf_0
-        + 0.020 * predict_full
-        + 0.004 * tail_scalar
+        + (0.006 * section_gains[0]) * pose_0
+        + (0.012 * section_gains[1]) * seg_0
+        + (0.010 * section_gains[2]) * hf_0
+        + (0.020 * section_gains[3]) * predict_full
+        + (0.004 * section_gains[4]) * tail_scalar
     ).clamp(0.0, 1.0)
     rgb_1_c = (
         rgb_1
-        + 0.006 * pose_1
-        + 0.012 * seg_1
-        + 0.010 * hf_1
-        + 0.020 * predict_full
-        + 0.004 * tail_scalar
+        + (0.006 * section_gains[0]) * pose_1
+        + (0.012 * section_gains[1]) * seg_1
+        + (0.010 * section_gains[2]) * hf_1
+        + (0.020 * section_gains[3]) * predict_full
+        + (0.004 * section_gains[4]) * tail_scalar
     ).clamp(0.0, 1.0)
     return rgb_0_c, rgb_1_c
 
@@ -272,6 +302,7 @@ def inflate_one_video(
                 rgb_1,
                 side_info_floats[pair_idx],
                 int8_scale=int8_scale,
+                ac_state=arc.ac_state,
             )
             frames_written += write_rgb_pair_to_raw(
                 fh, rgb_0_c, rgb_1_c, input_range="unit"

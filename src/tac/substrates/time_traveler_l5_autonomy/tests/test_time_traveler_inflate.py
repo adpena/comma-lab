@@ -28,6 +28,7 @@ def _build_toy_archive_bytes(
     num_pairs: int = 4,
     *,
     side_info: np.ndarray | None = None,
+    ac_state: bytes = b"",
     state_mutator: Callable[[dict[str, torch.Tensor]], None] | None = None,
 ) -> bytes:
     """Build a small TT5L archive from a freshly initialized substrate."""
@@ -67,6 +68,7 @@ def _build_toy_archive_bytes(
         foveation_grid_w=cfg.foveation_grid_w,
         pose_dim=cfg.pose_dim,
         per_pair_bytes=cfg.per_pair_side_info_bytes,
+        ac_state=ac_state,
     )
 
 
@@ -210,6 +212,31 @@ def test_inflate_one_video_side_info_bytes_affect_decoded_frames(tmp_path) -> No
     assert inflate_one_video(zero_archive, zero_out, device="cpu") == 2
     assert inflate_one_video(active_archive, active_out, device="cpu") == 2
     assert zero_out.read_bytes() != active_out.read_bytes()
+
+
+def test_inflate_one_video_ac_state_bytes_affect_decoded_frames(tmp_path) -> None:
+    """Non-empty AC state is consumed by the inflate residual path."""
+    side = np.zeros((1, 45), dtype=np.int8)
+    side[0, 36:45] = 64
+    ac_state_a = bytes([0, 64, 128, 192, 255] * 4)
+    ac_state_b = bytes([255, 192, 128, 64, 0] * 4)
+
+    archive_a = _build_toy_archive_bytes(
+        num_pairs=1,
+        side_info=side,
+        ac_state=ac_state_a,
+    )
+    archive_b = _build_toy_archive_bytes(
+        num_pairs=1,
+        side_info=side,
+        ac_state=ac_state_b,
+    )
+    out_a = tmp_path / "ac_a.raw"
+    out_b = tmp_path / "ac_b.raw"
+
+    assert inflate_one_video(archive_a, out_a, device="cpu") == 2
+    assert inflate_one_video(archive_b, out_b, device="cpu") == 2
+    assert out_a.read_bytes() != out_b.read_bytes()
 
 
 def test_inflate_one_video_world_model_pose_and_dynamics_bytes_affect_decoded_frames(
