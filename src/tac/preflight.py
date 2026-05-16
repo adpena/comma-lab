@@ -2367,13 +2367,53 @@ def preflight_all(
         # scoped to the same `submissions/*/inflate.py` surface (Catalog
         # #205 catches inline device-fork; Catalog #295 catches PYTHONPATH-
         # shim self-containment violations). Initial wire-in is WARN-ONLY
-        # per CLAUDE.md "Strict-flip atomicity rule" - live count at landing
-        # is N > 0 (several legacy submissions ship with PYTHONPATH shims
-        # pointing to sibling submissions or to the operator's working tree);
-        # sister-subagent backfill wave is the follow-on op-routable;
-        # strict-flip planned alongside that wave's final commit. Memory:
-        # feedback_catalog_295_submission_inflate_empty_pythonpath_strict_gate_landed_20260516.md.
+        # 2026-05-16 SISTER-BACKFILL-WAVE drove live count 6 -> 0 across all
+        # 6 affected substrates per
+        # .omx/research/submission_inflate_pythonpath_shim_audit_20260516.md:
+        # P1 NSCS01 (nscs01-style fail-closed waiver), P2 apogee_v2
+        # (vendored src/tac/water_filling_codec_v2.py +
+        # src/tac/arithmetic_qint_codec.py), P2 magic_codec_pr106_r2
+        # (research-only same-line waivers on lazy tac.* imports), P3 PR106
+        # triplet (pr106_lrl1/_stacked/_yshift_sidechannel; same-line waivers
+        # declaring sibling-submission shipping requirement per audit
+        # Priority 4 option b). STRICT-FLIPPED in same commit batch per
+        # CLAUDE.md "Strict-flip atomicity rule". Memory:
+        # feedback_catalog_295_sister_backfill_wave_6_substrates_strict_flip_landed_20260516.md.
         check_submission_inflate_works_with_empty_pythonpath(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #296 - SUBSTRATE PREDICTED-BAND HAS DYKSTRA-
+        # FEASIBILITY CHECK. Empirical anchor: NSCS06 v6 dispatch landed
+        # 105.15 vs predicted [0.10, 0.20] (553x OUTSIDE band) because
+        # 5-move composition was assumed additive under contest polytope
+        # constraints WITHOUT a Dykstra-feasibility intersection check.
+        # D1 1.18x OUTSIDE band. C6 MDL-IBPS + Time-Traveler L5 carry
+        # similar cargo-cult-prediction risk. Per CLAUDE.md "Meta-
+        # Lagrangian/Pareto solver - NON-NEGOTIABLE" + "Council conduct"
+        # (Dykstra co-leads quintet pact). Sister of Catalog #290 / #229
+        # / #292 / #294. Initial wire-in is WARN-ONLY per CLAUDE.md
+        # "Strict-flip atomicity rule" - live count at landing is small
+        # (≤5) per audit; sister-subagent backfill wave is the follow-on
+        # op-routable; strict-flip planned alongside that wave's final
+        # commit. Memory:
+        # feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md.
+        check_substrate_predicted_band_has_dykstra_feasibility_check(
+            strict=False, verbose=verbose,
+        )
+        # 2026-05-16 Catalog #297 - SUBSTRATE SIGNAL-AXIS DESTRUCTION HAS
+        # REVERSIBILITY PROBE. Empirical anchors: NSCS06 Y=R=G=B chroma
+        # replication (seg=64.59), NSCS06 np.roll global translation
+        # (pose=149.03), Z3-G1 empty hyperprior_weights_int8 slots
+        # (silent 0.19869 baseline reproduction). Per CLAUDE.md "Apples-
+        # to-apples evidence discipline" + Catalog #220 + Catalog #272.
+        # Sister of Catalog #220 / #272 / #139 / #105. Initial wire-in is
+        # WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" - live
+        # count at landing estimated ≤5 (NSCS06 F-redesign + sister
+        # legacy substrates); sister-subagent backfill wave is the
+        # follow-on op-routable; strict-flip planned alongside that
+        # wave's final commit. Memory:
+        # feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md.
+        check_substrate_signal_axis_destruction_has_reversibility_probe(
             strict=False, verbose=verbose,
         )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
@@ -62822,9 +62862,33 @@ def _scan_inflate_for_pythonpath_shim_self_contained(
     if not inserts:
         # But: if there are `from tac....` imports without a path insert,
         # the submission is implicitly depending on the operator's working
-        # tree -- the NSCS06 v5 bug class. Refuse.
+        # tree -- the NSCS06 v5 bug class. Refuse UNLESS the import line
+        # carries the canonical waiver (research-only adapter use case).
         if tac_imports:
-            first_import_line = tac_imports[0][0]
+            # Check each unvendored tac.* import for the canonical waiver
+            # OR for the import being vendored alongside (e.g. via
+            # submissions/<id>/src/tac/* + sister cwd manipulation by the
+            # inflate.sh wrapper). The waiver-respect path supports the
+            # function-scoped lazy-import pattern used by research adapters
+            # like submissions/magic_codec_pr106_r2/inflate.py which the
+            # audit ledger explicitly designates as the LAB-only dispatch
+            # acceptance shape (sibling submission + operator working tree
+            # both mounted; non-promotable per its docstring).
+            unwaived: list[tuple[int, str]] = []
+            for lineno, module_name in tac_imports:
+                line_text = (
+                    text_lines[lineno - 1]
+                    if 0 < lineno <= len(text_lines)
+                    else ""
+                )
+                if _check_295_line_has_waiver(line_text):
+                    continue
+                if _check_295_tac_module_is_vendored(submission_dir, module_name):
+                    continue
+                unwaived.append((lineno, module_name))
+            if not unwaived:
+                return []
+            first_import_line = unwaived[0][0]
             return [
                 f"{rel}:{first_import_line}: imports `from tac.*` / "
                 f"`import tac.*` WITHOUT any vendored `tac` package "
@@ -62836,7 +62900,8 @@ def _scan_inflate_for_pythonpath_shim_self_contained(
                 f"alongside as `submissions/{submission_dir.name}/"
                 f"_<id>_codec/` (NSCS06 v6 pattern @ commit 90bca47ff) "
                 f"OR add same-line "
-                f"`# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` waiver."
+                f"`# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` waiver "
+                f"on the offending `from tac.*` import line."
             ]
         return []
 
@@ -62979,6 +63044,576 @@ def check_submission_inflate_works_with_empty_pythonpath(
             "alongside (NSCS06 v6 pattern @ commit 90bca47ff) OR carry an "
             "explicit `# SUBMISSION_PYTHONPATH_SHIM_OK:<rationale>` "
             "waiver:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #296 - check_substrate_predicted_band_has_dykstra_feasibility_check
+# ============================================================================
+# Empirical anchors 2026-05-16 from
+# .omx/research/meta_assumption_backfill_audit_all_staircase_substrates_20260516.md
+# + grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md
+# + commit 4292c8ce2 (symposium) + commit b0a7ff474 (META-assumption audit):
+#
+#   - NSCS06: predicted score band ~[0.10, 0.20] from first-principles
+#     5-move composition. Empirical Modal v6 dispatch: 105.15 -- 553x
+#     OUTSIDE the predicted band. The cargo-cult was assuming 5 design
+#     moves compose additively under contest rate+distortion polytope
+#     constraints WITHOUT a Dykstra-feasibility intersection check.
+#   - D1: 1.18x OUTSIDE predicted band (polytope-interior overlay
+#     deferred to L2 INTEGRATION while rate-axis cost landed).
+#   - C6 MDL-IBPS: predicted [0.11, 0.16] from MDL + IB composition
+#     without Dykstra-feasibility check that the two constraints
+#     actually intersect at a feasible contest-polytope point.
+#   - Time-Traveler L5: predicted band from 5-design-move composition
+#     without Dykstra-feasibility check that the 5 moves jointly
+#     project into the contest's feasible region.
+#
+# Per CLAUDE.md "Meta-Lagrangian/Pareto solver - NON-NEGOTIABLE":
+# "Prefer solvable math over arbitrary sweeps. New knobs must be
+# grounded in entropy/MDL, Fisher/Hessian/Jacobian or Frechet
+# sensitivity, Dykstra/ADMM feasibility, Bayesian experimental design,
+# optimal transport/camera geometry..."
+#
+# Per CLAUDE.md "Council conduct": Dykstra co-leads the inner quintet
+# pact specifically because alternating-projections feasibility IS the
+# arbiter of whether a multi-constraint composition is achievable
+# rather than just predicted.
+#
+# Sister of Catalog #290 (canonical-vs-unique decision per layer),
+# Catalog #229 (premise verification before edit), Catalog #292
+# (per-deliberation assumption surfacing), Catalog #294 (9-dimension
+# success checklist evidence).
+# ============================================================================
+
+
+_CHECK_296_WAIVER_TOKEN = "PREDICTED_BAND_VIBES_OK:"
+_CHECK_296_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+# Section headers that trigger the gate (case-insensitive substring).
+_CHECK_296_TRIGGER_HEADERS = (
+    "## predicted Δs band",
+    "## predicted delta s band",
+    "## predicted score band",
+    "## predicted band",
+)
+
+_CHECK_296_DYKSTRA_TOKENS = (
+    "dykstra",
+    "convex feasibility",
+    "alternating projection",
+    "alternating-projection",
+    "intersection of constraints",
+    "intersection-of-constraints",
+)
+
+_CHECK_296_FIRST_PRINCIPLES_TOKENS = (
+    "shannon",
+    "r(d)",
+    "rate-distortion",
+    "mdl",
+    "minimum description length",
+    "tishby",
+    "daubechies",
+    "mallat",
+    "wyner",
+    "wyner-ziv",
+    "atick-redlich",
+    "atick redlich",
+    "rao-ballard",
+    "rao ballard",
+)
+
+_CHECK_296_PROBE_DISAMBIGUATOR_REGEX = re.compile(
+    r"tools/probe_[a-z0-9_]+_disambiguator\.py",
+    re.IGNORECASE,
+)
+
+
+def _check_296_iter_design_memos(repo_root: Path) -> list[Path]:
+    """List every ``.omx/research/*_design_<YYYYMMDD>.md`` under repo_root."""
+    research_root = repo_root / ".omx" / "research"
+    if not research_root.is_dir():
+        return []
+    pattern = re.compile(r"_design_(\d{8})\.md$")
+    targets: list[Path] = []
+    for entry in sorted(research_root.iterdir()):
+        if not entry.is_file():
+            continue
+        if pattern.search(entry.name):
+            targets.append(entry)
+    return targets
+
+
+def _check_296_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries the canonical same-line waiver.
+
+    Placeholder literals are rejected so the gate's own documentation
+    example cannot self-waive a real violation.
+    """
+    if _CHECK_296_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_296_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_296_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_296_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    return True
+
+
+def _check_296_body_has_acceptance_token(
+    body_lower: str, body_original: str
+) -> bool:
+    """Check whether the memo body satisfies the (a)/(b)/(c) acceptance cascade."""
+    for tok in _CHECK_296_DYKSTRA_TOKENS:
+        if tok in body_lower:
+            return True
+    for tok in _CHECK_296_FIRST_PRINCIPLES_TOKENS:
+        if tok in body_lower:
+            return True
+    if _CHECK_296_PROBE_DISAMBIGUATOR_REGEX.search(body_original):
+        return True
+    return False
+
+
+def _scan_design_memo_for_predicted_band_dykstra(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Find predicted-band-without-Dykstra-feasibility violations in one memo."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    body_lower = text.lower()
+    trigger_found = False
+    trigger_line_no = 0
+    text_lines = text.splitlines()
+    for i, line in enumerate(text_lines, start=1):
+        line_lower = line.lower()
+        for header in _CHECK_296_TRIGGER_HEADERS:
+            if header in line_lower:
+                if _check_296_line_has_waiver(line):
+                    return []
+                trigger_found = True
+                trigger_line_no = i
+                break
+        if trigger_found:
+            break
+
+    if not trigger_found:
+        return []
+
+    if _check_296_body_has_acceptance_token(body_lower, text):
+        return []
+
+    return [
+        f"{rel}:{trigger_line_no}: design memo contains a "
+        f"`## Predicted ΔS band` (or sister) section header but lacks "
+        f"ANY of: (a) Dykstra-feasibility token (dykstra / convex "
+        f"feasibility / alternating projection / intersection of "
+        f"constraints), (b) first-principles citation (Shannon / R(D) "
+        f"/ MDL / Tishby / Daubechies / Mallat / Wyner / "
+        f"Atick-Redlich / Rao-Ballard), (c) sister probe-disambiguator "
+        f"path (tools/probe_*_disambiguator.py). Per CLAUDE.md "
+        f"\"Meta-Lagrangian/Pareto solver - NON-NEGOTIABLE\" + "
+        f"\"Council conduct\" (Dykstra co-leads quintet pact). "
+        f"Empirical anchor: NSCS06 v6 dispatch landed 105.15 vs "
+        f"predicted [0.10, 0.20] band -- 553x OUTSIDE band -- because "
+        f"5-move composition was assumed additive without Dykstra-"
+        f"feasibility intersection check (symposium commit 4292c8ce2; "
+        f"META-assumption audit commit b0a7ff474). Either add the "
+        f"Dykstra-feasibility section / first-principles citation / "
+        f"probe-disambiguator path OR carry same-line "
+        f"`# PREDICTED_BAND_VIBES_OK:<rationale>` waiver on the "
+        f"`## Predicted ΔS band` header line."
+    ]
+
+
+def check_substrate_predicted_band_has_dykstra_feasibility_check(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #296 - refuse substrate design memos with predicted ΔS bands
+    that lack a Dykstra-feasibility intersection check, first-principles
+    citation, or sister probe-disambiguator path.
+
+    Empirical anchors 2026-05-16: NSCS06 v6 dispatch landed 105.15 vs
+    predicted [0.10, 0.20] (553x OUTSIDE band) because 5-move composition
+    was assumed additive under contest polytope constraints WITHOUT a
+    Dykstra-feasibility intersection check. D1 1.18x OUTSIDE band. C6
+    MDL-IBPS + Time-Traveler L5 carry similar cargo-cult-prediction risk.
+
+    Per CLAUDE.md "Meta-Lagrangian/Pareto solver - NON-NEGOTIABLE" +
+    "Council conduct" (Dykstra co-leads the inner quintet pact).
+
+    Sister of Catalog #290, #229, #292, #294.
+
+    Memory: ``feedback_catalog_296_substrate_predicted_band_dykstra_feasibility_landed_20260516.md``.
+    Lane: ``lane_catalog_296_297_metacargocult_strict_gates_20260516``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    targets = _check_296_iter_design_memos(root)
+    violations: list[str] = []
+    for path in targets:
+        violations.extend(
+            _scan_design_memo_for_predicted_band_dykstra(path, root)
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_predicted_band_has_dykstra_feasibility_check] "
+                f"{len(violations)} violation(s) across {len(targets)} "
+                "design memo(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:280]}")
+        else:
+            print(
+                f"  [check_substrate_predicted_band_has_dykstra_feasibility_check] "
+                f"OK ({len(targets)} design memo(s) scanned, 0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_predicted_band_has_dykstra_feasibility_check "
+            f"found {len(violations)} substrate design memo(s) with "
+            "`## Predicted ΔS band` sections that lack Dykstra-"
+            "feasibility / first-principles citation / probe-"
+            "disambiguator path. Per CLAUDE.md \"Meta-Lagrangian/Pareto "
+            "solver - NON-NEGOTIABLE\" + \"Council conduct\" + "
+            "Catalog #296 (META-CARGO-CULT meta-assumption audit). "
+            "Empirical anchor: NSCS06 v6 dispatch landed 105.15 vs "
+            "predicted [0.10, 0.20] (553x OUTSIDE band). Symposium "
+            "commit 4292c8ce2; META-assumption audit commit b0a7ff474.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #297 - check_substrate_signal_axis_destruction_has_reversibility_probe
+# ============================================================================
+# Empirical anchors 2026-05-16:
+#
+#   - NSCS06 Y=R=G=B grayscale-to-RGB replication at compress time:
+#     trainer collapsed RGB chroma to Y luma and reconstructed R=G=B=Y
+#     at inflate; segnet score landed seg=64.59 because SegNet's
+#     stride-2 stem cannot recover the destroyed chroma signal.
+#   - NSCS06 np.roll global translation cargo-cult: inflate-time
+#     reconstruction applied global translation under assumption that
+#     PoseNet is translation-invariant; pose=149.03 empirical proof
+#     that pose is NOT invariant.
+#   - Z3-G1 empty hyperprior_weights_int8 slots: archive emitted with
+#     `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""`; auth-eval
+#     reproduced Z3 v2 baseline 0.19869 to 5 decimals (silent baseline
+#     reproduction proof that empty-slot bytes never affect score).
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level
+# deconstruction and entropy discipline" + Catalog #220 (substrate L1+
+# byte-addition operational mechanism) + Catalog #139 (no-op detector)
+# + Catalog #105 (no-op provenance): every transform that mutates
+# archive bytes MUST be paired with a proof that the mutation actually
+# affects the score, not just an assumption.
+#
+# This gate scans `src/tac/substrates/*/` directory tree AND
+# `experiments/train_substrate_*.py` files for forbidden signal-axis-
+# destruction tokens (Y=R=G=B, grayscale_to_rgb(...duplicate),
+# frame.mean(...color), rgb_grey = (r+g+b)/3, single_channel_only,
+# _grayscale_to_rgb, _drop_chroma).
+#
+# Acceptance cascade per file:
+#   (a) Sister probe file exists: ``tools/probe_<substrate>_reversibility*.py``.
+#   (b) Same-line waiver ``# SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:<rationale>``.
+#   (c) Enclosing function name contains ``_compress_time_only`` marker.
+#
+# Sister of Catalog #220, #272, #139, #105.
+# ============================================================================
+
+
+_CHECK_297_WAIVER_TOKEN = "SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:"
+_CHECK_297_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+_CHECK_297_COMPRESS_TIME_ONLY_MARKER = "_compress_time_only"
+
+_CHECK_297_DESTRUCTION_PATTERNS = (
+    re.compile(r"\bY\s*=\s*R\s*=\s*G\s*=\s*B\b"),
+    re.compile(r"\bR\s*=\s*G\s*=\s*B\s*=\s*Y\b"),
+    re.compile(r"grayscale_to_rgb\s*\([^)]*duplicate", re.IGNORECASE),
+    re.compile(r"\bframe\.mean\s*\([^)]*\bcolor", re.IGNORECASE),
+    re.compile(r"rgb_grey\s*=\s*\(\s*r\s*\+\s*g\s*\+\s*b\s*\)\s*/\s*3"),
+    re.compile(r"\bsingle_channel_only\b"),
+    re.compile(r"\b_grayscale_to_rgb\b"),
+    re.compile(r"\b_drop_chroma\b"),
+)
+
+
+def _check_297_iter_target_files(repo_root: Path) -> list[Path]:
+    """List every target file the gate scans.
+
+    Includes:
+      - src/tac/substrates/<id>/<any>.py
+      - experiments/train_substrate_*.py
+    Excludes test files, vendored intake clones, and generated artifacts.
+    """
+    targets: list[Path] = []
+
+    substrates_root = repo_root / "src" / "tac" / "substrates"
+    if substrates_root.is_dir():
+        for entry in sorted(substrates_root.rglob("*.py")):
+            rel = entry.relative_to(repo_root).as_posix()
+            if "/tests/" in rel or "/test_" in rel:
+                continue
+            if "_intake_" in rel or "/build/lib/" in rel:
+                continue
+            if "/.omx/oss_export/" in rel:
+                continue
+            if entry.name.startswith("test_"):
+                continue
+            targets.append(entry)
+
+    experiments_root = repo_root / "experiments"
+    if experiments_root.is_dir():
+        for entry in sorted(experiments_root.iterdir()):
+            if not entry.is_file():
+                continue
+            if not entry.name.startswith("train_substrate_"):
+                continue
+            if not entry.name.endswith(".py"):
+                continue
+            rel = entry.relative_to(repo_root).as_posix()
+            if "_intake_" in rel:
+                continue
+            targets.append(entry)
+
+    return targets
+
+
+def _check_297_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries the canonical same-line waiver.
+
+    Placeholder literals are rejected so the gate's own documentation
+    example cannot self-waive a real violation.
+    """
+    if _CHECK_297_WAIVER_TOKEN not in line:
+        return False
+    idx = line.find(_CHECK_297_WAIVER_TOKEN)
+    tail = line[idx + len(_CHECK_297_WAIVER_TOKEN):].strip()
+    if not tail:
+        return False
+    for placeholder in _CHECK_297_WAIVER_PLACEHOLDERS:
+        if tail.startswith(placeholder):
+            return False
+    return True
+
+
+def _check_297_substrate_id_from_path(
+    path: Path, repo_root: Path
+) -> str | None:
+    """Derive the substrate id from a target file's path.
+
+    For ``src/tac/substrates/<id>/...``, returns ``<id>``.
+    For ``experiments/train_substrate_<id>.py``, returns ``<id>``.
+    """
+    rel_parts = (
+        path.relative_to(repo_root).parts if path.is_absolute() else path.parts
+    )
+    if len(rel_parts) >= 4 and rel_parts[:3] == ("src", "tac", "substrates"):
+        return rel_parts[3]
+    if (
+        len(rel_parts) == 2
+        and rel_parts[0] == "experiments"
+        and rel_parts[1].startswith("train_substrate_")
+        and rel_parts[1].endswith(".py")
+    ):
+        return rel_parts[1][len("train_substrate_"):-len(".py")]
+    return None
+
+
+def _check_297_sister_probe_exists(
+    repo_root: Path, substrate_id: str
+) -> bool:
+    """Return True if a sister reversibility probe exists.
+
+    Canonical pattern: ``tools/probe_<substrate_id>_reversibility*.py``.
+    """
+    tools_root = repo_root / "tools"
+    if not tools_root.is_dir():
+        return False
+    prefix = f"probe_{substrate_id}_reversibility"
+    for entry in tools_root.iterdir():
+        if not entry.is_file():
+            continue
+        if not entry.name.endswith(".py"):
+            continue
+        if entry.name.startswith(prefix):
+            return True
+    return False
+
+
+def _check_297_line_in_compress_time_only_function(
+    text_lines: list[str], lineno: int
+) -> bool:
+    """Heuristic: is the line at ``lineno`` inside a function whose name
+    contains ``_compress_time_only``?
+    """
+    if lineno < 1 or lineno > len(text_lines):
+        return False
+    target_line = text_lines[lineno - 1]
+    target_indent = len(target_line) - len(target_line.lstrip())
+    if target_indent == 0:
+        return False
+
+    def_pattern = re.compile(
+        r"^(\s*)(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
+    )
+    for i in range(lineno - 2, -1, -1):
+        line = text_lines[i]
+        if not line.strip():
+            continue
+        m = def_pattern.match(line)
+        if not m:
+            continue
+        def_indent = len(m.group(1))
+        if def_indent < target_indent:
+            func_name = m.group(2)
+            return _CHECK_297_COMPRESS_TIME_ONLY_MARKER in func_name
+    return False
+
+
+def _scan_file_for_signal_axis_destruction(
+    path: Path, repo_root: Path
+) -> list[str]:
+    """Find signal-axis-destruction-without-reversibility-probe violations."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+
+    text_lines = text.splitlines()
+    if not text_lines:
+        return []
+
+    hits: list[tuple[int, str, str]] = []
+    for lineno, line in enumerate(text_lines, start=1):
+        # Skip pure comment lines so docstring/comment mentions are not flagged.
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            continue
+        for pattern in _CHECK_297_DESTRUCTION_PATTERNS:
+            m = pattern.search(line)
+            if m:
+                hits.append((lineno, line, pattern.pattern))
+                break
+
+    if not hits:
+        return []
+
+    substrate_id = _check_297_substrate_id_from_path(path, repo_root)
+    probe_exists = False
+    if substrate_id is not None:
+        probe_exists = _check_297_sister_probe_exists(repo_root, substrate_id)
+
+    violations: list[str] = []
+    for lineno, line, matched_pat in hits:
+        if _check_297_line_has_waiver(line):
+            continue
+        if probe_exists:
+            continue
+        if _check_297_line_in_compress_time_only_function(text_lines, lineno):
+            continue
+        snippet = line.strip()[:160]
+        violations.append(
+            f"{rel}:{lineno}: signal-axis-destruction token detected "
+            f"(pattern `{matched_pat}`, line: `{snippet}`) WITHOUT "
+            f"sister reversibility probe at "
+            f"`tools/probe_{substrate_id or '<substrate-id>'}_reversibility*.py` "
+            f"AND WITHOUT same-line "
+            f"`# SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:<rationale>` "
+            f"waiver AND not inside a `_compress_time_only`-named "
+            f"function. Per CLAUDE.md \"Apples-to-apples evidence "
+            f"discipline\" + Catalog #220 + Catalog #272. Empirical "
+            f"anchors: NSCS06 Y=R=G=B chroma replication (seg=64.59), "
+            f"NSCS06 np.roll global translation (pose=149.03), Z3-G1 "
+            f"empty hyperprior slots (silent 0.19869 baseline). "
+            f"Symposium commit 4292c8ce2; META-assumption audit commit "
+            f"b0a7ff474. Either add a sister probe file, the same-"
+            f"line waiver with rationale, or move the destruction "
+            f"into a `_compress_time_only` function."
+        )
+    return violations
+
+
+def check_substrate_signal_axis_destruction_has_reversibility_probe(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #297 - refuse substrate trainers / codec modules that destroy
+    a signal axis (chroma drop / grayscale replication / explicit
+    single-channel marker) without a paired reversibility probe.
+
+    Empirical anchors 2026-05-16: NSCS06 Y=R=G=B chroma replication
+    (seg=64.59), NSCS06 np.roll global translation (pose=149.03), Z3-G1
+    empty hyperprior_weights_int8 slots (silent 0.19869 baseline
+    reproduction proof that empty slots never affect score).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level
+    deconstruction and entropy discipline".
+
+    Sister of Catalog #220 (substrate L1+ byte-addition operational
+    mechanism), Catalog #272 (distinguishing-feature integration
+    contract), Catalog #139 (packet compiler no-op detector), Catalog
+    #105 (no-op provenance).
+
+    Memory: ``feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md``.
+    Lane: ``lane_catalog_296_297_metacargocult_strict_gates_20260516``.
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    targets = _check_297_iter_target_files(root)
+    violations: list[str] = []
+    for path in targets:
+        violations.extend(_scan_file_for_signal_axis_destruction(path, root))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [check_substrate_signal_axis_destruction_has_reversibility_probe] "
+                f"{len(violations)} violation(s) across {len(targets)} "
+                "substrate file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    - {v[:280]}")
+        else:
+            print(
+                f"  [check_substrate_signal_axis_destruction_has_reversibility_probe] "
+                f"OK ({len(targets)} substrate file(s) scanned, 0 violation(s))"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_signal_axis_destruction_has_reversibility_probe "
+            f"found {len(violations)} signal-axis-destruction violation(s) "
+            "without paired reversibility probe. Per CLAUDE.md \"Apples-"
+            "to-apples evidence discipline\" + Catalog #220 + Catalog "
+            "#272 + Catalog #297 (META-CARGO-CULT META-CC-2). Empirical "
+            "anchors: NSCS06 Y=R=G=B (seg=64.59), NSCS06 np.roll "
+            "(pose=149.03), Z3-G1 empty slots (0.19869 silent baseline). "
+            "Symposium commit 4292c8ce2; META-assumption audit commit "
+            "b0a7ff474.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

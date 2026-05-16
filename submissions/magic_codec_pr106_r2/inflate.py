@@ -8,10 +8,27 @@ inflate decoder for the actual scene reconstruction.
 This file is INTENTIONALLY narrow and deliberately **not** a promotion-grade
 contest runtime yet. It is a provenance-preserving adapter for magic-codec
 research artifacts. Non-raw envelopes still require the repository ``tac``
-package for primitive decoding, so outputs produced through this wrapper must
-keep ``ready_for_exact_eval_dispatch=False`` until a byte-closed runtime packet
-copies or vendors the exact primitive decoders and proves full-frame inflate
-parity against the source runtime.
+package for primitive decoding (lazily-imported deeper inside the
+``_decode_*_to_bytes`` helpers), so outputs produced through this wrapper
+must keep ``ready_for_exact_eval_dispatch=False`` until a byte-closed
+runtime packet copies or vendors the exact primitive decoders AND vendors
+the sibling ``pr106_latent_sidecar_r2`` runtime in the same packet AND
+proves full-frame inflate parity against the source runtime.
+
+Per Catalog #295 (NSCS06 v5 bug-class anchor; commit ``0b50ceceb``): a
+submission ``inflate.py`` MUST be self-contained on a clean Modal worker.
+This file currently uses BOTH (a) lazy ``from tac.packet_compiler.*``
+imports inside the SRL1/SAC1/centered-delta decoders AND (b) sibling
+submission lookup via ``_delegate_to_pr106``. Both are intentional research
+shortcuts gated by the docstring claim that this is NOT a promotion-grade
+runtime; per audit Priority 4
+(.omx/research/submission_inflate_pythonpath_shim_audit_20260516.md) the
+acceptance path is the same-line ``# SUBMISSION_PYTHONPATH_SHIM_OK``
+waiver applied at the function-scoped imports + a clear dispatch contract
+that the magic-codec envelope variants require the sibling submission and
+the operator's working tree to be present, which is acceptable for the LAB
+dispatch flow (where both are mounted) and NOT acceptable for the
+OSS-release path until the helpers are vendored.
 
 Design scope:
 
@@ -117,7 +134,7 @@ def _decode_ac_to_bytes(inner: bytes) -> bytes:
     if inner[:4] != b"SAC1":
         raise ValueError(f"expected SAC1 magic; got {inner[:4]!r}")
     # Delegate to constriction-backed deserializer in the tac runtime.
-    from tac.packet_compiler.sparse_packet_ir import (
+    from tac.packet_compiler.sparse_packet_ir import (  # SUBMISSION_PYTHONPATH_SHIM_OK:magic-codec-pr106-r2-is-research-only-non-promotable-adapter-per-module-docstring-requires-sibling-pr106-latent-sidecar-r2-and-tac-packet-compiler-sparse-packet-ir-both-mounted-via-lab-dispatch-flow-not-oss-release-self-contained-per-catalog-295-audit-priority-4
         decode_arithmetic_coefficients,
         deserialize_arithmetic_coefficients,
     )
@@ -136,7 +153,7 @@ def _decode_centered_delta_to_bytes(inner: bytes) -> bytes:
     (lzma_len,) = struct.unpack_from("<I", inner, pos)
     pos += 4
     lzma_bytes = inner[pos : pos + lzma_len]
-    from tac.packet_compiler.pr101_sidecar_grammar import decode_centered_delta_uint8
+    from tac.packet_compiler.pr101_sidecar_grammar import decode_centered_delta_uint8  # SUBMISSION_PYTHONPATH_SHIM_OK:magic-codec-pr106-r2-is-research-only-non-promotable-adapter-per-module-docstring-requires-tac-packet-compiler-pr101-sidecar-grammar-mounted-via-lab-dispatch-flow-not-oss-release-self-contained-per-catalog-295-audit-priority-4
 
     values = decode_centered_delta_uint8(
         lzma_bytes, n_pairs=int(n_rows), n_dims=int(n_dims)

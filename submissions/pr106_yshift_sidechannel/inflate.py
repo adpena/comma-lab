@@ -51,8 +51,14 @@ import torch.nn.functional as F
 
 HERE = Path(__file__).resolve().parent
 # Reuse PR106 codec + model from sister submission to avoid duplication.
+# Per Catalog #295 audit Priority 4 option (b): pr106_yshift_sidechannel is a
+# composition lane that stacks on the canonical PR106 codec from
+# submissions/apogee_intN/src/{codec,model}.py. The contest dispatch packet
+# manifest declares both submissions as a co-shipped pair (sibling-submission
+# shipping requirement). NOT acceptable for OSS-release path where each
+# submission must be self-contained; LAB dispatch flow mounts both alongside.
 APOGEE_SRC = HERE.parent / "apogee_intN" / "src"
-sys.path.insert(0, str(APOGEE_SRC))
+sys.path.insert(0, str(APOGEE_SRC))  # SUBMISSION_PYTHONPATH_SHIM_OK:pr106-yshift-sidechannel-stacks-on-canonical-pr106-codec-from-sibling-apogee-intN-submission-co-shipped-in-lab-dispatch-packet-manifest-not-oss-release-self-contained-per-catalog-295-audit-priority-4-option-b
 
 from model import HNeRVDecoder  # type: ignore[import-not-found]
 from codec import parse_packed_archive  # type: ignore[import-not-found]

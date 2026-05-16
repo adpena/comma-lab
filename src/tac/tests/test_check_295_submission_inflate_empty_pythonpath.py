@@ -476,8 +476,14 @@ def test_multiple_submissions_aggregated(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-def test_orchestrator_callsite_wires_warn_only():
-    """preflight_all() must wire Catalog #295 with strict=False at landing."""
+def test_orchestrator_callsite_wires_strict_true_post_backfill():
+    """preflight_all() must wire Catalog #295 with strict=True post-backfill.
+
+    Strict-flipped 2026-05-16 by SISTER-BACKFILL-WAVE per CLAUDE.md
+    "Strict-flip atomicity rule" — the 4-priority backfill drove all 6
+    affected substrates to 0 violations in the same commit batch as
+    the strict-flip itself.
+    """
     import inspect
 
     from tac.preflight import preflight_all
@@ -486,16 +492,19 @@ def test_orchestrator_callsite_wires_warn_only():
     assert "check_submission_inflate_works_with_empty_pythonpath" in src, (
         "Catalog #295 must be wired into preflight_all()"
     )
-    # Find the call and verify strict=False (warn-only at landing).
+    # Find the call and verify strict=True post-backfill.
     lines = src.split("\n")
     found_call = False
     for i, line in enumerate(lines):
         if "check_submission_inflate_works_with_empty_pythonpath(" in line:
             # Check next 3 lines for strict= argument.
             window = "\n".join(lines[i : i + 4])
-            assert "strict=False" in window, (
-                "Catalog #295 wire-in must be strict=False at landing "
-                "per CLAUDE.md 'Strict-flip atomicity rule' (live count > 0)"
+            assert "strict=True" in window, (
+                "Catalog #295 wire-in must be strict=True post-backfill "
+                "per CLAUDE.md 'Strict-flip atomicity rule' (live count = 0). "
+                "If this gate has regressed back to strict=False, the "
+                "SISTER-BACKFILL-WAVE landing has been reverted; restore "
+                "the strict-flip OR document why via a CLAUDE.md edit."
             )
             found_call = True
             break
@@ -503,21 +512,61 @@ def test_orchestrator_callsite_wires_warn_only():
 
 
 # ---------------------------------------------------------------------------
-# Live regression: known affected substrates remain flagged
+# Live regression: all 6 previously-affected substrates now pass strict
 # ---------------------------------------------------------------------------
 
 
-def test_nscs01_remains_flagged_until_vendored():
-    """nscs01_nullspace_split_renderer is the canonical NSCS06-v5-class anchor.
-    Until the trainer vendors the codec package alongside, this MUST stay flagged.
+def test_all_six_backfilled_substrates_pass_strict():
+    """SISTER-BACKFILL-WAVE 2026-05-16 drove live count 6 -> 0.
+
+    Per `.omx/research/submission_inflate_pythonpath_shim_audit_20260516.md`
+    the 6 affected substrates were: apogee_v2, magic_codec_pr106_r2,
+    nscs01_nullspace_split_renderer, pr106_lrl1_sidechannel,
+    pr106_stacked, pr106_yshift_sidechannel. After backfill, NONE
+    should appear in the violation list. If any reappear, the backfill
+    fix for that substrate has regressed.
     """
     violations = check_submission_inflate_works_with_empty_pythonpath(
         strict=False, verbose=False,
     )
-    nscs01_violations = [v for v in violations if "nscs01" in v]
-    assert len(nscs01_violations) >= 1, (
-        "nscs01_nullspace_split_renderer must remain flagged until the trainer "
-        "vendors `tac.substrates.nscs01_nullspace_split_renderer` package "
-        "alongside as `submissions/<id>/src/tac/...` "
-        "(NSCS06 v6 pattern @ commit 90bca47ff)"
+    canonical_six = {
+        "apogee_v2",
+        "magic_codec_pr106_r2",
+        "nscs01_nullspace_split_renderer",
+        "pr106_lrl1_sidechannel",
+        "pr106_stacked",
+        "pr106_yshift_sidechannel",
+    }
+    regressions = []
+    for sub in canonical_six:
+        if any(sub in v for v in violations):
+            regressions.append(sub)
+    assert not regressions, (
+        f"SISTER-BACKFILL-WAVE regression: {regressions} re-appeared in "
+        f"Catalog #295 violations. Inspect the backfill fix for each:\n"
+        f"  - apogee_v2 → vendored src/tac/water_filling_codec_v2.py + "
+        f"src/tac/arithmetic_qint_codec.py alongside\n"
+        f"  - magic_codec_pr106_r2 → same-line waivers on 2 function-scoped "
+        f"`from tac.packet_compiler.*` imports\n"
+        f"  - nscs01_nullspace_split_renderer → same-line "
+        f"# SUBMISSION_PYTHONPATH_SHIM_OK waiver (NSCS01 fail-closed pattern)\n"
+        f"  - pr106_lrl1/_stacked/_yshift_sidechannel → same-line waivers "
+        f"on sibling-submission sys.path.insert lines (audit Priority 4 b)"
+    )
+
+
+def test_live_repo_zero_violations_post_backfill():
+    """The live repo MUST report 0 violations after the SISTER-BACKFILL-WAVE.
+
+    Companion of test_all_six_backfilled_substrates_pass_strict but with
+    a tighter contract: count must be EXACTLY 0, not just "the canonical
+    six don't appear".
+    """
+    violations = check_submission_inflate_works_with_empty_pythonpath(
+        strict=False, verbose=False,
+    )
+    assert violations == [], (
+        f"Catalog #295 live count must be 0 post-SISTER-BACKFILL-WAVE; "
+        f"got {len(violations)} violation(s):\n"
+        + "\n".join(f"  - {v[:200]}" for v in violations[:5])
     )

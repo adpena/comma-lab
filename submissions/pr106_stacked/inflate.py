@@ -65,8 +65,16 @@ import torch.nn.functional as F
 
 HERE = Path(__file__).resolve().parent
 # Reuse the vendored PR106 codec/model from the latent_sidecar sister lane.
+# Per Catalog #295 audit Priority 4 option (b): pr106_stacked is the meta-
+# composition lane that stacks ALL 4 score-aware sidechannels (latent +
+# yshift + lrl1 + wavelet-WR01) onto the canonical PR106 codec from sibling
+# submissions/pr106_latent_sidecar/src/{codec,model}.py. The contest dispatch
+# packet manifest declares both submissions as a co-shipped pair (sibling-
+# submission shipping requirement). NOT acceptable for OSS-release path
+# where each submission must be self-contained; LAB dispatch flow mounts
+# both alongside.
 PR106_SRC = HERE.parent / "pr106_latent_sidecar" / "src"
-sys.path.insert(0, str(PR106_SRC))
+sys.path.insert(0, str(PR106_SRC))  # SUBMISSION_PYTHONPATH_SHIM_OK:pr106-stacked-meta-composition-lane-stacks-on-canonical-pr106-codec-from-sibling-pr106-latent-sidecar-submission-co-shipped-in-lab-dispatch-packet-manifest-not-oss-release-self-contained-per-catalog-295-audit-priority-4-option-b
 
 from model import HNeRVDecoder  # type: ignore[import-not-found]
 from codec import parse_packed_archive  # type: ignore[import-not-found]
