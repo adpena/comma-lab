@@ -1,5 +1,36 @@
 # Main source-of-truth push audit - 2026-05-17
 
+## Current verification addendum - post L5-v2 freshness landing
+
+This addendum refreshes the source-of-truth custody after the later L5-v2
+architecture-lock freshness landing.
+
+- Local branch: `main`
+- Local HEAD before this addendum: `e554c498e2c7c3c2af09bf534e84926a330a7696`
+- Local `origin/main` before this addendum:
+  `e554c498e2c7c3c2af09bf534e84926a330a7696`
+- Remote `refs/heads/main` before this addendum:
+  `e554c498e2c7c3c2af09bf534e84926a330a7696`
+- Worktree status before this addendum: clean
+- Network refresh command: `git fetch --prune origin main`
+- Remote URL: `git@github.com:adpena/comma-lab.git`
+
+Current local branches not merged to `main` are historical safety refs only:
+
+| Branch | Status |
+| --- | --- |
+| `safety/stash-recovered-20260505T052046Z-stash0` | Preserved historical WIP; do not blindly merge. |
+| `safety/stash-recovered-20260505T052046Z-stash1` | Preserved historical WIP; do not blindly merge. |
+| `safety/stash-recovered-20260505T052046Z-stash2` | Preserved historical WIP; do not blindly merge. |
+| `safety/stash-recovered-20260505T052046Z-stash3` | Preserved historical WIP; do not blindly merge. |
+
+These refs and the stash stack remain preserved signal, not production source
+of truth. Any future promotion from them must happen through an isolated
+worktree, focused patch extraction, tests, review-tracker evidence, and a dated
+research ledger. They are intentionally not bulk-merged because doing so would
+mix old recovery/WIP surfaces into the current contest-custody tree without
+review.
+
 ## Verdict
 
 `main` is the production source of truth and is pushed to `origin/main`.
