@@ -30758,6 +30758,7 @@
       "name": "NSCS01 Nullspace Split Renderer",
       "phase": 2.0,
       "level": 1,
+      "research_only": true,
       "gates": {
         "impl_complete": {
           "status": true,
@@ -30792,7 +30793,7 @@
           "evidence": "scripts/remote_lane_substrate_nscs01_nullspace_split_renderer.sh + .omx/operator_authorize_recipes/substrate_nscs01_nullspace_split_renderer_modal_t4_dispatch.yaml + submissions/nscs01_nullspace_split_renderer/inflate.{sh,py} all in place; bash -n syntax-clean"
         }
       },
-      "notes": ""
+      "notes": "Catalog #315 disposition 2026-05-17: research_only=true because latest NSCS01 council anchor is PROCEED_WITH_REVISIONS and full_main remains council-gated NotImplementedError. Reactivate for paid dispatch only after head0-capacity revisions plus follow-on positive PROCEED anchor."
     },
     {
       "id": "lane_nscs03_end_to_end_balle_joint_codec_20260515",
@@ -32079,6 +32080,7 @@
       "name": "Phase 1b Z6 _full_main lift",
       "phase": 1.0,
       "level": 1,
+      "research_only": true,
       "gates": {
         "impl_complete": {
           "status": true,
@@ -32113,7 +32115,7 @@
           "evidence": "scripts/remote_lane_substrate_time_traveler_l5_z6.sh (pre-existing scaffold; canonical NVML env block per Catalog #244)"
         }
       },
-      "notes": ""
+      "notes": "Catalog #315 disposition 2026-05-17: research_only=true because latest Z6 council anchor is PROCEED_WITH_REVISIONS and local_predeploy dispatchability proof intentionally fails until recipe blockers clear. Reactivate for paid dispatch only after blocker-clearing iteration plus follow-on positive PROCEED anchor."
     },
     {
       "id": "lane_wave_3_phase_1a_fire_dispatchable_20260516",

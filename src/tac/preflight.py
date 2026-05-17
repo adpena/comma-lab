@@ -65054,6 +65054,16 @@ _CHECK_315_PLACEHOLDER_RATIONALES = ("<rationale>", "<reason>", "")
 
 def _check_315_lane_in_scope(lane_id: str) -> bool:
     lane_id_lower = lane_id.lower()
+    if any(
+        tok in lane_id_lower
+        for tok in (
+            "_council",
+            "sextet_council",
+            "grand_council",
+            "phase_2_sextet_council",
+        )
+    ):
+        return False
     return any(
         tok in lane_id_lower
         for tok in _CHECK_315_IN_SCOPE_ID_SUBSTRINGS
@@ -65162,6 +65172,40 @@ def _check_315_build_council_verdict_map(
     return latest_by_substrate
 
 
+# v2 (codex review fix 2026-05-17): canonical substrate-family tokens used
+# for fuzzy ID join. Posterior surface IDs (e.g.
+# ``nscs01_nullspace_split_renderer_v1_head0_capacity_surface``) and lane
+# IDs (e.g. ``lane_nscs01_nullspace_split_renderer_20260515``) rarely match
+# exactly. The exact-ID join from v1 silently missed every revised-council
+# lane on the live repo. Family-token overlap recovers them.
+_CHECK_315_SUBSTRATE_FAMILY_TOKENS: tuple[str, ...] = (
+    "nscs01", "nscs02", "nscs03", "nscs04", "nscs05", "nscs06",
+    "z3_g1", "z3_balle", "z4", "z5", "z6", "z7", "z8",
+    "atw_codec",
+    "wunderkind_g1",
+    "tishby_ib_pure",
+    "rudin",
+    "darts_supernet",
+)
+
+
+def _check_315_extract_family_tokens(id_str: str) -> frozenset[str]:
+    """Returns the set of canonical substrate-family tokens present in an
+    ID string. Used to fuzzy-match posterior ``deferred_substrate_id``
+    surface names against lane registry IDs when exact join fails.
+    """
+    if not isinstance(id_str, str) or not id_str:
+        return frozenset()
+    normalized = re.sub(r"[^a-z0-9]+", "_", id_str.lower()).strip("_")
+    haystack = f"_{normalized}_"
+    hits: set[str] = set()
+    for tok in _CHECK_315_SUBSTRATE_FAMILY_TOKENS:
+        normalized_tok = re.sub(r"[^a-z0-9]+", "_", tok.lower()).strip("_")
+        if normalized_tok and f"_{normalized_tok}_" in haystack:
+            hits.add(tok)
+    return frozenset(hits)
+
+
 def _check_315_substrate_ids_for_lane(lane: dict) -> tuple[str, ...]:
     """Returns the set of substrate_id strings that may identify this
     lane in the council posterior. The lane.id itself is the primary
@@ -65190,12 +65234,37 @@ def _check_315_lookup_latest_verdict(
     verdict_map: dict[str, dict],
 ) -> dict | None:
     """Returns the latest council deliberation record that names this
-    lane (any of its substrate_ids), or None if no anchor exists."""
+    lane (any of its substrate_ids OR a posterior surface_id that
+    shares a canonical substrate-family token), or None if no anchor
+    exists.
+
+    v2 (codex review fix 2026-05-17): added family-token fallback after
+    exact-ID join failed silently on every revised-council lane in the
+    live repo (NSCS01/NSCS03/Z6/Wunderkind/Tishby all used `_v1_*_surface`
+    surface IDs that did not match any lane ID exactly).
+    """
     candidate: dict | None = None
     candidate_ts: float = -1.0
+    # Pass 1: exact ID join (primary path; preserves prior behavior)
     for sid in _check_315_substrate_ids_for_lane(lane):
         row = verdict_map.get(sid)
         if row is None:
+            continue
+        ts = _check_315_parse_iso_utc(row.get("written_at_utc", "")) or 0.0
+        if ts > candidate_ts:
+            candidate_ts = ts
+            candidate = row
+    if candidate is not None:
+        return candidate
+    # Pass 2: family-token fuzzy match (codex review v2 fallback). Only
+    # fires when exact join produced nothing. Requires non-empty token
+    # overlap between lane and posterior surface ID.
+    lane_tokens = _check_315_extract_family_tokens(str(lane.get("id", "")))
+    if not lane_tokens:
+        return None
+    for sid, row in verdict_map.items():
+        sid_tokens = _check_315_extract_family_tokens(sid)
+        if not sid_tokens or not (lane_tokens & sid_tokens):
             continue
         ts = _check_315_parse_iso_utc(row.get("written_at_utc", "")) or 0.0
         if ts > candidate_ts:
@@ -65242,40 +65311,81 @@ def check_substrate_at_optimal_form_before_paid_dispatch(
     posterior_path = (
         root / ".omx" / "state" / "council_deliberation_posterior.jsonl"
     )
+    # v2 (codex review fix 2026-05-17): in STRICT mode, treat missing or
+    # unreadable control-plane state as a paid-dispatch blocker. Codex's
+    # finding: "absence of the registry/posterior is not evidence that
+    # every substrate is at optimal form; it is loss of the very state
+    # needed to prove safety. Under recovery, partial checkout, or JSON
+    # corruption, strict preflight can silently drop this guard before
+    # provider spend."
     if not registry_path.is_file():
-        if verbose:
-            print("  [catalog-315] OK (no lane_registry.json)")
-        return violations
-    if not posterior_path.is_file():
-        # If there are no council deliberations on disk, this gate
-        # cannot fire (no PROCEED_WITH_REVISIONS to detect). Per
-        # sister Catalog #298 / #300 / #301 fail-OPEN-when-state-
-        # missing pattern.
-        if verbose:
-            print(
-                "  [catalog-315] OK "
-                "(no council_deliberation_posterior.jsonl)"
+        if strict:
+            raise PreflightError(
+                "check_substrate_at_optimal_form_before_paid_dispatch "
+                "(Catalog #315 v2 fail-closed): lane_registry.json "
+                "is MISSING. Strict mode REQUIRES the lane registry to "
+                "prove substrate-form readiness; missing state is NOT "
+                "evidence of safety. Restore the registry or run in "
+                "non-strict mode for exploratory calls."
             )
+        if verbose:
+            print("  [catalog-315] WARN (no lane_registry.json; non-strict)")
         return violations
-
     try:
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if strict:
+            raise PreflightError(
+                "check_substrate_at_optimal_form_before_paid_dispatch "
+                "(Catalog #315 v2 fail-closed): lane_registry.json is "
+                f"UNREADABLE/CORRUPT ({exc}). Strict mode REQUIRES a "
+                "valid lane registry; refusing paid dispatch."
+            )
         if verbose:
             print(f"  [catalog-315] WARN registry read error: {exc}")
         return violations
 
     lanes = registry.get("lanes")
     if not isinstance(lanes, list):
+        if strict:
+            raise PreflightError(
+                "check_substrate_at_optimal_form_before_paid_dispatch "
+                "(Catalog #315 v2 fail-closed): lane_registry.json has "
+                "no 'lanes' list. Refusing paid dispatch."
+            )
         if verbose:
-            print("  [catalog-315] OK (registry has no lanes list)")
+            print("  [catalog-315] WARN (registry has no lanes list)")
+        return violations
+
+    if not posterior_path.is_file():
+        if strict:
+            raise PreflightError(
+                "check_substrate_at_optimal_form_before_paid_dispatch "
+                "(Catalog #315 v2 fail-closed): "
+                "council_deliberation_posterior.jsonl is MISSING. "
+                "Strict mode REQUIRES the council posterior to prove "
+                "substrate-form readiness; missing state is NOT "
+                "evidence of safety."
+            )
+        if verbose:
+            print(
+                "  [catalog-315] WARN "
+                "(no council_deliberation_posterior.jsonl; non-strict)"
+            )
         return violations
 
     verdict_map = _check_315_build_council_verdict_map(posterior_path)
     if not verdict_map:
+        if strict:
+            raise PreflightError(
+                "check_substrate_at_optimal_form_before_paid_dispatch "
+                "(Catalog #315 v2 fail-closed): council posterior has "
+                "no deferred_substrate_id anchors. Strict mode REQUIRES "
+                "council deliberations to prove substrate-form readiness."
+            )
         if verbose:
             print(
-                "  [catalog-315] OK "
+                "  [catalog-315] WARN "
                 "(no deferred_substrate_id anchors in posterior)"
             )
         return violations
@@ -65325,52 +65435,65 @@ def check_substrate_at_optimal_form_before_paid_dispatch(
 
         latest = _check_315_lookup_latest_verdict(lane, verdict_map)
         if latest is None:
-            # No council anchor exists for this substrate; the
-            # iteration-discipline gate only fires when a council
-            # has explicitly returned PROCEED_WITH_REVISIONS.
-            # Lanes with no council anchor are covered by other
-            # discipline gates (Catalog #233 promotion 4-gate,
-            # Catalog #294 9-dim checklist, etc.). This gate is
-            # SPECIFICALLY the council-verdict-binding surface.
+            # No council anchor exists for this substrate after exact-ID
+            # join and family-token fallback. Catalog #315 is specifically
+            # the council-verdict-binding surface; it must not become a
+            # broad retroactive "all historical substrate lanes need
+            # council rows" migration gate. Sister gates cover lanes with
+            # missing design/promotion evidence. This gate only blocks
+            # when a joinable council anchor exists and is not a positive
+            # PROCEED.
             no_council_anchor += 1
             if verbose:
                 print(
-                    f"  [catalog-315] OK lane={lane_id} L{level} "
-                    "no_council_anchor (out of scope for this "
-                    "gate; covered by sister gates)"
+                    f"  [catalog-315] WARN lane={lane_id} L{level} "
+                    "no_council_anchor (covered by sister gates)"
                 )
             continue
 
         verdict = latest.get("council_verdict", "")
-        if verdict != "PROCEED_WITH_REVISIONS":
-            # Latest council verdict is PROCEED (unconditional) /
-            # DEFER / REFUSE / ESCALATE. Either OK (PROCEED) or
-            # the lane is dormant pending re-deliberation
-            # (DEFER / REFUSE / ESCALATE). Not in scope for this
-            # gate; sister gates (Catalog #233 / #298) cover those.
+        # v2 (codex review fix 2026-05-17): POSITIVE PROCEED requirement.
+        # Codex's HIGH finding: v1 accepted any verdict !=
+        # 'PROCEED_WITH_REVISIONS' as dispatch-safe, including DEFER /
+        # REFUSE / ESCALATE_TO_HIGHER_TIER / missing / unknown. For a
+        # paid-dispatch BLOCKER the hard requirement is POSITIVE
+        # authorization, not absence of one specific negation.
+        _POSITIVE_PROCEED_VERDICTS = {"PROCEED", "PROCEED_UNCONDITIONAL"}
+        if verdict in _POSITIVE_PROCEED_VERDICTS:
             proceed_unconditional += 1
             if verbose:
                 print(
                     f"  [catalog-315] OK lane={lane_id} L{level} "
-                    f"latest_verdict={verdict!r}"
+                    f"latest_verdict={verdict!r} (positive PROCEED)"
                 )
             continue
 
         deliberation_id = latest.get("deliberation_id", "<unknown>")
         verdict_ts_str = latest.get("written_at_utc", "<unknown>")
+        # Classify non-PROCEED verdicts for dispatch-blocker rationale.
+        if verdict == "PROCEED_WITH_REVISIONS":
+            verdict_class = "iteration_pending"
+        elif verdict in ("DEFER_PENDING_EVIDENCE", "DEFER", "REFUSE"):
+            verdict_class = "dormant_pending_redeliberation"
+        elif verdict.startswith("ESCALATE"):
+            verdict_class = "escalated_no_authorization"
+        elif not verdict:
+            verdict_class = "missing_verdict"
+        else:
+            verdict_class = "unknown_non_proceed_verdict"
         violations.append(
             f"lane {lane_id!r} (L{level}) is in-scope substrate lane "
             f"with impl_complete=true but the latest council "
             f"deliberation ({deliberation_id!r} at {verdict_ts_str}) "
-            f"returned council_verdict='PROCEED_WITH_REVISIONS' AND "
-            "no follow-on PROCEED-unconditional anchor supersedes it. "
-            "Per CLAUDE.md \"Substrate MUST be at OPTIMAL FORM before "
-            "paid empirical dispatch\" non-negotiable: this lane MUST "
-            "satisfy one of: "
+            f"returned council_verdict={verdict!r} "
+            f"(blocker class: {verdict_class}) AND no follow-on "
+            "POSITIVE PROCEED anchor supersedes it. Per CLAUDE.md "
+            "\"Substrate MUST be at OPTIMAL FORM before paid empirical "
+            "dispatch\" v2 fail-closed: this lane MUST satisfy one of: "
             "(a) land iteration subagent commits applying the council "
             "revisions + re-trigger sextet/grand-council deliberation "
-            "that returns PROCEED (unconditional) per the canonical "
-            "iteration methodology (NSCS06 v6->v7 pattern), "
+            "that returns POSITIVE PROCEED per the canonical iteration "
+            "methodology (NSCS06 v6->v7 pattern), "
             "(b) declare `research_only=true` with reactivation "
             "criteria, "
             "(c) declare `lane_class=substrate_engineering`, "

@@ -112,6 +112,41 @@ def _repo_relative(path: Path, repo_root: Path) -> str:
         return str(path)
 
 
+def _resolve_repo_path_strict_in_repo(
+    path: str | Path,
+    repo_root: Path,
+) -> tuple[Path | None, str]:
+    """v2 (codex review fix 2026-05-17): canonical source-of-truth path
+    resolver that REJECTS absolute paths AND parent-directory traversal
+    (``..``) AND any path that resolves outside the repo root.
+
+    Codex's MEDIUM finding: the generic ``_resolve_repo_path`` accepts
+    absolute paths and ``../`` traversal, allowing a hand-edited bundle
+    to point at a private local or out-of-repo plan with a matching
+    hash. The verifier then emits ``matches_bundle_sha256=true``,
+    weakening the false-authority hardening.
+
+    Returns ``(resolved_path | None, error_token)``. When the path is
+    invalid for source-of-truth custody, ``resolved_path`` is None and
+    ``error_token`` names the specific blocker class so the caller can
+    surface it as a structured blocker.
+    """
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return None, "source_plan_path_absolute_rejected"
+    # Reject any explicit `..` component; even if it eventually resolves
+    # inside the repo, an out-of-tree traversal in source-of-truth
+    # custody is too brittle.
+    if ".." in candidate.parts:
+        return None, "source_plan_path_parent_traversal_rejected"
+    resolved = (repo_root / candidate).resolve()
+    try:
+        resolved.relative_to(repo_root.resolve())
+    except ValueError:
+        return None, "source_plan_path_outside_repo_rejected"
+    return resolved, ""
+
+
 def _mapping_rows(value: object) -> list[Mapping[str, Any]]:
     if not isinstance(value, Iterable) or isinstance(value, (str, bytes, Mapping)):
         return []
@@ -389,7 +424,14 @@ def _source_plan_status(
     }
     if not raw_path:
         return summary, {}, ["source_plan_path_missing"]
-    path = _resolve_repo_path(raw_path, repo_root)
+    # v2 (codex review fix 2026-05-17): canonicalize source_plan path
+    # to repo-relative; reject absolute paths + `..` traversal +
+    # outside-repo resolutions. Source-plan IS source-of-truth custody;
+    # the generic resolver's permissiveness allowed false-authority.
+    path, path_error = _resolve_repo_path_strict_in_repo(raw_path, repo_root)
+    if path is None:
+        summary["path"] = raw_path  # preserve operator's intent in the surface
+        return summary, {}, [path_error]
     summary["path"] = _repo_relative(path, repo_root)
     if not path.is_file():
         return summary, {}, ["source_plan_missing"]

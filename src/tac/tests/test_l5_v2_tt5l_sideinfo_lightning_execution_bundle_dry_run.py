@@ -548,6 +548,46 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_source_plan_sha_drift(
     )
 
 
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_absolute_source_plan(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle["source_plan"] = str(
+        tmp_path / ".omx/research/fake_lightning_plan.json"
+    )
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert "source_plan_path_absolute_rejected" in payload["blockers"]
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_source_plan_traversal(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle["source_plan"] = "../outside_plan.json"
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert "source_plan_path_parent_traversal_rejected" in payload["blockers"]
+
+
 def test_tt5l_lightning_bundle_dry_run_verifier_rejects_unpaired_axis_cells(
     tmp_path: Path,
 ) -> None:

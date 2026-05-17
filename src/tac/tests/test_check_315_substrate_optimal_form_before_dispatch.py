@@ -30,6 +30,7 @@ from tac.preflight import (
     PreflightError,
     _check_315_build_council_verdict_map,
     _check_315_collect_lane_text,
+    _check_315_extract_family_tokens,
     _check_315_lane_in_scope,
     _check_315_lane_opt_out,
     _check_315_lookup_latest_verdict,
@@ -164,6 +165,7 @@ def _make_council_row(
         ("lane_z7_predictive_coding_world_model", True),
         ("lane_z8_hierarchical_pc_substrate_20260516", True),
         # Out-of-scope (infrastructure / META / catalog gates).
+        ("lane_nscs01_phase_2_sextet_council_20260516", False),
         ("lane_lane_registry_consistent", False),
         ("lane_meta_lagrangian_atom_emitter", False),
         ("lane_random_unrelated_lane", False),
@@ -284,6 +286,17 @@ def test_substrate_ids_for_lane_supports_aliases_list():
     assert "alias_b" in ids
 
 
+def test_extract_family_tokens_is_separator_aware():
+    assert "z3_g1" in _check_315_extract_family_tokens("lane_z3_g1_entropy")
+    assert "z3_g1" not in _check_315_extract_family_tokens("lane_z30_future")
+    assert "nscs03" in _check_315_extract_family_tokens(
+        "nscs03_end_to_end_balle_joint_codec_v1_surface"
+    )
+    assert "z6" not in _check_315_extract_family_tokens(
+        "lane_time_traveler_l5_autonomy_substrate_20260513"
+    )
+
+
 def test_build_council_verdict_map_latest_wins(tmp_path):
     repo_root = _write_registry(tmp_path, [])
     posterior_path = _write_posterior(
@@ -340,6 +353,91 @@ def test_lookup_latest_verdict_returns_none_when_no_anchor(tmp_path):
         ],
     )
     vmap = _check_315_build_council_verdict_map(posterior_path)
+    assert _check_315_lookup_latest_verdict(lane, vmap) is None
+
+
+def test_lookup_latest_verdict_matches_family_token_surface_id(tmp_path):
+    lane = _make_lane_l1_impl_complete("lane_nscs01_nullspace_split_renderer_20260515")
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "nscs01_surface_deliberation",
+                "nscs01_nullspace_split_renderer_v1_head0_capacity_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+
+    verdict = _check_315_lookup_latest_verdict(lane, vmap)
+
+    assert verdict is not None
+    assert verdict["deliberation_id"] == "nscs01_surface_deliberation"
+
+
+def test_lookup_latest_verdict_does_not_false_match_prefix_family_token(tmp_path):
+    lane = _make_lane_l1_impl_complete("lane_z30_future_surface_20260517")
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "z3_deliberation",
+                "z3_g1_entropy_coded_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+
+    assert _check_315_lookup_latest_verdict(lane, vmap) is None
+
+
+def test_lookup_latest_verdict_does_not_false_match_z3_balle_to_z3_g1(tmp_path):
+    lane = _make_lane_l1_impl_complete(
+        "lane_z3_balle_hyperprior_bolton_recover_20260514"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "z3_g1_deliberation",
+                "lane_z3_g1_entropy_coded_v2_20260515",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+
+    assert _check_315_lookup_latest_verdict(lane, vmap) is None
+
+
+def test_lookup_latest_verdict_does_not_false_match_generic_time_traveler_to_z6(
+    tmp_path,
+):
+    lane = _make_lane_l1_impl_complete(
+        "lane_time_traveler_l5_autonomy_substrate_20260513"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "z6_deliberation",
+                "time_traveler_l5_z6_v1_ego_conditioning_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+
     assert _check_315_lookup_latest_verdict(lane, vmap) is None
 
 
@@ -587,6 +685,29 @@ def test_gate_passes_when_no_council_anchor_for_lane(tmp_path):
     assert violations == []
 
 
+def test_gate_strict_mode_does_not_turn_missing_anchor_into_revision_blocker(
+    tmp_path,
+):
+    """Strict Catalog #315 binds known council verdicts; it does not
+    retroactively require council rows for every historical substrate lane.
+    """
+    lane = _make_lane_l1_impl_complete("lane_substrate_no_council")
+    repo_root = _write_registry(tmp_path, [lane])
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "different_substrate_deliberation",
+                "lane_substrate_different",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-16T10:00:00Z",
+            ),
+        ],
+    )
+    violations = check_315(repo_root=repo_root, strict=True, verbose=False)
+    assert violations == []
+
+
 def test_gate_skips_l0_lanes(tmp_path):
     """L0 lanes have no impl yet; out of scope."""
     lane = _make_lane_l1_impl_complete("lane_substrate_z6")
@@ -816,9 +937,12 @@ def test_gate_alias_lookup_resolves_substrate_via_alias_field(tmp_path):
     assert "lane_substrate_z6" in violations[0]
 
 
-def test_gate_defer_verdict_treated_as_dormant_not_flagged(tmp_path):
-    """DEFER / REFUSE / ESCALATE verdicts are NOT flagged (the lane is
-    dormant pending re-deliberation; sister gates cover this)."""
+def test_gate_defer_verdict_treated_as_no_positive_proceed_blocker(tmp_path):
+    """DEFER / REFUSE / ESCALATE are not paid-dispatch authorization.
+
+    Catalog #315 v2 requires a positive PROCEED anchor, not merely the
+    absence of PROCEED_WITH_REVISIONS.
+    """
     lane = _make_lane_l1_impl_complete("lane_substrate_z6")
     repo_root = _write_registry(tmp_path, [lane])
     _write_posterior(
@@ -833,7 +957,9 @@ def test_gate_defer_verdict_treated_as_dormant_not_flagged(tmp_path):
         ],
     )
     violations = check_315(repo_root=repo_root, strict=False, verbose=False)
-    assert violations == []
+    assert len(violations) == 1
+    assert "DEFER_PENDING_EVIDENCE" in violations[0]
+    assert "dormant_pending_redeliberation" in violations[0]
 
 
 def test_gate_live_repo_regression_guard():
@@ -866,3 +992,316 @@ def test_orchestrator_wire_in_uses_strict_true():
         "Catalog #315 must stay strict once live count is verified at 0; "
         f"got window: {window}"
     )
+
+
+# ---------------------------------------------------------------------------
+# v2 (codex review fix 2026-05-17) regression tests using LIVE deferred IDs
+#
+# Per codex's explicit recommendation:
+#     "Add regression tests using the live deferred ids, not synthetic
+#      ids equal to lane ids."
+#
+# The 5 substrate IDs below are taken VERBATIM from
+# ``.omx/state/council_deliberation_posterior.jsonl`` as of 2026-05-17.
+# Each ``deferred_substrate_id`` differs from its registry lane ID,
+# making them the canonical witness set that the family-token fuzzy
+# fallback MUST resolve. Synthetic IDs equal to lane IDs accidentally
+# pass via the Pass-1 exact-ID join and silently hide regressions in
+# Pass-2.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "lane_id,live_surface_id,expected_token",
+    [
+        (
+            "lane_nscs01_nullspace_split_renderer_20260515",
+            "nscs01_nullspace_split_renderer_v1_head0_capacity_surface",
+            "nscs01",
+        ),
+        (
+            "lane_nscs03_end_to_end_balle_joint_codec_20260515",
+            "nscs03_end_to_end_balle_joint_codec_v1_default_hyperparameter_configuration",
+            "nscs03",
+        ),
+        (
+            "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+            "time_traveler_l5_z6_v1_ego_conditioning_surface",
+            "z6",
+        ),
+        # NOTE: z3-family lanes are intentionally NOT in Catalog #315's
+        # in-scope id-substring set today (no `z3_` / `z4_` / `z5_`
+        # entry; only `z6_` / `z7_` / `z8_`). The Z3 G1 council row
+        # exists in the live posterior but the gate scope filter is
+        # ground truth.
+        (
+            "lane_tishby_ib_pure_substrate_20260515",
+            "tishby_ib_pure_substrate",
+            "tishby_ib_pure",
+        ),
+    ],
+)
+def test_family_join_resolves_live_deferred_substrate_ids(
+    tmp_path, lane_id, live_surface_id, expected_token
+):
+    """v2 regression: every LIVE deferred_substrate_id from the council
+    posterior MUST resolve to its registry lane via family-token fuzzy
+    match (Pass 2). If this test fails, the family-token table has
+    drifted out of sync with the live posterior."""
+    lane = _make_lane_l1_impl_complete(lane_id)
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                f"live_council_deliberation_{expected_token}",
+                live_surface_id,
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T12:00:00Z",
+            ),
+        ],
+    )
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+    verdict = _check_315_lookup_latest_verdict(lane, vmap)
+
+    assert verdict is not None, (
+        f"live deferred substrate id {live_surface_id!r} did NOT resolve "
+        f"to lane {lane_id!r}; family token {expected_token!r} should "
+        "be in both ID strings — check _CHECK_315_SUBSTRATE_FAMILY_TOKENS"
+    )
+    assert verdict["deferred_substrate_id"] == live_surface_id
+    assert verdict["council_verdict"] == "PROCEED_WITH_REVISIONS"
+
+    # End-to-end: gate must FLAG (not silently pass) when council
+    # returned PROCEED_WITH_REVISIONS on the lane.
+    violations = check_315(repo_root=repo_root, strict=False, verbose=False)
+    assert len(violations) == 1
+    assert lane_id in violations[0]
+    assert "PROCEED_WITH_REVISIONS" in violations[0]
+
+
+def test_family_join_resolves_all_live_deferred_ids_simultaneously(tmp_path):
+    """v2 regression: synthesize the multi-lane scenario from one
+    snapshot of the live posterior. Verifies cross-lane interference
+    (no family token bleeds across families) AND that all in-scope
+    lanes flag together when none have opt-out."""
+    lanes = [
+        _make_lane_l1_impl_complete("lane_nscs01_nullspace_split_renderer_20260515"),
+        _make_lane_l1_impl_complete(
+            "lane_nscs03_end_to_end_balle_joint_codec_20260515"
+        ),
+        _make_lane_l1_impl_complete(
+            "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
+        ),
+        _make_lane_l1_impl_complete("lane_tishby_ib_pure_substrate_20260515"),
+    ]
+    repo_root = _write_registry(tmp_path, lanes)
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "live_nscs01",
+                "nscs01_nullspace_split_renderer_v1_head0_capacity_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T11:50:25Z",
+            ),
+            _make_council_row(
+                "live_nscs03",
+                "nscs03_end_to_end_balle_joint_codec_v1_default_hyperparameter_configuration",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T11:49:16Z",
+            ),
+            _make_council_row(
+                "live_z6",
+                "time_traveler_l5_z6_v1_ego_conditioning_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T02:49:25Z",
+            ),
+            _make_council_row(
+                "live_tishby",
+                "tishby_ib_pure_substrate",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-16T22:30:13Z",
+            ),
+        ],
+    )
+    violations = check_315(repo_root=repo_root, strict=False, verbose=False)
+    assert len(violations) == 4, (
+        f"expected 4 violations (one per in-scope lifted-trainer-form "
+        f"substrate) but got {len(violations)}: {violations}"
+    )
+    flagged_lanes = {v.split("'")[1] for v in violations}
+    assert flagged_lanes == {
+        "lane_nscs01_nullspace_split_renderer_20260515",
+        "lane_nscs03_end_to_end_balle_joint_codec_20260515",
+        "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+        "lane_tishby_ib_pure_substrate_20260515",
+    }
+
+
+def test_iteration_to_optimal_form_supersedes_live_revisions(tmp_path):
+    """v2 regression: chronologically LATER PROCEED anchor MUST
+    supersede the live PROCEED_WITH_REVISIONS — even when the later
+    anchor uses a different surface form than the earlier one. Models
+    the canonical iteration path: lifted form deferred -> cargo-cult
+    unwind landed -> sextet re-deliberates PROCEED."""
+    lane = _make_lane_l1_impl_complete(
+        "lane_nscs01_nullspace_split_renderer_20260515"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "older_revisions_live",
+                "nscs01_nullspace_split_renderer_v1_head0_capacity_surface",
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T11:50:25Z",
+            ),
+            _make_council_row(
+                "newer_optimal_form_v2",
+                "nscs01_nullspace_split_renderer_v2_optimal_form_surface",
+                "PROCEED",
+                "2026-05-17T20:00:00Z",
+            ),
+        ],
+    )
+    violations = check_315(repo_root=repo_root, strict=False, verbose=False)
+    assert violations == [], (
+        "iteration to optimal form (later PROCEED) must supersede the "
+        f"earlier PROCEED_WITH_REVISIONS; got: {violations}"
+    )
+
+
+def test_strict_mode_fails_closed_on_missing_registry(tmp_path):
+    """v2 fail-closed regression: strict mode MUST raise PreflightError
+    when lane_registry.json is missing. Codex CRITICAL: v1 silently
+    returned [] (fail-open) on missing control-plane state."""
+    with pytest.raises(PreflightError, match="lane_registry.json is MISSING"):
+        check_315(repo_root=tmp_path, strict=True, verbose=False)
+
+
+def test_strict_mode_fails_closed_on_missing_posterior(tmp_path):
+    """v2 fail-closed regression: strict mode MUST raise PreflightError
+    when posterior is missing (registry present)."""
+    _write_registry(
+        tmp_path,
+        [_make_lane_l1_impl_complete("lane_substrate_test")],
+    )
+    with pytest.raises(
+        PreflightError, match="council_deliberation_posterior.jsonl is MISSING"
+    ):
+        check_315(repo_root=tmp_path, strict=True, verbose=False)
+
+
+def test_strict_mode_fails_closed_on_unreadable_registry(tmp_path):
+    """v2 fail-closed regression: strict mode MUST raise on corrupt
+    registry JSON. Recovery / partial checkout / JSON corruption are
+    the empirical attack surfaces this catches."""
+    repo_root = tmp_path
+    state_dir = repo_root / ".omx" / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "lane_registry.json").write_text(
+        "{not valid json", encoding="utf-8"
+    )
+    with pytest.raises(PreflightError, match="UNREADABLE/CORRUPT"):
+        check_315(repo_root=repo_root, strict=True, verbose=False)
+
+
+def test_strict_mode_fails_closed_on_empty_verdict_map(tmp_path):
+    """v2 fail-closed regression: strict mode MUST raise when the
+    posterior file exists but contains no rows with
+    deferred_substrate_id set (so verdict_map is empty). v1 silently
+    fail-opened here."""
+    repo_root = _write_registry(
+        tmp_path,
+        [_make_lane_l1_impl_complete("lane_substrate_test")],
+    )
+    state_dir = repo_root / ".omx" / "state"
+    posterior_path = state_dir / "council_deliberation_posterior.jsonl"
+    posterior_path.write_text(
+        json.dumps(
+            {
+                "deliberation_id": "no_substrate_id_set",
+                "deferred_substrate_id": None,
+                "council_verdict": "PROCEED_WITH_REVISIONS",
+                "council_tier": "T3",
+                "council_attendees": ["Shannon"],
+                "council_quorum_met": True,
+                "topic": "no substrate id",
+                "written_at_utc": "2026-05-16T15:35:37+00:00",
+                "memory_path": "feedback_test.md",
+                "event_type": "council_deliberation",
+                "related_deliberation_ids": [],
+            },
+            sort_keys=True,
+        ) + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(PreflightError, match="no deferred_substrate_id anchors"):
+        check_315(repo_root=repo_root, strict=True, verbose=False)
+
+
+def test_strict_mode_does_not_turn_missing_anchor_into_revision_blocker_v2(
+    tmp_path,
+):
+    """Catalog #315 is the council-verdict-binding surface, not a broad
+    migration gate for historical lanes that have no joinable council row.
+    """
+    lane = _make_lane_l1_impl_complete(
+        "lane_substrate_unknown_no_anchor"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "unrelated_council",
+                "different_family_unrelated_substrate",
+                "PROCEED",
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    violations = check_315(repo_root=repo_root, strict=True, verbose=False)
+    assert violations == []
+
+
+@pytest.mark.parametrize(
+    "non_proceed_verdict",
+    [
+        "DEFER_PENDING_EVIDENCE",
+        "REFUSE",
+        "ESCALATE_TO_HIGHER_TIER",
+        "ESCALATE_TO_OPERATOR",
+        "UNKNOWN_NEW_VERDICT_FORM",
+        "",
+    ],
+)
+def test_positive_proceed_requirement_rejects_non_proceed_verdicts(
+    tmp_path, non_proceed_verdict
+):
+    """v2 POSITIVE-PROCEED regression: only PROCEED / PROCEED_UNCONDITIONAL
+    pass. Codex HIGH: v1 used negative test
+    ``verdict != 'PROCEED_WITH_REVISIONS'`` which silently accepted
+    DEFER / REFUSE / ESCALATE / missing / unknown as dispatch-safe.
+    The acceptance criterion is positive authorization."""
+    lane = _make_lane_l1_impl_complete("lane_substrate_test")
+    repo_root = _write_registry(tmp_path, [lane])
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "non_proceed_test",
+                "lane_substrate_test",
+                non_proceed_verdict,
+                "2026-05-17T10:00:00Z",
+            ),
+        ],
+    )
+    violations = check_315(repo_root=repo_root, strict=False, verbose=False)
+    assert len(violations) == 1, (
+        f"non-PROCEED verdict {non_proceed_verdict!r} silently accepted; "
+        f"violations={violations}"
+    )
+    assert "lane_substrate_test" in violations[0]
