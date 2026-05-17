@@ -76,6 +76,14 @@ architecture-lock/TT5L custody artifacts.
   a concrete warning that Brotli can beat zero-order entropy via LZ77/context;
   first profile section-conditioned entropy, then choose a terminal coder per
   stream with byte-consumption proof.
+- FEC6 CPU-frontier packet constraint:
+  `.omx/research/fec6_cpu_frontier_submission_surface_adversarial_review_20260517_codex.md`
+  classifies FEC6 as a real best `[contest-CPU]` anchor but not a clean
+  submission packet. Do not spend P0 on same-runtime byte polish unless a
+  profiler finds at least `78` charged, consumed bytes. If the operator wants
+  a CPU-mode submission, first materialize the contest-final packet surface
+  and rerun strict compliance; otherwise keep this lane pointed at
+  component-moving Rule #6 changes.
 - Dispatch policy: local byte/provenance proof first; paired CPU/CUDA exact
   only after a byte-different packet consumes changed bytes at inflate time.
 

@@ -111,6 +111,21 @@ retiring the L5/L5-v2 staircase:
   authority until landed and reviewed.
 - Reviewed disposition:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
+- FEC6 CPU frontier submission-surface adversarial review:
+  `.omx/research/fec6_cpu_frontier_submission_surface_adversarial_review_20260517_codex.md`.
+  Verdict: FEC6 remains the current best `[contest-CPU]` anchor, but the
+  current WIP packet is not submission-ready. Strict compliance output is
+  preserved at
+  `experiments/results/fec6_cpu_submission_surface_review_20260517_codex/pre_submission_compliance_cpu.json`
+  with `passed=false`; blockers include missing `archive.zip`/`report.txt` in
+  `submission_dir`, incomplete member manifest, missing public packet README
+  axis/source/repro labels, CPU score-claim schema mismatch, and terminal
+  dispatch claim missing runtime-tree SHA binding.
+- L5-v2 12-month foreseeable-failures sidecar:
+  `.omx/research/l5_v2_next_12_months_foreseeable_failures_20260517_subagent.md`.
+  Key tripwires: architecture-lock false authority, TT5L custody refresh
+  loops without harvested cells, non-causal side-info controls, no-op Rule #6
+  hyperprior/entropy work, axis drift, and optimizer/probe overfitting.
 - Key action change: harvest format0D's two-pass additive grammar as a donor
   primitive for Rule #6 A1/FEC6 byte-closed bolt-ons, but do not route the P0
   queue back into PR106-only local-basin polish. Any direct PR106 revisit must

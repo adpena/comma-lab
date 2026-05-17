@@ -1,5 +1,14 @@
 # Notepad
 
+## Supersession Note - 2026-05-17
+
+This file is preserved as historical April Track-B/AV1 working memory only.
+It is not current L5, TT5L, FEC6, Rule #6, PR101, or submission authority.
+Use `.omx/state/current_focus.md`, `.omx/state/next_experiments.md`, and dated
+`.omx/research/*_20260517*.md` ledgers for current routing. The stale entries
+below are retained for no-signal-loss provenance, especially film-grain,
+colorspace/range, payload-accounting, and scorer-hardening lessons.
+
 ## Priority Context
 Track B canonical floor: 2.12 @ 524x394 SVT-AV1 p0 CRF34 film-grain22 lanczos+unsharp with explicit bt709/tv encode tags and explicit rgb24(pc) decode. Rule-faithful runtime payload: 897745 bytes -> 2.1418040615200598. Track A exact_current remains the only explicitly non-rule-faithful lane. Canonical robust summary: reports/raw/robust_current-current_workflow-cpu-summary.json .
 

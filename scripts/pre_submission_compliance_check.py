@@ -168,6 +168,34 @@ def _score_for_submission_gate(
     return None, "missing"
 
 
+def _selected_axis_submission_score(
+    *,
+    explicit_score: float | None,
+    selected_axis: str,
+    sections: dict[str, Any],
+) -> tuple[float | None, str]:
+    if explicit_score is not None:
+        return float(explicit_score), "explicit_cli"
+    section_name = (
+        "contest_cpu_auth_eval"
+        if selected_axis == "contest_cpu"
+        else "auth_eval"
+    )
+    section = sections.get(section_name)
+    if not isinstance(section, dict):
+        return None, f"missing_{section_name}"
+    record = section.get("record")
+    record_score = None
+    if isinstance(record, dict) and record.get("score") is not None:
+        record_score = float(record["score"])
+    return _score_for_submission_gate(
+        record_score=record_score,
+        strict_formula=section.get("strict_formula")
+        if isinstance(section.get("strict_formula"), dict)
+        else None,
+    )
+
+
 def unsafe_zip_name(name: str) -> str | None:
     if not name:
         return "empty_member_name"
@@ -1896,6 +1924,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=DEFAULT_MAX_SUBMISSION_SCORE,
         help="Hard final-packet score ceiling for the selected axis.",
     )
+    parser.add_argument(
+        "--submission-score",
+        type=float,
+        help=(
+            "Optional explicit candidate score for frontier-regression checks. "
+            "When omitted, the checker derives the score from the selected-axis "
+            "auth-eval record."
+        ),
+    )
     parser.add_argument("--expect-single-member")
     parser.add_argument("--expected-archive-sha256")
     parser.add_argument("--expected-archive-size-bytes", type=int)
@@ -2063,7 +2100,10 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     # --contest-final) if the candidate is strictly worse than the
     # current best on the same axis. Surfaces the canonical citation in
     # the report so reviewers see at-a-glance what frontier they're
-    # comparing against. Fail-OPEN if tac.frontier_scan is unavailable
+    # comparing against. If --submission-score is omitted, derive the
+    # candidate score from the selected-axis auth-eval record so the gate
+    # cannot fail open through a missing optional CLI argument. Fail-OPEN
+    # if tac.frontier_scan is unavailable
     # (sister Catalog #279 fail-open pattern — the gate is a tripwire,
     # not the load-bearing custody surface).
     try:
@@ -2095,13 +2135,19 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             },
             "candidate": {
                 "axis": args.submission_score_axis,
-                "score": args.submission_score,
+                "score": None,
+                "score_source": None,
             },
         }
-        sections["frontier_baseline"] = frontier_section
-
         candidate_axis = (args.submission_score_axis or "").lower()
-        cand = args.submission_score
+        cand, cand_source = _selected_axis_submission_score(
+            explicit_score=args.submission_score,
+            selected_axis=candidate_axis,
+            sections=sections,
+        )
+        frontier_section["candidate"]["score"] = cand
+        frontier_section["candidate"]["score_source"] = cand_source
+        sections["frontier_baseline"] = frontier_section
         best_list = best.get(candidate_axis) or best.get(
             "contest_cpu" if candidate_axis == "cpu" else "contest_cuda"
             if candidate_axis == "cuda"
@@ -2135,7 +2181,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
             "tac.frontier_scan not importable; frontier-regression check SKIPPED",
             severity="warning",
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _add(
             checks,
             "frontier_scan_helper_available",
