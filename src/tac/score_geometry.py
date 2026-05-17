@@ -174,6 +174,35 @@ class RateOnlyDeltaAudit:
 
 
 @dataclass(frozen=True)
+class PoseByteTradeoff:
+    """Exact finite-change audit for spending bytes to reduce pose distortion."""
+
+    current_d_pose: float
+    added_bytes: int
+    candidate_pose_delta: float
+    pose_term_before: float
+    pose_term_after_candidate: float
+    pose_score_saving: float
+    byte_score_cost: float
+    net_score_delta: float
+    required_pose_delta_to_break_even: float | None
+    feasible_to_break_even: bool
+    evidence_grade: str = "[prediction; closed-form pose-byte tradeoff]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    @property
+    def blocker(self) -> str | None:
+        if self.net_score_delta <= 0.0:
+            return None
+        if not self.feasible_to_break_even:
+            return "byte_cost_exceeds_full_pose_term"
+        return "candidate_pose_delta_below_byte_break_even"
+
+
+@dataclass(frozen=True)
 class PlannerAxisMarginals:
     """Marginals expressed in the candidate-builder coordinate system.
 
@@ -520,6 +549,79 @@ def audit_rate_only_delta_claim(
         overclaim_factor_vs_candidate=overclaim,
         missing_score_saving_after_candidate=missing_score,
         missing_saved_bytes_after_candidate=missing_bytes,
+    )
+
+
+def pose_score_saving_from_delta(
+    *,
+    current_d_pose: float,
+    pose_delta: float,
+) -> float:
+    """Return exact score saving from reducing ``d_pose`` by ``pose_delta``."""
+    if current_d_pose < 0.0:
+        raise ValueError("current_d_pose must be non-negative")
+    if pose_delta < 0.0:
+        raise ValueError("pose_delta must be non-negative")
+    if pose_delta > current_d_pose:
+        raise ValueError("pose_delta cannot exceed current_d_pose")
+    before = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * current_d_pose)
+    after = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * (current_d_pose - pose_delta))
+    return before - after
+
+
+def pose_byte_tradeoff(
+    *,
+    current_d_pose: float,
+    added_bytes: int,
+    candidate_pose_delta: float,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> PoseByteTradeoff:
+    """Audit whether added bytes are justified by a finite pose reduction.
+
+    This guards the common writeup/planning mistake of using the pose marginal
+    as if every finite pose reduction is automatically worth its byte cost. At
+    the FEC6 operating point, for example, reducing ``d_pose`` by ``1e-6`` is
+    valuable, but not valuable enough to pay for 1000 new charged bytes.
+    """
+    if current_d_pose < 0.0:
+        raise ValueError("current_d_pose must be non-negative")
+    if added_bytes < 0:
+        raise ValueError("added_bytes must be non-negative")
+    if candidate_pose_delta < 0.0:
+        raise ValueError("candidate_pose_delta must be non-negative")
+    if candidate_pose_delta > current_d_pose:
+        raise ValueError("candidate_pose_delta cannot exceed current_d_pose")
+
+    pose_before = math.sqrt(POSE_COEFFICIENT_INSIDE_SQRT * current_d_pose)
+    pose_after = math.sqrt(
+        POSE_COEFFICIENT_INSIDE_SQRT * (current_d_pose - candidate_pose_delta)
+    )
+    pose_saving = pose_before - pose_after
+    byte_cost = score_saving_from_byte_savings(
+        added_bytes,
+        reference_bytes=reference_bytes,
+    )
+    if byte_cost > pose_before:
+        required_delta = None
+        feasible = False
+    else:
+        required_pose_term_after = pose_before - byte_cost
+        required_d_pose_after = (
+            required_pose_term_after * required_pose_term_after
+        ) / POSE_COEFFICIENT_INSIDE_SQRT
+        required_delta = current_d_pose - required_d_pose_after
+        feasible = True
+    return PoseByteTradeoff(
+        current_d_pose=current_d_pose,
+        added_bytes=added_bytes,
+        candidate_pose_delta=candidate_pose_delta,
+        pose_term_before=pose_before,
+        pose_term_after_candidate=pose_after,
+        pose_score_saving=pose_saving,
+        byte_score_cost=byte_cost,
+        net_score_delta=byte_cost - pose_saving,
+        required_pose_delta_to_break_even=required_delta,
+        feasible_to_break_even=feasible,
     )
 
 
@@ -1026,6 +1128,7 @@ __all__ = [
     "DualAxisDispatchRecommendation",
     "OperatingRegime",
     "PlannerAxisMarginals",
+    "PoseByteTradeoff",
     "RateOnlyDeltaAudit",
     "ScoreDecomposition",
     "ScoreGradient",
@@ -1039,6 +1142,8 @@ __all__ = [
     "marginal_value_per_byte",
     "operating_regime",
     "planner_axis_marginals",
+    "pose_byte_tradeoff",
+    "pose_score_saving_from_delta",
     "predict_cpu_axis_marginals",
     "project_onto_pareto_envelope",
     "recommend_dispatch_axis_dual",

@@ -11,6 +11,7 @@ from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
     DualAxisDispatchRecommendation,
     PlannerAxisMarginals,
+    PoseByteTradeoff,
     RateOnlyDeltaAudit,
     audit_rate_only_delta_claim,
     contest_score,
@@ -21,6 +22,8 @@ from tac.score_geometry import (
     marginal_value_per_byte,
     operating_regime,
     planner_axis_marginals,
+    pose_byte_tradeoff,
+    pose_score_saving_from_delta,
     predict_cpu_axis_marginals,
     project_onto_pareto_envelope,
     recommend_dispatch_axis_dual,
@@ -290,6 +293,38 @@ def test_score_delta_byte_conversion_round_trips() -> None:
     assert required == 12_015
     assert score_saving_from_byte_savings(required) >= 0.008
     assert score_saving_from_byte_savings(required - 1) < 0.008
+
+
+def test_pose_byte_tradeoff_bounds_fec6_writeup_example() -> None:
+    """At FEC6, a 1e-6 pose drop does not pay for 1000 new bytes."""
+    audit = pose_byte_tradeoff(
+        current_d_pose=0.00002943271901344679,
+        added_bytes=1_000,
+        candidate_pose_delta=1e-6,
+    )
+
+    assert isinstance(audit, PoseByteTradeoff)
+    assert audit.pose_score_saving == pytest.approx(0.00029396227124486515)
+    assert audit.byte_score_cost == pytest.approx(25.0 * 1_000 / CONTEST_REFERENCE_BYTES)
+    assert audit.net_score_delta == pytest.approx(0.00037189668187730617)
+    assert audit.required_pose_delta_to_break_even == pytest.approx(
+        2.24035397806799e-06,
+    )
+    assert audit.feasible_to_break_even is True
+    assert audit.blocker == "candidate_pose_delta_below_byte_break_even"
+    assert audit.score_claim is False
+    assert audit.ready_for_exact_eval_dispatch is False
+
+
+def test_pose_score_saving_from_delta_matches_exact_sqrt_formula() -> None:
+    saving = pose_score_saving_from_delta(
+        current_d_pose=0.00002943271901344679,
+        pose_delta=1e-6,
+    )
+    expected = math.sqrt(10 * 0.00002943271901344679) - math.sqrt(
+        10 * (0.00002943271901344679 - 1e-6),
+    )
+    assert saving == pytest.approx(expected)
 
 
 # ---------------------------------------------------------------------------

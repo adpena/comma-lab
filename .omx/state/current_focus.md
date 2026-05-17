@@ -125,6 +125,13 @@ retiring the L5/L5-v2 staircase:
   `submission_dir`, incomplete member manifest, missing public packet README
   axis/source/repro labels, CPU score-claim schema mismatch, and terminal
   dispatch claim missing runtime-tree SHA binding.
+- FEC6 writeup pose-marginal correction:
+  `.omx/research/fec6_writeup_pose_marginal_correction_20260517_codex.md`.
+  The live `docs/pr_writeups/cpu_frontier_fec6_20260517.md` WIP now uses
+  `5/sqrt(10*d_pose) = 291.44`, not `922`, and its 1000-byte pose example is
+  corrected to a net score regression unless `d_pose` drops by at least about
+  `2.24e-6`. Future FEC6/Rule #6 byte-spending claims should use
+  `tac.score_geometry.pose_byte_tradeoff`.
 - L5-v2 12-month foreseeable-failures sidecar:
   `.omx/research/l5_v2_next_12_months_foreseeable_failures_20260517_subagent.md`.
   Key tripwires: architecture-lock false authority, TT5L custody refresh

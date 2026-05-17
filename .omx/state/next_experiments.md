@@ -84,6 +84,12 @@ architecture-lock/TT5L custody artifacts.
   a CPU-mode submission, first materialize the contest-final packet surface
   and rerun strict compliance; otherwise keep this lane pointed at
   component-moving Rule #6 changes.
+- FEC6 pose-vs-byte tradeoff constraint:
+  `.omx/research/fec6_writeup_pose_marginal_correction_20260517_codex.md`
+  corrects the writeup's pose marginal to `291.44`, not `922`, and proves that
+  spending 1000 bytes for a `1e-6` `d_pose` reduction is a net regression. Any
+  FEC6/Rule #6 packet that spends bytes to move PoseNet should include a
+  `tac.score_geometry.pose_byte_tradeoff` row before paid dispatch.
 - Dispatch policy: local byte/provenance proof first; paired CPU/CUDA exact
   only after a byte-different packet consumes changed bytes at inflate time.
 
