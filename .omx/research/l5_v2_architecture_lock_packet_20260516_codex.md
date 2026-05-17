@@ -39,7 +39,7 @@
 - artifact_valid: `True`
 - source_commit: `a23606c9b1a81aacf154d6c2c12aca5408203d46`
 - source_relevant_paths_match: `False`
-- source_relevant_diff_paths: `['src/tac/exact_eval_custody.py', 'src/tac/optimization/l5_staircase_v2.py', 'src/tac/optimization/l5_v2_sideinfo_effect_curve.py']`
+- source_relevant_diff_paths: `['src/tac/exact_eval_custody.py', 'src/tac/optimization/l5_staircase_v2.py', 'src/tac/optimization/l5_v2_measurement_schedule.py', 'src/tac/optimization/l5_v2_sideinfo_effect_curve.py']`
 - source_custody_current_for_execution: `False`
 - cells: `10`/`10`
 - axes: `['contest_cpu', 'contest_cuda']`

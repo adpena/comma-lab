@@ -1127,7 +1127,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "bc7c4e3731d81209aea1c4aac36cf4c7706483dc",
+      "current_head_commit": "d6c49f9fbf4b4654b89260b15a4eaeed52b76c5b",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
@@ -1155,6 +1155,7 @@
       "source_relevant_diff_paths": [
         "src/tac/exact_eval_custody.py",
         "src/tac/optimization/l5_staircase_v2.py",
+        "src/tac/optimization/l5_v2_measurement_schedule.py",
         "src/tac/optimization/l5_v2_sideinfo_effect_curve.py"
       ],
       "source_relevant_paths": [
