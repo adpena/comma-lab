@@ -137,6 +137,16 @@ DEFAULT_PAIR_MANIFEST = (
     / "lapose_motion_atoms_20260505_codex"
     / "lapose_motion_atom_manifest_fixture.json"
 )
+
+# Catalog #152 WAVE-1 APPARATUS HARDENING 2026-05-16 extension: declare the
+# A1 base archive as a Modal extra-mount path so the canonical Modal mount
+# manifest (tac.deploy.modal.mount_manifest.collect_extra_mount_paths) stages
+# it explicitly. Without this, the file lives under experiments/results/**
+# which the Modal mount manifest IGNORES via DEFAULT_RESULTS_IGNORE, causing
+# the same crash class as STC v2 smoke fc-01KRSB76H04HM4958V2HX2JZZ4 rc=25.
+TIER_1_EXTRA_MOUNT_PATHS: tuple[str, ...] = (
+    str(DEFAULT_A1_ARCHIVE.relative_to(REPO_ROOT)),
+)
 CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 
 EVAL_HW = (384, 512)

@@ -34,9 +34,13 @@ import pytest
 
 from tac.preflight import (
     PreflightError,
+    _check_152_collect_modal_staged_recipe_waivers,
+    _check_152_collect_modal_staged_waivers,
     _check_152_collect_required_input_flags,
     _check_152_collect_waivers,
+    _check_152_default_path_is_modal_ignored,
     _check_152_extract_indirect_trainer_paths,
+    _check_152_trainer_declares_extra_mount_path,
     _check_152_wrapper_has_dispatch,
     _check_152_wrapper_validates_required_input,
     check_operator_wrapper_validates_required_input_files_pre_dispatch,
@@ -93,6 +97,37 @@ TIER_1_OPERATOR_REQUIRED_FLAGS = {
 '''
 
 
+_TRAINER_MODAL_IGNORED_REQ_INPUT = '''
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_ANCHOR_ARCHIVE = (
+    REPO_ROOT / "experiments" / "results" / "lane_a_landed" / "archive_lane_a.zip"
+)
+
+TIER_1_OPERATOR_REQUIRED_FLAGS = {
+    "--anchor-archive": {
+        "env": "ANCHOR_ARCHIVE",
+        "rationale": "anchor archive staged for Modal",
+        "default": "experiments/results/lane_a_landed/archive_lane_a.zip",
+        "satisfied_by_profile": (),
+        "requires": (),
+        "required_input_file": True,
+    },
+}
+'''
+
+
+_TRAINER_MODAL_IGNORED_REQ_INPUT_WITH_EXTRA_MOUNT = (
+    _TRAINER_MODAL_IGNORED_REQ_INPUT
+    + '''
+TIER_1_EXTRA_MOUNT_PATHS = (
+    str(DEFAULT_ANCHOR_ARCHIVE.relative_to(REPO_ROOT)),
+)
+'''
+)
+
+
 # -- Trainer-manifest extraction --------------------------------------------
 
 def test_collect_required_input_flags_filters_to_required_input_true(
@@ -138,6 +173,16 @@ def test_dispatch_token_lightning_run() -> None:
 
 def test_no_dispatch_token_skips_wrapper() -> None:
     text = 'echo "hello"\npython tools/analyze.py --in foo.json\n'
+    assert not _check_152_wrapper_has_dispatch(text)
+
+
+def test_comment_only_modal_runtime_reference_is_not_dispatch() -> None:
+    text = "# AUTO-EMITS from tac.deploy.modal.runtime\n"
+    assert not _check_152_wrapper_has_dispatch(text)
+
+
+def test_comment_only_modal_run_is_not_dispatch() -> None:
+    text = "# example: modal run experiments/foo.py\n"
     assert not _check_152_wrapper_has_dispatch(text)
 
 
@@ -218,6 +263,231 @@ def test_waiver_blanket_all() -> None:
     text = 'modal run x.py  # REQUIRED_INPUT_VALIDATION_OK:ALL:smoke-only\n'
     waivers = _check_152_collect_waivers(text)
     assert any(w.startswith("ALL") for w in waivers)
+
+
+# -- Modal ignored required-input staging extension -------------------------
+
+def test_modal_ignored_default_path_detection() -> None:
+    assert _check_152_default_path_is_modal_ignored(
+        "experiments/results/lane_a_landed/archive_lane_a.zip"
+    )
+    assert _check_152_default_path_is_modal_ignored(
+        "./experiments/results/foo/bar.bin"
+    )
+    assert not _check_152_default_path_is_modal_ignored("upstream/videos/0.mkv")
+
+
+def test_modal_extra_mount_path_accepts_constant_relative_to_shape(
+    tmp_path: Path,
+) -> None:
+    p = _write_trainer(
+        tmp_path,
+        "train_modal_anchor.py",
+        _TRAINER_MODAL_IGNORED_REQ_INPUT_WITH_EXTRA_MOUNT,
+    )
+    assert _check_152_trainer_declares_extra_mount_path(
+        p, "experiments/results/lane_a_landed/archive_lane_a.zip"
+    )
+
+
+def test_modal_staged_waiver_must_be_on_dispatch_line() -> None:
+    text = (
+        "# REQUIRED_INPUT_MODAL_STAGED_OK:volume-populated-before-dispatch\n"
+        "modal run experiments/modal_train_lane.py --gpu T4\n"
+    )
+    assert _check_152_collect_modal_staged_waivers(text) == set()
+
+
+def test_modal_staged_waiver_accepts_dispatch_line_only() -> None:
+    text = (
+        "modal run experiments/modal_train_lane.py --gpu T4 "
+        "# REQUIRED_INPUT_MODAL_STAGED_OK:volume-populated-before-dispatch\n"
+    )
+    assert _check_152_collect_modal_staged_waivers(text) == {
+        "volume-populated-before-dispatch"
+    }
+
+
+def test_modal_local_validation_still_requires_extra_mount_for_results_default(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path, "train_modal_anchor.py", _TRAINER_MODAL_IGNORED_REQ_INPUT
+    )
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_modal_anchor.sh",
+        '#!/bin/bash\n'
+        '[ -f "$ANCHOR_ARCHIVE" ] || { echo FATAL; exit 1; }\n'
+        'modal run experiments/train_modal_anchor.py '
+        '--anchor-archive "$ANCHOR_ARCHIVE" --gpu T4\n',
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert len(out) == 1, out
+    assert "Modal dispatch validates --anchor-archive locally" in out[0]
+    assert "TIER_1_EXTRA_MOUNT_PATHS" in out[0]
+
+
+def test_modal_extra_mount_path_satisfies_results_default(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path,
+        "train_modal_anchor.py",
+        _TRAINER_MODAL_IGNORED_REQ_INPUT_WITH_EXTRA_MOUNT,
+    )
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_modal_anchor.sh",
+        '#!/bin/bash\n'
+        '[ -f "$ANCHOR_ARCHIVE" ] || { echo FATAL; exit 1; }\n'
+        'modal run experiments/train_modal_anchor.py '
+        '--anchor-archive "$ANCHOR_ARCHIVE" --gpu T4\n',
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert out == []
+
+
+def test_modal_staged_waiver_on_dispatch_line_satisfies_results_default(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path, "train_modal_anchor.py", _TRAINER_MODAL_IGNORED_REQ_INPUT
+    )
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_modal_anchor.sh",
+        '#!/bin/bash\n'
+        '[ -f "$ANCHOR_ARCHIVE" ] || { echo FATAL; exit 1; }\n'
+        'modal run experiments/train_modal_anchor.py '
+        '--anchor-archive "$ANCHOR_ARCHIVE" --gpu T4 '
+        '# REQUIRED_INPUT_MODAL_STAGED_OK:modal-volume-prepopulated\n',
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert out == []
+
+
+def test_non_modal_dispatch_does_not_require_modal_extra_mount(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path, "train_modal_anchor.py", _TRAINER_MODAL_IGNORED_REQ_INPUT
+    )
+    _write_wrapper(
+        tmp_path,
+        "operator_authorize_vast_anchor.sh",
+        '#!/bin/bash\n'
+        '[ -f "$ANCHOR_ARCHIVE" ] || { echo FATAL; exit 1; }\n'
+        'python scripts/launch_lane_on_vastai.py '
+        '--trainer experiments/train_modal_anchor.py '
+        '--anchor-archive "$ANCHOR_ARCHIVE"\n',
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert out == []
+
+
+def _write_modal_recipe(
+    tmp: Path, *, trainer: str, default_path: str, waiver: str = ""
+) -> Path:
+    path = (
+        tmp
+        / ".omx"
+        / "operator_authorize_recipes"
+        / "substrate_modal_anchor.yaml"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    waiver_line = f"{waiver}\n" if waiver else ""
+    path.write_text(
+        waiver_line
+        + f"""
+platform: 'modal'
+required_input_files:
+  - flag: --anchor-archive
+    env: ANCHOR_ARCHIVE
+    default_path: {default_path}
+required_input_files_trainer: {trainer}
+modal:
+  cost_band_trainer: {trainer}
+""".lstrip(),
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_modal_staged_recipe_waiver_rejects_placeholder() -> None:
+    text = "# REQUIRED_INPUT_MODAL_STAGED_OK:<rationale>\n"
+    assert _check_152_collect_modal_staged_recipe_waivers(text) == set()
+
+
+def test_modal_staged_recipe_waiver_accepts_substantive_rationale() -> None:
+    text = "# REQUIRED_INPUT_MODAL_STAGED_OK:modal-volume-prepopulated\n"
+    assert _check_152_collect_modal_staged_recipe_waivers(text) == {
+        "modal-volume-prepopulated"
+    }
+
+
+def test_modal_recipe_results_default_requires_extra_mount(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path, "train_modal_anchor.py", _TRAINER_MODAL_IGNORED_REQ_INPUT
+    )
+    _write_modal_recipe(
+        tmp_path,
+        trainer="experiments/train_modal_anchor.py",
+        default_path="experiments/results/lane_a_landed/archive_lane_a.zip",
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert len(out) == 1, out
+    assert "Modal recipe `required_input_files` entry --anchor-archive" in out[0]
+    assert "TIER_1_EXTRA_MOUNT_PATHS" in out[0]
+
+
+def test_modal_recipe_results_default_accepts_extra_mount(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path,
+        "train_modal_anchor.py",
+        _TRAINER_MODAL_IGNORED_REQ_INPUT_WITH_EXTRA_MOUNT,
+    )
+    _write_modal_recipe(
+        tmp_path,
+        trainer="experiments/train_modal_anchor.py",
+        default_path="experiments/results/lane_a_landed/archive_lane_a.zip",
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert out == []
+
+
+def test_modal_recipe_results_default_accepts_recipe_waiver(
+    tmp_path: Path,
+) -> None:
+    _write_trainer(
+        tmp_path, "train_modal_anchor.py", _TRAINER_MODAL_IGNORED_REQ_INPUT
+    )
+    _write_modal_recipe(
+        tmp_path,
+        trainer="experiments/train_modal_anchor.py",
+        default_path="experiments/results/lane_a_landed/archive_lane_a.zip",
+        waiver="# REQUIRED_INPUT_MODAL_STAGED_OK:modal-volume-prepopulated",
+    )
+    out = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=tmp_path, strict=False, verbose=False,
+    )
+    assert out == []
 
 
 # -- Indirect lane-script detection -----------------------------------------

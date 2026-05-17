@@ -2522,13 +2522,17 @@ def preflight_all(
         # documenting the 6-facet observability surface (per-layer
         # inspection / per-signal decomposition / run-to-run diff /
         # post-hoc query interface / cite-chain / counterfactual hooks).
-        # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip
-        # atomicity rule" — live count at landing is bounded by the
-        # OBSERVABILITY-ADDENDUM backfill (this landing's Artifact 4).
+        # STRICT-FLIPPED 2026-05-16 by WAVE-1 apparatus hardening
+        # (lane lane_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_20260516)
+        # after 3 sister-landed design memos (rudin_floor / tier_1_resurrection_4 /
+        # tier_1_resurrection_5) were backfilled with the Observability surface
+        # section per Catalog #110/#113 HISTORICAL_PROVENANCE APPEND-ONLY
+        # discipline in the same commit batch (live count 0 at flip).
         # Sister of Catalog #290 + #294 + #303 + #296. Memory:
-        # feedback_max_observability_landed_catalog_305_20260516.md.
+        # feedback_max_observability_landed_catalog_305_20260516.md +
+        # feedback_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_landed_20260516.md.
         check_substrate_design_memo_has_observability_surface_section(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #307 / #308 / #309 / #310 / #311 / #312 -
         # FALSIFICATION-AUDIT-v2 Patterns D/E/F + Z6/Z7/Z8 design memo
@@ -42207,6 +42211,28 @@ _CHECK_152_DISPATCH_TOKENS = (
     "lightning.ai run",
     "kaggle kernels push",
 )
+_CHECK_152_DISPATCH_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"(^|[\s;|&()])modal\s+run(\s|$)",
+        r"\bmodal\.run\b",
+        r"\bmodal_train_lane\b",
+        r"\blaunch_lane_on_vastai\b",
+        r"\blaunch_lane_lightning\b",
+        r"\bvastai\s+create\s+instance\b",
+        r"\blightning\s+run\b",
+        r"\blightning\.ai\s+run\b",
+        r"\bkaggle\s+kernels\s+push\b",
+    )
+)
+_CHECK_152_MODAL_DISPATCH_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"(^|[\s;|&()])modal\s+run(\s|$)",
+        r"\bmodal\.run\b",
+        r"\bmodal_train_lane\b",
+    )
+)
 # Mirror Catalog #151 excluded path markers.
 _CHECK_152_EXCLUDED_PATH_MARKERS = (
     "experiments/results/public_pr",
@@ -42239,7 +42265,19 @@ def _check_152_collect_required_input_flags(
 def _check_152_wrapper_has_dispatch(wrapper_text: str) -> bool:
     """A wrapper is in-scope for Catalog #152 only if it actually DISPATCHES
     a GPU job (vs. e.g. a local-only utility that happens to import a trainer)."""
-    return any(tok in wrapper_text for tok in _CHECK_152_DISPATCH_TOKENS)
+    return any(
+        any(pattern.search(line) for pattern in _CHECK_152_DISPATCH_PATTERNS)
+        for line in _check_152_non_comment_lines(wrapper_text)
+    )
+
+
+def _check_152_non_comment_lines(text: str) -> Iterator[str]:
+    """Yield executable-looking lines, ignoring blank and comment-only lines."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        yield line
 
 
 def _check_152_wrapper_validates_required_input(
@@ -42312,6 +42350,222 @@ def _check_152_extract_indirect_trainer_paths(wrapper_text: str) -> list[str]:
     for m in lane_script_re.finditer(wrapper_text):
         lane_script_paths.append(m.group(1).strip())
     return lane_script_paths
+
+
+# ---------------------------------------------------------------------------
+# Catalog #152 EXTENSION (WAVE-1 APPARATUS HARDENING 2026-05-16):
+# modal-mounted-input discipline for paths under experiments/results/**
+# ---------------------------------------------------------------------------
+# Bug-class anchor: STC v2 smoke fc-01KRSB76H04HM4958V2HX2JZZ4 (2026-05-16)
+# returned rc=25 / 1.6s on Modal T4 because the Lane A anchor archive lives at
+# experiments/results/lane_a_landed/archive_lane_a.zip and the canonical Modal
+# mount manifest (`tac.deploy.modal.mount_manifest`) IGNORES the
+# ``results/**`` subtree via DEFAULT_RESULTS_IGNORE=("results/**",). The file
+# existed on the operator workstation so the existing Catalog #152 local-file
+# validator PASSED, but the Modal worker never received the file and crashed
+# at the lane driver's `exit 25` defense-in-depth check.
+#
+# Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" + Catalog #166 sentinel
+# discipline: anchor-archive / required-input failures should be caught at
+# OPERATOR-AUTHORIZE LOCAL TIME, not at Modal worker startup time. The
+# canonical Modal staging mechanism already exists: a trainer can declare a
+# module-level ``TIER_1_EXTRA_MOUNT_PATHS = (path, ...)`` tuple (or sibling
+# ``MODAL_EXTRA_MOUNT_PATHS``) that ``mount_manifest.collect_extra_mount_paths``
+# reads and adds to the Modal image via ``add_local_file``. This extension
+# refuses Modal-dispatch wrappers whose trainer has a `required_input_file=True`
+# default_path under the Modal-IGNORED ``experiments/results/**`` subtree and
+# whose trainer does NOT declare the path in ``TIER_1_EXTRA_MOUNT_PATHS`` /
+# ``MODAL_EXTRA_MOUNT_PATHS``.
+#
+# Scope: Modal-only. Vast.ai / Lightning / Kaggle dispatch wrappers stage via
+# different mechanisms (per-dispatch local copy via vastai/lightning sync;
+# kaggle uses dataset uploads); the Modal-mount-ignore bug class does NOT
+# generalize to those providers. Catalog #152's existing local-file validator
+# covers them.
+#
+# Same-line waiver: ``# REQUIRED_INPUT_MODAL_STAGED_OK:<rationale>`` on the
+# dispatch line for the rare deliberate case where the operator has staged the
+# file via an out-of-band mechanism (e.g. Modal Volume populated by a prior
+# dispatch). Placeholder ``<rationale>`` / ``<reason>`` literals + bare
+# colon-only forms are REJECTED so the gate's docstring example cannot
+# self-waive.
+
+# The canonical Modal-IGNORED subtree per
+# ``tac.deploy.modal.mount_manifest.DEFAULT_RESULTS_IGNORE``. Kept in sync
+# with that module's constant; any drift between the two surfaces re-opens
+# the bug class.
+_CHECK_152_MODAL_IGNORED_PATH_PREFIXES: tuple[str, ...] = (
+    "experiments/results/",
+)
+# Tokens that, if present in the wrapper text, mark the dispatch as
+# Modal-bound (per Catalog #152 _CHECK_152_DISPATCH_TOKENS / Catalog #153 /
+# Catalog #166). Other providers (Vast.ai / Lightning / Kaggle) do NOT have
+# the Modal results/** ignore semantic.
+_CHECK_152_MODAL_DISPATCH_TOKENS: tuple[str, ...] = (
+    "modal run",
+    "modal.run",
+    "modal_train_lane",
+)
+_CHECK_152_MODAL_STAGED_WAIVER_RE = re.compile(
+    r"#\s*REQUIRED_INPUT_MODAL_STAGED_OK:([^\n]+)"
+)
+_CHECK_152_PLACEHOLDER_RATIONALES = frozenset((
+    "<rationale>", "<reason>", "",
+))
+
+
+def _check_152_default_path_is_modal_ignored(default_path: str) -> bool:
+    """Return True iff ``default_path`` falls under a Modal-IGNORED subtree.
+
+    Mirrors ``tac.deploy.modal.mount_manifest.DEFAULT_RESULTS_IGNORE`` =
+    ``("results/**",)`` for ``experiments/`` only (other top-level dirs
+    don't have the same ignore pattern).
+    """
+    if not default_path:
+        return False
+    normalized = default_path.strip().lstrip("./")
+    return any(
+        normalized.startswith(prefix)
+        for prefix in _CHECK_152_MODAL_IGNORED_PATH_PREFIXES
+    )
+
+
+def _check_152_wrapper_dispatches_to_modal(wrapper_text: str) -> bool:
+    """Return True iff the wrapper contains a Modal-specific dispatch token."""
+    return any(
+        any(pattern.search(line) for pattern in _CHECK_152_MODAL_DISPATCH_PATTERNS)
+        for line in _check_152_non_comment_lines(wrapper_text)
+    )
+
+
+def _check_152_trainer_declares_extra_mount_path(
+    trainer_path: Path, default_path: str
+) -> bool:
+    """Return True iff trainer module declares ``default_path`` in
+    ``TIER_1_EXTRA_MOUNT_PATHS`` or ``MODAL_EXTRA_MOUNT_PATHS``.
+
+    Uses regex over the trainer source to avoid AST evaluation cost; the
+    canonical declaration shape is a module-level tuple/list literal of
+    string entries (the existing
+    ``tac.deploy.modal.mount_manifest.collect_extra_mount_paths`` consumer
+    only accepts ``tuple``/``list`` of ``str``/``Path``).
+
+    Normalization: ``default_path`` may be the manifest entry's relative-path
+    string (e.g. ``experiments/results/lane_a_landed/archive_lane_a.zip``);
+    the trainer's declaration may be ``str(PATH.relative_to(REPO_ROOT))`` or
+    a literal string. We accept any source-text occurrence of the normalized
+    path string within an extra-mount-paths block.
+    """
+    try:
+        text = trainer_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    # Find any TIER_1_EXTRA_MOUNT_PATHS / MODAL_EXTRA_MOUNT_PATHS assignment
+    # and scan the body for the default_path string.
+    extra_mount_blocks: list[str] = []
+    for attr in ("TIER_1_EXTRA_MOUNT_PATHS", "MODAL_EXTRA_MOUNT_PATHS"):
+        # Allow either `=` or `:` (annotated assignment) form.
+        pat = re.compile(
+            rf"{attr}\s*(?::[^=]*)?=\s*\(([^)]*)\)",
+            re.DOTALL,
+        )
+        for m in pat.finditer(text):
+            extra_mount_blocks.append(m.group(1))
+        # Also support list form.
+        pat_list = re.compile(
+            rf"{attr}\s*(?::[^=]*)?=\s*\[([^\]]*)\]",
+            re.DOTALL,
+        )
+        for m in pat_list.finditer(text):
+            extra_mount_blocks.append(m.group(1))
+    if not extra_mount_blocks:
+        return False
+    normalized = default_path.strip().lstrip("./")
+    # Accept either an exact string-literal match OR a relative_to(REPO_ROOT)
+    # expression on a constant whose value matches the normalized path.
+    for block in extra_mount_blocks:
+        if normalized in block:
+            return True
+        # Tolerate the canonical
+        # ``str(DEFAULT_ANCHOR_ARCHIVE.relative_to(REPO_ROOT))`` shape: the
+        # block may reference a constant name like ``DEFAULT_ANCHOR_ARCHIVE``;
+        # if any all-caps identifier in the block has its own assignment in
+        # the trainer text containing the normalized path, accept.
+        const_re = re.compile(r"\b([A-Z][A-Z0-9_]{2,})\b")
+        for const_match in const_re.finditer(block):
+            const_name = const_match.group(1)
+            const_def_pat = re.compile(
+                rf"{const_name}\s*(?::[^=]*)?=[^\n]*(?:\n[^=\n]+)*?",
+                re.MULTILINE,
+            )
+            for cd in const_def_pat.finditer(text):
+                if normalized in cd.group(0):
+                    return True
+                # Try a 3-line window after the assignment for multi-line
+                # Path expressions (e.g. REPO_ROOT / "experiments" / ...).
+                start = cd.end()
+                snippet = text[start : start + 600]
+                if normalized in snippet:
+                    return True
+                # Tolerate Path-segment expression: the constant is built as
+                # REPO_ROOT / "experiments" / "results" / "lane_a_landed" /
+                # "archive_lane_a.zip" — split the normalized path on /, check
+                # all segments appear in order within the 600-char snippet.
+                segments = [s for s in normalized.split("/") if s]
+                cursor = 0
+                hit = True
+                for seg in segments:
+                    quoted = f'"{seg}"'
+                    idx = snippet.find(quoted, cursor)
+                    if idx < 0:
+                        quoted2 = f"'{seg}'"
+                        idx = snippet.find(quoted2, cursor)
+                    if idx < 0:
+                        hit = False
+                        break
+                    cursor = idx + len(quoted)
+                if hit:
+                    return True
+    return False
+
+
+def _check_152_collect_modal_staged_waivers(wrapper_text: str) -> set[str]:
+    """Return non-placeholder rationales from Modal dispatch-line waivers.
+
+    ``# REQUIRED_INPUT_MODAL_STAGED_OK:<rationale>`` is intentionally
+    same-line with a Modal dispatch token. A global waiver elsewhere in the
+    wrapper is ignored so one unrelated comment cannot bypass all required
+    Modal-staged inputs.
+
+    Placeholder rationales (``<rationale>`` / ``<reason>`` / empty) are
+    REJECTED so the docstring example cannot self-waive.
+    """
+    out: set[str] = set()
+    for line in _check_152_non_comment_lines(wrapper_text):
+        if not any(
+            pattern.search(line)
+            for pattern in _CHECK_152_MODAL_DISPATCH_PATTERNS
+        ):
+            continue
+        for m in _CHECK_152_MODAL_STAGED_WAIVER_RE.finditer(line):
+            rationale = m.group(1).strip()
+            if rationale and rationale not in _CHECK_152_PLACEHOLDER_RATIONALES:
+                out.add(rationale)
+    return out
+
+
+def _check_152_collect_modal_staged_recipe_waivers(recipe_text: str) -> set[str]:
+    """Return non-placeholder Modal-staged waivers from a recipe YAML.
+
+    Operator-authorize recipes are declarative rather than dispatch lines, so
+    the waiver is recipe-scoped. It still rejects placeholder rationales.
+    """
+    out: set[str] = set()
+    for m in _CHECK_152_MODAL_STAGED_WAIVER_RE.finditer(recipe_text):
+        rationale = m.group(1).strip()
+        if rationale and rationale not in _CHECK_152_PLACEHOLDER_RATIONALES:
+            out.add(rationale)
+    return out
 
 
 def check_operator_wrapper_validates_required_input_files_pre_dispatch(
@@ -42420,11 +42674,62 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
                 if token in (env_var, flag, "ALL", "all"):
                     return True
             return False
+        # WAVE-1 APPARATUS HARDENING 2026-05-16 extension: collect
+        # Modal-staged waivers once per wrapper (set may be empty).
+        modal_staged_waivers = _check_152_collect_modal_staged_waivers(text)
+        wrapper_is_modal_dispatch = _check_152_wrapper_dispatches_to_modal(text)
+        # Pre-build trainer-path-by-flag map for the modal-mount check (used
+        # to look up which trainer declares each flag so we can read its
+        # TIER_1_EXTRA_MOUNT_PATHS tuple).
+        flag_to_trainer: dict[str, str] = {}
+        for tp in sorted(all_trainer_paths):
+            for flag in trainer_cache.get(tp, {}):
+                flag_to_trainer.setdefault(flag, tp)
         for flag, meta in union_required.items():
             env_var = meta.get("env", "") or ""
             if _is_waived(env_var, flag):
                 continue
             if _check_152_wrapper_validates_required_input(text, env_var):
+                # Local validation present. Now the WAVE-1 extension: if
+                # this is a Modal dispatch AND default_path is under
+                # experiments/results/** (Modal-IGNORED), ALSO require that
+                # the trainer declare the path in TIER_1_EXTRA_MOUNT_PATHS
+                # / MODAL_EXTRA_MOUNT_PATHS so the Modal mount manifest
+                # stages it. Otherwise local validation will pass while the
+                # Modal worker silently lacks the file (STC v2 anchor).
+                if not wrapper_is_modal_dispatch:
+                    continue
+                default_path = meta.get("default", "") or meta.get("default_path", "") or ""
+                if not _check_152_default_path_is_modal_ignored(default_path):
+                    continue
+                if modal_staged_waivers:
+                    # Any non-placeholder same-line waiver excuses every
+                    # Modal-staged check (operator has explicitly declared
+                    # the file is staged via an out-of-band mechanism).
+                    continue
+                trainer_for_flag = flag_to_trainer.get(flag)
+                if trainer_for_flag is not None and (
+                    _check_152_trainer_declares_extra_mount_path(
+                        root / trainer_for_flag, default_path
+                    )
+                ):
+                    continue
+                modal_msg = (
+                    f"{rel}: Modal dispatch validates {flag} locally but "
+                    f"default_path={default_path!r} is under the Modal-IGNORED "
+                    f"`experiments/results/**` subtree (see "
+                    f"tac.deploy.modal.mount_manifest.DEFAULT_RESULTS_IGNORE). "
+                    f"Add the path to trainer's TIER_1_EXTRA_MOUNT_PATHS / "
+                    f"MODAL_EXTRA_MOUNT_PATHS tuple so mount_manifest stages "
+                    f"it (canonical fix; sister of Catalog #153 mount-builder "
+                    f"discipline), OR add same-line "
+                    f"`# REQUIRED_INPUT_MODAL_STAGED_OK:<rationale>` waiver on "
+                    f"the dispatch line. Bug-class anchor: STC v2 smoke "
+                    f"fc-01KRSB76H04HM4958V2HX2JZZ4 rc=25 (2026-05-16) "
+                    f"crashed at lane-driver exit 25 because local validation "
+                    f"passed but Modal worker never received the file."
+                )
+                violations.append(modal_msg)
                 continue
             rationale = (meta.get("rationale", "") or "")[:120]
             generator = (meta.get("generator_command", "") or "")[:160]
@@ -42437,6 +42742,105 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
             if generator:
                 msg += f"; generate via: {generator}"
             violations.append(msg)
+
+    # ----------------------------------------------------------------------
+    # WAVE-1 APPARATUS HARDENING 2026-05-16 recipe-schema sub-scan.
+    # The wrapper-scan loop above covers operator-authored shell wrappers
+    # AND `tools/operator_authorize.py` (the canonical Modal dispatcher).
+    # But the actual STC v2 bug path goes: operator_authorize.py reads
+    # recipe YAML at runtime -> dispatches Modal -> Modal worker can't
+    # find the file. The wrapper-scan can't see this because the trainer
+    # reference is loaded DYNAMICALLY from the recipe YAML, so the static
+    # AST walker doesn't find it.
+    #
+    # This sister scan iterates every Modal operator-authorize recipe and
+    # applies the same modal-IGNORED + extra-mount discipline at the
+    # recipe-schema layer (which IS the canonical operator-facing
+    # declaration surface). For every recipe with `platform: modal` AND a
+    # `required_input_files: [...]` list, every entry whose `default_path`
+    # is under the Modal-IGNORED `experiments/results/**` subtree MUST be
+    # declared in the trainer's `TIER_1_EXTRA_MOUNT_PATHS` /
+    # `MODAL_EXTRA_MOUNT_PATHS` tuple. The trainer is resolved via the
+    # recipe's `required_input_files_trainer` field (canonical), or via
+    # the `modal.cost_band_trainer` sub-field as a fallback.
+    recipes_dir = root / ".omx" / "operator_authorize_recipes"
+    if recipes_dir.is_dir():
+        try:
+            import yaml as _yaml  # type: ignore[import-untyped]
+        except ImportError:
+            _yaml = None  # type: ignore[assignment]
+        for recipe_path in sorted(recipes_dir.glob("*.yaml")):
+            rel = str(recipe_path.relative_to(root))
+            try:
+                recipe_text = recipe_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Recipe-scoped `# REQUIRED_INPUT_MODAL_STAGED_OK:<rationale>`
+            # waiver excuses every input only when it carries a substantive
+            # rationale. Wrapper waivers stay dispatch-line scoped because
+            # wrappers have executable dispatch lines; recipes are declarative.
+            recipe_waivers = _check_152_collect_modal_staged_recipe_waivers(
+                recipe_text
+            )
+            if recipe_waivers:
+                continue
+            # Cheap pre-filter before YAML parse. Do not require a specific
+            # quoting style for `platform`; YAML parsing below is authoritative.
+            if "platform:" not in recipe_text or "required_input_files" not in recipe_text:
+                continue
+            if _yaml is None:
+                continue
+            try:
+                data = _yaml.safe_load(recipe_text) or {}
+            except Exception:
+                continue
+            if not isinstance(data, dict):
+                continue
+            if data.get("platform") != "modal":
+                continue
+            required_inputs = data.get("required_input_files") or []
+            if not isinstance(required_inputs, list) or not required_inputs:
+                continue
+            # Resolve trainer path: canonical field is
+            # `required_input_files_trainer`; fall back to
+            # `modal.cost_band_trainer`.
+            trainer_rel = data.get("required_input_files_trainer")
+            if not trainer_rel:
+                modal_cfg = data.get("modal") or {}
+                if isinstance(modal_cfg, dict):
+                    trainer_rel = modal_cfg.get("cost_band_trainer")
+            if not trainer_rel or not isinstance(trainer_rel, str):
+                continue
+            trainer_path = root / trainer_rel
+            if not trainer_path.is_file():
+                continue
+            for entry in required_inputs:
+                if not isinstance(entry, dict):
+                    continue
+                default_path = entry.get("default_path") or ""
+                flag = entry.get("flag") or "<unknown>"
+                if not isinstance(default_path, str):
+                    continue
+                if not _check_152_default_path_is_modal_ignored(default_path):
+                    continue
+                if _check_152_trainer_declares_extra_mount_path(
+                    trainer_path, default_path
+                ):
+                    continue
+                msg = (
+                    f"{rel}: Modal recipe `required_input_files` entry "
+                    f"{flag} default_path={default_path!r} is under the "
+                    f"Modal-IGNORED `experiments/results/**` subtree (see "
+                    f"tac.deploy.modal.mount_manifest.DEFAULT_RESULTS_IGNORE) "
+                    f"AND trainer {trainer_rel} does NOT declare the path in "
+                    f"TIER_1_EXTRA_MOUNT_PATHS / MODAL_EXTRA_MOUNT_PATHS. "
+                    f"Canonical fix: add the path to the trainer's "
+                    f"TIER_1_EXTRA_MOUNT_PATHS tuple so "
+                    f"mount_manifest.collect_extra_mount_paths stages it. "
+                    f"Bug-class anchor: STC v2 smoke "
+                    f"fc-01KRSB76H04HM4958V2HX2JZZ4 rc=25 (2026-05-16)."
+                )
+                violations.append(msg)
 
     if verbose:
         if violations:

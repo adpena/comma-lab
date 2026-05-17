@@ -414,10 +414,9 @@ def test_305_string_repo_root_accepted(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_305_orchestrator_callsite_warn_only_at_landing() -> None:
-    """Verify the orchestrator wires Catalog #305 with strict=False at landing
-    per CLAUDE.md "Strict-flip atomicity rule" (the 10 existing 2026-05-16
-    design memos predate the directive; backfill is the follow-up)."""
+def test_305_orchestrator_callsite_strict_after_wave_1_backfill() -> None:
+    """Verify Catalog #305 is strict after the WAVE-1 backfill drove live
+    violations to 0."""
     import inspect
     from tac import preflight
 
@@ -427,15 +426,15 @@ def test_305_orchestrator_callsite_warn_only_at_landing() -> None:
         "check_substrate_design_memo_has_observability_surface_section"
         in src
     ), "Catalog #305 gate not wired into preflight_all()"
-    # Verify the call uses strict=False (warn-only).
+    # Verify the call uses strict=True after WAVE-1 strict-flip.
     # The pattern in preflight_all is:
     # check_substrate_design_memo_has_observability_surface_section(
-    #     strict=False, verbose=verbose,
+    #     strict=True, verbose=verbose,
     # )
     idx = src.find("check_substrate_design_memo_has_observability_surface_section(")
     assert idx > 0
     snippet = src[idx : idx + 200]
-    assert "strict=False" in snippet, (
-        "Catalog #305 should be wired with strict=False at landing per "
-        "'Strict-flip atomicity rule' — backfill drives count to 0 first."
+    assert "strict=True" in snippet, (
+        "Catalog #305 should remain strict after WAVE-1 backfilled the "
+        "remaining 2026-05-16 design memos and live count reached 0."
     )

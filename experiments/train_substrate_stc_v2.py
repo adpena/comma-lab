@@ -50,7 +50,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 import zipfile
@@ -96,6 +95,22 @@ CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 LANE_A_INFLATE_SH = REPO_ROOT / "submissions" / "robust_current" / "inflate.sh"
 
 CONTEST_NORMALIZER = 37_545_489.0
+
+
+# ---------------------------------------------------------------------------
+# Catalog #152 modal-mounted-input discipline (WAVE-1 APPARATUS HARDENING
+# 2026-05-16 extension; bug-class anchor STC v2 smoke fc-01KRSB76H04HM4958V2HX2JZZ4
+# rc=25 / 1.6s because the Lane A anchor archive lives under
+# experiments/results/lane_a_landed/ which the canonical Modal mount manifest
+# IGNORES via DEFAULT_RESULTS_IGNORE=("results/**",); the file existed on the
+# operator workstation so the local Catalog #152 validator passed, but the
+# Modal worker never received the file and crashed at exit 25). The canonical
+# fix is to declare the path in TIER_1_EXTRA_MOUNT_PATHS so the Modal mount
+# manifest stages it explicitly via mount_manifest.collect_extra_mount_paths.
+# ---------------------------------------------------------------------------
+TIER_1_EXTRA_MOUNT_PATHS: tuple[str, ...] = (
+    str(DEFAULT_ANCHOR_ARCHIVE.relative_to(REPO_ROOT)),
+)
 
 
 # ---------------------------------------------------------------------------
