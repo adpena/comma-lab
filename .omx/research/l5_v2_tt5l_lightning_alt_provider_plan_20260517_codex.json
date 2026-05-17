@@ -75,8 +75,9 @@
   "source_manifest_probe": {
     "command": ".venv/bin/python scripts/lightning_repro_workspace.py --dry-run --run-id l5_v2_tt5l_random_lsb_current_code_lightning_repro_20260517 --manifest-out /tmp/l5_v2_tt5l_random_lsb_current_code_lightning_source_manifest_20260517.json --artifact experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --artifact experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --requirements-mode uv-sync --python-bin .venv/bin/python --require-cuda",
     "failure_class": "lightning_remote_identity_missing",
+    "observed_at_utc": "2026-05-17T07:30:46Z",
     "returncode": 1,
-    "status_basis": "not_rerun_after_archive_refresh; still blocked until remote identity is supplied",
+    "status_basis": "rerun_after_archive_refresh_against_current_archive_and_runtime; still blocked until remote identity is supplied",
     "stderr_or_stdout": "set --remote or LIGHTNING_SSH_TARGET before staging to Lightning"
   },
   "source_plan": ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json"

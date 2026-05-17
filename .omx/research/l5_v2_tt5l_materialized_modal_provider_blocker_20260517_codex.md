@@ -71,6 +71,23 @@ Verification receipt:
   `next_action=resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider`,
   `recursive_execute_present=False`, `nested_keys=[]`
 
+## Lightning Source Manifest Probe Refresh
+
+2026-05-17 follow-up: reran the Lightning repro workspace source-manifest probe
+against the current `ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`
+archive and current runtime path. The no-spend dry run still fails before any
+remote staging because no Lightning SSH identity is configured locally:
+
+```text
+set --remote or LIGHTNING_SSH_TARGET before staging to Lightning
+```
+
+This refresh converts the older inherited `not_rerun_after_archive_refresh`
+note into current evidence:
+`rerun_after_archive_refresh_against_current_archive_and_runtime`. It does not
+change the method status, score claim, promotion eligibility, or exact-dispatch
+readiness.
+
 The paired Lightning alternate-provider plan has also been refreshed onto the
 same current archive/runtime metadata. It is artifact-valid, but dispatch is
 still blocked on real Lightning environment prerequisites:
