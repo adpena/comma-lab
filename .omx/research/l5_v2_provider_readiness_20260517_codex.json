@@ -1,6 +1,6 @@
 {
   "evidence_semantics": "provider_inventory_no_dispatch_no_score_claim",
-  "generated_at_utc": "2026-05-17T09:05:06Z",
+  "generated_at_utc": "2026-05-17T09:21:08Z",
   "kaggle_kernel_ref": "adpena/comma-gpu-lane-smoke",
   "providers": [
     {
@@ -8,7 +8,7 @@
         "modal_billing_not_checked",
         "cuda_runtime_import_probe_not_run"
       ],
-      "checked_at_utc": "2026-05-17T09:05:04Z",
+      "checked_at_utc": "2026-05-17T09:21:07Z",
       "command": [
         "/Users/adpena/Projects/pact/.venv/bin/modal",
         "--version"
@@ -28,7 +28,7 @@
     },
     {
       "blockers": [],
-      "checked_at_utc": "2026-05-17T09:05:05Z",
+      "checked_at_utc": "2026-05-17T09:21:07Z",
       "command": [
         "/Users/adpena/Projects/pact/.venv/bin/kaggle",
         "kernels",
@@ -51,10 +51,12 @@
     {
       "blockers": [
         "credits_or_quota_not_checked",
-        "studio_route_not_checked",
-        "no_dispatch_claim"
+        "no_dispatch_claim",
+        "lightning_teamspace_missing",
+        "lightning_owner_missing",
+        "lightning_ssh_target_missing"
       ],
-      "checked_at_utc": "2026-05-17T09:05:05Z",
+      "checked_at_utc": "2026-05-17T09:21:07Z",
       "command": [
         "/Users/adpena/Projects/pact/.venv/bin/python",
         "-c",
@@ -62,14 +64,16 @@
       ],
       "exact_cuda_evidence_allowed": false,
       "next_actions": [
-        "Run `scripts/launch_lightning_batch_job.py doctor` before any Lightning dispatch.",
+        "Set LIGHTNING_TEAMSPACE plus LIGHTNING_SDK_USER or LIGHTNING_ORG before Lightning dispatch.",
+        "Set LIGHTNING_SSH_TARGET and stage the source manifest before remote preflight.",
+        "Run `scripts/launch_lightning_batch_job.py doctor --require-ssh --require-machine-inventory --require-remote-supply-chain` before any Lightning dispatch.",
         "Use claim_lane_dispatch.py before every non-dry-run Lightning job.",
         "Treat Lightning exact CUDA only after artifact custody and adjudication land."
       ],
       "provider": "lightning",
       "proxy_only": false,
       "score_lowering_role": "claimed_cuda_batch_jobs_when_credits_quota_and_studio_route_are_ready",
-      "status": "ready_sdk_check_credit_quota_next",
+      "status": "ready_sdk_missing_lightning_route",
       "stderr_excerpt": "",
       "stdout_excerpt": "2026.4.23"
     },
@@ -77,7 +81,7 @@
       "blockers": [
         "vastai_api_key_missing"
       ],
-      "checked_at_utc": "2026-05-17T09:05:05Z",
+      "checked_at_utc": "2026-05-17T09:21:07Z",
       "command": [
         "/Users/adpena/Projects/pact/.venv/bin/vastai"
       ],
@@ -96,7 +100,7 @@
       "blockers": [
         "aws_session_expired"
       ],
-      "checked_at_utc": "2026-05-17T09:05:05Z",
+      "checked_at_utc": "2026-05-17T09:21:07Z",
       "command": [
         "/opt/homebrew/bin/aws",
         "sts",
@@ -119,7 +123,7 @@
       "blockers": [
         "azure_not_logged_in"
       ],
-      "checked_at_utc": "2026-05-17T09:05:05Z",
+      "checked_at_utc": "2026-05-17T09:21:08Z",
       "command": [
         "az",
         "account",
@@ -143,7 +147,7 @@
         "gcp_billing_not_enabled_or_not_readable",
         "gpu_quota_not_checked"
       ],
-      "checked_at_utc": "2026-05-17T09:05:06Z",
+      "checked_at_utc": "2026-05-17T09:21:08Z",
       "command": [
         "gcloud",
         "billing",

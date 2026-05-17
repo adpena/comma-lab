@@ -103,18 +103,48 @@ class CloudProviderReadinessTests(unittest.TestCase):
         self.assertIn("modal_billing_not_checked", payload.blockers)
         self.assertIn("cuda_runtime_import_probe_not_run", payload.blockers)
 
-    def test_probe_lightning_sdk_ready_still_requires_credit_and_claim(self) -> None:
+    def test_probe_lightning_sdk_ready_surfaces_missing_route_before_dispatch(self) -> None:
         mod = load_module()
 
         def fake_runner(command: list[str], _timeout: int):
             return mod.CommandResult(command=command, returncode=0, stdout="2026.4.10\n")
 
-        payload = mod.probe_lightning(runner=fake_runner)
+        with mock.patch.dict(mod.os.environ, {}, clear=True):
+            payload = mod.probe_lightning(runner=fake_runner)
 
-        self.assertEqual(payload.status, "ready_sdk_check_credit_quota_next")
+        self.assertEqual(payload.status, "ready_sdk_missing_lightning_route")
         self.assertFalse(payload.exact_cuda_evidence_allowed)
         self.assertIn("credits_or_quota_not_checked", payload.blockers)
         self.assertIn("no_dispatch_claim", payload.blockers)
+        self.assertIn("lightning_teamspace_missing", payload.blockers)
+        self.assertIn("lightning_owner_missing", payload.blockers)
+        self.assertIn("lightning_ssh_target_missing", payload.blockers)
+        self.assertNotIn("machine_inventory_not_checked", payload.blockers)
+
+    def test_probe_lightning_sdk_ready_requires_doctor_when_route_is_declared(self) -> None:
+        mod = load_module()
+
+        def fake_runner(command: list[str], _timeout: int):
+            return mod.CommandResult(command=command, returncode=0, stdout="2026.4.10\n")
+
+        with mock.patch.dict(
+            mod.os.environ,
+            {
+                "LIGHTNING_TEAMSPACE": "teamspace",
+                "LIGHTNING_SDK_USER": "user",
+                "LIGHTNING_SSH_TARGET": "lightning-studio",
+            },
+            clear=True,
+        ):
+            payload = mod.probe_lightning(runner=fake_runner)
+
+        self.assertEqual(payload.status, "ready_sdk_run_doctor_next")
+        self.assertFalse(payload.exact_cuda_evidence_allowed)
+        self.assertIn("credits_or_quota_not_checked", payload.blockers)
+        self.assertIn("machine_inventory_not_checked", payload.blockers)
+        self.assertIn("source_manifest_not_staged", payload.blockers)
+        self.assertIn("remote_cuda_runtime_probe_not_run", payload.blockers)
+        self.assertNotIn("lightning_teamspace_missing", payload.blockers)
 
     def test_probe_vastai_offer_ready_still_requires_claim_probe_and_heartbeat(self) -> None:
         mod = load_module()
@@ -165,6 +195,31 @@ class CloudProviderReadinessTests(unittest.TestCase):
 
         providers = [row["provider"] for row in payload["providers"]]
         self.assertEqual(providers, list(mod.provider_contracts()))
+
+    def test_write_markdown_preserves_provider_implication_context(self) -> None:
+        mod = load_module()
+        payload = {
+            "generated_at_utc": "2026-05-17T00:00:00Z",
+            "providers": [
+                {
+                    "provider": "lightning",
+                    "status": "ready_sdk_missing_lightning_route",
+                    "exact_cuda_evidence_allowed": False,
+                    "proxy_only": False,
+                    "blockers": ["lightning_teamspace_missing"],
+                    "next_actions": ["Set LIGHTNING_TEAMSPACE."],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir) / "provider.md"
+            mod.write_markdown(payload, out)
+            text = out.read_text()
+
+        self.assertIn("Provider readiness is not a score claim", text)
+        self.assertIn("No provider row currently authorizes exact-CUDA dispatch", text)
+        self.assertIn("LIGHTNING_TEAMSPACE", text)
 
     def test_probe_aws_classifies_expired_session(self) -> None:
         mod = load_module()

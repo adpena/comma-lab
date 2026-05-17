@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -271,27 +272,65 @@ def probe_lightning(*, runner: Runner = run_command, timeout_s: int = 20) -> Pro
         timeout_s,
     )
     ok = result.returncode == 0
+    if ok:
+        teamspace = os.environ.get("LIGHTNING_TEAMSPACE", "").strip()
+        owner = (
+            os.environ.get("LIGHTNING_SDK_USER", "").strip()
+            or os.environ.get("LIGHTNING_ORG", "").strip()
+        )
+        ssh_target = os.environ.get("LIGHTNING_SSH_TARGET", "").strip()
+        blockers = ["credits_or_quota_not_checked", "no_dispatch_claim"]
+        if not teamspace:
+            blockers.append("lightning_teamspace_missing")
+        if not owner:
+            blockers.append("lightning_owner_missing")
+        if not ssh_target:
+            blockers.append("lightning_ssh_target_missing")
+        if teamspace and owner:
+            blockers.append("machine_inventory_not_checked")
+        if ssh_target:
+            blockers.extend(
+                ["source_manifest_not_staged", "remote_cuda_runtime_probe_not_run"]
+            )
+        missing_route = {
+            "lightning_teamspace_missing",
+            "lightning_owner_missing",
+            "lightning_ssh_target_missing",
+        }
+        status = (
+            "ready_sdk_missing_lightning_route"
+            if any(blocker in missing_route for blocker in blockers)
+            else "ready_sdk_run_doctor_next"
+        )
+        next_actions = [
+            (
+                "Set LIGHTNING_TEAMSPACE plus LIGHTNING_SDK_USER or LIGHTNING_ORG "
+                "before Lightning dispatch."
+            ),
+            "Set LIGHTNING_SSH_TARGET and stage the source manifest before remote preflight.",
+            (
+                "Run `scripts/launch_lightning_batch_job.py doctor --require-ssh "
+                "--require-machine-inventory --require-remote-supply-chain` before "
+                "any Lightning dispatch."
+            ),
+            "Use claim_lane_dispatch.py before every non-dry-run Lightning job.",
+            "Treat Lightning exact CUDA only after artifact custody and adjudication land.",
+        ]
+    else:
+        blockers = ["lightning_sdk_missing_or_broken"]
+        status = "blocked_sdk_missing"
+        next_actions = [
+            "Install or repair lightning-sdk in .venv, or use another CUDA provider."
+        ]
     return _provider(
         provider="lightning",
-        status="ready_sdk_check_credit_quota_next" if ok else "blocked_sdk_missing",
+        status=status,
         role="claimed_cuda_batch_jobs_when_credits_quota_and_studio_route_are_ready",
         exact_cuda=False,
         proxy_only=False,
         result=result,
-        blockers=(
-            ["credits_or_quota_not_checked", "studio_route_not_checked", "no_dispatch_claim"]
-            if ok
-            else ["lightning_sdk_missing_or_broken"]
-        ),
-        next_actions=(
-            [
-                "Run `scripts/launch_lightning_batch_job.py doctor` before any Lightning dispatch.",
-                "Use claim_lane_dispatch.py before every non-dry-run Lightning job.",
-                "Treat Lightning exact CUDA only after artifact custody and adjudication land.",
-            ]
-            if ok
-            else ["Install or repair lightning-sdk in .venv, or use another CUDA provider."]
-        ),
+        blockers=blockers,
+        next_actions=next_actions,
     )
 
 
@@ -539,6 +578,10 @@ def write_markdown(payload: dict[str, object], path: Path) -> None:
         "",
         "This is a read-only provider inventory. It is not a dispatch, score claim, or promotion artifact.",
         "",
+        "Context: provider readiness is an execution-unblocker ledger for byte-closed "
+        "candidate work units. It does not override lane claims, source-custody "
+        "checks, exact-eval adjudication, or architecture-lock gates.",
+        "",
         "| provider | status | exact CUDA allowed now | proxy only | blockers | next action |",
         "|---|---|---:|---:|---|---|",
     ]
@@ -559,6 +602,22 @@ def write_markdown(payload: dict[str, object], path: Path) -> None:
                     next_action=next_action.replace("|", "\\|"),
                 )
             )
+    lines.extend(
+        [
+            "",
+            "## Implication",
+            "",
+            "- No provider row currently authorizes exact-CUDA dispatch when "
+            "`exact CUDA allowed now` is `no` for every provider.",
+            "- Lightning route blockers are explicit: configure `LIGHTNING_TEAMSPACE`, "
+            "`LIGHTNING_SDK_USER` or `LIGHTNING_ORG`, and `LIGHTNING_SSH_TARGET`, "
+            "then run the Lightning doctor with required SSH, machine inventory, "
+            "and remote supply-chain checks before dispatch.",
+            "- Kaggle remains proxy-only and cannot promote or rank contest candidates.",
+            "- Provider readiness is not a score claim; harvested exact CPU/CUDA "
+            "artifacts still need custody, adjudication, and lane-claim closure.",
+        ]
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n")
 
