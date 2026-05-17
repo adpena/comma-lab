@@ -32406,11 +32406,11 @@
       "id": "lane_commit_swap_absorption_pattern_investigation_20260516",
       "name": "Commit-swap absorption pattern investigation + Catalog #314 self-protection",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #314 gate function + 38 tests + CLAUDE.md row"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32425,16 +32425,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #314 warn-only at landing; 9 violations detected; tests at src/tac/tests/test_check_314_subagent_files_touched_absorption_in_bare_commits.py"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/commit_swap_absorption_pattern_investigation_landed_20260516.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -32492,5 +32492,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T03:28:50Z"
+  "updated_at": "2026-05-17T03:37:31Z"
 }
