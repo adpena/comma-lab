@@ -113,6 +113,9 @@ TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH = (
 TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH = (
     ".omx/research/l5_v2_tt5l_materialized_modal_provider_blocker_20260517_codex.json"
 )
+TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json"
+)
 TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID = (
     "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
 )
@@ -3383,6 +3386,11 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         archive_sha256=archive_sha256,
         pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
     )
+    alternate_provider_plan_status = _tt5l_materialized_lightning_alt_provider_plan_status(
+        repo_root=repo_root,
+        archive_sha256=archive_sha256,
+        pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
+    )
 
     return {
         "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",
@@ -3406,11 +3414,139 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         "operator_execute_command_template_after_review": operator_plan_command
         + " --execute",
         "provider_blocker_status": provider_blocker_status,
+        "alternate_provider_plan_status": alternate_provider_plan_status,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def _tt5l_materialized_lightning_alt_provider_plan_status(
+    *,
+    repo_root: Path,
+    archive_sha256: str,
+    pair_group_id: str,
+) -> dict[str, Any]:
+    artifact_path = (
+        repo_root / TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH
+    )
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1",
+            "artifact_path": TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "provider": "",
+            "execution_ready": False,
+            "local_supply_chain_ok": False,
+            "exact_eval_dry_run_ok": False,
+            "command_sha256": "",
+            "job_name": "",
+            "execution_blockers": [],
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append("l5_v2_tt5l_lightning_alt_provider_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_alt_provider_not_object"
+            )
+    if payload and payload.get("schema") != (
+        "l5_v2_tt5l_lightning_alternate_provider_plan_v1"
+    ):
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_schema_mismatch"
+        )
+    provider = str(payload.get("provider") or "").strip() if payload else ""
+    payload_archive_sha = str(payload.get("archive_sha256") or "").strip() if payload else ""
+    payload_pair_group_id = str(payload.get("pair_group_id") or "").strip() if payload else ""
+    if payload and provider != "lightning":
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_provider_not_lightning"
+        )
+    if payload and payload_archive_sha != archive_sha256:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_archive_sha_mismatch"
+        )
+    if payload and payload_pair_group_id != pair_group_id:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_pair_group_mismatch"
+        )
+    if payload and payload.get("score_claim") is not False:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_score_claim_not_false"
+        )
+    if payload and payload.get("promotion_eligible") is not False:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_promotion_not_false"
+        )
+    if payload and payload.get("ready_for_exact_eval_dispatch") is not False:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_exact_dispatch_not_false"
+        )
+
+    doctor = payload.get("local_lightning_doctor") if payload else None
+    local_supply_chain_ok = (
+        isinstance(doctor, Mapping)
+        and doctor.get("status") == "OK"
+        and doctor.get("local_supply_chain_ok") is True
+    )
+    dry_run = payload.get("exact_eval_dry_run") if payload else None
+    command_sha256 = ""
+    job_name = ""
+    exact_eval_dry_run_ok = False
+    if isinstance(dry_run, Mapping):
+        command_sha256 = str(dry_run.get("command_sha256") or "").strip()
+        job_name = str(dry_run.get("job_name") or "").strip()
+        exact_eval_dry_run_ok = (
+            dry_run.get("status") == "DRY_RUN"
+            and _SHA256_HEX_RE.fullmatch(command_sha256) is not None
+            and bool(job_name)
+        )
+    execution_blockers = [
+        str(blocker)
+        for blocker in (payload.get("execution_blockers") if payload else []) or []
+        if str(blocker)
+    ]
+    readiness_blockers: list[str] = []
+    if payload and not local_supply_chain_ok:
+        readiness_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_local_supply_chain_not_ok"
+        )
+    if payload and not exact_eval_dry_run_ok:
+        readiness_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_exact_eval_dry_run_missing"
+        )
+    readiness_blockers.extend(
+        "l5_v2_tt5l_lightning_alt_provider_blocked:" + blocker
+        for blocker in execution_blockers
+    )
+    artifact_valid = bool(payload) and not validation_blockers
+    execution_ready = artifact_valid and not readiness_blockers
+    return {
+        "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1",
+        "artifact_path": TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": artifact_valid,
+        "provider": provider,
+        "execution_ready": execution_ready,
+        "local_supply_chain_ok": local_supply_chain_ok,
+        "exact_eval_dry_run_ok": exact_eval_dry_run_ok,
+        "command_sha256": command_sha256,
+        "job_name": job_name,
+        "execution_blockers": list(dict.fromkeys(execution_blockers)),
+        "blockers": list(
+            dict.fromkeys(validation_blockers + readiness_blockers)
+        ),
     }
 
 
@@ -3572,6 +3708,11 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     provider_blocker_status = materialized_work_unit_status["provider_blocker_status"]
     if provider_blocker_status["active"] is True:
         blockers.extend(str(blocker) for blocker in provider_blocker_status["blockers"])
+        alternate_plan = materialized_work_unit_status[
+            "alternate_provider_plan_status"
+        ]
+        if alternate_plan["artifact_valid"] is True:
+            blockers.extend(str(blocker) for blocker in alternate_plan["blockers"])
 
     if not dykstra_valid:
         next_action = {
@@ -3717,6 +3858,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "provider_blocker_status": materialized_work_unit_status[
                 "provider_blocker_status"
             ],
+            "alternate_provider_plan_status": materialized_work_unit_status[
+                "alternate_provider_plan_status"
+            ],
             "operator_plan_command_template": materialized_work_unit_status[
                 "operator_plan_command_template"
             ],
@@ -3738,6 +3882,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "ready_for_operator_dispatch": False,
             "ready_for_provider_dispatch": False,
             "ready_for_alternate_provider_planning": True,
+            "ready_for_alternate_provider_dispatch": materialized_work_unit_status[
+                "alternate_provider_plan_status"
+            ]["execution_ready"],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,

@@ -1,0 +1,71 @@
+{
+  "schema": "l5_v2_tt5l_lightning_alternate_provider_plan_v1",
+  "generated_at_utc": "2026-05-17T05:12:00Z",
+  "generated_by": "codex",
+  "provider": "lightning",
+  "purpose": "Alternate exact-CUDA routing plan for the L5 v2 TT5L random_lsb materialized paired work unit after Modal failed before job spawn on workspace billing limits.",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
+  "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+  "archive_size_bytes": 38911,
+  "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+  "axis": "contest_cuda",
+  "runtime_path": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+  "expected_runtime_tree_sha256": "5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583",
+  "source_plan": ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json",
+  "modal_provider_blocker": ".omx/research/l5_v2_tt5l_materialized_modal_provider_blocker_20260517_codex.json",
+  "local_lightning_doctor": {
+    "command": ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --json-out /tmp/pact_lightning_doctor_tt5l_20260517.json --run-id l5_v2_tt5l_alt_provider_doctor_20260517 --strict --machine-inventory --gpu-only",
+    "status": "OK",
+    "local_supply_chain_ok": true,
+    "failed_checks": [],
+    "package_versions": {
+      "lightning": null,
+      "lightning-sdk": "2026.4.23",
+      "lightning_sdk": "2026.4.23",
+      "pytorch-lightning": null
+    },
+    "ssh_auth_status": "skipped",
+    "machine_inventory_status": "skipped",
+    "machine_inventory_skip_reason": "No --teamspace or LIGHTNING_TEAMSPACE was configured in the local environment."
+  },
+  "source_manifest_probe": {
+    "command": ".venv/bin/python scripts/lightning_repro_workspace.py --dry-run --run-id l5_v2_tt5l_random_lsb_lightning_repro_20260517 --manifest-out /tmp/l5_v2_tt5l_random_lsb_lightning_source_manifest_20260517.json --artifact experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip --artifact experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime --requirements-mode uv-sync --python-bin .venv/bin/python --require-cuda",
+    "returncode": 1,
+    "failure_class": "lightning_remote_identity_missing",
+    "stderr_or_stdout": "set --remote or LIGHTNING_SSH_TARGET before staging to Lightning"
+  },
+  "exact_eval_dry_run": {
+    "command": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --state-path /tmp/l5_v2_tt5l_random_lsb_lightning_dry_run_state_20260517.json --job-name l5-v2-tt5l-random-lsb-cuda-20260517 --archive /teamspace/studios/this_studio/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --output-dir /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517 --machine T4 --python-bin .venv/bin/python --inflate-sh experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime/inflate.sh --expected-archive-sha256 b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 --expected-archive-size-bytes 38911 --local-artifact-dir experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517 --adjudicate --baseline-score 0.1928 --baseline-archive-bytes 38911 --predicted-band 0.0 200.0 --regression-threshold 200.0 --max-sane-score 200.0 --queue-metadata pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --queue-metadata axis=contest_cuda --queue-metadata archive_sha256=b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 --queue-metadata expected_runtime_tree_sha256=5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583 --queue-metadata source_plan=.omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json --dry-run",
+    "status": "DRY_RUN",
+    "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+    "machine": "T4",
+    "role": "exact_cuda_eval",
+    "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+    "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517",
+    "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517",
+    "adjudication_mode": "forensic_broad_band_no_score_claim",
+    "required_device": "cuda",
+    "required_samples": 600
+  },
+  "execution_blockers": [
+    "missing_lightning_ssh_target",
+    "missing_lightning_teamspace",
+    "machine_inventory_not_checked",
+    "source_manifest_not_staged",
+    "remote_cuda_runtime_not_probed"
+  ],
+  "next_action_after_provider_config": {
+    "claim_lane_first": true,
+    "lane_id": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda",
+    "commands": [
+      ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --strict --require-ssh --remote-supply-chain --require-remote-supply-chain --remote-preflight-ssh-target <lightning_ssh_alias> --teamspace <teamspace> --machine-inventory --gpu-only --json-out experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517/lightning_doctor.json",
+      ".venv/bin/python scripts/launch_lightning_batch_job.py list-machines --teamspace <teamspace> --machine T4 --gpu-only",
+      ".venv/bin/python scripts/lightning_repro_workspace.py --remote <lightning_ssh_alias> --run-id l5_v2_tt5l_random_lsb_lightning_repro_20260517 --manifest-out experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517/source_manifest.json --artifact experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip --artifact experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime --requirements-mode uv-sync --python-bin .venv/bin/python --require-cuda",
+      ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda --instance-job-id l5-v2-tt5l-random-lsb-cuda-20260517 --provider lightning --status claimed --agent codex:l5_v2_tt5l_lightning_alt_provider --notes pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda;archive_sha=b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7;axis=contest_cuda",
+      ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name l5-v2-tt5l-random-lsb-cuda-20260517 --archive /teamspace/studios/this_studio/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --output-dir /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517 --machine T4 --studio <studio> --teamspace <teamspace> --python-bin .venv/bin/python --inflate-sh experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime/inflate.sh --source-manifest experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517/source_manifest.json --remote-preflight-ssh-target <lightning_ssh_alias> --dispatch-lane-id lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda --expected-archive-sha256 b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 --expected-archive-size-bytes 38911 --local-artifact-dir experiments/results/lightning_batch/l5_v2_tt5l_random_lsb_cuda_20260517 --adjudicate --baseline-score 0.1928 --baseline-archive-bytes 38911 --predicted-band 0.0 200.0 --regression-threshold 200.0 --max-sane-score 200.0 --queue-metadata pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --queue-metadata axis=contest_cuda --queue-metadata archive_sha256=b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 --queue-metadata expected_runtime_tree_sha256=5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583 --queue-metadata source_plan=.omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json"
+    ]
+  }
+}

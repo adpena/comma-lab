@@ -2534,6 +2534,137 @@ def test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker(
     )
 
 
+def test_l5_v2_tt5l_modal_blocker_surfaces_lightning_alternate_plan(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    _write_tt5l_archive_zip(archive_path, nonzero_side_info=True)
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
+    )
+    blocker_path = tmp_path / l5_v2.TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH
+    blocker_path.parent.mkdir(parents=True, exist_ok=True)
+    blocker_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_tt5l_materialized_provider_blocker_v1",
+                "provider": "modal",
+                "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+                "archive_sha256": archive_sha,
+                "pair_group_id": (
+                    "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+                ),
+                "resolved": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    alternate_plan_path = (
+        tmp_path
+        / l5_v2.TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH
+    )
+    alternate_plan_path.parent.mkdir(parents=True, exist_ok=True)
+    alternate_plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_tt5l_lightning_alternate_provider_plan_v1",
+                "provider": "lightning",
+                "archive_sha256": archive_sha,
+                "pair_group_id": (
+                    "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "local_lightning_doctor": {
+                    "status": "OK",
+                    "local_supply_chain_ok": True,
+                },
+                "exact_eval_dry_run": {
+                    "status": "DRY_RUN",
+                    "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+                    "command_sha256": "a" * 64,
+                },
+                "execution_blockers": [
+                    "missing_lightning_ssh_target",
+                    "missing_lightning_teamspace",
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+    action = tt5l["next_non_pr106_l5_action"]
+    alternate = action["alternate_provider_plan_status"]
+
+    assert action["action_id"] == (
+        "resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider"
+    )
+    assert alternate["artifact_valid"] is True
+    assert alternate["provider"] == "lightning"
+    assert alternate["local_supply_chain_ok"] is True
+    assert alternate["exact_eval_dry_run_ok"] is True
+    assert alternate["execution_ready"] is False
+    assert action["ready_for_alternate_provider_planning"] is True
+    assert action["ready_for_alternate_provider_dispatch"] is False
+    assert (
+        "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target"
+        in tt5l["blockers"]
+    )
+
+
 def test_l5_v2_tt5l_materialized_work_unit_rejects_all_zero_sideinfo(
     tmp_path: Path,
 ) -> None:

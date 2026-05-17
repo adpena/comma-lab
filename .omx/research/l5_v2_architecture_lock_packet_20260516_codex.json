@@ -14,6 +14,32 @@
   "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
   "next_non_pr106_l5_action": {
     "action_id": "resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider",
+    "alternate_provider_plan_status": {
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+      "artifact_valid": true,
+      "blockers": [
+        "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+        "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+        "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+        "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+        "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
+      ],
+      "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+      "exact_eval_dry_run_ok": true,
+      "execution_blockers": [
+        "missing_lightning_ssh_target",
+        "missing_lightning_teamspace",
+        "machine_inventory_not_checked",
+        "source_manifest_not_staged",
+        "remote_cuda_runtime_not_probed"
+      ],
+      "execution_ready": false,
+      "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+      "local_supply_chain_ok": true,
+      "provider": "lightning",
+      "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1"
+    },
     "dispatch_attempted": true,
     "execution_order": [
       "resolve_modal_workspace_billing_cycle_spend_limit_or_select_alternate_provider",
@@ -22,6 +48,32 @@
       "convert_returned_results_into_l5_v2_probe_observations"
     ],
     "materialized_work_unit_status": {
+      "alternate_provider_plan_status": {
+        "artifact_exists": true,
+        "artifact_path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+        "artifact_valid": true,
+        "blockers": [
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
+        ],
+        "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+        "exact_eval_dry_run_ok": true,
+        "execution_blockers": [
+          "missing_lightning_ssh_target",
+          "missing_lightning_teamspace",
+          "machine_inventory_not_checked",
+          "source_manifest_not_staged",
+          "remote_cuda_runtime_not_probed"
+        ],
+        "execution_ready": false,
+        "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+        "local_supply_chain_ok": true,
+        "provider": "lightning",
+        "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1"
+      },
       "archive_bytes": 38911,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
       "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
@@ -139,6 +191,7 @@
       "resolved": false,
       "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1"
     },
+    "ready_for_alternate_provider_dispatch": false,
     "ready_for_alternate_provider_planning": true,
     "ready_for_exact_eval_dispatch": false,
     "ready_for_operator_dispatch": false,
@@ -195,7 +248,12 @@
       "prediction_band:prediction_band_baseline_custody_missing",
       "prediction_band:prediction_band_baseline_artifact_missing",
       "prediction_band:prediction_band_empirical_anchor_missing",
-      "l5_v2_tt5l_modal_provider_blocker_active:modal_workspace_billing_cycle_spend_limit_reached"
+      "l5_v2_tt5l_modal_provider_blocker_active:modal_workspace_billing_cycle_spend_limit_reached",
+      "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+      "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+      "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+      "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+      "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
     ],
     "campaign_id": "campaign_time_traveler_l5_v2_staircase_20260516",
     "dispatch_recipe_exists": true,
@@ -290,6 +348,32 @@
     },
     "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
     "materialized_tt5l_paired_work_unit_status": {
+      "alternate_provider_plan_status": {
+        "artifact_exists": true,
+        "artifact_path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+        "artifact_valid": true,
+        "blockers": [
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
+        ],
+        "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+        "exact_eval_dry_run_ok": true,
+        "execution_blockers": [
+          "missing_lightning_ssh_target",
+          "missing_lightning_teamspace",
+          "machine_inventory_not_checked",
+          "source_manifest_not_staged",
+          "remote_cuda_runtime_not_probed"
+        ],
+        "execution_ready": false,
+        "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+        "local_supply_chain_ok": true,
+        "provider": "lightning",
+        "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1"
+      },
       "archive_bytes": 38911,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
       "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
@@ -440,6 +524,32 @@
     },
     "next_non_pr106_l5_action": {
       "action_id": "resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider",
+      "alternate_provider_plan_status": {
+        "artifact_exists": true,
+        "artifact_path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+        "artifact_valid": true,
+        "blockers": [
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+          "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
+        ],
+        "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+        "exact_eval_dry_run_ok": true,
+        "execution_blockers": [
+          "missing_lightning_ssh_target",
+          "missing_lightning_teamspace",
+          "machine_inventory_not_checked",
+          "source_manifest_not_staged",
+          "remote_cuda_runtime_not_probed"
+        ],
+        "execution_ready": false,
+        "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+        "local_supply_chain_ok": true,
+        "provider": "lightning",
+        "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1"
+      },
       "dispatch_attempted": true,
       "execution_order": [
         "resolve_modal_workspace_billing_cycle_spend_limit_or_select_alternate_provider",
@@ -448,6 +558,32 @@
         "convert_returned_results_into_l5_v2_probe_observations"
       ],
       "materialized_work_unit_status": {
+        "alternate_provider_plan_status": {
+          "artifact_exists": true,
+          "artifact_path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+          "artifact_valid": true,
+          "blockers": [
+            "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target",
+            "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_teamspace",
+            "l5_v2_tt5l_lightning_alt_provider_blocked:machine_inventory_not_checked",
+            "l5_v2_tt5l_lightning_alt_provider_blocked:source_manifest_not_staged",
+            "l5_v2_tt5l_lightning_alt_provider_blocked:remote_cuda_runtime_not_probed"
+          ],
+          "command_sha256": "72b693724b3e13eb06c066239362a8058231f7a81072244ae981041d7f68568d",
+          "exact_eval_dry_run_ok": true,
+          "execution_blockers": [
+            "missing_lightning_ssh_target",
+            "missing_lightning_teamspace",
+            "machine_inventory_not_checked",
+            "source_manifest_not_staged",
+            "remote_cuda_runtime_not_probed"
+          ],
+          "execution_ready": false,
+          "job_name": "l5-v2-tt5l-random-lsb-cuda-20260517",
+          "local_supply_chain_ok": true,
+          "provider": "lightning",
+          "schema": "l5_v2_tt5l_materialized_lightning_alt_provider_plan_status_v1"
+        },
         "archive_bytes": 38911,
         "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
         "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
@@ -565,6 +701,7 @@
         "resolved": false,
         "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1"
       },
+      "ready_for_alternate_provider_dispatch": false,
       "ready_for_alternate_provider_planning": true,
       "ready_for_exact_eval_dispatch": false,
       "ready_for_operator_dispatch": false,
