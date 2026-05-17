@@ -524,6 +524,42 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_unpaired_axis_cells(
     )
 
 
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_duplicate_and_extra_cells(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    cells = bundle["cells"]
+    assert isinstance(cells, list)
+    first = dict(cells[0])
+    extra = dict(cells[1])
+    extra["variant"] = "unexpected_variant"
+    extra["axis"] = "contest_cpu"
+    cells.append(first)
+    cells.append(extra)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert payload["coverage"]["duplicate_cells"] == ["zero:contest_cpu"]
+    assert payload["coverage"]["extra_cells"] == ["unexpected_variant:contest_cpu"]
+    assert any(
+        "source_bundle_duplicate_cells:zero:contest_cpu" in blocker
+        for blocker in payload["blockers"]
+    )
+    assert any(
+        "source_bundle_extra_cells:unexpected_variant:contest_cpu" in blocker
+        for blocker in payload["blockers"]
+    )
+
+
 def test_tt5l_lightning_bundle_dry_run_json_and_markdown_keep_false_authority(
     tmp_path: Path,
 ) -> None:

@@ -305,6 +305,46 @@ def _cell_by_key(cells: Iterable[Mapping[str, Any]]) -> dict[tuple[str, str], Ma
     return out
 
 
+def _cell_key_coverage(cells: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    required = {
+        (variant, axis)
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+    }
+    counts: dict[tuple[str, str], int] = {}
+    key_missing_indices: list[int] = []
+    for idx, cell in enumerate(cells):
+        variant = str(cell.get("variant") or "").strip()
+        axis = str(cell.get("axis") or "").strip()
+        if not variant or not axis:
+            key_missing_indices.append(idx)
+            continue
+        key = (variant, axis)
+        counts[key] = counts.get(key, 0) + 1
+
+    missing = [
+        f"{variant}:{axis}"
+        for variant, axis in sorted(required)
+        if (variant, axis) not in counts
+    ]
+    duplicates = [
+        f"{variant}:{axis}"
+        for (variant, axis), count in sorted(counts.items())
+        if (variant, axis) in required and count > 1
+    ]
+    extras = [
+        f"{variant}:{axis}"
+        for variant, axis in sorted(counts)
+        if (variant, axis) not in required
+    ]
+    return {
+        "missing_cells": missing,
+        "duplicate_cells": duplicates,
+        "extra_cells": extras,
+        "key_missing_indices": key_missing_indices,
+    }
+
+
 def _load_json_mapping(path: Path) -> tuple[Mapping[str, Any], list[str]]:
     try:
         loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -666,14 +706,24 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
 
     cells = _mapping_rows(bundle.get("cells"))
     cell_by_key = _cell_by_key(cells)
-    missing_cells = [
-        f"{variant}:{axis}"
-        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
-        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
-        if (variant, axis) not in cell_by_key
-    ]
+    cell_key_coverage = _cell_key_coverage(cells)
+    missing_cells = list(cell_key_coverage["missing_cells"])
     if missing_cells:
         global_blockers.append("source_bundle_missing_cells:" + ",".join(missing_cells))
+    duplicate_cells = list(cell_key_coverage["duplicate_cells"])
+    if duplicate_cells:
+        global_blockers.append(
+            "source_bundle_duplicate_cells:" + ",".join(duplicate_cells)
+        )
+    extra_cells = list(cell_key_coverage["extra_cells"])
+    if extra_cells:
+        global_blockers.append("source_bundle_extra_cells:" + ",".join(extra_cells))
+    key_missing_indices = list(cell_key_coverage["key_missing_indices"])
+    if key_missing_indices:
+        global_blockers.append(
+            "source_bundle_cell_key_missing_indices:"
+            + ",".join(str(idx) for idx in key_missing_indices)
+        )
     if len(cells) != expected_cell_count:
         global_blockers.append("source_bundle_cell_count_mismatch")
     global_blockers.extend(_paired_axis_blockers(cells))
@@ -815,6 +865,9 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
             "covered_variants": sorted({str(cell["variant"]) for cell in verified_cells}),
             "covered_axes": sorted({str(cell["axis"]) for cell in verified_cells}),
             "missing_cells": missing_cells,
+            "duplicate_cells": duplicate_cells,
+            "extra_cells": extra_cells,
+            "key_missing_indices": key_missing_indices,
         },
         "authority_notes": [
             "Dry-run verification proves local parser and queue-spec custody only.",
