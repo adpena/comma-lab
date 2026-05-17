@@ -54,6 +54,8 @@ def _write_exact_eval_artifact(
     cell: dict[str, object],
     *,
     seed: int = 10,
+    archive_sha256: str | None = None,
+    archive_size_bytes: int | None = None,
 ) -> Path:
     local_dir = root / str(cell["local_artifact_dir"])
     artifact = local_dir / "contest_auth_eval.json"
@@ -63,7 +65,11 @@ def _write_exact_eval_artifact(
     _write_json(manifest, {"aggregate_sha256": raw_sha})
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text("ok\n", encoding="utf-8")
-    archive_bytes = int(cell["archive_size_bytes"])
+    archive_bytes = (
+        int(cell["archive_size_bytes"])
+        if archive_size_bytes is None
+        else archive_size_bytes
+    )
     pose_dist = 0.0
     seg_dist = 0.001
     score = contest_score(seg_dist, pose_dist, archive_bytes)
@@ -78,7 +84,7 @@ def _write_exact_eval_artifact(
             "canonical_score": score,
             "n_samples": 600,
             "provenance": {
-                "archive_sha256": cell["archive_sha256"],
+                "archive_sha256": archive_sha256 or cell["archive_sha256"],
                 "device": "cuda" if is_cuda else "cpu",
                 "gpu_model": "Tesla T4" if is_cuda else "",
                 "hardware": "Tesla T4" if is_cuda else "Linux x86_64",
@@ -176,6 +182,53 @@ def test_harvest_cells_merge_exact_eval_without_dropping_pair_identity(
             "tt5l_sideinfo_effect_curve_cell_blocked:contest_cuda:trained"
         )
         for blocker in curve["contract_blockers"]
+    )
+
+
+def test_harvest_cells_block_archive_sha_and_byte_mismatches(
+    tmp_path: Path,
+) -> None:
+    plan_path, plan = _plan(tmp_path)
+    target = next(
+        cell
+        for cell in plan["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+    _write_exact_eval_artifact(
+        tmp_path,
+        target,
+        archive_sha256=_sha(999),
+        archive_size_bytes=int(target["archive_size_bytes"]) + 1,
+    )
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+    trained_cuda = next(
+        cell
+        for cell in payload["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+
+    assert (
+        "harvested_exact_eval_archive_sha_mismatch:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert (
+        "harvested_exact_eval_archive_bytes_mismatch:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert (
+        "harvested_exact_eval_archive_sha_mismatch:trained:contest_cuda"
+        in payload["blockers"]
+    )
+    curve = build_l5_v2_sideinfo_effect_curve(payload["cells"], repo_root=tmp_path)
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_blocked:contest_cuda:trained:"
+        "harvested_exact_eval_archive_sha_mismatch:trained:contest_cuda"
+        in curve["contract_blockers"]
     )
 
 

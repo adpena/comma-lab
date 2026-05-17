@@ -143,6 +143,9 @@ def _normalize_cell(
     axis = str(cell.get("axis") or evidence.get("axis") or "").strip()
     variant = str(cell.get("variant") or cell.get("sideinfo_variant") or "").strip()
     blockers: list[str] = []
+    inherited_blockers = cell.get("blockers")
+    if isinstance(inherited_blockers, list):
+        blockers.extend(str(blocker) for blocker in inherited_blockers if str(blocker))
     if axis not in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
         blockers.append(f"axis_unrecognized:{axis or '<missing>'}")
     if variant not in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:

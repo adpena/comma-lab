@@ -448,6 +448,11 @@ def _sideinfo_effect_curve_blockers(
         row_blockers = row.get("blockers")
         if isinstance(row_blockers, list) and row_blockers:
             blockers.append(f"tt5l_sideinfo_effect_curve_cell_blocked:{cell}")
+            blockers.extend(
+                f"tt5l_sideinfo_effect_curve_cell_blocked:{cell}:{blocker}"
+                for blocker in row_blockers
+                if str(blocker)
+            )
         blockers.extend(
             _sideinfo_exact_eval_custody_blockers(row, artifact_base_dir=base_dir)
         )

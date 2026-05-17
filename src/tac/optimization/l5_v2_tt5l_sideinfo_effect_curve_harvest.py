@@ -268,6 +268,23 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
                 cell_blockers.append(
                     f"harvested_exact_eval_artifact_unreadable:{variant}:{axis}"
                 )
+            else:
+                observed_archive_sha = str(evidence.get("archive_sha256") or "").strip()
+                if observed_archive_sha != identity["archive_sha256"]:
+                    cell_blockers.append(
+                        "harvested_exact_eval_archive_sha_mismatch:"
+                        f"{variant}:{axis}"
+                    )
+                observed_archive_bytes = evidence.get("archive_bytes")
+                expected_archive_bytes = cell.get("archive_size_bytes")
+                if (
+                    isinstance(expected_archive_bytes, int)
+                    and observed_archive_bytes != expected_archive_bytes
+                ):
+                    cell_blockers.append(
+                        "harvested_exact_eval_archive_bytes_mismatch:"
+                        f"{variant}:{axis}"
+                    )
         else:
             evidence = _missing_evidence(identity=identity, cell=cell)
 
