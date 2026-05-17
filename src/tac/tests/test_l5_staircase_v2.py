@@ -791,6 +791,17 @@ def _write_tt5l_first_anchor_timing_smoke_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _tt5l_sideinfo_liveness(variant: str) -> dict[str, object]:
+    nonzero = 0 if variant in {"zero", "ablated"} else 600
+    return {
+        "checked": True,
+        "shape": [600, 45],
+        "total_values": 27_000,
+        "nonzero_values": nonzero,
+        "nonzero_fraction": nonzero / 27_000,
+    }
+
+
 def _tt5l_sideinfo_effect_curve_cells() -> list[dict[str, object]]:
     cells: list[dict[str, object]] = []
     for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
@@ -808,6 +819,7 @@ def _tt5l_sideinfo_effect_curve_cells() -> list[dict[str, object]]:
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
                     "blockers": [],
+                    "sideinfo_liveness": _tt5l_sideinfo_liveness(variant),
                 }
             )
     return cells
@@ -2056,6 +2068,12 @@ def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
     assert action["ready_for_provider_dispatch"] is False
     assert action["score_claim"] is False
     assert action["ready_for_exact_eval_dispatch"] is False
+    assert materialized["tt5l_sideinfo_stats"]["nonzero_pair_count"] == 1
+    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 1
+    assert materialized["tt5l_sideinfo_stats"]["liveness_warnings"] == [
+        "tt5l_side_info_some_pairs_all_zero",
+        "tt5l_side_info_at_most_one_nonzero_per_pair_on_average",
+    ]
     assert "tools/dispatch_modal_paired_auth_eval.py" in action[
         "operator_execute_command_template_after_review"
     ]
@@ -2208,6 +2226,9 @@ def test_l5_v2_tt5l_materialized_work_unit_rejects_all_zero_sideinfo(
     )
     assert materialized["tt5l_sideinfo_stats"]["valid"] is True
     assert materialized["tt5l_sideinfo_stats"]["nonzero_values"] == 0
+    assert materialized["tt5l_sideinfo_stats"]["nonzero_pair_count"] == 0
+    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 2
+    assert materialized["tt5l_sideinfo_stats"]["section_liveness"]["checked"] is True
     assert readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"][
         "action_id"
     ] == "materialize_l5_v2_paired_probe_measurements"

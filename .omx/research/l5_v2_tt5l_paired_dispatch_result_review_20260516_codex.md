@@ -177,16 +177,31 @@ Follow-up hardening added after the paired review:
 - `experiments/train_substrate_time_traveler_l5_autonomy.py` now refuses to
   export a TT5L archive when quantized per-pair side-info is empty or all zero,
   so the exact 25ep failure class cannot silently recur at trainer export time.
-- Export provenance now records pair coverage and section coverage, not just a
-  global nonzero count: `nonzero_pair_count`, `all_zero_pair_count`,
-  `min/max/mean_nonzero_values_per_pair`, `section_liveness`, and
-  `liveness_warnings`.
+- The reusable TT5L archive module
+  `src/tac/substrates/time_traveler_l5_autonomy/archive.py` now owns the
+  canonical liveness math via `side_info_liveness_stats(...)`; trainer export
+  and materialized paired-work-unit inspection consume the same implementation
+  instead of duplicating coverage logic.
+- Export and readiness provenance now record pair coverage and section coverage,
+  not just a global nonzero count: `nonzero_pair_count`,
+  `all_zero_pair_count`, `min/max/mean_nonzero_values_per_pair`,
+  `section_liveness`, and `liveness_warnings`.
+- The L5-v2 side-info effect curve now treats that liveness block as part of
+  the paired-cell contract: active side-channel variants must prove nonzero
+  side-info, while zero/ablated controls must still carry checked liveness
+  evidence.
 - The guard deliberately does not impose an arbitrary nonzero-fraction
   threshold. Sparse side-info may be valid for hard-pair targeting, but the
   provenance now exposes nearly-dead packets such as one-nonzero-byte exports
   for adversarial review and effect-curve gating.
+- `src/tac/optimization/l5_v2_sideinfo_effect_curve.py` and
+  `src/tac/optimization/l5_v2_measurement_schedule.py` now require side-info
+  liveness evidence on every effect-curve cell. The active variants
+  `random_lsb`, `shuffled`, and `trained` must carry nonzero side-info before
+  the schedule can route past `measure_tt5l_sideinfo_effect_curve`.
 - Focused tests cover empty rejection, all-zero rejection, sparse warning
-  provenance, and full section-coverage provenance.
+  provenance, full section-coverage provenance, missing liveness in effect
+  cells, and active-variant zero-liveness rejection.
 
 ## Probe Intake Update
 

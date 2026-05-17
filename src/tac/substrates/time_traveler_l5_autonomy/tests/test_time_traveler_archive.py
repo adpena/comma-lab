@@ -15,6 +15,7 @@ from tac.substrates.time_traveler_l5_autonomy.archive import (
     pack_archive,
     parse_archive,
     quantize_per_pair_residual_int8,
+    side_info_liveness_stats,
 )
 
 
@@ -178,6 +179,46 @@ def test_parse_archive_restores_side_info_bytes_exactly() -> None:
     assert arc.per_pair_side_info.shape == (10, 45)
     assert arc.per_pair_side_info.dtype == np.int8
     assert np.array_equal(arc.per_pair_side_info, side_info)
+
+
+def test_side_info_liveness_stats_records_pair_and_section_coverage() -> None:
+    side_info = np.zeros((3, 45), dtype=np.int8)
+    side_info[0, 0] = 1
+    side_info[1, 12] = -1
+    side_info[2, 30] = 2
+    side_info[2, 36] = -2
+
+    stats = side_info_liveness_stats(side_info)
+
+    assert stats["dtype"] == "int8"
+    assert stats["shape"] == [3, 45]
+    assert stats["total_values"] == 135
+    assert stats["nonzero_values"] == 4
+    assert stats["total_pairs"] == 3
+    assert stats["nonzero_pair_count"] == 3
+    assert stats["all_zero_pair_count"] == 0
+    assert stats["nonzero_pair_fraction"] == 1.0
+    assert stats["liveness_warnings"] == []
+    sections = stats["section_liveness"]["sections"]
+    assert sections["se3_lie"]["nonzero_values"] == 1
+    assert sections["seg_boundary"]["nonzero_values"] == 1
+    assert sections["hf_residual"]["nonzero_values"] == 1
+    assert sections["predict_residual"]["nonzero_values"] == 1
+
+
+def test_side_info_liveness_stats_surfaces_sparse_dead_pairs() -> None:
+    side_info = np.zeros((3, 45), dtype=np.int8)
+    side_info[0, 0] = 1
+
+    stats = side_info_liveness_stats(side_info)
+
+    assert stats["nonzero_values"] == 1
+    assert stats["nonzero_pair_count"] == 1
+    assert stats["all_zero_pair_count"] == 2
+    assert stats["liveness_warnings"] == [
+        "tt5l_side_info_some_pairs_all_zero",
+        "tt5l_side_info_at_most_one_nonzero_per_pair_on_average",
+    ]
 
 
 def test_parse_archive_restores_meta_json() -> None:

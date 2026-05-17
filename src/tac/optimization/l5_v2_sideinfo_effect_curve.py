@@ -17,6 +17,7 @@ from typing import Any
 
 from tac.exact_eval_custody import normalize_sha256, validate_exact_eval_evidence
 from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
@@ -32,8 +33,6 @@ L5V2_SIDEINFO_EFFECT_CURVE_CONTROL_VARIANTS = tuple(
     for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
     if variant != "trained"
 )
-
-
 def _as_mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
@@ -86,6 +85,32 @@ def _runtime_content_tree_sha256(evidence: Mapping[str, Any]) -> str:
     return ""
 
 
+def _sideinfo_liveness_for_cell(
+    cell: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    for key in (
+        "sideinfo_liveness",
+        "side_info_liveness",
+        "per_pair_side_info_liveness",
+        "export_sideinfo_liveness",
+    ):
+        value = cell.get(key)
+        if isinstance(value, Mapping):
+            return dict(value)
+        value = evidence.get(key)
+        if isinstance(value, Mapping):
+            return dict(value)
+    for outer_key in ("provenance", "runtime_custody", "archive_custody"):
+        nested = evidence.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        value = nested.get("per_pair_side_info_liveness")
+        if isinstance(value, Mapping):
+            return dict(value)
+    return {}
+
+
 def _normalize_cell(
     cell: Mapping[str, Any],
     *,
@@ -125,6 +150,7 @@ def _normalize_cell(
         "archive_sha256": validation.archive_sha256,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
         "runtime_content_tree_sha256": _runtime_content_tree_sha256(evidence),
+        "sideinfo_liveness": _sideinfo_liveness_for_cell(cell, evidence),
         "raw_output_aggregate_sha256": str(
             evidence.get("raw_output_aggregate_sha256")
             or evidence.get("inflated_raw_output_aggregate_sha256")
@@ -259,6 +285,7 @@ def sideinfo_effect_curve_json(payload: Mapping[str, Any]) -> str:
 __all__ = [
     "L5V2_SIDEINFO_EFFECT_CURVE_CONTROL_VARIANTS",
     "L5V2_SIDEINFO_EFFECT_CURVE_MEASUREMENT_ID",
+    "L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS",
     "L5V2_SIDEINFO_EFFECT_CURVE_PREDICATE_ID",
     "build_l5_v2_sideinfo_effect_curve",
     "sideinfo_effect_curve_json",

@@ -40,6 +40,9 @@ L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS = (
     "trained",
     "ablated",
 )
+L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS = frozenset(
+    {"random_lsb", "shuffled", "trained"}
+)
 
 
 def _candidate_rows_from_intake(intake: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -161,6 +164,56 @@ def _sideinfo_variant_pair_identity_blockers(
                 "tt5l_sideinfo_effect_curve_variant_"
                 f"runtime_identity_unpaired:{variant}"
             )
+    return blockers
+
+
+def _positive_int_field(mapping: Mapping[str, Any], key: str) -> int | None:
+    value = mapping.get(key)
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
+def _nonnegative_int_field(mapping: Mapping[str, Any], key: str) -> int | None:
+    value = mapping.get(key)
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value >= 0:
+        return value
+    return None
+
+
+def _sideinfo_liveness_blockers(row: Mapping[str, Any]) -> list[str]:
+    axis = str(row.get("axis") or row.get("device_axis") or "").strip()
+    variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()
+    cell = f"{axis or '?'}:{variant or '?'}"
+    liveness = row.get("sideinfo_liveness") or row.get("per_pair_side_info_liveness")
+    if not isinstance(liveness, Mapping):
+        return [f"tt5l_sideinfo_effect_curve_cell_sideinfo_liveness_missing:{cell}"]
+    blockers: list[str] = []
+    if liveness.get("checked") is not True:
+        blockers.append(
+            f"tt5l_sideinfo_effect_curve_cell_sideinfo_liveness_unchecked:{cell}"
+        )
+    total_values = _positive_int_field(liveness, "total_values")
+    nonzero_values = _nonnegative_int_field(liveness, "nonzero_values")
+    if total_values is None:
+        blockers.append(
+            f"tt5l_sideinfo_effect_curve_cell_sideinfo_liveness_empty:{cell}"
+        )
+    if nonzero_values is None:
+        blockers.append(
+            f"tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_count_missing:{cell}"
+        )
+    elif (
+        variant in L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS
+        and nonzero_values <= 0
+    ):
+        blockers.append(
+            f"tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:{cell}"
+        )
     return blockers
 
 
@@ -315,6 +368,7 @@ def _sideinfo_effect_curve_blockers(
         row_blockers = row.get("blockers")
         if isinstance(row_blockers, list) and row_blockers:
             blockers.append(f"tt5l_sideinfo_effect_curve_cell_blocked:{cell}")
+        blockers.extend(_sideinfo_liveness_blockers(row))
     return list(dict.fromkeys(blockers))
 
 
@@ -602,6 +656,7 @@ __all__ = [
     "L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH",
     "L5V2_MEASUREMENT_SCHEDULE_SCHEMA",
     "L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH",
+    "L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS",
     "build_l5_v2_lattice_measurement_schedule",
     "render_l5_v2_lattice_measurement_schedule_markdown",
     "schedule_json",

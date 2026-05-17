@@ -34,6 +34,17 @@ def _write_manifest(path: Path, *, aggregate_sha: str) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _sideinfo_liveness(variant: str) -> dict[str, object]:
+    nonzero = 0 if variant in {"zero", "ablated"} else 600
+    return {
+        "checked": True,
+        "shape": [600, 45],
+        "total_values": 27_000,
+        "nonzero_values": nonzero,
+        "nonzero_fraction": nonzero / 27_000,
+    }
+
+
 def _cell(
     repo_root: Path,
     *,
@@ -86,6 +97,9 @@ def _cell(
             "inflated_outputs_manifest_path": str(manifest.relative_to(repo_root)),
             "inflated_outputs_manifest_sha256": manifest_sha,
             "raw_output_aggregate_sha256": raw_sha,
+            "provenance": {
+                "per_pair_side_info_liveness": _sideinfo_liveness(variant),
+            },
         },
     }
 
@@ -174,6 +188,52 @@ def test_sideinfo_effect_curve_builder_keeps_invalid_custody_blockers(
     assert any(
         str(blocker).startswith("tt5l_sideinfo_effect_curve_cell_blocked")
         for blocker in validate_l5_v2_sideinfo_effect_curve(payload)
+    )
+
+
+def test_sideinfo_effect_curve_requires_cell_sideinfo_liveness(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    evidence = cells[0]["evidence"]
+    assert isinstance(evidence, dict)
+    evidence.pop("provenance")
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_liveness_missing:"
+        "contest_cpu:zero"
+        in payload["contract_blockers"]
+    )
+
+
+def test_sideinfo_effect_curve_requires_nonzero_liveness_for_active_variants(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    trained_cpu = next(
+        cell
+        for cell in cells
+        if cell["axis"] == "contest_cpu" and cell["variant"] == "trained"
+    )
+    evidence = trained_cpu["evidence"]
+    assert isinstance(evidence, dict)
+    provenance = evidence["provenance"]
+    assert isinstance(provenance, dict)
+    liveness = provenance["per_pair_side_info_liveness"]
+    assert isinstance(liveness, dict)
+    liveness["nonzero_values"] = 0
+    liveness["nonzero_fraction"] = 0.0
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:"
+        "contest_cpu:trained"
+        in payload["contract_blockers"]
     )
 
 

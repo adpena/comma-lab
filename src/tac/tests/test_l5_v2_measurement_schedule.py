@@ -41,6 +41,17 @@ def _sha(seed: str) -> str:
     return hashlib.sha256(seed.encode()).hexdigest()
 
 
+def _sideinfo_liveness(variant: str) -> dict[str, object]:
+    nonzero = 0 if variant in {"zero", "ablated"} else 600
+    return {
+        "checked": True,
+        "shape": [600, 45],
+        "total_values": 27_000,
+        "nonzero_values": nonzero,
+        "nonzero_fraction": nonzero / 27_000,
+    }
+
+
 def _complete_sideinfo_effect_curve() -> dict[str, object]:
     return {
         "schema": L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
@@ -74,6 +85,7 @@ def _complete_sideinfo_effect_curve() -> dict[str, object]:
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
                 "blockers": [],
+                "sideinfo_liveness": _sideinfo_liveness(variant),
             }
             for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
             for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
@@ -199,6 +211,49 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
     assert schedule["active_rule_id"] == "measure_tt5l_sideinfo_effect_curve"
     assert (
         "tt5l_sideinfo_effect_curve_variant_archive_sha_mismatch:zero"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_sideinfo_curve_without_liveness() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cpu" and row["variant"] == "trained":
+            row.pop("sideinfo_liveness")
+            break
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_liveness_missing:"
+        "contest_cpu:trained"
+        in schedule["sideinfo_effect_curve_blockers"]
+    )
+
+
+def test_l5_v2_schedule_rejects_active_sideinfo_curve_with_zero_liveness() -> None:
+    curve = _complete_sideinfo_effect_curve()
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cuda" and row["variant"] == "random_lsb":
+            liveness = row["sideinfo_liveness"]
+            assert isinstance(liveness, dict)
+            liveness["nonzero_values"] = 0
+            liveness["nonzero_fraction"] = 0.0
+            break
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:"
+        "contest_cuda:random_lsb"
         in schedule["sideinfo_effect_curve_blockers"]
     )
 

@@ -73,6 +73,14 @@ TT5L_MAGIC: bytes = b"TT5L"
 TT5L_SCHEMA_VERSION: int = 1
 """Schema version byte. Bump when grammar changes."""
 
+TT5L_SIDE_INFO_SECTION_WIDTHS: tuple[tuple[str, int], ...] = (
+    ("se3_lie", 12),
+    ("seg_boundary", 18),
+    ("hf_residual", 6),
+    ("predict_residual", 9),
+)
+"""Canonical TT5L per-pair side-info section layout."""
+
 TT5L_DETERMINISTIC_STATE_DICT_SCHEMA: str = "tt5l_state_dict_v2"
 """JSON state_dict payload schema used by deterministic proof artifacts."""
 
@@ -226,6 +234,121 @@ def _deserialize_per_pair_side_info(
             f"per_pair_bytes={per_pair_bytes})"
         )
     return np.frombuffer(raw, dtype=np.int8).reshape(num_pairs, per_pair_bytes).copy()
+
+
+def _side_info_array_and_dtype(side_info: object) -> tuple[np.ndarray, str]:
+    if isinstance(side_info, torch.Tensor):
+        return (
+            side_info.detach().to("cpu").contiguous().numpy(),
+            str(side_info.dtype),
+        )
+    arr = np.asarray(side_info)
+    return arr, str(arr.dtype)
+
+
+def _side_info_section_liveness(side_info: np.ndarray) -> dict[str, object]:
+    """Return per-section side-info coverage for the TT5L 45-byte layout."""
+
+    if side_info.ndim != 2:
+        return {
+            "checked": False,
+            "reason": "side_info_not_rank2",
+            "sections": {},
+        }
+    section_stats: dict[str, object] = {}
+    offset = 0
+    per_pair_bytes = int(side_info.shape[1])
+    for name, width in TT5L_SIDE_INFO_SECTION_WIDTHS:
+        end = min(offset + width, per_pair_bytes)
+        if end <= offset:
+            break
+        section = side_info[:, offset:end]
+        total_values = int(section.size)
+        nonzero_values = int(np.count_nonzero(section)) if total_values else 0
+        section_stats[name] = {
+            "offset": offset,
+            "width": int(end - offset),
+            "total_values": total_values,
+            "nonzero_values": nonzero_values,
+            "nonzero_fraction": (
+                float(nonzero_values / total_values) if total_values else 0.0
+            ),
+        }
+        offset = end
+    if offset < per_pair_bytes:
+        section = side_info[:, offset:per_pair_bytes]
+        total_values = int(section.size)
+        nonzero_values = int(np.count_nonzero(section)) if total_values else 0
+        section_stats["extra"] = {
+            "offset": offset,
+            "width": int(per_pair_bytes - offset),
+            "total_values": total_values,
+            "nonzero_values": nonzero_values,
+            "nonzero_fraction": (
+                float(nonzero_values / total_values) if total_values else 0.0
+            ),
+        }
+    return {
+        "checked": True,
+        "per_pair_bytes": per_pair_bytes,
+        "sections": section_stats,
+    }
+
+
+def side_info_liveness_stats(side_info: object) -> dict[str, object]:
+    """Return export/evidence liveness stats for a TT5L temporal side channel."""
+
+    arr, dtype_name = _side_info_array_and_dtype(side_info)
+    total_values = int(arr.size)
+    nonzero_values = int(np.count_nonzero(arr)) if total_values else 0
+    if arr.ndim >= 2:
+        per_pair_width = 1
+        for dim in arr.shape[1:]:
+            per_pair_width *= int(dim)
+        pair_view = arr.reshape(int(arr.shape[0]), per_pair_width)
+        total_pairs = int(pair_view.shape[0])
+        per_pair_nonzero = np.count_nonzero(pair_view, axis=1)
+        nonzero_pair_count = int(np.count_nonzero(per_pair_nonzero))
+        min_nonzero_per_pair = int(per_pair_nonzero.min()) if total_pairs else 0
+        max_nonzero_per_pair = int(per_pair_nonzero.max()) if total_pairs else 0
+        mean_nonzero_per_pair = (
+            float(per_pair_nonzero.mean()) if total_pairs else 0.0
+        )
+    else:
+        total_pairs = 1 if total_values else 0
+        nonzero_pair_count = 1 if nonzero_values else 0
+        min_nonzero_per_pair = nonzero_values
+        max_nonzero_per_pair = nonzero_values
+        mean_nonzero_per_pair = float(nonzero_values)
+    all_zero_pair_count = int(total_pairs - nonzero_pair_count)
+    liveness_warnings: list[str] = []
+    if total_pairs and nonzero_pair_count < total_pairs:
+        liveness_warnings.append("tt5l_side_info_some_pairs_all_zero")
+    if nonzero_values and nonzero_values <= total_pairs:
+        liveness_warnings.append("tt5l_side_info_at_most_one_nonzero_per_pair_on_average")
+    return {
+        "checked": True,
+        "dtype": dtype_name,
+        "shape": [int(dim) for dim in arr.shape],
+        "total_values": total_values,
+        "nonzero_values": nonzero_values,
+        "nonzero_fraction": (
+            float(nonzero_values / total_values) if total_values else 0.0
+        ),
+        "total_pairs": total_pairs,
+        "nonzero_pair_count": nonzero_pair_count,
+        "all_zero_pair_count": all_zero_pair_count,
+        "nonzero_pair_fraction": (
+            float(nonzero_pair_count / total_pairs) if total_pairs else 0.0
+        ),
+        "min_nonzero_values_per_pair": min_nonzero_per_pair,
+        "max_nonzero_values_per_pair": max_nonzero_per_pair,
+        "mean_nonzero_values_per_pair": mean_nonzero_per_pair,
+        "section_liveness": _side_info_section_liveness(arr),
+        "liveness_warnings": liveness_warnings,
+        "min": int(arr.min()) if total_values else None,
+        "max": int(arr.max()) if total_values else None,
+    }
 
 
 def pack_archive(
@@ -521,6 +644,7 @@ __all__ = [
     "TT5L_MAGIC",
     "TT5L_SCHEMA_VERSION",
     "TT5L_SECTION_ROLES",
+    "TT5L_SIDE_INFO_SECTION_WIDTHS",
     "TimeTravelerArchive",
     "dequantize_per_pair_residual",
     "pack_archive",
@@ -528,4 +652,5 @@ __all__ = [
     "parse_tt5l_archive_bytes",
     "quantize_per_pair_residual_int8",
     "serialize_deterministic_state_dict_blob",
+    "side_info_liveness_stats",
 ]

@@ -21,7 +21,8 @@
     "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cuda",
     "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
     "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
-    "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero"
+    "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
+    "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
   ],
   "effect_blockers": [
     "trained_not_best_or_tied:contest_cpu",
@@ -48,6 +49,63 @@
       "score": 3.9007398365396795,
       "score_claim": false,
       "seg_dist": 0.02515214,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 600,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
       "variant": "trained"
     }
   ],

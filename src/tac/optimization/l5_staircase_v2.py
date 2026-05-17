@@ -2350,7 +2350,10 @@ def _inspect_tt5l_archive_sideinfo(archive_zip_path: Path) -> dict[str, Any]:
         "error": "",
     }
     try:
-        from tac.substrates.time_traveler_l5_autonomy.archive import parse_archive
+        from tac.substrates.time_traveler_l5_autonomy.archive import (
+            parse_archive,
+            side_info_liveness_stats,
+        )
 
         with zipfile.ZipFile(archive_zip_path, "r") as zf:
             names = set(zf.namelist())
@@ -2361,21 +2364,14 @@ def _inspect_tt5l_archive_sideinfo(archive_zip_path: Path) -> dict[str, Any]:
             archive_bytes = zf.read(member)
         parsed = parse_archive(archive_bytes)
         side_info = parsed.per_pair_side_info
-        total_values = int(side_info.size)
-        nonzero_values = int((side_info != 0).sum())
+        liveness = side_info_liveness_stats(side_info)
         stats.update(
             {
+                **liveness,
                 "valid": True,
                 "archive_member": member,
                 "num_pairs": int(parsed.num_pairs),
                 "per_pair_bytes": int(parsed.per_pair_bytes),
-                "total_values": total_values,
-                "nonzero_values": nonzero_values,
-                "nonzero_fraction": (
-                    float(nonzero_values / total_values) if total_values else 0.0
-                ),
-                "min": int(side_info.min()) if total_values else None,
-                "max": int(side_info.max()) if total_values else None,
                 "error": "",
             }
         )
