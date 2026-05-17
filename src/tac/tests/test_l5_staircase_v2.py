@@ -1074,6 +1074,102 @@ def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _write_tt5l_partial_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
+    artifact_path = repo_root / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    cell_artifacts = _tt5l_sideinfo_cell_artifacts(
+        repo_root,
+        axis="contest_cuda",
+        variant="trained",
+        variant_idx=3,
+        axis_idx=1,
+    )
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
+                "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+                "predicate_id": "tt5l_paired_sideinfo_effect_curve_v1",
+                "predicate_passed": False,
+                "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+                "required_variants": list(
+                    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "effect_blockers": [
+                    "trained_not_best_or_tied:contest_cpu",
+                    "trained_not_best_or_tied:contest_cuda",
+                ],
+                "contract_blockers": [
+                    "tt5l_sideinfo_effect_curve_predicate_not_passed",
+                    (
+                        "tt5l_sideinfo_effect_curve_cells_missing:"
+                        "contest_cpu/trained,contest_cuda/zero"
+                    ),
+                    (
+                        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:"
+                        "contest_cuda:trained"
+                    ),
+                ],
+                "axis_effects": {
+                    "contest_cpu": {
+                        "trained_score": None,
+                        "best_control_variant": "",
+                        "best_control_score": None,
+                        "delta_vs_best_control": None,
+                        "trained_beats_or_ties_best_control": False,
+                    },
+                    "contest_cuda": {
+                        "trained_score": 3.9007398365396795,
+                        "best_control_variant": "",
+                        "best_control_score": None,
+                        "delta_vs_best_control": None,
+                        "trained_beats_or_ties_best_control": False,
+                    },
+                },
+                "observed_cells": [
+                    {
+                        "axis": "contest_cuda",
+                        "variant": "trained",
+                        "archive_sha256": _sha(50_003),
+                        "archive_bytes": 34_603,
+                        "runtime_tree_sha256": _sha(70_031),
+                        "runtime_content_tree_sha256": _sha(60_003),
+                        "hardware": "NVIDIA T4 CUDA GPU",
+                        "inflate_device": "auto",
+                        "eval_device": "cuda",
+                        "auth_eval_command": "contest_auth_eval --device cuda",
+                        **cell_artifacts,
+                        "n_samples": 600,
+                        "seg_dist": 0.02515214,
+                        "pose_dist": 0.18563657,
+                        "score": 3.9007398365396795,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                        "blockers": [],
+                        "sideinfo_liveness": {
+                            "checked": True,
+                            "shape": [600, 45],
+                            "total_values": 27_000,
+                            "nonzero_values": 0,
+                            "nonzero_fraction": 0.0,
+                            "total_pairs": 600,
+                            "nonzero_pair_count": 0,
+                        },
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
 def _tt5l_lightning_paired_axis_plan_cell(
     *,
     variant: str,
@@ -3875,6 +3971,55 @@ def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
         "contest_cpu",
         "contest_cuda",
     ]
+
+
+def test_l5_v2_tt5l_sideinfo_effect_curve_status_preserves_partial_negative_evidence(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_partial_sideinfo_effect_curve_artifact(tmp_path)
+
+    status = l5_v2.tt5l_sideinfo_effect_curve_status(repo_root=tmp_path)
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_present"] is True
+    assert status["artifact_valid"] is False
+    assert status["measurement_id"] == "measure_tt5l_sideinfo_effect_curve"
+    assert status["predicate_passed"] is False
+    assert status["observed_cell_count"] == 1
+    assert "contest_cpu/trained" in status["missing_cells"]
+    assert "contest_cuda/zero" in status["missing_cells"]
+    assert status["effect_blockers"] == [
+        "trained_not_best_or_tied:contest_cpu",
+        "trained_not_best_or_tied:contest_cuda",
+    ]
+    observed = status["observed_cells"][0]
+    assert observed["axis"] == "contest_cuda"
+    assert observed["variant"] == "trained"
+    assert observed["score"] == 3.9007398365396795
+    assert observed["sideinfo_nonzero_fraction"] == 0.0
+    assert observed["sideinfo_nonzero_values"] == 0
+    assert observed["sideinfo_total_values"] == 27_000
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
+        in status["blockers"]
+    )
+
+
+def test_l5_v2_architecture_lock_packet_renders_partial_sideinfo_evidence(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_partial_sideinfo_effect_curve_artifact(tmp_path)
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert "## Sideinfo Effect Curve" in report
+    assert "- artifact_valid: `False`" in report
+    assert "- observed_cell_count: `1`" in report
+    assert "contest_cuda/trained" in report
+    assert "sideinfo_nonzero_fraction=`0.0`" in report
+    assert "sideinfo_nonzero_values=`0`/`27000`" in report
+    assert "contest_cpu/trained" in report
 
 
 def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(

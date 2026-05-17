@@ -1011,7 +1011,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "73e66c96a9147e30929cd5cd58facd1f3c435324",
+      "current_head_commit": "b86ebe29fe92c3e1ff7b7990e24dcdaee39a5917",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
@@ -1053,9 +1053,26 @@
       "source_relevant_paths_match": true
     },
     "sideinfo_effect_curve_status": {
+      "artifact_exists": true,
       "artifact_path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",
       "artifact_present": true,
       "artifact_valid": false,
+      "axis_effects": {
+        "contest_cpu": {
+          "best_control_score": null,
+          "best_control_variant": "",
+          "delta_vs_best_control": null,
+          "trained_beats_or_ties_best_control": false,
+          "trained_score": null
+        },
+        "contest_cuda": {
+          "best_control_score": null,
+          "best_control_variant": "",
+          "delta_vs_best_control": null,
+          "trained_beats_or_ties_best_control": false,
+          "trained_score": 3.9007398365396795
+        }
+      },
       "blockers": [
         "tt5l_sideinfo_effect_curve_predicate_not_passed",
         "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cpu",
@@ -1065,8 +1082,64 @@
         "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
         "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
       ],
+      "contract_blockers": [
+        "tt5l_sideinfo_effect_curve_predicate_not_passed",
+        "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cpu",
+        "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cuda",
+        "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
+        "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
+        "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
+      ],
+      "effect_blockers": [
+        "trained_not_best_or_tied:contest_cpu",
+        "trained_not_best_or_tied:contest_cuda"
+      ],
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "missing_cells": [
+        "contest_cpu/ablated",
+        "contest_cpu/random_lsb",
+        "contest_cpu/shuffled",
+        "contest_cpu/trained",
+        "contest_cpu/zero",
+        "contest_cuda/ablated",
+        "contest_cuda/random_lsb",
+        "contest_cuda/shuffled",
+        "contest_cuda/zero"
+      ],
+      "observed_cell_count": 1,
+      "observed_cells": [
+        {
+          "archive_bytes": 34603,
+          "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+          "artifact_path": ".omx/research/time_traveler_recovered_tt5l_25ep_exact_cuda_result_review_20260515_codex.json",
+          "axis": "contest_cuda",
+          "runtime_content_tree_sha256": "105fc0834cfb8a54b8f46edb81a030d076369c3062f3066c1800602f9d6035f5",
+          "score": 3.9007398365396795,
+          "sideinfo_checked": true,
+          "sideinfo_nonzero_fraction": 0.0,
+          "sideinfo_nonzero_pair_count": 0,
+          "sideinfo_nonzero_values": 0,
+          "sideinfo_total_pairs": 600,
+          "sideinfo_total_values": 27000,
+          "variant": "trained"
+        }
+      ],
+      "predicate_id": "tt5l_paired_sideinfo_effect_curve_v1",
+      "predicate_passed": false,
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_variants": [
+        "zero",
+        "random_lsb",
+        "shuffled",
+        "trained",
+        "ablated"
+      ],
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_status_v1",
       "score_claim": false
     },

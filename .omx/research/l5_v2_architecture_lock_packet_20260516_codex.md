@@ -50,6 +50,20 @@
 - score_claim: `false`
 - promotion_eligible: `false`
 
+## Sideinfo Effect Curve
+
+- artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json`
+- artifact_valid: `False`
+- measurement_id: `measure_tt5l_sideinfo_effect_curve`
+- predicate_passed: `False`
+- observed_cell_count: `1`
+- missing_cells: `['contest_cpu/ablated', 'contest_cpu/random_lsb', 'contest_cpu/shuffled', 'contest_cpu/trained', 'contest_cpu/zero', 'contest_cuda/ablated', 'contest_cuda/random_lsb', 'contest_cuda/shuffled', 'contest_cuda/zero']`
+- effect_blockers: `['trained_not_best_or_tied:contest_cpu', 'trained_not_best_or_tied:contest_cuda']`
+- axis_effects: `{'contest_cpu': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': None}, 'contest_cuda': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': 3.9007398365396795}}`
+- observed_cell `contest_cuda/trained`: score=`3.9007398365396795`, sideinfo_nonzero_fraction=`0.0`, sideinfo_nonzero_values=`0`/`27000`, archive_sha256=`2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a`, runtime_content_tree_sha256=`105fc0834cfb8a54b8f46edb81a030d076369c3062f3066c1800602f9d6035f5`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Probe Gate Artifact
 
 - artifact_path: `.omx/research/l5_v2_probe_gate_artifact_20260516_codex.json`

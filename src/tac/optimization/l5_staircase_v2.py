@@ -3319,6 +3319,7 @@ def _tt5l_sideinfo_effect_curve_status(*, repo_root: Path) -> dict[str, Any]:
     artifact_path = repo_root / TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
     blockers: list[str] = []
     loaded: object | None = None
+    payload: Mapping[str, Any] = {}
 
     if not artifact_path.is_file():
         blockers.append("tt5l_sideinfo_effect_curve_artifact_missing")
@@ -3330,16 +3331,74 @@ def _tt5l_sideinfo_effect_curve_status(*, repo_root: Path) -> dict[str, Any]:
         if loaded is not None and not isinstance(loaded, Mapping):
             blockers.append("tt5l_sideinfo_effect_curve_artifact_not_object")
         if isinstance(loaded, Mapping):
+            payload = loaded
             blockers.extend(
                 validate_l5_v2_sideinfo_effect_curve(loaded, repo_root=repo_root)
             )
 
     blockers = list(dict.fromkeys(blockers))
+    observed_cells: list[dict[str, Any]] = []
+    raw_observed_cells = payload.get("observed_cells")
+    if isinstance(raw_observed_cells, list):
+        for raw_cell in raw_observed_cells:
+            if not isinstance(raw_cell, Mapping):
+                continue
+            liveness = raw_cell.get("sideinfo_liveness")
+            if not isinstance(liveness, Mapping):
+                liveness = {}
+            observed_cells.append(
+                {
+                    "axis": str(raw_cell.get("axis") or ""),
+                    "variant": str(raw_cell.get("variant") or ""),
+                    "score": raw_cell.get("score"),
+                    "archive_sha256": str(raw_cell.get("archive_sha256") or ""),
+                    "archive_bytes": raw_cell.get("archive_bytes"),
+                    "runtime_content_tree_sha256": str(
+                        raw_cell.get("runtime_content_tree_sha256") or ""
+                    ),
+                    "artifact_path": str(raw_cell.get("artifact_path") or ""),
+                    "sideinfo_checked": liveness.get("checked"),
+                    "sideinfo_nonzero_fraction": liveness.get("nonzero_fraction"),
+                    "sideinfo_nonzero_values": liveness.get("nonzero_values"),
+                    "sideinfo_total_values": liveness.get("total_values"),
+                    "sideinfo_nonzero_pair_count": liveness.get(
+                        "nonzero_pair_count"
+                    ),
+                    "sideinfo_total_pairs": liveness.get("total_pairs"),
+                }
+            )
+    missing_cells: list[str] = []
+    missing_prefix = "tt5l_sideinfo_effect_curve_cells_missing:"
+    for blocker in blockers:
+        if blocker.startswith(missing_prefix):
+            missing_cells = [
+                cell for cell in blocker.removeprefix(missing_prefix).split(",") if cell
+            ]
+            break
+    effect_blockers = payload.get("effect_blockers")
+    contract_blockers = payload.get("contract_blockers")
+    axis_effects = payload.get("axis_effects")
     return {
         "schema": "l5_v2_tt5l_sideinfo_effect_curve_status_v1",
         "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
         "artifact_present": artifact_path.is_file(),
         "artifact_valid": not blockers,
+        "measurement_id": str(payload.get("measurement_id") or ""),
+        "predicate_id": str(payload.get("predicate_id") or ""),
+        "predicate_passed": payload.get("predicate_passed"),
+        "required_axes": list(payload.get("required_axes") or []),
+        "required_variants": list(payload.get("required_variants") or []),
+        "observed_cell_count": len(observed_cells),
+        "observed_cells": observed_cells,
+        "missing_cells": missing_cells,
+        "axis_effects": axis_effects if isinstance(axis_effects, Mapping) else {},
+        "effect_blockers": (
+            list(effect_blockers) if isinstance(effect_blockers, list) else []
+        ),
+        "contract_blockers": (
+            list(contract_blockers) if isinstance(contract_blockers, list) else []
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -6701,6 +6760,9 @@ def render_l5_v2_architecture_lock_packet_markdown(
     )
     if not isinstance(paired_axis_plan_status, Mapping):
         paired_axis_plan_status = {}
+    sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
+    if not isinstance(sideinfo_effect_curve_status, Mapping):
+        sideinfo_effect_curve_status = {}
     materialized_work_unit_status = next_action.get("materialized_work_unit_status")
     if not isinstance(materialized_work_unit_status, Mapping):
         materialized_work_unit_status = {}
@@ -6837,6 +6899,72 @@ def render_l5_v2_architecture_lock_packet_markdown(
                     "- execution_blockers: "
                     f"`{paired_axis_plan_status.get('execution_blockers', [])}`"
                 ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if sideinfo_effect_curve_status:
+        observed_cells = sideinfo_effect_curve_status.get("observed_cells")
+        if not isinstance(observed_cells, list):
+            observed_cells = []
+        lines.extend(
+            [
+                "",
+                "## Sideinfo Effect Curve",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{sideinfo_effect_curve_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{sideinfo_effect_curve_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- measurement_id: "
+                    f"`{sideinfo_effect_curve_status.get('measurement_id', '')}`"
+                ),
+                (
+                    "- predicate_passed: "
+                    f"`{sideinfo_effect_curve_status.get('predicate_passed')}`"
+                ),
+                (
+                    "- observed_cell_count: "
+                    f"`{sideinfo_effect_curve_status.get('observed_cell_count')}`"
+                ),
+                (
+                    "- missing_cells: "
+                    f"`{sideinfo_effect_curve_status.get('missing_cells', [])}`"
+                ),
+                (
+                    "- effect_blockers: "
+                    f"`{sideinfo_effect_curve_status.get('effect_blockers', [])}`"
+                ),
+                (
+                    "- axis_effects: "
+                    f"`{sideinfo_effect_curve_status.get('axis_effects', {})}`"
+                ),
+            ]
+        )
+        for cell in observed_cells[:3]:
+            if not isinstance(cell, Mapping):
+                continue
+            axis = str(cell.get("axis") or "")
+            variant = str(cell.get("variant") or "")
+            lines.append(
+                f"- observed_cell `{axis}/{variant}`: "
+                f"score=`{cell.get('score')}`, "
+                f"sideinfo_nonzero_fraction="
+                f"`{cell.get('sideinfo_nonzero_fraction')}`, "
+                f"sideinfo_nonzero_values="
+                f"`{cell.get('sideinfo_nonzero_values')}`/"
+                f"`{cell.get('sideinfo_total_values')}`, "
+                f"archive_sha256=`{cell.get('archive_sha256')}`, "
+                f"runtime_content_tree_sha256="
+                f"`{cell.get('runtime_content_tree_sha256')}`"
+            )
+        lines.extend(
+            [
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
             ]
