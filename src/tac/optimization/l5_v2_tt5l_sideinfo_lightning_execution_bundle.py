@@ -169,6 +169,10 @@ def _source_manifest_path(job_name: str) -> str:
     return f"experiments/results/lightning_batch/{job_name}/source_manifest.json"
 
 
+def _source_manifest_receipt_path(job_name: str) -> str:
+    return f"experiments/results/lightning_batch/{job_name}/source_manifest_receipt.json"
+
+
 def _stage_source_manifest_command(
     *,
     job_name: str,
@@ -186,6 +190,8 @@ def _stage_source_manifest_command(
         job_name,
         "--manifest-out",
         _source_manifest_path(job_name),
+        "--receipt-out",
+        _source_manifest_receipt_path(job_name),
     ]
     for source in _SOURCE_DIRS:
         command.extend(["--source", source])
@@ -629,6 +635,9 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle(
                         if local_artifact_dir
                         else ""
                     ),
+                    "stage_source_manifest_receipt_path": (
+                        _source_manifest_receipt_path(job_name) if job_name else ""
+                    ),
                     "source_spec_command_sha256": source_command_sha256,
                     "source_spec_command_is_authoritative": True,
                     "claim_command": preflight_cell.get("claim_command", ""),
@@ -819,6 +828,7 @@ def render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_markdown(
                 f"- source_spec_command_sha256: `{cell.get('source_spec_command_sha256')}`",
                 f"- claim_command: `{cell.get('claim_command')}`",
                 f"- stage_source_manifest_command_template: `{cell.get('stage_source_manifest_command_template')}`",
+                f"- stage_source_manifest_receipt_path: `{cell.get('stage_source_manifest_receipt_path')}`",
                 f"- dry_run_submit_command: `{cell.get('dry_run_submit_command')}`",
                 f"- non_dry_run_submit_command_template: `{cell.get('non_dry_run_submit_command_template')}`",
                 f"- non_dry_run_submit_blockers: `{cell.get('non_dry_run_submit_blockers', [])}`",

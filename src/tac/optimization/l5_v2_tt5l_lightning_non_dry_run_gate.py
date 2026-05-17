@@ -357,7 +357,64 @@ def _validate_source_manifest(
         "git_head": manifest_head,
         "manifest_sha256": manifest_sha,
         "recomputed_manifest_sha256": recomputed_manifest_sha,
+        "file_count": manifest.get("file_count", "") if manifest else "",
+        "total_bytes": manifest.get("total_bytes", "") if manifest else "",
         "archive_file": dict(artifact_file) if artifact_file else {},
+    }, _dedupe(blockers)
+
+
+def _validate_stage_receipt(
+    *,
+    receipt: Mapping[str, Any],
+    receipt_exists: bool,
+    manifest_status: Mapping[str, Any],
+    cell: Mapping[str, Any],
+    stage_manifest_path: str,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    if not receipt_exists:
+        blockers.append("stage_receipt_missing")
+    if not receipt:
+        blockers.append("stage_receipt_invalid_or_empty")
+    if receipt and receipt.get("schema_version") != 1:
+        blockers.append("stage_receipt_schema_version_not_1")
+    if receipt and receipt.get("tool") != "scripts/lightning_repro_workspace.py":
+        blockers.append("stage_receipt_tool_mismatch")
+    if receipt and receipt.get("status") != "OK":
+        blockers.append("stage_receipt_status_not_ok")
+    if receipt and receipt.get("dry_run") is not False:
+        blockers.append("stage_receipt_dry_run_true")
+    if receipt and receipt.get("remote_sha256_verified") is not True:
+        blockers.append("stage_receipt_remote_sha256_not_verified")
+    if receipt and receipt.get("manifest") != stage_manifest_path:
+        blockers.append("stage_receipt_manifest_path_mismatch")
+    manifest_sha = str(manifest_status.get("manifest_sha256") or "")
+    if receipt and receipt.get("manifest_sha256") != manifest_sha:
+        blockers.append("stage_receipt_manifest_sha256_mismatch")
+    job_name = str(cell.get("job_name") or "")
+    if receipt and receipt.get("run_id") != job_name:
+        blockers.append("stage_receipt_run_id_mismatch")
+    if receipt and not str(receipt.get("remote_manifest") or "").strip():
+        blockers.append("stage_receipt_remote_manifest_missing")
+    expected_file_count = manifest_status.get("file_count")
+    if isinstance(expected_file_count, int) and receipt.get("file_count") != expected_file_count:
+        blockers.append("stage_receipt_file_count_mismatch")
+    expected_total_bytes = manifest_status.get("total_bytes")
+    if isinstance(expected_total_bytes, int) and receipt.get("total_bytes") != expected_total_bytes:
+        blockers.append("stage_receipt_total_bytes_mismatch")
+    return {
+        "exists": receipt_exists,
+        "status": receipt.get("status", "") if receipt else "",
+        "dry_run": receipt.get("dry_run", "") if receipt else "",
+        "remote_sha256_verified": (
+            receipt.get("remote_sha256_verified", "") if receipt else ""
+        ),
+        "manifest": receipt.get("manifest", "") if receipt else "",
+        "remote_manifest": receipt.get("remote_manifest", "") if receipt else "",
+        "run_id": receipt.get("run_id", "") if receipt else "",
+        "manifest_sha256": receipt.get("manifest_sha256", "") if receipt else "",
+        "file_count": receipt.get("file_count", "") if receipt else "",
+        "total_bytes": receipt.get("total_bytes", "") if receipt else "",
     }, _dedupe(blockers)
 
 
@@ -453,6 +510,15 @@ def _manifest_out_from_stage_command(cell: Mapping[str, Any]) -> str:
     return _arg_value(argv, "--manifest-out")
 
 
+def _receipt_out_from_stage_command(cell: Mapping[str, Any]) -> str:
+    command = str(cell.get("stage_source_manifest_command_template") or "")
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return ""
+    return _arg_value(argv, "--receipt-out")
+
+
 def _coverage_blockers(cells: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Any], list[str]]:
     blockers: list[str] = []
     expected = {
@@ -542,8 +608,11 @@ def build_l5_v2_tt5l_lightning_non_dry_run_gate(
         variant = str(cell.get("variant") or "")
         axis = str(cell.get("axis") or "")
         stage_manifest_path = _manifest_out_from_stage_command(cell)
+        stage_receipt_path = _receipt_out_from_stage_command(cell)
         if not stage_manifest_path:
             cell_blockers.append("stage_source_manifest_path_missing")
+        if not stage_receipt_path:
+            cell_blockers.append("stage_source_manifest_receipt_path_missing")
         manifest_file = _resolve_repo_path(stage_manifest_path, root) if stage_manifest_path else root
         manifest, manifest_load_blockers = _load_json_object(manifest_file)
         cell_blockers.extend(f"source_manifest:{item}" for item in manifest_load_blockers)
@@ -555,6 +624,17 @@ def build_l5_v2_tt5l_lightning_non_dry_run_gate(
             current_head_commit=current_head_commit,
         )
         cell_blockers.extend(manifest_blockers)
+        receipt_file = _resolve_repo_path(stage_receipt_path, root) if stage_receipt_path else root
+        receipt, receipt_load_blockers = _load_json_object(receipt_file)
+        receipt_status, receipt_blockers = _validate_stage_receipt(
+            receipt=receipt,
+            receipt_exists=receipt_file.is_file() if stage_receipt_path else False,
+            manifest_status=manifest_status,
+            cell=cell,
+            stage_manifest_path=stage_manifest_path,
+        )
+        receipt_status["load_blockers"] = list(receipt_load_blockers)
+        cell_blockers.extend(receipt_blockers)
         command_status, command_blockers = _validate_non_dry_run_command(
             cell=cell,
             source_manifest_path=stage_manifest_path,
@@ -581,6 +661,8 @@ def build_l5_v2_tt5l_lightning_non_dry_run_gate(
                 "archive_size_bytes": cell.get("archive_size_bytes", ""),
                 "source_manifest_path": stage_manifest_path,
                 "source_manifest": manifest_status,
+                "stage_source_manifest_receipt_path": stage_receipt_path,
+                "stage_receipt": receipt_status,
                 "non_dry_run_command": command_status,
                 "active_claim": claim_status,
                 "ready_for_non_dry_run_submit": ready,
@@ -645,9 +727,9 @@ def render_l5_v2_tt5l_lightning_non_dry_run_gate_markdown(
         "",
         "This gate is spend-readiness only. It does not dispatch provider work "
         "and does not claim score movement. It fails closed unless the doctor "
-        "output is OK, every per-cell source manifest is staged, every cell has "
-        "an active Lightning lane claim, and all non-dry-run submit templates "
-        "are free of placeholders.",
+        "output is OK, every per-cell source manifest has a real remote-verified "
+        "staging receipt, every cell has an active Lightning lane claim, and all "
+        "non-dry-run submit templates are free of placeholders.",
         "",
         "## Status",
         "",

@@ -130,6 +130,12 @@ def test_tt5l_lightning_execution_bundle_builds_dry_run_commands(
     assert "scripts/lightning_repro_workspace.py" in zero_cpu[
         "stage_source_manifest_command_template"
     ]
+    assert "--receipt-out experiments/results/lightning_batch/" in zero_cpu[
+        "stage_source_manifest_command_template"
+    ]
+    assert zero_cpu["stage_source_manifest_receipt_path"].endswith(
+        "/source_manifest_receipt.json"
+    )
     dry_run = zero_cpu["dry_run_submit_command"]
     assert "scripts/launch_lightning_batch_job.py exact-eval" in dry_run
     assert "--dry-run" in dry_run

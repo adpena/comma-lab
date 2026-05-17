@@ -188,6 +188,8 @@ def test_parse_args_supports_deterministic_runtime_verification() -> None:
     args = mod.parse_args([
         "--remote",
         "s_example@ssh.lightning.ai",
+        "--receipt-out",
+        ".omx/state/receipt.json",
         "--requirements-mode",
         "verify-only",
         "--python-bin",
@@ -196,6 +198,7 @@ def test_parse_args_supports_deterministic_runtime_verification() -> None:
         "--dry-run",
     ])
     assert args.requirements_mode == "verify-only"
+    assert args.receipt_out == ".omx/state/receipt.json"
     assert args.python_bin == "/opt/conda/bin/python"
     assert args.require_cuda is True
 

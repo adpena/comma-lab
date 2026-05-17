@@ -1015,6 +1015,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--remote-pact", default=DEFAULT_REMOTE_PACT)
     parser.add_argument("--run-id", default=f"lightning_repro_{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}")
     parser.add_argument("--manifest-out", default=None)
+    parser.add_argument(
+        "--receipt-out",
+        default=None,
+        help=(
+            "Optional local JSON receipt proving whether workspace staging was "
+            "a real remote-verified transfer or only a dry-run."
+        ),
+    )
     parser.add_argument("--source", action="append", default=None)
     parser.add_argument("--artifact", action="append", default=[])
     parser.add_argument(
@@ -1205,10 +1213,17 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         json_text(
-            {
+            receipt := {
+                "schema_version": 1,
+                "tool": "scripts/lightning_repro_workspace.py",
                 "status": "DRY_RUN" if args.dry_run else "OK",
+                "dry_run": bool(args.dry_run),
+                "remote_sha256_verified": (not args.dry_run and not args.no_verify),
                 "manifest": str(manifest_out),
                 "remote_manifest": f"{args.remote}:{remote_manifest}",
+                "remote": args.remote,
+                "remote_pact": args.remote_pact,
+                "run_id": args.run_id,
                 "file_count": manifest["file_count"],
                 "total_bytes": manifest["total_bytes"],
                 "manifest_sha256": manifest["manifest_sha256"],
@@ -1216,6 +1231,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         end="",
     )
+    if args.receipt_out:
+        _write_json(Path(args.receipt_out), receipt)
     return 0
 
 

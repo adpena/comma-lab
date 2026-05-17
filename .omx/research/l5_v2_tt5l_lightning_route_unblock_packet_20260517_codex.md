@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning route unblock packet
 
-**Generated:** 2026-05-17T17:39:55Z
-**Commit:** `ae740ea0a324a4f3bcfaf106504a6fa1649fc1f2`
+**Generated:** 2026-05-17T17:49:25Z
+**Commit:** `1f1f0140789f9f12a7e9a140ed41802e99fcdaa1`
 
 This packet is generated from live artifact hashes. It turns the current TT5L Lightning blocker into an executable operator checklist. It is not a dispatch, score claim, or promotion artifact.
 
@@ -25,19 +25,19 @@ The TT5L method path is not blocked here. The route is blocked on provider confi
   - SHA-256: `9ae5433a2c769c1f39a9c9996c86cabe970225b5070c2ad3e620ee45a7459d65`
 - 10-cell sideinfo execution preflight: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `08ec32670834081b0f4124582966f29a3f1128e3057360fea13a5aca1746675e`
+  - SHA-256: `f05bf200b2c7eeaf929c77be6f49efad9ac44a6034e2115d02b588e025c0d1b5`
 - 10-cell sideinfo execution bundle: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `52ba6870aa007e2491e7d75ff78ed4a29dff0a21f66e79c1ccdb4e2ff2a0f211`
+  - SHA-256: `a88042f1af6db3a4bd526a955aa883e5dafc651d9029433e5ca7ca8cc0077730`
 - 10-cell dry-run verification: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `6ae4f39b7ec8e261bbe247504a3e5362aa19f26debc1678d32156c8745a9f5c1`
+  - SHA-256: `a7e35fe99dcc41701314bab685556afe76a171c480696827906a57b05f2876d5`
   - all dry-runs passed: `True`
   - cells passed: `10`/`10`
 - 10-cell paired-axis plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `5481812ed636d6fa605d885f9057de0acaddf4fe10600946705592fafff2cd4b`
-  - source commit: `ae740ea0a324a4f3bcfaf106504a6fa1649fc1f2`
+  - SHA-256: `c1d2d9faae5950a37299b73c5ed5ffab272eb4b3591ebef091399e7b7114c35b`
+  - source commit: `1f1f0140789f9f12a7e9a140ed41802e99fcdaa1`
   - source-relevant paths match current HEAD: `True`
 - Sideinfo harvest cells: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json`
   - exists: `True`

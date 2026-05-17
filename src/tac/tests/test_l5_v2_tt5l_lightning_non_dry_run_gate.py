@@ -113,6 +113,39 @@ def _source_manifest(
     return payload
 
 
+def _stage_arg(command: str, flag: str) -> Path:
+    argv = shlex.split(command)
+    return Path(argv[argv.index(flag) + 1])
+
+
+def _receipt_from_manifest(
+    *,
+    manifest: dict[str, object],
+    receipt_path: str,
+    status: str = "OK",
+    dry_run: bool = False,
+    remote_sha256_verified: bool = True,
+) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "tool": "scripts/lightning_repro_workspace.py",
+        "status": status,
+        "dry_run": dry_run,
+        "remote_sha256_verified": remote_sha256_verified,
+        "manifest": str(receipt_path).replace("source_manifest_receipt.json", "source_manifest.json"),
+        "remote_manifest": (
+            "studio@ssh.lightning.ai:/teamspace/studios/this_studio/pact/.omx/state/"
+            f"{manifest['run_id']}_manifest.json"
+        ),
+        "remote": "studio@ssh.lightning.ai",
+        "remote_pact": "/teamspace/studios/this_studio/pact",
+        "run_id": manifest["run_id"],
+        "file_count": manifest["file_count"],
+        "total_bytes": manifest["total_bytes"],
+        "manifest_sha256": manifest["manifest_sha256"],
+    }
+
+
 def _non_dry_command(
     *,
     cell: dict[str, object],
@@ -188,6 +221,10 @@ def _fake_bundle(tmp_path: Path, *, placeholder: bool = False) -> tuple[dict[str
             lane_id = f"lane_l5_v2_tt5l_sideinfo_effect_curve_{variant}_{axis}"
             job_name = f"l5-v2-tt5l-sideinfo-{variant}-{axis}-test"
             source_manifest_path = f"experiments/results/lightning_batch/{job_name}/source_manifest.json"
+            source_receipt_path = (
+                f"experiments/results/lightning_batch/{job_name}/"
+                "source_manifest_receipt.json"
+            )
             cell: dict[str, object] = {
                 "variant": variant,
                 "axis": axis,
@@ -203,6 +240,8 @@ def _fake_bundle(tmp_path: Path, *, placeholder: bool = False) -> tuple[dict[str
                         "scripts/lightning_repro_workspace.py",
                         "--manifest-out",
                         source_manifest_path,
+                        "--receipt-out",
+                        source_receipt_path,
                         "--artifact",
                         archive_rel,
                     ]
@@ -216,13 +255,22 @@ def _fake_bundle(tmp_path: Path, *, placeholder: bool = False) -> tuple[dict[str
             cells.append(cell)
             manifest_path = tmp_path / source_manifest_path
             manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest = _source_manifest(
+                run_id=job_name,
+                archive_path=archive_rel,
+                archive_sha256=archive_sha,
+                archive_bytes=len(archive_bytes),
+            )
             manifest_path.write_text(
+                json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            receipt_path = tmp_path / source_receipt_path
+            receipt_path.write_text(
                 json.dumps(
-                    _source_manifest(
-                        run_id=job_name,
-                        archive_path=archive_rel,
-                        archive_sha256=archive_sha,
-                        archive_bytes=len(archive_bytes),
+                    _receipt_from_manifest(
+                        manifest=manifest,
+                        receipt_path=source_receipt_path,
                     ),
                     indent=2,
                     sort_keys=True,
@@ -370,7 +418,7 @@ def test_tt5l_non_dry_run_gate_blocks_stale_manifest_head(tmp_path: Path) -> Non
     first_cell = bundle["cells"][0]
     assert isinstance(first_cell, dict)
     stage_command = str(first_cell["stage_source_manifest_command_template"])
-    source_manifest_path = Path(shlex.split(stage_command)[3])
+    source_manifest_path = _stage_arg(stage_command, "--manifest-out")
     manifest_file = tmp_path / source_manifest_path
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     manifest["git"]["head"] = "b" * 40
@@ -391,6 +439,61 @@ def test_tt5l_non_dry_run_gate_blocks_stale_manifest_head(tmp_path: Path) -> Non
     assert any(
         "source_manifest_git_head_mismatch_bundle" in blocker
         for blocker in payload["blockers"]
+    )
+
+
+def test_tt5l_non_dry_run_gate_blocks_missing_stage_receipt(tmp_path: Path) -> None:
+    bundle, claims_text = _fake_bundle(tmp_path)
+    first_cell = bundle["cells"][0]
+    assert isinstance(first_cell, dict)
+    stage_command = str(first_cell["stage_source_manifest_command_template"])
+    receipt_file = tmp_path / _stage_arg(stage_command, "--receipt-out")
+    receipt_file.unlink()
+
+    payload = _build_gate(
+        tmp_path,
+        bundle=bundle,
+        claims_text=claims_text,
+        doctor_output=_doctor_output(),
+    )
+
+    assert payload["ready_for_non_dry_run_submit"] is False
+    assert any("stage_receipt_missing" in blocker for blocker in payload["blockers"])
+
+
+def test_tt5l_non_dry_run_gate_blocks_dry_run_stage_receipt(tmp_path: Path) -> None:
+    bundle, claims_text = _fake_bundle(tmp_path)
+    first_cell = bundle["cells"][0]
+    assert isinstance(first_cell, dict)
+    stage_command = str(first_cell["stage_source_manifest_command_template"])
+    manifest_file = tmp_path / _stage_arg(stage_command, "--manifest-out")
+    receipt_file = tmp_path / _stage_arg(stage_command, "--receipt-out")
+    manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+    receipt = _receipt_from_manifest(
+        manifest=manifest,
+        receipt_path=str(_stage_arg(stage_command, "--receipt-out")),
+        status="DRY_RUN",
+        dry_run=True,
+        remote_sha256_verified=False,
+    )
+    receipt_file.write_text(
+        json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = _build_gate(
+        tmp_path,
+        bundle=bundle,
+        claims_text=claims_text,
+        doctor_output=_doctor_output(),
+    )
+
+    assert payload["ready_for_non_dry_run_submit"] is False
+    blockers = payload["blockers"]
+    assert any("stage_receipt_status_not_ok" in blocker for blocker in blockers)
+    assert any("stage_receipt_dry_run_true" in blocker for blocker in blockers)
+    assert any(
+        "stage_receipt_remote_sha256_not_verified" in blocker for blocker in blockers
     )
 
 
