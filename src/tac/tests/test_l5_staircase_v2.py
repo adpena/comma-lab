@@ -1092,6 +1092,28 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert "l1_scaffold_present_next_action_completed_or_superseded" in tishby[
         "l1_build_blockers"
     ]
+    assert tishby["post_l1_probe_evidence"]["schema"] == (
+        l5_v2.TISHBY_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA
+    )
+    assert tishby["post_l1_probe_evidence"]["artifact_present"] is True
+    assert tishby["post_l1_probe_evidence"]["artifact_valid"] is True
+    assert tishby["post_l1_probe_evidence"]["d4_verdict"] == (
+        l5_v2.TISHBY_D4_INDEPENDENT_VERDICT
+    )
+    assert tishby["post_l1_probe_evidence"]["vib_tractability_verdict"] == (
+        l5_v2.TISHBY_VIB_TRACTABLE_VERDICT
+    )
+    assert tishby["post_l1_probe_evidence"]["allowed_to_spend"] is False
+    assert tishby["post_l1_recommended_next_action_status"] == (
+        "blocked_pending_conditioning_or_mine"
+    )
+    assert tishby["post_l1_recommended_next_action_id"] == (
+        "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep"
+    )
+    assert (
+        "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+        in tishby["blockers"]
+    )
 
     for row in rows.values():
         assert row["horizon_class"] == "asymptotic_pursuit"
@@ -1131,6 +1153,7 @@ def test_l5_v2_asymptotic_candidate_surface_artifact_tracks_live_payload() -> No
             "ready_for_l1_scaffold_dispatch",
             "l1_build_blockers",
             "blockers",
+            "post_l1_probe_evidence",
             "post_l1_proxy_evidence",
             "post_l1_recommended_next_action_status",
             "post_l1_recommended_next_action_id",
@@ -1153,6 +1176,8 @@ def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() ->
         "`blocked_pending_redesign_or_next_candidate`"
     ) in report
     assert "identity_dominates_all_tested_ego_proxies_real_video_smoke" in report
+    assert "blocked_pending_conditioning_or_mine" in report
+    assert "d4=INDEPENDENT;vib=TRACTABLE" in report
     assert "score_claim: `false`" in report
 
 
@@ -1230,6 +1255,15 @@ def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
     assert z6["post_l1_proxy_evidence"]["artifact_present"] is False
     assert z6["post_l1_proxy_evidence"]["artifact_valid"] is False
     assert "z6_real_video_ego_proxy_sweep_missing" in z6["blockers"]
+    tishby = next(
+        row
+        for row in payload["candidates"]
+        if row["candidate_id"] == "tishby_ib_pure_substrate"
+    )
+    assert tishby["post_l1_probe_evidence"]["artifact_present"] is False
+    assert tishby["post_l1_probe_evidence"]["artifact_valid"] is False
+    assert "tishby_d4_probe_missing" in tishby["blockers"]
+    assert "tishby_vib_tractability_missing" in tishby["blockers"]
 
 
 def test_l5_v2_asymptotic_pursuit_candidates_require_registry_with_ledger(

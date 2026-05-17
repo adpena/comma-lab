@@ -1,0 +1,19 @@
+{
+  "axis_label": "[diagnostic-CPU; H(latent|scorer_class) probe]",
+  "evidence_grade": "diagnostic_cpu",
+  "h_latent_given_scorer_class_bits_per_symbol": 7.03263775808795,
+  "h_latent_unconditional_bits_per_symbol": 7.039023260840262,
+  "independence_tolerance_bits": 0.01,
+  "meaningful_mi_threshold_bits": 0.5,
+  "mutual_information_bits": 0.006385502752311645,
+  "notes": "D4 probe executed on A1 latents per Tishby IB-pure design memo section 22 op-routable #1. Latents are A1 fine-tuned HNeRV, 600 pairs, latent_dim 28, requantized to uint8 via affine map to [0,255]. Scorer classes are canonical SegNet argmax mode per-pair on A1-rendered frame_1 at (384, 512) using upstream/models/segnet.safetensors loaded via tac.scorer.load_default_scorers. Local macOS CPU; not promotable; diagnostic_cpu evidence grade.",
+  "num_class_symbols": 16800,
+  "num_latent_symbols": 16800,
+  "num_unique_classes": 2,
+  "observed_at_utc": "2026-05-16T21:37:29+00:00",
+  "score_claim": false,
+  "source_state_path": ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+  "substrate_id": "tishby_ib_pure",
+  "verdict": "INDEPENDENT",
+  "wyner_ziv_gain_ceiling_fraction": 0.0009071575012169224
+}

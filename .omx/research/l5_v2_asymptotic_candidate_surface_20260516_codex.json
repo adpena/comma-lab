@@ -7,6 +7,7 @@
     "requires_t3_ratification_before_l1_scaffold_dispatch",
     "requires_dykstra_feasibility_intersection_before_paid_smoke",
     "requires_byte_mutation_proof_before_score_or_rank_authority",
+    "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe",
     "requires_d4_probe_verdict_before_tishby_scaffold",
     "requires_variational_ib_tractability_before_path_vib_or_mine",
     "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
@@ -116,7 +117,8 @@
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
         },
-        "post_l1_proxy_evidence": {
+        "post_l1_probe_evidence": {
+          "allowed_to_spend": false,
           "allowed_to_spend_on_z6_full_film": false,
           "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
           "artifact_present": true,
@@ -128,6 +130,34 @@
             "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
           ],
           "identity_dominates_all_tested_real_video_proxies": true,
+          "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
+          "paradigm_claim_allowed": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "ready_for_paid_dispatch": false,
+          "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+          "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+          "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+          "schema": "z6_post_l1_proxy_evidence_status_v1",
+          "score_claim": false,
+          "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+          "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
+        },
+        "post_l1_proxy_evidence": {
+          "allowed_to_spend": false,
+          "allowed_to_spend_on_z6_full_film": false,
+          "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+          "artifact_present": true,
+          "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+          "artifact_valid": true,
+          "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+          "best_proxy_id": "random_control",
+          "blockers": [
+            "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+          ],
+          "identity_dominates_all_tested_real_video_proxies": true,
+          "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
           "paradigm_claim_allowed": false,
           "promotion_eligible": false,
           "rank_or_kill_eligible": false,
@@ -149,7 +179,8 @@
       "local_ledger_path": ".omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "ad07c1a032078fefafbafc2a910522e75ea5479bbac15d7cab4569f43ca5e334",
-      "post_l1_proxy_evidence": {
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
         "allowed_to_spend_on_z6_full_film": false,
         "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
         "artifact_present": true,
@@ -161,6 +192,34 @@
           "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
         ],
         "identity_dominates_all_tested_real_video_proxies": true,
+        "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+        "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+        "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+        "schema": "z6_post_l1_proxy_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+        "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
+      },
+      "post_l1_proxy_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_z6_full_film": false,
+        "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+        "artifact_valid": true,
+        "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+        "best_proxy_id": "random_control",
+        "blockers": [
+          "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        ],
+        "identity_dominates_all_tested_real_video_proxies": true,
+        "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
         "paradigm_claim_allowed": false,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -280,6 +339,7 @@
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
         },
+        "post_l1_probe_evidence": null,
         "post_l1_proxy_evidence": null,
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
         "schema": "l5_v2_asymptotic_next_action_status_v1"
@@ -289,6 +349,7 @@
       "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "a9484ebc2deeec44128005d46e3c024b90682140b3afa4b0a691726a552794c5",
+      "post_l1_probe_evidence": null,
       "post_l1_proxy_evidence": null,
       "post_l1_recommended_next_action": "",
       "post_l1_recommended_next_action_id": "",
@@ -313,7 +374,8 @@
       "blockers": [
         "requires_d4_probe_verdict_before_tishby_scaffold",
         "requires_variational_ib_tractability_before_path_vib_or_mine",
-        "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
+        "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim",
+        "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
       ],
       "candidate_id": "tishby_ib_pure_substrate",
       "cost_band_usd": [
@@ -329,7 +391,11 @@
       "effective_recommended_next_action_id": "completed_or_superseded:run_d4_probe_and_build_variational_ib_tractability_tool",
       "expected_first_artifact_status": [
         {
-          "path": ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+          "path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+          "present": true
+        },
+        {
+          "path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
           "present": true
         },
         {
@@ -342,7 +408,8 @@
         }
       ],
       "expected_first_artifacts": [
-        ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+        ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+        ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
         "tools/check_variational_ib_tractability.py",
         "src/tac/substrates/tishby_ib_pure/"
       ],
@@ -358,7 +425,11 @@
         "canonical_replacement_lane_registered": false,
         "expected_first_artifact_status": [
           {
-            "path": ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+            "path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+            "present": true
+          },
+          {
+            "path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
             "present": true
           },
           {
@@ -388,13 +459,47 @@
             "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
           ],
           "l1_scaffold_present": true,
-          "post_l1_recommended_next_action": "",
-          "post_l1_recommended_next_action_id": "",
-          "post_l1_recommended_next_action_status": "not_applicable",
+          "post_l1_recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+          "post_l1_recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+          "post_l1_recommended_next_action_status": "blocked_pending_conditioning_or_mine",
           "ready_for_l1_build": false,
           "ready_for_l1_scaffold_dispatch": false,
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
+        },
+        "post_l1_probe_evidence": {
+          "allowed_to_spend": false,
+          "allowed_to_spend_on_tishby_path_vib": false,
+          "artifact_present": true,
+          "artifact_valid": true,
+          "blockers": [
+            "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+          ],
+          "d4_independent": true,
+          "d4_probe_artifact_path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+          "d4_probe_artifact_present": true,
+          "d4_probe_artifact_sha256": "19fcde1835794204f6acd02e4cc336505117a01dfa1bcfdfb3b39cb05b45e233",
+          "d4_verdict": "INDEPENDENT",
+          "gradient_snr_worst_case": 4.9758341440833425,
+          "measured_summary": "d4_mi_bits=0.006385502752311645;vib_worst_snr=4.9758341440833425",
+          "mutual_information_bits": 0.006385502752311645,
+          "paradigm_claim_allowed": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "ready_for_paid_dispatch": false,
+          "recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+          "recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+          "recommended_next_action_status": "blocked_pending_conditioning_or_mine",
+          "schema": "tishby_post_l1_probe_evidence_status_v1",
+          "score_claim": false,
+          "verdict": "d4=INDEPENDENT;vib=TRACTABLE",
+          "vib_tractability_artifact_path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
+          "vib_tractability_artifact_present": true,
+          "vib_tractability_artifact_sha256": "72053a829372b32aefdeaf222c1734b56e93d971609406c7fec0efbb98c41b91",
+          "vib_tractability_verdict": "TRACTABLE",
+          "vib_tractable": true,
+          "wyner_ziv_gain_ceiling_fraction": 0.0009071575012169224
         },
         "post_l1_proxy_evidence": null,
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
@@ -405,10 +510,44 @@
       "local_ledger_path": ".omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "3271690105a5af1a9ceba1670a3ef10ee54e829277737f34eaa937cb45a2264a",
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_tishby_path_vib": false,
+        "artifact_present": true,
+        "artifact_valid": true,
+        "blockers": [
+          "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+        ],
+        "d4_independent": true,
+        "d4_probe_artifact_path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+        "d4_probe_artifact_present": true,
+        "d4_probe_artifact_sha256": "19fcde1835794204f6acd02e4cc336505117a01dfa1bcfdfb3b39cb05b45e233",
+        "d4_verdict": "INDEPENDENT",
+        "gradient_snr_worst_case": 4.9758341440833425,
+        "measured_summary": "d4_mi_bits=0.006385502752311645;vib_worst_snr=4.9758341440833425",
+        "mutual_information_bits": 0.006385502752311645,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+        "recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+        "recommended_next_action_status": "blocked_pending_conditioning_or_mine",
+        "schema": "tishby_post_l1_probe_evidence_status_v1",
+        "score_claim": false,
+        "verdict": "d4=INDEPENDENT;vib=TRACTABLE",
+        "vib_tractability_artifact_path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
+        "vib_tractability_artifact_present": true,
+        "vib_tractability_artifact_sha256": "72053a829372b32aefdeaf222c1734b56e93d971609406c7fec0efbb98c41b91",
+        "vib_tractability_verdict": "TRACTABLE",
+        "vib_tractable": true,
+        "wyner_ziv_gain_ceiling_fraction": 0.0009071575012169224
+      },
       "post_l1_proxy_evidence": null,
-      "post_l1_recommended_next_action": "",
-      "post_l1_recommended_next_action_id": "",
-      "post_l1_recommended_next_action_status": "not_applicable",
+      "post_l1_recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+      "post_l1_recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+      "post_l1_recommended_next_action_status": "blocked_pending_conditioning_or_mine",
       "primary_axis": "training_paradigm_scorer_relationship_class_shift",
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -475,7 +614,8 @@
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
       },
-      "post_l1_proxy_evidence": {
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
         "allowed_to_spend_on_z6_full_film": false,
         "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
         "artifact_present": true,
@@ -487,6 +627,34 @@
           "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
         ],
         "identity_dominates_all_tested_real_video_proxies": true,
+        "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+        "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+        "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+        "schema": "z6_post_l1_proxy_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+        "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
+      },
+      "post_l1_proxy_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_z6_full_film": false,
+        "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+        "artifact_valid": true,
+        "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+        "best_proxy_id": "random_control",
+        "blockers": [
+          "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        ],
+        "identity_dominates_all_tested_real_video_proxies": true,
+        "measured_summary": "best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05",
         "paradigm_claim_allowed": false,
         "promotion_eligible": false,
         "rank_or_kill_eligible": false,
@@ -547,6 +715,7 @@
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
       },
+      "post_l1_probe_evidence": null,
       "post_l1_proxy_evidence": null,
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
       "schema": "l5_v2_asymptotic_next_action_status_v1"
@@ -557,7 +726,11 @@
       "canonical_replacement_lane_registered": false,
       "expected_first_artifact_status": [
         {
-          "path": ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+          "path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+          "present": true
+        },
+        {
+          "path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
           "present": true
         },
         {
@@ -587,13 +760,47 @@
           "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
         ],
         "l1_scaffold_present": true,
-        "post_l1_recommended_next_action": "",
-        "post_l1_recommended_next_action_id": "",
-        "post_l1_recommended_next_action_status": "not_applicable",
+        "post_l1_recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+        "post_l1_recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+        "post_l1_recommended_next_action_status": "blocked_pending_conditioning_or_mine",
         "ready_for_l1_build": false,
         "ready_for_l1_scaffold_dispatch": false,
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
+      },
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_tishby_path_vib": false,
+        "artifact_present": true,
+        "artifact_valid": true,
+        "blockers": [
+          "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+        ],
+        "d4_independent": true,
+        "d4_probe_artifact_path": ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json",
+        "d4_probe_artifact_present": true,
+        "d4_probe_artifact_sha256": "19fcde1835794204f6acd02e4cc336505117a01dfa1bcfdfb3b39cb05b45e233",
+        "d4_verdict": "INDEPENDENT",
+        "gradient_snr_worst_case": 4.9758341440833425,
+        "measured_summary": "d4_mi_bits=0.006385502752311645;vib_worst_snr=4.9758341440833425",
+        "mutual_information_bits": 0.006385502752311645,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on measured Path-VIB side-info until scorer-class conditioning is meaningful, Path-MINE is implemented, or a beta-sweep is justified by a new probe. Prefer the next L5-v2 candidate if no new Tishby conditioning signal exists.",
+        "recommended_next_action_id": "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep",
+        "recommended_next_action_status": "blocked_pending_conditioning_or_mine",
+        "schema": "tishby_post_l1_probe_evidence_status_v1",
+        "score_claim": false,
+        "verdict": "d4=INDEPENDENT;vib=TRACTABLE",
+        "vib_tractability_artifact_path": ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json",
+        "vib_tractability_artifact_present": true,
+        "vib_tractability_artifact_sha256": "72053a829372b32aefdeaf222c1734b56e93d971609406c7fec0efbb98c41b91",
+        "vib_tractability_verdict": "TRACTABLE",
+        "vib_tractable": true,
+        "wyner_ziv_gain_ceiling_fraction": 0.0009071575012169224
       },
       "post_l1_proxy_evidence": null,
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",

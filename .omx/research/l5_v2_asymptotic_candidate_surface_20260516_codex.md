@@ -32,12 +32,12 @@ This is a planning and no-signal-loss surface. It records whether asymptotic L5-
 
 Expected first artifacts:
 
-Post-L1 proxy evidence:
+Post-L1 evidence:
 - artifact_present=`True`
 - artifact_valid=`True`
 - verdict=`identity_dominates_all_tested_ego_proxies_real_video_smoke`
-- allowed_to_spend_on_z6_full_film=`False`
-- best_identity_minus_full_loss_proxy=`-5.4001808166503906e-05`
+- allowed_to_spend=`False`
+- measured_summary=`best_proxy=random_control identity_minus_full_loss_proxy=-5.4001808166503906e-05`
 - `src/tac/substrates/time_traveler_l5_z6/` present=`True`
 - `experiments/train_substrate_time_traveler_l5_z6.py` present=`True`
 - `tools/probe_z6_predictive_coding_vs_identity_disambiguator.py` present=`True`
@@ -77,12 +77,20 @@ Expected first artifacts:
 - effective_recommended_next_action_id: `completed_or_superseded:run_d4_probe_and_build_variational_ib_tractability_tool`
 - ready_for_l1_build: `False`
 - ready_for_l1_scaffold_dispatch: `False`
-- post_l1_recommended_next_action_status: `not_applicable`
-- post_l1_recommended_next_action_id: ``
-- blockers: `['requires_d4_probe_verdict_before_tishby_scaffold', 'requires_variational_ib_tractability_before_path_vib_or_mine', 'requires_paired_smoke_vs_atw_v2_before_asymptotic_claim']`
+- post_l1_recommended_next_action_status: `blocked_pending_conditioning_or_mine`
+- post_l1_recommended_next_action_id: `advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep`
+- blockers: `['requires_d4_probe_verdict_before_tishby_scaffold', 'requires_variational_ib_tractability_before_path_vib_or_mine', 'requires_paired_smoke_vs_atw_v2_before_asymptotic_claim', 'tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe']`
 - l1_build_blockers: `['l1_scaffold_present_next_action_completed_or_superseded']`
 
 Expected first artifacts:
-- `.omx/state/h_latent_given_scorer_class_tishby_ib_pure.json` present=`True`
+
+Post-L1 evidence:
+- artifact_present=`True`
+- artifact_valid=`True`
+- verdict=`d4=INDEPENDENT;vib=TRACTABLE`
+- allowed_to_spend=`False`
+- measured_summary=`d4_mi_bits=0.006385502752311645;vib_worst_snr=4.9758341440833425`
+- `.omx/research/tishby_ib_pure_d4_probe_20260516_codex.json` present=`True`
+- `.omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json` present=`True`
 - `tools/check_variational_ib_tractability.py` present=`True`
 - `src/tac/substrates/tishby_ib_pure/` present=`True`

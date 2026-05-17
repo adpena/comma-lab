@@ -220,6 +220,17 @@ Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT = (
     "identity_dominates_all_tested_ego_proxies_real_video_smoke"
 )
 Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA = "z6_post_l1_proxy_evidence_status_v1"
+TISHBY_D4_PROBE_ARTIFACT_PATH = (
+    ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json"
+)
+TISHBY_VIB_TRACTABILITY_ARTIFACT_PATH = (
+    ".omx/research/tishby_ib_pure_variational_ib_tractability_20260516_codex.json"
+)
+TISHBY_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA = (
+    "tishby_post_l1_probe_evidence_status_v1"
+)
+TISHBY_D4_INDEPENDENT_VERDICT = "INDEPENDENT"
+TISHBY_VIB_TRACTABLE_VERDICT = "TRACTABLE"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -380,7 +391,8 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
             "Variational-IB tractability checker before any substrate scaffold."
         ),
         expected_first_artifacts=(
-            ".omx/state/h_latent_given_scorer_class_tishby_ib_pure.json",
+            TISHBY_D4_PROBE_ARTIFACT_PATH,
+            TISHBY_VIB_TRACTABILITY_ARTIFACT_PATH,
             "tools/check_variational_ib_tractability.py",
             "src/tac/substrates/tishby_ib_pure/",
         ),
@@ -416,6 +428,7 @@ def l5_v2_asymptotic_pursuit_candidates(
     aggregate_blockers: list[str] = list(lane_registry_blockers)
     for candidate in _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES:
         z6_post_l1_proxy_evidence: dict[str, Any] | None = None
+        post_l1_probe_evidence: dict[str, Any] | None = None
         ledger_path = resolved_repo_root / candidate.local_ledger_path
         ledger_present = ledger_path.is_file()
         ledger_sha256 = _sha256_file(ledger_path) if ledger_present else ""
@@ -496,16 +509,22 @@ def l5_v2_asymptotic_pursuit_candidates(
             z6_post_l1_proxy_evidence = _z6_post_l1_proxy_evidence_status(
                 repo_root=resolved_repo_root,
             )
-            blockers.extend(z6_post_l1_proxy_evidence["blockers"])
-            aggregate_blockers.extend(z6_post_l1_proxy_evidence["blockers"])
+            post_l1_probe_evidence = z6_post_l1_proxy_evidence
+        elif candidate.candidate_id == "tishby_ib_pure_substrate":
+            post_l1_probe_evidence = _tishby_post_l1_probe_evidence_status(
+                repo_root=resolved_repo_root,
+            )
+        if post_l1_probe_evidence is not None:
+            blockers.extend(post_l1_probe_evidence["blockers"])
+            aggregate_blockers.extend(post_l1_probe_evidence["blockers"])
             post_l1_recommended_next_action_id = str(
-                z6_post_l1_proxy_evidence["recommended_next_action_id"]
+                post_l1_probe_evidence["recommended_next_action_id"]
             )
             post_l1_recommended_next_action = str(
-                z6_post_l1_proxy_evidence["recommended_next_action"]
+                post_l1_probe_evidence["recommended_next_action"]
             )
             post_l1_recommended_next_action_status = str(
-                z6_post_l1_proxy_evidence["recommended_next_action_status"]
+                post_l1_probe_evidence["recommended_next_action_status"]
             )
         next_prerequisite_status = {
             "status": recommended_next_action_status,
@@ -541,6 +560,7 @@ def l5_v2_asymptotic_pursuit_candidates(
             ),
             "next_prerequisite_status": next_prerequisite_status,
             "ready_for_l1_build_semantics": ready_for_l1_build_semantics,
+            "post_l1_probe_evidence": post_l1_probe_evidence,
             "post_l1_proxy_evidence": z6_post_l1_proxy_evidence,
         }
         aggregate_blockers.extend(blockers)
@@ -579,6 +599,7 @@ def l5_v2_asymptotic_pursuit_candidates(
                     l5_v2_asymptotic_next_action_status
                 ),
                 "post_l1_proxy_evidence": z6_post_l1_proxy_evidence,
+                "post_l1_probe_evidence": post_l1_probe_evidence,
                 "post_l1_recommended_next_action_status": (
                     post_l1_recommended_next_action_status
                 ),
@@ -665,17 +686,19 @@ def render_l5_v2_asymptotic_candidate_surface_markdown(
                     "Expected first artifacts:",
                 ]
             )
-            post_l1_proxy = row.get("post_l1_proxy_evidence")
-            if isinstance(post_l1_proxy, Mapping):
+            post_l1_evidence = row.get("post_l1_probe_evidence")
+            if not isinstance(post_l1_evidence, Mapping):
+                post_l1_evidence = row.get("post_l1_proxy_evidence")
+            if isinstance(post_l1_evidence, Mapping):
                 lines.extend(
                     [
                         "",
-                        "Post-L1 proxy evidence:",
-                        f"- artifact_present=`{post_l1_proxy.get('artifact_present')}`",
-                        f"- artifact_valid=`{post_l1_proxy.get('artifact_valid')}`",
-                        f"- verdict=`{post_l1_proxy.get('verdict')}`",
-                        f"- allowed_to_spend_on_z6_full_film=`{post_l1_proxy.get('allowed_to_spend_on_z6_full_film')}`",
-                        f"- best_identity_minus_full_loss_proxy=`{post_l1_proxy.get('best_identity_minus_full_loss_proxy')}`",
+                        "Post-L1 evidence:",
+                        f"- artifact_present=`{post_l1_evidence.get('artifact_present')}`",
+                        f"- artifact_valid=`{post_l1_evidence.get('artifact_valid')}`",
+                        f"- verdict=`{post_l1_evidence.get('verdict')}`",
+                        f"- allowed_to_spend=`{post_l1_evidence.get('allowed_to_spend')}`",
+                        f"- measured_summary=`{post_l1_evidence.get('measured_summary')}`",
                     ]
                 )
             artifacts = row.get("expected_first_artifact_status")
@@ -781,7 +804,13 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             "best_identity_minus_full_loss_proxy"
         ),
         "identity_dominates_all_tested_real_video_proxies": identity_dominates,
+        "allowed_to_spend": False,
         "allowed_to_spend_on_z6_full_film": False,
+        "measured_summary": (
+            f"best_proxy={payload.get('best_proxy_id')} "
+            f"identity_minus_full_loss_proxy="
+            f"{payload.get('best_identity_minus_full_loss_proxy')}"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -793,6 +822,141 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         "recommended_next_action": recommended_next_action,
         "blockers": list(dict.fromkeys(blockers)),
     }
+
+
+def _tishby_post_l1_probe_evidence_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return fail-closed Tishby post-L1 probe evidence for dispatch routing."""
+
+    d4_path = repo_root / TISHBY_D4_PROBE_ARTIFACT_PATH
+    vib_path = repo_root / TISHBY_VIB_TRACTABILITY_ARTIFACT_PATH
+    blockers: list[str] = []
+    d4_payload = _load_probe_artifact_mapping(
+        d4_path,
+        blockers=blockers,
+        blocker_prefix="tishby_d4_probe",
+    )
+    vib_payload = _load_probe_artifact_mapping(
+        vib_path,
+        blockers=blockers,
+        blocker_prefix="tishby_vib_tractability",
+    )
+    for prefix, payload in (
+        ("tishby_d4_probe", d4_payload),
+        ("tishby_vib_tractability", vib_payload),
+    ):
+        if payload and payload.get("substrate_id") != "tishby_ib_pure":
+            blockers.append(f"{prefix}_substrate_id_mismatch")
+        if payload and payload.get("score_claim") is not False:
+            blockers.append(f"{prefix}_score_claim_not_false")
+        if payload and payload.get("evidence_grade") != "diagnostic_cpu":
+            blockers.append(f"{prefix}_evidence_grade_mismatch")
+
+    d4_verdict = str(d4_payload.get("verdict") or "")
+    vib_verdict = str(vib_payload.get("verdict") or "")
+    d4_independent = d4_verdict == TISHBY_D4_INDEPENDENT_VERDICT
+    vib_tractable = vib_verdict == TISHBY_VIB_TRACTABLE_VERDICT
+    if d4_payload and not d4_independent:
+        blockers.append("tishby_d4_probe_not_independent_unreviewed_path")
+    if vib_payload and not vib_tractable:
+        blockers.append("tishby_vib_tractability_not_tractable")
+    if d4_independent:
+        blockers.append(
+            "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+        )
+        recommended_next_action_id = (
+            "advance_tishby_only_with_meaningful_conditioning_or_mine_beta_sweep"
+        )
+        recommended_next_action = (
+            "Do not spend on measured Path-VIB side-info until scorer-class "
+            "conditioning is meaningful, Path-MINE is implemented, or a "
+            "beta-sweep is justified by a new probe. Prefer the next L5-v2 "
+            "candidate if no new Tishby conditioning signal exists."
+        )
+        recommended_next_action_status = "blocked_pending_conditioning_or_mine"
+    elif d4_payload and vib_tractable and not blockers:
+        recommended_next_action_id = "run_tishby_scorer_bearing_beta_sweep"
+        recommended_next_action = (
+            "D4 and VIB gates passed; run scorer-bearing beta sweep before "
+            "any score or paradigm claim."
+        )
+        recommended_next_action_status = "probe_candidate_found_requires_beta_sweep"
+    else:
+        recommended_next_action_id = "run_tishby_d4_and_vib_probe_bundle"
+        recommended_next_action = (
+            "Run and preserve the Tishby D4 plus VIB tractability probe bundle "
+            "before paid dispatch."
+        )
+        recommended_next_action_status = "missing_or_invalid_probe_evidence"
+
+    d4_mi = d4_payload.get("mutual_information_bits")
+    vib_snr = vib_payload.get("gradient_snr_worst_case")
+    return {
+        "schema": TISHBY_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA,
+        "d4_probe_artifact_path": TISHBY_D4_PROBE_ARTIFACT_PATH,
+        "d4_probe_artifact_present": d4_path.is_file(),
+        "d4_probe_artifact_sha256": _sha256_file(d4_path) if d4_path.is_file() else "",
+        "vib_tractability_artifact_path": TISHBY_VIB_TRACTABILITY_ARTIFACT_PATH,
+        "vib_tractability_artifact_present": vib_path.is_file(),
+        "vib_tractability_artifact_sha256": (
+            _sha256_file(vib_path) if vib_path.is_file() else ""
+        ),
+        "artifact_present": d4_path.is_file() and vib_path.is_file(),
+        "artifact_valid": bool(d4_payload)
+        and bool(vib_payload)
+        and not [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "tishby_path_vib_paid_dispatch_blocked_d4_independent_scorer_class_probe"
+            }
+        ],
+        "verdict": f"d4={d4_verdict};vib={vib_verdict}",
+        "d4_verdict": d4_verdict,
+        "vib_tractability_verdict": vib_verdict,
+        "mutual_information_bits": d4_mi,
+        "wyner_ziv_gain_ceiling_fraction": d4_payload.get(
+            "wyner_ziv_gain_ceiling_fraction"
+        ),
+        "gradient_snr_worst_case": vib_snr,
+        "d4_independent": d4_independent,
+        "vib_tractable": vib_tractable,
+        "allowed_to_spend": False,
+        "allowed_to_spend_on_tishby_path_vib": False,
+        "measured_summary": f"d4_mi_bits={d4_mi};vib_worst_snr={vib_snr}",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "paradigm_claim_allowed": False,
+        "recommended_next_action_status": recommended_next_action_status,
+        "recommended_next_action_id": recommended_next_action_id,
+        "recommended_next_action": recommended_next_action,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def _load_probe_artifact_mapping(
+    path: Path,
+    *,
+    blockers: list[str],
+    blocker_prefix: str,
+) -> Mapping[str, Any]:
+    """Load a small probe artifact mapping and append fail-closed blockers."""
+
+    if not path.is_file():
+        blockers.append(f"{blocker_prefix}_missing")
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        blockers.append(f"{blocker_prefix}_json_invalid")
+        return {}
+    if not isinstance(loaded, Mapping):
+        blockers.append(f"{blocker_prefix}_not_object")
+        return {}
+    return loaded
 
 
 def _l5_v2_lane_registry_ids(*, repo_root: Path) -> tuple[set[str], list[str]]:
@@ -5047,6 +5211,11 @@ __all__ = [
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
     "SUBJECT_ID",
+    "TISHBY_D4_INDEPENDENT_VERDICT",
+    "TISHBY_D4_PROBE_ARTIFACT_PATH",
+    "TISHBY_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA",
+    "TISHBY_VIB_TRACTABILITY_ARTIFACT_PATH",
+    "TISHBY_VIB_TRACTABLE_VERDICT",
     "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_PATH",
     "TT5L_CONTEST_SIDEINFO_COMMITTED_PROOF_ARTIFACT_SHA256",
     "TT5L_CONTEST_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
