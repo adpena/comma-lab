@@ -1,0 +1,137 @@
+{
+  "blockers": [],
+  "current_head_commit": "528d5f777d25de4a38d69c9b18b7fbd7b7f2938e",
+  "dispatch_attempted": false,
+  "doctor_output_path": ".omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json",
+  "doctor_required_checks": {
+    "check_pass_predicates": {
+      "local_supply_chain": "checks.local_supply_chain.ok != false",
+      "machine_inventory": "checks.machine_inventory.ok == true and machine_count > 0",
+      "remote_supply_chain": "checks.remote_supply_chain.ok == true",
+      "ssh_auth": "checks.ssh_auth.ok == true"
+    },
+    "expected_status": "OK",
+    "required_checks": [
+      "local_supply_chain",
+      "ssh_auth",
+      "remote_supply_chain",
+      "machine_inventory"
+    ],
+    "required_json_fields": [
+      "schema_version",
+      "tool",
+      "recorded_at_utc",
+      "checks",
+      "status",
+      "failed_checks"
+    ]
+  },
+  "generated_at_utc": "2026-05-17T11:31:47Z",
+  "identity_modes": [
+    {
+      "doctor_command_template": ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --json-out .omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json --run-id l5_v2_tt5l_lightning_required_doctor_20260517 --strict --ssh-target \"$LIGHTNING_SSH_TARGET\" --require-ssh --remote-supply-chain --require-remote-supply-chain --repo-dir /teamspace/studios/this_studio/pact --python-bin .venv/bin/python --teamspace \"$LIGHTNING_TEAMSPACE\" --user \"$LIGHTNING_SDK_USER\" --machine-inventory --require-machine-inventory --machine T4 --gpu-only",
+      "forbidden_env": [
+        "LIGHTNING_ORG"
+      ],
+      "mode": "user",
+      "required_env": [
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_SDK_USER"
+      ]
+    },
+    {
+      "doctor_command_template": ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --json-out .omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json --run-id l5_v2_tt5l_lightning_required_doctor_20260517 --strict --ssh-target \"$LIGHTNING_SSH_TARGET\" --require-ssh --remote-supply-chain --require-remote-supply-chain --repo-dir /teamspace/studios/this_studio/pact --python-bin .venv/bin/python --teamspace \"$LIGHTNING_TEAMSPACE\" --org \"$LIGHTNING_ORG\" --machine-inventory --require-machine-inventory --machine T4 --gpu-only",
+      "forbidden_env": [
+        "LIGHTNING_SDK_USER"
+      ],
+      "mode": "org",
+      "required_env": [
+        "LIGHTNING_TEAMSPACE",
+        "LIGHTNING_SSH_TARGET",
+        "LIGHTNING_ORG"
+      ]
+    }
+  ],
+  "next_after_doctor_if_ok": [
+    "Run per-cell stage_source_manifest_command_template from the execution bundle.",
+    "Run per-cell claim_command before every non-dry-run submit.",
+    "Replace all placeholders in non_dry_run_submit_command_template.",
+    "Submit only after doctor JSON status is OK and all required checks pass.",
+    "Harvest contest_auth_eval artifacts and terminal claims before any score claim."
+  ],
+  "operator_environment_required": {
+    "LIGHTNING_SDK_USER_or_LIGHTNING_ORG": {
+      "exclusive": true,
+      "purpose": "Exactly one Lightning SDK owner identity.",
+      "required": true
+    },
+    "LIGHTNING_SSH_TARGET": {
+      "purpose": "SSH target for remote auth and remote supply-chain scan.",
+      "required": true
+    },
+    "LIGHTNING_STUDIO": {
+      "purpose": "Studio name required by non-dry-run submit templates.",
+      "required_after_doctor_for_submit": true
+    },
+    "LIGHTNING_TEAMSPACE": {
+      "purpose": "Lightning teamspace for T4 machine inventory and batch jobs.",
+      "required": true
+    }
+  },
+  "planning_only": true,
+  "promotion_eligible": false,
+  "provider_spend_attempted": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_non_dry_run_submit": false,
+  "ready_for_operator_doctor": true,
+  "ready_for_provider_dispatch": false,
+  "route_blocker_closure_map": {
+    "LIGHTNING_SDK_USER or LIGHTNING_ORG missing": [
+      "Choose exactly one identity mode.",
+      "Doctor must pass machine_inventory with that owner."
+    ],
+    "LIGHTNING_SSH_TARGET missing": [
+      "Set LIGHTNING_SSH_TARGET.",
+      "Doctor must pass ssh_auth and remote_supply_chain."
+    ],
+    "LIGHTNING_TEAMSPACE missing": [
+      "Set LIGHTNING_TEAMSPACE.",
+      "Doctor must pass machine_inventory."
+    ],
+    "Lightning credits or quota not checked": [
+      "Machine inventory must return at least one T4 candidate.",
+      "Operator still owns account-credit confirmation before spend."
+    ],
+    "Lightning machine inventory not checked": [
+      "Doctor must pass machine_inventory for T4 with gpu_only."
+    ],
+    "active dispatch claims not created for non-dry-run cells": [
+      "Run each bundle cells[*].claim_command after doctor and before submit."
+    ],
+    "remote CUDA runtime not probed": [
+      "Doctor must pass remote_supply_chain before submit.",
+      "Non-dry-run submit still performs exact-eval remote preflight."
+    ],
+    "source manifest not staged to remote Lightning workspace": [
+      "Run each bundle cells[*].stage_source_manifest_command_template after doctor."
+    ]
+  },
+  "schema": "l5_v2_tt5l_lightning_required_doctor_plan_v1",
+  "score_claim": false,
+  "source_route_packet": ".omx/research/l5_v2_tt5l_lightning_route_unblock_packet_20260517_codex.json",
+  "source_route_packet_commit": "614191c7b62c699dcc0af7394001088cc87c805c",
+  "source_route_packet_sha256": "e3392005ece3e00e679db43e5e5abf7f2eb00dd06bf4e39d6ac7aa27fd57403b",
+  "source_route_remaining_blockers": [
+    "Lightning credits or quota not checked",
+    "LIGHTNING_SDK_USER or LIGHTNING_ORG missing",
+    "LIGHTNING_SSH_TARGET missing",
+    "LIGHTNING_TEAMSPACE missing",
+    "active dispatch claims not created for non-dry-run cells",
+    "Lightning machine inventory not checked",
+    "source manifest not staged to remote Lightning workspace",
+    "remote CUDA runtime not probed"
+  ],
+  "tool": "tools/build_l5_v2_tt5l_lightning_doctor_plan.py"
+}
