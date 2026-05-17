@@ -27,6 +27,63 @@ last_refreshed_note: |
 > without unilaterally rewriting the body. Full regen deferred to next
 > session-close gate per the WAVE-9-CLOSURE pattern.
 
+## FRONTIER (scanner-derived from canonical state)
+
+> This section is the scanner-derived citation surface. Catalog #316 checks it
+> against `.omx/state/continual_learning_posterior.json`,
+> `.omx/state/active_lane_dispatch_claims.md`, and
+> `.omx/state/modal_call_id_ledger.jsonl`. Regenerate/check manually with:
+>
+>     .venv/bin/python tools/scan_best_anchor_per_axis.py
+>
+> This is a strict preflight citation gate, not score authority. Per CLAUDE.md
+> "Submission auth eval — BOTH CPU AND CUDA" non-negotiable, only 1:1
+> contest-compliant hardware (Linux x86_64 + recognized GPU class) qualifies.
+> macOS-CPU advisory / MPS rows are excluded.
+
+### Current best — last regenerated 2026-05-17
+
+| Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
+|---|---|---|---|---|
+| **`[contest-CPU GHA Linux x86_64]`** | **0.1920513169** | `6bae0201fb08` | linux_x86_64_cpu | `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515` |
+| **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
+
+### Top-5 per axis (sanity / promotion-candidate queue)
+
+**`[contest-CPU]`**:
+
+1. **0.1920513169** — `6bae0201fb08` — `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`
+2. 0.1920978868 — `8866ebb655e9` — pr101 fec sibling
+3. 0.1948697174 — `7d1e46331a04`
+4. 0.1982817145 — `14190c2aac3d`
+5. 0.1983654164 — `ac8b7681cde0`
+
+**`[contest-CUDA T4]`**:
+
+1. **0.2053300290** — `9cb989cef519` — `lane_pr106_format0d_latent_score_table_20260516_contest_cuda`
+2. 0.2063163866 — `56cdd10bdc43` — `lane_pr106_format0c_exact_radix_paired_20260515`
+3. 0.2063257086 — `5c9ef623a089` — `lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515`
+4. 0.2063310355 — `186a3d59f203`
+5. 0.2063330331 — `09bcd867c277`
+
+### Comparison vs public PRs
+
+- **PR101 GOLD** (`qpose14_qzs3_filmq9g_slsb1_r55`): 0.193 `[contest-CPU]` → **we beat by 0.00095 on CPU axis** with `6bae0201`.
+- **PR102 (bronze)**: 0.19538 `[contest-CPU]` / 0.22839 `[contest-CUDA]` → **we beat by 0.0033 CPU + 0.023 CUDA**.
+- **PR103 (silver)**: ~0.195 `[contest-CPU]` → **we beat by 0.0028 CPU**.
+
+### Technique inventory of frontier lanes
+
+- **fec6** (`pr101_frame_exploit_selector_fec6_fixed_huffman_k16`): PR101 GOLD decoder + frame-conditional K=16 codec selector with fixed-Huffman entropy coding.
+- **format0d** (`pr106_format0d_latent_score_table`): PR106 latent score-table grammar with exact-radix sidechannel + autohash runtime closure.
+- **format0c sister** (`pr106_format0c_exact_radix_paired`): same family, prior format version.
+- **format0b** (`pr106_hdm11_hlm3_magicless_packetir_format0b`): PR106 magicless PacketIR variant.
+
+### Strategic implications
+
+- The Top-5 CUDA bucket is dominated by PR106 `format0*` family (alien-tech routing per `feedback_a1d3dd050fc09dc54`) — a clear architectural cluster worth deeper investigation.
+- The CPU/CUDA bifurcation is real: best-CPU is fec6 (PR101 family) but best-CUDA is format0d (PR106 family). Different lanes win different axes. **A binding artifact that combines fec6's selector + PR106 format0d's score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every primitive we'd need for a dual-axis frontier sweep.**
+- A1 (`87ec7ca5f2f3`) at 0.19285 CPU is #3 — anchor for a separate (PR101-grammar minimalist) line.
 
 ## Executive summary
 

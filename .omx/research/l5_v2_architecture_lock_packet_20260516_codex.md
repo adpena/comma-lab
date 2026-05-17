@@ -39,15 +39,15 @@
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
 - artifact_valid: `True`
 - source_commit: `4b6ff1a6110fd78a0a79e6817a2d64369780f322`
-- source_relevant_paths_match: `True`
-- source_relevant_diff_paths: `[]`
-- source_custody_current_for_execution: `True`
+- source_relevant_paths_match: `False`
+- source_relevant_diff_paths: `['.omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json', 'src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py']`
+- source_custody_current_for_execution: `False`
 - cells: `10`/`10`
 - axes: `['contest_cpu', 'contest_cuda']`
-- all_cells_dry_run_ready: `True`
+- all_cells_dry_run_ready: `False`
 - all_cells_dry_run_structurally_valid: `True`
 - execution_ready: `False`
-- execution_blockers: `['l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_lightning_identity_and_workspace_preflight_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes']`
+- execution_blockers: `['l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_lightning_identity_and_workspace_preflight_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes', 'l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed']`
 - score_claim: `false`
 - promotion_eligible: `false`
 
@@ -153,17 +153,17 @@
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json`
 - artifact_valid: `True`
 - plan_id: `l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972`
-- work_units: `5`/`5`
+- work_units: `0`/`5`
 - required_variants: `['zero', 'random_lsb', 'shuffled', 'trained', 'ablated']`
-- ready_for_operator_dispatch: `True`
+- ready_for_operator_dispatch: `False`
 - ready_for_provider_dispatch: `false`
 - dispatch_attempted: `false`
 - blockers: `[]`
-- work_unit `zero`: ready=`True`, archive_sha256=`b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3`, archive_bytes=`34373`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102`
-- work_unit `random_lsb`: ready=`True`, archive_sha256=`ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`, archive_bytes=`38681`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190`
-- work_unit `shuffled`: ready=`True`, archive_sha256=`c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3`, archive_bytes=`43284`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4`
-- work_unit `trained`: ready=`True`, archive_sha256=`f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a`, archive_bytes=`43323`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779`
-- work_unit `ablated`: ready=`True`, archive_sha256=`ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39`, archive_bytes=`42419`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998`
+- work_unit `zero`: ready=`False`, archive_sha256=`b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3`, archive_bytes=`34373`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102`
+- work_unit `random_lsb`: ready=`False`, archive_sha256=`ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`, archive_bytes=`38681`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190`
+- work_unit `shuffled`: ready=`False`, archive_sha256=`c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3`, archive_bytes=`43284`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4`
+- work_unit `trained`: ready=`False`, archive_sha256=`f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a`, archive_bytes=`43323`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779`
+- work_unit `ablated`: ready=`False`, archive_sha256=`ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39`, archive_bytes=`42419`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998`
 - score_claim: `false`
 - promotion_eligible: `false`
 

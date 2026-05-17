@@ -3530,10 +3530,39 @@ def update_rudin_daubechies_from_dispatch_outcome(
 # uncertainty band gives an apples-to-apples confidence multiplier.
 
 
+def _resolve_canonical_frontier_threshold_cpu(default: float = 0.192) -> float:
+    """Return live best contest-CPU anchor from canonical state.
+
+    Per Catalog #316 PERMANENT-FIX-FRONTIER-SIGNAL-LOSS: the autopilot
+    derives the frontier threshold from canonical state
+    (.omx/state/continual_learning_posterior.json +
+    .omx/state/active_lane_dispatch_claims.md +
+    .omx/state/modal_call_id_ledger.jsonl) via ``tac.frontier_scan``,
+    not a hardcoded literal that silently underestimates when better
+    archives land. Falls back to ``default`` (0.192) if
+    ``tac.frontier_scan`` is unavailable or no qualifying contest-CPU
+    anchor exists.
+    """
+    try:
+        from pathlib import Path as _Path
+
+        from tac.frontier_scan import best_per_axis, collect_all_anchors
+
+        repo_root = _Path(__file__).resolve().parent.parent
+        anchors = collect_all_anchors(repo_root)
+        best = best_per_axis(anchors)
+        cpu = best.get("contest_cpu", [])
+        if cpu:
+            return cpu[0].score
+    except Exception:
+        pass
+    return default
+
+
 def _build_substrate_lattice_from_candidates(
     candidates: list[CandidateRow],
     *,
-    frontier_threshold_cpu: float = 0.192,
+    frontier_threshold_cpu: float | None = None,
     expected_sparsity: int = 5,
     use_daubechies_db4: bool = True,
     use_tree_structured_prior: bool = True,
@@ -3553,6 +3582,11 @@ def _build_substrate_lattice_from_candidates(
         classify_predicted_band,
     )
 
+    # Per Catalog #316: derive frontier from canonical state when caller
+    # passes None. Hardcoded 0.192 default is silent staleness when better
+    # archives land.
+    if frontier_threshold_cpu is None:
+        frontier_threshold_cpu = _resolve_canonical_frontier_threshold_cpu()
     lr = SubstrateLatticeRecovery(
         use_daubechies_db4=use_daubechies_db4,
         use_tree_structured_prior=use_tree_structured_prior,
@@ -3592,7 +3626,7 @@ def _build_substrate_lattice_from_candidates(
 def rerank_candidates_via_compressive_sensing_lattice(
     candidates: list[CandidateRow],
     *,
-    frontier_threshold_cpu: float = 0.192,
+    frontier_threshold_cpu: float | None = None,
     expected_sparsity: int = 5,
     anchors: list[tuple[str, float]] | None = None,
     use_daubechies_db4: bool = True,

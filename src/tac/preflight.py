@@ -2460,6 +2460,30 @@ def preflight_all(
         check_substrate_at_optimal_form_before_paid_dispatch(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #316 - REPORTS/LATEST.MD NOT STALE VS CANONICAL
+        # FRONTIER. Per CLAUDE.md "Apples-to-apples evidence discipline" +
+        # operator directive 2026-05-17 (PERMANENT-FIX-FRONTIER-SIGNAL-LOSS).
+        # Refuses repo state where reports/latest.md cites a CPU/CUDA score
+        # WORSE than the canonical best anchor in
+        # .omx/state/{continual_learning_posterior.json,
+        # modal_call_id_ledger.jsonl, active_lane_dispatch_claims.md}, OR
+        # where reports/latest.md has NO recognizable contest citation while
+        # canonical state has qualifying anchors. Bug class anchor: the
+        # 2026-05-15 0.19205 [contest-CPU] (archive 6bae0201) + 0.20533
+        # [contest-CUDA] (archive 9cb989cef519) sat in state for 2 days
+        # while reports/latest.md kept citing the stale PR101 GOLD 0.193
+        # baseline. Sister of Catalog #127 (per-call-site custody routing)
+        # + #205 (inflate device-fork) + #245 (Modal call_id ledger source) +
+        # #185 (META-meta CLAUDE.md drift). Same-line waiver
+        # `<!-- FRONTIER_DRIFT_OK:<rationale> -->` in reports/latest.md
+        # header (first 30 lines) opts out for paper-frozen snapshots.
+        # STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule"
+        # (live count: 0 at landing — reports/latest.md FRONTIER section
+        # backfilled in the same commit batch). Memory:
+        # feedback_permanent_fix_frontier_signal_loss_landed_20260517.md.
+        check_reports_latest_md_not_stale_vs_canonical_frontier(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -69584,6 +69608,206 @@ def check_no_subagent_files_touched_absorption_in_bare_commits(
             "subagent within the preceding 60 minutes. Per CLAUDE.md Catalog "
             "#314 COMMIT-SWAP-INVESTIGATION 2026-05-16 (sister of #117 / "
             "#157 / #174 / #216 / #230 / #289 / #302).\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #316 — check_reports_latest_md_not_stale_vs_canonical_frontier
+#
+# PERMANENT-FIX-FRONTIER-SIGNAL-LOSS self-protection 2026-05-17 per operator
+# directive of the same date: "Make sure this is fixed permanently because
+# these results are interesting and might influence PR strategy and also
+# staircase strategy or open parallel lanes".
+#
+# Bug class anchor: the 2026-05-15 anchor at 0.19205 [contest-CPU] (archive
+# 6bae0201...) and 0.20533 [contest-CUDA] (archive 9cb989cef519...) sat in
+# .omx/state/continual_learning_posterior.json and
+# .omx/state/active_lane_dispatch_claims.md for 2 days while reports/latest.md
+# + MEMORY.md index + conversation memory kept citing the stale PR101 GOLD
+# 0.193 baseline. Per CLAUDE.md "Apples-to-apples evidence discipline"
+# non-negotiable: every promotion / planning / dispatch decision must be
+# apples-to-apples against the actual best anchor in state, not against a
+# citation that drifted.
+#
+# The gate reads:
+#   - .omx/state/continual_learning_posterior.json
+#   - .omx/state/modal_call_id_ledger.jsonl
+#   - .omx/state/active_lane_dispatch_claims.md
+#   - experiments/results/**/contest_auth_eval*.json (+ Modal auth_eval JSON)
+# via tac.frontier_scan (canonical helper; Catalog #316 + autopilot + CLI
+# all import from the same module). It then refuses ANY repo state where:
+#
+#   (A) reports/latest.md CITES a CPU or CUDA score on the contest axis,
+#       AND the canonical state has a strictly BETTER score on that axis
+#       by > 1e-6, OR
+#   (B) reports/latest.md has NO recognizable contest-CPU / contest-CUDA
+#       citation at all (complete signal loss; worse than drift).
+#
+# Acceptance: same-line waiver
+#   <!-- FRONTIER_DRIFT_OK:<rationale> -->
+# on the file's header block (first 30 lines) opts out for the rare
+# deliberate stale-snapshot case (e.g. paper revision frozen against an
+# older frontier). Placeholder <rationale> / <reason> literals REJECTED so
+# the gate's docstring example cannot self-waive.
+#
+# Sister gates:
+#   - Catalog #127 — per-call-site custody routing (axis + hardware triple)
+#   - Catalog #205 — submission inflate device-fork (CPU/CUDA reproducibility)
+#   - Catalog #245 — Modal call_id ledger (the canonical state this gate reads)
+#   - Catalog #185 — META-meta drift detection (CLAUDE.md catalog text vs gate)
+#
+# STRICT-from-byte-one per CLAUDE.md "Bugs must be permanently fixed AND
+# self-protected against" + "Strict-flip atomicity rule" non-negotiables —
+# live count at landing: 0 (reports/latest.md backfilled with FRONTIER
+# section citing the canonical state in the same commit batch).
+# ============================================================================
+
+
+def _check_316_load_frontier_scan_payload(repo_root: Path):
+    """Lazy import to avoid hard tac.frontier_scan dep at preflight import time."""
+    try:
+        from tac.frontier_scan import build_frontier_scan_payload
+    except ImportError:
+        return None
+    try:
+        return build_frontier_scan_payload(repo_root)
+    except Exception:
+        return None
+
+
+def _check_316_waiver_present(repo_root: Path) -> bool:
+    """Header-window FRONTIER_DRIFT_OK waiver with non-placeholder rationale."""
+    path = repo_root / "reports/latest.md"
+    if not path.is_file():
+        return False
+    try:
+        header = path.read_text(encoding="utf-8").splitlines()[:30]
+    except OSError:
+        return False
+    waiver_pat = re.compile(
+        r"FRONTIER_DRIFT_OK\s*:\s*(.+?)(?:\s*-->|\s*$)",
+        re.IGNORECASE,
+    )
+    for line in header:
+        m = waiver_pat.search(line)
+        if not m:
+            continue
+        rationale = m.group(1).strip()
+        if not rationale:
+            continue
+        low = rationale.lower()
+        if low in ("<rationale>", "<reason>"):
+            continue
+        return True
+    return False
+
+
+def check_reports_latest_md_not_stale_vs_canonical_frontier(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Refuse reports/latest.md citations that lag the canonical anchor state.
+
+    Per Catalog #316 — anti-frontier-signal-loss self-protection. Reads the
+    canonical anchor surfaces via ``tac.frontier_scan.build_frontier_scan_payload``
+    and refuses if either:
+
+      (A) reports/latest.md cites a CPU or CUDA contest score that is worse
+          by > 1e-6 than the best qualifying anchor in canonical state
+          (frontier drift); OR
+      (B) reports/latest.md has NO recognizable contest-CPU / contest-CUDA
+          citation while canonical state has at least one qualifying anchor
+          on each axis (complete signal loss; even worse than drift).
+
+    Same-line waiver ``<!-- FRONTIER_DRIFT_OK:<rationale> -->`` in the
+    file's first-30-line header opts out for paper-frozen snapshots etc.;
+    placeholder rationales rejected.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    payload = _check_316_load_frontier_scan_payload(root)
+    if payload is None:
+        # tac.frontier_scan unavailable or scan failed; fail-OPEN by design
+        # (sister Catalog #279 fail-closed pattern only when the gate's
+        # producer is the load-bearing surface; here the gate is a tripwire
+        # over an external citation surface so unreachable canonical state
+        # is a separate problem covered by Catalog #245 ledger / #131
+        # shared-state writes).
+        if verbose:
+            print(
+                "  [check_reports_latest_md_not_stale_vs_canonical_frontier] "
+                "SKIP (tac.frontier_scan unavailable)"
+            )
+        return violations
+
+    if _check_316_waiver_present(root):
+        if verbose:
+            print(
+                "  [check_reports_latest_md_not_stale_vs_canonical_frontier] "
+                "OK (FRONTIER_DRIFT_OK waiver present in header)"
+            )
+        return violations
+
+    # Surface drift rows first (the canonical fix-path).
+    drift = payload.get("drift") or []
+    for row in drift:
+        if not isinstance(row, dict):
+            continue
+        axis = row.get("axis")
+        cited = row.get("cited_score")
+        best = row.get("best_score")
+        delta = row.get("delta_better")
+        best_anchor = row.get("best_anchor") or {}
+        sha = best_anchor.get("archive_sha256") or "<unknown>"
+        violations.append(
+            f"reports/latest.md cites {axis}={cited:.6f} but canonical state "
+            f"has a better anchor at {best:.6f} (Δ={delta:+.6f}; "
+            f"archive sha={sha[:12]}). Per CLAUDE.md \"Apples-to-apples "
+            "evidence discipline\" + Catalog #316: regenerate the FRONTIER "
+            "section via `.venv/bin/python tools/scan_best_anchor_per_axis.py` "
+            "OR add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` to the header."
+        )
+
+    # Surface complete-signal-loss case (no citations at all on either axis).
+    if not drift:
+        cited = payload.get("reports_latest_md_cited") or {}
+        best_per_axis = payload.get("best_per_axis") or {}
+        if best_per_axis and not cited:
+            qualifying_axes = sorted(best_per_axis.keys())
+            violations.append(
+                "reports/latest.md has NO recognizable [contest-CPU] / "
+                "[contest-CUDA] score citation while canonical state has "
+                f"qualifying anchors on axes {qualifying_axes!r}. Per "
+                "Catalog #316: this is complete frontier signal loss. "
+                "Regenerate the FRONTIER section via "
+                "`.venv/bin/python tools/scan_best_anchor_per_axis.py` and "
+                "paste the best-per-axis citations into reports/latest.md, "
+                "OR add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` to the "
+                "header for paper-frozen snapshots."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_reports_latest_md_not_stale_vs_canonical_frontier] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_reports_latest_md_not_stale_vs_canonical_frontier] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_reports_latest_md_not_stale_vs_canonical_frontier "
+            f"found {len(violations)} frontier-drift / signal-loss "
+            "issue(s) per Catalog #316 PERMANENT-FIX-FRONTIER-SIGNAL-LOSS "
+            "2026-05-17. Regenerate via tools/scan_best_anchor_per_axis.py "
+            "or add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` waiver.\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations

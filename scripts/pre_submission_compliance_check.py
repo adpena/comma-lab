@@ -2054,6 +2054,96 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         sections["public_hygiene"] = hygiene_record
         checks.extend(hygiene_checks)
 
+    # Catalog #316 wire-in — frontier-regression block. Per the operator
+    # 2026-05-17 directive: submission + final conformance review must
+    # apples-to-apples the candidate against the canonical best-anchor
+    # state so a regression cannot ship by mistake. Compares the
+    # submission's chosen-axis score (--submission-score) against
+    # tac.frontier_scan.best_per_axis() and refuses (error severity in
+    # --contest-final) if the candidate is strictly worse than the
+    # current best on the same axis. Surfaces the canonical citation in
+    # the report so reviewers see at-a-glance what frontier they're
+    # comparing against. Fail-OPEN if tac.frontier_scan is unavailable
+    # (sister Catalog #279 fail-open pattern — the gate is a tripwire,
+    # not the load-bearing custody surface).
+    try:
+        from tac.frontier_scan import best_per_axis, collect_all_anchors
+
+        all_anchors = collect_all_anchors(REPO_ROOT)
+        best = best_per_axis(all_anchors)
+        cpu_best = best.get("contest_cpu", [])
+        cuda_best = best.get("contest_cuda", [])
+        frontier_section: dict[str, Any] = {
+            "schema": "pact_frontier_check_v1",
+            "canonical_best": {
+                "contest_cpu": {
+                    "score": cpu_best[0].score if cpu_best else None,
+                    "archive_sha256": cpu_best[0].archive_sha256 if cpu_best else None,
+                    "hardware_substrate": (
+                        cpu_best[0].hardware_substrate if cpu_best else None
+                    ),
+                    "lane_id": (cpu_best[0].extra or {}).get("lane_id") if cpu_best else None,
+                },
+                "contest_cuda": {
+                    "score": cuda_best[0].score if cuda_best else None,
+                    "archive_sha256": cuda_best[0].archive_sha256 if cuda_best else None,
+                    "hardware_substrate": (
+                        cuda_best[0].hardware_substrate if cuda_best else None
+                    ),
+                    "lane_id": (cuda_best[0].extra or {}).get("lane_id") if cuda_best else None,
+                },
+            },
+            "candidate": {
+                "axis": args.submission_score_axis,
+                "score": args.submission_score,
+            },
+        }
+        sections["frontier_baseline"] = frontier_section
+
+        candidate_axis = (args.submission_score_axis or "").lower()
+        cand = args.submission_score
+        best_list = best.get(candidate_axis) or best.get(
+            "contest_cpu" if candidate_axis == "cpu" else "contest_cuda"
+            if candidate_axis == "cuda"
+            else "",
+        )
+        if cand is not None and best_list:
+            best_score = best_list[0].score
+            best_sha = best_list[0].archive_sha256
+            candidate_sha = (archive.get("sha256") or "").lower()
+            same_archive = candidate_sha == best_sha.lower()
+            # Allow ties / exact-same-archive (re-submission of the
+            # current frontier). Refuse strictly-worse on different bytes.
+            no_regression = same_archive or (cand <= best_score + 1e-6)
+            _add(
+                checks,
+                "frontier_no_regression_on_submitted_axis",
+                no_regression,
+                (
+                    f"axis={candidate_axis} candidate={cand:.6f} "
+                    f"canonical_best={best_score:.6f} "
+                    f"canonical_archive={best_sha[:12]} "
+                    f"same_archive={same_archive}"
+                ),
+                severity="error" if args.contest_final else "warning",
+            )
+    except ImportError:
+        _add(
+            checks,
+            "frontier_scan_helper_available",
+            False,
+            "tac.frontier_scan not importable; frontier-regression check SKIPPED",
+            severity="warning",
+        )
+    except Exception as exc:  # noqa: BLE001
+        _add(
+            checks,
+            "frontier_scan_helper_available",
+            False,
+            f"tac.frontier_scan errored: {exc!r}; frontier-regression check SKIPPED",
+            severity="warning",
+        )
+
     passed = all(check.passed or check.severity != "error" for check in checks)
     return {
         "schema": SCHEMA,
