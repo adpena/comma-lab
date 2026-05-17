@@ -11,8 +11,7 @@ STC v2 FIX's preflight.py + CLAUDE.md + 3 driver scripts BEFORE STC v2
 FIX's canonical serializer call ran).
 
 The gate scans last N commits and flags any commit NOT in the serializer
-log AND not carrying ``# ABSORPTION_PATTERN_OK:<rationale>`` or
-``# NO_SERIALIZER_OK:<rationale>`` waiver whose file list intersects an
+log AND not carrying ``# ABSORPTION_PATTERN_OK:<rationale>`` waiver whose file list intersects an
 in-flight subagent's declared ``files_touched`` checkpoint within the
 preceding 60-minute window (excluding common-shared exempt files).
 """
@@ -174,9 +173,9 @@ def test_message_has_waiver_accepts_absorption_token() -> None:
     assert _check_314_message_has_waiver(msg)
 
 
-def test_message_has_waiver_accepts_no_serializer_token() -> None:
+def test_message_has_waiver_rejects_no_serializer_token() -> None:
     msg = "fix: something\n\n# NO_SERIALIZER_OK: operator manual housekeeping"
-    assert _check_314_message_has_waiver(msg)
+    assert not _check_314_message_has_waiver(msg)
 
 
 def test_message_has_waiver_rejects_placeholder_rationale() -> None:
@@ -208,7 +207,7 @@ def test_exempt_files_includes_common_shared_state() -> None:
 
 def test_waiver_tokens_present() -> None:
     assert "# ABSORPTION_PATTERN_OK:" in _CHECK_314_WAIVER_TOKENS
-    assert "# NO_SERIALIZER_OK:" in _CHECK_314_WAIVER_TOKENS
+    assert "# NO_SERIALIZER_OK:" not in _CHECK_314_WAIVER_TOKENS
 
 
 # ---------------------------------------------------------------------------
@@ -422,8 +421,8 @@ def test_gate_respects_absorption_pattern_waiver(tmp_path: Path) -> None:
     assert violations == []
 
 
-def test_gate_respects_no_serializer_ok_waiver(tmp_path: Path) -> None:
-    """Sister Catalog #117 waiver also exempts from #314."""
+def test_gate_rejects_no_serializer_ok_waiver(tmp_path: Path) -> None:
+    """Sister Catalog #117 waiver does not prove absorption ownership."""
     _git_init(tmp_path)
     _write_subagent_checkpoint(
         tmp_path,
@@ -441,7 +440,7 @@ def test_gate_respects_no_serializer_ok_waiver(tmp_path: Path) -> None:
     violations = check_no_subagent_files_touched_absorption_in_bare_commits(
         repo_root=tmp_path, strict=False, verbose=False, last_n_commits=10,
     )
-    assert violations == []
+    assert len(violations) == 1
 
 
 def test_gate_rejects_waiver_with_placeholder_rationale(tmp_path: Path) -> None:

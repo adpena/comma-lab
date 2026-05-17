@@ -71,7 +71,7 @@ Full canonical row in CLAUDE.md documenting bug class anchor, root cause, hypoth
 `src/tac/tests/test_check_314_subagent_files_touched_absorption_in_bare_commits.py` covers:
 - Helper unit tests (ISO-UTC parser; waiver token detection with placeholder rejection; exempt-files set; waiver-tokens tuple).
 - Loader unit tests (serializer hash loader; malformed-JSON tolerance; missing-file fail-OPEN; in-flight loader with exempt filtering; space-separated legacy format; multiple rows per subagent).
-- End-to-end (clean repo; canonical absorption pattern detected; serializer-log commit skipped; absorption-pattern waiver accepted; no-serializer waiver accepted; placeholder waiver rejected; commits outside 60-min window skipped; commits before checkpoint skipped; no-file-overlap skipped; exempt-files-overlap skipped; dedup per commit-subagent pair; multi-subagent collisions counted separately).
+- End-to-end (clean repo; canonical absorption pattern detected; serializer-log commit skipped; absorption-pattern waiver accepted; no-serializer waiver rejected; placeholder waiver rejected; commits outside 60-min window skipped; commits before checkpoint skipped; no-file-overlap skipped; exempt-files-overlap skipped; dedup per commit-subagent pair; multi-subagent collisions counted separately).
 - Strict-mode (raises with Catalog #314 message / silent on clean).
 - Orchestrator wire-in warn-only regression guard + Catalog #185 sister-gate-callable regression guard.
 - Anchor-specific live-repo regression guard pinning today's STC v2 + probe_outcomes + L5 + Z6 absorption pattern empirical effectiveness at landing.
@@ -87,7 +87,7 @@ All 38 tests pass.
 
 ## Live count + sister-gate cleanliness
 
-- Catalog #314 (NEW): **9 violations** at landing (warn-only). Strict-flip pending operator-routed audit + waiver backfill OR an absorption-clean window.
+- Catalog #314 (NEW): **9 violations** at initial landing under the broader checkpoint-status scan; **8 violations** after follow-up review tightened scope to status=in_progress only (warn-only). Strict-flip pending operator-routed audit + waiver backfill OR an absorption-clean window.
 - Catalog #117 (existing sister): 12 violations at landing (warn-only; this gate's coverage is bigger than #314 since #117 catches ALL bare commits, not just absorbing ones).
 - Catalog #118 (no duplicate numbers): **0 violations**
 - Catalog #159 (catalog text matches preflight strict value): **0 violations**

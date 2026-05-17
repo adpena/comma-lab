@@ -2515,8 +2515,9 @@ def preflight_all(
         # #216 / #289 (commit-swap protection family) + #230 (bulk-
         # rewrite ownership map) + #302 (sister subagent scope overlap
         # via checkpoint JSONL). Initial wire-in is WARN-ONLY per
-        # "Strict-flip atomicity rule" — live count at landing: 1
-        # (today's `89d89c27e` absorption is the canonical anchor).
+        # "Strict-flip atomicity rule" — live count after review tightening: 8
+        # absorption-signature violations; initial broader landing count was 9
+        # across 6 unique bare commits.
         # Strict-flip pending operator-routed audit + waiver backfill
         # on the absorption-anchor commits. Memory:
         # feedback_commit_swap_absorption_pattern_investigation_landed_20260516.md.
@@ -68528,7 +68529,7 @@ def check_dispatch_target_has_no_predecessor_adjudicated_outcome(
 #
 # This gate closes the absorption-pattern surface as a dedicated detector
 # scoped to the empirical fingerprint: a bare commit (not in serializer log,
-# no NO_SERIALIZER_OK waiver) containing files declared as `files_touched`
+# no absorption-specific waiver) containing files declared as `files_touched`
 # by an in-flight subagent (status=in_progress) within a ~60-minute window
 # preceding the commit timestamp.
 #
@@ -68554,8 +68555,8 @@ def check_dispatch_target_has_no_predecessor_adjudicated_outcome(
 # bare-commit-absorbs-in-flight-files (#314).
 #
 # Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
-# — live count at landing: 1 (today's `89d89c27e` absorption of STC v2's
-# preflight.py + CLAUDE.md + 3 driver scripts is the canonical anchor).
+# — live count after review tightening: 8 absorption-signature
+# violations; initial broader landing count was 9 across 6 unique bare commits.
 # Strict-flip pending operator-routed audit + waiver backfill on the
 # absorption-anchor commits.
 # ============================================================================
@@ -68581,10 +68582,7 @@ _CHECK_314_EXEMPT_FILES = frozenset({
 })
 
 # Waiver tokens accepted on the commit message body.
-_CHECK_314_WAIVER_TOKENS = (
-    "# ABSORPTION_PATTERN_OK:",
-    "# NO_SERIALIZER_OK:",  # Sister waiver from Catalog #117 also accepted
-)
+_CHECK_314_WAIVER_TOKENS = ("# ABSORPTION_PATTERN_OK:",)
 _CHECK_314_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
 
 # Window: how far BEFORE the commit timestamp to scan for in-flight subagent
@@ -68669,8 +68667,8 @@ def _check_314_load_in_flight_subagent_files(repo_root):
     bare commit time, not the most-recent overall).
 
     A row is included if it has a parseable `written_at_utc`, a non-empty
-    `files_touched` list (after exempt-file filtering), and status in
-    {in_progress, complete, blocked}.
+    `files_touched` list (after exempt-file filtering), and
+    status=in_progress.
     """
     out = []
     jsonl_path = repo_root / ".omx" / "state" / "subagent_progress.jsonl"
@@ -68695,7 +68693,7 @@ def _check_314_load_in_flight_subagent_files(repo_root):
                 if ts is None:
                     continue
                 status = row.get("status")
-                if status not in ("in_progress", "complete", "blocked"):
+                if status != "in_progress":
                     continue
                 files_touched = row.get("files_touched") or []
                 if not isinstance(files_touched, list):
@@ -68740,13 +68738,12 @@ def check_no_subagent_files_touched_absorption_in_bare_commits(
     negotiable + 2 empirical anchors today.
 
     Scans the last ``last_n_commits`` commits. For each commit NOT in the
-    serializer log AND not carrying ``# ABSORPTION_PATTERN_OK:<rationale>``
-    or ``# NO_SERIALIZER_OK:<rationale>`` waiver, parses the commit's
+    serializer log AND not carrying ``# ABSORPTION_PATTERN_OK:<rationale>`` waiver, parses the commit's
     timestamp + file list and intersects with the `files_touched` of every
     subagent_progress.jsonl row whose ``written_at_utc`` falls within
-    ``[commit_time - 60min, commit_time]`` AND whose status is in_progress
-    / complete / blocked. Any overlap (excluding common-shared exempt
-    files) is flagged as an absorption-pattern signature.
+    ``[commit_time - 60min, commit_time]`` AND whose status is
+    in_progress. Any overlap (excluding common-shared exempt files) is
+    flagged as an absorption-pattern signature.
 
     Bug class: bare ``git commit`` via the operator's ``/commit`` slash
     command (commit-commands plugin) packages whatever is in the shared
@@ -68909,9 +68906,7 @@ def check_no_subagent_files_touched_absorption_in_bare_commits(
                 f"`tools/subagent_commit_serializer.py` with "
                 f"--expected-content-sha256 per Catalog #157, (b) add "
                 f"`# ABSORPTION_PATTERN_OK:<rationale>` waiver to the "
-                f"commit body (e.g. via `git notes append`), OR (c) add "
-                f"`# NO_SERIALIZER_OK:<rationale>` waiver from sister "
-                f"Catalog #117."
+                f"commit body (e.g. via `git notes append`)."
             )
 
     if verbose:

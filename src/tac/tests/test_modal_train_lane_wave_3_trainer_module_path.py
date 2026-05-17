@@ -149,6 +149,16 @@ def test_modal_train_lane_main_derives_and_spawns_with_payload() -> None:
     spawn_idx = main_src.index("fn.spawn(")
     spawn_block = main_src[spawn_idx : spawn_idx + 600]
     assert "trainer_extra_mount_payload" in spawn_block
+    assert "fail_on_import_error=True" in main_src
+
+
+def test_modal_train_lane_main_fails_closed_for_missing_substrate_trainer() -> None:
+    """Substrate-named lane scripts imply canonical trainer metadata."""
+    text = SOURCE.read_text()
+    main_src = text[text.index("@app.local_entrypoint()"):]
+    assert "implies canonical" in main_src
+    assert "train_substrate_" in main_src
+    assert "Refusing Modal dispatch" in main_src
 
 
 def test_modal_train_lane_main_warns_for_non_substrate_lane() -> None:
@@ -383,6 +393,24 @@ def test_collect_trainer_extra_mount_payload_handles_import_error_with_warn(
     captured = capsys.readouterr()
     assert "WARN" in captured.err
     assert "could not be imported" in captured.err
+
+
+def test_collect_trainer_extra_mount_payload_can_fail_closed_on_import_error(
+    modal_train_lane_module, tmp_path
+) -> None:
+    """Substrate dispatch calls the helper with fail_on_import_error=True."""
+    fake_repo = tmp_path / "fake_repo_broken_strict"
+    fake_repo.mkdir()
+    (fake_repo / "experiments").mkdir()
+    trainer_path = fake_repo / "experiments" / "train_substrate_broken.py"
+    trainer_path.write_text("raise RuntimeError('trainer broken at import')\n")
+
+    with pytest.raises(RuntimeError):
+        modal_train_lane_module._collect_trainer_extra_mount_payload(
+            trainer_path,
+            fake_repo,
+            fail_on_import_error=True,
+        )
 
 
 # ---------------------------------------------------------------------------

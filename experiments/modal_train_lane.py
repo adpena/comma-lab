@@ -190,6 +190,15 @@ training_image = build_training_image(
 )
 
 
+def _substrate_id_from_lane_script(lane_script: str) -> str | None:
+    """Return substrate id for canonical substrate lane scripts."""
+    script_name = Path(lane_script).name
+    prefix = "remote_lane_substrate_"
+    if not script_name.startswith(prefix) or not script_name.endswith(".sh"):
+        return None
+    return script_name[len(prefix):-len(".sh")]
+
+
 def _derive_trainer_module_path(lane_script: str, repo_root: Path) -> Path | None:
     """Derive canonical trainer module path from lane_script.
 
@@ -204,12 +213,9 @@ def _derive_trainer_module_path(lane_script: str, repo_root: Path) -> Path | Non
     module at module-load time, but it CAN derive one at dispatch time from
     the lane_script.
     """
-    script_name = Path(lane_script).name
-    # Canonical substrate driver naming convention
-    prefix = "remote_lane_substrate_"
-    if not script_name.startswith(prefix) or not script_name.endswith(".sh"):
+    substrate_id = _substrate_id_from_lane_script(lane_script)
+    if substrate_id is None:
         return None
-    substrate_id = script_name[len(prefix):-len(".sh")]
     candidate = repo_root / "experiments" / f"train_substrate_{substrate_id}.py"
     if not candidate.is_file():
         return None
@@ -219,6 +225,8 @@ def _derive_trainer_module_path(lane_script: str, repo_root: Path) -> Path | Non
 def _collect_trainer_extra_mount_payload(
     trainer_module_path: Path | None,
     repo_root: Path,
+    *,
+    fail_on_import_error: bool = False,
 ) -> dict:
     """Read trainer-declared TIER_1_EXTRA_MOUNT_PATHS (+ MODAL_EXTRA_MOUNT_PATHS)
     into a ``{rel_path: bytes}`` dict suitable for serialization to the Modal
@@ -227,7 +235,7 @@ def _collect_trainer_extra_mount_payload(
     Returns an empty dict if:
     - ``trainer_module_path`` is None (legacy dispatchers / unmapped lane scripts)
     - the trainer module has no extra-mount declarations
-    - the trainer module cannot be imported (logged + skipped, not raised)
+    - the trainer module cannot be imported AND ``fail_on_import_error=False``
 
     Skips paths under STRUCTURAL_MINIMUM_DIRS (already mounted) so we do not
     double-mount common files. Only reads files under
@@ -287,6 +295,11 @@ def _collect_trainer_extra_mount_payload(
             trainer_module_path
         )
     except Exception as exc:
+        if fail_on_import_error:
+            raise RuntimeError(
+                "trainer extra-mount discovery failed for "
+                f"{trainer_module_path}: {type(exc).__name__}: {exc}"
+            ) from exc
         print(
             f"[modal-train-lane][WAVE-3] WARN: trainer module {trainer_module_path} "
             f"could not be imported for extra-mount discovery: {type(exc).__name__}: {exc}. "
@@ -1561,17 +1574,40 @@ def main(
     # after the structural copy. This makes trainer-side declarations
     # STRUCTURALLY EFFECTIVE for the generic Modal dispatcher (previously
     # `trainer_module_path=None` made them inert).
+    substrate_id_from_lane = _substrate_id_from_lane_script(lane_script)
     trainer_module_path_resolved = _derive_trainer_module_path(
         lane_script, repo_root
     )
+    if substrate_id_from_lane is not None and trainer_module_path_resolved is None:
+        print(
+            f"FATAL: substrate lane_script {lane_script!r} implies canonical "
+            "trainer module "
+            f"experiments/train_substrate_{substrate_id_from_lane}.py, but "
+            "that file does not exist. Refusing Modal dispatch because "
+            "trainer-side TIER_1_EXTRA_MOUNT_PATHS / required_input_file "
+            "metadata cannot be consumed.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     if trainer_module_path_resolved is not None:
         print(
             f"[modal-train-lane][WAVE-3] derived trainer module from "
             f"lane_script: {trainer_module_path_resolved.relative_to(repo_root)}"
         )
-        trainer_extra_mount_payload = _collect_trainer_extra_mount_payload(
-            trainer_module_path_resolved, repo_root
-        )
+        try:
+            trainer_extra_mount_payload = _collect_trainer_extra_mount_payload(
+                trainer_module_path_resolved,
+                repo_root,
+                fail_on_import_error=True,
+            )
+        except RuntimeError as exc:
+            print(
+                f"FATAL: {exc}. Refusing Modal dispatch because "
+                "substrate-named lane scripts must consume trainer-side "
+                "TIER_1_EXTRA_MOUNT_PATHS / required_input_file metadata.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         if trainer_extra_mount_payload:
             print(
                 f"[modal-train-lane][WAVE-3] staging "
