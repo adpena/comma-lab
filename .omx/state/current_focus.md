@@ -58,6 +58,12 @@ retiring the L5/L5-v2 staircase:
    `.omx/research/rule6_z3v2_direct_residual_unwind_20260517_codex.md`.
 2. **Rule #6 A1 bolt-on #2**: PR101-style per-tensor byte map plus
    Brotli/LZMA/Huffman sidecar on A1 weights/latents.
+   Current A1 byte-escape profiler is saturated under the existing runtime:
+   raw-LZMA latent sweep best equals source at `15387` bytes, current
+   607-byte sidecar has only a 4-byte oracle entropy gap but no smaller
+   runtime-supported representation for current semantics, and no candidate
+   archive was emitted. Ledger:
+   `.omx/research/a1_rule6_byte_escape_profile_20260517_codex.md`.
 3. **Rule #6 A1 bolt-on #3**: VQ-codebook on A1 per-pair latent.
 4. **TT5L side-info effect curve**: run Lightning doctor, then claim and
    execute the 10 paired CPU/CUDA cells only if doctor and source-manifest

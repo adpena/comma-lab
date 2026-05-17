@@ -45,6 +45,16 @@ architecture-lock/TT5L custody artifacts.
 - Lane class: frontier-breaking byte-coding bolt-on.
 - Required work: per-tensor byte map, Brotli/LZMA/Huffman tournament, manifest
   of consumed byte sections, monolithic archive grammar, no-op detector.
+- 2026-05-17 byte-escape profiler:
+  `.omx/research/a1_rule6_byte_escape_profile_20260517_codex.md` classifies
+  the current A1 runtime grammar as `saturated_byte_only_current_runtime`.
+  Evidence: A1 latent raw-LZMA sweep has best `15387` bytes, equal to source;
+  A1's 607-byte Huffman-enum sidecar has a 4-byte oracle entropy gap but the
+  600-byte runtime format cannot represent the current choices (`max=445`),
+  so the usable supported sidecar floor remains 607 bytes. This is not a
+  method kill: it blocks retreading existing-grammar byte-only arithmetic and
+  redirects this lane to a new consumed runtime grammar or component-changing
+  byte map.
 - No-ignore scan constraint: do not retread generic zero-order arithmetic
   coding on HNeRV-like latent bytes. The ignored auto-memory snapshot preserves
   a concrete warning that Brotli can beat zero-order entropy via LZ77/context;
