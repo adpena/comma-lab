@@ -88,6 +88,22 @@ note into current evidence:
 change the method status, score claim, promotion eligibility, or exact-dispatch
 readiness.
 
+2026-05-17 validator follow-up: the L5 v2 alternate-provider status now treats
+that refreshed source-manifest probe as required evidence. A Lightning alternate
+plan is not artifact-valid unless `source_manifest_probe` is tied to the same
+current archive path and runtime path, has an `observed_at_utc`, and records the
+`rerun_after_archive_refresh_against_current_archive_and_runtime` basis. This
+prevents stale source-manifest probes from surviving as valid alternate-provider
+evidence after TT5L archive/runtime refreshes.
+
+Verification receipt:
+
+- focused regressions:
+  `.venv/bin/pytest -q src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_modal_blocker_surfaces_lightning_alternate_plan src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_lightning_alternate_plan_rejects_stale_source_manifest_probe`
+- result: `2 passed`
+- live status:
+  `alt_valid=True`, `source_manifest_probe_current=True`, `execution_ready=False`
+
 The paired Lightning alternate-provider plan has also been refreshed onto the
 same current archive/runtime metadata. It is artifact-valid, but dispatch is
 still blocked on real Lightning environment prerequisites:

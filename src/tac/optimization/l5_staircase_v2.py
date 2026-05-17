@@ -3465,8 +3465,10 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
     )
     alternate_provider_plan_status = _tt5l_materialized_lightning_alt_provider_plan_status(
         repo_root=repo_root,
+        archive_path=archive_path,
         archive_sha256=archive_sha256,
         pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
+        runtime_path=submission_dir,
     )
 
     suppress_execute_template = provider_blocker_status["active"] is True or (
@@ -3510,8 +3512,10 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
 def _tt5l_materialized_lightning_alt_provider_plan_status(
     *,
     repo_root: Path,
+    archive_path: str,
     archive_sha256: str,
     pair_group_id: str,
+    runtime_path: str,
 ) -> dict[str, Any]:
     artifact_path = (
         repo_root / TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH
@@ -3528,6 +3532,7 @@ def _tt5l_materialized_lightning_alt_provider_plan_status(
             "execution_ready": False,
             "local_supply_chain_ok": False,
             "exact_eval_dry_run_ok": False,
+            "source_manifest_probe_current": False,
             "command_sha256": "",
             "job_name": "",
             "execution_blockers": [],
@@ -3577,6 +3582,42 @@ def _tt5l_materialized_lightning_alt_provider_plan_status(
         validation_blockers.append(
             "l5_v2_tt5l_lightning_alt_provider_exact_dispatch_not_false"
         )
+    source_manifest_probe = payload.get("source_manifest_probe") if payload else None
+    source_manifest_probe_current = False
+    if payload and not isinstance(source_manifest_probe, Mapping):
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_alt_provider_source_manifest_probe_missing"
+        )
+    elif isinstance(source_manifest_probe, Mapping):
+        source_manifest_command = str(source_manifest_probe.get("command") or "")
+        source_manifest_status_basis = str(
+            source_manifest_probe.get("status_basis") or ""
+        )
+        if not str(source_manifest_probe.get("observed_at_utc") or "").strip():
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_alt_provider_source_manifest_probe_observed_at_missing"
+            )
+        if f"--artifact {archive_path}" not in source_manifest_command:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_alt_provider_source_manifest_archive_mismatch"
+            )
+        if f"--artifact {runtime_path}" not in source_manifest_command:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_alt_provider_source_manifest_runtime_mismatch"
+            )
+        if (
+            "rerun_after_archive_refresh_against_current_archive_and_runtime"
+            not in source_manifest_status_basis
+        ):
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_alt_provider_source_manifest_probe_stale"
+            )
+        source_manifest_probe_current = not any(
+            blocker.startswith(
+                "l5_v2_tt5l_lightning_alt_provider_source_manifest_"
+            )
+            for blocker in validation_blockers
+        )
 
     doctor = payload.get("local_lightning_doctor") if payload else None
     local_supply_chain_ok = (
@@ -3625,6 +3666,7 @@ def _tt5l_materialized_lightning_alt_provider_plan_status(
         "execution_ready": execution_ready,
         "local_supply_chain_ok": local_supply_chain_ok,
         "exact_eval_dry_run_ok": exact_eval_dry_run_ok,
+        "source_manifest_probe_current": source_manifest_probe_current,
         "command_sha256": command_sha256,
         "job_name": job_name,
         "execution_blockers": list(dict.fromkeys(execution_blockers)),
