@@ -32040,8 +32040,8 @@
       "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "WAVE-1 apparatus hardening: Catalog #305 strict-flipped + Catalog #152 extended with modal-mounted-input discipline (5 new helpers + 1 new sub-scan loop + per-flag check augmentation + 29 dedicated tests + 3 sister trainer fixes for STC v2 / a1_plus_wavelet_residual / a1_plus_lapose)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32082,5 +32082,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T01:15:58Z"
+  "updated_at": "2026-05-17T01:16:05Z"
 }
