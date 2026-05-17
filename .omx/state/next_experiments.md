@@ -93,6 +93,24 @@ architecture-lock/TT5L custody artifacts.
 - Dispatch policy: local byte/provenance proof first; paired CPU/CUDA exact
   only after a byte-different packet consumes changed bytes at inflate time.
 
+### 2a. Master-Gradient Operator Response Rewrite
+
+- Lane class: apparatus fix for CPU-frontier/Rule #6 search, not a score claim.
+- 2026-05-17 adversarial review:
+  `.omx/research/master_gradient_raw_byte_finite_difference_adversarial_review_20260517_codex.md`.
+  Raw archive-byte or bit finite differences are blocked for ZIP plus
+  entropy-coded packets because the mutation is usually a container/CRC/header
+  or compressed-stream corruption, not a local score derivative.
+- Required work: rewrite any `(N_archive_bytes, 3)` master-gradient campaign as
+  an `(N_valid_mutation_operators, 3)` response matrix. Each row must declare a
+  grammar section or mutation operator, rebuild ZIP metadata/CRC, prove inflate
+  success, carry an axis label, and keep `score_claim=false` until exact result
+  review.
+- Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
+  operator-row manifest may proceed after
+  `tools/audit_master_gradient_feasibility.py` reports
+  `operator_response_probe_ready`.
+
 ### 3. Rule #6 A1 VQ-Codebook Bolt-On
 
 - Lane class: frontier-breaking discrete latent bolt-on.

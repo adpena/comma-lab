@@ -113,6 +113,12 @@ retiring the L5/L5-v2 staircase:
   is untracked partner WIP and was left unmodified. Its L5 row inherits the
   stale `-0.008` to `-0.015` rate-only expectation; current routing should use
   the L5 rate-only bound review instead.
+- Master-gradient raw archive-byte finite differences are now blocked as an
+  invalid probe grain for ZIP/entropy-coded packets. Current routing should
+  use `.omx/research/master_gradient_raw_byte_finite_difference_adversarial_review_20260517_codex.md`
+  and `tac.master_gradient_feasibility`: replace `(N_archive_bytes, 3)` bit/byte
+  flip probes with `(N_valid_mutation_operators, 3)` packet-valid score-response
+  rows that rebuild ZIP metadata/CRC and prove inflate success.
 - Reviewed disposition:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - FEC6 CPU frontier submission-surface adversarial review:
