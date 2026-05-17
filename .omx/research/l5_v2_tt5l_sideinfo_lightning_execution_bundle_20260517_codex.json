@@ -453,7 +453,7 @@
       "variant": "ablated"
     }
   ],
-  "current_head_commit": "d53ad33ed3cc34b8fea5ff0817e45743a692f593",
+  "current_head_commit": "6b2577be74a17a677dcfe597564c31225910d0e3",
   "dispatch_attempted": false,
   "dry_run_default": true,
   "dykstra_feasibility_status": {
@@ -478,16 +478,59 @@
     "refresh_l5_v2_architecture_lock_packet"
   ],
   "expected_cell_count": 10,
-  "generated_at_utc": "2026-05-17T12:25:07Z",
+  "generated_at_utc": "2026-05-17T12:56:54Z",
   "global_blockers": [
     "non_dry_run_submit_requires_lightning_identity_and_workspace",
     "non_dry_run_submit_requires_remote_preflight_ssh_target",
     "non_dry_run_submit_requires_staged_source_manifest",
     "non_dry_run_submit_requires_active_lane_claim_per_cell",
-    "score_claim_forbidden_until_effect_curve_artifact_passes"
+    "score_claim_forbidden_until_effect_curve_artifact_passes",
+    "sideinfo_effect_claim:sideinfo_effect_claim_complete_harvested_exact_eval_cells_required",
+    "sideinfo_effect_claim:sideinfo_effect_claim_passing_sideinfo_effect_curve_artifact_required",
+    "timing_smoke_authority:timing_smoke_authority_complete_harvested_exact_eval_cells_required",
+    "timing_smoke_authority:timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required",
+    "paired_anchor_claim:paired_anchor_claim_complete_paired_cpu_cuda_exact_eval_cells_required",
+    "paired_anchor_claim:paired_anchor_claim_adjudicated_exact_eval_artifacts_required"
   ],
   "operator_execute_required": true,
   "planning_only": true,
+  "promotion_adjacent_blockers": {
+    "paired_anchor_claim": [
+      "paired_anchor_claim_complete_paired_cpu_cuda_exact_eval_cells_required",
+      "paired_anchor_claim_adjudicated_exact_eval_artifacts_required"
+    ],
+    "sideinfo_effect_claim": [
+      "sideinfo_effect_claim_complete_harvested_exact_eval_cells_required",
+      "sideinfo_effect_claim_passing_sideinfo_effect_curve_artifact_required"
+    ],
+    "timing_smoke_authority": [
+      "timing_smoke_authority_complete_harvested_exact_eval_cells_required",
+      "timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required"
+    ]
+  },
+  "promotion_adjacent_readiness": {
+    "paired_anchor_claim": {
+      "blockers": [
+        "paired_anchor_claim_complete_paired_cpu_cuda_exact_eval_cells_required",
+        "paired_anchor_claim_adjudicated_exact_eval_artifacts_required"
+      ],
+      "ready": false
+    },
+    "sideinfo_effect_claim": {
+      "blockers": [
+        "sideinfo_effect_claim_complete_harvested_exact_eval_cells_required",
+        "sideinfo_effect_claim_passing_sideinfo_effect_curve_artifact_required"
+      ],
+      "ready": false
+    },
+    "timing_smoke_authority": {
+      "blockers": [
+        "timing_smoke_authority_complete_harvested_exact_eval_cells_required",
+        "timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required"
+      ],
+      "ready": false
+    }
+  },
   "promotion_eligible": false,
   "provider_submit_default": "refuse_non_dry_run",
   "rank_or_kill_eligible": false,
@@ -495,7 +538,10 @@
   "ready_for_dry_run_submit": true,
   "ready_for_exact_eval_dispatch": false,
   "ready_for_non_dry_run_submit": false,
+  "ready_for_paired_anchor_claim": false,
   "ready_for_provider_dispatch": false,
+  "ready_for_sideinfo_effect_claim": false,
+  "ready_for_timing_smoke_authority": false,
   "remote_repo_dir": "/teamspace/studios/this_studio/pact",
   "required_axes": [
     "contest_cpu",

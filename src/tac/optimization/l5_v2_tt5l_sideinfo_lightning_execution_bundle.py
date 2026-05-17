@@ -66,6 +66,21 @@ TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
 )
 TT5L_DYKSTRA_FEASIBILITY_SCHEMA = "dykstra_feasibility_verdict_v1"
 
+_PROMOTION_ADJACENT_SURFACES = {
+    "sideinfo_effect_claim": (
+        "complete_harvested_exact_eval_cells_required",
+        "passing_sideinfo_effect_curve_artifact_required",
+    ),
+    "timing_smoke_authority": (
+        "complete_harvested_exact_eval_cells_required",
+        "paired_cpu_cuda_runtime_timing_artifacts_required",
+    ),
+    "paired_anchor_claim": (
+        "complete_paired_cpu_cuda_exact_eval_cells_required",
+        "adjudicated_exact_eval_artifacts_required",
+    ),
+}
+
 _SOURCE_DIRS = (
     "src",
     "experiments",
@@ -395,6 +410,23 @@ def _dykstra_status(repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _promotion_adjacent_readiness(dykstra: Mapping[str, Any]) -> dict[str, Any]:
+    """Return explicit false-authority blockers for post-dry-run claim surfaces."""
+
+    dykstra_valid = dykstra.get("artifact_valid") is True
+    surfaces: dict[str, dict[str, Any]] = {}
+    for surface, evidence_blockers in _PROMOTION_ADJACENT_SURFACES.items():
+        blockers: list[str] = []
+        if not dykstra_valid:
+            blockers.append(f"{surface}_requires_valid_dykstra_feasibility_artifact")
+        blockers.extend(f"{surface}_{blocker}" for blocker in evidence_blockers)
+        surfaces[surface] = {
+            "ready": False,
+            "blockers": blockers,
+        }
+    return surfaces
+
+
 def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle(
     *,
     preflight: Mapping[str, Any],
@@ -427,6 +459,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle(
     )
     blockers: list[str] = []
     dykstra = _dykstra_status(root)
+    promotion_adjacent_readiness = _promotion_adjacent_readiness(dykstra)
     if preflight.get("schema") != L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_SCHEMA:
         blockers.append("execution_preflight_schema_mismatch")
     if (
@@ -650,6 +683,14 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle(
         "runtime_content_tree_sha256": runtime.get("runtime_content_tree_sha256"),
         "runtime_file_count": runtime.get("runtime_file_count"),
         "dykstra_feasibility_status": dykstra,
+        "ready_for_sideinfo_effect_claim": False,
+        "ready_for_timing_smoke_authority": False,
+        "ready_for_paired_anchor_claim": False,
+        "promotion_adjacent_readiness": promotion_adjacent_readiness,
+        "promotion_adjacent_blockers": {
+            surface: list(status["blockers"])
+            for surface, status in promotion_adjacent_readiness.items()
+        },
         "remote_repo_dir": remote_repo_dir,
         "submission_dir": submission_dir,
         "dry_run_default": True,
@@ -691,6 +732,11 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle(
             "non_dry_run_submit_requires_staged_source_manifest",
             "non_dry_run_submit_requires_active_lane_claim_per_cell",
             "score_claim_forbidden_until_effect_curve_artifact_passes",
+            *[
+                f"{surface}:{blocker}"
+                for surface, status in promotion_adjacent_readiness.items()
+                for blocker in status["blockers"]
+            ],
         ],
         "blockers": _dedupe(blockers),
     }
@@ -729,9 +775,13 @@ def render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_markdown(
         f"- ready_for_dry_run_submit: `{payload.get('ready_for_dry_run_submit')}`",
         "- ready_for_non_dry_run_submit: `false`",
         "- ready_for_provider_dispatch: `false`",
+        "- ready_for_sideinfo_effect_claim: `false`",
+        "- ready_for_timing_smoke_authority: `false`",
+        "- ready_for_paired_anchor_claim: `false`",
         "- dispatch_attempted: `false`",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",
+        f"- Promotion-adjacent blockers: `{payload.get('promotion_adjacent_blockers', {})}`",
         f"- Blockers: `{payload.get('blockers', [])}`",
         f"- Global blockers: `{payload.get('global_blockers', [])}`",
         "",

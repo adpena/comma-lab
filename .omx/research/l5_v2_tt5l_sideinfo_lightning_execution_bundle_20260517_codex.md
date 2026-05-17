@@ -1,6 +1,6 @@
 # L5 v2 TT5L side-info Lightning execution bundle
 
-Generated: 2026-05-17T12:25:07Z
+Generated: 2026-05-17T12:56:54Z
 
 This bundle is dry-run/default and fail-closed. It converts the TT5L side-info paired-axis plan plus execution preflight into concrete Lightning launch-script commands while keeping the source plan command SHA as the authoritative runtime payload. It does not submit provider work and does not claim score movement.
 
@@ -13,11 +13,15 @@ This bundle is dry-run/default and fail-closed. It converts the TT5L side-info p
 - ready_for_dry_run_submit: `True`
 - ready_for_non_dry_run_submit: `false`
 - ready_for_provider_dispatch: `false`
+- ready_for_sideinfo_effect_claim: `false`
+- ready_for_timing_smoke_authority: `false`
+- ready_for_paired_anchor_claim: `false`
 - dispatch_attempted: `false`
 - score_claim: `false`
 - promotion_eligible: `false`
+- Promotion-adjacent blockers: `{'sideinfo_effect_claim': ['sideinfo_effect_claim_complete_harvested_exact_eval_cells_required', 'sideinfo_effect_claim_passing_sideinfo_effect_curve_artifact_required'], 'timing_smoke_authority': ['timing_smoke_authority_complete_harvested_exact_eval_cells_required', 'timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required'], 'paired_anchor_claim': ['paired_anchor_claim_complete_paired_cpu_cuda_exact_eval_cells_required', 'paired_anchor_claim_adjudicated_exact_eval_artifacts_required']}`
 - Blockers: `[]`
-- Global blockers: `['non_dry_run_submit_requires_lightning_identity_and_workspace', 'non_dry_run_submit_requires_remote_preflight_ssh_target', 'non_dry_run_submit_requires_staged_source_manifest', 'non_dry_run_submit_requires_active_lane_claim_per_cell', 'score_claim_forbidden_until_effect_curve_artifact_passes']`
+- Global blockers: `['non_dry_run_submit_requires_lightning_identity_and_workspace', 'non_dry_run_submit_requires_remote_preflight_ssh_target', 'non_dry_run_submit_requires_staged_source_manifest', 'non_dry_run_submit_requires_active_lane_claim_per_cell', 'score_claim_forbidden_until_effect_curve_artifact_passes', 'sideinfo_effect_claim:sideinfo_effect_claim_complete_harvested_exact_eval_cells_required', 'sideinfo_effect_claim:sideinfo_effect_claim_passing_sideinfo_effect_curve_artifact_required', 'timing_smoke_authority:timing_smoke_authority_complete_harvested_exact_eval_cells_required', 'timing_smoke_authority:timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required', 'paired_anchor_claim:paired_anchor_claim_complete_paired_cpu_cuda_exact_eval_cells_required', 'paired_anchor_claim:paired_anchor_claim_adjudicated_exact_eval_artifacts_required']`
 
 ## Cells
 

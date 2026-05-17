@@ -100,6 +100,25 @@ def test_tt5l_lightning_execution_bundle_builds_dry_run_commands(
     assert bundle["ready_for_dry_run_submit"] is True
     assert bundle["ready_for_non_dry_run_submit"] is False
     assert bundle["dykstra_feasibility_status"]["artifact_valid"] is True
+    assert bundle["ready_for_sideinfo_effect_claim"] is False
+    assert bundle["ready_for_timing_smoke_authority"] is False
+    assert bundle["ready_for_paired_anchor_claim"] is False
+    assert (
+        "sideinfo_effect_claim_requires_valid_dykstra_feasibility_artifact"
+        not in bundle["promotion_adjacent_blockers"]["sideinfo_effect_claim"]
+    )
+    assert (
+        "sideinfo_effect_claim_complete_harvested_exact_eval_cells_required"
+        in bundle["promotion_adjacent_blockers"]["sideinfo_effect_claim"]
+    )
+    assert (
+        "timing_smoke_authority_paired_cpu_cuda_runtime_timing_artifacts_required"
+        in bundle["promotion_adjacent_blockers"]["timing_smoke_authority"]
+    )
+    assert (
+        "paired_anchor_claim_adjudicated_exact_eval_artifacts_required"
+        in bundle["promotion_adjacent_blockers"]["paired_anchor_claim"]
+    )
 
     zero_cpu = next(
         cell
@@ -154,8 +173,28 @@ def test_tt5l_lightning_execution_bundle_records_missing_dykstra_without_blockin
 
     assert bundle["ready_for_dry_run_submit"] is True
     assert bundle["ready_for_provider_dispatch"] is False
+    assert bundle["ready_for_sideinfo_effect_claim"] is False
+    assert bundle["ready_for_timing_smoke_authority"] is False
+    assert bundle["ready_for_paired_anchor_claim"] is False
     assert bundle["dykstra_feasibility_status"]["artifact_exists"] is False
     assert "dykstra:dykstra_feasibility_artifact_missing" in bundle["global_blockers"]
+    assert (
+        "sideinfo_effect_claim_requires_valid_dykstra_feasibility_artifact"
+        in bundle["promotion_adjacent_blockers"]["sideinfo_effect_claim"]
+    )
+    assert (
+        "timing_smoke_authority_requires_valid_dykstra_feasibility_artifact"
+        in bundle["promotion_adjacent_blockers"]["timing_smoke_authority"]
+    )
+    assert (
+        "paired_anchor_claim_requires_valid_dykstra_feasibility_artifact"
+        in bundle["promotion_adjacent_blockers"]["paired_anchor_claim"]
+    )
+    assert (
+        "sideinfo_effect_claim:"
+        "sideinfo_effect_claim_requires_valid_dykstra_feasibility_artifact"
+        in bundle["global_blockers"]
+    )
 
 
 def test_tt5l_lightning_execution_bundle_fails_closed_on_command_sha_mismatch(
@@ -206,6 +245,10 @@ def test_tt5l_lightning_execution_bundle_json_and_markdown_are_axis_labelled(
     assert "[contest-CUDA]" in report
     assert "score_claim: `false`" in report
     assert "promotion_eligible: `false`" in report
+    assert "ready_for_sideinfo_effect_claim: `false`" in report
+    assert "ready_for_timing_smoke_authority: `false`" in report
+    assert "ready_for_paired_anchor_claim: `false`" in report
+    assert "Promotion-adjacent blockers" in report
     assert "dry_run_submit_command" in report
     assert "non_dry_run_submit_command_template" in report
 
