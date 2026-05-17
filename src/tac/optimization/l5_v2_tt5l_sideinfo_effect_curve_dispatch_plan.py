@@ -19,6 +19,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.deploy.lightning.batch_jobs import (
+    LightningAdjudicationSpec,
+    LightningBatchJobsClient,
+    make_exact_eval_spec,
+)
 from tac.deploy.modal.paired_dispatch import (
     PAIRED_AUTH_EVAL_DISPATCH_TOOL,
     paired_auth_eval_dispatch_command_template,
@@ -53,6 +58,29 @@ L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_OUTPUT_ROOT = (
 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_MEASUREMENT_ID = (
     "measure_tt5l_sideinfo_effect_curve"
 )
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA = (
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_TOOL_PATH = (
+    "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_REPORT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.md"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_ARTIFACT_ROOT = (
+    "experiments/results/lightning_batch/"
+    "l5_v2_tt5l_sideinfo_effect_curve_paired_axes"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_CUDA_ONLY_REPORT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_alt_provider_plan_20260517_codex.md"
+)
+DEFAULT_LIGHTNING_REMOTE_REPO_DIR = "/teamspace/studios/this_studio/pact"
 _SAFE_TOKEN_RE = re.compile(r"[^A-Za-z0-9_.:-]+")
 _FALSE_AUTHORITY_FLAGS = {
     "planning_only": True,
@@ -301,6 +329,79 @@ def _harvest_commands(*, variant: str, run_id: str) -> dict[str, str]:
     return {
         axis: f".venv/bin/python tools/recover_modal_auth_eval.py --output-dir {out_dir}"
         for axis, out_dir in _axis_output_dirs(variant=variant, run_id=run_id).items()
+    }
+
+
+def _axis_eval_device(axis: str) -> str:
+    if axis == "contest_cpu":
+        return "cpu"
+    if axis == "contest_cuda":
+        return "cuda"
+    raise ValueError(f"unsupported TT5L side-info effect-curve axis: {axis!r}")
+
+
+def _axis_job_suffix(axis: str) -> str:
+    return _axis_eval_device(axis)
+
+
+def _lightning_job_name(*, variant: str, axis: str) -> str:
+    variant_slug = _slug(variant).replace("_", "-")
+    return f"l5-v2-tt5l-sideinfo-{variant_slug}-{_axis_job_suffix(axis)}-20260517"
+
+
+def _lightning_cell_local_dir(*, variant: str, axis: str, artifact_root: str) -> str:
+    return f"{artifact_root.rstrip('/')}/{_slug(variant)}/{axis}"
+
+
+def _hash_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _write_lightning_dry_run_artifacts(
+    *,
+    spec: Any,
+    state_path: Path,
+    stdout_path: Path,
+    stderr_path: Path,
+    reset_state: bool,
+) -> dict[str, Any]:
+    if reset_state:
+        for path in (state_path, stdout_path, stderr_path):
+            if path.exists():
+                path.unlink()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    record = LightningBatchJobsClient(state_path=state_path).submit(spec, dry_run=True)
+    stdout_text = json.dumps(record, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    _write_text(stdout_path, stdout_text)
+    _write_text(stderr_path, "")
+    return record
+
+
+def _lightning_adjudication(*, archive_bytes: int, eval_device: str) -> LightningAdjudicationSpec:
+    return LightningAdjudicationSpec(
+        baseline_score=0.1928,
+        predicted_band_low=0.0,
+        predicted_band_high=200.0,
+        regression_threshold=200.0,
+        baseline_archive_size_bytes=archive_bytes,
+        max_sane_score=200.0,
+        required_samples=600,
+        required_device=eval_device,
+        allow_component_gate_forensic_success=True,
+        allow_sane_score_forensic_success=True,
+    )
+
+
+def _dry_run_state_snapshot(path: Path, *, repo_root: Path) -> dict[str, str | int]:
+    return {
+        "path": _repo_relative(path, repo_root),
+        "sha256": _sha256_file(path),
+        "bytes": path.stat().st_size,
     }
 
 
@@ -613,12 +714,366 @@ def render_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_markdown(
     return "\n".join(lines)
 
 
+def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
+    *,
+    manifest: Mapping[str, Any],
+    manifest_path: str | Path,
+    repo_root: str | Path,
+    remote_repo_dir: str = DEFAULT_LIGHTNING_REMOTE_REPO_DIR,
+    artifact_root: str = L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_ARTIFACT_ROOT,
+    machine: str = "T4",
+    python_bin: str = ".venv/bin/python",
+    source_dispatch_plan: str = L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH,
+    modal_billing_blocker: str = (
+        ".omx/research/"
+        "l5_v2_tt5l_sideinfo_effect_curve_modal_billing_blocker_20260517_codex.json"
+    ),
+    source_commit: str = "",
+    materialize_dry_runs: bool = True,
+    reset_state: bool = True,
+    generated_at_utc: str | None = None,
+) -> dict[str, Any]:
+    """Build the Lightning 5x2 dry-run surface for TT5L side-info variants.
+
+    The function never submits provider work. It uses Lightning's dry-run
+    client to materialize exact-eval state records when requested, then records
+    hashes of those ignored result-tree artifacts in a durable `.omx` ledger.
+    """
+
+    root = Path(repo_root).resolve()
+    manifest_file = _resolve_repo_path(manifest_path, root)
+    manifest_sha = _sha256_file(manifest_file) if manifest_file.is_file() else ""
+    manifest_blockers = _manifest_blockers(
+        manifest=manifest,
+        manifest_path=manifest_file,
+        repo_root=root,
+    )
+    runtime = manifest.get("runtime") if isinstance(manifest.get("runtime"), Mapping) else {}
+    submission_dir = str(runtime.get("submission_dir") or "").strip()
+    variants_by_name = _variant_rows_by_name(manifest)
+    generated = generated_at_utc or (
+        datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    )
+    cells: list[dict[str, Any]] = []
+    blockers: list[str] = list(manifest_blockers)
+
+    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+        row = variants_by_name.get(variant, {})
+        archive, archive_blockers = _variant_archive_status(row=row, repo_root=root)
+        custody_blockers = _variant_custody_blockers(row)
+        archive_sha = str(archive.get("sha256") or "")
+        archive_bytes = archive.get("bytes")
+        if not isinstance(archive_bytes, int):
+            archive_bytes = None
+        pair_group_id = _variant_pair_group_id(variant, archive_sha) if archive_sha else ""
+        variant_blockers = _dedupe(
+            list(manifest_blockers) + archive_blockers + custody_blockers
+        )
+        if not submission_dir:
+            variant_blockers.append("variant_manifest_submission_dir_missing")
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            eval_device = _axis_eval_device(axis)
+            local_dir_rel = _lightning_cell_local_dir(
+                variant=variant,
+                axis=axis,
+                artifact_root=artifact_root,
+            )
+            local_dir = _resolve_repo_path(local_dir_rel, root)
+            state_path = local_dir / "state.json"
+            stdout_path = local_dir / "dry_run.stdout"
+            stderr_path = local_dir / "dry_run.stderr"
+            cell_blockers = list(variant_blockers)
+            spec_dict: dict[str, Any] | None = None
+            queue_dict: dict[str, Any] | None = None
+            record_status = "not_materialized"
+            invariants: dict[str, bool] = {}
+            command_sha256 = ""
+            if archive_sha and archive_bytes is not None and not cell_blockers:
+                job_name = _lightning_job_name(variant=variant, axis=axis)
+                spec = make_exact_eval_spec(
+                    name=job_name,
+                    archive_path=f"{remote_repo_dir.rstrip('/')}/{archive['path']}",
+                    repo_dir=remote_repo_dir.rstrip("/"),
+                    upstream_dir=f"{remote_repo_dir.rstrip('/')}/upstream",
+                    output_dir=f"{remote_repo_dir.rstrip('/')}/{local_dir_rel}",
+                    machine=machine,
+                    python_bin=python_bin,
+                    inflate_sh=f"{submission_dir}/inflate.sh",
+                    expected_archive_sha256=archive_sha,
+                    expected_archive_size_bytes=archive_bytes,
+                    queue_metadata={
+                        "variant": variant,
+                        "axis": axis,
+                        "pair_group_id": pair_group_id,
+                        "archive_sha256": archive_sha,
+                        "source_plan": source_dispatch_plan,
+                    },
+                    local_artifact_dir=local_dir_rel,
+                    adjudication=_lightning_adjudication(
+                        archive_bytes=archive_bytes,
+                        eval_device=eval_device,
+                    ),
+                    eval_device=eval_device,
+                )
+                spec_dict = spec.asdict()
+                command_sha256 = _hash_bytes(spec.command.encode("utf-8"))
+                if materialize_dry_runs:
+                    record = _write_lightning_dry_run_artifacts(
+                        spec=spec,
+                        state_path=state_path,
+                        stdout_path=stdout_path,
+                        stderr_path=stderr_path,
+                        reset_state=reset_state,
+                    )
+                    record_status = str(record.get("status") or "")
+                    queue_dict = (
+                        dict(record["queue"]) if isinstance(record.get("queue"), Mapping) else None
+                    )
+                invariants = {
+                    "status_dry_run": (not materialize_dry_runs) or record_status == "DRY_RUN",
+                    "role_matches_axis": spec.role == f"exact_{eval_device}_eval",
+                    "adjudication_required_device_matches_axis": (
+                        spec.adjudication is not None
+                        and spec.adjudication.required_device == eval_device
+                    ),
+                    "command_contains_expected_device": f"--device {eval_device}" in spec.command,
+                    "command_omits_opposite_device": (
+                        f"--device {'cuda' if eval_device == 'cpu' else 'cpu'}"
+                        not in spec.command
+                    ),
+                    "cuda_require_marker_matches_axis": (
+                        ("INFLATE_REQUIRE_CUDA=1" in spec.command)
+                        == (eval_device == "cuda")
+                    ),
+                    "queue_metadata_axis_matches_cell": (
+                        spec.queue_metadata.get("axis") == axis
+                    ),
+                    "stderr_empty": (
+                        (not materialize_dry_runs)
+                        or (stderr_path.is_file() and stderr_path.stat().st_size == 0)
+                    ),
+                }
+                failed = [key for key, ok in invariants.items() if not ok]
+                if failed:
+                    cell_blockers.extend(
+                        f"lightning_paired_axis_invariant_failed:{key}"
+                        for key in failed
+                    )
+            else:
+                cell_blockers.append("lightning_exact_eval_spec_not_materialized")
+
+            state_snapshot = (
+                _dry_run_state_snapshot(state_path, repo_root=root)
+                if materialize_dry_runs and state_path.is_file()
+                else None
+            )
+            stdout_snapshot = (
+                _dry_run_state_snapshot(stdout_path, repo_root=root)
+                if materialize_dry_runs and stdout_path.is_file()
+                else None
+            )
+            stderr_snapshot = (
+                _dry_run_state_snapshot(stderr_path, repo_root=root)
+                if materialize_dry_runs and stderr_path.is_file()
+                else None
+            )
+            cell = {
+                **_FALSE_AUTHORITY_FLAGS,
+                "variant": variant,
+                "axis": axis,
+                "role": f"exact_{eval_device}_eval",
+                "required_device": eval_device,
+                "archive_sha256": archive_sha,
+                "archive_size_bytes": archive_bytes,
+                "pair_group_id": pair_group_id,
+                "local_artifact_dir": local_dir_rel,
+                "state_path": str(state_path.relative_to(root)),
+                "dry_run_stdout_path": str(stdout_path.relative_to(root)),
+                "dry_run_stderr_path": str(stderr_path.relative_to(root)),
+                "state": state_snapshot,
+                "dry_run_stdout": stdout_snapshot,
+                "dry_run_stderr": stderr_snapshot,
+                "state_sha256": state_snapshot["sha256"] if state_snapshot else "",
+                "dry_run_stdout_sha256": (
+                    stdout_snapshot["sha256"] if stdout_snapshot else ""
+                ),
+                "dry_run_stderr_sha256": (
+                    stderr_snapshot["sha256"] if stderr_snapshot else ""
+                ),
+                "command_sha256": command_sha256,
+                "job_name": spec_dict.get("name") if spec_dict else "",
+                "spec": spec_dict,
+                "queue": queue_dict,
+                "invariants": invariants,
+                "ready_for_operator_dispatch": not cell_blockers,
+                "ready_for_provider_dispatch": False,
+                "blockers": _dedupe(cell_blockers),
+            }
+            cells.append(cell)
+            blockers.extend(cell["blockers"])
+
+    all_cells_ready = all(cell["ready_for_operator_dispatch"] is True for cell in cells)
+    role_set = {str(cell["role"]) for cell in cells}
+    return {
+        **_FALSE_AUTHORITY_FLAGS,
+        "schema": L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA,
+        "tool": L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_TOOL_PATH,
+        "generated_at_utc": generated,
+        "source_commit": source_commit,
+        "source_variant_manifest": _repo_relative(manifest_file, root),
+        "source_variant_manifest_sha256": manifest_sha,
+        "source_dispatch_plan": source_dispatch_plan,
+        "modal_billing_blocker": modal_billing_blocker,
+        "supersedes_cuda_only_lightning_plan": (
+            L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_CUDA_ONLY_REPORT_PATH
+        ),
+        "artifact_root": artifact_root,
+        "remote_repo_dir": remote_repo_dir.rstrip("/"),
+        "required_variants": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS),
+        "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+        "cell_count": len(cells),
+        "cells": cells,
+        "all_cells_dry_run_ready": all_cells_ready,
+        "ready_for_operator_dispatch_after_identity_and_claims": all_cells_ready,
+        "ready_for_provider_dispatch": False,
+        "blockers": _dedupe(
+            [
+                *blockers,
+                "dry_run_only_no_provider_job_launched",
+                "requires_lightning_identity_and_workspace_preflight_before_submit",
+                "requires_source_manifest_staged_to_lightning_workspace_before_submit",
+                "requires_per_axis_lane_claim_before_non_dry_run_submit",
+                "requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
+                "score_claim_forbidden_until_effect_curve_artifact_passes",
+            ]
+        ),
+        "verification": {
+            "paired_axis_dry_run_semantics": (
+                "PASS" if all_cells_ready else "BLOCKED"
+            ),
+            "stderr_files_empty": all(
+                bool(cell.get("invariants", {}).get("stderr_empty")) for cell in cells
+            ),
+            "cpu_cells_exact_cpu_eval": all(
+                cell["role"] == "exact_cpu_eval"
+                for cell in cells
+                if cell["axis"] == "contest_cpu"
+            ),
+            "cuda_cells_exact_cuda_eval": all(
+                cell["role"] == "exact_cuda_eval"
+                for cell in cells
+                if cell["axis"] == "contest_cuda"
+            ),
+            "cpu_commands_omit_cuda_device_and_inflate_require_cuda": all(
+                cell.get("invariants", {}).get("command_omits_opposite_device") is True
+                and cell.get("invariants", {}).get("cuda_require_marker_matches_axis")
+                is True
+                for cell in cells
+                if cell["axis"] == "contest_cpu"
+            ),
+            "cuda_commands_retain_cuda_device_and_inflate_require_cuda": all(
+                cell.get("invariants", {}).get("command_contains_expected_device") is True
+                and cell.get("invariants", {}).get("cuda_require_marker_matches_axis")
+                is True
+                for cell in cells
+                if cell["axis"] == "contest_cuda"
+            ),
+            "roles": sorted(role_set),
+        },
+    }
+
+
+def l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_json(
+    payload: Mapping[str, Any],
+) -> str:
+    """Return canonical JSON text for the Lightning paired-axis plan."""
+
+    return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+
+
+def render_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_markdown(
+    payload: Mapping[str, Any],
+) -> str:
+    """Render the Lightning paired-axis dry-run surface for operators."""
+
+    lines = [
+        "# L5 v2 TT5L side-info effect curve Lightning paired-axis plan",
+        "",
+        f"Generated: {payload.get('generated_at_utc')}",
+        "",
+        "This memo supersedes the CUDA-only Lightning alternate-provider memo for "
+        "the TT5L side-info effect curve. It does not launch provider work and "
+        "does not claim score movement. It records ten dry-run exact-eval cells: "
+        "five side-info variants times `[contest-CPU]` and `[contest-CUDA]`.",
+        "",
+        "## Status",
+        "",
+        f"- Source commit: `{payload.get('source_commit')}`",
+        f"- Source variant manifest: `{payload.get('source_variant_manifest')}`",
+        f"- Source dispatch plan: `{payload.get('source_dispatch_plan')}`",
+        f"- Modal blocker still recorded at: `{payload.get('modal_billing_blocker')}`",
+        f"- Raw dry-run artifact root: `{payload.get('artifact_root')}` "
+        "(ignored result-tree state; hashes recorded below)",
+        "- Dispatch attempted: `false`",
+        "- Score claim: `false`",
+        "- Promotion eligible: `false`",
+        "- Required axes: `[contest-CPU]`, `[contest-CUDA]`",
+        "- Required variants: `zero`, `random_lsb`, `shuffled`, `trained`, `ablated`",
+        "",
+        "## Paired-Axis Dry-Run Cells",
+        "",
+        "| variant | axis | role | required device | bytes | archive SHA-256 | command SHA-256 | state SHA-256 |",
+        "| --- | --- | --- | --- | ---: | --- | --- | --- |",
+    ]
+    for cell in _as_mapping_rows(payload.get("cells")):
+        state = cell.get("state") if isinstance(cell.get("state"), Mapping) else {}
+        lines.append(
+            f"| `{cell.get('variant')}` | `{cell.get('axis')}` | "
+            f"`{cell.get('role')}` | `{cell.get('required_device')}` | "
+            f"{cell.get('archive_size_bytes')} | `{cell.get('archive_sha256')}` | "
+            f"`{cell.get('command_sha256')}` | `{state.get('sha256')}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Axis Invariants Verified",
+            "",
+            "- CPU cells are `exact_cpu_eval`, adjudicate with `required_device=cpu`, "
+            "contain `--device cpu`, omit `--device cuda`, and omit "
+            "`INFLATE_REQUIRE_CUDA=1`.",
+            "- CUDA cells are `exact_cuda_eval`, adjudicate with "
+            "`required_device=cuda`, contain `--device cuda`, and retain "
+            "`INFLATE_REQUIRE_CUDA=1`.",
+            "- All ten `dry_run.stderr` files are zero bytes when the plan is ready.",
+            "- Queue metadata carries the expected `axis`, `variant`, `pair_group_id`, "
+            "`archive_sha256`, and source dispatch-plan pointer for every cell.",
+            "",
+            "## Reactivation Criteria",
+            "",
+            "Before any non-dry-run submit, configure Lightning identity/workspace "
+            "variables, stage a fresh source manifest, run the remote preflight, and "
+            "claim the per-axis lane. The effect-curve predicate remains blocked until "
+            "all ten cells are harvested and the aggregate side-info effect artifact "
+            "passes its paired-axis validation.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 __all__ = [
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH",
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_REPORT_PATH",
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA",
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_TOOL_PATH",
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH",
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_REPORT_PATH",
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA",
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_TOOL_PATH",
     "build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan",
+    "build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan",
     "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_json",
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_json",
     "render_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_markdown",
+    "render_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_markdown",
 ]
