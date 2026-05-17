@@ -107,6 +107,38 @@ def materialized_tt5l_probe_source_paths(
     return _dedupe_paths(out)
 
 
+def materialized_tt5l_probe_source_metadata(
+    *,
+    repo_root: str | Path | None = None,
+    plan_path: str | Path = L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH,
+) -> dict[str, dict[str, str]]:
+    """Return pair identity metadata keyed by materialized auth-eval JSON path."""
+
+    root = Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    candidate = Path(plan_path)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    payload = _read_json_object(resolved)
+    if payload is None:
+        return {}
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, Mapping):
+        return {}
+    pair_group_id = str(payload.get("pair_group_id") or "").strip()
+    run_id = str(payload.get("run_id") or "").strip()
+    metadata: dict[str, dict[str, str]] = {}
+    for axis in ("contest_cpu", "contest_cuda"):
+        output_dir = str(outputs.get(axis) or "").strip()
+        if not output_dir:
+            continue
+        source_path = str(Path(output_dir) / "contest_auth_eval.json")
+        metadata[source_path] = {
+            "pair_group_id": pair_group_id,
+            "run_id": run_id,
+            "materialized_work_unit_plan_path": _relative_path(resolved, root),
+        }
+    return metadata
+
+
 def default_l5_v2_probe_source_paths(
     *,
     repo_root: str | Path | None = None,
@@ -457,13 +489,47 @@ def _inflate_device_for_payload(
     return policy
 
 
+def _pair_group_id_for_payload(
+    payload: Mapping[str, Any],
+    command: str,
+    *,
+    source_metadata: Mapping[str, str],
+) -> str:
+    return str(
+        source_metadata.get("pair_group_id")
+        or payload.get("pair_group_id")
+        or _nested(payload, "custody", "pair_group_id")
+        or _nested(payload, "provenance", "pair_group_id")
+        or _command_flag_value(command, "--pair-group-id")
+        or ""
+    ).strip()
+
+
+def _run_id_for_payload(
+    payload: Mapping[str, Any],
+    command: str,
+    *,
+    source_metadata: Mapping[str, str],
+) -> str:
+    return str(
+        source_metadata.get("run_id")
+        or payload.get("run_id")
+        or _nested(payload, "custody", "run_id")
+        or _nested(payload, "provenance", "run_id")
+        or _command_flag_value(command, "--run-id")
+        or ""
+    ).strip()
+
+
 def _axis_evidence_from_payload(
     path: Path,
     payload: Mapping[str, Any],
     *,
     axis: str,
     repo_root: Path,
+    source_metadata: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
+    source_metadata = source_metadata or {}
     command = _command_text(
         _nested(payload, "custody", "command")
         or _nested(payload, "provenance", "sys_argv")
@@ -488,6 +554,16 @@ def _axis_evidence_from_payload(
     return {
         "axis": axis,
         "archive_sha256": _archive_sha_for_payload(payload),
+        "pair_group_id": _pair_group_id_for_payload(
+            payload,
+            command,
+            source_metadata=source_metadata,
+        ),
+        "run_id": _run_id_for_payload(
+            payload,
+            command,
+            source_metadata=source_metadata,
+        ),
         "runtime_tree_sha256": _runtime_sha_for_payload(payload),
         "expected_runtime_tree_sha256": _expected_runtime_sha_for_payload(payload),
         "score": _first_finite_float(
@@ -552,6 +628,8 @@ def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
 
     fields = (
         "archive_sha256",
+        "pair_group_id",
+        "run_id",
         "runtime_tree_sha256",
         "score",
         "seg_dist",
@@ -571,6 +649,18 @@ def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
         "score_delta",
     )
     return sum(1 for field in fields if evidence.get(field) not in (None, ""))
+
+
+def _axis_group_key(evidence: Mapping[str, Any], *, source_path: Path, repo_root: Path) -> str:
+    archive_sha = (
+        normalize_sha256(evidence.get("archive_sha256"))
+        or f"missing_archive_sha:{_relative_path(source_path, repo_root)}"
+    )
+    pair_group_id = str(evidence.get("pair_group_id") or "").strip()
+    run_id = str(evidence.get("run_id") or "").strip()
+    if pair_group_id or run_id:
+        return f"{archive_sha}|pair_group_id={pair_group_id}|run_id={run_id}"
+    return archive_sha
 
 
 def _axis_custody_blockers(
@@ -640,11 +730,12 @@ def build_l5_v2_probe_observation_intake(
         if source_paths is not None
         else tuple(default_l5_v2_probe_source_paths(repo_root=root))
     )
+    materialized_source_metadata = materialized_tt5l_probe_source_metadata(repo_root=root)
     source_records: list[dict[str, Any]] = []
     grouped_axis_evidence: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
         candidate_id: {} for candidate_id in L5V2_CANDIDATES
     }
-    grouped_source_records_by_archive: dict[str, dict[str, list[dict[str, Any]]]] = {
+    grouped_source_records_by_identity: dict[str, dict[str, list[dict[str, Any]]]] = {
         candidate_id: {} for candidate_id in L5V2_CANDIDATES
     }
     grouped_source_records: dict[str, list[dict[str, Any]]] = {
@@ -675,15 +766,22 @@ def build_l5_v2_probe_observation_intake(
         axis_evidence: dict[str, Any] | None = None
         axis_archive_key = ""
         if payload is not None and candidate_id is not None and axis is not None:
+            relative_source = _relative_path(resolved, root)
+            source_metadata = materialized_source_metadata.get(
+                relative_source,
+                materialized_source_metadata.get(str(raw_path), {}),
+            )
             axis_evidence = _axis_evidence_from_payload(
                 resolved,
                 payload,
                 axis=axis,
                 repo_root=root,
+                source_metadata=source_metadata,
             )
-            axis_archive_key = (
-                normalize_sha256(axis_evidence.get("archive_sha256"))
-                or f"missing_archive_sha:{_relative_path(resolved, root)}"
+            axis_archive_key = _axis_group_key(
+                axis_evidence,
+                source_path=resolved,
+                repo_root=root,
             )
             archive_group = grouped_axis_evidence[candidate_id].setdefault(
                 axis_archive_key,
@@ -718,8 +816,8 @@ def build_l5_v2_probe_observation_intake(
         source_records.append(source_record)
         if candidate_id in grouped_source_records:
             grouped_source_records[candidate_id].append(source_record)
-        if candidate_id in grouped_source_records_by_archive and axis_archive_key:
-            grouped_source_records_by_archive[candidate_id].setdefault(
+        if candidate_id in grouped_source_records_by_identity and axis_archive_key:
+            grouped_source_records_by_identity[candidate_id].setdefault(
                 axis_archive_key,
                 [],
             ).append(source_record)
@@ -768,7 +866,19 @@ def build_l5_v2_probe_observation_intake(
             if axes
             else "artifact_intake_not_architecture_lock_evidence"
         )
-        selected_sources = grouped_source_records_by_archive[candidate_id].get(
+        pair_group_ids = {
+            str(row.get("pair_group_id") or "").strip()
+            for row in axis_rows
+            if str(row.get("pair_group_id") or "").strip()
+        }
+        run_ids = {
+            str(row.get("run_id") or "").strip()
+            for row in axis_rows
+            if str(row.get("run_id") or "").strip()
+        }
+        pair_group_id = next(iter(pair_group_ids)) if len(pair_group_ids) == 1 else ""
+        run_id = next(iter(run_ids)) if len(run_ids) == 1 else ""
+        selected_sources = grouped_source_records_by_identity[candidate_id].get(
             selected_archive_key,
             grouped_source_records[candidate_id],
         )
@@ -784,6 +894,8 @@ def build_l5_v2_probe_observation_intake(
                 predicate_id="l5_v2_probe_observation_intake_v1",
                 predicate_passed=False,
                 archive_sha256=archive_sha,
+                pair_group_id=pair_group_id,
+                run_id=run_id,
                 runtime_tree_sha256_by_axis=observed_runtime_by_axis,
                 axis_evidence=tuple(axis_rows),
                 sideinfo_consumed=False,
@@ -791,8 +903,9 @@ def build_l5_v2_probe_observation_intake(
                     archive_sha and len(observed_runtime_by_axis) == len(axes)
                 ),
                 notes=(
-                    "auto-intake only; axes are grouped by exact archive SHA so "
-                    "stale and newly materialized TT5L runs cannot be mixed; "
+                    "auto-intake only; axes are grouped by exact archive SHA "
+                    "plus pair_group_id/run_id when available so stale and "
+                    "newly materialized TT5L runs cannot be mixed; "
                     "fill missing paired axis, score_delta, payload-consumption "
                     "predicate, and candidate-specific custody before architecture lock"
                 ),
@@ -875,6 +988,7 @@ __all__ = [
     "L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH",
     "build_l5_v2_probe_observation_intake",
     "default_l5_v2_probe_source_paths",
+    "materialized_tt5l_probe_source_metadata",
     "materialized_tt5l_probe_source_paths",
     "render_l5_v2_probe_observation_intake_markdown",
 ]

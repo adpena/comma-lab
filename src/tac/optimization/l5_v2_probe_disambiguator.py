@@ -51,6 +51,8 @@ class L5V2ProbeObservation:
     predicate_id: str = ""
     predicate_passed: bool = False
     archive_sha256: str = ""
+    pair_group_id: str = ""
+    run_id: str = ""
     runtime_tree_sha256: str = ""
     runtime_tree_sha256_by_axis: Mapping[str, str] = dataclasses.field(
         default_factory=dict
@@ -107,6 +109,8 @@ def observation_from_mapping(payload: Mapping[str, Any]) -> L5V2ProbeObservation
             field_name="predicate_passed",
         ),
         archive_sha256=str(payload.get("archive_sha256") or ""),
+        pair_group_id=str(payload.get("pair_group_id") or ""),
+        run_id=str(payload.get("run_id") or ""),
         runtime_tree_sha256=str(payload.get("runtime_tree_sha256") or ""),
         runtime_tree_sha256_by_axis={
             str(axis): str(value)
@@ -370,6 +374,36 @@ def _axis_evidence_blockers(
     return tuple(blockers)
 
 
+def _axis_identity_blockers(observation: L5V2ProbeObservation) -> tuple[str, ...]:
+    blockers: list[str] = []
+    pair_group_ids = {
+        str(item.get("pair_group_id") or "").strip()
+        for item in observation.axis_evidence
+        if str(item.get("pair_group_id") or "").strip()
+    }
+    run_ids = {
+        str(item.get("run_id") or "").strip()
+        for item in observation.axis_evidence
+        if str(item.get("run_id") or "").strip()
+    }
+    observation_pair_group_id = observation.pair_group_id.strip()
+    if len(pair_group_ids) > 1 or (
+        observation_pair_group_id
+        and pair_group_ids
+        and observation_pair_group_id not in pair_group_ids
+    ):
+        blockers.append("l5_v2_probe_axis_pair_group_mismatch")
+
+    observation_run_id = observation.run_id.strip()
+    if len(run_ids) > 1 or (
+        observation_run_id
+        and run_ids
+        and observation_run_id not in run_ids
+    ):
+        blockers.append("l5_v2_probe_axis_run_id_mismatch")
+    return tuple(blockers)
+
+
 def _axis_score_delta(evidence: Mapping[str, Any]) -> float | None:
     direct = finite_float(evidence.get("score_delta"))
     if direct is not None:
@@ -469,6 +503,7 @@ def _observation_blockers(
     if "contest" not in observation.evidence_grade.lower():
         blockers.append("l5_v2_probe_contest_evidence_grade_missing")
     blockers.extend(_axis_evidence_blockers(observation, repo_root=repo_root))
+    blockers.extend(_axis_identity_blockers(observation))
     _paired_delta, paired_delta_blockers = _paired_axis_score_delta(observation)
     blockers.extend(paired_delta_blockers)
     return tuple(dict.fromkeys(blockers))
@@ -493,6 +528,8 @@ def build_probe_template() -> dict[str, Any]:
                 "predicate_id": "",
                 "predicate_passed": False,
                 "archive_sha256": "",
+                "pair_group_id": "",
+                "run_id": "",
                 "runtime_tree_sha256": "",
                 "runtime_tree_sha256_by_axis": dict.fromkeys(
                     REQUIRED_EXACT_AXES, ""

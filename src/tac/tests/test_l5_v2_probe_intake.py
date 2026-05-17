@@ -13,6 +13,7 @@ from tac.optimization.l5_v2_probe_intake import (
     DEFAULT_L5V2_PROBE_SOURCE_PATHS,
     build_l5_v2_probe_observation_intake,
     default_l5_v2_probe_source_paths,
+    materialized_tt5l_probe_source_metadata,
     materialized_tt5l_probe_source_paths,
 )
 
@@ -55,17 +56,107 @@ def test_l5_v2_probe_intake_prefers_materialized_plan_outputs(tmp_path: Path) ->
                 "contest_cpu": cpu_output,
                 "contest_cuda": cuda_output,
             },
+            "pair_group_id": "pair-current",
+            "run_id": "run-current",
         },
     )
 
     dynamic = materialized_tt5l_probe_source_paths(repo_root=tmp_path)
+    metadata = materialized_tt5l_probe_source_metadata(repo_root=tmp_path)
     defaults = default_l5_v2_probe_source_paths(repo_root=tmp_path)
 
     assert dynamic == (
         f"{cpu_output}/contest_auth_eval.json",
         f"{cuda_output}/contest_auth_eval.json",
     )
+    assert metadata[f"{cpu_output}/contest_auth_eval.json"]["pair_group_id"] == (
+        "pair-current"
+    )
+    assert metadata[f"{cuda_output}/contest_auth_eval.json"]["run_id"] == "run-current"
     assert defaults[:2] == dynamic
+
+
+def test_l5_v2_probe_intake_applies_materialized_plan_pair_identity(
+    tmp_path: Path,
+) -> None:
+    cpu_output = (
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/"
+        "modal_auth_eval_cpu/"
+        "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_current_cpu"
+    )
+    cuda_output = (
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/"
+        "modal_auth_eval/"
+        "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_current_cuda"
+    )
+    _write_json(
+        tmp_path
+        / ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json",
+        {
+            "outputs": {
+                "contest_cpu": cpu_output,
+                "contest_cuda": cuda_output,
+            },
+            "pair_group_id": "pair-current",
+            "run_id": "run-current",
+        },
+    )
+    base_payload = {
+        "archive_size_bytes": 10,
+        "avg_posenet_dist": 0.2,
+        "avg_segnet_dist": 0.02,
+        "canonical_score": 1.0,
+        "n_samples": 600,
+    }
+    _write_json(
+        tmp_path / cpu_output / "contest_auth_eval.json",
+        {
+            **base_payload,
+            "evidence_grade": "contest-CPU",
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cpu",
+                "inflate_runtime_manifest": {"runtime_tree_sha256": "b" * 64},
+                "platform_machine": "x86_64",
+                "platform_system": "Linux",
+                "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cpu"],
+            },
+            "score_axis": "contest_cpu",
+        },
+    )
+    _write_json(
+        tmp_path / cuda_output / "contest_auth_eval.json",
+        {
+            **base_payload,
+            "evidence_grade": "contest-CUDA",
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cuda",
+                "gpu_model": "Tesla T4",
+                "inflate_device_policy": "auto",
+                "inflate_runtime_manifest": {"runtime_tree_sha256": "b" * 64},
+                "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cuda"],
+            },
+            "score_axis": "contest_cuda",
+        },
+    )
+
+    intake = build_l5_v2_probe_observation_intake(repo_root=tmp_path)
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+
+    assert tt5l["exact_axes"] == ["contest_cpu", "contest_cuda"]
+    assert tt5l["pair_group_id"] == "pair-current"
+    assert tt5l["run_id"] == "run-current"
+    assert {
+        (row["axis"], row["pair_group_id"], row["run_id"])
+        for row in tt5l["axis_evidence"]
+    } == {
+        ("contest_cpu", "pair-current", "run-current"),
+        ("contest_cuda", "pair-current", "run-current"),
+    }
 
 
 def test_l5_v2_probe_intake_does_not_mix_tt5l_axes_across_archive_sha(
@@ -126,6 +217,71 @@ def test_l5_v2_probe_intake_does_not_mix_tt5l_axes_across_archive_sha(
         "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/"
         "contest_auth_eval.json"
     ) in DEFAULT_L5V2_PROBE_SOURCE_PATHS
+
+
+def test_l5_v2_probe_intake_does_not_mix_tt5l_axes_across_pair_group(
+    tmp_path: Path,
+) -> None:
+    cpu = _write_json(
+        tmp_path / "tt5l_cpu_pair_a" / "contest_auth_eval.json",
+        {
+            "archive_size_bytes": 10,
+            "avg_posenet_dist": 0.2,
+            "avg_segnet_dist": 0.02,
+            "canonical_score": 1.0,
+            "evidence_grade": "contest-CPU",
+            "n_samples": 600,
+            "pair_group_id": "pair-a",
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cpu",
+                "inflate_runtime_manifest": {"runtime_tree_sha256": "b" * 64},
+                "platform_machine": "x86_64",
+                "platform_system": "Linux",
+                "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cpu"],
+            },
+            "run_id": "run-a",
+            "score_axis": "contest_cpu",
+        },
+    )
+    cuda = _write_json(
+        tmp_path / "tt5l_cuda_pair_b" / "contest_auth_eval.json",
+        {
+            "archive_size_bytes": 10,
+            "avg_posenet_dist": 0.2,
+            "avg_segnet_dist": 0.02,
+            "canonical_score": 1.0,
+            "evidence_grade": "contest-CUDA",
+            "n_samples": 600,
+            "pair_group_id": "pair-b",
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cuda",
+                "gpu_model": "Tesla T4",
+                "inflate_device_policy": "auto",
+                "inflate_runtime_manifest": {"runtime_tree_sha256": "b" * 64},
+                "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cuda"],
+            },
+            "run_id": "run-b",
+            "score_axis": "contest_cuda",
+        },
+    )
+
+    intake = build_l5_v2_probe_observation_intake([cpu, cuda], repo_root=tmp_path)
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+    source_evidence = [
+        row["axis_evidence"]
+        for row in intake["source_records"]
+        if row.get("axis_evidence")
+    ]
+
+    assert {row["pair_group_id"] for row in source_evidence} == {"pair-a", "pair-b"}
+    assert tt5l["exact_axes"] != ["contest_cpu", "contest_cuda"]
+    assert "l5_v2_probe_paired_exact_axes_missing" in tt5l["blockers"]
+    assert "pair_group_id/run_id" in tt5l["notes"]
 
 
 def test_l5_v2_probe_intake_classifies_single_tt5l_cuda_as_incomplete(

@@ -310,6 +310,35 @@ def test_l5_v2_probe_rejects_duplicate_axis_evidence_rows(tmp_path: Path) -> Non
     assert "l5_v2_probe_axis_evidence_duplicate:contest_cpu" in row["blockers"]
 
 
+def test_l5_v2_probe_rejects_cross_pair_axis_evidence(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+    axis_rows = [dict(row) for row in valid.axis_evidence]
+    for row in axis_rows:
+        if row["axis"] == "contest_cpu":
+            row["pair_group_id"] = "pair-a"
+            row["run_id"] = "run-a"
+        else:
+            row["pair_group_id"] = "pair-b"
+            row["run_id"] = "run-b"
+
+    verdict = evaluate_l5_v2_probe(
+        (
+            dataclasses.replace(
+                valid,
+                pair_group_id="pair-a",
+                run_id="run-a",
+                axis_evidence=tuple(axis_rows),
+            ),
+        ),
+        repo_root=tmp_path,
+    )
+    row = verdict["evaluated_observations"][0]
+
+    assert verdict["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_axis_pair_group_mismatch" in row["blockers"]
+    assert "l5_v2_probe_axis_run_id_mismatch" in row["blockers"]
+
+
 def test_l5_v2_probe_blocks_axis_evidence_without_formula_closure(
     tmp_path: Path,
 ) -> None:
