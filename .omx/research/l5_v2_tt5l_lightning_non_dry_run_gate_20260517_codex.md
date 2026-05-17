@@ -1,6 +1,6 @@
 # L5 v2 TT5L Lightning non-dry-run gate
 
-Generated: 2026-05-17T17:36:48Z
+Generated: 2026-05-17T17:40:03Z
 
 This gate is spend-readiness only. It does not dispatch provider work and does not claim score movement. It fails closed unless the doctor output is OK, every per-cell source manifest is staged, every cell has an active Lightning lane claim, and all non-dry-run submit templates are free of placeholders.
 
@@ -16,7 +16,7 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - promotion_eligible: `false`
 - dispatch_attempted: `false`
 - Ready cells: `0`/`10`
-- Blocker count: `153`
+- Blocker count: `143`
 
 ## Top-Level Blockers
 
@@ -38,7 +38,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `zero:contest_cpu:source_manifest_invalid_or_empty`
 - `zero:contest_cpu:source_manifest_artifact_paths_missing`
 - `zero:contest_cpu:source_manifest_git_head_mismatch_bundle`
-- `zero:contest_cpu:source_bundle_current_head_mismatch`
 - `zero:contest_cpu:source_manifest_git_head_mismatch_current`
 - `zero:contest_cpu:source_manifest_archive_file_missing`
 - `zero:contest_cpu:non_dry_run_command_placeholders_present`
@@ -52,7 +51,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `zero:contest_cuda:source_manifest_invalid_or_empty`
 - `zero:contest_cuda:source_manifest_artifact_paths_missing`
 - `zero:contest_cuda:source_manifest_git_head_mismatch_bundle`
-- `zero:contest_cuda:source_bundle_current_head_mismatch`
 - `zero:contest_cuda:source_manifest_git_head_mismatch_current`
 - `zero:contest_cuda:source_manifest_archive_file_missing`
 - `zero:contest_cuda:non_dry_run_command_placeholders_present`
@@ -66,7 +64,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `random_lsb:contest_cpu:source_manifest_invalid_or_empty`
 - `random_lsb:contest_cpu:source_manifest_artifact_paths_missing`
 - `random_lsb:contest_cpu:source_manifest_git_head_mismatch_bundle`
-- `random_lsb:contest_cpu:source_bundle_current_head_mismatch`
 - `random_lsb:contest_cpu:source_manifest_git_head_mismatch_current`
 - `random_lsb:contest_cpu:source_manifest_archive_file_missing`
 - `random_lsb:contest_cpu:non_dry_run_command_placeholders_present`
@@ -80,7 +77,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `random_lsb:contest_cuda:source_manifest_invalid_or_empty`
 - `random_lsb:contest_cuda:source_manifest_artifact_paths_missing`
 - `random_lsb:contest_cuda:source_manifest_git_head_mismatch_bundle`
-- `random_lsb:contest_cuda:source_bundle_current_head_mismatch`
 - `random_lsb:contest_cuda:source_manifest_git_head_mismatch_current`
 - `random_lsb:contest_cuda:source_manifest_archive_file_missing`
 - `random_lsb:contest_cuda:non_dry_run_command_placeholders_present`
@@ -94,7 +90,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `shuffled:contest_cpu:source_manifest_invalid_or_empty`
 - `shuffled:contest_cpu:source_manifest_artifact_paths_missing`
 - `shuffled:contest_cpu:source_manifest_git_head_mismatch_bundle`
-- `shuffled:contest_cpu:source_bundle_current_head_mismatch`
 - `shuffled:contest_cpu:source_manifest_git_head_mismatch_current`
 - `shuffled:contest_cpu:source_manifest_archive_file_missing`
 - `shuffled:contest_cpu:non_dry_run_command_placeholders_present`
@@ -108,7 +103,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `shuffled:contest_cuda:source_manifest_invalid_or_empty`
 - `shuffled:contest_cuda:source_manifest_artifact_paths_missing`
 - `shuffled:contest_cuda:source_manifest_git_head_mismatch_bundle`
-- `shuffled:contest_cuda:source_bundle_current_head_mismatch`
 - `shuffled:contest_cuda:source_manifest_git_head_mismatch_current`
 - `shuffled:contest_cuda:source_manifest_archive_file_missing`
 - `shuffled:contest_cuda:non_dry_run_command_placeholders_present`
@@ -122,7 +116,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `trained:contest_cpu:source_manifest_invalid_or_empty`
 - `trained:contest_cpu:source_manifest_artifact_paths_missing`
 - `trained:contest_cpu:source_manifest_git_head_mismatch_bundle`
-- `trained:contest_cpu:source_bundle_current_head_mismatch`
 - `trained:contest_cpu:source_manifest_git_head_mismatch_current`
 - `trained:contest_cpu:source_manifest_archive_file_missing`
 - `trained:contest_cpu:non_dry_run_command_placeholders_present`
@@ -136,7 +129,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `trained:contest_cuda:source_manifest_invalid_or_empty`
 - `trained:contest_cuda:source_manifest_artifact_paths_missing`
 - `trained:contest_cuda:source_manifest_git_head_mismatch_bundle`
-- `trained:contest_cuda:source_bundle_current_head_mismatch`
 - `trained:contest_cuda:source_manifest_git_head_mismatch_current`
 - `trained:contest_cuda:source_manifest_archive_file_missing`
 - `trained:contest_cuda:non_dry_run_command_placeholders_present`
@@ -150,7 +142,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `ablated:contest_cpu:source_manifest_invalid_or_empty`
 - `ablated:contest_cpu:source_manifest_artifact_paths_missing`
 - `ablated:contest_cpu:source_manifest_git_head_mismatch_bundle`
-- `ablated:contest_cpu:source_bundle_current_head_mismatch`
 - `ablated:contest_cpu:source_manifest_git_head_mismatch_current`
 - `ablated:contest_cpu:source_manifest_archive_file_missing`
 - `ablated:contest_cpu:non_dry_run_command_placeholders_present`
@@ -164,7 +155,6 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 - `ablated:contest_cuda:source_manifest_invalid_or_empty`
 - `ablated:contest_cuda:source_manifest_artifact_paths_missing`
 - `ablated:contest_cuda:source_manifest_git_head_mismatch_bundle`
-- `ablated:contest_cuda:source_bundle_current_head_mismatch`
 - `ablated:contest_cuda:source_manifest_git_head_mismatch_current`
 - `ablated:contest_cuda:source_manifest_archive_file_missing`
 - `ablated:contest_cuda:non_dry_run_command_placeholders_present`
@@ -178,13 +168,13 @@ This gate is spend-readiness only. It does not dispatch provider work and does n
 
 | variant | axis | lane_id | job_name | ready | blockers |
 | --- | --- | --- | --- | --- | --- |
-| `zero` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu` | `l5-v2-tt5l-sideinfo-zero-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `zero` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cuda` | `l5-v2-tt5l-sideinfo-zero-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `random_lsb` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cpu` | `l5-v2-tt5l-sideinfo-random-lsb-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `random_lsb` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cuda` | `l5-v2-tt5l-sideinfo-random-lsb-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `shuffled` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cpu` | `l5-v2-tt5l-sideinfo-shuffled-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `shuffled` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cuda` | `l5-v2-tt5l-sideinfo-shuffled-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `trained` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cpu` | `l5-v2-tt5l-sideinfo-trained-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `trained` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cuda` | `l5-v2-tt5l-sideinfo-trained-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `ablated` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cpu` | `l5-v2-tt5l-sideinfo-ablated-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
-| `ablated` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cuda` | `l5-v2-tt5l-sideinfo-ablated-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_bundle_current_head_mismatch', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `zero` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu` | `l5-v2-tt5l-sideinfo-zero-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `zero` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cuda` | `l5-v2-tt5l-sideinfo-zero-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `random_lsb` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cpu` | `l5-v2-tt5l-sideinfo-random-lsb-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `random_lsb` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cuda` | `l5-v2-tt5l-sideinfo-random-lsb-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `shuffled` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cpu` | `l5-v2-tt5l-sideinfo-shuffled-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `shuffled` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cuda` | `l5-v2-tt5l-sideinfo-shuffled-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `trained` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cpu` | `l5-v2-tt5l-sideinfo-trained-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `trained` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cuda` | `l5-v2-tt5l-sideinfo-trained-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `ablated` | `[contest-CPU]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cpu` | `l5-v2-tt5l-sideinfo-ablated-cpu-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |
+| `ablated` | `[contest-CUDA]` | `lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cuda` | `l5-v2-tt5l-sideinfo-ablated-cuda-20260517` | `False` | `['source_manifest:json_file_missing', 'source_manifest_missing', 'source_manifest_invalid_or_empty', 'source_manifest_artifact_paths_missing', 'source_manifest_git_head_mismatch_bundle', 'source_manifest_git_head_mismatch_current', 'source_manifest_archive_file_missing', 'non_dry_run_command_placeholders_present', 'non_dry_run_command_arg_placeholder:--studio', 'non_dry_run_command_arg_placeholder:--teamspace', 'non_dry_run_command_arg_placeholder:--remote-preflight-ssh-target', 'non_dry_run_command_identity_mode_not_exactly_one', 'active_lightning_claim_missing']` |

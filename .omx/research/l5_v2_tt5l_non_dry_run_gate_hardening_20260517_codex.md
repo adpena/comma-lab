@@ -43,7 +43,10 @@ Result:
 - `ready_for_non_dry_run_submit=false`
 - `ready_for_provider_dispatch=false`
 - `ready_cell_count=0/10`
-- `blocker_count=153`
+- `blocker_count=143` after regenerating the TT5L paired-axis plan,
+  execution preflight, execution bundle, dry-run verification, route-unblock
+  packet, doctor plan, and non-dry-run gate on commit
+  `ae740ea0a324a4f3bcfaf106504a6fa1649fc1f2`
 - `score_claim=false`
 - `promotion_eligible=false`
 - `dispatch_attempted=false`
@@ -58,8 +61,9 @@ Primary live blockers:
   `<lightning-studio>`, `<lightning-teamspace>`, `<--user-or---org>`,
   `<lightning-user-or-org>`, `<lightning-ssh-target>`
 - No active Lightning dispatch claim rows exist for the 10 TT5L side-info cells.
-- The source bundle was generated before the current head, so staged manifests
-  must match the regenerated bundle before spend.
+- Source-manifest git-head blockers remain only because the manifests do not
+  exist yet. The stale source-bundle/current-head mismatch was removed by the
+  follow-up regeneration.
 
 ## Adversarial review
 
