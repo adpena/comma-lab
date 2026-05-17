@@ -133,6 +133,14 @@ architecture-lock/TT5L custody artifacts.
   `raw_archive_byte_rows_emitted=0`. This blocks same-runtime selector-polish
   retreads from the current rows; proceed only with new paired component rows
   or a byte-different component-moving packet operator with consumption proof.
+- Partner WIP blocker:
+  `.omx/research/master_gradient_partner_wip_false_authority_review_20260517_codex.md`.
+  Do not land the current untracked `src/tac/master_gradient.py` as a master
+  authority while it models `(N_archive_bytes, 3)` gradients and raw
+  `{byte_idx: delta}` projections. The next valid interface is a typed
+  `CandidateModificationSpec` / operator-response row schema. The dirty
+  cathedral-autopilot hook is anchor-presence diagnostics until candidates
+  carry real packet-valid modification specs.
 - Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
   operator-row manifest may proceed after
   `tools/audit_master_gradient_feasibility.py` reports
@@ -164,9 +172,9 @@ architecture-lock/TT5L custody artifacts.
   paired-axis plan `10/10`, execution preflight `ready_cell_count=10`,
   execution bundle `ready_dry_run_cell_count=10`, dry-run verification
   `10/10`, route packet `artifact_blocker_count=0`, and required doctor plan
-  `ready_for_operator_doctor=true`; route/doctor packets are current to
-  `e73c0cea2fe6138c6d7957a957a007dd637b0e61` with paired-axis-plan
-  `source_relevant_paths_match_current_head=true`. Ledger:
+  `ready_for_operator_doctor=true`; route/doctor packets are source-relevant
+  clean but must be regenerated immediately before provider execution rather
+  than treated as self-referential commit authority. Ledger:
   `.omx/research/l5_v2_tt5l_dispatch_custody_materialization_20260517_codex.md`.
 - Next concrete action: run the required Lightning doctor from
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`,

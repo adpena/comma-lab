@@ -63,13 +63,14 @@ retiring the L5/L5-v2 staircase:
   `ready_dry_run_cell_count=10`, dry-run verifier has `10/10` passing cells,
   route packet has `artifact_blocker_count=0`, and required doctor plan is
   `ready_for_operator_doctor=true`. The route and doctor packets were
-  refreshed against `main` commit
-  `e73c0cea2fe6138c6d7957a957a007dd637b0e61`; paired-axis-plan source-relevant
-  paths still match current `HEAD`. Non-dry-run provider execution remains
-  blocked on Lightning identity/quota, `LIGHTNING_TEAMSPACE`,
-  `LIGHTNING_SSH_TARGET`, per-cell source manifests, active lane claims,
-  remote CUDA/machine-inventory doctor checks, exact harvest, terminal claim
-  rows, and architecture-lock packet refresh after harvest.
+  refreshed from a source-relevant tree with no paired-axis-plan source-path
+  drift. Do not use the recorded generated-at commit as self-referential
+  dispatch authority; rerun the route/doctor packet immediately before
+  non-dry-run execution. Non-dry-run provider execution remains blocked on
+  Lightning identity/quota, `LIGHTNING_TEAMSPACE`, `LIGHTNING_SSH_TARGET`,
+  per-cell source manifests, active lane claims, remote CUDA/machine-inventory
+  doctor checks, exact harvest, terminal claim rows, and architecture-lock
+  packet refresh after harvest.
 - Lightning required-doctor plan exists at
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`;
   it is planning-only and confers no dispatch or score authority. The route
@@ -130,6 +131,16 @@ retiring the L5/L5-v2 staircase:
   campaign notes without editing partner WIP: the only valid next object is a
   grammar-aware operator-row manifest, still `score_claim=false` and
   dispatch-ineligible until packet closure proofs exist.
+- Master-gradient dirty WIP adversarial review:
+  `.omx/research/master_gradient_partner_wip_false_authority_review_20260517_codex.md`.
+  The untracked `src/tac/master_gradient.py` and dirty cathedral-autopilot
+  hook should not land as authority-bearing code while they expose an
+  `(N_archive_bytes, 3)` tensor, `finite_difference_bit_flip` method naming,
+  raw `{byte_idx: delta}` projection API, notes-parsed archive SHA lookup, and
+  a "rerank" hook that currently leaves ordering unchanged. Valid routing
+  remains `CandidateModificationSpec` / `grammar_aware_operator` response rows
+  with packet rebuild, inflate proof, byte-consumption proof, and exact
+  axis-labelled result review.
 - First executable master-gradient operator row is now materialized for
   PR106-format Brotli sections:
   `tac.master_gradient_brotli_operator_candidate` and
@@ -226,8 +237,10 @@ No-ignore follow-up ledger:
 `.omx/research/l5_v2_omx_parent_markdown_no_ignore_refresh_20260517_codex.md`.
 FEC6 selector operator follow-up:
 `.omx/research/omx_parent_markdown_and_fec6_selector_operator_followup_20260517_codex.md`.
-Latest TT5L custody refresh uses `main`
-`e73c0cea2fe6138c6d7957a957a007dd637b0e61`.
+Latest TT5L route/doctor custody refresh is source-relevant-path clean but must
+be regenerated immediately before provider execution; the generated packet's
+recorded commit is a reproducibility input, not self-referential dispatch
+authority.
 
 ## Required Refresh Cadence
 

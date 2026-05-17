@@ -26,6 +26,24 @@ def test_raw_archive_byte_gradient_is_blocked_for_zip_entropy_packets() -> None:
     assert verdict.recommended_probe_grain == "grammar_aware_operator"
 
 
+def test_raw_archive_byte_remains_blocked_even_if_container_proofs_are_claimed() -> None:
+    verdict = audit_master_gradient_probe_plan(
+        mutation_grain="raw_archive_byte",
+        axis_label="contest_cpu",
+        updates_zip_headers=True,
+        updates_crc=True,
+        repacks_archive=True,
+        proves_inflate_success=True,
+    )
+
+    assert verdict.raw_byte_gradient_valid is False
+    assert verdict.operator_response_valid is False
+    assert verdict.ready_for_operator_probe is False
+    assert verdict.verdict == "blocked_raw_archive_gradient"
+    assert "raw_byte_score_derivative_not_well_defined_for_discrete_packet" in verdict.blockers
+    assert "raw_archive_byte_flip_is_not_local_in_entropy_coded_payload" in verdict.blockers
+
+
 def test_zip_member_payload_byte_is_blocked_when_inner_stream_is_entropy_coded() -> None:
     verdict = audit_master_gradient_probe_plan(
         mutation_grain="zip_member_payload_byte",
