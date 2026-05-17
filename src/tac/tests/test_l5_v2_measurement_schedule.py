@@ -214,6 +214,12 @@ def test_l5_v2_schedule_routes_to_sideinfo_curve_after_probe_eligibility() -> No
         sideinfo["sideinfo_variant_packet_source_archive"]
         == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SOURCE_ARCHIVE_PATH
     )
+    assert "current_code_fullshape_sideinfo" in (
+        sideinfo["sideinfo_variant_packet_manifest_artifact"]
+    )
+    assert "current_code_fullshape_sideinfo" in (
+        sideinfo["sideinfo_variant_packet_source_archive"]
+    )
     assert (
         sideinfo["sideinfo_variant_packet_submission_dir"]
         == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR

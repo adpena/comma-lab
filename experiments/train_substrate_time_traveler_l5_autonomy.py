@@ -1039,6 +1039,55 @@ def _run_posterior_update_from_auth_eval_json(
         }
 
 
+def _full_cpu_wall_clock_exceeded(
+    *,
+    started_at: float,
+    budget_sec: float | None,
+    now: float | None = None,
+) -> tuple[bool, float]:
+    """Return whether a full-CPU advisory run has exhausted its budget.
+
+    The TT5L full-shape CPU path can spend minutes inside a single epoch
+    because there are up to 600 per-pair scorer-backed batches. Checking the
+    budget only between epochs makes ``--max-wall-clock-hours`` ineffective for
+    advisory liveness smokes.
+    """
+
+    current = time.time() if now is None else float(now)
+    elapsed = max(0.0, current - float(started_at))
+    if budget_sec is None:
+        return False, elapsed
+    return elapsed > float(budget_sec), elapsed
+
+
+def _format_full_cpu_wall_clock_abort(
+    *,
+    epoch: int,
+    elapsed_sec: float,
+    budget_sec: float,
+    max_wall_clock_hours: float,
+    batch_start: int | None = None,
+) -> str:
+    """Build a stable wall-clock abort message for stage/log custody."""
+
+    location = f"epoch {epoch}"
+    if batch_start is not None:
+        location += f", batch_start {batch_start}"
+    return (
+        f"{SUBSTRATE_TAG}-full wall-clock gate tripped at {location}: "
+        f"elapsed {elapsed_sec:.1f}s exceeds budget {budget_sec:.1f}s "
+        f"(--max-wall-clock-hours={max_wall_clock_hours}). "
+        "Aborting gracefully and emitting best available EMA checkpoint."
+    )
+
+
+def _json_finite_float_or_none(value: float) -> float | None:
+    """Return a JSON-strict float value, or ``None`` for NaN/Infinity."""
+
+    numeric = float(value)
+    return numeric if math.isfinite(numeric) else None
+
+
 def _full_main(args: argparse.Namespace) -> int:
     """Full training — score-aware Lagrangian end-to-end."""
     import torch
@@ -1279,22 +1328,45 @@ def _full_main(args: argparse.Namespace) -> int:
         wall_clock_aborted = False
 
         for epoch in range(args.epochs):
-            if wall_clock_budget_sec is not None:
-                elapsed = time.time() - train_started_at
-                if elapsed > wall_clock_budget_sec:
-                    print(
-                        f"[{SUBSTRATE_TAG}-full] wall-clock gate tripped at "
-                        f"epoch {epoch}: elapsed {elapsed:.1f}s exceeds budget "
-                        f"{wall_clock_budget_sec:.1f}s "
-                        f"(--max-wall-clock-hours={args.max_wall_clock_hours}). "
-                        "Aborting gracefully and emitting best EMA checkpoint."
+            exceeded, elapsed = _full_cpu_wall_clock_exceeded(
+                started_at=train_started_at,
+                budget_sec=wall_clock_budget_sec,
+            )
+            if exceeded:
+                print(
+                    "["
+                    + _format_full_cpu_wall_clock_abort(
+                        epoch=epoch,
+                        elapsed_sec=elapsed,
+                        budget_sec=float(wall_clock_budget_sec),
+                        max_wall_clock_hours=float(args.max_wall_clock_hours),
                     )
-                    wall_clock_aborted = True
-                    break
+                    + "]"
+                )
+                wall_clock_aborted = True
+                break
             substrate.train()
             random.shuffle(train_indices_pool)
             epoch_losses: list[float] = []
             for batch_start in range(0, len(train_indices_pool), args.batch_size):
+                exceeded, elapsed = _full_cpu_wall_clock_exceeded(
+                    started_at=train_started_at,
+                    budget_sec=wall_clock_budget_sec,
+                )
+                if exceeded:
+                    print(
+                        "["
+                        + _format_full_cpu_wall_clock_abort(
+                            epoch=epoch,
+                            batch_start=batch_start,
+                            elapsed_sec=elapsed,
+                            budget_sec=float(wall_clock_budget_sec),
+                            max_wall_clock_hours=float(args.max_wall_clock_hours),
+                        )
+                        + "]"
+                    )
+                    wall_clock_aborted = True
+                    break
                 batch_indices = train_indices_pool[batch_start : batch_start + args.batch_size]
                 if not batch_indices:
                     continue
@@ -1365,6 +1437,9 @@ def _full_main(args: argparse.Namespace) -> int:
             if scheduler is not None:
                 scheduler.step()
 
+            if wall_clock_aborted:
+                break
+
             if epoch % max(1, args.val_every_epochs) == 0 or epoch == args.epochs - 1:
                 live_state = {k: v.detach().clone() for k, v in substrate.state_dict().items()}
                 ema.apply(substrate)
@@ -1406,6 +1481,28 @@ def _full_main(args: argparse.Namespace) -> int:
 
         train_elapsed = time.time() - train_started_at
         _stage(f"trained_best_epoch_{best_epoch}_val_lag_{best_val_lag:.5f}_elapsed_{train_elapsed:.1f}s")
+
+        if (
+            wall_clock_aborted
+            and not archive_build_skipped
+            and not ckpt_best_path.exists()
+        ):
+            live_state = {k: v.detach().clone() for k, v in substrate.state_dict().items()}
+            ema.apply(substrate)
+            ema_eval_state = _state_dict_cpu_snapshot(substrate)
+            substrate.load_state_dict(live_state)
+            torch.save(
+                {
+                    "state_dict": ema_eval_state,
+                    "per_pair_side_info_float": per_pair_side_info_float.detach().cpu(),
+                    "config": asdict(cfg),
+                    "epoch": -1,
+                    "val_lag": None,
+                    "fallback_reason": "full_cpu_wall_clock_aborted_before_validation",
+                },
+                ckpt_best_path,
+            )
+            _stage("fallback_checkpoint_saved_after_full_cpu_wall_clock_abort")
 
         # 10. Load best EMA checkpoint and build the archive.
         if archive_build_skipped:
@@ -1589,8 +1686,10 @@ def _full_main(args: argparse.Namespace) -> int:
             "requires_paired_contest_cpu_gha_linux_x86_64_before_score_claim",
             "requires_paired_contest_cuda_before_dual_axis_submission",
         ]))
+    provenance["best_val_lag"] = _json_finite_float_or_none(best_val_lag)
     (args.output_dir / "provenance.json").write_text(
-        json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+        json.dumps(provenance, indent=2, sort_keys=True, allow_nan=False),
+        encoding="utf-8",
     )
     print(f"[{SUBSTRATE_TAG}-full] wrote {args.output_dir / 'provenance.json'}")
     return 0

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import zipfile
 from pathlib import Path
@@ -10,6 +11,9 @@ import numpy as np
 import torch
 
 import tac.optimization.l5_staircase_v2 as l5_v2
+from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR,
+)
 from tac.optimization.l5_v2_tt5l_materialized_work_unit import (
     build_tt5l_materialized_paired_work_unit_plan,
     select_tt5l_variant_archive,
@@ -75,6 +79,23 @@ def _write_tt5l_archive_zip(
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("0.bin", bin_bytes)
+
+
+def test_materialized_work_unit_cli_default_runtime_matches_variant_manifest_source() -> None:
+    tool_path = Path(__file__).resolve().parents[3] / "tools" / (
+        "build_l5_v2_tt5l_materialized_paired_work_unit.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "build_l5_v2_tt5l_materialized_paired_work_unit_under_test",
+        tool_path,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    args = module.parse_args([])
+
+    assert str(args.submission_dir) == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR
 
 
 def test_tt5l_materialized_work_unit_builder_outputs_valid_plan(tmp_path: Path) -> None:

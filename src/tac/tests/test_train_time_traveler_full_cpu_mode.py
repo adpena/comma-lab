@@ -146,6 +146,71 @@ def test_archive_byte_proxy_calibration_records_drift(trainer_module):
     assert calibration["bin_to_proxy_ratio"] == pytest.approx(1500 / 1180)
 
 
+def test_full_cpu_wall_clock_budget_helper_trips_by_elapsed_time(trainer_module):
+    exceeded, elapsed = trainer_module._full_cpu_wall_clock_exceeded(
+        started_at=100.0,
+        budget_sec=3.0,
+        now=104.5,
+    )
+    assert exceeded is True
+    assert elapsed == pytest.approx(4.5)
+
+    exceeded, elapsed = trainer_module._full_cpu_wall_clock_exceeded(
+        started_at=100.0,
+        budget_sec=3.0,
+        now=102.5,
+    )
+    assert exceeded is False
+    assert elapsed == pytest.approx(2.5)
+
+    exceeded, _elapsed = trainer_module._full_cpu_wall_clock_exceeded(
+        started_at=100.0,
+        budget_sec=None,
+        now=999.0,
+    )
+    assert exceeded is False
+
+
+def test_full_cpu_wall_clock_abort_message_records_batch_location(trainer_module):
+    message = trainer_module._format_full_cpu_wall_clock_abort(
+        epoch=2,
+        batch_start=37,
+        elapsed_sec=12.25,
+        budget_sec=10.0,
+        max_wall_clock_hours=10.0 / 3600.0,
+    )
+    assert "batch_start 37" in message
+    assert "elapsed 12.2s exceeds budget 10.0s" in message
+    assert "Aborting gracefully" in message
+
+
+def test_json_finite_float_or_none_rejects_nan_and_infinity(trainer_module):
+    assert trainer_module._json_finite_float_or_none(1.25) == pytest.approx(1.25)
+    assert trainer_module._json_finite_float_or_none(float("inf")) is None
+    assert trainer_module._json_finite_float_or_none(float("-inf")) is None
+    assert trainer_module._json_finite_float_or_none(float("nan")) is None
+
+
+def test_full_cpu_wall_clock_gate_checked_inside_batch_loop() -> None:
+    """A 600-pair CPU advisory epoch must not overrun the wall-clock cap."""
+
+    text = TRAINER_PATH.read_text(encoding="utf-8")
+    batch_loop_start = text.index(
+        "for batch_start in range(0, len(train_indices_pool), args.batch_size):"
+    )
+    batch_loop_end = text.index(
+        "# Tier-1 O2: autocast wrap",
+        batch_loop_start,
+    )
+    batch_loop_prefix = text[batch_loop_start:batch_loop_end]
+    assert "_full_cpu_wall_clock_exceeded(" in batch_loop_prefix
+    assert "batch_start=batch_start" in batch_loop_prefix
+    assert "wall_clock_aborted = True" in batch_loop_prefix
+    assert "break" in batch_loop_prefix
+    assert "fallback_checkpoint_saved_after_full_cpu_wall_clock_abort" in text
+    assert "allow_nan=False" in text
+
+
 def test_full_trainer_side_info_initializes_at_quantized_lsb(trainer_module):
     """TT5L full training must not start with an archive-dead side channel."""
 

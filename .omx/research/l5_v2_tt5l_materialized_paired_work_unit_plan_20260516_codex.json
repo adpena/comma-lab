@@ -1,10 +1,10 @@
 {
   "archive": {
-    "bytes": 38911,
-    "expected_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+    "bytes": 38681,
+    "expected_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
     "expected_sha256_match": true,
-    "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
-    "sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7"
+    "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+    "sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1"
   },
   "axes_skipped_due_to_existing_anchor": {
     "contest_cpu": false,
@@ -17,13 +17,13 @@
       "--detach",
       "experiments/modal_auth_eval_cpu.py",
       "--archive",
-      "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
+      "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
       "--expected-archive-sha256",
-      "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+      "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
       "--inflate-sh",
       "inflate.sh",
       "--output-dir",
-      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cpu",
       "--detach",
       "--provider-detach-ack",
       "--pair-group-id",
@@ -31,15 +31,15 @@
       "--lane-id",
       "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
       "--instance-job-id",
-      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cpu",
       "--claim-agent",
       "codex:l5_v2_paired_measurement_dispatch",
       "--claim-notes",
-      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cpu; archive_sha=b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7; bytes=38911",
+      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cpu; archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1; bytes=38681",
       "--submission-dir",
-      "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
       "--expected-runtime-tree-sha256",
-      "f419ca980f533652a90d227fe675b433f0784e40547b68327fa091bcf95fb453"
+      "025123f140784b92b0d6145a05df6e97aedace7cf3e620a10551454cfa8057a2"
     ],
     "contest_cuda": [
       ".venv/bin/modal",
@@ -47,13 +47,13 @@
       "--detach",
       "experiments/modal_auth_eval.py",
       "--archive",
-      "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
+      "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
       "--expected-archive-sha256",
-      "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+      "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
       "--inflate-sh",
       "inflate.sh",
       "--output-dir",
-      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cuda",
       "--gpu",
       "T4",
       "--detach",
@@ -63,18 +63,18 @@
       "--lane-id",
       "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda",
       "--instance-job-id",
-      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cuda",
       "--claim-agent",
       "codex:l5_v2_paired_measurement_dispatch",
       "--claim-notes",
-      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cuda; archive_sha=b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7; bytes=38911",
+      "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; pair_group_id=pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda; axis=contest_cuda; archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1; bytes=38681",
       "--submission-dir",
-      "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
       "--expected-runtime-tree-sha256",
-      "5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583"
+      "83f5f760000802b69abb187e8239403a0d8fd9ed21ec8d127fa0542ca91001aa"
     ]
   },
-  "created_at_utc": "2026-05-17T04:44:46Z",
+  "created_at_utc": "2026-05-17T05:29:59Z",
   "dispatch_attempted": false,
   "existing_anchors_reused": {
     "contest_cpu": null,
@@ -85,55 +85,53 @@
     "contest_cuda": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
   },
   "materialized_from": {
-    "archive_bytes": 38911,
-    "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
-    "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
-    "source_archive_path": "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
-    "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+    "archive_bytes": 38681,
+    "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+    "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+    "source_archive_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/archive.zip",
+    "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
     "source_sideinfo_liveness": {
-      "all_zero_pair_count": 600,
+      "all_zero_pair_count": 0,
       "checked": true,
       "dtype": "int8",
-      "liveness_warnings": [
-        "tt5l_side_info_some_pairs_all_zero"
-      ],
-      "max": 0,
-      "max_nonzero_values_per_pair": 0,
-      "mean_nonzero_values_per_pair": 0.0,
-      "min": 0,
-      "min_nonzero_values_per_pair": 0,
-      "nonzero_fraction": 0.0,
-      "nonzero_pair_count": 0,
-      "nonzero_pair_fraction": 0.0,
-      "nonzero_values": 0,
+      "liveness_warnings": [],
+      "max": 4,
+      "max_nonzero_values_per_pair": 38,
+      "mean_nonzero_values_per_pair": 27.711666666666666,
+      "min": -4,
+      "min_nonzero_values_per_pair": 18,
+      "nonzero_fraction": 0.6158148148148148,
+      "nonzero_pair_count": 600,
+      "nonzero_pair_fraction": 1.0,
+      "nonzero_values": 16627,
       "section_liveness": {
         "checked": true,
         "per_pair_bytes": 45,
         "sections": {
           "hf_residual": {
-            "nonzero_fraction": 0.0,
-            "nonzero_values": 0,
+            "nonzero_fraction": 0.6205555555555555,
+            "nonzero_values": 2234,
             "offset": 30,
             "total_values": 3600,
             "width": 6
           },
           "predict_residual": {
-            "nonzero_fraction": 0.0,
-            "nonzero_values": 0,
+            "nonzero_fraction": 0.615,
+            "nonzero_values": 3321,
             "offset": 36,
             "total_values": 5400,
             "width": 9
           },
           "se3_lie": {
-            "nonzero_fraction": 0.0,
-            "nonzero_values": 0,
+            "nonzero_fraction": 0.6161111111111112,
+            "nonzero_values": 4436,
             "offset": 0,
             "total_values": 7200,
             "width": 12
           },
           "seg_boundary": {
-            "nonzero_fraction": 0.0,
-            "nonzero_values": 0,
+            "nonzero_fraction": 0.6144444444444445,
+            "nonzero_values": 6636,
             "offset": 12,
             "total_values": 10800,
             "width": 18
@@ -148,22 +146,24 @@
       "total_values": 27000
     },
     "variant": "random_lsb",
-    "variant_manifest_path": ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
-    "variant_manifest_sha256": "db9ddcc7f43acbeddf61209fbead038cebcfabf86af95e291faef04aa8b68839",
-    "variant_report_path": ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.md",
+    "variant_manifest_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+    "variant_manifest_sha256": "80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459",
+    "variant_report_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md",
     "variant_row": {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
-      "archive_bytes": 38911,
+      "archive_bytes": 38681,
       "archive_member": "0.bin",
-      "archive_member_bytes": 38788,
-      "archive_member_sha256": "6c9c3b627b8b30b0958e3a9e13d2c1b99f93f52af6d6b35204514beccc4ff449",
-      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
-      "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+      "archive_member_bytes": 38558,
+      "archive_member_sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63",
+      "archive_member_sha_changed_from_source": true,
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "archive_sha_changed_from_source": true,
       "blockers": [
-        "requires_paired_cpu_cuda_exact_eval_before_score_claim",
-        "source_trained_sideinfo_all_zero"
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "default_rng(20260517).choice([-1, 1], size=source_shape)",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -173,7 +173,7 @@
         },
         {
           "length": 4321,
-          "offset": 34215,
+          "offset": 33985,
           "reason": "variant-specific compressed side-info payload",
           "section": "per_pair_side_info_blob"
         }
@@ -190,28 +190,28 @@
       "parsed_sections": {
         "ac_state_blob": {
           "length": 0,
-          "offset": 38536,
+          "offset": 38306,
           "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         },
         "meta_blob": {
           "length": 252,
-          "offset": 38536,
+          "offset": 38306,
           "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
         },
         "per_pair_side_info_blob": {
           "length": 4321,
-          "offset": 34215,
+          "offset": 33985,
           "sha256": "c8c6ee3c65e9cf52bcf0fef25c44974f31959903adffab1cb5419579c9a98ab9"
         },
         "tt5l_header": {
           "length": 34,
           "offset": 0,
-          "sha256": "cc9058607aebeeb5a82de14602fa1bfb6de2ea6a35088449962219fbcc44b0d3"
+          "sha256": "3d338739351d72b5558a2243a9e9e33819faaa371ea37eb721d5a4f40dff7c6c"
         },
         "world_model_blob": {
-          "length": 34181,
+          "length": 33951,
           "offset": 34,
-          "sha256": "af11c970f21fe2a1094bbcee7da769c28264914954c4387fcecb67d91e0ce817"
+          "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
         }
       },
       "promotion_eligible": false,
@@ -219,6 +219,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "deterministic +/-1 int8 side-info control",
+      "sideinfo_changed_from_source": true,
       "sideinfo_equal_source": false,
       "sideinfo_equal_zero": false,
       "sideinfo_liveness": {
@@ -276,8 +277,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": true,
       "sideinfo_sha256": "1cf4e9ee2321eb3ed11c454e3363de2e906c8e444fa0f9db2a09efea74b91d29",
+      "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+      "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+      "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
       "variant": "random_lsb",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     }
   },
@@ -289,8 +296,8 @@
   "operator_execute_required": true,
   "output_root": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact",
   "outputs": {
-    "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
-    "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda"
+    "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cpu",
+    "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cuda"
   },
   "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
   "planning_only": true,
@@ -303,16 +310,16 @@
     "contest_cuda",
     "contest_cpu"
   ],
-  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8",
+  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190",
   "runtime": {
     "expected_runtime_content_tree_sha256_by_axis": {
-      "contest_cpu": "b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0",
-      "contest_cuda": "b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0"
+      "contest_cpu": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+      "contest_cuda": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32"
     },
     "expected_runtime_tree_sha256": null,
     "expected_runtime_tree_sha256_by_axis": {
-      "contest_cpu": "f419ca980f533652a90d227fe675b433f0784e40547b68327fa091bcf95fb453",
-      "contest_cuda": "5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583"
+      "contest_cpu": "025123f140784b92b0d6145a05df6e97aedace7cf3e620a10551454cfa8057a2",
+      "contest_cuda": "83f5f760000802b69abb187e8239403a0d8fd9ed21ec8d127fa0542ca91001aa"
     },
     "inflate_sh": "inflate.sh",
     "modal_uploaded_runtime_manifest_by_axis": {
@@ -350,10 +357,10 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 4117,
+            "bytes": 4148,
             "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
             "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
-            "sha256": "e7c72997fcaacd7d47bc403bfe0870b8d3e3d10a8cf5baa206aefdf0d7fbf0da"
+            "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
           },
           {
             "bytes": 0,
@@ -362,22 +369,22 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 17134,
+            "bytes": 23018,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
             "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
-            "sha256": "5f26d5eff1a66ace60ca5569364e3cf105bdd11db86ba9dc07e049bcebe7c612"
+            "sha256": "43d4af9bbc341b1760db78340de4baaa6e2e8389e61e596e53aae6b524ec2c45"
           },
           {
-            "bytes": 11238,
+            "bytes": 24100,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
             "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/archive.py",
-            "sha256": "9b05484b5f0b627b21eb76f8e3a711046ba190fba024e95ece2174dda7b9ca13"
+            "sha256": "819b6a5d1ad3fc5698606abf028bb052308b5069fd0a700df263f56d85aad66f"
           },
           {
-            "bytes": 7059,
+            "bytes": 12682,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/inflate.py",
             "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/inflate.py",
-            "sha256": "0a62dc1330dabc144960241cb5c5077ef533af00e941e2519aeca3915ff19a97"
+            "sha256": "c6500366452c279ac600180763fc8c53afc44d9d1e0a8eaf397006b359e593d8"
           }
         ],
         "repo_local_tac_import_manifest": {
@@ -625,17 +632,18 @@
             "tac.substrates._shared.inflate_runtime",
             "tac.substrates.time_traveler_l5_autonomy.architecture",
             "tac.substrates.time_traveler_l5_autonomy.archive",
-            "tac.substrates.time_traveler_l5_autonomy.inflate"
+            "tac.substrates.time_traveler_l5_autonomy.inflate",
+            "tac.substrates.z5_predictive_coding_world_model.architecture"
           ],
           "runtime_root_name": "submission_dir",
           "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
           "tac_root_relative_path": "src/tac",
           "unresolved_modules": []
         },
-        "runtime_content_tree_sha256": "b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0",
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
         "runtime_file_count": 10,
         "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
-        "runtime_tree_sha256": "f419ca980f533652a90d227fe675b433f0784e40547b68327fa091bcf95fb453",
+        "runtime_tree_sha256": "025123f140784b92b0d6145a05df6e97aedace7cf3e620a10551454cfa8057a2",
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
         "upstream_evaluate_py": {
           "bytes": 6005,
@@ -677,10 +685,10 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 4117,
+            "bytes": 4148,
             "relative_path": "src/tac/substrates/_shared/inflate_runtime.py",
             "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/_shared/inflate_runtime.py",
-            "sha256": "e7c72997fcaacd7d47bc403bfe0870b8d3e3d10a8cf5baa206aefdf0d7fbf0da"
+            "sha256": "fc304003c4d258f27eff05f730ef5a5d47b9efe01506b47416bb125817d7c254"
           },
           {
             "bytes": 0,
@@ -689,22 +697,22 @@
             "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
           },
           {
-            "bytes": 17134,
+            "bytes": 23018,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
             "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/architecture.py",
-            "sha256": "5f26d5eff1a66ace60ca5569364e3cf105bdd11db86ba9dc07e049bcebe7c612"
+            "sha256": "43d4af9bbc341b1760db78340de4baaa6e2e8389e61e596e53aae6b524ec2c45"
           },
           {
-            "bytes": 11238,
+            "bytes": 24100,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/archive.py",
             "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/archive.py",
-            "sha256": "9b05484b5f0b627b21eb76f8e3a711046ba190fba024e95ece2174dda7b9ca13"
+            "sha256": "819b6a5d1ad3fc5698606abf028bb052308b5069fd0a700df263f56d85aad66f"
           },
           {
-            "bytes": 7059,
+            "bytes": 12682,
             "relative_path": "src/tac/substrates/time_traveler_l5_autonomy/inflate.py",
             "repo_relative_path": "/tmp/modal_auth_eval/submission_dir/src/tac/substrates/time_traveler_l5_autonomy/inflate.py",
-            "sha256": "0a62dc1330dabc144960241cb5c5077ef533af00e941e2519aeca3915ff19a97"
+            "sha256": "c6500366452c279ac600180763fc8c53afc44d9d1e0a8eaf397006b359e593d8"
           }
         ],
         "repo_local_tac_import_manifest": {
@@ -952,17 +960,18 @@
             "tac.substrates._shared.inflate_runtime",
             "tac.substrates.time_traveler_l5_autonomy.architecture",
             "tac.substrates.time_traveler_l5_autonomy.archive",
-            "tac.substrates.time_traveler_l5_autonomy.inflate"
+            "tac.substrates.time_traveler_l5_autonomy.inflate",
+            "tac.substrates.z5_predictive_coding_world_model.architecture"
           ],
           "runtime_root_name": "submission_dir",
           "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
           "tac_root_relative_path": "src/tac",
           "unresolved_modules": []
         },
-        "runtime_content_tree_sha256": "b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0",
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
         "runtime_file_count": 10,
         "runtime_root": "/tmp/modal_auth_eval/submission_dir",
-        "runtime_tree_sha256": "5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583",
+        "runtime_tree_sha256": "83f5f760000802b69abb187e8239403a0d8fd9ed21ec8d127fa0542ca91001aa",
         "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
         "upstream_evaluate_py": {
           "bytes": 6005,
@@ -971,7 +980,7 @@
         }
       }
     },
-    "submission_dir": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime"
+    "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
   },
   "schema": "modal_paired_auth_eval_dispatch_plan_v2",
   "score_claim": false,

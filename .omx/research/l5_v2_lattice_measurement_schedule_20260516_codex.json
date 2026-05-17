@@ -160,12 +160,12 @@
         }
       ],
       "sideinfo_variant_packet_builder_tool": "tools/build_tt5l_sideinfo_variant_packets.py",
-      "sideinfo_variant_packet_manifest_artifact": ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
-      "sideinfo_variant_packet_output_root": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex",
-      "sideinfo_variant_packet_report_artifact": ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.md",
+      "sideinfo_variant_packet_manifest_artifact": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "sideinfo_variant_packet_output_root": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z",
+      "sideinfo_variant_packet_report_artifact": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md",
       "sideinfo_variant_packet_schema": "tt5l_sideinfo_variant_packets_v1",
-      "sideinfo_variant_packet_source_archive": "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
-      "sideinfo_variant_packet_submission_dir": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime"
+      "sideinfo_variant_packet_source_archive": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/archive.zip",
+      "sideinfo_variant_packet_submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
     },
     {
       "blockers": [

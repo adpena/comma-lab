@@ -16,6 +16,7 @@ from tac.optimization.l5_staircase_v2 import (  # noqa: E402
 )
 from tac.optimization.l5_v2_measurement_schedule import (  # noqa: E402
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR,
 )
 from tac.optimization.l5_v2_tt5l_materialized_work_unit import (  # noqa: E402
     TT5L_MATERIALIZED_PAIRED_WORK_UNIT_DEFAULT_VARIANT,
@@ -65,7 +66,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--submission-dir",
         type=Path,
-        default=Path("experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime"),
+        default=Path(L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR),
         help="Runtime submission directory containing inflate.sh.",
     )
     parser.add_argument(

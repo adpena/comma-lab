@@ -39,23 +39,26 @@ L5V2_TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH = (
     "tools/build_tt5l_sideinfo_variant_packets.py"
 )
 L5V2_TT5L_SIDEINFO_VARIANT_PACKET_ARTIFACT_PATH = (
-    ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json"
+    ".omx/research/"
+    "l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json"
 )
 L5V2_TT5L_SIDEINFO_VARIANT_PACKET_REPORT_PATH = (
-    ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.md"
+    ".omx/research/"
+    "l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md"
 )
 L5V2_TT5L_SIDEINFO_VARIANT_PACKET_OUTPUT_ROOT = (
     "experiments/results/time_traveler_l5_v2/"
-    "tt5l_sideinfo_variant_packets_20260517_codex"
+    "tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z"
 )
 L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SOURCE_ARCHIVE_PATH = (
-    "experiments/results/"
-    "lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__"
-    "smoke__25ep_modal/"
-    "lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip"
+    "experiments/results/time_traveler_l5_v2/"
+    "tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/"
+    "archive.zip"
 )
 L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR = (
-    "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime"
+    "experiments/results/time_traveler_l5_v2/"
+    "tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/"
+    "submission_dir"
 )
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES = ("contest_cpu", "contest_cuda")
 L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS = (
