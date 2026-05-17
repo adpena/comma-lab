@@ -1,5 +1,6 @@
 {
   "blockers": [
+    "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep",
     "requires_z6_l1_scaffold_before_paid_dispatch",
     "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
     "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
@@ -22,7 +23,8 @@
       "blockers": [
         "requires_z6_l1_scaffold_before_paid_dispatch",
         "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
-        "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
+        "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
+        "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
       ],
       "candidate_id": "z6_z7_z8_predictive_coding_world_models",
       "cost_band_usd": [
@@ -106,10 +108,38 @@
             "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
           ],
           "l1_scaffold_present": true,
+          "post_l1_recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+          "post_l1_recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+          "post_l1_recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
           "ready_for_l1_build": false,
           "ready_for_l1_scaffold_dispatch": false,
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
+        },
+        "post_l1_proxy_evidence": {
+          "allowed_to_spend_on_z6_full_film": false,
+          "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+          "artifact_present": true,
+          "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+          "artifact_valid": true,
+          "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+          "best_proxy_id": "random_control",
+          "blockers": [
+            "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+          ],
+          "identity_dominates_all_tested_real_video_proxies": true,
+          "paradigm_claim_allowed": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "ready_for_paid_dispatch": false,
+          "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+          "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+          "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+          "schema": "z6_post_l1_proxy_evidence_status_v1",
+          "score_claim": false,
+          "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+          "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
         },
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
         "schema": "l5_v2_asymptotic_next_action_status_v1"
@@ -119,6 +149,34 @@
       "local_ledger_path": ".omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "ad07c1a032078fefafbafc2a910522e75ea5479bbac15d7cab4569f43ca5e334",
+      "post_l1_proxy_evidence": {
+        "allowed_to_spend_on_z6_full_film": false,
+        "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+        "artifact_valid": true,
+        "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+        "best_proxy_id": "random_control",
+        "blockers": [
+          "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        ],
+        "identity_dominates_all_tested_real_video_proxies": true,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+        "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+        "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+        "schema": "z6_post_l1_proxy_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+        "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
+      },
+      "post_l1_recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+      "post_l1_recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+      "post_l1_recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
       "primary_axis": "scorer_relationship_class_shift_predictive_coding",
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -214,11 +272,15 @@
             "requires_byte_mutation_proof_before_score_or_rank_authority"
           ],
           "l1_scaffold_present": true,
+          "post_l1_recommended_next_action": "",
+          "post_l1_recommended_next_action_id": "",
+          "post_l1_recommended_next_action_status": "not_applicable",
           "ready_for_l1_build": false,
           "ready_for_l1_scaffold_dispatch": false,
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
         },
+        "post_l1_proxy_evidence": null,
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
         "schema": "l5_v2_asymptotic_next_action_status_v1"
       },
@@ -227,6 +289,10 @@
       "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "a9484ebc2deeec44128005d46e3c024b90682140b3afa4b0a691726a552794c5",
+      "post_l1_proxy_evidence": null,
+      "post_l1_recommended_next_action": "",
+      "post_l1_recommended_next_action_id": "",
+      "post_l1_recommended_next_action_status": "not_applicable",
       "primary_axis": "architecture_decode_contract_scorer_relationship_class_shift",
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -322,11 +388,15 @@
             "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
           ],
           "l1_scaffold_present": true,
+          "post_l1_recommended_next_action": "",
+          "post_l1_recommended_next_action_id": "",
+          "post_l1_recommended_next_action_status": "not_applicable",
           "ready_for_l1_build": false,
           "ready_for_l1_scaffold_dispatch": false,
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
         },
+        "post_l1_proxy_evidence": null,
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
         "schema": "l5_v2_asymptotic_next_action_status_v1"
       },
@@ -335,6 +405,10 @@
       "local_ledger_path": ".omx/research/tishby_ib_pure_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
       "local_ledger_sha256": "3271690105a5af1a9ceba1670a3ef10ee54e829277737f34eaa937cb45a2264a",
+      "post_l1_proxy_evidence": null,
+      "post_l1_recommended_next_action": "",
+      "post_l1_recommended_next_action_id": "",
+      "post_l1_recommended_next_action_status": "not_applicable",
       "primary_axis": "training_paradigm_scorer_relationship_class_shift",
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -393,10 +467,38 @@
           "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
         ],
         "l1_scaffold_present": true,
+        "post_l1_recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+        "post_l1_recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+        "post_l1_recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
         "ready_for_l1_build": false,
         "ready_for_l1_scaffold_dispatch": false,
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
+      },
+      "post_l1_proxy_evidence": {
+        "allowed_to_spend_on_z6_full_film": false,
+        "artifact_path": ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "467adb8a97ab0b07b08e5a1c0ae2cf6637aa117c191bf8032f754bf430e7374b",
+        "artifact_valid": true,
+        "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+        "best_proxy_id": "random_control",
+        "blockers": [
+          "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        ],
+        "identity_dominates_all_tested_real_video_proxies": true,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-derived ego proxy that beats identity in smoke, redesign the predictor objective, or advance the L5-v2 staircase to Z7/Rudin/Tishby rather than retreading this configuration.",
+        "recommended_next_action_id": "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7",
+        "recommended_next_action_status": "blocked_pending_redesign_or_next_candidate",
+        "schema": "z6_post_l1_proxy_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_z6_real_video_ego_proxy_sweep.py",
+        "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke"
       },
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
       "schema": "l5_v2_asymptotic_next_action_status_v1"
@@ -437,11 +539,15 @@
           "requires_byte_mutation_proof_before_score_or_rank_authority"
         ],
         "l1_scaffold_present": true,
+        "post_l1_recommended_next_action": "",
+        "post_l1_recommended_next_action_id": "",
+        "post_l1_recommended_next_action_status": "not_applicable",
         "ready_for_l1_build": false,
         "ready_for_l1_scaffold_dispatch": false,
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
       },
+      "post_l1_proxy_evidence": null,
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
       "schema": "l5_v2_asymptotic_next_action_status_v1"
     },
@@ -481,11 +587,15 @@
           "requires_paired_smoke_vs_atw_v2_before_asymptotic_claim"
         ],
         "l1_scaffold_present": true,
+        "post_l1_recommended_next_action": "",
+        "post_l1_recommended_next_action_id": "",
+        "post_l1_recommended_next_action_status": "not_applicable",
         "ready_for_l1_build": false,
         "ready_for_l1_scaffold_dispatch": false,
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
       },
+      "post_l1_proxy_evidence": null,
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
       "schema": "l5_v2_asymptotic_next_action_status_v1"
     }

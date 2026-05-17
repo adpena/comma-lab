@@ -1028,6 +1028,30 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         "completed_or_superseded"
     )
     assert z6_status["next_prerequisite_status"]["ready_for_l1_build"] is False
+    assert z6["post_l1_proxy_evidence"]["schema"] == (
+        l5_v2.Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA
+    )
+    assert z6["post_l1_proxy_evidence"]["artifact_present"] is True
+    assert z6["post_l1_proxy_evidence"]["artifact_valid"] is True
+    assert z6["post_l1_proxy_evidence"]["verdict"] == (
+        l5_v2.Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT
+    )
+    assert z6["post_l1_proxy_evidence"]["score_claim"] is False
+    assert z6["post_l1_proxy_evidence"]["ready_for_paid_dispatch"] is False
+    assert (
+        z6["post_l1_proxy_evidence"]["allowed_to_spend_on_z6_full_film"]
+        is False
+    )
+    assert z6["post_l1_recommended_next_action_status"] == (
+        "blocked_pending_redesign_or_next_candidate"
+    )
+    assert z6["post_l1_recommended_next_action_id"] == (
+        "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7"
+    )
+    assert z6_status["post_l1_proxy_evidence"] == z6["post_l1_proxy_evidence"]
+    assert z6_status["next_prerequisite_status"][
+        "post_l1_recommended_next_action_status"
+    ] == "blocked_pending_redesign_or_next_candidate"
     assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
@@ -1040,6 +1064,10 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert "requires_z6_l1_scaffold_before_paid_dispatch" in z6["blockers"]
     assert (
         "requires_identity_predictor_disambiguator_result_before_paradigm_claim"
+        in z6["blockers"]
+    )
+    assert (
+        "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
         in z6["blockers"]
     )
 
@@ -1103,6 +1131,10 @@ def test_l5_v2_asymptotic_candidate_surface_artifact_tracks_live_payload() -> No
             "ready_for_l1_scaffold_dispatch",
             "l1_build_blockers",
             "blockers",
+            "post_l1_proxy_evidence",
+            "post_l1_recommended_next_action_status",
+            "post_l1_recommended_next_action_id",
+            "post_l1_recommended_next_action",
         ):
             assert artifact_row[field] == live_row[field]
 
@@ -1116,6 +1148,11 @@ def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() ->
     assert "z6_z7_z8_predictive_coding_world_models" in report
     assert "expected_first_artifacts_all_present: `True`" in report
     assert "recommended_next_action_status: `completed_or_superseded`" in report
+    assert (
+        "post_l1_recommended_next_action_status: "
+        "`blocked_pending_redesign_or_next_candidate`"
+    ) in report
+    assert "identity_dominates_all_tested_ego_proxies_real_video_smoke" in report
     assert "score_claim: `false`" in report
 
 
@@ -1185,6 +1222,14 @@ def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
         "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
         "scoping_design_20260516"
     ) in payload["blockers"]
+    z6 = next(
+        row
+        for row in payload["candidates"]
+        if row["candidate_id"] == "z6_z7_z8_predictive_coding_world_models"
+    )
+    assert z6["post_l1_proxy_evidence"]["artifact_present"] is False
+    assert z6["post_l1_proxy_evidence"]["artifact_valid"] is False
+    assert "z6_real_video_ego_proxy_sweep_missing" in z6["blockers"]
 
 
 def test_l5_v2_asymptotic_pursuit_candidates_require_registry_with_ledger(
@@ -1223,6 +1268,9 @@ def test_l5_v2_asymptotic_pursuit_candidates_require_registry_with_ledger(
         "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
         "scoping_design_20260516"
     ) in z6["blockers"]
+    assert z6["post_l1_proxy_evidence"]["artifact_present"] is False
+    assert z6["post_l1_proxy_evidence"]["artifact_valid"] is False
+    assert "z6_real_video_ego_proxy_sweep_missing" in z6["blockers"]
     assert "requires_l5_v2_asymptotic_pursuit_lane_registry_entry" in z6[
         "l1_build_blockers"
     ]

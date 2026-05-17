@@ -209,6 +209,17 @@ L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH = (
 Z6_IDENTITY_PREDICTOR_DISAMBIGUATOR_TOOL_PATH = (
     "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py"
 )
+Z6_REAL_VIDEO_EGO_PROXY_SWEEP_TOOL_PATH = (
+    "tools/probe_z6_real_video_ego_proxy_sweep.py"
+)
+Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_z6_real_video_ego_proxy_sweep_20260516_codex.json"
+)
+Z6_REAL_VIDEO_EGO_PROXY_SWEEP_SCHEMA = "z6_real_video_ego_proxy_sweep_v1"
+Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT = (
+    "identity_dominates_all_tested_ego_proxies_real_video_smoke"
+)
+Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA = "z6_post_l1_proxy_evidence_status_v1"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -404,6 +415,7 @@ def l5_v2_asymptotic_pursuit_candidates(
     rows: list[dict[str, Any]] = []
     aggregate_blockers: list[str] = list(lane_registry_blockers)
     for candidate in _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES:
+        z6_post_l1_proxy_evidence: dict[str, Any] | None = None
         ledger_path = resolved_repo_root / candidate.local_ledger_path
         ledger_present = ledger_path.is_file()
         ledger_sha256 = _sha256_file(ledger_path) if ledger_present else ""
@@ -477,6 +489,24 @@ def l5_v2_asymptotic_pursuit_candidates(
             if l1_scaffold_present
             else "ready_to_start_l1_scaffold_work_only_not_scaffold_ready"
         )
+        post_l1_recommended_next_action_id = ""
+        post_l1_recommended_next_action = ""
+        post_l1_recommended_next_action_status = "not_applicable"
+        if candidate.candidate_id == "z6_z7_z8_predictive_coding_world_models":
+            z6_post_l1_proxy_evidence = _z6_post_l1_proxy_evidence_status(
+                repo_root=resolved_repo_root,
+            )
+            blockers.extend(z6_post_l1_proxy_evidence["blockers"])
+            aggregate_blockers.extend(z6_post_l1_proxy_evidence["blockers"])
+            post_l1_recommended_next_action_id = str(
+                z6_post_l1_proxy_evidence["recommended_next_action_id"]
+            )
+            post_l1_recommended_next_action = str(
+                z6_post_l1_proxy_evidence["recommended_next_action"]
+            )
+            post_l1_recommended_next_action_status = str(
+                z6_post_l1_proxy_evidence["recommended_next_action_status"]
+            )
         next_prerequisite_status = {
             "status": recommended_next_action_status,
             "action_id": effective_next_action_id,
@@ -487,6 +517,13 @@ def l5_v2_asymptotic_pursuit_candidates(
             "l1_scaffold_present": l1_scaffold_present,
             "blockers": list(l1_build_blockers),
             "dependency_blockers": list(candidate.dependency_blockers),
+            "post_l1_recommended_next_action_status": (
+                post_l1_recommended_next_action_status
+            ),
+            "post_l1_recommended_next_action_id": (
+                post_l1_recommended_next_action_id
+            ),
+            "post_l1_recommended_next_action": post_l1_recommended_next_action,
         }
         l5_v2_asymptotic_next_action_status = {
             "schema": L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA,
@@ -504,6 +541,7 @@ def l5_v2_asymptotic_pursuit_candidates(
             ),
             "next_prerequisite_status": next_prerequisite_status,
             "ready_for_l1_build_semantics": ready_for_l1_build_semantics,
+            "post_l1_proxy_evidence": z6_post_l1_proxy_evidence,
         }
         aggregate_blockers.extend(blockers)
         rows.append(
@@ -540,6 +578,14 @@ def l5_v2_asymptotic_pursuit_candidates(
                 "l5_v2_asymptotic_next_action_status": (
                     l5_v2_asymptotic_next_action_status
                 ),
+                "post_l1_proxy_evidence": z6_post_l1_proxy_evidence,
+                "post_l1_recommended_next_action_status": (
+                    post_l1_recommended_next_action_status
+                ),
+                "post_l1_recommended_next_action_id": (
+                    post_l1_recommended_next_action_id
+                ),
+                "post_l1_recommended_next_action": post_l1_recommended_next_action,
             }
         )
     return {
@@ -611,12 +657,27 @@ def render_l5_v2_asymptotic_candidate_surface_markdown(
                     f"- effective_recommended_next_action_id: `{row.get('effective_recommended_next_action_id')}`",
                     f"- ready_for_l1_build: `{row.get('ready_for_l1_build')}`",
                     f"- ready_for_l1_scaffold_dispatch: `{row.get('ready_for_l1_scaffold_dispatch')}`",
+                    f"- post_l1_recommended_next_action_status: `{row.get('post_l1_recommended_next_action_status')}`",
+                    f"- post_l1_recommended_next_action_id: `{row.get('post_l1_recommended_next_action_id')}`",
                     f"- blockers: `{row.get('blockers')}`",
                     f"- l1_build_blockers: `{row.get('l1_build_blockers')}`",
                     "",
                     "Expected first artifacts:",
                 ]
             )
+            post_l1_proxy = row.get("post_l1_proxy_evidence")
+            if isinstance(post_l1_proxy, Mapping):
+                lines.extend(
+                    [
+                        "",
+                        "Post-L1 proxy evidence:",
+                        f"- artifact_present=`{post_l1_proxy.get('artifact_present')}`",
+                        f"- artifact_valid=`{post_l1_proxy.get('artifact_valid')}`",
+                        f"- verdict=`{post_l1_proxy.get('verdict')}`",
+                        f"- allowed_to_spend_on_z6_full_film=`{post_l1_proxy.get('allowed_to_spend_on_z6_full_film')}`",
+                        f"- best_identity_minus_full_loss_proxy=`{post_l1_proxy.get('best_identity_minus_full_loss_proxy')}`",
+                    ]
+                )
             artifacts = row.get("expected_first_artifact_status")
             if isinstance(artifacts, list):
                 for artifact in artifacts:
@@ -626,6 +687,112 @@ def render_l5_v2_asymptotic_candidate_surface_markdown(
                         f"- `{artifact.get('path')}` present=`{artifact.get('present')}`"
                     )
     return "\n".join(lines) + "\n"
+
+
+def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return fail-closed Z6 post-L1 proxy evidence for dispatch routing."""
+
+    artifact_path = repo_root / Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH
+    blockers: list[str] = []
+    artifact_present = artifact_path.is_file()
+    artifact_sha256 = ""
+    payload: Mapping[str, Any] = {}
+    if not artifact_present:
+        blockers.append("z6_real_video_ego_proxy_sweep_missing")
+    else:
+        artifact_sha256 = _sha256_file(artifact_path)
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            blockers.append("z6_real_video_ego_proxy_sweep_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+            else:
+                blockers.append("z6_real_video_ego_proxy_sweep_not_object")
+
+    for field_name in (
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_paid_dispatch",
+        "paradigm_claim_allowed",
+    ):
+        if payload.get(field_name) is not False:
+            blockers.append(f"z6_real_video_ego_proxy_sweep_{field_name}_not_false")
+    if payload and payload.get("schema") != Z6_REAL_VIDEO_EGO_PROXY_SWEEP_SCHEMA:
+        blockers.append("z6_real_video_ego_proxy_sweep_schema_mismatch")
+    if payload and payload.get("evidence_grade") != "real_video_smoke_proxy_no_scorer":
+        blockers.append("z6_real_video_ego_proxy_sweep_evidence_grade_mismatch")
+    if payload and not isinstance(payload.get("rows"), list):
+        blockers.append("z6_real_video_ego_proxy_sweep_rows_missing")
+
+    verdict = str(payload.get("verdict") or "")
+    identity_dominates = (
+        verdict == Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT
+    )
+    if identity_dominates:
+        blockers.append(
+            "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        )
+        recommended_next_action_id = (
+            "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7"
+        )
+        recommended_next_action = (
+            "Do not spend on Z6-v1 full-FiLM. Either build a PoseNet/scorer-"
+            "derived ego proxy that beats identity in smoke, redesign the "
+            "predictor objective, or advance the L5-v2 staircase to Z7/Rudin/"
+            "Tishby rather than retreading this configuration."
+        )
+        recommended_next_action_status = "blocked_pending_redesign_or_next_candidate"
+    elif payload and not blockers:
+        recommended_next_action_id = "z6_proxy_sweep_found_full_film_candidate"
+        recommended_next_action = (
+            "A full-FiLM proxy candidate beat identity in smoke; run the next "
+            "paired scorer-bearing probe before any score or paradigm claim."
+        )
+        recommended_next_action_status = "proxy_candidate_found_requires_scorer_probe"
+    else:
+        recommended_next_action_id = "run_z6_real_video_ego_proxy_sweep"
+        recommended_next_action = (
+            "Run the Z6 real-video ego-proxy sweep before any paid full-FiLM "
+            "dispatch."
+        )
+        recommended_next_action_status = "missing_or_invalid_proxy_evidence"
+
+    return {
+        "schema": Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA,
+        "tool_path": Z6_REAL_VIDEO_EGO_PROXY_SWEEP_TOOL_PATH,
+        "artifact_path": Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH,
+        "artifact_present": artifact_present,
+        "artifact_sha256": artifact_sha256,
+        "artifact_valid": bool(payload) and not [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+            }
+        ],
+        "verdict": verdict,
+        "best_proxy_id": payload.get("best_proxy_id"),
+        "best_identity_minus_full_loss_proxy": payload.get(
+            "best_identity_minus_full_loss_proxy"
+        ),
+        "identity_dominates_all_tested_real_video_proxies": identity_dominates,
+        "allowed_to_spend_on_z6_full_film": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "paradigm_claim_allowed": False,
+        "recommended_next_action_status": recommended_next_action_status,
+        "recommended_next_action_id": recommended_next_action_id,
+        "recommended_next_action": recommended_next_action,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
 
 
 def _l5_v2_lane_registry_ids(*, repo_root: Path) -> tuple[set[str], list[str]]:
@@ -4910,6 +5077,11 @@ __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
     "TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH",
+    "Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA",
+    "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH",
+    "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT",
+    "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_SCHEMA",
+    "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_TOOL_PATH",
     "L5V2AsymptoticPursuitCandidate",
     "L5V2Gate",
     "L5V2GateEvidence",
