@@ -10,7 +10,7 @@
     "score_claim": false
   },
   "blockers": [],
-  "current_head_commit": "9b926ab6e099585d64a76726db91c8af6be0f181",
+  "current_head_commit": "e73c0cea2fe6138c6d7957a957a007dd637b0e61",
   "current_route_verdict": {
     "dispatch_attempted": false,
     "execution_ready": false,
@@ -27,7 +27,7 @@
     "status": "blocked_on_operator_route_configuration"
   },
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T15:40:02Z",
+  "generated_at_utc": "2026-05-17T16:57:26Z",
   "no_signal_loss_notes": [
     "This packet is generated from live artifact SHA-256s, not hand-edited.",
     "Architecture lock is deliberately downstream of this packet; do not hash it here.",
@@ -151,7 +151,7 @@
       "passed_cell_count": 10,
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_v1",
-      "sha256": "e1b8c26fce04996a8e26b68c8a0d2bc63541a894ba6515f05466acbd07257ea8"
+      "sha256": "72f4c23dcf9e456d14e5d8017b59f9a930ab3ddd39b3e2a62098ad4a837e2752"
     },
     "sideinfo_execution_preflight": {
       "blockers": [],
@@ -179,7 +179,7 @@
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
       "sha256": "acc247e499a9f3a855d97623099bbb95d59807eb5371a0d31f6ade3f8b145414",
       "source_commit": "9b926ab6e099585d64a76726db91c8af6be0f181",
-      "source_commit_matches_current_head": true,
+      "source_commit_matches_current_head": false,
       "source_relevant_diff_paths": [],
       "source_relevant_paths_match_current_head": true
     }

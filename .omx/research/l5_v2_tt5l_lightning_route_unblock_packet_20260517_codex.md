@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning route unblock packet
 
-**Generated:** 2026-05-17T15:40:02Z
-**Commit:** `9b926ab6e099585d64a76726db91c8af6be0f181`
+**Generated:** 2026-05-17T16:57:26Z
+**Commit:** `e73c0cea2fe6138c6d7957a957a007dd637b0e61`
 
 This packet is generated from live artifact hashes. It turns the current TT5L Lightning blocker into an executable operator checklist. It is not a dispatch, score claim, or promotion artifact.
 
@@ -31,7 +31,7 @@ The TT5L method path is not blocked here. The route is blocked on provider confi
   - SHA-256: `3c79806149add6780146538c8aed7615153a8c62ca028a660e65cd9b06155e79`
 - 10-cell dry-run verification: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `e1b8c26fce04996a8e26b68c8a0d2bc63541a894ba6515f05466acbd07257ea8`
+  - SHA-256: `72f4c23dcf9e456d14e5d8017b59f9a930ab3ddd39b3e2a62098ad4a837e2752`
   - all dry-runs passed: `True`
   - cells passed: `10`/`10`
 - 10-cell paired-axis plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
