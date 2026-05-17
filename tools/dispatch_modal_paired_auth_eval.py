@@ -50,11 +50,14 @@ from tac.deploy.modal.auth_eval import (  # noqa: E402
     modal_uploaded_submission_dir_runtime_manifest,
 )
 from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    MODAL_AUTH_EVAL_CPU_REMOTE_SUBMISSION_DIR,
+    MODAL_AUTH_EVAL_CUDA_REMOTE_SUBMISSION_DIR,
     PAIRED_AUTH_EVAL_DEFAULT_CLAIM_AGENT,
+    paired_auth_eval_axis_command,
 )
 
-CUDA_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval/submission_dir"
-CPU_REMOTE_SUBMISSION_DIR = "/tmp/modal_auth_eval_cpu/submission_dir"
+CUDA_REMOTE_SUBMISSION_DIR = MODAL_AUTH_EVAL_CUDA_REMOTE_SUBMISSION_DIR
+CPU_REMOTE_SUBMISSION_DIR = MODAL_AUTH_EVAL_CPU_REMOTE_SUBMISSION_DIR
 AUTO_RUNTIME_TREE = "auto"
 DEFAULT_REPO_INFLATE_SH = "submissions/robust_current/inflate.sh"
 DEFAULT_UPLOADED_SUBMISSION_INFLATE_SH = "inflate.sh"
@@ -417,71 +420,42 @@ def build_plan(
     cuda_lane = f"{lane_id_base}_contest_cuda"
     cpu_lane = f"{lane_id_base}_contest_cpu"
 
-    cuda_cmd = [
-        modal_bin,
-        "run",
-        "--detach",
-        "experiments/modal_auth_eval.py",
-        "--archive",
-        str(archive),
-        "--expected-archive-sha256",
-        archive_sha,
-        "--inflate-sh",
-        inflate_sh_for_cmd,
-        "--output-dir",
-        str(cuda_output),
-        "--gpu",
-        gpu,
-        "--detach",
-        "--provider-detach-ack",
-        "--pair-group-id",
-        pair_group_id,
-        "--lane-id",
-        cuda_lane,
-        "--instance-job-id",
-        f"{run_id}_cuda",
-        "--claim-agent",
-        claim_agent,
-        "--claim-notes",
-        f"{notes}; pair_group_id={pair_group_id}; axis=contest_cuda; archive_sha={archive_sha}; bytes={archive_bytes}",
-    ]
-    cpu_cmd = [
-        modal_bin,
-        "run",
-        "--detach",
-        "experiments/modal_auth_eval_cpu.py",
-        "--archive",
-        str(archive),
-        "--expected-archive-sha256",
-        archive_sha,
-        "--inflate-sh",
-        inflate_sh_for_cmd,
-        "--output-dir",
-        str(cpu_output),
-        "--detach",
-        "--provider-detach-ack",
-        "--pair-group-id",
-        pair_group_id,
-        "--lane-id",
-        cpu_lane,
-        "--instance-job-id",
-        f"{run_id}_cpu",
-        "--claim-agent",
-        claim_agent,
-        "--claim-notes",
-        f"{notes}; pair_group_id={pair_group_id}; axis=contest_cpu; archive_sha={archive_sha}; bytes={archive_bytes}",
-    ]
-    _optional_arg(cuda_cmd, "--submission-dir", submission_dir)
-    _optional_arg(cpu_cmd, "--submission-dir", submission_dir)
-    _optional_arg(
-        cuda_cmd,
-        "--expected-runtime-tree-sha256",
-        expected_runtime_by_axis["contest_cuda"],
+    cuda_cmd = paired_auth_eval_axis_command(
+        axis="contest_cuda",
+        modal_bin=modal_bin,
+        archive_path=archive,
+        archive_sha256=archive_sha,
+        inflate_sh=inflate_sh_for_cmd,
+        output_dir=cuda_output,
+        gpu=gpu,
+        pair_group_id=pair_group_id,
+        lane_id=cuda_lane,
+        instance_job_id=f"{run_id}_cuda",
+        claim_agent=claim_agent,
+        claim_notes=(
+            f"{notes}; pair_group_id={pair_group_id}; axis=contest_cuda; "
+            f"archive_sha={archive_sha}; bytes={archive_bytes}"
+        ),
+        submission_dir=submission_dir,
+        expected_runtime_tree_sha256=expected_runtime_by_axis["contest_cuda"],
     )
-    _optional_arg(
-        cpu_cmd,
-        "--expected-runtime-tree-sha256",
-        expected_runtime_by_axis["contest_cpu"],
+    cpu_cmd = paired_auth_eval_axis_command(
+        axis="contest_cpu",
+        modal_bin=modal_bin,
+        archive_path=archive,
+        archive_sha256=archive_sha,
+        inflate_sh=inflate_sh_for_cmd,
+        output_dir=cpu_output,
+        pair_group_id=pair_group_id,
+        lane_id=cpu_lane,
+        instance_job_id=f"{run_id}_cpu",
+        claim_agent=claim_agent,
+        claim_notes=(
+            f"{notes}; pair_group_id={pair_group_id}; axis=contest_cpu; "
+            f"archive_sha={archive_sha}; bytes={archive_bytes}"
+        ),
+        submission_dir=submission_dir,
+        expected_runtime_tree_sha256=expected_runtime_by_axis["contest_cpu"],
     )
 
     # Resolve per-axis skip-decisions before assembling the plan dict so the

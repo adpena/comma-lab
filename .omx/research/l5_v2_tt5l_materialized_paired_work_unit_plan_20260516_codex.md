@@ -1,125 +1,36 @@
 # L5 v2 TT5L materialized paired work-unit plan
 
 - schema: `modal_paired_auth_eval_dispatch_plan_v2`
+- tool: `tools/build_l5_v2_tt5l_materialized_paired_work_unit.py`
 - materialized artifact: `.omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json`
-- artifact sha256: `49898f162c5d312dc3de4f1d2571294cb7e4ffb9ba628c76ad9acf6868489b03`
 - score_claim: `false`
 - promotion_eligible: `false`
 - ready_for_exact_eval_dispatch: `false`
 - dispatch_attempted: `false`
-
-## Purpose
-
-This landing moves the L5 v2 TT5L paired probe from a generic blocked
-dispatch template to a materialized, byte-closed work unit with archive,
-runtime, pair-group, lane-id, and per-axis Modal command custody.
-
-It does not execute the job and does not claim score movement. Its job is to
-make the next frontier action concrete: review the materialized TT5L
-archive/runtime packet, then run the canonical paired dispatcher only if the
-operator accepts the current-runtime rerun policy.
+- materialized_variant: `random_lsb`
 
 ## Materialized Custody
 
-- archive path:
-  `experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip`
-- archive bytes: `34603`
-- archive sha256:
-  `2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a`
-- submission runtime:
-  `experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime`
-- pair group:
-  `pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda`
-- CPU lane:
-  `lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu`
-- CUDA lane:
-  `lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda`
-- CPU expected Modal uploaded runtime tree:
-  `2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584`
-- CUDA expected Modal uploaded runtime tree:
-  `2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28`
-- shared runtime content tree:
-  `630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718`
+- archive path: `experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip`
+- archive bytes: `38911`
+- archive sha256: `b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7`
+- submission runtime: `experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime`
+- pair group: `pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda`
+- CPU lane: `lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu`
+- CUDA lane: `lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda`
+- CPU expected Modal uploaded runtime tree: `f419ca980f533652a90d227fe675b433f0784e40547b68327fa091bcf95fb453`
+- CUDA expected Modal uploaded runtime tree: `5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583`
+- CPU runtime content tree: `b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0`
+- CUDA runtime content tree: `b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0`
 
-## Runtime Policy
+## Materialization Source
 
-The older recovered TT5L `[contest-CUDA]` anchor remains a real single-axis
-artifact, but it is not reused as the CUDA half of this paired work unit. The
-prior runtime-mismatch packet classified that case as
-`existing_cuda_anchor_runtime_mismatch_for_paired_measurement`.
-
-This materialized work unit therefore represents the clean current-runtime
-policy: rerun both `[contest-CPU]` and `[contest-CUDA]` under the same
-materialized archive/runtime contract, then harvest through the canonical
-Modal recovery path.
-
-## Hardening
-
-`src/tac/optimization/l5_staircase_v2.py` now validates the materialized work
-unit before it can become the next TT5L action. The validator refuses:
-
-- missing or malformed archive path, archive bytes, or archive SHA;
-- archive path that does not exist on disk;
-- archive byte or SHA mismatch;
-- missing runtime directory or `inflate.sh`;
-- missing per-axis runtime tree or runtime content hashes;
-- pair-group mismatch;
-- lane-id mismatch;
-- per-axis command lists that are not Modal `run` commands;
-- wrong CPU/CUDA wrapper scripts;
-- missing provider detach flags;
-- command flag mismatches for archive, archive SHA, runtime, pair group, lane,
-  or expected runtime tree.
-
-This closes the weak-command gap where any non-empty command list could have
-made a materialized plan appear valid.
+- variant manifest: `.omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json`
+- variant manifest sha256: `db9ddcc7f43acbeddf61209fbead038cebcfabf86af95e291faef04aa8b68839`
+- variant report: `.omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.md`
+- source archive: `experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip`
+- source archive sha256: `2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a`
 
 ## Operator Next Action
 
-The TT5L campaign readiness surface now advances to:
-
-`review_and_execute_l5_v2_tt5l_materialized_paired_measurement`
-
-The emitted operator command remains non-executing until `--execute` is added
-after review. The generated execute template routes through
-`tools/dispatch_modal_paired_auth_eval.py`, not direct single-axis wrappers,
-and the per-axis wrappers remain owned by the paired dispatcher.
-
-## Verification
-
-Focused tests:
-
-```text
-.venv/bin/python -m pytest \
-  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized \
-  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_materialized_work_unit_rejects_weak_axis_commands \
-  src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_probe_action_uses_existing_fail_closed_intake -q
-```
-
-Result: `3 passed`.
-
-Lint:
-
-```text
-.venv/bin/ruff check src/tac/optimization/l5_staircase_v2.py src/tac/tests/test_l5_staircase_v2.py
-```
-
-Result: `All checks passed!`.
-
-Live readiness check:
-
-```text
-artifact_valid=True
-blockers=[]
-next_action=review_and_execute_l5_v2_tt5l_materialized_paired_measurement
-ready_for_operator_dispatch=True
-ready_for_exact_eval_dispatch=False
-```
-
-## Remaining Blockers
-
-- No dispatch has been attempted from this packet.
-- The returned CPU/CUDA artifacts do not exist yet.
-- Side-info effect-curve cells still need paired evidence.
-- Probe observations must be regenerated from harvested paired results before
-  L5 v2 architecture lock, rank, kill, promotion, or stack-of-stacks authority.
+Review this materialized CPU/CUDA work unit, then execute through the canonical paired dispatcher only if the archive/runtime custody is still accepted. This packet intentionally stays `ready_for_provider_dispatch=false` until that explicit operator step.
