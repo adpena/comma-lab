@@ -73,9 +73,26 @@ def _without_env_args(command: str) -> str:
     return shlex.join(out)
 
 
+def _without_arg_value(command: str, flag: str) -> str:
+    argv = shlex.split(command)
+    out: list[str] = []
+    idx = 0
+    while idx < len(argv):
+        if argv[idx] == flag:
+            idx += 2
+            continue
+        out.append(argv[idx])
+        idx += 1
+    return shlex.join(out)
+
+
 def _fake_bundle(repo_root: Path) -> dict[str, object]:
     cells: list[dict[str, object]] = []
     variants: list[dict[str, object]] = []
+    inflate_sh = repo_root / "runtime" / "inflate.sh"
+    inflate_sh.parent.mkdir(parents=True, exist_ok=True)
+    inflate_sh.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    inflate_sh.chmod(0o755)
     for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
         archive_path = repo_root / "archives" / variant / "archive.zip"
         archive_path.parent.mkdir(parents=True, exist_ok=True)
@@ -104,6 +121,8 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
                         f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
                         "--machine",
                         "T4",
+                        "--inflate-sh",
+                        inflate_sh.relative_to(repo_root).as_posix(),
                         "--expected-archive-sha256",
                         archive_sha,
                         "--expected-archive-size-bytes",
@@ -148,6 +167,8 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
                         f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
                         "--machine",
                         "T4",
+                        "--inflate-sh",
+                        inflate_sh.relative_to(repo_root).as_posix(),
                         "--studio",
                         "<lightning-studio>",
                         "--remote-preflight-ssh-target",
@@ -313,6 +334,8 @@ def test_tt5l_lightning_bundle_dry_run_verifier_accepts_all_cells(
     assert payload["blockers"] == []
     first = payload["cells"][0]
     assert first["verified"] is True
+    assert first["inflate_runtime"]["exists"] is True
+    assert first["inflate_runtime"]["executable"] is True
     assert first["dry_run_state_file"]["stdout_core_matched"] is True
     assert first["queue"]["launcher_command_sha_matches_source_spec"] is False
     assert first["queue"]["command_sha_delta_classification"] == "expected_submit_layer_delta"
@@ -418,6 +441,34 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_stale_state_file(
     assert payload["ready_for_dry_run_submit"] is False
     assert any(
         "dry_run_state_stdout_queue_mismatch" in blocker
+        for blocker in payload["blockers"]
+    )
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_missing_inflate_runtime(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    first_cell = bundle["cells"][0]
+    assert isinstance(first_cell, dict)
+    first_cell["dry_run_submit_command"] = _without_arg_value(
+        str(first_cell["dry_run_submit_command"]),
+        "--inflate-sh",
+    )
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert any(
+        "dry_run_inflate_sh_arg_missing" in blocker
         for blocker in payload["blockers"]
     )
 

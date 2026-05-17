@@ -1300,7 +1300,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "a984bdba7f2b5517e01ae9139a0bea5957c25332",
+      "current_head_commit": "ef620b0d67077a588ac9d62b97f863f13d498368",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",

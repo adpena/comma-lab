@@ -174,6 +174,33 @@ def _missing_runtime_envs(command: str) -> list[str]:
     ]
 
 
+def _inflate_runtime_status(
+    *,
+    argv: Sequence[str],
+    repo_root: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    raw_path = _arg_value(argv, "--inflate-sh")
+    if not raw_path:
+        return {
+            "path": "",
+            "exists": False,
+            "executable": False,
+        }, ["dry_run_inflate_sh_arg_missing"]
+    path = _resolve_repo_path(raw_path, repo_root)
+    exists = path.is_file()
+    executable = exists and bool(path.stat().st_mode & 0o111)
+    if not exists:
+        blockers.append("dry_run_inflate_sh_missing")
+    elif not executable:
+        blockers.append("dry_run_inflate_sh_not_executable")
+    return {
+        "path": _repo_relative(path, repo_root),
+        "exists": exists,
+        "executable": executable,
+    }, blockers
+
+
 def _run_dry_run_command(
     command: str,
     repo_root: Path,
@@ -671,6 +698,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
             parse_blockers: list[str] = []
             archive_summary: dict[str, Any] = {}
             state_summary: dict[str, Any] = {}
+            inflate_runtime_summary: dict[str, Any] = {}
             if cell:
                 archive_summary, archive_blockers = _local_archive_status(
                     cell=cell,
@@ -678,6 +706,11 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
                     repo_root=root,
                 )
                 cell_blockers.extend(archive_blockers)
+                inflate_runtime_summary, runtime_blockers = _inflate_runtime_status(
+                    argv=argv,
+                    repo_root=root,
+                )
+                cell_blockers.extend(runtime_blockers)
             if command and not cell_blockers:
                 result = run(command, root, timeout_seconds)
                 if result.timed_out:
@@ -719,6 +752,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
                     "run_id": str(cell.get("run_id") or ""),
                     "local_artifact_dir": str(cell.get("local_artifact_dir") or ""),
                     "local_archive": archive_summary,
+                    "inflate_runtime": inflate_runtime_summary,
                     "dry_run_state_path": str(cell.get("dry_run_state_path") or ""),
                     "dry_run_state_file": state_summary,
                     "dry_run_command_sha256": _sha256_text(command) if command else "",

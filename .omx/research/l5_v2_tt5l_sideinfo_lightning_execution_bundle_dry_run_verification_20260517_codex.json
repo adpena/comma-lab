@@ -101,6 +101,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu",
       "local_archive": {
         "bytes": 34373,
@@ -151,7 +156,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23688,
-      "stdout_sha256": "604932ecdc2e81144c1f1e7b9dccdc641e77f77108ce6b48984e33010a368790",
+      "stdout_sha256": "9903850c8258ad63e0d6c647277992673c2f377952f426647ec8cb141c310c17",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -249,6 +254,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cuda",
       "local_archive": {
         "bytes": 34373,
@@ -299,7 +309,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42659,
-      "stdout_sha256": "3236bda4694f19b6742bd6594d1c2e64cb2f08bb97bca60b814214385113e6bd",
+      "stdout_sha256": "a62dbec554204189535adde3d4f34317883a5c188cf93f846be8f394c0153318",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -397,6 +407,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cpu",
       "local_archive": {
         "bytes": 38681,
@@ -447,7 +462,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 24120,
-      "stdout_sha256": "e041d19dd7530a3359a996eceb8d10fde2d88db9b184da16a585423795efa6c5",
+      "stdout_sha256": "b82101d24f31595e1f6e5b6fef8676b92ec2b072243e1085471bf5b6908a0766",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -545,6 +560,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cuda",
       "local_archive": {
         "bytes": 38681,
@@ -595,7 +615,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 43103,
-      "stdout_sha256": "9ee9aba1264d208e9deda3da8d653c2a694631f43527df3f2ba5ecf9d1372f1c",
+      "stdout_sha256": "0b5c5b64bed585a8d9d2c64116ad41bed6ad3d922f62eb9176a54a8e71fb3e38",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -693,6 +713,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cpu",
       "local_archive": {
         "bytes": 43284,
@@ -743,7 +768,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23976,
-      "stdout_sha256": "cc5f47868710f8ebc4c7c80745bc1f3b0405be945b4fdc9e939e62c0866d73d9",
+      "stdout_sha256": "9f54deb03124d32bce1a8ac4f2be0bb9914082583b1567986676aef6f0ed391b",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -841,6 +866,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cuda",
       "local_archive": {
         "bytes": 43284,
@@ -891,7 +921,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42955,
-      "stdout_sha256": "26a83fe4a925bcf77a82f9c3ea44a568d0ddb436fc5e67ce4e763914a5df21e9",
+      "stdout_sha256": "78dea2066dd37c9a546b5b3bb17b5c4bed697d2db2847c4e13fe41ff23cf7269",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -989,6 +1019,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cpu",
       "local_archive": {
         "bytes": 43323,
@@ -1039,7 +1074,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "80868c46bb978c0119b0eeb010d0951ad66b20fb5c442bc26c882dc5d578ced1",
+      "stdout_sha256": "da42e6c3bd982364826749c3b35af414cc47c61639d010d58e4d5c78c8bfc64c",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1137,6 +1172,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cuda",
       "local_archive": {
         "bytes": 43323,
@@ -1187,7 +1227,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "2c3dfca3be3d52843d7fc8c717af621cd539c2054fa3a3ef870064a6f45ae14c",
+      "stdout_sha256": "8db84b33e4482885447e78f7246113ddc9076fdeba62c2c25fd42721f36621f4",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1285,6 +1325,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cpu",
       "local_archive": {
         "bytes": 42419,
@@ -1335,7 +1380,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "f10a62d2730aae6cad6e637ab378a4d823ded5bc27f80219a6e8d8708b7f9ff3",
+      "stdout_sha256": "8fe1bac66ddd001843f2a7a36db4bc941a8a1d65822daccfb3d339fe5830c69c",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1433,6 +1478,11 @@
         "stdout_core_matched": true
       },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/launcher_dry_run_state.json",
+      "inflate_runtime": {
+        "executable": true,
+        "exists": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh"
+      },
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cuda",
       "local_archive": {
         "bytes": 42419,
@@ -1483,7 +1533,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "ff5614d74072f0fa3ff0d5fcb79df87c72cc60ca1b6769744251b8dcc1dc213a",
+      "stdout_sha256": "af428e6633c4c3275142d7cab4f3a8f2e9e1d823c092c4c123decd039dc56339",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1514,13 +1564,13 @@
       "ablated"
     ]
   },
-  "current_head_commit": "a984bdba7f2b5517e01ae9139a0bea5957c25332",
+  "current_head_commit": "ef620b0d67077a588ac9d62b97f863f13d498368",
   "dispatch_attempted": false,
   "dry_run_cells_exercised": 10,
   "dry_run_cells_total": 10,
   "expected_cell_count": 10,
   "failed_cell_count": 0,
-  "generated_at_utc": "2026-05-17T11:02:48Z",
+  "generated_at_utc": "2026-05-17T11:05:31Z",
   "passed_cell_count": 10,
   "planning_only": true,
   "promotion_eligible": false,

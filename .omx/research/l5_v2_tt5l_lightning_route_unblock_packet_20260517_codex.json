@@ -1,7 +1,7 @@
 {
   "schema": "l5_v2_tt5l_lightning_route_unblock_packet_v1",
-  "generated_at_utc": "2026-05-17T11:03:01Z",
-  "current_head_commit": "a984bdba7f2b5517e01ae9139a0bea5957c25332",
+  "generated_at_utc": "2026-05-17T11:05:40Z",
+  "current_head_commit": "ef620b0d67077a588ac9d62b97f863f13d498368",
   "purpose": "Turn the L5 v2 TT5L Lightning alternate-provider blocker into an executable, false-authority-safe operator unblock checklist.",
   "source_artifacts": {
     "provider_readiness": {
@@ -14,13 +14,13 @@
     },
     "sideinfo_execution_bundle_dry_run_verification": {
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
-      "sha256": "785093cfdbf27788a62b1081d8e3fb24eb8171a87103781993b328fad57230b6",
+      "sha256": "79745d8e7edb3a545a2563f01287b2dafdcbfe42ddad6303e1830ab71c59652a",
       "all_dry_runs_passed": true,
       "passed_cell_count": 10
     },
     "architecture_lock_packet": {
       "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
-      "sha256": "7667cbd04ccd69d9413a46e23f5860e47e17d07d42ea0e263aa84adbcbb96431"
+      "sha256": "9510c1fc55f3075539b0f63ac5f59688cd235d908c9c2a35e1af50c0d4b59964"
     },
     "legacy_cuda_only_alt_provider_plan": {
       "path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
@@ -54,6 +54,7 @@
     "provider_readiness_probe_completed": true,
     "bundle_all_10_dry_run_commands_parse": true,
     "bundle_all_10_dry_run_state_files_match_stdout_core": true,
+    "bundle_all_10_inflate_runtimes_exist_and_are_executable": true,
     "bundle_axes": [
       "contest_cpu",
       "contest_cuda"
@@ -143,6 +144,7 @@
     "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
     "The 10-cell bundle now embeds the T4/g4dn torch and uv env pins required by scripts/launch_lightning_batch_job.py before non-dry-run exact-eval submit.",
     "The dry-run verifier now compares every launcher stdout record against the latest record persisted at the cell state path across dry_run, queue, and spec.",
+    "The dry-run verifier now checks every cell's local --inflate-sh runtime path exists and is executable before accepting parser custody.",
     "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required."
   ]
 }
