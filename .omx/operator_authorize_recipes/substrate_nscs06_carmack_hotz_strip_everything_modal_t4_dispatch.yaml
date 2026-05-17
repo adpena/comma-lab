@@ -21,13 +21,13 @@ target_modes:
   - contest_one_video_replay
   - research_substrate
 canary_status: independent_substrate
-dispatch_enabled: true
-research_only: false
+dispatch_enabled: false
+research_only: true
 
 # Path A redesign v7 (2026-05-16; symposium commit 4292c8ce2): chroma +
-# optical-flow surgical additions UNWIND cargo-cults #1, #2, #4. Predicted
-# Path A band: [40, 65] (NOT medal-band per Contrarian dissent; first
-# empirical anchor needed before B/C/D/F decisions).
+# optical-flow surgical additions UNWIND cargo-cults #1, #2, #4. v7 landed
+# at 58.89 [contest-CPU] = 44% improvement vs v6 105.15 (cargo-cult-unwind
+# methodology HARD-EARNED). But 58.89 is 307× worse than 0.192 frontier.
 path_a_redesign: true
 path_a_council_provenance: |
   Grand council symposium 2026-05-16 commit 4292c8ce2 ratified Path A
@@ -35,7 +35,17 @@ path_a_council_provenance: |
   mandate). Contrarian dissent acknowledged: Path A produces 40-65 NOT
   medal-band; if operator wants leaderboard pivot to C or D.
 
-dispatch_blockers: []
+dispatch_blockers:
+  - nscs06_family_deferred_per_operator_decision_20260516
+  - v7_plateau_at_58p89_contest_cpu_307x_worse_than_0p192_frontier
+  - v8_path_b_falsified_at_104p98_diagnostic_cpu_2026_05_16
+  - reactivation_requires_new_cargo_cult_unwind_OR_class_shift_below_50_OR_operator_directive
+
+reactivation_criteria:
+  - new_cargo_cult_unwind_technique_discovered_that_breaks_v7_plateau_at_58p89
+  - empirical_evidence_class_shift_to_sub_50_contest_cpu_via_sister_substrate_insight
+  - time_traveler_l5_or_z6_z7_z8_results_bear_on_strip_everything_failure_modes
+  - operator_directive_revisit_nscs06_family
 
 cost_band:
   epochs: 1
