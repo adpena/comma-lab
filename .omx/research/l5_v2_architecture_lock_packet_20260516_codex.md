@@ -37,6 +37,19 @@
 - score_claim: `false`
 - promotion_eligible: `false`
 
+## Materialized TT5L Provider Routing
+
+- work_unit_artifact_valid: `True`
+- archive_sha256: `ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`
+- provider_blocker_active: `True`
+- provider_blocker_failure_class: `modal_workspace_billing_cycle_spend_limit_reached`
+- modal_execute_suppressed_until_blocker_resolved: `True`
+- alternate_provider: `lightning`
+- alternate_artifact_valid: `True`
+- lightning_source_manifest_probe_current: `True`
+- lightning_execution_ready: `False`
+- lightning_execution_blockers: `['missing_lightning_ssh_target', 'missing_lightning_teamspace', 'machine_inventory_not_checked', 'source_manifest_not_staged', 'remote_cuda_runtime_not_probed']`
+
 ## Blockers
 - `requires_all_l5_v2_gate_evidence_valid`
 - `requires_c1_z5_tt5l_probe_gate_evidence`

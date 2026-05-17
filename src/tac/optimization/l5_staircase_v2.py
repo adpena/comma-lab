@@ -6279,6 +6279,23 @@ def render_l5_v2_architecture_lock_packet_markdown(
     )
     if not isinstance(paired_axis_plan_status, Mapping):
         paired_axis_plan_status = {}
+    materialized_work_unit_status = next_action.get("materialized_work_unit_status")
+    if not isinstance(materialized_work_unit_status, Mapping):
+        materialized_work_unit_status = {}
+    provider_blocker_status = next_action.get("provider_blocker_status")
+    if not isinstance(provider_blocker_status, Mapping):
+        provider_blocker_status = materialized_work_unit_status.get(
+            "provider_blocker_status"
+        )
+    if not isinstance(provider_blocker_status, Mapping):
+        provider_blocker_status = {}
+    alternate_provider_plan_status = next_action.get("alternate_provider_plan_status")
+    if not isinstance(alternate_provider_plan_status, Mapping):
+        alternate_provider_plan_status = materialized_work_unit_status.get(
+            "alternate_provider_plan_status"
+        )
+    if not isinstance(alternate_provider_plan_status, Mapping):
+        alternate_provider_plan_status = {}
     lines = [
         "# L5 v2 architecture lock packet",
         "",
@@ -6352,6 +6369,54 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
+            ]
+        )
+    if materialized_work_unit_status or provider_blocker_status or alternate_provider_plan_status:
+        lines.extend(
+            [
+                "",
+                "## Materialized TT5L Provider Routing",
+                "",
+                (
+                    "- work_unit_artifact_valid: "
+                    f"`{materialized_work_unit_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- archive_sha256: "
+                    f"`{materialized_work_unit_status.get('archive_sha256', '')}`"
+                ),
+                (
+                    "- provider_blocker_active: "
+                    f"`{provider_blocker_status.get('active')}`"
+                ),
+                (
+                    "- provider_blocker_failure_class: "
+                    f"`{provider_blocker_status.get('failure_class', '')}`"
+                ),
+                (
+                    "- modal_execute_suppressed_until_blocker_resolved: "
+                    f"`{next_action.get('modal_execute_command_suppressed_until_provider_blocker_resolved', False)}`"
+                ),
+                (
+                    "- alternate_provider: "
+                    f"`{alternate_provider_plan_status.get('provider', '')}`"
+                ),
+                (
+                    "- alternate_artifact_valid: "
+                    f"`{alternate_provider_plan_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- lightning_source_manifest_probe_current: "
+                    f"`{alternate_provider_plan_status.get('source_manifest_probe_current')}`"
+                ),
+                (
+                    "- lightning_execution_ready: "
+                    f"`{alternate_provider_plan_status.get('execution_ready')}`"
+                ),
+                (
+                    "- lightning_execution_blockers: "
+                    f"`{alternate_provider_plan_status.get('execution_blockers', [])}`"
+                ),
             ]
         )
     blockers = packet.get("architecture_lock_blockers")

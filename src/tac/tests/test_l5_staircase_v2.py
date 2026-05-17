@@ -2955,6 +2955,21 @@ def test_l5_v2_tt5l_modal_blocker_surfaces_lightning_alternate_plan(
         "l5_v2_tt5l_lightning_alt_provider_blocked:missing_lightning_ssh_target"
         in tt5l["blockers"]
     )
+    report = render_l5_v2_architecture_lock_packet_markdown(
+        l5_v2_architecture_lock_packet(gate_evidence=evidence, repo_root=tmp_path)
+    )
+    assert "## Materialized TT5L Provider Routing" in report
+    assert "- provider_blocker_active: `True`" in report
+    assert (
+        "- provider_blocker_failure_class: "
+        "`modal_workspace_billing_cycle_spend_limit_reached`"
+    ) in report
+    assert "- modal_execute_suppressed_until_blocker_resolved: `True`" in report
+    assert "- alternate_provider: `lightning`" in report
+    assert "- alternate_artifact_valid: `True`" in report
+    assert "- lightning_source_manifest_probe_current: `True`" in report
+    assert "- lightning_execution_ready: `False`" in report
+    assert "missing_lightning_ssh_target" in report
 
 
 def test_l5_v2_tt5l_lightning_alternate_plan_rejects_stale_source_manifest_probe(
