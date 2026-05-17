@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
+from zipfile import ZipFile
 
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
@@ -27,6 +29,11 @@ def _write_runtime(root: Path) -> Path:
     runtime = root / "experiments/results/tt5l/runtime"
     runtime.mkdir(parents=True, exist_ok=True)
     (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    os.chmod(runtime / "inflate.sh", 0o755)
+    (runtime / "report.txt").write_text(
+        "TT5L side-info effect-curve test runtime\n",
+        encoding="utf-8",
+    )
     return runtime
 
 
@@ -36,7 +43,27 @@ def _write_manifest(root: Path) -> Path:
     for index, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
         archive = root / f"experiments/results/tt5l/{variant}/archive.zip"
         archive.parent.mkdir(parents=True, exist_ok=True)
-        archive.write_bytes(f"archive:{variant}:{index}".encode())
+        with ZipFile(archive, "w") as zf:
+            zf.writestr("0.bin", f"archive:{variant}:{index}".encode())
+        archive_manifest = archive.parent / "archive_manifest.json"
+        archive_manifest.write_text(
+            json.dumps(
+                {
+                    "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                    "archive_path": archive.relative_to(root).as_posix(),
+                    "archive_sha256": _sha256(archive),
+                    "archive_bytes": archive.stat().st_size,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "members": [{"name": "0.bin"}],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         variants.append(
             {
                 "variant": variant,
@@ -45,6 +72,7 @@ def _write_manifest(root: Path) -> Path:
                 "archive_path": archive.relative_to(root).as_posix(),
                 "archive_sha256": _sha256(archive),
                 "archive_bytes": archive.stat().st_size,
+                "archive_manifest_path": archive_manifest.relative_to(root).as_posix(),
                 "source_archive_sha256": "1" * 64,
                 "source_archive_member_sha256": "2" * 64,
                 "source_sideinfo_section_sha256": "3" * 64,
@@ -146,6 +174,8 @@ def test_tt5l_sideinfo_dispatch_plan_materializes_five_byte_closed_work_units(
         assert row["pair_group_id"] in command
         assert row["pair_group_id"] in execute_command
         assert row["dispatch_blockers"] == []
+        assert row["exact_dispatch_authority"]["authorized"] is True
+        assert row["exact_dispatch_authority"]["blockers"] == []
         assert "requires_paired_cpu_cuda_exact_eval_before_score_claim" in row[
             "score_claim_blockers"
         ]
@@ -201,6 +231,37 @@ def test_tt5l_sideinfo_dispatch_plan_fails_closed_on_missing_noop_custody(
         "variant_custody_field_missing:random_lsb:source_sideinfo_section_sha256"
         in plan["blockers"]
     )
+
+
+def test_tt5l_sideinfo_dispatch_plan_requires_exact_dispatch_custody(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest(tmp_path)
+    runtime = tmp_path / "experiments/results/tt5l/runtime"
+    (runtime / "report.txt").unlink()
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    first_manifest = (
+        tmp_path
+        / str(payload["variants"][0]["archive_manifest_path"])
+    )
+    first_manifest.unlink()
+
+    plan = build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
+        manifest=payload,
+        manifest_path=manifest,
+        repo_root=tmp_path,
+    )
+
+    first = plan["work_units"][0]
+    assert first["ready_for_operator_dispatch"] is False
+    blockers = first["exact_dispatch_authority"]["blockers"]
+    assert (
+        "exact_dispatch_authority:contest_cpu:archive_manifest_missing"
+        in blockers
+    )
+    assert "exact_dispatch_authority:contest_cpu:report_txt_missing" in blockers
+    assert "exact_dispatch_authority:contest_cuda:report_txt_missing" in blockers
+    assert plan["ready_for_operator_dispatch"] is False
 
 
 def test_tt5l_sideinfo_dispatch_plan_json_and_markdown_are_durable(

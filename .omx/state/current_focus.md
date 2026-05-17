@@ -44,6 +44,11 @@ retiring the L5/L5-v2 staircase:
   but non-dry-run provider execution still requires Lightning doctor, per-cell
   source manifests, active lane claims, exact harvest, terminal claim rows, and
   architecture-lock packet refresh.
+- TT5L side-info Modal paired dispatch plan now consumes the shared exact
+  dispatch authority gate. The live five-variant plan is intentionally blocked
+  (`ready_work_unit_count=0`) until the submission runtime has `report.txt` and
+  each variant archive has a matching `archive_manifest.json`. Ledger:
+  `.omx/research/l5_v2_tt5l_exact_dispatch_authority_hardening_20260517_codex.md`.
 - Lightning required-doctor plan exists at
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`;
   it is planning-only and confers no dispatch or score authority.
@@ -65,9 +70,10 @@ retiring the L5/L5-v2 staircase:
    archive was emitted. Ledger:
    `.omx/research/a1_rule6_byte_escape_profile_20260517_codex.md`.
 3. **Rule #6 A1 bolt-on #3**: VQ-codebook on A1 per-pair latent.
-4. **TT5L side-info effect curve**: run Lightning doctor, then claim and
-   execute the 10 paired CPU/CUDA cells only if doctor and source-manifest
-   custody are green.
+4. **TT5L side-info effect curve**: first materialize the missing `report.txt`
+   and per-variant archive manifests flagged by exact-dispatch authority, then
+   run Lightning doctor, then claim and execute the 10 paired CPU/CUDA cells
+   only if doctor and source-manifest custody are green.
 5. **SCORER-AWARENESS probe wave**: measure whether substrate distinguishing
    features reach scorer attention/argmax maps before deferring high-risk
    per-pair-conditioning substrates.

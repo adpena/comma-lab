@@ -74,14 +74,20 @@ architecture-lock/TT5L custody artifacts.
 ### 4. TT5L Side-Info Effect Curve
 
 - Lane class: L5-v2 asymptotic evidence.
-- Current artifact state: 10-cell Lightning paired-axis dry-run plan exists;
-  execution still requires doctor and per-cell custody.
-- Next concrete action: run the required Lightning doctor from
+- Current artifact state: 10-cell Lightning paired-axis dry-run plan exists,
+  and the Modal paired dispatch plan now routes each variant through shared
+  exact-dispatch authority. The live Modal plan is blocked at
+  `ready_work_unit_count=0` because the runtime is missing `report.txt` and the
+  variants are missing exact archive manifests. Ledger:
+  `.omx/research/l5_v2_tt5l_exact_dispatch_authority_hardening_20260517_codex.md`.
+- Next concrete action: materialize the missing `report.txt` and per-variant
+  `archive_manifest.json` custody, rebuild the dispatch plan to
+  `ready_work_unit_count=5`, then run the required Lightning doctor from
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`,
-  then stage per-cell source manifests and claim each lane before non-dry-run
+  stage per-cell source manifests, and claim each lane before non-dry-run
   submission.
-- Dispatch policy: no non-dry-run cell without doctor `status=OK`, active
-  claim, source manifest, and terminal-claim plan.
+- Dispatch policy: no non-dry-run cell without exact-dispatch authority green,
+  doctor `status=OK`, active claim, source manifest, and terminal-claim plan.
 
 ### 5. SCORER-AWARENESS Probe Wave
 

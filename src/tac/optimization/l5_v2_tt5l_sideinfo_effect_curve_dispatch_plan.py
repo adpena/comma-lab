@@ -31,6 +31,7 @@ from tac.deploy.modal.paired_dispatch import (
 from tac.deploy.modal.paired_dispatch_contract import (
     paired_auth_eval_dispatch_command_blockers,
 )
+from tac.optimizer.exact_dispatch_authority import exact_dispatch_authority
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
@@ -448,6 +449,101 @@ def _command_blockers(command: list[str]) -> list[str]:
     )
 
 
+def _variant_archive_manifest_path(
+    *,
+    archive_path: str,
+    row: Mapping[str, Any],
+    repo_root: Path,
+) -> str:
+    declared = str(row.get("archive_manifest_path") or "").strip()
+    if declared:
+        return declared
+    if not archive_path:
+        return ""
+    archive = _resolve_repo_path(archive_path, repo_root)
+    return _repo_relative(archive.parent / "archive_manifest.json", repo_root)
+
+
+def _exact_dispatch_authority_for_variant(
+    *,
+    variant: str,
+    row: Mapping[str, Any],
+    archive: Mapping[str, Any],
+    submission_dir: str,
+    lanes: Mapping[str, str],
+    repo_root: Path,
+) -> dict[str, Any]:
+    """Run shared exact-dispatch custody on both paired TT5L axes."""
+
+    archive_path = str(archive.get("path") or "").strip()
+    archive_sha256 = str(archive.get("sha256") or "").strip()
+    archive_bytes = archive.get("bytes")
+    archive_manifest_path = _variant_archive_manifest_path(
+        archive_path=archive_path,
+        row=row,
+        repo_root=repo_root,
+    )
+    base_authority_row = {
+        "candidate_id": f"l5_v2_tt5l_sideinfo_effect_curve_{_slug(variant)}",
+        "target_modes": ["contest_exact_eval"],
+        "deployment_target": "modal_paired_cpu_cuda_auth_eval",
+        "ready_for_exact_eval_dispatch": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "dispatch_attempted": False,
+        "archive_path": archive_path,
+        "candidate_archive_path": archive_path,
+        "archive_sha256": archive_sha256,
+        "candidate_archive_sha256": archive_sha256,
+        "archive_bytes": archive_bytes,
+        "candidate_archive_bytes": archive_bytes,
+        "submission_dir": submission_dir,
+        "archive_manifest_path": archive_manifest_path,
+        "score_affecting_payload_changed": row.get("archive_sha_changed_from_source"),
+        "charged_bits_changed": row.get("archive_member_sha_changed_from_source"),
+        "source_archive_sha256": row.get("source_archive_sha256"),
+        "source_payload_sha256": row.get("source_sideinfo_section_sha256"),
+        "candidate_payload_sha256": archive_sha256,
+    }
+    verdicts: dict[str, Any] = {}
+    combined_blockers: list[str] = []
+    claims_path = repo_root / ".omx" / "state" / "active_lane_dispatch_claims.md"
+    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+        axis_row = {
+            **base_authority_row,
+            "lane_id": str(lanes.get(axis) or ""),
+            "exact_eval_axis": axis,
+        }
+        verdict = exact_dispatch_authority(
+            axis_row,
+            repo_root=repo_root,
+            source=(
+                "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:"
+                f"{variant}:{axis}"
+            ),
+            dispatch_claims_path=claims_path,
+            claim_policy="preclaim_conflict_check",
+        ).as_dict()
+        verdicts[axis] = verdict
+        combined_blockers.extend(
+            f"exact_dispatch_authority:{axis}:{blocker}"
+            for blocker in verdict.get("blockers", [])
+            if str(blocker)
+        )
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_exact_dispatch_authority_v1",
+        "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+        "authorized": all(
+            verdict.get("authorized") is True for verdict in verdicts.values()
+        ),
+        "archive_manifest_path": archive_manifest_path,
+        "dispatch_claims_path": _repo_relative(claims_path, repo_root),
+        "axis_verdicts": verdicts,
+        "blockers": _dedupe(combined_blockers),
+    }
+
+
 def _required_cells(variant: str) -> list[dict[str, str]]:
     return [
         {"axis": axis, "variant": variant}
@@ -516,6 +612,17 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
             "contest_cuda": f"{_variant_lane_id_base(variant)}_contest_cuda",
             "contest_cpu": f"{_variant_lane_id_base(variant)}_contest_cpu",
         }
+        exact_authority = _exact_dispatch_authority_for_variant(
+            variant=variant,
+            row=row,
+            archive=archive,
+            submission_dir=submission_dir,
+            lanes=lanes,
+            repo_root=root,
+        )
+        dispatch_blockers = _dedupe(
+            dispatch_blockers + _as_text_list(exact_authority.get("blockers"))
+        )
         ready_for_operator = not dispatch_blockers
         work_units.append(
             {
@@ -554,6 +661,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
                 "operator_execute_command_template_after_review": (
                     shlex.join(operator_execute_command) if operator_execute_command else ""
                 ),
+                "exact_dispatch_authority": exact_authority,
                 "ready_for_operator_dispatch": ready_for_operator,
                 "ready_for_provider_dispatch": False,
                 "preclaim_forbidden": True,
