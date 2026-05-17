@@ -453,7 +453,7 @@
       "variant": "ablated"
     }
   ],
-  "current_head_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
+  "current_head_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
   "dispatch_attempted": false,
   "dry_run_default": true,
   "dykstra_feasibility_status": {
@@ -478,7 +478,7 @@
     "refresh_l5_v2_architecture_lock_packet"
   ],
   "expected_cell_count": 10,
-  "generated_at_utc": "2026-05-17T11:46:49Z",
+  "generated_at_utc": "2026-05-17T12:13:31Z",
   "global_blockers": [
     "non_dry_run_submit_requires_lightning_identity_and_workspace",
     "non_dry_run_submit_requires_remote_preflight_ssh_target",
@@ -517,10 +517,10 @@
   "source_dispatch_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json",
   "source_dispatch_plan_sha256": "017e9684e885ca850ab918c6f70e214e5663459bf8cec3583b3c66c36152f27a",
   "source_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
-  "source_plan_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
-  "source_plan_sha256": "f4b5cb48f3354afa3975c4f94cb3ef5b6f1a0d9a989f1ac4c8adbe52728fbbdf",
+  "source_plan_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
+  "source_plan_sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
   "source_preflight": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json",
-  "source_preflight_sha256": "5f2cff67b8db6c8141c54a0b42d7918f0ea3705d55141adb41191bc75d37b33e",
+  "source_preflight_sha256": "7fd702e364b02fb6510e961007e8018d681adc9d0e7bdfe64dd17d0637fba15e",
   "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
   "source_variant_manifest_sha256": "80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459",
   "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",

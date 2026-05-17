@@ -517,7 +517,7 @@
     "lightning_doctor_plan_status": {
       "artifact_exists": true,
       "artifact_path": ".omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.json",
-      "artifact_sha256": "57f696bc38c8b8a43a9d607174c89f1bcd9bb6feb6407c2bcf8a38f305bd098f",
+      "artifact_sha256": "9c6dacc5a78d88cb09e35cc45ce542aa42715bb740b1b9e7ac8a843372076213",
       "artifact_valid": true,
       "blockers": [],
       "dispatch_attempted": false,
@@ -535,18 +535,18 @@
       ],
       "schema": "l5_v2_tt5l_lightning_doctor_plan_status_v1",
       "score_claim": false,
-      "source_route_packet_actual_sha256": "d1d6b0193bab42486392041302e8701202837228243d2b05264c4d10f9b198a6",
-      "source_route_packet_sha256": "d1d6b0193bab42486392041302e8701202837228243d2b05264c4d10f9b198a6",
+      "source_route_packet_actual_sha256": "6b4f5c1a6d3b0fd06ff3fa155238d9860504f53c5528d6a1ebda021e4b318c65",
+      "source_route_packet_sha256": "6b4f5c1a6d3b0fd06ff3fa155238d9860504f53c5528d6a1ebda021e4b318c65",
       "source_route_packet_sha256_matches": true,
       "tool_path": "tools/build_l5_v2_tt5l_lightning_doctor_plan.py"
     },
     "lightning_route_unblock_packet_status": {
       "artifact_exists": true,
       "artifact_path": ".omx/research/l5_v2_tt5l_lightning_route_unblock_packet_20260517_codex.json",
-      "artifact_sha256": "d1d6b0193bab42486392041302e8701202837228243d2b05264c4d10f9b198a6",
+      "artifact_sha256": "6b4f5c1a6d3b0fd06ff3fa155238d9860504f53c5528d6a1ebda021e4b318c65",
       "artifact_valid": true,
       "blockers": [],
-      "current_head_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
+      "current_head_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
       "dispatch_attempted": false,
       "paired_axis_source_current": true,
       "promotion_eligible": false,
@@ -1329,7 +1329,7 @@
       "tool_path": "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
     },
     "sideinfo_effect_curve_lightning_paired_axis_plan_status": {
-      "all_cells_dry_run_ready": false,
+      "all_cells_dry_run_ready": true,
       "all_cells_dry_run_structurally_valid": true,
       "artifact_exists": true,
       "artifact_path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
@@ -1341,8 +1341,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "cell_count": 10,
       "covered_axes": [
@@ -1356,7 +1355,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "c4163dd0b364a01d18f37640c8e0b17ec9be2592",
+      "current_head_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
@@ -1365,8 +1364,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "execution_ready": false,
       "expected_cell_count": 10,
@@ -1376,14 +1374,12 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1",
       "score_claim": false,
-      "source_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
+      "source_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
       "source_commit_is_ancestor": true,
-      "source_commit_matches_head": false,
-      "source_custody_current_for_execution": false,
-      "source_custody_valid": false,
-      "source_relevant_diff_paths": [
-        "scripts/launch_lightning_batch_job.py"
-      ],
+      "source_commit_matches_head": true,
+      "source_custody_current_for_execution": true,
+      "source_custody_valid": true,
+      "source_relevant_diff_paths": [],
       "source_relevant_paths": [
         "tools/build_l5_v2_architecture_lock_packet.py",
         "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py",
@@ -1404,7 +1400,7 @@
         ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
         ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json"
       ],
-      "source_relevant_paths_match": false
+      "source_relevant_paths_match": true
     },
     "sideinfo_effect_curve_status": {
       "artifact_exists": true,
@@ -2334,8 +2330,8 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_status_v1",
       "source_bundle": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
-      "source_bundle_actual_sha256": "65d87193a0675dd4456d4a1f3a0f96a1b5f01676badb6ae7e8b756c5c61c4766",
-      "source_bundle_sha256": "65d87193a0675dd4456d4a1f3a0f96a1b5f01676badb6ae7e8b756c5c61c4766",
+      "source_bundle_actual_sha256": "5b0aaf1a259cf39cf3ede3cdc8b99264e68740c9c9b1c75eb57094a62d0a1402",
+      "source_bundle_sha256": "5b0aaf1a259cf39cf3ede3cdc8b99264e68740c9c9b1c75eb57094a62d0a1402",
       "source_bundle_sha256_matches": true,
       "tool_path": "tools/verify_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py"
     },
@@ -2363,12 +2359,12 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_status_v1",
       "source_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
-      "source_plan_actual_sha256": "f4b5cb48f3354afa3975c4f94cb3ef5b6f1a0d9a989f1ac4c8adbe52728fbbdf",
-      "source_plan_sha256": "f4b5cb48f3354afa3975c4f94cb3ef5b6f1a0d9a989f1ac4c8adbe52728fbbdf",
+      "source_plan_actual_sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
+      "source_plan_sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
       "source_plan_sha256_matches": true,
       "source_preflight": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json",
-      "source_preflight_actual_sha256": "5f2cff67b8db6c8141c54a0b42d7918f0ea3705d55141adb41191bc75d37b33e",
-      "source_preflight_sha256": "5f2cff67b8db6c8141c54a0b42d7918f0ea3705d55141adb41191bc75d37b33e",
+      "source_preflight_actual_sha256": "7fd702e364b02fb6510e961007e8018d681adc9d0e7bdfe64dd17d0637fba15e",
+      "source_preflight_sha256": "7fd702e364b02fb6510e961007e8018d681adc9d0e7bdfe64dd17d0637fba15e",
       "source_preflight_sha256_matches": true,
       "tool_path": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py"
     },
@@ -2395,8 +2391,8 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_status_v1",
       "source_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
-      "source_plan_actual_sha256": "f4b5cb48f3354afa3975c4f94cb3ef5b6f1a0d9a989f1ac4c8adbe52728fbbdf",
-      "source_plan_sha256": "f4b5cb48f3354afa3975c4f94cb3ef5b6f1a0d9a989f1ac4c8adbe52728fbbdf",
+      "source_plan_actual_sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
+      "source_plan_sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
       "source_plan_sha256_matches": true,
       "tool_path": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_preflight.py"
     },
