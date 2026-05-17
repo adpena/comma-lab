@@ -255,6 +255,200 @@ A substrate lane that lands `impl_complete=true` at L1 with byte addition >1 KB 
 
 Sister of HNeRV parity discipline lesson 2 (export-first design) and Catalog #105 / #139 (no-op detector + structural consumption proof). HNeRV parity #2 says "if you can't export, tag research_only"; Catalog #220 says "if you exported but the bytes don't produce frame changes, ALSO tag research_only or fix the overlay." Together they extinct the 8th forbidden pattern (research-substrate trap) at TWO surfaces: design-time + runtime-effect.
 
+## Substrate MUST be at OPTIMAL FORM before paid empirical dispatch — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**Source:** operator directive 2026-05-17 + cumulative lessons from the
+2026-05-13 → 2026-05-17 substrate dispatch waves. Anchor memos:
+`.omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md`
+(NSCS06 v6→v7 44% improvement via cargo-cult-unwind methodology),
+`.omx/research/falsification_audit_v2_post_horizon_class_post_pivot_lessons_20260516.md`
+(4 distinguishing-feature dispatch failures), `feedback_meta_framing_correction_optimal_form_before_paid_dispatch_landed_20260517.md`
+(this section's landing). Sister of HNeRV parity discipline + UNIQUE-AND-COMPLETE-PER-METHOD operating mode + 9-dimension success checklist evidence + Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY.
+
+### The structural failure this rule extincts
+
+Across the 2026-05-13 → 2026-05-17 dispatch waves we **empirically
+dispatched substrates at LIFTED-TRAINER form when operator's standing
+directives required OPTIMAL FORM at implementation**. The pattern, with
+empirical receipts:
+
+- **NSCS06 v6 → v7 = 44% improvement** (105.15 → 58.89, contest-CUDA)
+  achieved in ONE iteration via cargo-cult-unwind methodology
+  (`.omx/research/nscs06_path_a_chroma_optical_flow_redesign_20260516.md`).
+  NSCS06 v6 was the ONLY substrate that got iterated to optimal form
+  before the next paid dispatch wave.
+- **4-of-5 distinguishing-feature dispatch failures** this session
+  (Wunderkind G1 v2 reducer, ATW v2 D4 cooperative-receiver, Z6 FiLM
+  ego-motion, NSCS01 nullspace-split, NSCS06 v8 Path B) were
+  empirically tested at **lifted-trainer form**, falsifying SPECIFIC
+  IMPLEMENTATIONS not the novel concepts. The implementations sat at
+  PROCEED_WITH_REVISIONS council verdicts but were dispatched anyway
+  for an "empirical anchor."
+- **52+ other substrates** were lifted to LIFTED-TRAINER form
+  (passes tests + has PR95-paradigm tokens) but NEVER ITERATED to
+  optimal form before either dispatch or retirement.
+
+The design-memo discipline gates (Catalog #290 canonical-vs-unique
+per layer / #294 9-dim checklist / #303 cargo-cult audit / #305
+observability surface) were enforced at the **memo surface** but
+silently BYPASSED at the **implementation + dispatch surface**: a
+sextet council could return `PROCEED_WITH_REVISIONS`, the council
+memo could land with full v2 frontmatter per Catalog #300, and the
+substrate trainer could still receive a paid Modal/Lightning/Vast.ai
+dispatch the next hour because no STRICT gate bound the council
+verdict back to the dispatch decision.
+
+### Definitions
+
+**OPTIMAL FORM**: substrate state where ALL of the following hold:
+1. **Cargo-cult-unwind methodology applied** per the NSCS06 v6→v7
+   pattern: enumerate the cargo-culted assumptions (per Catalog #303),
+   apply the unwind path per assumption, and document the new
+   implementation against the cargo-cult audit section.
+2. **9-dim checklist satisfied AT IMPLEMENTATION** (not just declared
+   in the design memo) per Catalog #294: uniqueness / beauty / distinctness
+   / rigor / per-method optimization / stack-of-stacks composability /
+   deterministic reproducibility / extreme optimization / optimal minimal
+   contest score.
+3. **Sextet / grand council returned PROCEED-unconditional** (not
+   `PROCEED_WITH_REVISIONS`) on the iterated form. Every revision
+   from the prior council pass has either been applied OR explicitly
+   recorded as a waived design decision with rationale.
+
+**LIFTED-TRAINER FORM**: substrate state where:
+1. Basic implementation passes tests AND has PR95-paradigm tokens
+   (eval_roundtrip + EMA + score-aware loss + canonical scorer
+   helpers + archive grammar + inflate runtime); AND
+2. EITHER no council deliberation exists yet, OR the latest council
+   verdict is `PROCEED_WITH_REVISIONS` with un-applied revisions, OR
+   the cargo-cult-unwind methodology has not been applied per
+   Catalog #303.
+
+### The rule
+
+Every substrate at L1+ with `impl_complete=true` whose latest council
+deliberation in `.omx/state/council_deliberation_posterior.jsonl`
+returned `PROCEED_WITH_REVISIONS` AND no chronologically-later
+PROCEED-unconditional anchor supersedes it MUST satisfy one of:
+
+1. **Land iteration subagent commits** applying the council revisions
+   + re-trigger sextet / grand-council deliberation that returns
+   PROCEED (unconditional) per the canonical iteration methodology
+   below. The new PROCEED anchor must be chronologically later than
+   the PROCEED_WITH_REVISIONS anchor.
+2. **Declare `research_only=true`** in the lane registry with
+   `reactivation_criteria` pinned in notes per CLAUDE.md "Substrate
+   scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable.
+3. **Declare `lane_class=substrate_engineering`** per HNeRV parity
+   discipline L7 (substrate engineering exceeds bolt-on size budget;
+   not yet contest-dispatch eligible).
+4. **Move to `archived/` state** with terminal verdict + reactivation
+   criteria per CLAUDE.md "Forbidden premature KILL" (archived state
+   is dormant-with-reactivation, not kill).
+5. **Same-line waiver** `# OPTIMAL_FORM_DISPATCH_OK:<rationale>` in
+   lane notes / evidence for the rare deliberate operator-approved
+   pre-iteration dispatch (e.g. cheap $1-3 Catalog #167 smoke + probe
+   disambiguator to inform the next iteration). The rationale must be
+   a real string (placeholder `<rationale>` / `<reason>` literals are
+   REJECTED so the gate's own docstring example cannot self-waive).
+
+### Forbidden anti-pattern (the "dispatch-at-lifted-form" trap)
+
+Empirically dispatching a substrate for a paid Modal/Lightning/Vast.ai
+auth-eval anchor when the latest council deliberation returned
+`PROCEED_WITH_REVISIONS` and none of the 5 opt-outs above applies is
+FORBIDDEN. The dispatch produces a measurement that falsifies the
+specific lifted-trainer implementation, not the novel concept; per
+CLAUDE.md "Forbidden premature KILL without research exhaustion" + the
+sister "Forbidden premature KILL" rule, this is the canonical way to
+mis-classify an implementation-level finding as a paradigm-level kill.
+The 4-of-5 dispatch failures this session are the empirical receipts.
+
+### Canonical substrate iteration methodology (the NSCS06 v6→v7 pattern)
+
+This is the **canonical method** for iterating a substrate from
+LIFTED-TRAINER form to OPTIMAL FORM:
+
+1. **Audit current implementation against operator's
+   UNIQUE-AND-COMPLETE-PER-METHOD operating mode** (CLAUDE.md
+   non-negotiable). Per layer, document the canonical-vs-unique
+   decision per Catalog #290. The audit produces a per-layer
+   classification: ADOPT_CANONICAL_BECAUSE_SERVES /
+   FORK_BECAUSE_SUPPRESSES / FORK_BECAUSE_PRINCIPLED_MISMATCH /
+   UNCLEAR_NEEDS_EMPIRICAL.
+2. **Enumerate cargo-cults per Catalog #303** (`## Cargo-cult audit
+   per assumption` section). Each cargo-culted assumption gets a
+   HARD-EARNED-vs-CARGO-CULTED classification per the addendum +
+   an explicit unwind path.
+3. **Apply unwinds systematically** — produce v_n+1 implementation
+   that addresses each unwind path with the substrate-optimal
+   engineering choice (not the path-of-least-resistance canonical
+   adoption). NSCS06 v6→v7 unwound 4-of-7 cargo-cults in one
+   iteration and achieved 44% score improvement.
+4. **Re-test sextet** (or grand council for tier-elevated lanes per
+   Catalog #300). The new deliberation may return PROCEED-unconditional
+   (OPTIMAL FORM reached), new PROCEED_WITH_REVISIONS (more iteration
+   needed), DEFER_PENDING_EVIDENCE (probe gap), or REFUSE
+   (paradigm-level question).
+5. **Iterate until PROCEED-unconditional** before paid empirical
+   dispatch. The cycle is not bounded by a fixed iteration count —
+   the council verdict is the structural arbiter. Per CLAUDE.md
+   "Forbidden premature KILL without research exhaustion", we
+   iterate until the sextet says we're at OPTIMAL FORM or we
+   document the architectural ceiling explicitly.
+
+The cycle's chronological evidence is preserved in
+`.omx/state/council_deliberation_posterior.jsonl` per Catalog #300
+v2 frontmatter; sister Catalog #292 enforces per-deliberation explicit
+assumption surfacing; Catalog #291 enforces per-session META-ASSUMPTION
+cadence so the iteration loop itself does not silently drift.
+
+### Concrete enforcement
+
+- STRICT preflight Catalog #315
+  (`check_substrate_at_optimal_form_before_paid_dispatch`) — refuses
+  any in-scope substrate lane at L1+ with `impl_complete=true` whose
+  latest council deliberation in `.omx/state/council_deliberation_posterior.jsonl`
+  returned `PROCEED_WITH_REVISIONS` AND has no opt-out per the 5
+  acceptance cascades above. STRICT-from-byte-one at landing 2026-05-17
+  (live count: 0 — all 13 current PROCEED_WITH_REVISIONS council
+  anchors map to lanes with structural opt-out via `research_only=true`
+  or `lane_class=substrate_engineering`). The gate fires structurally
+  the moment a future substrate is registered without opt-out and a
+  council returns PROCEED_WITH_REVISIONS.
+- The gate's substrate ↔ council join is via the
+  `deferred_substrate_id` field in the council posterior schema. Lanes
+  may declare a `substrate_alias` (or `substrate_aliases` list) in the
+  registry so the v1-surface name used by the sextet can be matched
+  back to the canonical lane id (e.g.
+  `lane_substrate_z6` ↔ `z6_v1_ego_conditioning_surface`).
+
+### Cross-references
+
+- Sister of Catalog #220 (substrate L1+ scaffold operational mechanism;
+  runtime-effect surface) + Catalog #272 (distinguishing-feature
+  integration contract; per-substrate-feature surface) + Catalog #233
+  (L1→L2 promotion canonical 4-gate; promotion-discipline surface) +
+  Catalog #298 (substrate L1 not stale dispatch; retirement-discipline
+  surface) + Catalog #294 (9-dim success checklist evidence;
+  design-memo surface) + Catalog #303 (cargo-cult audit section;
+  design-memo surface) + Catalog #305 (observability surface;
+  design-memo surface) + Catalog #300 (council deliberation v2
+  frontmatter; council-discipline surface).
+- Together they extinct the **dispatch-at-lifted-trainer-form bug
+  class** across 8 orthogonal surfaces: design-memo (#290 + #294 +
+  #303 + #305) + runtime-effect (#220) + per-feature (#272) +
+  promotion-discipline (#233) + retirement-discipline (#298) +
+  council-discipline (#300) + iteration-discipline (#315 — this
+  gate).
+- HNeRV parity discipline lesson 7 (bolt-on vs substrate-engineering
+  split) — the canonical articulation of "iterate substrate engineering
+  per method, share bolt-ons."
+- CLAUDE.md "Forbidden premature KILL without research exhaustion" +
+  "KILL/FALSIFIED memory verdicts" — Catalog #315 prevents the
+  upstream cause of the symptom these gates address: paradigm-level
+  KILL verdicts based on implementation-level falsifications.
+
 ## Apples-to-apples evidence discipline — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator correction, 2026-05-10, after PR103 histogram packet review.
@@ -2862,6 +3056,8 @@ Catalog #291 OSS-hermetic implementation note (2026-05-15 follow-up): the runtim
 313. `check_dispatch_target_has_no_predecessor_adjudicated_outcome` — PROBE-OUTCOMES-BAKE-IN self-protection 2026-05-16 (per operator NON-NEGOTIABLE *"bake in the FULL 4-layer canonical pattern per the Catalog #245 Modal call_id ledger exemplar so probe-disambiguator verdicts are queryable across sessions and gating dispatch BEFORE we re-run something an existing adjudicated probe already settled"*). Refuses dispatch wrappers (`.py` or `.sh` files under `tools/`, `scripts/`, `experiments/`, `src/tac/` containing a known dispatch token: `modal run` / `modal_train_lane` / `launch_lane_on_vastai` / `launch_lane_lightning` / `vastai create instance` / `lightning run` / `lightning.ai run` / `kaggle kernels push` / `operator_authorize.py`) that target a recipe (literal `--recipe <path>` OR `operator_authorize_recipes/<basename>.yaml`) whose substrate has a recent blocking adjudicated probe-outcome verdict in `{INDEPENDENT, KILL, DEFER}` in the canonical ledger `.omx/state/probe_outcomes.jsonl` (managed by canonical helper `tac.probe_outcomes_ledger`). Bug class anchor: 2026-05-16 ATW v2 D4 H(latent|scorer_class) probe (Codex `tools/run_atw_v2_d4_probe_from_a1.py` $0.30 CPU smoke 2026-05-16 22:47:41Z) returned `INDEPENDENT` verdict (MI=0.006385 bits/symbol; 2 orders of magnitude below MEANINGFUL_CONDITIONING threshold 0.5). Without the canonical adjudicated-outcomes ledger + STRICT gate, future subagent dispatchers can re-fire ATW v2 Phase 2 dispatch on the same architectural surface despite the apparatus having already settled the question — burning paid GPU re-measuring an answer the system already has. Sister anchors: Wunderkind G1 v2 per-pair-dominant SegNet argmax reducer DEFER verdict (council Q1 SPLIT-VERDICT per Catalog #308); other probe outcomes across 60+ memos under `.omx/research/*probe*.md`. **4-layer pattern per Catalog #245 exemplar**: Layer 1 = canonical fcntl-locked JSONL helper at `src/tac/probe_outcomes_ledger.py` (~750 LOC; APPEND-ONLY per HISTORICAL_PROVENANCE Catalog #110/#113; `register_probe_outcome` / `update_probe_outcome` / `query_blocking_outcomes` / `latest_blocking_outcome_by_recipe` / `latest_blocking_outcome_by_substrate` / `load_outcomes_strict` per Catalog #138 fail-closed pattern; quarantine on corrupt; 7-verdict taxonomy `{INDEPENDENT, KILL, DEFER, PROMOTE, PROCEED, PARTIAL, OPERATOR_REVIEW_REQUIRED}`; 3-status taxonomy `{blocking, advisory, expired}`; 5-event-type taxonomy `{adjudicated, ratified, superseded, expired, operator_override}`; expires_at_utc auto-computed = adjudicated + 30 days per CLAUDE.md "Substrate retirement discipline" Catalog #298 staleness window). Layer 2 = operator-facing CLI + library API at `tools/check_predecessor_probe_outcome.py` (`--recipe` / `--substrate` / `--list-blocking` / `--json` flags; exit codes 0/1/2 for OK/blocked/arg-error). Layer 3 = this STRICT preflight gate. Layer 4 = `tools/operator_authorize.py::_check_predecessor_probe_outcome` runtime wire-in between Catalog #152 `_validate_required_input_files` and Catalog #243 `_run_local_pre_deploy_check` insertion points; paired-env bypass `OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1` + `OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE=<text>` per Catalog #199 sister rule. Acceptance: same-line `# PROBE_PREDECESSOR_OVERRIDE_OK:<rationale>` waiver with non-placeholder rationale (placeholder `<rationale>` / `<reason>` literals rejected so the gate's docstring example cannot self-waive). Scope: `.py` + `.sh` extensions only; excludes `experiments/results/` (DERIVED_OUTPUT per Catalog #113) + `_intake_` (Catalog #109) + `.omx/oss_export/` + `vendored` + `/tests/` + `test_*` files + `build/lib/` + `reports/raw/` + `submissions/exact_current/` (per CLAUDE.md mutation frontier). Self-exempt: canonical helper `src/tac/probe_outcomes_ledger.py` + this gate's defining file `src/tac/preflight.py` + the CLI `tools/check_predecessor_probe_outcome.py`. Per CLAUDE.md "Forbidden premature KILL without research exhaustion": a blocking outcome does NOT mean the lane is killed — it means the apparatus has already adjudicated this probe within the staleness window. STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" + "Bugs must be permanently fixed AND self-protected against" non-negotiables — live count at landing: 0 (the canonical operator-authorize entry point at `tools/operator_authorize.py` carries the runtime check + paired-env bypass per Catalog #199; sister dispatch wrappers under `scripts/operator_authorize_substrate_*.sh` already route through it; the gate fires structurally so any future dispatch wrapper that bypasses the canonical entry point is refused BEFORE the GPU meter starts). 1 historical anchor backfilled in same commit batch (ATW v2 D4 H(latent|scorer_class) → INDEPENDENT). Sister of Catalog #245 (canonical Modal call_id ledger 4-layer exemplar this gate operationalizes for probe-outcomes) + Catalog #131 (`check_no_bare_writes_to_shared_state` — `PROBE_OUTCOMES_LEDGER_PATH` is registered there so direct writes outside the canonical helper refuse) + Catalog #138 (strict-load discipline — `load_outcomes_strict` mirrors `load_call_ids_strict`) + Catalog #292 (per-deliberation assumption surfacing — this gate's amendment adds the standing question "has this probe / dispatch already been executed and adjudicated?") + Catalog #240 (recipe-vs-trainer chain — sister at the dispatch-flow coherence surface) + Catalog #243 (local pre-deploy harness) + Catalog #271 (codex pre-dispatch review) + Catalog #167 (smoke-before-full pattern) + Catalog #199 (paired-env bypass discipline) + Catalog #298 (30-day staleness window; same default). 84 focused tests across `src/tac/tests/test_probe_outcomes_ledger.py` (50 tests covering schema validation / register happy-path + 8 invalid-input rejections / update event-type transitions / load_outcomes lenient + strict / quarantine on corrupt / atomic write no-tmp-leakage / query helpers / 4-proc spawn-pool concurrent-append stress / full lifecycle / ATW v2 D4 backfill / JSONL byte-stable sort_keys) + `src/tac/tests/test_check_313_dispatch_target_no_predecessor_probe_outcome.py` (27 tests covering live-repo regression / positive blocking-outcome flagged / negative no-outcome / PROMOTE not-blocking / dispatch-token-without-recipe-path / same-line waiver / placeholder rejection / test files excluded / intake clones excluded / strict raises with Catalog #313 message / strict silent on clean / canonical helper self-exempt / multi-violation aggregation / missing scan dir / string repo_root / comment lines / only .py + .sh scanned / ATW v2 D4 anchor regression / gate callable via globals / signature keyword-only / verbose output) + `src/tac/tests/test_check_313_probe_predecessor_gate.py` (4 regression tests covering common `--recipe <name>` extraction, direct recipe paths, same-line waiver, and preflight_all wiring) + `src/tac/tests/test_operator_authorize_probe_predecessor.py` (3 runtime tests covering blocking verdict refusal and paired-env bypass discipline). Memory: `feedback_probe_outcomes_canonical_ledger_landed_20260516.md`. Lane: `lane_probe_outcomes_canonical_ledger_bake_in_20260516`.
 
 297. `check_substrate_signal_axis_destruction_has_reversibility_probe` — META-CARGO-CULT META-CC-2 self-protection 2026-05-16 (per `.omx/research/meta_assumption_backfill_audit_all_staircase_substrates_20260516.md` + `.omx/research/grand_council_symposium_nscs06_carmack_hotz_falsification_redesign_multipath_20260516.md` + commit `4292c8ce2` (symposium) + commit `b0a7ff474` (META-assumption audit)). Refuses substrate trainers + codec modules under `src/tac/substrates/*/` and `experiments/train_substrate_*.py` files containing forbidden signal-axis-destruction tokens: (1) `Y=R=G=B` / `R=G=B=Y` chained-assignment (NSCS06 grayscale-to-RGB replication anchor); (2) `grayscale_to_rgb(...duplicate...)` call with duplicate semantics; (3) `frame.mean(...color...)` chroma-collapsing axis-mean; (4) `rgb_grey = (r+g+b)/3` manual chroma-to-luma reduction; (5) `single_channel_only` variable / kwarg / comment marker; (6) `_grayscale_to_rgb` helper function name; (7) `_drop_chroma` helper function name. Per-line acceptance cascade: (a) sister probe file exists at `tools/probe_<substrate_id>_reversibility*.py` (canonical pattern, sister derived from `src/tac/substrates/<id>/` parent dir OR `experiments/train_substrate_<id>.py` filename token); (b) same-line waiver `# SIGNAL_AXIS_DESTRUCTION_REVERSIBLE_PROBE_OK:<rationale>` on the destruction-token line (placeholder `<rationale>` / `<reason>` literals rejected); (c) enclosing function name contains the substring `_compress_time_only` signaling explicitly that destruction lives only at compress time and the downstream loss does NOT route through SegNet/PoseNet on the destroyed signal. Pure comment lines (starting with `#` after leading whitespace) are NOT flagged so docstring/comment mentions are tolerated. Test files (`/tests/` subdir, `test_*.py` filenames) + vendored intake clones + generated build/oss-export artifacts excluded. Bug class anchors: NSCS06 Y=R=G=B chroma replication (seg=64.59 because SegNet's stride-2 stem cannot recover destroyed chroma); NSCS06 np.roll global translation (pose=149.03 empirical proof that PoseNet is NOT translation-invariant); Z3-G1 empty `hyperprior_weights_int8 = b""` + `w_hat_int8 = b""` slots (silent reproduction of Z3 v2 baseline 0.19869 to 5 decimals — empty slots never affect the score). Per CLAUDE.md "Apples-to-apples evidence discipline" + "Bit-level deconstruction and entropy discipline" + Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #139 (no-op detector packet compiler) + Catalog #105 (no-op provenance): every transform that mutates archive bytes MUST be paired with a proof that the mutation actually affects the score, not just an assumption. Sister of Catalog #220 (substrate L1+ byte-addition operational mechanism) + Catalog #272 (distinguishing-feature integration contract) + Catalog #139 (packet compiler no-op detector) + Catalog #105 (no-op provenance). Together they close the "compress-destroys-signal-without-inflate-reconstruction" surface across multiple orthogonal axes: L1+ scaffold byte-addition (#220) + distinguishing-feature contract (#272) + packet compiler no-op detector (#139) + no-op provenance (#105) + signal-axis destruction reversibility probe (#297). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: 2 (`src/tac/substrates/nscs06_carmack_hotz_strip_everything/inflate.py:42` + `:111` — the `_grayscale_to_rgb` helper def + invocation; NSCS06 lane is already `research_only=true` per the v6 falsification per commit `a16eb06fd`). Strict-flip planned after either (a) operator-routed NSCS06 redesign lands a sister `tools/probe_nscs06_carmack_hotz_strip_everything_reversibility.py` proving the chroma reconstruction is empirically reversible per the contest scorer's actual gradient response, OR (b) the NSCS06 `_grayscale_to_rgb` helper definition is rewritten into a `_compress_time_only`-named function, OR (c) operator-approved same-line waivers documenting the deferred reversibility status. 24 dedicated tests in `src/tac/tests/test_check_297_signal_axis_reversibility.py` covering live-repo regression guard (≤5 ceiling), out-of-scope (no substrates dir / empty / file without tokens), positive (every destruction pattern flagged: grayscale_to_rgb helper / Y=R=G=B chained / _drop_chroma / single_channel_only / rgb_grey literal / grayscale_to_rgb call with duplicate / train_substrate_*.py file in experiments), negative (sister probe file accepts / probe with suffix accepts / same-line waiver / `_compress_time_only` function short-circuits), waiver semantics (`<rationale>` + `<reason>` placeholders rejected), comment-line tolerance (pure comment with pattern NOT flagged), strict-mode (raises with Catalog #297 message / silent on clean), aggregation (multi-violation one file / multi-violation across files), test files excluded, string repo_root accepted, syntax-error file tolerated, verbose output (clean + dirty). Memory: `feedback_catalog_297_substrate_signal_axis_destruction_reversibility_landed_20260516.md`. Lane: `lane_catalog_296_297_metacargocult_strict_gates_20260516`.
+
+315. `check_substrate_at_optimal_form_before_paid_dispatch` — META-FRAMING-CORRECTION self-protection 2026-05-17 (per operator directive of the same date + cumulative lessons from the 2026-05-13 → 2026-05-17 substrate dispatch waves). The structural failure this gate prevents: **empirically dispatching substrates at LIFTED-TRAINER form when operator's standing directives required OPTIMAL FORM at implementation**. Empirical receipts: (a) NSCS06 v6 → v7 = **44% improvement** (105.15 → 58.89, contest-CUDA) via cargo-cult-unwind methodology — the ONLY substrate that got iterated to optimal form before next paid dispatch wave; (b) **4-of-5 distinguishing-feature dispatch failures** this session (Wunderkind G1 v2 reducer / ATW v2 D4 cooperative-receiver / Z6 FiLM ego-motion / NSCS01 nullspace-split / NSCS06 v8 Path B) tested at lifted-trainer form, falsifying SPECIFIC IMPLEMENTATIONS not novel concepts; (c) operator's UNIQUE-AND-COMPLETE-PER-METHOD operating mode + 9-dim checklist + PR95-lesson-at-META-level + HNeRV parity discipline directives are enforced at the DESIGN-MEMO surface (Catalogs #290 + #294 + #303 + #305) but BYPASSED at the IMPLEMENTATION + DISPATCH surface. The gate scans `.omx/state/lane_registry.json` for in-scope substrate lanes (id-substring match against the canonical set mirroring Catalog #220 / #272 / #298 + extended with `time_traveler` / `wunderkind` / `atw_` / `z6_` / `z7_` / `z8_`) at L1+ with `impl_complete=true`; for each, looks up the latest council deliberation in `.omx/state/council_deliberation_posterior.jsonl` via the canonical `deferred_substrate_id` field (with optional `substrate_alias` / `substrate_aliases` lane-registry support for surface-name mapping); refuses any lane whose latest verdict is `PROCEED_WITH_REVISIONS` AND has no chronologically-later PROCEED-unconditional anchor AND has no opt-out. Acceptance cascade per CLAUDE.md "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" non-negotiable: (a) iteration anchor: chronologically-later PROCEED-unconditional council deliberation on same substrate (e.g. after cargo-cult-unwind iteration per NSCS06 v6→v7 pattern); (b) `research_only=true` (top-level field OR notes-token OR `target_modes` includes `research_only`/`research_substrate`); (c) `lane_class=substrate_engineering` (top-level field OR notes-token); (d) `archived=true` (top-level field OR notes-token `lane_state=archived` / `terminal_verdict`); (e) same-line waiver `# OPTIMAL_FORM_DISPATCH_OK:<rationale>` in lane notes / evidence (placeholder `<rationale>` / `<reason>` literals rejected). Lanes WITHOUT any council deliberation anchor for the substrate are out of scope for this specific gate (covered by sister gates Catalog #233 promotion 4-gate + Catalog #294 9-dim checklist + Catalog #298 retirement discipline); this gate is SPECIFICALLY the **council-verdict-binding** surface. Sister of Catalog #220 (substrate L1+ scaffold operational mechanism; runtime-effect surface) + Catalog #272 (distinguishing-feature integration contract; per-substrate-feature surface) + Catalog #233 (L1→L2 promotion canonical 4-gate; promotion-discipline surface) + Catalog #298 (substrate L1 not stale dispatch; retirement-discipline surface) + Catalog #294 (9-dim success checklist evidence; design-memo surface) + Catalog #303 (cargo-cult audit section; design-memo surface) + Catalog #305 (observability surface; design-memo surface) + Catalog #300 (council deliberation v2 frontmatter; council-discipline surface). Together they extinct the **dispatch-at-lifted-trainer-form bug class** across 8 orthogonal surfaces: design-memo (#290 + #294 + #303 + #305) + runtime-effect (#220) + per-feature (#272) + promotion-discipline (#233) + retirement-discipline (#298) + council-discipline (#300) + iteration-discipline (#315 — this gate). STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule" — live count at landing: **0** across 106 scanned in-scope substrate L1+ lanes (65 already opted out via `research_only=true` / `lane_class=substrate_engineering`; 41 lacked any council anchor with `deferred_substrate_id` field set so are covered by sister gates; all 13 PROCEED_WITH_REVISIONS council anchors mapped to lanes with structural opt-out). The gate fires structurally the moment a future substrate is registered without opt-out and a council returns PROCEED_WITH_REVISIONS. 61 dedicated tests in `src/tac/tests/test_check_315_substrate_optimal_form_before_dispatch.py` covering helper unit tests (in-scope classifier across all 26 substrate substrings + 4 out-of-scope; ISO UTC parser; lane-text collection; opt-out cascade — research_only top-level + lane_class top-level + archived top-level + target_modes + notes-token; waiver semantics with placeholder rejection; alias support — substrate_alias + substrate_aliases list; verdict-map builder latest-wins; verdict-map skip rows without substrate_id; latest-verdict lookup returns None when no anchor), end-to-end gate behavior (no registry / no posterior / canonical PROCEED_WITH_REVISIONS flagged / PROCEED-unconditional after revisions supersedes / revisions chronologically later still flagged / research_only opt-out / substrate_engineering opt-out / archived opt-out / target_modes opt-out / waiver accepted / placeholder waiver rejected / no council anchor out of scope / L0 skipped / impl_complete=false skipped / out-of-scope lanes skipped / strict raises with Catalog #315 + OPTIMAL FORM message / strict silent on clean / multi-violation aggregation / corrupt registry / corrupt posterior / string repo_root / verbose output / alias lookup / DEFER verdict treated as dormant), live-repo regression guard, and orchestrator wire-in strict=True regression guard. Memory: `feedback_meta_framing_correction_optimal_form_before_paid_dispatch_landed_20260517.md`. Lane: `lane_meta_framing_correction_optimal_form_before_dispatch_20260517`.
 
 314. `check_no_subagent_files_touched_absorption_in_bare_commits` — COMMIT-SWAP-INVESTIGATION self-protection 2026-05-16 (per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable + 2 empirical anchors today: (a) WAVE-D 2c957c31e forensic finding 2026-05-15 (CODEX-FIX-WAVE absorbed DISPATCH-OPTIMIZATION's preflight.py + CLAUDE.md edits via DROP-FLAG-AND-RETRY pattern; closed by Catalog #289); (b) STC v2 FIX 2026-05-16 (commits `89d89c27e` "Harden L5 sideinfo and dispatch probe gates" + `c09c6e1c8` "Preserve probe outcomes landing memo" + `5562afc3c` "Preserve L5 v2 TT5L audit signal" absorbed STC v2 FIX subagent's edits to `src/tac/preflight.py` + `src/tac/tests/test_check_152_modal_mounted_input_extension.py` + `CLAUDE.md` + 3 driver scripts (`scripts/remote_lane_substrate_stc_v2.sh` / `a1_plus_lapose` / `a1_plus_wavelet_residual`) BEFORE STC v2 FIX's canonical serializer call ran; Catalog #157 `--expected-content-sha256` did NOT fire rc=4 because the absorbed content IS the working-tree state at lock-acquire time)). Refuses bare commits whose file list intersects an in-flight subagent's declared `files_touched` checkpoint within the preceding 60-minute window (excluding common-shared exempt files). Root cause: the operator's `/commit` slash command (commit-commands plugin at `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/commit-commands/commands/commit.md`) does bare `git add` + `git commit` directly (NOT through `tools/subagent_commit_serializer.py`). When invoked while a sister subagent has uncommitted edits in the shared working tree, the bare `git add` packages whatever the LLM thinks is relevant — which can include the sister's still-in-flight edits. The resulting commit carries a terse subject like "Preserve probe outcomes landing memo" or "Harden L5 sideinfo and dispatch probe gates" and the sister's work is silently attributed to the wrong commit body. WHY existing protections did not extinct this: Catalog #117 (subagent commit serializer must be used) IS detecting the bare commits (12 violations in last 50 today, including all 3 absorption commits) but is wired warn-only per legacy backlog. It DETECTS but does NOT BLOCK; #157 / #174 / #216 / #289 (--expected-content-sha256 family) protect against sister-edits-during-lock-wait + drop-flag-and-retry, not bare-commit-absorbs-files-before-serializer; #230 (bulk-rewrite ownership map) covers the COMMIT-MESSAGE surface; not the bare-commit-with-terse-subject case; #302 (sister subagent scope overlap via checkpoint JSONL) covers the SIMULTANEOUS-EDIT surface (2+ subagents both editing same files); not the BARE-COMMIT-ABSORBS-IN-FLIGHT-FILES case. Catalog #314 closes the absorption-pattern surface as a dedicated detector scoped to the empirical fingerprint: a bare commit (not in serializer log, no absorption-specific waiver) containing files declared as `files_touched` by an in-flight subagent (status=in_progress) within a ~60-minute window preceding the commit timestamp. The detection is POST-HOC (the commit already landed). This is by design: we cannot block the `/commit` slash command from within preflight because preflight runs before commit, not before edit. The structural value is operator-facing alert + machine-readable evidence for the next subagent wave so absorption is detected within the same session rather than discovered weeks later when the operator wonders "why did THIS commit include files I never asked about?". Acceptance: (a) commit went through `tools/subagent_commit_serializer.py` (matched by serializer log via prefix-aware sha lookup mirroring Catalog #117 / #235 semantics); (b) commit message body carries `# ABSORPTION_PATTERN_OK:<rationale>` waiver (placeholder `<rationale>` / `<reason>` literals rejected; rationale must be ≥4 chars). Exempt files (commonly multi-subagent state): `.omx/state/lane_registry.json` / `.omx/state/lane_maturity_audit.log` / `.omx/state/modal_call_id_ledger.jsonl` / `.omx/state/active_lane_dispatch_claims.md` / `.omx/state/commit-serializer.log` / `.omx/state/catalog-claim.log` / `.omx/state/subagent_progress.jsonl` / `.omx/state/continual_learning_posterior.jsonl` / `.omx/state/cost_band_posterior.jsonl` / `.omx/state/next_catalog_number.txt` / `.omx/state/probe_outcomes.jsonl` / `MEMORY.md`. Sister of Catalog #117 (last-50 commit serializer usage gate; #314 is the per-absorption-fingerprint complement that catches the bug class even when #117 has legacy backlog), Catalog #157 / #174 / #216 / #289 (commit-swap protection family), Catalog #230 (bulk-rewrite ownership map; commit-message surface), Catalog #302 (sister subagent scope overlap via checkpoint JSONL; edit-time-checkpoint surface). Together they extinct the multi-subagent edit/commit collision class at SEVEN surfaces: edit-time-checkpoint (#302) + edit-time-bulk-op (#230) + commit-time-pre-pre-lock (#157) + commit-time-staged (#216) + commit-time-lock-arbitration (#117) + post-resolution-residual-marker (#248) + bare-commit-absorbs-in-flight-files (#314). Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule" — initial live count at landing: 9 absorption-signature violations across 6 unique bare commits in last 50; follow-up review tightened status scope to in_progress only, current count 8. Strict-flip pending operator-routed audit + waiver backfill on absorption-anchor commits OR an absorption-clean window (50 fresh commits all going through canonical serializer). 38 dedicated tests in `src/tac/tests/test_check_314_subagent_files_touched_absorption_in_bare_commits.py` covering live-repo regression guard (≤30 ceiling), helper unit tests (ISO-UTC parser / waiver token detection with placeholder rejection / exempt-files set / waiver-tokens tuple), loader unit tests (serializer hash loader / malformed-JSON tolerance / missing-file fail-OPEN / in-flight loader with exempt filtering / space-separated legacy format / multiple rows per subagent), end-to-end (clean repo / canonical absorption pattern detected / serializer-log commit skipped / absorption-pattern waiver accepted / no-serializer waiver rejected / placeholder waiver rejected / commits outside 60-min window skipped / commits before checkpoint skipped / no-file-overlap skipped / exempt-files-overlap skipped / dedup per commit-subagent pair / multi-subagent collisions counted separately), strict-mode (raises with Catalog #314 message / silent on clean), orchestrator wire-in warn-only regression guard + Catalog #185 sister-gate-callable regression guard, anchor-specific live-repo regression guard pinning today's STC v2 + probe_outcomes + L5 + Z6 absorption pattern empirical effectiveness at landing. Memory: `feedback_commit_swap_absorption_pattern_investigation_landed_20260516.md`. Lane: `lane_commit_swap_absorption_pattern_investigation_20260516`. Cross-ref `.omx/research/commit_swap_incident_2c957c31e_forensic_analysis_20260515.md` (WAVE-D 2c957c31e forensic anchor) + `.omx/research/stc_v2_driver_path_layer_fix_landed_20260516.md` (today's STC v2 FIX anchor that surfaced this bug class as recurrence).
 

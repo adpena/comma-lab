@@ -2433,6 +2433,33 @@ def preflight_all(
         check_substrate_lane_l1_scaffold_not_stale_dispatch(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #315 - SUBSTRATE AT OPTIMAL FORM BEFORE PAID
+        # DISPATCH. Per CLAUDE.md "Substrate MUST be at OPTIMAL FORM before
+        # paid empirical dispatch" non-negotiable. The structural failure
+        # this gate prevents: empirically dispatching substrates at
+        # LIFTED-TRAINER form (basic implementation that passes tests +
+        # has PR95-paradigm tokens) when the sextet/grand council returned
+        # PROCEED_WITH_REVISIONS and the substrate has not been iterated
+        # to OPTIMAL FORM. Empirical anchors (this session):
+        # NSCS06 v6 -> v7 = 44% score improvement (105.15 -> 58.89) via
+        # cargo-cult-unwind methodology (the ONLY substrate that got
+        # iterated to optimal form before next paid dispatch wave);
+        # 4-of-5 distinguishing-feature dispatch failures (Wunderkind G1
+        # v2, ATW v2 D4, Z6 FiLM, NSCS01 nullspace-split, NSCS06 v8
+        # Path B) tested at lifted-trainer form. Sister of Catalog #220 /
+        # #272 / #233 / #298 / #294 / #303 / #305 / #300. STRICT-from-
+        # byte-one per CLAUDE.md "Strict-flip atomicity rule" — live
+        # count at landing: 0 (all in-scope substrate lanes with latest
+        # PROCEED_WITH_REVISIONS verdicts are already opted-out via
+        # research_only=true / lane_class=substrate_engineering; the
+        # 13 PROCEED_WITH_REVISIONS anchors in posterior all map to
+        # lanes with structural opt-out). The gate fires structurally
+        # the moment a future substrate is registered without opt-out
+        # and a council returns PROCEED_WITH_REVISIONS. Memory:
+        # feedback_meta_framing_correction_optimal_form_before_paid_dispatch_landed_20260517.md.
+        check_substrate_at_optimal_form_before_paid_dispatch(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -64870,6 +64897,512 @@ def check_substrate_lane_l1_scaffold_not_stale_dispatch(
             "discipline\" + premortem #1 (Category E). Run "
             "`.venv/bin/python tools/audit_stale_l1_substrates.py "
             "--only-stale` for the decision queue:\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #315 — check_substrate_at_optimal_form_before_paid_dispatch
+#
+# META-FRAMING-CORRECTION 2026-05-17 self-protection per operator directive
+# of the same date.
+#
+# The structural failure this gate prevents:
+#   Empirically dispatching substrates at LIFTED-TRAINER form (basic
+#   implementation that passes tests + has PR95-paradigm tokens) when the
+#   sextet / grand council returned ``PROCEED_WITH_REVISIONS`` and the
+#   substrate has not been iterated to OPTIMAL FORM (cargo-cult-unwind
+#   methodology applied + 9-dim checklist satisfied + sextet returned
+#   PROCEED-unconditional). Per operator standing directives
+#   (UNIQUE-AND-COMPLETE-PER-METHOD + 9-dim checklist + PR95-at-META +
+#   HNeRV parity discipline + cargo-cult unwind methodology), substrate
+#   dispatch must happen at OPTIMAL FORM, not at the first
+#   ``impl_complete=true`` waypoint.
+#
+# Empirical anchors (this session):
+#   - NSCS06 v6 -> v7 = 44% score improvement (105.15 -> 58.89) via
+#     cargo-cult-unwind methodology. The ONLY substrate that got iterated
+#     to optimal form before the next paid dispatch wave.
+#   - 4-of-5 distinguishing-feature dispatch failures this session
+#     (Wunderkind G1 v2 reducer / ATW v2 D4 cooperative-receiver /
+#     Z6 FiLM ego-motion / NSCS01 nullspace-split / NSCS06 v8 Path B)
+#     were empirically tested at LIFTED-TRAINER form, falsifying
+#     specific implementations not the novel concepts.
+#   - Operator's UNIQUE-AND-COMPLETE-PER-METHOD directive (Catalog #290)
+#     + 9-dim checklist (Catalog #294) + cargo-cult audit (Catalog #303)
+#     + observability surface (Catalog #305) are enforced at DESIGN-MEMO
+#     surface but BYPASSED at IMPLEMENTATION + DISPATCH surface.
+#
+# How the gate detects the bug class:
+#   For every in-scope substrate lane in ``.omx/state/lane_registry.json``
+#   at L1+ with ``impl_complete=true``, the gate scans
+#   ``.omx/state/council_deliberation_posterior.jsonl`` for the latest
+#   council deliberation that names this substrate via the canonical
+#   ``deferred_substrate_id`` field. If the latest verdict is
+#   ``PROCEED_WITH_REVISIONS`` AND no later ``PROCEED`` anchor (without
+#   revisions) supersedes it AND the lane has no opt-out, the gate
+#   refuses.
+#
+# Acceptance cascade (any ONE suffices):
+#   (a) Substrate has a sextet PROCEED-unconditional anchor that is
+#       chronologically LATER than the most-recent
+#       PROCEED_WITH_REVISIONS anchor for the same substrate
+#       (iteration landed; council re-approved).
+#   (b) ``research_only=true`` declared per CLAUDE.md "Substrate
+#       scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable
+#       (top-level field OR notes-token OR target_modes contains
+#       ``research_only`` / ``research_substrate``).
+#   (c) ``lane_class=substrate_engineering`` declared (top-level field
+#       OR notes-token) per HNeRV parity discipline L7 (substrate
+#       engineering exceeds bolt-on size budget; not yet contest-
+#       dispatch eligible).
+#   (d) ``archived=true`` (top-level field OR notes-token
+#       ``lane_state=archived`` / ``terminal_verdict``) per CLAUDE.md
+#       "Forbidden premature KILL" — archived state is dormant-with-
+#       reactivation, NOT kill.
+#   (e) Same-line waiver
+#       ``# OPTIMAL_FORM_DISPATCH_OK:<rationale>`` in lane notes /
+#       evidence (placeholder ``<rationale>`` / ``<reason>`` literals
+#       REJECTED so the gate's docstring example cannot self-waive).
+#
+# Sister gates:
+#   - Catalog #220 — substrate L1+ scaffold operational mechanism
+#   - Catalog #272 — distinguishing-feature integration contract
+#   - Catalog #233 — L1->L2 promotion canonical 4-gate
+#   - Catalog #298 — substrate L1 not stale dispatch (retirement
+#     discipline; #315 is the iteration-discipline complement: #298
+#     prevents staleness, #315 prevents premature dispatch)
+#   - Catalog #294 — 9-dim success checklist (design-memo surface)
+#   - Catalog #303 — cargo-cult audit section (design-memo surface)
+#   - Catalog #305 — observability surface (design-memo surface)
+#   - Catalog #300 — council deliberation v2 frontmatter
+#
+# Together they extinct the canonical failure: design-memo discipline
+# (#290 + #294 + #303 + #305) is enforced at the memo surface, but the
+# IMPLEMENTATION + COUNCIL + DISPATCH chain has no structural gate
+# binding the council verdict back to the dispatch decision. Catalog
+# #315 closes that surface.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity
+# rule" — live count at landing is expected >0 because multiple
+# substrates have PROCEED_WITH_REVISIONS anchors WITHOUT follow-on
+# iteration anchors (Wunderkind G1 v2, ATW v2 D4 cooperative-receiver,
+# Z6 v1 FiLM, NSCS01 v1 head0-capacity, NSCS03 v1 default-config).
+# Strict-flip pending the substrate-iteration wave that lands either
+# follow-on PROCEED-unconditional council anchors OR
+# ``research_only=true`` opt-out on the affected lanes.
+# ============================================================================
+
+_CHECK_315_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
+    "substrate_",
+    "_substrate_",
+    "_polytope_",
+    "_sidecar_",
+    "_overlay_",
+    "yucr_",
+    "d1_segnet",
+    "d2_",
+    "d4_",
+    "lane_a1_",
+    "_hnerv_",
+    "_nerv_",
+    "_lora_",
+    "wavelet_residual",
+    "siren_residual",
+    "coord_mlp_residual",
+    "nscs",
+    "balle_",
+    "cool_chic",
+    "_c3_",
+    "vq_vae",
+    "self_compress",
+    "time_traveler",
+    "wunderkind",
+    "atw_",
+    "z6_",
+    "z7_",
+    "z8_",
+)
+
+_CHECK_315_OPT_OUT_RESEARCH_TOKENS: tuple[str, ...] = (
+    "research_only=true",
+    "research_only:true",
+    "research-only=true",
+)
+
+_CHECK_315_OPT_OUT_SUBSTRATE_ENG_TOKENS: tuple[str, ...] = (
+    "lane_class=substrate_engineering",
+    "lane_class:substrate_engineering",
+    "lane_class: substrate_engineering",
+    "substrate_engineering_exception",
+)
+
+_CHECK_315_OPT_OUT_ARCHIVED_TOKENS: tuple[str, ...] = (
+    "archived=true",
+    "lane_state=archived",
+    "terminal_verdict",
+)
+
+_CHECK_315_WAIVER_RE = re.compile(
+    r"#\s*OPTIMAL_FORM_DISPATCH_OK\s*:\s*(?P<reason>[^\n#]+)",
+    re.IGNORECASE,
+)
+
+_CHECK_315_PLACEHOLDER_RATIONALES = ("<rationale>", "<reason>", "")
+
+
+def _check_315_lane_in_scope(lane_id: str) -> bool:
+    lane_id_lower = lane_id.lower()
+    return any(
+        tok in lane_id_lower
+        for tok in _CHECK_315_IN_SCOPE_ID_SUBSTRINGS
+    )
+
+
+def _check_315_collect_lane_text(lane: dict) -> str:
+    parts: list[str] = []
+    notes = lane.get("notes", "")
+    if isinstance(notes, str):
+        parts.append(notes)
+    gates = lane.get("gates", {})
+    if isinstance(gates, dict):
+        for gate_obj in gates.values():
+            if isinstance(gate_obj, dict):
+                ev = gate_obj.get("evidence", "")
+                if isinstance(ev, str):
+                    parts.append(ev)
+    return "\n".join(parts).lower()
+
+
+def _check_315_lane_opt_out(lane: dict, text: str) -> str | None:
+    if lane.get("research_only") is True:
+        return "research_only=true"
+    if lane.get("archived") is True:
+        return "archived=true"
+    if lane.get("lane_class") in (
+        "substrate_engineering", "research_substrate"
+    ):
+        return f"lane_class={lane['lane_class']}"
+    target_modes = lane.get("target_modes", [])
+    if isinstance(target_modes, list):
+        for tm in target_modes:
+            if isinstance(tm, str) and tm.lower() in (
+                "research_substrate", "research_only"
+            ):
+                return f"target_modes={tm}"
+    for tok in _CHECK_315_OPT_OUT_RESEARCH_TOKENS:
+        if tok in text:
+            return tok
+    for tok in _CHECK_315_OPT_OUT_SUBSTRATE_ENG_TOKENS:
+        if tok in text:
+            return tok
+    for tok in _CHECK_315_OPT_OUT_ARCHIVED_TOKENS:
+        if tok in text:
+            return tok
+    return None
+
+
+def _check_315_waiver_present(text: str) -> bool:
+    for m in _CHECK_315_WAIVER_RE.finditer(text):
+        reason = m.group("reason").strip().lower()
+        if reason and reason not in _CHECK_315_PLACEHOLDER_RATIONALES:
+            return True
+    return False
+
+
+def _check_315_parse_iso_utc(value: str) -> float | None:
+    """Best-effort parse of an ISO-8601 UTC timestamp to a POSIX
+    seconds-since-epoch float. Returns None on parse failure."""
+    from datetime import datetime as _dt, timezone as _tz
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        cleaned = value.rstrip("Z").split("+")[0]
+        dt = _dt.fromisoformat(cleaned)
+        return dt.replace(tzinfo=_tz.utc).timestamp()
+    except (ValueError, AttributeError):
+        return None
+
+
+def _check_315_build_council_verdict_map(
+    posterior_path: Path,
+) -> dict[str, dict]:
+    """Returns a map of substrate_id -> latest council deliberation
+    record (the row with the most-recent ``written_at_utc``).
+
+    Records without a ``deferred_substrate_id`` field cannot be joined
+    back to a lane and are excluded. This is the canonical substrate
+    -> council-verdict join surface per the council posterior schema.
+    """
+    latest_by_substrate: dict[str, dict] = {}
+    latest_ts_by_substrate: dict[str, float] = {}
+    if not posterior_path.is_file():
+        return latest_by_substrate
+    try:
+        for line in posterior_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            substrate_id = row.get("deferred_substrate_id")
+            if not isinstance(substrate_id, str) or not substrate_id:
+                continue
+            ts_str = row.get("written_at_utc", "")
+            ts = _check_315_parse_iso_utc(ts_str) or 0.0
+            prior_ts = latest_ts_by_substrate.get(substrate_id)
+            if prior_ts is None or ts > prior_ts:
+                latest_ts_by_substrate[substrate_id] = ts
+                latest_by_substrate[substrate_id] = row
+    except OSError:
+        return latest_by_substrate
+    return latest_by_substrate
+
+
+def _check_315_substrate_ids_for_lane(lane: dict) -> tuple[str, ...]:
+    """Returns the set of substrate_id strings that may identify this
+    lane in the council posterior. The lane.id itself is the primary
+    key; additional aliases may live in lane.notes (e.g. the v1 surface
+    name documented in council deliberations)."""
+    ids: list[str] = []
+    lane_id = str(lane.get("id", ""))
+    if lane_id:
+        ids.append(lane_id)
+    # Some council anchors use the alias surface name, not the
+    # full registry id. Allow lookup by alias if the lane declares
+    # one. The alias field is OPT-IN; missing alias is fine.
+    alias = lane.get("substrate_alias")
+    if isinstance(alias, str) and alias:
+        ids.append(alias)
+    aliases = lane.get("substrate_aliases")
+    if isinstance(aliases, list):
+        for a in aliases:
+            if isinstance(a, str) and a:
+                ids.append(a)
+    return tuple(ids)
+
+
+def _check_315_lookup_latest_verdict(
+    lane: dict,
+    verdict_map: dict[str, dict],
+) -> dict | None:
+    """Returns the latest council deliberation record that names this
+    lane (any of its substrate_ids), or None if no anchor exists."""
+    candidate: dict | None = None
+    candidate_ts: float = -1.0
+    for sid in _check_315_substrate_ids_for_lane(lane):
+        row = verdict_map.get(sid)
+        if row is None:
+            continue
+        ts = _check_315_parse_iso_utc(row.get("written_at_utc", "")) or 0.0
+        if ts > candidate_ts:
+            candidate_ts = ts
+            candidate = row
+    return candidate
+
+
+def check_substrate_at_optimal_form_before_paid_dispatch(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #315 — refuse substrate dispatch at LIFTED-TRAINER form
+    when sextet council returned PROCEED_WITH_REVISIONS.
+
+    Per operator directive 2026-05-17 (META-FRAMING-CORRECTION):
+    substrates MUST be iterated to OPTIMAL FORM (cargo-cult-unwind
+    methodology applied + 9-dim checklist satisfied + sextet returned
+    PROCEED-unconditional) BEFORE paid empirical dispatch. The 4-of-5
+    distinguishing-feature failures this session falsified SPECIFIC
+    IMPLEMENTATIONS at lifted-trainer form rather than novel concepts.
+
+    See the module-level Catalog #315 docstring above for the full
+    acceptance cascade and the
+    ``# OPTIMAL_FORM_DISPATCH_OK:<rationale>`` same-line waiver.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-lane diagnostic.
+
+    Returns:
+        List of violation messages (one per lane at lifted-trainer
+        form with outstanding council revisions).
+    """
+    root = repo_root or REPO_ROOT
+    if isinstance(root, str):
+        root = Path(root)
+    violations: list[str] = []
+
+    registry_path = root / ".omx" / "state" / "lane_registry.json"
+    posterior_path = (
+        root / ".omx" / "state" / "council_deliberation_posterior.jsonl"
+    )
+    if not registry_path.is_file():
+        if verbose:
+            print("  [catalog-315] OK (no lane_registry.json)")
+        return violations
+    if not posterior_path.is_file():
+        # If there are no council deliberations on disk, this gate
+        # cannot fire (no PROCEED_WITH_REVISIONS to detect). Per
+        # sister Catalog #298 / #300 / #301 fail-OPEN-when-state-
+        # missing pattern.
+        if verbose:
+            print(
+                "  [catalog-315] OK "
+                "(no council_deliberation_posterior.jsonl)"
+            )
+        return violations
+
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        if verbose:
+            print(f"  [catalog-315] WARN registry read error: {exc}")
+        return violations
+
+    lanes = registry.get("lanes")
+    if not isinstance(lanes, list):
+        if verbose:
+            print("  [catalog-315] OK (registry has no lanes list)")
+        return violations
+
+    verdict_map = _check_315_build_council_verdict_map(posterior_path)
+    if not verdict_map:
+        if verbose:
+            print(
+                "  [catalog-315] OK "
+                "(no deferred_substrate_id anchors in posterior)"
+            )
+        return violations
+
+    scanned = 0
+    opted_out = 0
+    proceed_unconditional = 0
+    no_council_anchor = 0
+
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        lane_id = str(lane.get("id", ""))
+        if not lane_id or not _check_315_lane_in_scope(lane_id):
+            continue
+        level = int(lane.get("level", 0) or 0)
+        if level < 1:
+            continue
+        gates = lane.get("gates", {})
+        if not isinstance(gates, dict):
+            continue
+        impl_gate = gates.get("impl_complete", {})
+        if not (
+            isinstance(impl_gate, dict)
+            and impl_gate.get("status") is True
+        ):
+            continue
+        scanned += 1
+        text = _check_315_collect_lane_text(lane)
+
+        opt_out = _check_315_lane_opt_out(lane, text)
+        if opt_out:
+            opted_out += 1
+            if verbose:
+                print(
+                    f"  [catalog-315] OK lane={lane_id} L{level} "
+                    f"opt_out={opt_out!r}"
+                )
+            continue
+
+        if _check_315_waiver_present(text):
+            if verbose:
+                print(
+                    f"  [catalog-315] WAIVED lane={lane_id} L{level}"
+                )
+            continue
+
+        latest = _check_315_lookup_latest_verdict(lane, verdict_map)
+        if latest is None:
+            # No council anchor exists for this substrate; the
+            # iteration-discipline gate only fires when a council
+            # has explicitly returned PROCEED_WITH_REVISIONS.
+            # Lanes with no council anchor are covered by other
+            # discipline gates (Catalog #233 promotion 4-gate,
+            # Catalog #294 9-dim checklist, etc.). This gate is
+            # SPECIFICALLY the council-verdict-binding surface.
+            no_council_anchor += 1
+            if verbose:
+                print(
+                    f"  [catalog-315] OK lane={lane_id} L{level} "
+                    "no_council_anchor (out of scope for this "
+                    "gate; covered by sister gates)"
+                )
+            continue
+
+        verdict = latest.get("council_verdict", "")
+        if verdict != "PROCEED_WITH_REVISIONS":
+            # Latest council verdict is PROCEED (unconditional) /
+            # DEFER / REFUSE / ESCALATE. Either OK (PROCEED) or
+            # the lane is dormant pending re-deliberation
+            # (DEFER / REFUSE / ESCALATE). Not in scope for this
+            # gate; sister gates (Catalog #233 / #298) cover those.
+            proceed_unconditional += 1
+            if verbose:
+                print(
+                    f"  [catalog-315] OK lane={lane_id} L{level} "
+                    f"latest_verdict={verdict!r}"
+                )
+            continue
+
+        deliberation_id = latest.get("deliberation_id", "<unknown>")
+        verdict_ts_str = latest.get("written_at_utc", "<unknown>")
+        violations.append(
+            f"lane {lane_id!r} (L{level}) is in-scope substrate lane "
+            f"with impl_complete=true but the latest council "
+            f"deliberation ({deliberation_id!r} at {verdict_ts_str}) "
+            f"returned council_verdict='PROCEED_WITH_REVISIONS' AND "
+            "no follow-on PROCEED-unconditional anchor supersedes it. "
+            "Per CLAUDE.md \"Substrate MUST be at OPTIMAL FORM before "
+            "paid empirical dispatch\" non-negotiable: this lane MUST "
+            "satisfy one of: "
+            "(a) land iteration subagent commits applying the council "
+            "revisions + re-trigger sextet/grand-council deliberation "
+            "that returns PROCEED (unconditional) per the canonical "
+            "iteration methodology (NSCS06 v6->v7 pattern), "
+            "(b) declare `research_only=true` with reactivation "
+            "criteria, "
+            "(c) declare `lane_class=substrate_engineering`, "
+            "(d) move to archived state with terminal verdict, OR "
+            "(e) carry a same-line "
+            "`# OPTIMAL_FORM_DISPATCH_OK:<rationale>` waiver in lane "
+            "notes/evidence (rationale must be a real string)."
+        )
+
+    if verbose:
+        print(
+            f"  [catalog-315] scanned={scanned} "
+            f"opted_out={opted_out} "
+            f"latest_proceed_unconditional={proceed_unconditional} "
+            f"no_council_anchor={no_council_anchor} "
+            f"violations={len(violations)}"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_at_optimal_form_before_paid_dispatch "
+            f"found {len(violations)} substrate lane(s) at LIFTED-"
+            "TRAINER form with outstanding sextet/grand-council "
+            "PROCEED_WITH_REVISIONS verdicts. Per CLAUDE.md "
+            "\"Substrate MUST be at OPTIMAL FORM before paid "
+            "empirical dispatch\" non-negotiable, every such lane "
+            "must land iteration commits + receive a follow-on "
+            "PROCEED-unconditional council anchor BEFORE any paid "
+            "Modal/Lightning/Vast.ai dispatch. Canonical iteration "
+            "methodology: NSCS06 v6->v7 (105.15 -> 58.89, 44% "
+            "improvement in ONE iteration via cargo-cult unwinds). "
+            "Affected lanes:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations
