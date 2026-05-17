@@ -26,6 +26,7 @@ from tac.optimization.l5_v2_measurement_schedule import (
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA,
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
@@ -362,6 +363,118 @@ def _variant_rows_by_name(manifest: Mapping[str, Any]) -> dict[str, Mapping[str,
         if variant:
             out[variant] = row
     return out
+
+
+def _source_plan_status(
+    *,
+    bundle: Mapping[str, Any],
+    repo_root: Path,
+) -> tuple[dict[str, Any], dict[tuple[str, str], Mapping[str, Any]], list[str]]:
+    blockers: list[str] = []
+    raw_path = str(bundle.get("source_plan") or "").strip()
+    expected_sha = str(bundle.get("source_plan_sha256") or "").strip()
+    summary: dict[str, Any] = {
+        "path": raw_path,
+        "exists": False,
+        "sha256": "",
+        "matches_bundle_sha256": False,
+        "schema": "",
+        "cell_count": 0,
+        "coverage": {
+            "missing_cells": [],
+            "duplicate_cells": [],
+            "extra_cells": [],
+            "key_missing_indices": [],
+        },
+    }
+    if not raw_path:
+        return summary, {}, ["source_plan_path_missing"]
+    path = _resolve_repo_path(raw_path, repo_root)
+    summary["path"] = _repo_relative(path, repo_root)
+    if not path.is_file():
+        return summary, {}, ["source_plan_missing"]
+
+    summary["exists"] = True
+    actual_sha = _sha256_file(path)
+    summary["sha256"] = actual_sha
+    summary["matches_bundle_sha256"] = bool(expected_sha) and actual_sha == expected_sha
+    if not expected_sha:
+        blockers.append("source_plan_sha256_missing_from_bundle")
+    elif actual_sha != expected_sha:
+        blockers.append("source_plan_sha256_mismatch_bundle")
+
+    plan, load_blockers = _load_json_mapping(path)
+    blockers.extend(f"source_plan:{blocker}" for blocker in load_blockers)
+    if load_blockers:
+        return summary, {}, blockers
+    summary["schema"] = plan.get("schema", "")
+    if plan.get("schema") != L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA:
+        blockers.append("source_plan_schema_mismatch")
+
+    plan_cells = _mapping_rows(plan.get("cells"))
+    summary["cell_count"] = len(plan_cells)
+    coverage = _cell_key_coverage(plan_cells)
+    summary["coverage"] = coverage
+    if coverage["missing_cells"]:
+        blockers.append(
+            "source_plan_missing_cells:" + ",".join(coverage["missing_cells"])
+        )
+    if coverage["duplicate_cells"]:
+        blockers.append(
+            "source_plan_duplicate_cells:" + ",".join(coverage["duplicate_cells"])
+        )
+    if coverage["extra_cells"]:
+        blockers.append("source_plan_extra_cells:" + ",".join(coverage["extra_cells"]))
+    if coverage["key_missing_indices"]:
+        blockers.append(
+            "source_plan_cell_key_missing_indices:"
+            + ",".join(str(idx) for idx in coverage["key_missing_indices"])
+        )
+    if len(plan_cells) != (
+        len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+        * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+    ):
+        blockers.append("source_plan_cell_count_mismatch")
+    return summary, _cell_by_key(plan_cells), blockers
+
+
+def _source_plan_cell_summary(
+    *,
+    cell: Mapping[str, Any],
+    source_plan_cell: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    if not source_plan_cell:
+        return {
+            "matched": False,
+            "command_sha256": "",
+        }, ["source_plan_cell_missing"]
+    expected_source_sha = str(cell.get("source_spec_command_sha256") or "")
+    plan_command_sha = str(source_plan_cell.get("command_sha256") or "").strip()
+    if not plan_command_sha:
+        blockers.append("source_plan_cell_command_sha256_missing")
+    elif expected_source_sha != plan_command_sha:
+        blockers.append("source_spec_command_sha256_mismatch_source_plan")
+    fields = (
+        "archive_sha256",
+        "archive_size_bytes",
+        "pair_group_id",
+        "run_id",
+        "local_artifact_dir",
+    )
+    for field in fields:
+        if cell.get(field) != source_plan_cell.get(field):
+            blockers.append(f"source_plan_cell_{field}_mismatch")
+    return {
+        "matched": not blockers,
+        "command_sha256": plan_command_sha,
+        "source_spec_command_sha256": expected_source_sha,
+        "archive_sha256": str(source_plan_cell.get("archive_sha256") or ""),
+        "archive_size_bytes": source_plan_cell.get("archive_size_bytes"),
+        "pair_group_id": str(source_plan_cell.get("pair_group_id") or ""),
+        "run_id": str(source_plan_cell.get("run_id") or ""),
+        "local_artifact_dir": str(source_plan_cell.get("local_artifact_dir") or ""),
+    }, blockers
 
 
 def _local_archive_status(
@@ -703,6 +816,11 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
         global_blockers.append("source_bundle_non_dry_run_ready")
     if bundle.get("ready_for_provider_dispatch") is not False:
         global_blockers.append("source_bundle_provider_dispatch_ready")
+    source_plan, source_plan_cells, source_plan_blockers = _source_plan_status(
+        bundle=bundle,
+        repo_root=root,
+    )
+    global_blockers.extend(source_plan_blockers)
 
     cells = _mapping_rows(bundle.get("cells"))
     cell_by_key = _cell_by_key(cells)
@@ -749,7 +867,13 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
             archive_summary: dict[str, Any] = {}
             state_summary: dict[str, Any] = {}
             inflate_runtime_summary: dict[str, Any] = {}
+            source_plan_cell: dict[str, Any] = {}
             if cell:
+                source_plan_cell, source_plan_cell_blockers = _source_plan_cell_summary(
+                    cell=cell,
+                    source_plan_cell=source_plan_cells.get((variant, axis), {}),
+                )
+                cell_blockers.extend(source_plan_cell_blockers)
                 archive_summary, archive_blockers = _local_archive_status(
                     cell=cell,
                     variant_row=variant_rows.get(variant, {}),
@@ -803,6 +927,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
                     "local_artifact_dir": str(cell.get("local_artifact_dir") or ""),
                     "local_archive": archive_summary,
                     "inflate_runtime": inflate_runtime_summary,
+                    "source_plan_cell": source_plan_cell,
                     "dry_run_state_path": str(cell.get("dry_run_state_path") or ""),
                     "dry_run_state_file": state_summary,
                     "dry_run_command_sha256": _sha256_text(command) if command else "",
@@ -849,6 +974,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
             "tool",
             L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH,
         ),
+        "source_plan": source_plan,
         "expected_cell_count": expected_cell_count,
         "cell_count": len(verified_cells),
         "passed_cell_count": passed_count,

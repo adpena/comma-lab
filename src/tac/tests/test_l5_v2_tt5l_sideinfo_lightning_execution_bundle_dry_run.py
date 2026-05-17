@@ -12,6 +12,7 @@ from tac.optimization.l5_v2_measurement_schedule import (
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA,
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
@@ -222,6 +223,26 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
         json.dumps({"schema": "fake", "variants": variants}, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    source_plan_cells = [
+        {
+            "variant": cell["variant"],
+            "axis": cell["axis"],
+            "archive_sha256": cell["archive_sha256"],
+            "archive_size_bytes": cell["archive_size_bytes"],
+            "pair_group_id": cell["pair_group_id"],
+            "run_id": cell["run_id"],
+            "local_artifact_dir": cell["local_artifact_dir"],
+            "command_sha256": cell["source_spec_command_sha256"],
+        }
+        for cell in cells
+    ]
+    source_plan = {
+        "schema": L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA,
+        "cells": source_plan_cells,
+    }
+    source_plan_bytes = json.dumps(source_plan, sort_keys=True).encode("utf-8") + b"\n"
+    source_plan_path = repo_root / ".omx/research/fake_lightning_plan.json"
+    source_plan_path.write_bytes(source_plan_bytes)
     return {
         "schema": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
         "tool": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py",
@@ -235,6 +256,8 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
         "dispatch_attempted": False,
         "ready_for_non_dry_run_submit": False,
         "ready_for_dry_run_submit": True,
+        "source_plan": source_plan_path.relative_to(repo_root).as_posix(),
+        "source_plan_sha256": hashlib.sha256(source_plan_bytes).hexdigest(),
         "source_variant_manifest": manifest_path.relative_to(repo_root).as_posix(),
         "cell_count": len(cells),
         "ready_dry_run_cell_count": len(cells),
@@ -336,6 +359,11 @@ def test_tt5l_lightning_bundle_dry_run_verifier_accepts_all_cells(
     assert first["verified"] is True
     assert first["inflate_runtime"]["exists"] is True
     assert first["inflate_runtime"]["executable"] is True
+    assert first["source_plan_cell"]["matched"] is True
+    assert (
+        first["source_plan_cell"]["command_sha256"]
+        == first["queue"]["source_spec_command_sha256"]
+    )
     assert first["dry_run_state_file"]["stdout_core_matched"] is True
     assert first["queue"]["launcher_command_sha_matches_source_spec"] is False
     assert first["queue"]["command_sha_delta_classification"] == "expected_submit_layer_delta"
@@ -494,6 +522,30 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_metadata_axis_drift(
 
     assert payload["all_dry_runs_passed"] is False
     assert any("dry_run_queue_metadata_axis_mismatch" in blocker for blocker in payload["blockers"])
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_source_plan_sha_drift(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    first_cell = bundle["cells"][0]
+    assert isinstance(first_cell, dict)
+    first_cell["source_spec_command_sha256"] = "0" * 64
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert any(
+        "source_spec_command_sha256_mismatch_source_plan" in blocker
+        for blocker in payload["blockers"]
+    )
 
 
 def test_tt5l_lightning_bundle_dry_run_verifier_rejects_unpaired_axis_cells(
