@@ -19,7 +19,7 @@
 - `paired_axis_plan_evidence_valid`: `False`
 - `sideinfo_effect_curve_artifact_valid`: `False`
 - `first_anchor_timing_smoke_artifact_valid`: `False`
-- `anchor_pair_evidence_valid`: `False`
+- `anchor_pair_evidence_valid`: `True`
 
 ## Lightning Paired-Axis Dry-Run Plan
 
@@ -43,7 +43,6 @@
 - `requires_paired_cpu_cuda_axis_plan`
 - `requires_paired_cpu_cuda_sideinfo_effect_curve`
 - `requires_tt5l_first_anchor_timing_smoke_artifact`
-- `requires_exact_or_diagnostic_anchor_pair`
 
 ## Authority
 

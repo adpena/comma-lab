@@ -1,0 +1,9 @@
+{
+  "aggregate_sha256": "71f0b59f7d96c0345c41360a187aeae41bc5347b359d4f7d9421da377172c962",
+  "axis": "contest_cpu",
+  "promotion_eligible": false,
+  "schema": "l5_v2_tt5l_paired_exact_inflated_outputs_manifest_summary_v1",
+  "score_claim": false,
+  "source_manifest_sha256": "33e717cea576b3883e18aecf989611776e0aa671709349434d84bb0dc0148518",
+  "source_result_review_packet": ".omx/research/l5_v2_tt5l_paired_exact_cpu_result_review_20260516_codex.json"
+}

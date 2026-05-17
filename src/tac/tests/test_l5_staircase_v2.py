@@ -4983,6 +4983,66 @@ def test_l5_v2_dispatch_readiness_rejects_invalid_anchor_semantics(
     )
 
 
+def test_l5_v2_dispatch_readiness_consumes_pair_anchor_artifact_over_stale_axis_rows(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+    gate_id = "exact_anchor_or_diagnostic_pair"
+    payload = _gate_artifact_payload(gate_id, repo_root=tmp_path)
+    payload["schema"] = "l5_v2_tt5l_paired_exact_anchor_pair_v1"
+    payload["predicate_id"] = l5_v2.TT5L_PAIRED_EXACT_ANCHOR_PAIR_PREDICATE_ID
+    payload["pair_group_id"] = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+    payload["paired_axis_status"] = "paired_cpu_cuda_harvested"
+    payload["score_claim"] = False
+    payload["promotion_eligible"] = False
+    rows = payload["anchor_pair"]
+    assert isinstance(rows, list)
+    for row in rows:
+        assert isinstance(row, dict)
+        row["promotion_eligible"] = False
+        row["ready_for_exact_eval_dispatch"] = False
+        if row["axis"] == "contest_cpu":
+            row["dispatch_blockers"] = ["contest_cuda_pending_for_internal_promotion"]
+            row["exact_cuda_evidence"] = False
+        else:
+            row["exact_cuda_evidence"] = True
+        for key in ("artifact_path", "log_path", "inflated_outputs_manifest_path"):
+            custody_path = tmp_path / str(row[key])
+            custody_path.parent.mkdir(parents=True, exist_ok=True)
+            if key == "inflated_outputs_manifest_path":
+                custody_path.write_text(
+                    json.dumps(
+                        {"aggregate_sha256": row["inflated_raw_output_aggregate_sha256"]},
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            else:
+                custody_path.write_text(f"{gate_id} {row['axis']} {key}\n", encoding="utf-8")
+
+    anchor_path = tmp_path / l5_v2.TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH
+    anchor_path.parent.mkdir(parents=True, exist_ok=True)
+    anchor_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    gate = next(
+        gate for gate in readiness["gates"] if gate["gate_id"] == gate_id
+    )
+
+    assert gate["evidence_valid"] is True
+    assert gate["evidence"]["artifact_path"] == (
+        l5_v2.TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH
+    )
+    assert (
+        readiness["tt5l_campaign_readiness"]["anchor_pair_evidence_valid"] is True
+    )
+    assert "requires_l5_v2_empirical_anchor" not in readiness["blockers"]
+    assert readiness["score_claim"] is False
+    assert readiness["promotion_eligible"] is False
+
+
 def test_l5_v2_dispatch_readiness_requires_exact_anchor_eval_custody(
     tmp_path: Path,
 ) -> None:

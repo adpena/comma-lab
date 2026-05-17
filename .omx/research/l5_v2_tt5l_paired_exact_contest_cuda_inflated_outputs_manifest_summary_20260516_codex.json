@@ -1,0 +1,9 @@
+{
+  "aggregate_sha256": "656bc4f75369a9228e4e21665b2bfab29ddf3fa98ceb1d62a72ba00cddb039f5",
+  "axis": "contest_cuda",
+  "promotion_eligible": false,
+  "schema": "l5_v2_tt5l_paired_exact_inflated_outputs_manifest_summary_v1",
+  "score_claim": false,
+  "source_manifest_sha256": "e62b597a267d29a9acf56f212a96bc70d421b82ff9a4bbf4caeb5ef46cb347e8",
+  "source_result_review_packet": ".omx/research/l5_v2_tt5l_paired_exact_cuda_result_review_20260516_codex.json"
+}
