@@ -22,6 +22,7 @@ Per CLAUDE.md "Subagent commits MUST use serializer" and Catalog #117/#157/#174.
 from __future__ import annotations
 
 import struct
+import sys
 from pathlib import Path
 
 import pytest
@@ -48,6 +49,8 @@ from tac.substrates.time_traveler_l5_z6.architecture import (
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 DRIVER_PATH = REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z6.sh"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 # ===========================================================================
 # (G) SubstrateContract / SCAFFOLD discipline
@@ -109,7 +112,9 @@ def test_smoke_effective_epochs_caps_default_full_epoch_count() -> None:
 def test_remote_driver_verifies_active_claim_and_preserves_full_epoch_default() -> None:
     """Remote driver must verify the active claim and keep full default at 300."""
     src = DRIVER_PATH.read_text(encoding="utf-8")
-    assert 'Z6_EPOCHS="${Z6_EPOCHS:-300}"' in src
+    assert 'Z6_EPOCHS="${Z6_EPOCHS:-}"' in src
+    assert 'Z6_EPOCHS="3"' in src
+    assert 'Z6_EPOCHS="300"' in src
     assert "verify_active_dispatch_claim()" in src
     assert "claim_lane_dispatch.py\" summary" in src
     assert "--live-only" in src

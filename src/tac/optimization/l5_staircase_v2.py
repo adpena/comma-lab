@@ -200,6 +200,12 @@ L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA = (
 L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA = (
     "l5_v2_asymptotic_next_action_status_v1"
 )
+L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_asymptotic_candidate_surface_20260516_codex.json"
+)
+L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH = (
+    ".omx/research/l5_v2_asymptotic_candidate_surface_20260516_codex.md"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -549,6 +555,73 @@ def l5_v2_asymptotic_pursuit_candidates(
         "ready_for_paid_dispatch": False,
         "blockers": list(dict.fromkeys(aggregate_blockers)),
     }
+
+
+def asymptotic_candidate_surface_json(payload: Mapping[str, Any]) -> str:
+    """Return canonical JSON text for the L5 v2 asymptotic surface."""
+
+    return json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n"
+
+
+def render_l5_v2_asymptotic_candidate_surface_markdown(
+    payload: Mapping[str, Any],
+) -> str:
+    """Render a compact operator-facing L5 v2 asymptotic surface report."""
+
+    lines = [
+        "# L5 v2 asymptotic candidate surface",
+        "",
+        f"- schema: `{payload.get('schema')}`",
+        f"- campaign_id: `{payload.get('campaign_id')}`",
+        f"- candidate_count: `{payload.get('candidate_count')}`",
+        "- score_claim: `false`",
+        "- promotion_eligible: `false`",
+        "- rank_or_kill_eligible: `false`",
+        "- ready_for_exact_eval_dispatch: `false`",
+        "- ready_for_paid_dispatch: `false`",
+        "",
+        "This is a planning and no-signal-loss surface. It records whether "
+        "asymptotic L5-v2 candidates have their first executable artifacts, "
+        "but it does not authorize score claims, rank changes, paid dispatch, "
+        "or promotion.",
+        "",
+        "## Candidates",
+    ]
+    candidates = payload.get("candidates")
+    if isinstance(candidates, list):
+        for row in candidates:
+            if not isinstance(row, Mapping):
+                continue
+            lines.extend(
+                [
+                    "",
+                    f"### {row.get('candidate_id')}",
+                    "",
+                    f"- title: {row.get('title')}",
+                    f"- lane_id: `{row.get('lane_id')}`",
+                    f"- local_ledger_present: `{row.get('local_ledger_present')}`",
+                    f"- lane_registry_registered: `{row.get('lane_registry_registered')}`",
+                    f"- expected_first_artifacts_all_present: `{row.get('expected_first_artifacts_all_present')}`",
+                    f"- l1_scaffold_present: `{row.get('l1_scaffold_present')}`",
+                    f"- recommended_next_action_status: `{row.get('recommended_next_action_status')}`",
+                    f"- effective_recommended_next_action_id: `{row.get('effective_recommended_next_action_id')}`",
+                    f"- ready_for_l1_build: `{row.get('ready_for_l1_build')}`",
+                    f"- ready_for_l1_scaffold_dispatch: `{row.get('ready_for_l1_scaffold_dispatch')}`",
+                    f"- blockers: `{row.get('blockers')}`",
+                    f"- l1_build_blockers: `{row.get('l1_build_blockers')}`",
+                    "",
+                    "Expected first artifacts:",
+                ]
+            )
+            artifacts = row.get("expected_first_artifact_status")
+            if isinstance(artifacts, list):
+                for artifact in artifacts:
+                    if not isinstance(artifact, Mapping):
+                        continue
+                    lines.append(
+                        f"- `{artifact.get('path')}` present=`{artifact.get('present')}`"
+                    )
+    return "\n".join(lines) + "\n"
 
 
 def _l5_v2_lane_registry_ids(*, repo_root: Path) -> tuple[set[str], list[str]]:
@@ -4788,6 +4861,9 @@ __all__ = [
     "L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH",
     "L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA",
     "L5_V2_ARCHITECTURE_LOCK_PACKET_TOOL_PATH",
+    "L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH",
+    "L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH",
+    "L5_V2_ASYMPTOTIC_NEXT_ACTION_STATUS_SCHEMA",
     "L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA",
     "L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH",
@@ -4834,6 +4910,7 @@ __all__ = [
     "L5V2Gate",
     "L5V2GateEvidence",
     "L5V2Step",
+    "asymptotic_candidate_surface_json",
     "l5_v2_architecture_lock_packet",
     "l5_v2_asymptotic_pursuit_candidates",
     "l5_v2_canonical_probe_gate_evidence",
@@ -4849,6 +4926,7 @@ __all__ = [
     "l5_v2_staircase_steps",
     "l5_v2_tt5l_campaign_readiness",
     "render_l5_v2_architecture_lock_packet_markdown",
+    "render_l5_v2_asymptotic_candidate_surface_markdown",
     "tt5l_first_anchor_timing_smoke_status",
     "tt5l_move_level_feasibility_status",
     "tt5l_sideinfo_effect_curve_status",

@@ -16,6 +16,8 @@ import torch
 
 import tac.optimization.l5_staircase_v2 as l5_v2
 from tac.optimization.l5_staircase_v2 import (
+    L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH,
+    L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH,
     L5_V2_PACKETIR_SECTION_ENTROPY_EVIDENCE_SCHEMA,
     L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_PATH,
     L5_V2_PACKETIR_SECTION_ENTROPY_MATRIX_ARTIFACT_SHA256,
@@ -37,6 +39,7 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
     render_l5_v2_architecture_lock_packet_markdown,
+    render_l5_v2_asymptotic_candidate_surface_markdown,
 )
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
@@ -1062,6 +1065,91 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         assert row["rank_or_kill_eligible"] is False
         assert row["ready_for_exact_eval_dispatch"] is False
         assert row["ready_for_paid_dispatch"] is False
+
+
+def test_l5_v2_asymptotic_candidate_surface_artifact_tracks_live_payload() -> None:
+    live = l5_v2.l5_v2_asymptotic_pursuit_candidates()
+    artifact_path = REPO_ROOT / L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH
+    assert L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH.endswith(".md")
+    assert artifact_path.is_file()
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    assert artifact["schema"] == live["schema"]
+    assert artifact["candidate_ids"] == live["candidate_ids"]
+    assert artifact["score_claim"] is False
+    assert artifact["promotion_eligible"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
+    assert artifact["ready_for_paid_dispatch"] is False
+    artifact_rows = {row["candidate_id"]: row for row in artifact["candidates"]}
+    live_rows = {row["candidate_id"]: row for row in live["candidates"]}
+    for candidate_id, live_row in live_rows.items():
+        artifact_row = artifact_rows[candidate_id]
+        for field in (
+            "expected_first_artifacts",
+            "expected_first_artifact_status",
+            "expected_first_artifacts_all_present",
+            "l1_scaffold_present",
+            "recommended_next_action_status",
+            "effective_recommended_next_action_id",
+            "ready_for_recommended_next_action",
+            "ready_for_l1_build",
+            "ready_for_l1_scaffold_dispatch",
+            "l1_build_blockers",
+            "blockers",
+        ):
+            assert artifact_row[field] == live_row[field]
+
+
+def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() -> None:
+    payload = l5_v2.l5_v2_asymptotic_pursuit_candidates()
+
+    report = render_l5_v2_asymptotic_candidate_surface_markdown(payload)
+
+    assert "# L5 v2 asymptotic candidate surface" in report
+    assert "z6_z7_z8_predictive_coding_world_models" in report
+    assert "expected_first_artifacts_all_present: `True`" in report
+    assert "recommended_next_action_status: `completed_or_superseded`" in report
+    assert "score_claim: `false`" in report
+
+
+def test_l5_v2_asymptotic_candidate_surface_cli_writes_json_and_markdown(
+    tmp_path: Path,
+) -> None:
+    artifact_root = (
+        REPO_ROOT
+        / "experiments"
+        / "results"
+        / "time_traveler_l5_v2"
+        / f"test_asymptotic_candidate_surface_{tmp_path.name}"
+    )
+    output_json = artifact_root / "surface.json"
+    output_md = artifact_root / "surface.md"
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "tools/build_l5_v2_asymptotic_candidate_surface.py",
+                "--output-json",
+                str(output_json.relative_to(REPO_ROOT)),
+                "--output-md",
+                str(output_md.relative_to(REPO_ROOT)),
+            ],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert output_json.is_file()
+        assert output_md.is_file()
+        payload = json.loads(output_json.read_text(encoding="utf-8"))
+        assert payload["candidate_count"] == 3
+        assert payload["ready_for_paid_dispatch"] is False
+        assert "score_claim=false" in proc.stdout
+    finally:
+        if artifact_root.exists():
+            shutil.rmtree(artifact_root)
 
 
 def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
