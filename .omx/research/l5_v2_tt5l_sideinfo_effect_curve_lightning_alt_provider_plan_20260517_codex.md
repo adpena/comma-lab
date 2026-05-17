@@ -52,3 +52,10 @@ After Lightning identity and workspace preflights pass, claim each
 `contest_cuda` lane before non-dry-run launch. For actual TT5L side-info effect
 claims, pair these CUDA cells with matching `contest_cpu` cells, or fix Modal
 billing and use the paired Modal dispatch plan.
+
+## Supersession
+
+Superseded by
+`.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.md`,
+which records the post-CPU-axis-hardening 5x2 Lightning dry-run surface. Use
+that paired-axis memo for any future Lightning activation.
