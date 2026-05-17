@@ -1,0 +1,69 @@
+{
+  "schema": "l5_v2_tt5l_sideinfo_first_lightning_dry_run_probe_v1",
+  "recorded_at_utc": "2026-05-17T10:31:47Z",
+  "lane_family": "l5_v2_tt5l_sideinfo_effect_curve_paired_axes",
+  "purpose": "Preserve the first launcher dry-run parse result from the L5 v2 TT5L sideinfo Lightning execution bundle without committing ignored results-tree state.",
+  "source_bundle": {
+    "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
+    "sha256": "aa871f49c4403272972e5a5c68b1f9bbd1a657be9923d3a40d39332efc6d60f1",
+    "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
+    "ready_for_dry_run_submit": true,
+    "ready_dry_run_cell_count": 10,
+    "ready_for_non_dry_run_submit": false,
+    "ready_for_provider_dispatch": false
+  },
+  "source_plan": {
+    "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
+    "sha256": "9b84463441126dbfd7618a5dbb8a29b810ba3a376f29c3e42f1e4d94d1f1983f"
+  },
+  "ignored_raw_state": {
+    "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/launcher_dry_run_state.json",
+    "sha256": "b3a0eb90feb7c22372e850d0d510e53a54ee6ed794a9b75f95771db2898010a1",
+    "json_shape": "array[1]",
+    "committed": false,
+    "reason_not_committed": "Raw launcher state belongs in ignored experiment results; durable signal is canonicalized in this research ledger."
+  },
+  "probe_result": {
+    "variant": "zero",
+    "axis": "contest_cpu",
+    "dry_run": true,
+    "returncode": 0,
+    "stderr_empty": true,
+    "queue_role": "exact_cpu_eval",
+    "required_device": "cpu",
+    "required_samples": 600,
+    "expected_archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+    "expected_archive_size_bytes": 34373,
+    "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu",
+    "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu",
+    "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+    "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+    "source_spec_command_sha256": "60b76e129ee3c866d761579d03e42bb0f67503c0d10995c79aca217c7fde4efd",
+    "launcher_queue_command_sha256": "f1bda02af81d2a27e7409f2e29db6ee8122ddbd6dcf52387d7bf15a8b4ed8ec2",
+    "launcher_command_sha_matches_source_spec": false,
+    "command_sha_delta_classification": "expected_submit_layer_delta",
+    "command_sha_delta_rationale": "The launcher dry-run adds source-manifest, dispatch-lane-id, adjudication, and queue metadata around the source spec command. Full verification should compare custody invariants instead of requiring byte-identical command SHA equality."
+  },
+  "coverage": {
+    "dry_run_cells_total": 10,
+    "dry_run_cells_exercised": 1,
+    "dry_run_cells_unexercised": 9,
+    "full_bundle_verifier_required": true
+  },
+  "authority": {
+    "planning_only": true,
+    "score_claim": false,
+    "score_claim_valid": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_provider_dispatch": false,
+    "dispatch_attempted": false,
+    "provider_spend_attempted": false
+  },
+  "next_actions": [
+    "Land and run a full dry-run verifier across all 10 bundle cells.",
+    "Stage source manifests and active lane claims before any non-dry-run Lightning dispatch.",
+    "Keep contest-CPU and contest-CUDA paired-axis evidence separate until harvested exact artifacts exist."
+  ]
+}
