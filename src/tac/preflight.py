@@ -2499,6 +2499,21 @@ def preflight_all(
         check_local_research_signal_dispatches_stamp_evidence_grade(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #318 — MASTER-GRADIENT RAW BYTE AUTHORITY.
+        # Per the May 17 L5/Rule #6 rebaseline, raw archive-byte / bit finite
+        # differences over ZIP + entropy-coded packets are not local score
+        # derivatives. Refuse authority-bearing master-gradient source surfaces
+        # that expose `(N_archive_bytes, 3)` tensors, `finite_difference_bit_flip`
+        # methods, raw `{byte_idx: delta}` projection APIs, or anchor-presence
+        # rerank hooks. Valid routing is typed `CandidateModificationSpec` /
+        # grammar-aware operator response rows with packet rebuild, ZIP CRC/header
+        # refresh, inflate proof, byte-consumption proof, and axis-labelled result
+        # review. STRICT-from-byte-one as a self-protecting guard against the
+        # exact partner-WIP false-authority class recorded in
+        # master_gradient_partner_wip_false_authority_review_20260517_codex.md.
+        check_master_gradient_raw_byte_authority_not_landed(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -70018,6 +70033,135 @@ def check_local_research_signal_dispatches_stamp_evidence_grade(
         raise PreflightError(
             "check_local_research_signal_dispatches_stamp_evidence_grade "
             f"found {len(violations)} violation(s) per Catalog #317.\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #318 - check_master_gradient_raw_byte_authority_not_landed
+# 2026-05-17 lane_l5_rule6_master_gradient_raw_byte_authority_guard.
+# Raw byte/bit finite differences over contest ZIP archives and entropy-coded
+# payloads are blocked by ``tac.master_gradient_feasibility``. This source
+# guard catches the next failure layer: a helper that *names* itself as master
+# gradient authority while exposing raw archive-byte tensors or byte-index
+# projection APIs. Valid master-gradient routing is a packet-valid
+# ``CandidateModificationSpec`` / grammar-aware operator response row that
+# rebuilds packet metadata and proves inflate + byte consumption.
+
+_CHECK_318_TARGET_FILES: tuple[str, ...] = (
+    "src/tac/master_gradient.py",
+    "tools/extract_master_gradient.py",
+    "tools/cathedral_autopilot_autonomous_loop.py",
+)
+_CHECK_318_FORBIDDEN_PATTERNS: tuple[tuple[str, str], ...] = (
+    ("finite_difference_bit_flip", "raw_bit_or_byte_finite_difference_method"),
+    ("(N_archive_bytes, 3)", "raw_archive_byte_response_tensor"),
+    ("(N_bytes, 3)", "raw_byte_response_tensor"),
+    ("gradient_array_path", "raw_gradient_sidecar_path"),
+    ("byte_modifications: Mapping[int, float]", "raw_byte_modification_api"),
+    ("predict_delta_s(byte_modifications", "raw_byte_delta_projection_api"),
+    ("latest_anchor_for_archive", "archive_sha_anchor_presence_rerank"),
+)
+_CHECK_318_REQUIRED_OPERATOR_TOKENS: tuple[str, ...] = (
+    "CandidateModificationSpec",
+    "grammar_aware_operator",
+)
+_CHECK_318_WAIVER_PATTERN = re.compile(
+    r"MASTER_GRADIENT_RAW_AUTHORITY_OK\s*:\s*(.+?)(?:$|#)",
+    re.MULTILINE,
+)
+
+
+def _check_318_source_has_waiver(source: str) -> bool:
+    """Return True iff source carries a non-placeholder explicit waiver."""
+    header = "\n".join(source.splitlines()[:80])
+    m = _CHECK_318_WAIVER_PATTERN.search(header)
+    if not m:
+        return False
+    rationale = m.group(1).strip().rstrip(":").strip()
+    if not rationale:
+        return False
+    if rationale.lower() in ("<rationale>", "<reason>"):
+        return False
+    return True
+
+
+def check_master_gradient_raw_byte_authority_not_landed(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #318 — block raw archive-byte master-gradient authority.
+
+    This is intentionally a source tripwire, not a score-analysis tool. The
+    allowed master-gradient route is already expressed by
+    ``tac.master_gradient_feasibility`` and
+    ``tac.master_gradient_operator_plan``: packet-valid mutation operators
+    with explicit packet proofs and no score/promotion authority. This check
+    refuses the authority-bearing WIP surface that reintroduces raw
+    ``(N_archive_bytes, 3)`` gradients or byte-index delta projections.
+
+    Same-header waiver in the first 80 lines:
+    ``# MASTER_GRADIENT_RAW_AUTHORITY_OK:<rationale>``. Placeholder rationale
+    strings are rejected.
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    for rel_path in _CHECK_318_TARGET_FILES:
+        path = root / rel_path
+        if not path.is_file():
+            continue
+        try:
+            source = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            if verbose:
+                print(
+                    "  [check_master_gradient_raw_byte_authority_not_landed] "
+                    f"SKIP {rel_path} (read failed: {exc})"
+                )
+            continue
+        if _check_318_source_has_waiver(source):
+            continue
+
+        hits = [
+            label
+            for token, label in _CHECK_318_FORBIDDEN_PATTERNS
+            if token in source
+        ]
+        if not hits:
+            continue
+        has_valid_route_tokens = all(
+            token in source for token in _CHECK_318_REQUIRED_OPERATOR_TOKENS
+        )
+        if has_valid_route_tokens and "finite_difference_bit_flip" not in source:
+            continue
+        violations.append(
+            f"{rel_path} exposes authority-bearing raw master-gradient pattern(s) "
+            f"{hits}. Per Catalog #318 and the May 17 L5/Rule #6 rebaseline, "
+            "raw archive-byte / bit finite differences over ZIP plus entropy-coded "
+            "packets are not score derivatives. Replace this with a typed "
+            "`CandidateModificationSpec` / `grammar_aware_operator` response-row "
+            "interface that rebuilds ZIP metadata/CRC and proves inflate + "
+            "byte-consumption closure, or add "
+            "`# MASTER_GRADIENT_RAW_AUTHORITY_OK:<rationale>` in the first 80 "
+            "lines for a deliberately diagnostic, non-authority artifact."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_master_gradient_raw_byte_authority_not_landed] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_master_gradient_raw_byte_authority_not_landed] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_master_gradient_raw_byte_authority_not_landed found "
+            f"{len(violations)} raw-byte master-gradient authority issue(s) "
+            "per Catalog #318.\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations
