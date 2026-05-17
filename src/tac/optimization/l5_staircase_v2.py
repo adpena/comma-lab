@@ -3130,6 +3130,10 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
                     blockers.append(
                         "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_invalid"
                     )
+                elif int(sideinfo_stats["num_pairs"]) != _TT5L_CONTEST_N_PAIRS:
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_num_pairs_not_full_contest"
+                    )
                 elif int(sideinfo_stats["total_values"]) <= 0:
                     blockers.append(
                         "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_empty"

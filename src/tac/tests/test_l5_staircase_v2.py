@@ -79,7 +79,12 @@ def _write_aggregate_manifest(path: Path, *, aggregate_sha: str) -> str:
     return _file_sha256(path)
 
 
-def _write_tt5l_archive_zip(path: Path, *, nonzero_side_info: bool) -> None:
+def _write_tt5l_archive_zip(
+    path: Path,
+    *,
+    nonzero_side_info: bool,
+    num_pairs: int = 600,
+) -> None:
     from tac.substrates.time_traveler_l5_autonomy.architecture import (
         TimeTravelerConfig,
         TimeTravelerSubstrate,
@@ -90,7 +95,7 @@ def _write_tt5l_archive_zip(path: Path, *, nonzero_side_info: bool) -> None:
     cfg = TimeTravelerConfig(
         hidden_dim=8,
         num_hidden_layers=1,
-        num_pairs=2,
+        num_pairs=num_pairs,
         output_height=8,
         output_width=8,
         per_pair_side_info_bytes=45,
@@ -123,6 +128,101 @@ def _write_tt5l_archive_zip(path: Path, *, nonzero_side_info: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("0.bin", bin_bytes)
+
+
+def _write_standard_tt5l_materialized_work_unit_plan(
+    path: Path,
+    *,
+    archive_rel: str,
+    archive_sha: str,
+    archive_bytes: int,
+    runtime_rel: str,
+) -> None:
+    pair_group_id = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+    cpu_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu"
+    cuda_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+                "pair_group_id": pair_group_id,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "archive": {
+                    "path": archive_rel,
+                    "sha256": archive_sha,
+                    "bytes": archive_bytes,
+                },
+                "runtime": {
+                    "submission_dir": runtime_rel,
+                    "expected_runtime_tree_sha256_by_axis": {
+                        "contest_cpu": "b" * 64,
+                        "contest_cuda": "c" * 64,
+                    },
+                    "expected_runtime_content_tree_sha256_by_axis": {
+                        "contest_cpu": "d" * 64,
+                        "contest_cuda": "d" * 64,
+                    },
+                },
+                "required_axes": ["contest_cpu", "contest_cuda"],
+                "lanes": {
+                    "contest_cpu": cpu_lane,
+                    "contest_cuda": cuda_lane,
+                },
+                "commands": {
+                    "contest_cpu": [
+                        ".venv/bin/modal",
+                        "run",
+                        "--detach",
+                        "experiments/modal_auth_eval_cpu.py",
+                        "--archive",
+                        archive_rel,
+                        "--expected-archive-sha256",
+                        archive_sha,
+                        "--submission-dir",
+                        runtime_rel,
+                        "--pair-group-id",
+                        pair_group_id,
+                        "--lane-id",
+                        cpu_lane,
+                        "--expected-runtime-tree-sha256",
+                        "b" * 64,
+                        "--provider-detach-ack",
+                    ],
+                    "contest_cuda": [
+                        ".venv/bin/modal",
+                        "run",
+                        "--detach",
+                        "experiments/modal_auth_eval.py",
+                        "--archive",
+                        archive_rel,
+                        "--expected-archive-sha256",
+                        archive_sha,
+                        "--submission-dir",
+                        runtime_rel,
+                        "--pair-group-id",
+                        pair_group_id,
+                        "--lane-id",
+                        cuda_lane,
+                        "--expected-runtime-tree-sha256",
+                        "c" * 64,
+                        "--provider-detach-ack",
+                    ],
+                },
+                "axes_skipped_due_to_existing_anchor": {
+                    "contest_cpu": False,
+                    "contest_cuda": False,
+                },
+                "existing_anchors_reused": {
+                    "contest_cpu": None,
+                    "contest_cuda": None,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _canonical_json_sha256(payload: object) -> str:
@@ -2276,90 +2376,12 @@ def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
     runtime_dir = tmp_path / runtime_rel
     runtime_dir.mkdir(parents=True, exist_ok=True)
     (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    pair_group_id = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
-    cpu_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu"
-    cuda_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
-    work_unit_path.write_text(
-        json.dumps(
-            {
-                "schema": "modal_paired_auth_eval_dispatch_plan_v2",
-                "pair_group_id": pair_group_id,
-                "score_claim": False,
-                "promotion_eligible": False,
-                "archive": {
-                    "path": archive_rel,
-                    "sha256": archive_sha,
-                    "bytes": archive_path.stat().st_size,
-                },
-                "runtime": {
-                    "submission_dir": runtime_rel,
-                    "expected_runtime_tree_sha256_by_axis": {
-                        "contest_cpu": "b" * 64,
-                        "contest_cuda": "c" * 64,
-                    },
-                    "expected_runtime_content_tree_sha256_by_axis": {
-                        "contest_cpu": "d" * 64,
-                        "contest_cuda": "d" * 64,
-                    },
-                },
-                "required_axes": ["contest_cpu", "contest_cuda"],
-                "lanes": {
-                    "contest_cpu": cpu_lane,
-                    "contest_cuda": cuda_lane,
-                },
-                "commands": {
-                    "contest_cpu": [
-                        ".venv/bin/modal",
-                        "run",
-                        "--detach",
-                        "experiments/modal_auth_eval_cpu.py",
-                        "--archive",
-                        archive_rel,
-                        "--expected-archive-sha256",
-                        archive_sha,
-                        "--submission-dir",
-                        runtime_rel,
-                        "--pair-group-id",
-                        pair_group_id,
-                        "--lane-id",
-                        cpu_lane,
-                        "--expected-runtime-tree-sha256",
-                        "b" * 64,
-                        "--provider-detach-ack",
-                    ],
-                    "contest_cuda": [
-                        ".venv/bin/modal",
-                        "run",
-                        "--detach",
-                        "experiments/modal_auth_eval.py",
-                        "--archive",
-                        archive_rel,
-                        "--expected-archive-sha256",
-                        archive_sha,
-                        "--submission-dir",
-                        runtime_rel,
-                        "--pair-group-id",
-                        pair_group_id,
-                        "--lane-id",
-                        cuda_lane,
-                        "--expected-runtime-tree-sha256",
-                        "c" * 64,
-                        "--provider-detach-ack",
-                    ],
-                },
-                "axes_skipped_due_to_existing_anchor": {
-                    "contest_cpu": False,
-                    "contest_cuda": False,
-                },
-                "existing_anchors_reused": {
-                    "contest_cpu": None,
-                    "contest_cuda": None,
-                },
-            },
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
     )
 
     readiness = l5_v2_dispatch_readiness(
@@ -2381,7 +2403,7 @@ def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
     assert action["score_claim"] is False
     assert action["ready_for_exact_eval_dispatch"] is False
     assert materialized["tt5l_sideinfo_stats"]["nonzero_pair_count"] == 1
-    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 1
+    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 599
     assert materialized["tt5l_sideinfo_stats"]["liveness_warnings"] == [
         "tt5l_side_info_some_pairs_all_zero",
         "tt5l_side_info_at_most_one_nonzero_per_pair_on_average",
@@ -2437,90 +2459,12 @@ def test_l5_v2_tt5l_materialized_work_unit_rejects_all_zero_sideinfo(
     runtime_dir = tmp_path / runtime_rel
     runtime_dir.mkdir(parents=True, exist_ok=True)
     (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
-    pair_group_id = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
-    cpu_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu"
-    cuda_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
-    work_unit_path.write_text(
-        json.dumps(
-            {
-                "schema": "modal_paired_auth_eval_dispatch_plan_v2",
-                "pair_group_id": pair_group_id,
-                "score_claim": False,
-                "promotion_eligible": False,
-                "archive": {
-                    "path": archive_rel,
-                    "sha256": archive_sha,
-                    "bytes": archive_path.stat().st_size,
-                },
-                "runtime": {
-                    "submission_dir": runtime_rel,
-                    "expected_runtime_tree_sha256_by_axis": {
-                        "contest_cpu": "b" * 64,
-                        "contest_cuda": "c" * 64,
-                    },
-                    "expected_runtime_content_tree_sha256_by_axis": {
-                        "contest_cpu": "d" * 64,
-                        "contest_cuda": "d" * 64,
-                    },
-                },
-                "required_axes": ["contest_cpu", "contest_cuda"],
-                "lanes": {
-                    "contest_cpu": cpu_lane,
-                    "contest_cuda": cuda_lane,
-                },
-                "commands": {
-                    "contest_cpu": [
-                        ".venv/bin/modal",
-                        "run",
-                        "--detach",
-                        "experiments/modal_auth_eval_cpu.py",
-                        "--archive",
-                        archive_rel,
-                        "--expected-archive-sha256",
-                        archive_sha,
-                        "--submission-dir",
-                        runtime_rel,
-                        "--pair-group-id",
-                        pair_group_id,
-                        "--lane-id",
-                        cpu_lane,
-                        "--expected-runtime-tree-sha256",
-                        "b" * 64,
-                        "--provider-detach-ack",
-                    ],
-                    "contest_cuda": [
-                        ".venv/bin/modal",
-                        "run",
-                        "--detach",
-                        "experiments/modal_auth_eval.py",
-                        "--archive",
-                        archive_rel,
-                        "--expected-archive-sha256",
-                        archive_sha,
-                        "--submission-dir",
-                        runtime_rel,
-                        "--pair-group-id",
-                        pair_group_id,
-                        "--lane-id",
-                        cuda_lane,
-                        "--expected-runtime-tree-sha256",
-                        "c" * 64,
-                        "--provider-detach-ack",
-                    ],
-                },
-                "axes_skipped_due_to_existing_anchor": {
-                    "contest_cpu": False,
-                    "contest_cuda": False,
-                },
-                "existing_anchors_reused": {
-                    "contest_cpu": None,
-                    "contest_cuda": None,
-                },
-            },
-            sort_keys=True,
-        )
-        + "\n",
-        encoding="utf-8",
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
     )
 
     readiness = l5_v2_dispatch_readiness(
@@ -2539,8 +2483,79 @@ def test_l5_v2_tt5l_materialized_work_unit_rejects_all_zero_sideinfo(
     assert materialized["tt5l_sideinfo_stats"]["valid"] is True
     assert materialized["tt5l_sideinfo_stats"]["nonzero_values"] == 0
     assert materialized["tt5l_sideinfo_stats"]["nonzero_pair_count"] == 0
-    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 2
+    assert materialized["tt5l_sideinfo_stats"]["all_zero_pair_count"] == 600
     assert materialized["tt5l_sideinfo_stats"]["section_liveness"]["checked"] is True
+    assert readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"][
+        "action_id"
+    ] == "materialize_l5_v2_paired_probe_measurements"
+
+
+def test_l5_v2_tt5l_materialized_work_unit_rejects_noncontest_pair_count(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    _write_tt5l_archive_zip(archive_path, nonzero_side_info=True, num_pairs=2)
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    materialized = readiness["tt5l_campaign_readiness"][
+        "materialized_tt5l_paired_work_unit_status"
+    ]
+
+    assert materialized["artifact_valid"] is False
+    assert (
+        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_num_pairs_not_full_contest"
+        in materialized["blockers"]
+    )
+    assert materialized["tt5l_sideinfo_stats"]["valid"] is True
+    assert materialized["tt5l_sideinfo_stats"]["num_pairs"] == 2
+    assert materialized["tt5l_sideinfo_stats"]["nonzero_values"] > 0
     assert readiness["tt5l_campaign_readiness"]["next_non_pr106_l5_action"][
         "action_id"
     ] == "materialize_l5_v2_paired_probe_measurements"
