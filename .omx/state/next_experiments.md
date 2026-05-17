@@ -28,6 +28,13 @@ and the current L5-v2 architecture-lock/TT5L custody artifacts.
 - Required work: design memo, archive grammar, export contract, scorer-aware
   training, KL-on-logits `T=2.0` A1-teacher distillation, byte-mutation no-op
   proof, paired CPU/CUDA plan.
+- 2026-05-17 unwind constraint: do not reuse the existing Z3HV2
+  direct-residual export as the Ballé implementation. Existing Z3HV2 full is
+  classified in
+  `.omx/research/rule6_z3v2_direct_residual_unwind_20260517_codex.md` as
+  `direct_residual_control`, byte-negative by `860` inner bytes, with no active
+  Ballé entropy residual decoder. A valid Ballé bolt-on must consume side-info
+  in the residual entropy decoder or use a distinct byte-closed grammar.
 - Dispatch policy: no spend until byte-closed packet exists and the lane is
   claimed. First paid step should be a timing smoke that measures seconds/epoch
   and produces a reviewable archive path.
@@ -85,6 +92,10 @@ and the current L5-v2 architecture-lock/TT5L custody artifacts.
   runtime-consumed packet exists.
 - PR106 packet variants remain forensic control and exact-eval lessons, not
   the active score-lowering priority.
+- Existing Z3HV2 direct-residual exports are measured controls, not active
+  frontier candidates: paired Z3 v2 full scored `0.1986956456779881`
+  `[contest-CPU]` and `0.23170948072940661` `[contest-CUDA]` with archive
+  `b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b`.
 - TT5L paired diagnostic anchor at score about `3.9` is a measured-config
   failure and custody anchor, not a lane kill and not a promotion result.
 

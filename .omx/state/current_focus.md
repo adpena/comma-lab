@@ -52,6 +52,10 @@ retiring the L5/L5-v2 staircase:
 
 1. **Rule #6 A1 bolt-on #1**: Ballé-2018 hyperprior on A1 per-pair latent,
    with KL-on-logits `T=2.0` distillation from frozen A1 teacher.
+   Existing Z3HV2 direct-residual export is not this implementation: it is now
+   classified as a byte-negative direct-residual control with no active Ballé
+   entropy residual decoder. See
+   `.omx/research/rule6_z3v2_direct_residual_unwind_20260517_codex.md`.
 2. **Rule #6 A1 bolt-on #2**: PR101-style per-tensor byte map plus
    Brotli/LZMA/Huffman sidecar on A1 weights/latents.
 3. **Rule #6 A1 bolt-on #3**: VQ-codebook on A1 per-pair latent.

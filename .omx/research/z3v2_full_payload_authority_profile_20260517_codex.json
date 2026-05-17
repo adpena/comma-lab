@@ -1,0 +1,48 @@
+{
+  "a1_latent_blob_bytes_replaced": 15387,
+  "archive_bytes": 179130,
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_substrate_z3_balle_hyperprior_bolton_modal_t4_dispatch_20260515T114115Z__full__1000ep_modal/lane_substrate_z3_balle_hyperprior_bolton_results/output/submission_dir_reconstructed/archive.zip",
+  "archive_sha256": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+  "balle_entropy_residual_decoder_active": false,
+  "byte_saving": false,
+  "byte_savings_signed": -860,
+  "classification": "direct_residual_control",
+  "decoder_section_bytes": 162168,
+  "direct_residual_control": true,
+  "member_name": "0.bin",
+  "meta": {
+    "factorized_half_range": 16.0,
+    "hyper_dim": 8,
+    "latent_dim": 28,
+    "max_sigma": 16.0,
+    "min_sigma": 0.0010000000474974513,
+    "n_pairs": 600,
+    "quant_step": 1.0
+  },
+  "payload_bytes": 179022,
+  "payload_sha256": "c55e2d0d7a0d5c375fd0fb8e3e4705ac88892b93c3497a9d75222536e137cc40",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_blob_lengths": {
+    "residual_blob_compressed_bytes": 15982,
+    "section_total_bytes_from_lengths": 16247,
+    "w_hat_blob_compressed_bytes": 0,
+    "weights_blob_compressed_bytes": 0
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "residual_coding": "brotli_direct_int8_residual",
+  "residual_int8_bytes": 16800,
+  "result_review_blockers": [
+    "score_claim_requires_paired_contest_cpu_cuda_auth_eval",
+    "result_review_required_before_promotion",
+    "current_z3hv2_runtime_has_no_active_balle_entropy_residual_decoder",
+    "hyperprior_weights_and_w_hat_slots_empty",
+    "z3hv2_section_not_smaller_than_a1_latent_blob"
+  ],
+  "schema": "z3v2_payload_profile_v1",
+  "score_claim": false,
+  "sidecar_section_bytes": 607,
+  "w_hat_int8_bytes": 0,
+  "weights_int8_bytes": 0,
+  "z3hv2_section_bytes": 16247
+}
