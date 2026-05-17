@@ -106,7 +106,7 @@ def _expected_archive_kwargs(marker: str = "a", size: int = 123) -> dict[str, ob
     }
 
 
-def _adjudication() -> LightningAdjudicationSpec:
+def _adjudication(required_device: str = "cuda") -> LightningAdjudicationSpec:
     return LightningAdjudicationSpec(
         baseline_score=1.2,
         predicted_band_low=1.0,
@@ -120,6 +120,7 @@ def _adjudication() -> LightningAdjudicationSpec:
         max_posenet_relative=1.5,
         max_segnet_relative=1.2,
         component_reference_label="frontier",
+        required_device=required_device,
     )
 
 
@@ -154,6 +155,7 @@ def _write_artifact_dir(root: Path, *, adjudication: bool = True) -> tuple[str, 
                 "avg_segnet_dist": 0.004,
                 "n_samples": 600,
                 "archive_size_bytes": identity["archive_size_bytes"],
+                "score_axis": "contest_cuda",
                 "provenance": {
                     "device": "cuda",
                     "archive_sha256": identity["archive_sha256"],
@@ -246,6 +248,100 @@ def _write_artifact_dir(root: Path, *, adjudication: bool = True) -> tuple[str, 
             )
             + "\n"
         )
+    return identity["archive_sha256"], identity["archive_size_bytes"]
+
+
+def _write_cpu_artifact_dir(root: Path, *, promotion_eligible: bool = False) -> tuple[str, int]:
+    root.mkdir(parents=True, exist_ok=True)
+    archive = root / "archive.zip"
+    archive.write_bytes(b"fake cpu archive bytes")
+    identity = archive_identity(archive)
+    metadata: dict[str, object] = {
+        "schema_version": 1,
+        "job_name": "artifact-cpu-job",
+        "role": "exact_cpu_eval",
+        "expected_archive_sha256": identity["archive_sha256"],
+        "expected_archive_size_bytes": identity["archive_size_bytes"],
+        "queue_metadata": {"lane": "tt5l"},
+        "adjudication": {
+            "required_device": "cpu",
+            "required_samples": 600,
+            "provenance_name": "adjudication_provenance.json",
+            "result_copy_name": "contest_auth_eval.adjudicated.json",
+        },
+        "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        "status_source": "lightning_sdk_job_attributes",
+    }
+    (root / "lightning_queue_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    contest_payload = {
+        "score_recomputed_from_components": 1.25,
+        "final_score": 1.25,
+        "avg_posenet_dist": 0.003,
+        "avg_segnet_dist": 0.004,
+        "n_samples": 600,
+        "archive_size_bytes": identity["archive_size_bytes"],
+        "score_axis": "contest_cpu",
+        "evidence_grade": "contest-CPU",
+        "score_claim_valid": True,
+        "cpu_leaderboard_reproduction_eligible": True,
+        "provenance": {
+            "device": "cpu",
+            "archive_sha256": identity["archive_sha256"],
+            "platform_system": "Linux",
+            "platform_machine": "x86_64",
+        },
+    }
+    (root / "contest_auth_eval.json").write_text(
+        json.dumps(contest_payload, indent=2, sort_keys=True) + "\n"
+    )
+    (root / "auth_eval.log").write_text("cpu axis score\n")
+    (root / "report.txt").write_text("cpu report text\n")
+    (root / "eval_provenance.json").write_text(
+        json.dumps({"device": "cpu", "archive_sha256": identity["archive_sha256"]}) + "\n"
+    )
+    (root / ARTIFACT_RUNNER_PREFLIGHT).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "lightning_exact_eval_runner_preflight",
+                "requested_device": "cpu",
+                "torch_import_ok": True,
+                "platform_system": "Linux",
+                "platform_machine": "x86_64",
+                "cpu_contest_platform": True,
+            }
+        )
+        + "\n"
+    )
+    supply_scan = {
+        "schema_version": 1,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "status": "OK",
+        "strict": True,
+        "violation_count": 0,
+        "violations": [],
+        "package_versions": {"lightning": None, "lightning-sdk": "2026.4.10"},
+    }
+    (root / ARTIFACT_SUPPLY_CHAIN_SCAN_PRE).write_text(json.dumps(supply_scan) + "\n")
+    (root / ARTIFACT_SUPPLY_CHAIN_SCAN).write_text(json.dumps(supply_scan) + "\n")
+    (root / "contest_auth_eval.adjudicated.json").write_text(
+        json.dumps(contest_payload, indent=2, sort_keys=True) + "\n"
+    )
+    (root / "adjudication_provenance.json").write_text(
+        json.dumps(
+            {
+                "score_axis": "contest_cpu",
+                "contest_cpu_archive_sha256": identity["archive_sha256"],
+                "contest_cpu_archive_bytes": identity["archive_size_bytes"],
+                "contest_cpu_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+                "contest_cpu_device": "cpu",
+                "score_tag": "[contest-CPU]",
+                "promotion_eligible": promotion_eligible,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     return identity["archive_sha256"], identity["archive_size_bytes"]
 
 
@@ -753,6 +849,31 @@ def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> No
     )
 
 
+def test_exact_cpu_eval_command_is_axis_explicit_and_not_cuda_preflighted() -> None:
+    command = exact_cuda_eval_command(
+        repo_dir="/repo",
+        archive_path="/artifacts/archive.zip",
+        upstream_dir="/upstream",
+        output_dir="/out",
+        adjudication=_adjudication(required_device="cpu"),
+        eval_device="cpu",
+        **_expected_archive_kwargs(),
+    )
+
+    assert "experiments/contest_auth_eval.py" in command
+    assert "--device cpu" in command
+    assert "--device cuda" not in command
+    assert "LIGHTNING_EXACT_CPU_EVAL_JSON_OK" in command
+    assert "payload.get('score_axis') == 'contest_cpu'" in command
+    assert "LIGHTNING_RUNNER_CPU_PREFLIGHT_OK" in command
+    assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in command
+    assert "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in command
+    assert "export INFLATE_REQUIRE_CUDA=1" not in command
+    assert "--required-device cpu" in command
+    assert "scripts/scan_lightning_supply_chain.py" in command
+    assert "LIGHTNING_INFLATE_RUNTIME_STATIC_PREFLIGHT_OK" in command
+
+
 def test_exact_cuda_eval_command_can_emit_component_trace() -> None:
     command = exact_cuda_eval_command(
         repo_dir="/repo",
@@ -780,6 +901,20 @@ def test_exact_cuda_eval_command_can_emit_component_trace() -> None:
     assert command.index("experiments/contest_component_trace.py") < command.index(
         "scripts/adjudicate_contest_auth_eval.py"
     )
+
+
+def test_exact_cpu_eval_rejects_component_trace() -> None:
+    with pytest.raises(ValueError, match="component_trace is CUDA-only"):
+        exact_cuda_eval_command(
+            repo_dir="/repo",
+            archive_path="/artifacts/archive.zip",
+            upstream_dir="/upstream",
+            output_dir="/out",
+            adjudication=_adjudication(required_device="cpu"),
+            component_trace=True,
+            eval_device="cpu",
+            **_expected_archive_kwargs(),
+        )
 
 
 def test_official_component_response_command_is_cuda_and_supply_chain_guarded() -> None:
@@ -1920,6 +2055,28 @@ def test_exact_eval_spec_is_fail_closed() -> None:
     spec.validate()
 
 
+def test_exact_cpu_eval_spec_records_separate_role_and_axis() -> None:
+    spec = make_exact_eval_spec(
+        name="pfp16-cpu-eval",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        adjudication=_adjudication(required_device="cpu"),
+        eval_device="cpu",
+        **_expected_archive_kwargs(),
+    )
+
+    assert spec.role == "exact_cpu_eval"
+    assert spec.adjudication is not None
+    assert spec.adjudication.required_device == "cpu"
+    assert "--device cpu" in spec.command
+    assert "--device cuda" not in spec.command
+    assert "LIGHTNING_RUNNER_CPU_PREFLIGHT_OK" in spec.command
+    assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in spec.command
+    spec.validate()
+
+
 def test_exact_eval_spec_records_expected_archive_and_queue_metadata() -> None:
     spec = make_exact_eval_spec(
         name="pfp16-eval",
@@ -2921,6 +3078,44 @@ def test_mirror_local_artifact_dir_validates_mirror_and_writes_report(tmp_path: 
     assert result["promotion_eligible"] is True
     validation = json.loads((mirror / ARTIFACT_VALIDATION).read_text())
     assert validation["archive_size_bytes"] == expected_bytes
+
+
+def test_validate_local_artifact_dir_accepts_exact_cpu_axis_as_non_promotional(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "artifacts-cpu"
+    expected_sha, expected_bytes = _write_cpu_artifact_dir(artifact_dir)
+
+    result = validate_local_artifact_dir(
+        artifact_dir,
+        expected_archive_sha256=expected_sha,
+        expected_archive_size_bytes=expected_bytes,
+        require_adjudication=True,
+    )
+
+    assert result["score_axis"] == "contest_cpu"
+    assert result["device"] == "cpu"
+    assert result["promotion_eligible"] is False
+    assert result["dali_bootstrap"] is None
+    assert result["adjudication_provenance"]["contest_cpu_archive_sha256"] == expected_sha
+
+
+def test_validate_local_artifact_dir_rejects_promotional_exact_cpu_adjudication(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "artifacts-cpu-promotional"
+    expected_sha, expected_bytes = _write_cpu_artifact_dir(
+        artifact_dir,
+        promotion_eligible=True,
+    )
+
+    with pytest.raises(ValueError, match="CPU adjudication must not be promotion_eligible"):
+        validate_local_artifact_dir(
+            artifact_dir,
+            expected_archive_sha256=expected_sha,
+            expected_archive_size_bytes=expected_bytes,
+            require_adjudication=True,
+        )
 
 
 def test_validate_local_artifact_dir_reports_failed_component_gate_as_non_promotable(
@@ -4091,6 +4286,58 @@ def test_batch_job_cli_dry_run(tmp_path: Path) -> None:
     assert "--top-k 17" in payload["spec"]["command"]
     assert payload["submit_readiness"]["ok"] is False
     assert "missing --remote-preflight-ssh-target" in payload["submit_readiness"]["blockers"][0]
+
+
+def test_batch_job_cli_dry_run_accepts_explicit_cpu_axis(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "exact-eval",
+            "--state-path",
+            str(tmp_path / "jobs.json"),
+            "--job-name",
+            "cli-cpu-dry",
+            "--archive",
+            "/repo/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--studio",
+            "pact",
+            "--expected-archive-sha256",
+            "e" * 64,
+            "--expected-archive-size-bytes",
+            "790",
+            "--adjudicate",
+            "--eval-device",
+            "cpu",
+            "--baseline-score",
+            "1.2",
+            "--predicted-band",
+            "1.0",
+            "1.4",
+            "--regression-threshold",
+            "1.6",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "DRY_RUN"
+    assert payload["spec"]["role"] == "exact_cpu_eval"
+    assert payload["spec"]["adjudication"]["required_device"] == "cpu"
+    assert "--device cpu" in payload["spec"]["command"]
+    assert "--device cuda" not in payload["spec"]["command"]
+    assert "LIGHTNING_RUNNER_CPU_PREFLIGHT_OK" in payload["spec"]["command"]
+    assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in payload["spec"]["command"]
 
 
 def test_batch_job_cli_unknown_remote_flag_reports_real_argparse_surface(tmp_path: Path) -> None:

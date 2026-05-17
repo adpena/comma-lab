@@ -1,0 +1,25 @@
+{
+  "artifact": ".omx/research/l5_v2_lightning_cpu_axis_exact_eval_hardening_20260517_codex.md",
+  "dispatch_attempted": false,
+  "evidence": {
+    "py_compile": "pass",
+    "pytest_auth_eval_axis": "64 passed",
+    "pytest_lightning_axis": "135 passed",
+    "ruff": "All checks passed!"
+  },
+  "landed_changes": [
+    "scripts/launch_lightning_batch_job.py exact-eval accepts --eval-device cuda|cpu",
+    "src/tac/deploy/lightning/batch_jobs.py emits exact_cuda_eval and exact_cpu_eval roles",
+    "scripts/adjudicate_contest_auth_eval.py emits contest_cuda_* or contest_cpu_* fields by required device",
+    "Lightning artifact validation accepts non-promotional exact_cpu_eval artifacts without DALI artifacts"
+  ],
+  "promotion_eligible": false,
+  "score_claim": false,
+  "schema": "l5_v2_lightning_cpu_axis_exact_eval_hardening_v1",
+  "score_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "status": "provider_axis_hardening_landed",
+  "timestamp_utc": "2026-05-17T06:20:40Z"
+}

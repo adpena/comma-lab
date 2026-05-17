@@ -103,6 +103,12 @@ CANONICAL_ARTIFACT_FILES = (
     "adjudication_provenance.json",
     "contest_auth_eval.adjudicated.json",
 )
+CANONICAL_CPU_EXACT_EVAL_ARTIFACT_FILES = tuple(
+    name
+    for name in CANONICAL_ARTIFACT_FILES
+    if name not in {ARTIFACT_DALI_BOOTSTRAP, ARTIFACT_DALI_REQUIREMENTS}
+)
+EXACT_AUTH_EVAL_ROLES = frozenset({"exact_cuda_eval", "exact_cpu_eval"})
 LIGHTNING_STUDIO_MACHINE_CLASS_PAIRS = {
     "g4dn.xlarge": "T4_SMALL",
     "g4dn.2xlarge": "T4",
@@ -696,6 +702,33 @@ def _validate_optional_number(
             raise ValueError(f"adjudication {field} must be >= {minimum}")
 
 
+def _normalise_eval_device(eval_device: str) -> str:
+    device = str(eval_device).strip().lower()
+    if device not in {"cuda", "cpu"}:
+        raise ValueError(f"exact eval device must be 'cuda' or 'cpu', got {eval_device!r}")
+    return device
+
+
+def _exact_eval_role(eval_device: str) -> str:
+    return f"exact_{_normalise_eval_device(eval_device)}_eval"
+
+
+def _exact_eval_axis(eval_device: str) -> str:
+    return f"contest_{_normalise_eval_device(eval_device)}"
+
+
+def _exact_eval_score_tag(eval_device: str) -> str:
+    return "[contest-CUDA]" if _normalise_eval_device(eval_device) == "cuda" else "[contest-CPU]"
+
+
+def _exact_eval_artifact_files_for_role(role: object) -> tuple[str, ...]:
+    return (
+        CANONICAL_CPU_EXACT_EVAL_ARTIFACT_FILES
+        if role == "exact_cpu_eval"
+        else CANONICAL_ARTIFACT_FILES
+    )
+
+
 def _normalise_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     if not metadata:
         return {}
@@ -889,12 +922,15 @@ def _validate_dali_bootstrap_artifact(
             violations.append(
                 f"final_probe.nvidia_dali_fn_module={final_probe.get('nvidia_dali_fn_module')!r}"
             )
-        if isinstance(installed, dict) and isinstance(selected_package, str):
-            if installed.get(selected_package) != DALI_BOOTSTRAP_VERSION:
-                violations.append(
-                    f"final_probe.installed_distributions[{selected_package!r}]="
-                    f"{installed.get(selected_package)!r}"
-                )
+        if (
+            isinstance(installed, dict)
+            and isinstance(selected_package, str)
+            and installed.get(selected_package) != DALI_BOOTSTRAP_VERSION
+        ):
+            violations.append(
+                f"final_probe.installed_distributions[{selected_package!r}]="
+                f"{installed.get(selected_package)!r}"
+            )
 
     if violations:
         raise ValueError("DALI bootstrap artifact failed validation: " + "; ".join(violations))
@@ -902,20 +938,39 @@ def _validate_dali_bootstrap_artifact(
     return payload
 
 
-def _validate_runner_preflight_artifact(path: Path) -> dict[str, Any]:
+def _validate_runner_preflight_artifact(
+    path: Path,
+    *,
+    required_device: str = "cuda",
+) -> dict[str, Any]:
+    required_device = _normalise_eval_device(required_device)
     payload = _load_json_object(path, label="runner preflight artifact")
     violations: list[str] = []
     if payload.get("tool") != "lightning_exact_eval_runner_preflight":
         violations.append(f"tool={payload.get('tool')!r}")
-    if payload.get("cuda_available") is not True:
-        violations.append(f"cuda_available={payload.get('cuda_available')!r}")
-    device_count = payload.get("device_count")
-    if not isinstance(device_count, int) or device_count <= 0:
-        violations.append(f"device_count={device_count!r}")
-    if payload.get("nvidia_dali_fn_module") != "nvidia.dali.fn":
-        violations.append(f"nvidia_dali_fn_module={payload.get('nvidia_dali_fn_module')!r}")
-    if not payload.get("device_name"):
-        violations.append("device_name must be recorded")
+    requested_device = payload.get("requested_device") or "cuda"
+    if requested_device != required_device:
+        violations.append(f"requested_device={requested_device!r}, expected {required_device!r}")
+    if required_device == "cuda":
+        if payload.get("cuda_available") is not True:
+            violations.append(f"cuda_available={payload.get('cuda_available')!r}")
+        device_count = payload.get("device_count")
+        if not isinstance(device_count, int) or device_count <= 0:
+            violations.append(f"device_count={device_count!r}")
+        if payload.get("nvidia_dali_fn_module") != "nvidia.dali.fn":
+            violations.append(f"nvidia_dali_fn_module={payload.get('nvidia_dali_fn_module')!r}")
+        if not payload.get("device_name"):
+            violations.append("device_name must be recorded")
+    else:
+        if payload.get("torch_import_ok") is not True:
+            violations.append(f"torch_import_ok={payload.get('torch_import_ok')!r}")
+        if payload.get("cpu_contest_platform") is not True:
+            violations.append(f"cpu_contest_platform={payload.get('cpu_contest_platform')!r}")
+        if payload.get("platform_system") != "Linux":
+            violations.append(f"platform_system={payload.get('platform_system')!r}")
+        machine = str(payload.get("platform_machine") or "").lower()
+        if machine not in {"x86_64", "amd64"}:
+            violations.append(f"platform_machine={payload.get('platform_machine')!r}")
     if violations:
         raise ValueError("runner preflight artifact failed validation: " + "; ".join(violations))
     return payload
@@ -1072,8 +1127,7 @@ class LightningAdjudicationSpec:
             raise ValueError("adjudication max_segnet_relative requires baseline_segnet_dist")
         if not isinstance(self.component_reference_label, str) or not self.component_reference_label.strip():
             raise ValueError("adjudication component_reference_label must be a non-empty string")
-        if self.required_device != "cuda":
-            raise ValueError("Lightning exact eval adjudication must require cuda")
+        _normalise_eval_device(self.required_device)
         if self.required_samples <= 0:
             raise ValueError("adjudication required_samples must be positive")
         if "/" in self.result_copy_name or "/" in self.provenance_name:
@@ -1126,28 +1180,53 @@ class LightningBatchJobSpec:
         _normalise_metadata(self.queue_metadata)
         if self.adjudication is not None:
             self.adjudication.validate()
-        if self.role == "exact_cuda_eval":
+        if self.role in EXACT_AUTH_EVAL_ROLES:
+            role_device = "cuda" if self.role == "exact_cuda_eval" else "cpu"
             _require_expected_archive(self.expected_archive_sha256, self.expected_archive_size_bytes)
             if self.adjudication is None:
                 raise ValueError("exact eval jobs require adjudication provenance")
+            if _normalise_eval_device(self.adjudication.required_device) != role_device:
+                raise ValueError(
+                    "exact eval job role and adjudication required_device disagree: "
+                    f"role={self.role!r} required_device={self.adjudication.required_device!r}"
+                )
             if self.interruptible:
                 raise ValueError("exact eval jobs must not be interruptible")
-            if "--device cuda" not in self.command:
-                raise ValueError("exact eval job command must run contest_auth_eval.py --device cuda")
+            if f"--device {role_device}" not in self.command:
+                raise ValueError(
+                    "exact eval job command must run contest_auth_eval.py "
+                    f"--device {role_device}"
+                )
+            other_device = "cpu" if role_device == "cuda" else "cuda"
+            if f"--device {other_device}" in self.command:
+                raise ValueError(
+                    "exact eval job command mixes device axes: "
+                    f"role={self.role!r} also contains --device {other_device}"
+                )
             if "contest_auth_eval.json" not in self.command:
                 raise ValueError("exact eval job command must preserve contest_auth_eval.json")
             if "scripts/scan_lightning_supply_chain.py" not in self.command:
                 raise ValueError("exact eval job command must run Lightning supply-chain scan")
-            if "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in self.command:
-                raise ValueError("exact eval job command must run CUDA runner preflight")
-            if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in self.command:
-                raise ValueError("exact eval job command must run DALI runner preflight")
+            if role_device == "cuda":
+                if "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in self.command:
+                    raise ValueError("exact eval job command must run CUDA runner preflight")
+                if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in self.command:
+                    raise ValueError("exact eval job command must run DALI runner preflight")
+                if "--require-hashes" not in self.command or "--no-deps" not in self.command:
+                    raise ValueError("exact eval DALI bootstrap must use hash-pinned no-deps install")
+                if "--index-url" in self.command or "--extra-index-url" in self.command:
+                    raise ValueError("exact eval DALI bootstrap must use direct wheel URLs, not package indexes")
+            else:
+                if "LIGHTNING_RUNNER_CPU_PREFLIGHT_OK" not in self.command:
+                    raise ValueError("exact CPU eval job command must run CPU runner preflight")
+                if "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in self.command:
+                    raise ValueError("exact CPU eval job command must not run CUDA runner preflight")
+                if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" in self.command:
+                    raise ValueError("exact CPU eval job command must not run DALI runner preflight")
+                if "INFLATE_REQUIRE_CUDA=1" in self.command:
+                    raise ValueError("exact CPU eval job command must not require CUDA inflate")
             if "LIGHTNING_INFLATE_RUNTIME_STATIC_PREFLIGHT_OK" not in self.command:
                 raise ValueError("exact eval job command must run inflate runtime static preflight")
-            if "--require-hashes" not in self.command or "--no-deps" not in self.command:
-                raise ValueError("exact eval DALI bootstrap must use hash-pinned no-deps install")
-            if "--index-url" in self.command or "--extra-index-url" in self.command:
-                raise ValueError("exact eval DALI bootstrap must use direct wheel URLs, not package indexes")
             if self.remote_output_dir is not None:
                 _validate_writable_output_dir(self.remote_output_dir)
             if "/teamspace/jobs/" in self.command:
@@ -1528,9 +1607,62 @@ def _runner_preflight_command(
     *,
     python_bin: str,
     output_dir: str,
+    eval_device: str = "cuda",
 ) -> str:
+    eval_device = _normalise_eval_device(eval_device)
     py = _quote(python_bin)
     out = _quote(output_dir)
+    if eval_device == "cpu":
+        return "\n".join(
+            [
+                (
+                    f"{py} scripts/scan_lightning_supply_chain.py "
+                    f"--json-out {out}/{ARTIFACT_SUPPLY_CHAIN_SCAN_PRE} "
+                    "--quiet --strict"
+                ),
+                (
+                    f"{py} scripts/scan_lightning_supply_chain.py "
+                    f"--json-out {out}/{ARTIFACT_SUPPLY_CHAIN_SCAN} "
+                    "--quiet --strict"
+                ),
+                (
+                    f"{py} - {out}/{ARTIFACT_RUNNER_PREFLIGHT} <<'PY'\n"
+                    "import json, platform, sys, time\n"
+                    "try:\n"
+                    "    import torch\n"
+                    "    torch_import_ok = True\n"
+                    "    torch_version = getattr(torch, '__version__', None)\n"
+                    "    cuda_available = bool(torch.cuda.is_available())\n"
+                    "    device_count = int(torch.cuda.device_count()) if cuda_available else 0\n"
+                    "except Exception as exc:\n"
+                    "    raise SystemExit(f'FATAL: torch import failed before exact CPU eval: {exc!r}')\n"
+                    "system = platform.system()\n"
+                    "machine = platform.machine().lower()\n"
+                    "cpu_contest_platform = system == 'Linux' and machine in {'x86_64', 'amd64'}\n"
+                    "payload = {\n"
+                    "    'schema_version': 1,\n"
+                    "    'tool': 'lightning_exact_eval_runner_preflight',\n"
+                    "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+                    "    'requested_device': 'cpu',\n"
+                    "    'python': sys.executable,\n"
+                    "    'torch_import_ok': torch_import_ok,\n"
+                    "    'torch_version': torch_version,\n"
+                    "    'platform_system': system,\n"
+                    "    'platform_machine': platform.machine(),\n"
+                    "    'cpu_contest_platform': cpu_contest_platform,\n"
+                    "    'cuda_available': cuda_available,\n"
+                    "    'device_count': device_count,\n"
+                    "}\n"
+                    "if not cpu_contest_platform:\n"
+                    "    open(sys.argv[1], 'w').write(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+                    "    raise SystemExit('FATAL: exact CPU eval requires Linux x86_64/amd64 contest-compatible hardware')\n"
+                    "open(sys.argv[1], 'w').write(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+                    "print('LIGHTNING_RUNNER_CPU_PREFLIGHT_OK')\n"
+                    "print(json.dumps(payload, sort_keys=True))\n"
+                    "PY"
+                ),
+            ]
+        )
     return "\n".join(
         [
             (
@@ -1739,7 +1871,7 @@ def _adjudication_command(
         f"--regression-threshold {_quote(str(adjudication.regression_threshold))}",
         f"--delta-key {_quote(adjudication.delta_key)}",
         f"--component-reference-label {_quote(adjudication.component_reference_label)}",
-        f"--required-device {_quote(adjudication.required_device)}",
+        f"--required-device {_quote(_normalise_eval_device(adjudication.required_device))}",
         f"--required-samples {_quote(str(adjudication.required_samples))}",
         f"--max-sane-score {_quote(str(adjudication.max_sane_score))}",
     ]
@@ -1780,13 +1912,33 @@ def exact_cuda_eval_command(
     adjudication: LightningAdjudicationSpec | None = None,
     component_trace: bool = False,
     component_trace_top_k: int = 80,
+    eval_device: str = "cuda",
 ) -> str:
-    """Build a fail-closed exact CUDA auth-eval command for a Lightning job."""
+    """Build a fail-closed exact auth-eval command for a Lightning job.
 
+    The historical function name is retained for compatibility. Pass
+    ``eval_device="cpu"`` only for an explicit [contest-CPU] replay axis.
+    """
+
+    eval_device = _normalise_eval_device(eval_device)
+    role = _exact_eval_role(eval_device)
+    axis = _exact_eval_axis(eval_device)
+    ok_marker = (
+        "LIGHTNING_EXACT_CUDA_EVAL_JSON_OK"
+        if eval_device == "cuda"
+        else "LIGHTNING_EXACT_CPU_EVAL_JSON_OK"
+    )
     _validate_writable_output_dir(output_dir)
     _require_expected_archive(expected_archive_sha256, expected_archive_size_bytes)
     if adjudication is None:
-        raise ValueError("exact CUDA eval command requires adjudication provenance")
+        raise ValueError("exact auth eval command requires adjudication provenance")
+    if _normalise_eval_device(adjudication.required_device) != eval_device:
+        raise ValueError(
+            "exact auth eval command device and adjudication required_device disagree: "
+            f"eval_device={eval_device!r} required_device={adjudication.required_device!r}"
+        )
+    if eval_device == "cpu" and component_trace:
+        raise ValueError("component_trace is CUDA-only; run CPU exact eval without component_trace")
     adjudication.validate()
     expected_runtime_tree_sha256 = None
     if isinstance(queue_metadata, dict):
@@ -1804,6 +1956,7 @@ def exact_cuda_eval_command(
     out = _quote(output_dir)
     py = _quote(python_bin)
     inflate = _quote(inflate_sh)
+    cuda_env_export = "export INFLATE_REQUIRE_CUDA=1\n" if eval_device == "cuda" else ""
     command = "\n".join(
         [
             "set -euo pipefail",
@@ -1838,14 +1991,18 @@ def exact_cuda_eval_command(
                 output_dir=output_dir,
                 payload=_metadata_payload(
                     job_name=job_name,
-                    role="exact_cuda_eval",
+                    role=role,
                     expected_archive_sha256=expected_archive_sha256,
                     expected_archive_size_bytes=expected_archive_size_bytes,
                     queue_metadata=queue_metadata,
                     adjudication=adjudication,
                 ),
             ),
-            _runner_preflight_command(python_bin=python_bin, output_dir=output_dir),
+            _runner_preflight_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+                eval_device=eval_device,
+            ),
             _inflate_runtime_bootstrap_command(
                 python_bin=python_bin,
                 output_dir=output_dir,
@@ -1865,13 +2022,13 @@ def exact_cuda_eval_command(
             (
                 f"export UV_PROJECT_ENVIRONMENT={out}/uv_project_env\n"
                 "export UV_LINK_MODE=${UV_LINK_MODE:-copy}\n"
-                "export INFLATE_REQUIRE_CUDA=1\n"
+                f"{cuda_env_export}"
                 f"export PATH=$(dirname {py}):$PATH\n"
                 f"{py} -u experiments/contest_auth_eval.py "
                 f"--archive {out}/{ARTIFACT_ARCHIVE} "
                 f"--inflate-sh {inflate} "
                 f"--upstream-dir {upstream} "
-                "--device cuda "
+                f"--device {eval_device} "
                 "--keep-work-dir "
                 f"--work-dir {out}/eval_work "
                 f"{runtime_tree_arg}"
@@ -1887,7 +2044,8 @@ def exact_cuda_eval_command(
                 "payload = json.load(open(sys.argv[1]))\n"
                 "prov = payload.get('provenance') or {}\n"
                 "assert payload.get('n_samples') == 600, payload.get('n_samples')\n"
-                "assert prov.get('device') == 'cuda', prov.get('device')\n"
+                f"assert prov.get('device') == {eval_device!r}, prov.get('device')\n"
+                f"assert payload.get('score_axis') == {axis!r}, payload.get('score_axis')\n"
                 "score = payload.get('score_recomputed_from_components')\n"
                 "assert isinstance(score, (int, float)) and math.isfinite(score), score\n"
                 f"expected_sha = {expected_archive_sha256!r}\n"
@@ -1896,8 +2054,9 @@ def exact_cuda_eval_command(
                 "    assert prov.get('archive_sha256') == expected_sha, prov.get('archive_sha256')\n"
                 "if expected_bytes is not None:\n"
                 "    assert payload.get('archive_size_bytes') == expected_bytes, payload.get('archive_size_bytes')\n"
-                "print('LIGHTNING_EXACT_CUDA_EVAL_JSON_OK')\n"
+                f"print({ok_marker!r})\n"
                 "print(json.dumps({'score_recomputed_from_components': score, "
+                f"'score_axis': {axis!r}, "
                 "'archive_sha256': prov.get('archive_sha256'), "
                 "'archive_size_bytes': payload.get('archive_size_bytes'), "
                 "'gpu_model': prov.get('gpu_model'), "
@@ -2021,9 +2180,12 @@ def make_exact_eval_spec(
     adjudication: LightningAdjudicationSpec | None = None,
     component_trace: bool = False,
     component_trace_top_k: int = 80,
+    eval_device: str = "cuda",
 ) -> LightningBatchJobSpec:
     """Create a strict exact-eval job spec."""
 
+    eval_device = _normalise_eval_device(eval_device)
+    role = _exact_eval_role(eval_device)
     out = output_dir or default_exact_eval_output_dir(repo_dir=repo_dir, job_name=name)
     command = exact_cuda_eval_command(
         repo_dir=repo_dir,
@@ -2040,6 +2202,7 @@ def make_exact_eval_spec(
         adjudication=adjudication,
         component_trace=component_trace,
         component_trace_top_k=component_trace_top_k,
+        eval_device=eval_device,
     )
     local_out = local_artifact_dir or default_exact_eval_local_artifact_dir(job_name=name)
     spec = LightningBatchJobSpec(
@@ -2056,7 +2219,7 @@ def make_exact_eval_spec(
         interruptible=False,
         max_runtime=max_runtime,
         reuse_snapshot=False,
-        role="exact_cuda_eval",
+        role=role,
         expected_archive_sha256=expected_archive_sha256,
         expected_archive_size_bytes=expected_archive_size_bytes,
         queue_metadata=dict(queue_metadata or {}),
@@ -3150,7 +3313,7 @@ def job_status_snapshot(job: object) -> dict[str, Any]:
 
 def _extract_job_status(snapshot: dict[str, Any]) -> str | None:
     value = snapshot.get("status")
-    if value is None or isinstance(value, str) and value.startswith("<error:"):
+    if value is None or (isinstance(value, str) and value.startswith("<error:")):
         return None
     return str(value)
 
@@ -3195,6 +3358,7 @@ _REMOTE_STATUS_RECONCILIATION_REQUIRED = "REMOTE_STATUS_RECONCILIATION_REQUIRED"
 _LIGHTNING_FAIL_CLOSED_ROLES = {
     "alpha_geo0_exact_eval",
     "exact_cuda_eval",
+    "exact_cpu_eval",
     "official_component_response",
     "diagnostic_component_sensitivity",
 }
@@ -3318,25 +3482,32 @@ def validate_local_artifact_dir(
     runner_preflight_path = artifact_root / ARTIFACT_RUNNER_PREFLIGHT
     supply_chain_pre_path = artifact_root / ARTIFACT_SUPPLY_CHAIN_SCAN_PRE
     supply_chain_post_path = artifact_root / ARTIFACT_SUPPLY_CHAIN_SCAN
+    if not metadata_path.is_file():
+        raise FileNotFoundError(f"Lightning artifact dir missing required files: {[str(metadata_path)]}")
+    metadata = _load_json_object(metadata_path, label="Lightning queue metadata")
+    role = metadata.get("role")
+    if role not in EXACT_AUTH_EVAL_ROLES:
+        raise ValueError(
+            f"Lightning queue metadata role={role!r}, "
+            "expected 'exact_cuda_eval' or 'exact_cpu_eval'"
+        )
+    eval_device = "cuda" if role == "exact_cuda_eval" else "cpu"
     required = [
         metadata_path,
         contest_json_path,
         archive_path,
         artifact_root / "eval_provenance.json",
         artifact_root / "report.txt",
-        dali_bootstrap_path,
-        dali_requirements_path,
         runner_preflight_path,
         supply_chain_pre_path,
         supply_chain_post_path,
     ]
+    if eval_device == "cuda":
+        required.extend([dali_bootstrap_path, dali_requirements_path])
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise FileNotFoundError(f"Lightning artifact dir missing required files: {missing}")
 
-    metadata = _load_json_object(metadata_path, label="Lightning queue metadata")
-    if metadata.get("role") != "exact_cuda_eval":
-        raise ValueError(f"Lightning queue metadata role={metadata.get('role')!r}, expected 'exact_cuda_eval'")
     if metadata.get("score_source") != "contest_auth_eval.json:score_recomputed_from_components":
         raise ValueError("Lightning queue metadata score_source is not the exact contest JSON component recompute")
     metadata_expected_sha = metadata.get("expected_archive_sha256")
@@ -3370,8 +3541,15 @@ def validate_local_artifact_dir(
         supply_chain_post_path,
         label="post-DALI supply-chain scan",
     )
-    dali_bootstrap = _validate_dali_bootstrap_artifact(dali_bootstrap_path, dali_requirements_path)
-    runner_preflight = _validate_runner_preflight_artifact(runner_preflight_path)
+    dali_bootstrap = (
+        _validate_dali_bootstrap_artifact(dali_bootstrap_path, dali_requirements_path)
+        if eval_device == "cuda"
+        else None
+    )
+    runner_preflight = _validate_runner_preflight_artifact(
+        runner_preflight_path,
+        required_device=eval_device,
+    )
 
     payload = _load_json_object(contest_json_path, label="contest_auth_eval.json")
     score = _require_finite_number(payload, "score_recomputed_from_components")
@@ -3385,8 +3563,14 @@ def validate_local_artifact_dir(
     if not isinstance(provenance, dict):
         raise ValueError("contest_auth_eval.json missing provenance object")
     device = provenance.get("device")
-    if device != "cuda":
-        raise ValueError(f"contest_auth_eval provenance.device={device!r}, expected 'cuda'")
+    if device != eval_device:
+        raise ValueError(f"contest_auth_eval provenance.device={device!r}, expected {eval_device!r}")
+    expected_score_axis = _exact_eval_axis(eval_device)
+    if payload.get("score_axis") != expected_score_axis:
+        raise ValueError(
+            f"contest_auth_eval score_axis={payload.get('score_axis')!r}, "
+            f"expected {expected_score_axis!r}"
+        )
 
     actual_identity = archive_identity(archive_path)
     payload_bytes = payload.get("archive_size_bytes")
@@ -3444,18 +3628,22 @@ def validate_local_artifact_dir(
         )
         if adjudicated_payload != payload:
             raise ValueError("adjudicated contest JSON copy does not match contest_auth_eval.json")
-        adj_sha = adjudication_provenance.get("contest_cuda_archive_sha256")
-        adj_bytes = adjudication_provenance.get("contest_cuda_archive_bytes")
+        adj_sha = adjudication_provenance.get(f"{expected_score_axis}_archive_sha256")
+        adj_bytes = adjudication_provenance.get(f"{expected_score_axis}_archive_bytes")
         if adj_sha != actual_identity["archive_sha256"]:
             raise ValueError("adjudication archive sha256 does not match artifact archive")
         if adj_bytes != actual_identity["archive_size_bytes"]:
             raise ValueError("adjudication archive bytes do not match artifact archive")
-        if adjudication_provenance.get("contest_cuda_score_source") != (
+        if adjudication_provenance.get(f"{expected_score_axis}_score_source") != (
             "contest_auth_eval.json:score_recomputed_from_components"
         ):
             raise ValueError("adjudication provenance score source is not contest_auth_eval.json")
-        if adjudication_provenance.get("contest_cuda_device") != "cuda":
-            raise ValueError("adjudication provenance device is not cuda")
+        if adjudication_provenance.get(f"{expected_score_axis}_device") != eval_device:
+            raise ValueError(f"adjudication provenance device is not {eval_device}")
+        if eval_device == "cpu" and adjudication_provenance.get("promotion_eligible") is True:
+            raise ValueError("exact CPU adjudication must not be promotion_eligible")
+        if eval_device == "cpu" and adjudication_provenance.get("score_tag") != "[contest-CPU]":
+            raise ValueError("exact CPU adjudication must carry [contest-CPU] score_tag")
         adjudication_lane_status = adjudication_provenance.get("lane_status")
         adjudication_component_gate_triggered = bool(
             adjudication_provenance.get("component_gate_triggered")
@@ -3532,6 +3720,7 @@ def validate_local_artifact_dir(
         "archive_sha256": actual_identity["archive_sha256"],
         "archive_size_bytes": actual_identity["archive_size_bytes"],
         "score_recomputed_from_components": score,
+        "score_axis": expected_score_axis,
         "n_samples": n_samples,
         "device": device,
         "gpu_model": provenance.get("gpu_model"),
@@ -3616,9 +3805,13 @@ def _reconstruct_missing_adjudication_artifacts_from_metadata(
     if payload_sha != actual_identity["archive_sha256"]:
         return []
     required_device = str(adjudication_meta.get("required_device") or "cuda")
+    required_device = _normalise_eval_device(required_device)
     required_samples = int(adjudication_meta.get("required_samples") or 600)
     device = provenance.get("device")
     if device != required_device or n_samples != required_samples:
+        return []
+    score_axis = _exact_eval_axis(required_device)
+    if payload.get("score_axis") != score_axis:
         return []
 
     def component_gate(
@@ -3711,23 +3904,88 @@ def _reconstruct_missing_adjudication_artifacts_from_metadata(
     if sane_score_gate_triggered:
         lane_status = "SANE_SCORE_REVIEW_REQUIRED"
 
-    contest_equivalent_hardware = provenance.get("gpu_t4_match") is True
     scientific_score_eligible = (
         not regression_triggered
         and not component_gate_triggered
         and not sane_score_gate_triggered
     )
-    promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
-    evidence_grade = "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
-    paper_claim_grade = (
-        evidence_grade
-        if promotion_eligible
-        else (
-            "A score-grade; T4/equivalent promotion required"
-            if scientific_score_eligible
-            else "A-negative scoped forensic"
+    if required_device == "cuda":
+        contest_equivalent_hardware = provenance.get("gpu_t4_match") is True
+        promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
+        score_claim_valid = promotion_eligible
+        evidence_grade = "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
+        paper_claim_grade = (
+            evidence_grade
+            if promotion_eligible
+            else (
+                "A score-grade; T4/equivalent promotion required"
+                if scientific_score_eligible
+                else "A-negative scoped forensic"
+            )
         )
-    )
+        allowed_use = (
+            ["promotion_review", "rank_frontier_candidate"]
+            if promotion_eligible
+            else ["forensic", "no_rank_frontier", "no_promotion"]
+        )
+    else:
+        contest_equivalent_hardware = (
+            payload.get("evidence_grade") == "contest-CPU"
+            and payload.get("score_claim_valid") is True
+            and payload.get("cpu_leaderboard_reproduction_eligible") is True
+        )
+        promotion_eligible = False
+        score_claim_valid = scientific_score_eligible and contest_equivalent_hardware
+        evidence_grade = "contest-CPU" if contest_equivalent_hardware else "CPU advisory"
+        paper_claim_grade = (
+            "contest-CPU public leaderboard reproduction"
+            if score_claim_valid
+            else (
+                "contest-CPU replay requires Linux x86_64 full-sample custody"
+                if scientific_score_eligible
+                else "A-negative scoped CPU forensic"
+            )
+        )
+        allowed_use = (
+            [
+                "cpu_axis_score_claim",
+                "public_leaderboard_reproduction",
+                "cpu_cuda_drift_diagnosis",
+                "no_cuda_promotion",
+            ]
+            if score_claim_valid
+            else ["forensic", "no_rank_frontier", "no_cuda_promotion"]
+        )
+    axis_fields: dict[str, Any] = {
+        f"{score_axis}_score": score,
+        f"{score_axis}_score_recomputed": score,
+        f"{score_axis}_score_reported_rounded": final_score,
+        f"{score_axis}_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        f"{score_axis}_avg_posenet_dist": avg_posenet,
+        f"{score_axis}_avg_segnet_dist": avg_segnet,
+        f"{score_axis}_result_json": str(result_copy_path),
+        f"{score_axis}_n_samples": n_samples,
+        f"{score_axis}_archive_sha256": actual_identity["archive_sha256"],
+        f"{score_axis}_archive_bytes": actual_identity["archive_size_bytes"],
+        f"{score_axis}_device": device,
+    }
+    if required_device == "cuda":
+        axis_fields.update(
+            {
+                "contest_cuda_gpu_model": provenance.get("gpu_model"),
+                "contest_cuda_gpu_t4_match": provenance.get("gpu_t4_match"),
+            }
+        )
+    else:
+        axis_fields.update(
+            {
+                "contest_cpu_platform_system": provenance.get("platform_system"),
+                "contest_cpu_platform_machine": provenance.get("platform_machine"),
+                "contest_cpu_leaderboard_reproduction_eligible": payload.get(
+                    "cpu_leaderboard_reproduction_eligible"
+                ),
+            }
+        )
     recovered_provenance = {
         "completed_at_utc": _utc_now(),
         "artifact_recovery": "reconstructed_missing_adjudication_artifacts_from_metadata",
@@ -3739,32 +3997,22 @@ def _reconstruct_missing_adjudication_artifacts_from_metadata(
             if isinstance(adjudication_meta.get("baseline_archive_size_bytes"), int)
             else None
         ),
-        "contest_cuda_score": score,
-        "contest_cuda_score_recomputed": score,
-        "contest_cuda_score_reported_rounded": final_score,
-        "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
-        "contest_cuda_avg_posenet_dist": avg_posenet,
-        "contest_cuda_avg_segnet_dist": avg_segnet,
-        "contest_cuda_result_json": str(result_copy_path),
-        "contest_cuda_n_samples": n_samples,
-        "contest_cuda_archive_sha256": actual_identity["archive_sha256"],
-        "contest_cuda_archive_bytes": actual_identity["archive_size_bytes"],
-        "contest_cuda_device": device,
-        "contest_cuda_gpu_model": provenance.get("gpu_model"),
-        "contest_cuda_gpu_t4_match": provenance.get("gpu_t4_match"),
+        **axis_fields,
+        "score_axis": score_axis,
         "contest_equivalent_hardware": contest_equivalent_hardware,
         "evidence_grade": evidence_grade,
         "promotion_eligible": promotion_eligible,
+        "score_claim_valid": score_claim_valid,
         "scientific_score_eligible": scientific_score_eligible,
-        "hardware_promotion_gate_triggered": scientific_score_eligible and not contest_equivalent_hardware,
-        "paper_claim_grade": paper_claim_grade,
-        "allowed_use": (
-            ["promotion_review", "rank_frontier_candidate"]
-            if promotion_eligible
-            else ["forensic", "no_rank_frontier", "no_promotion"]
+        "hardware_promotion_gate_triggered": (
+            scientific_score_eligible
+            and required_device == "cuda"
+            and not contest_equivalent_hardware
         ),
-        "score_tag": "[contest-CUDA]",
-        "result_tag": "[contest-CUDA]",
+        "paper_claim_grade": paper_claim_grade,
+        "allowed_use": allowed_use,
+        "score_tag": _exact_eval_score_tag(required_device),
+        "result_tag": _exact_eval_score_tag(required_device),
         "score_delta_vs_baseline": score_delta_vs_baseline,
         str(adjudication_meta.get("delta_key") or "score_delta_vs_baseline"): score_delta_vs_baseline,
         "regression_threshold": regression_threshold,
@@ -3973,11 +4221,11 @@ def validate_local_component_response_artifact_dir(
         if Path(str(response_curve_paths.get(component, ""))).name != curve_path.name:
             raise ValueError(f"summary response_curve_paths[{component!r}] does not point at {curve_path.name}")
         gate_results = curve.get("gate_results")
-        if external_baseline_required:
-            if not isinstance(gate_results, dict):
-                failed_components.append(component)
-            elif gate_results.get("external_baseline_repro") is not True:
-                failed_components.append(component)
+        if external_baseline_required and (
+            not isinstance(gate_results, dict)
+            or gate_results.get("external_baseline_repro") is not True
+        ):
+            failed_components.append(component)
         if curve.get("passed") is not True:
             failed_components.append(component)
     failed_components = sorted(set(failed_components))
@@ -4457,10 +4705,7 @@ def _ssh_top_level_file_names(
         value = raw_line.strip()
         if not value:
             continue
-        if value.startswith(prefix):
-            value = value[len(prefix) :]
-        else:
-            value = PurePosixPath(value).name
+        value = value[len(prefix) :] if value.startswith(prefix) else PurePosixPath(value).name
         if value:
             names.append(value)
     return sorted(set(names))
@@ -4606,7 +4851,28 @@ def mirror_ssh_artifact_dir(
     top_level_file_set = set(top_level_files)
     copied_files: list[str] = []
     missing_required_files: list[str] = []
-    for name in CANONICAL_ARTIFACT_FILES:
+    artifact_file_names = CANONICAL_ARTIFACT_FILES
+    if ARTIFACT_METADATA in top_level_file_set:
+        subprocess.run(
+            _scp_command(
+                scp_bin,
+                f"{target}:{remote}/{ARTIFACT_METADATA}",
+                mirror / ARTIFACT_METADATA,
+                connect_timeout=ssh_connect_timeout,
+            ),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        copied_files.append(ARTIFACT_METADATA)
+        try:
+            metadata = _load_json_object(mirror / ARTIFACT_METADATA, label="Lightning queue metadata")
+            artifact_file_names = _exact_eval_artifact_files_for_role(metadata.get("role"))
+        except Exception:
+            artifact_file_names = CANONICAL_ARTIFACT_FILES
+    for name in artifact_file_names:
+        if name == ARTIFACT_METADATA and name in copied_files:
+            continue
         if name not in top_level_file_set:
             missing_required_files.append(name)
             continue

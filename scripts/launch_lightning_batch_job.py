@@ -455,6 +455,7 @@ def _adjudication_from_args(args: argparse.Namespace) -> LightningAdjudicationSp
         component_reference_label=args.component_reference_label,
         delta_key=args.delta_key,
         max_sane_score=args.max_sane_score,
+        required_device=args.eval_device,
         allow_component_gate_forensic_success=(
             not args.fail_job_on_component_gate
         ),
@@ -1665,6 +1666,7 @@ def cmd_exact_eval(args: argparse.Namespace) -> int:
         adjudication=_adjudication_from_args(args),
         component_trace=args.component_trace,
         component_trace_top_k=args.component_trace_top_k,
+        eval_device=args.eval_device,
         inflate_sh=args.inflate_sh,
     )
     client = _client(args)
@@ -2792,6 +2794,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Compute expected archive SHA-256/bytes from --archive locally before submit/dry-run.",
     )
     exact.add_argument("--adjudicate", action="store_true", help="Append scripts/adjudicate_contest_auth_eval.py wiring.")
+    exact.add_argument(
+        "--eval-device",
+        choices=("cuda", "cpu"),
+        default="cuda",
+        help=(
+            "Exact auth-eval axis for experiments/contest_auth_eval.py. "
+            "Default cuda preserves promotion-path behavior; cpu is a "
+            "separate [contest-CPU] replay axis."
+        ),
+    )
     exact.add_argument("--baseline-score", type=float)
     exact.add_argument("--baseline-archive-bytes", type=int)
     exact.add_argument("--predicted-band", nargs=2, type=float, metavar=("LOW", "HIGH"))

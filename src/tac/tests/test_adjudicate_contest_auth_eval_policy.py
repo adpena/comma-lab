@@ -73,6 +73,7 @@ def _write_minimal_inputs(tmp_path: Path, payload_extra: dict[str, object]) -> t
         "archive_size_bytes": archive.stat().st_size,
         "avg_posenet_dist": 0.001,
         "avg_segnet_dist": 0.001,
+        "score_axis": "contest_cuda",
         "provenance": {
             "device": "cuda",
             "archive_sha256": archive_sha,
@@ -148,3 +149,57 @@ def test_adjudicator_promotes_only_when_no_raw_blockers(tmp_path: Path) -> None:
     assert payload["score_claim"] is True
     assert payload["rank_or_kill_eligible"] is True
     assert payload["allowed_uses"] == ["promotion_review", "rank_frontier_candidate"]
+
+
+def test_adjudicator_cpu_axis_is_score_claim_but_never_cuda_promotion(
+    tmp_path: Path,
+) -> None:
+    module = _load_adjudicator()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"stored archive bytes")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    contest_json, archive, provenance = _write_minimal_inputs(
+        tmp_path,
+        {
+            "score_axis": "contest_cpu",
+            "evidence_grade": "contest-CPU",
+            "score_claim_valid": True,
+            "cpu_leaderboard_reproduction_eligible": True,
+            "provenance": {
+                "device": "cpu",
+                "archive_sha256": archive_sha,
+                "platform_system": "Linux",
+                "platform_machine": "x86_64",
+                "gpu_model": "Tesla T4",
+                "gpu_t4_match": True,
+            },
+        },
+    )
+    result_copy = tmp_path / "adjudicated_cpu.json"
+    args = _args(
+        contest_json=contest_json,
+        archive=archive,
+        provenance=provenance,
+        result_copy=result_copy,
+    )
+    args.required_device = "cpu"
+
+    result = module.adjudicate(args)
+
+    assert result["score_axis"] == "contest_cpu"
+    assert result["promotion_eligible"] is False
+    assert result["score_claim_valid"] is True
+    assert result["evidence_grade"] == "contest-CPU"
+    assert result["allowed_use"] == [
+        "cpu_axis_score_claim",
+        "public_leaderboard_reproduction",
+        "cpu_cuda_drift_diagnosis",
+        "no_cuda_promotion",
+    ]
+    payload = read_json(result_copy)
+    assert payload["score_claim"] is True
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["adjudication"]["score_axis"] == "contest_cpu"
+    lane_provenance = read_json(provenance)
+    assert lane_provenance["contest_cpu_archive_sha256"] == archive_sha
+    assert "contest_cuda_archive_sha256" not in lane_provenance

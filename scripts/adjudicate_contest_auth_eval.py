@@ -62,6 +62,22 @@ _RAW_PROMOTION_BLOCKER_FIELDS = (
 )
 
 
+def _expected_score_axis(device: str) -> str:
+    if device == "cuda":
+        return "contest_cuda"
+    if device == "cpu":
+        return "contest_cpu"
+    raise SystemExit(f"FATAL: unsupported required device for adjudication: {device!r}")
+
+
+def _score_tag_for_axis(score_axis: str) -> str:
+    if score_axis == "contest_cuda":
+        return "[contest-CUDA]"
+    if score_axis == "contest_cpu":
+        return "[contest-CPU]"
+    raise SystemExit(f"FATAL: unsupported score axis for adjudication: {score_axis!r}")
+
+
 def _require_number(payload: dict[str, Any], key: str) -> float:
     value = payload.get(key)
     if not isinstance(value, (int, float)) or isinstance(value, bool):
@@ -703,11 +719,19 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     eval_provenance = payload.get("provenance")
     if not isinstance(eval_provenance, dict):
         raise SystemExit("FATAL: contest_auth_eval.json missing provenance object")
+    required_device = str(args.required_device).strip().lower()
     device = eval_provenance.get("device")
-    if device != args.required_device:
+    if device != required_device:
         raise SystemExit(
             f"FATAL: contest_auth_eval provenance.device={device!r}, "
-            f"expected {args.required_device!r}"
+            f"expected {required_device!r}"
+        )
+    score_axis = payload.get("score_axis")
+    expected_score_axis = _expected_score_axis(str(device))
+    if score_axis != expected_score_axis:
+        raise SystemExit(
+            f"FATAL: contest_auth_eval score_axis={score_axis!r}, "
+            f"expected {expected_score_axis!r} for device={device!r}"
         )
     payload_archive_sha256 = eval_provenance.get("archive_sha256") or payload.get("archive_sha256")
     if payload_archive_sha256 != actual_archive_sha256:
@@ -777,11 +801,6 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         lane_status = _add_review_status(lane_status, "SOURCE_MANIFEST_CLOSURE")
     if raw_promotion_policy_gate_triggered:
         lane_status = _add_review_status(lane_status, "RAW_PROMOTION_POLICY")
-    gpu_t4_match = eval_provenance.get("gpu_t4_match")
-    contest_equivalent_hardware = gpu_t4_match is True
-    evidence_grade = (
-        "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
-    )
     scientific_score_eligible = (
         not regression_triggered
         and not component_gate_triggered
@@ -790,28 +809,97 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         and not source_manifest_closure_gate_triggered
         and not raw_promotion_policy_gate_triggered
     )
-    promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
-    hardware_promotion_gate_triggered = scientific_score_eligible and not contest_equivalent_hardware
-    paper_claim_grade = (
-        evidence_grade
-        if promotion_eligible
-        else (
-            "A score-grade; T4/equivalent promotion required"
-            if scientific_score_eligible
-            else "A-negative scoped forensic"
+    gpu_t4_match = eval_provenance.get("gpu_t4_match")
+    is_cuda_axis = expected_score_axis == "contest_cuda"
+    if is_cuda_axis:
+        contest_equivalent_hardware = gpu_t4_match is True
+        evidence_grade = (
+            "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
         )
-    )
-    if promotion_eligible:
-        allowed_use = ["promotion_review", "rank_frontier_candidate"]
-    elif scientific_score_eligible:
-        allowed_use = ["diagnostic_score_screen", "requires_t4_confirmation", "no_promotion"]
+        promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
+        score_claim_valid = promotion_eligible
+        hardware_promotion_gate_triggered = scientific_score_eligible and not contest_equivalent_hardware
+        paper_claim_grade = (
+            evidence_grade
+            if promotion_eligible
+            else (
+                "A score-grade; T4/equivalent promotion required"
+                if scientific_score_eligible
+                else "A-negative scoped forensic"
+            )
+        )
+        if promotion_eligible:
+            allowed_use = ["promotion_review", "rank_frontier_candidate"]
+        elif scientific_score_eligible:
+            allowed_use = ["diagnostic_score_screen", "requires_t4_confirmation", "no_promotion"]
+        else:
+            allowed_use = ["forensic", "no_rank_frontier", "no_promotion"]
     else:
-        allowed_use = ["forensic", "no_rank_frontier", "no_promotion"]
+        contest_equivalent_hardware = (
+            payload.get("evidence_grade") == "contest-CPU"
+            and payload.get("score_claim_valid") is True
+            and payload.get("cpu_leaderboard_reproduction_eligible") is True
+        )
+        evidence_grade = "contest-CPU" if contest_equivalent_hardware else "CPU advisory"
+        promotion_eligible = False
+        score_claim_valid = scientific_score_eligible and contest_equivalent_hardware
+        hardware_promotion_gate_triggered = False
+        paper_claim_grade = (
+            "contest-CPU public leaderboard reproduction"
+            if score_claim_valid
+            else (
+                "contest-CPU replay requires Linux x86_64 full-sample custody"
+                if scientific_score_eligible
+                else "A-negative scoped CPU forensic"
+            )
+        )
+        allowed_use = (
+            [
+                "cpu_axis_score_claim",
+                "public_leaderboard_reproduction",
+                "cpu_cuda_drift_diagnosis",
+                "no_cuda_promotion",
+            ]
+            if score_claim_valid
+            else ["forensic", "no_rank_frontier", "no_cuda_promotion"]
+        )
 
     baseline_archive_bytes = args.baseline_archive_bytes
     archive_delta_bytes = None
     if baseline_archive_bytes is not None:
         archive_delta_bytes = actual_archive_bytes - baseline_archive_bytes
+    axis_prefix = str(expected_score_axis)
+    axis_score_tag = _score_tag_for_axis(axis_prefix)
+    axis_provenance = {
+        f"{axis_prefix}_score": score_recomputed,
+        f"{axis_prefix}_score_recomputed": score_recomputed,
+        f"{axis_prefix}_score_reported_rounded": final_score,
+        f"{axis_prefix}_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        f"{axis_prefix}_avg_posenet_dist": components["avg_posenet_dist"],
+        f"{axis_prefix}_avg_segnet_dist": components["avg_segnet_dist"],
+        f"{axis_prefix}_result_json": str(result_copy),
+        f"{axis_prefix}_n_samples": n_samples,
+        f"{axis_prefix}_archive_sha256": actual_archive_sha256,
+        f"{axis_prefix}_archive_bytes": actual_archive_bytes,
+        f"{axis_prefix}_device": device,
+    }
+    if is_cuda_axis:
+        axis_provenance.update(
+            {
+                "contest_cuda_gpu_model": eval_provenance.get("gpu_model"),
+                "contest_cuda_gpu_t4_match": gpu_t4_match,
+            }
+        )
+    else:
+        axis_provenance.update(
+            {
+                "contest_cpu_platform_system": eval_provenance.get("platform_system"),
+                "contest_cpu_platform_machine": eval_provenance.get("platform_machine"),
+                "contest_cpu_leaderboard_reproduction_eligible": payload.get(
+                    "cpu_leaderboard_reproduction_eligible"
+                ),
+            }
+        )
 
     provenance.update(
         {
@@ -820,28 +908,18 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "final_archive_bytes": actual_archive_bytes,
             "baseline_archive_bytes": baseline_archive_bytes,
             "archive_delta_bytes": archive_delta_bytes,
-            "contest_cuda_score": score_recomputed,
-            "contest_cuda_score_recomputed": score_recomputed,
-            "contest_cuda_score_reported_rounded": final_score,
-            "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
-            "contest_cuda_avg_posenet_dist": components["avg_posenet_dist"],
-            "contest_cuda_avg_segnet_dist": components["avg_segnet_dist"],
-            "contest_cuda_result_json": str(result_copy),
-            "contest_cuda_n_samples": n_samples,
-            "contest_cuda_archive_sha256": actual_archive_sha256,
-            "contest_cuda_archive_bytes": actual_archive_bytes,
-            "contest_cuda_device": device,
-            "contest_cuda_gpu_model": eval_provenance.get("gpu_model"),
-            "contest_cuda_gpu_t4_match": gpu_t4_match,
+            **axis_provenance,
+            "score_axis": axis_prefix,
             "contest_equivalent_hardware": contest_equivalent_hardware,
             "evidence_grade": evidence_grade,
             "promotion_eligible": promotion_eligible,
+            "score_claim_valid": score_claim_valid,
             "scientific_score_eligible": scientific_score_eligible,
             "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
             "paper_claim_grade": paper_claim_grade,
             "allowed_use": allowed_use,
-            "score_tag": "[contest-CUDA]",
-            "result_tag": "[contest-CUDA]",
+            "score_tag": axis_score_tag,
+            "result_tag": axis_score_tag,
             "score_delta_vs_baseline": score_delta_vs_baseline,
             args.delta_key: score_delta_vs_baseline,
             "regression_threshold": regression_threshold,
@@ -906,18 +984,19 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "source_manifest_runtime_closure_sha256": source_manifest_closure.get("closure_sha256"),
         "raw_promotion_policy_gate_triggered": raw_promotion_policy_gate_triggered,
         "raw_promotion_policy_gate_violations": raw_promotion_policy_gate["violations"],
-        "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
-        "contest_cuda_archive_sha256": actual_archive_sha256,
-        "contest_cuda_archive_bytes": actual_archive_bytes,
-        "contest_cuda_device": device,
-        "contest_cuda_gpu_t4_match": gpu_t4_match,
+        "score_axis": axis_prefix,
+        f"{axis_prefix}_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        f"{axis_prefix}_archive_sha256": actual_archive_sha256,
+        f"{axis_prefix}_archive_bytes": actual_archive_bytes,
+        f"{axis_prefix}_device": device,
+        f"{axis_prefix}_gpu_t4_match": gpu_t4_match if is_cuda_axis else None,
     }
     result_payload = dict(payload)
     result_payload.update(
         {
             "adjudication": adjudication_summary,
             "promotion_eligible": promotion_eligible,
-            "score_claim_valid": promotion_eligible,
+            "score_claim_valid": score_claim_valid,
             "scientific_score_eligible": scientific_score_eligible,
             "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
             "contest_equivalent_hardware": contest_equivalent_hardware,
@@ -941,6 +1020,10 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         result_payload["evidence_grade"] = "A++"
         result_payload["score_claim"] = True
         result_payload["rank_or_kill_eligible"] = True
+    elif score_claim_valid:
+        result_payload["evidence_grade"] = evidence_grade
+        result_payload["score_claim"] = True
+        result_payload["rank_or_kill_eligible"] = False
     else:
         result_payload["evidence_grade"] = paper_claim_grade
         result_payload["score_claim"] = False
@@ -981,10 +1064,11 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "archive_bytes": actual_archive_bytes,
         "gpu_model": eval_provenance.get("gpu_model"),
         "gpu_t4_match": gpu_t4_match,
+        "score_axis": axis_prefix,
         "contest_equivalent_hardware": contest_equivalent_hardware,
         "evidence_grade": evidence_grade,
         "promotion_eligible": promotion_eligible,
-        "score_claim_valid": promotion_eligible,
+        "score_claim_valid": score_claim_valid,
         "scientific_score_eligible": scientific_score_eligible,
         "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
         "paper_claim_grade": paper_claim_grade,
