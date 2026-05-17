@@ -23,6 +23,7 @@ from tac.exact_eval_custody import (
     CUDA_DEVICE_TOKENS,
     contains_forbidden_contest_cpu_token,
     contains_non_negated_device_token,
+    extract_archive_sha256,
     validate_exact_eval_evidence,
 )
 from tac.optimization.l5_v2_measurement_schedule import (
@@ -3224,6 +3225,56 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
                 "l5_v2_tt5l_materialized_paired_work_unit_lane_mismatch:" + axis
             )
 
+    run_id = str(payload.get("run_id") or "").strip() if payload else ""
+    output_root = str(payload.get("output_root") or "").strip() if payload else ""
+    if payload and not run_id:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_run_id_missing")
+    if payload and not output_root:
+        blockers.append("l5_v2_tt5l_materialized_paired_work_unit_output_root_missing")
+    outputs = payload.get("outputs") if payload else None
+    output_by_axis: dict[str, str] = {}
+    if not isinstance(outputs, Mapping):
+        if payload:
+            blockers.append("l5_v2_tt5l_materialized_paired_work_unit_outputs_missing")
+    else:
+        for axis in ("contest_cpu", "contest_cuda"):
+            output_dir = str(outputs.get(axis) or "").strip()
+            output_by_axis[axis] = output_dir
+            if not output_dir:
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_output_dir_missing:"
+                    + axis
+                )
+                continue
+            if output_dir.startswith("/"):
+                blockers.append(
+                    "l5_v2_tt5l_materialized_paired_work_unit_output_dir_absolute:"
+                    + axis
+                )
+                continue
+            output_result = repo_root / output_dir / "contest_auth_eval.json"
+            if output_result.is_file():
+                try:
+                    output_payload = json.loads(output_result.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    blockers.append(
+                        "l5_v2_tt5l_materialized_paired_work_unit_output_collision_unreadable:"
+                        + axis
+                    )
+                else:
+                    if not isinstance(output_payload, Mapping):
+                        blockers.append(
+                            "l5_v2_tt5l_materialized_paired_work_unit_output_collision_not_object:"
+                            + axis
+                        )
+                    else:
+                        existing_archive_sha = extract_archive_sha256(output_payload)
+                        if existing_archive_sha and existing_archive_sha != archive_sha256:
+                            blockers.append(
+                                "l5_v2_tt5l_materialized_paired_work_unit_output_collision_archive_mismatch:"
+                                + axis
+                            )
+
     def _flag_value(command: list[object], flag: str) -> str:
         try:
             index = command.index(flag)
@@ -3271,6 +3322,10 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
             "--lane-id": expected_lane,
             "--expected-runtime-tree-sha256": expected_runtime_sha,
         }
+        if run_id:
+            expected_values["--instance-job-id"] = f"{run_id}_{'cpu' if axis == 'contest_cpu' else 'cuda'}"
+        if output_by_axis.get(axis):
+            expected_values["--output-dir"] = output_by_axis[axis]
         for flag, expected_value in expected_values.items():
             if _flag_value(command, flag) != expected_value:
                 blockers.append(
@@ -3299,25 +3354,27 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
                     + axis
                 )
 
-    operator_plan_command = (
+    operator_plan_parts = [
         ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py "
         f"--archive {archive_path} "
         f"--submission-dir {submission_dir} "
         "--inflate-sh inflate.sh "
         "--label l5_v2_time_traveler_l5_autonomy "
         f"--expected-archive-sha256 {archive_sha256} "
-        "--run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement "
+        f"--run-id {run_id or '<missing_run_id>'} "
         "--pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda "
         "--lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact "
-        "--output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact "
+        f"--output-root {output_root or '<missing_output_root>'} "
         "--modal-bin .venv/bin/modal "
         "--gpu T4 "
         "--claim-agent codex:l5_v2_paired_measurement_dispatch "
         "--claim-notes "
         "l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda "
-        "--expected-runtime-tree-sha256 auto "
-        "--skip-axis-if-promotable-anchor-exists"
-    )
+        "--expected-runtime-tree-sha256 auto"
+    ]
+    if payload and payload.get("skip_axis_if_promotable_anchor_exists") is True:
+        operator_plan_parts.append(" --skip-axis-if-promotable-anchor-exists")
+    operator_plan_command = "".join(operator_plan_parts)
 
     return {
         "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",

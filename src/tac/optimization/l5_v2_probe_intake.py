@@ -36,6 +36,9 @@ L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA = "l5_v2_probe_observation_intake_v1"
 L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH = (
     "tools/audit_l5_v2_probe_observations.py"
 )
+L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH = (
+    ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json"
+)
 DEFAULT_L5V2_PROBE_SOURCE_PATHS: tuple[str, ...] = (
     "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
     "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
@@ -67,6 +70,54 @@ def _read_json_object(path: Path) -> Mapping[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, Mapping) else None
+
+
+def _dedupe_paths(paths: Iterable[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(path for path in paths if str(path).strip()))
+
+
+def materialized_tt5l_probe_source_paths(
+    *,
+    repo_root: str | Path | None = None,
+    plan_path: str | Path = L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH,
+) -> tuple[str, ...]:
+    """Return TT5L source JSON paths from the materialized paired work-unit plan.
+
+    The materialized TT5L plan may be variant/archive-specific. Reading its
+    output directories prevents the probe intake from silently reusing stale
+    source-archive eval paths after a new side-info variant is selected.
+    """
+
+    root = Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    candidate = Path(plan_path)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    payload = _read_json_object(resolved)
+    if payload is None:
+        return ()
+    outputs = payload.get("outputs")
+    if not isinstance(outputs, Mapping):
+        return ()
+    out: list[str] = []
+    for axis in ("contest_cpu", "contest_cuda"):
+        output_dir = str(outputs.get(axis) or "").strip()
+        if not output_dir:
+            continue
+        out.append(str(Path(output_dir) / "contest_auth_eval.json"))
+    return _dedupe_paths(out)
+
+
+def default_l5_v2_probe_source_paths(
+    *,
+    repo_root: str | Path | None = None,
+) -> tuple[str, ...]:
+    """Return dynamic materialized TT5L paths before legacy probe sources."""
+
+    return _dedupe_paths(
+        (
+            *materialized_tt5l_probe_source_paths(repo_root=repo_root),
+            *DEFAULT_L5V2_PROBE_SOURCE_PATHS,
+        )
+    )
 
 
 def _relative_path(path: Path, repo_root: Path) -> str:
@@ -559,22 +610,30 @@ def _empty_observation(candidate_id: str, notes: str) -> L5V2ProbeObservation:
 
 
 def build_l5_v2_probe_observation_intake(
-    source_paths: Iterable[str | Path] = DEFAULT_L5V2_PROBE_SOURCE_PATHS,
+    source_paths: Iterable[str | Path] | None = None,
     *,
     repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Scan known artifacts and emit a fail-closed L5 v2 probe intake report."""
 
     root = Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    resolved_source_paths = (
+        tuple(source_paths)
+        if source_paths is not None
+        else tuple(default_l5_v2_probe_source_paths(repo_root=root))
+    )
     source_records: list[dict[str, Any]] = []
-    grouped_axis_evidence: dict[str, dict[str, dict[str, Any]]] = {
+    grouped_axis_evidence: dict[str, dict[str, dict[str, dict[str, Any]]]] = {
+        candidate_id: {} for candidate_id in L5V2_CANDIDATES
+    }
+    grouped_source_records_by_archive: dict[str, dict[str, list[dict[str, Any]]]] = {
         candidate_id: {} for candidate_id in L5V2_CANDIDATES
     }
     grouped_source_records: dict[str, list[dict[str, Any]]] = {
         candidate_id: [] for candidate_id in L5V2_CANDIDATES
     }
 
-    for raw_path in source_paths:
+    for raw_path in resolved_source_paths:
         path = Path(raw_path)
         resolved = path if path.is_absolute() else root / path
         if not resolved.is_file():
@@ -596,6 +655,7 @@ def build_l5_v2_probe_observation_intake(
             payload=payload,
         )
         axis_evidence: dict[str, Any] | None = None
+        axis_archive_key = ""
         if payload is not None and candidate_id is not None and axis is not None:
             axis_evidence = _axis_evidence_from_payload(
                 resolved,
@@ -603,9 +663,17 @@ def build_l5_v2_probe_observation_intake(
                 axis=axis,
                 repo_root=root,
             )
-            existing = grouped_axis_evidence[candidate_id].get(axis)
+            axis_archive_key = (
+                normalize_sha256(axis_evidence.get("archive_sha256"))
+                or f"missing_archive_sha:{_relative_path(resolved, root)}"
+            )
+            archive_group = grouped_axis_evidence[candidate_id].setdefault(
+                axis_archive_key,
+                {},
+            )
+            existing = archive_group.get(axis)
             if existing is None or _axis_evidence_quality(axis_evidence) > _axis_evidence_quality(existing):
-                grouped_axis_evidence[candidate_id][axis] = axis_evidence
+                archive_group[axis] = axis_evidence
         custody_blockers = (
             _axis_custody_blockers(axis_evidence, axis=axis, repo_root=root)
             if axis_evidence is not None and axis is not None
@@ -632,10 +700,28 @@ def build_l5_v2_probe_observation_intake(
         source_records.append(source_record)
         if candidate_id in grouped_source_records:
             grouped_source_records[candidate_id].append(source_record)
+        if candidate_id in grouped_source_records_by_archive and axis_archive_key:
+            grouped_source_records_by_archive[candidate_id].setdefault(
+                axis_archive_key,
+                [],
+            ).append(source_record)
 
     observations: list[L5V2ProbeObservation] = []
     for candidate_id in L5V2_CANDIDATES:
-        axis_rows = list(grouped_axis_evidence[candidate_id].values())
+        archive_groups = grouped_axis_evidence[candidate_id]
+        if archive_groups:
+            selected_archive_key, selected_axis_map = max(
+                archive_groups.items(),
+                key=lambda item: (
+                    len(item[1]),
+                    sum(_axis_evidence_quality(row) for row in item[1].values()),
+                    item[0],
+                ),
+            )
+        else:
+            selected_archive_key = ""
+            selected_axis_map = {}
+        axis_rows = list(selected_axis_map.values())
         if not axis_rows:
             observations.append(
                 _empty_observation(
@@ -656,7 +742,11 @@ def build_l5_v2_probe_observation_intake(
             if axes
             else "artifact_intake_not_architecture_lock_evidence"
         )
-        first_source = grouped_source_records[candidate_id][0]
+        selected_sources = grouped_source_records_by_archive[candidate_id].get(
+            selected_archive_key,
+            grouped_source_records[candidate_id],
+        )
+        first_source = selected_sources[0]
         observations.append(
             L5V2ProbeObservation(
                 candidate_id=candidate_id,
@@ -673,9 +763,10 @@ def build_l5_v2_probe_observation_intake(
                 sideinfo_consumed=False,
                 byte_closed_archive=bool(archive_sha and runtime_by_axis),
                 notes=(
-                    "auto-intake only; fill missing paired axis, score_delta, "
-                    "payload-consumption predicate, and candidate-specific custody "
-                    "before architecture lock"
+                    "auto-intake only; axes are grouped by exact archive SHA so "
+                    "stale and newly materialized TT5L runs cannot be mixed; "
+                    "fill missing paired axis, score_delta, payload-consumption "
+                    "predicate, and candidate-specific custody before architecture lock"
                 ),
             )
         )
@@ -753,6 +844,9 @@ __all__ = [
     "DEFAULT_L5V2_PROBE_SOURCE_PATHS",
     "L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA",
     "L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH",
+    "L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH",
     "build_l5_v2_probe_observation_intake",
+    "default_l5_v2_probe_source_paths",
+    "materialized_tt5l_probe_source_paths",
     "render_l5_v2_probe_observation_intake_markdown",
 ]

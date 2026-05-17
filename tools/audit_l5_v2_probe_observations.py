@@ -36,8 +36,8 @@ _reexec_repo_venv_if_available(REPO_ROOT)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.optimization.l5_v2_probe_intake import (  # noqa: E402
-    DEFAULT_L5V2_PROBE_SOURCE_PATHS,
     build_l5_v2_probe_observation_intake,
+    default_l5_v2_probe_source_paths,
     render_l5_v2_probe_observation_intake_markdown,
 )
 
@@ -92,7 +92,9 @@ def _write_text(path: Path, text: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    source_paths = args.source_json or [Path(item) for item in DEFAULT_L5V2_PROBE_SOURCE_PATHS]
+    source_paths = args.source_json or [
+        Path(item) for item in default_l5_v2_probe_source_paths(repo_root=REPO_ROOT)
+    ]
     intake = build_l5_v2_probe_observation_intake(source_paths, repo_root=REPO_ROOT)
     _write_json(args.output_json, intake)
     if args.output_md is not None:

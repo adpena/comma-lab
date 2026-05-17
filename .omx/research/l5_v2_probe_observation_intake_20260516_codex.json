@@ -94,7 +94,7 @@
         "contest_cpu",
         "contest_cuda"
       ],
-      "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+      "notes": "auto-intake only; axes are grouped by exact archive SHA so stale and newly materialized TT5L runs cannot be mixed; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
       "predicate_id": "l5_v2_probe_observation_intake_v1",
       "predicate_passed": false,
       "predicted_or_measured_delta": 0.0,
@@ -201,7 +201,7 @@
             "contest_cpu",
             "contest_cuda"
           ],
-          "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+          "notes": "auto-intake only; axes are grouped by exact archive SHA so stale and newly materialized TT5L runs cannot be mixed; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
           "predicate_id": "l5_v2_probe_observation_intake_v1",
           "predicate_passed": false,
           "predicted_or_measured_delta": 0.0,
@@ -358,7 +358,7 @@
               "contest_cuda"
             ],
             "missing_exact_axes": [],
-            "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+            "notes": "auto-intake only; axes are grouped by exact archive SHA so stale and newly materialized TT5L runs cannot be mixed; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
             "paired_score_delta": null,
             "predicate_id": "l5_v2_probe_observation_intake_v1",
             "predicate_passed": false,
@@ -391,7 +391,7 @@
         "selected_delta_source": "paired_axis_score_delta",
         "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
       },
-      "verdict_sha256": "961039c2092517049c0d22c3ebd106c356dd1cdec8f314f065162706eef2066d"
+      "verdict_sha256": "ff6dc2015a3254ce21e561ed0c1b519baf37b593c8f7ba2d56e3601cedc53f73"
     },
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
@@ -403,6 +403,22 @@
   "schema": "l5_v2_probe_observation_intake_v1",
   "score_claim": false,
   "source_records": [
+    {
+      "accepted_for_observation": false,
+      "blockers": [
+        "source_file_missing"
+      ],
+      "exists": false,
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu/contest_auth_eval.json"
+    },
+    {
+      "accepted_for_observation": false,
+      "blockers": [
+        "source_file_missing"
+      ],
+      "exists": false,
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda/contest_auth_eval.json"
+    },
     {
       "accepted_for_observation": true,
       "axis": "contest_cpu",
@@ -775,7 +791,7 @@
           "contest_cuda"
         ],
         "missing_exact_axes": [],
-        "notes": "auto-intake only; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
+        "notes": "auto-intake only; axes are grouped by exact archive SHA so stale and newly materialized TT5L runs cannot be mixed; fill missing paired axis, score_delta, payload-consumption predicate, and candidate-specific custody before architecture lock",
         "paired_score_delta": null,
         "predicate_id": "l5_v2_probe_observation_intake_v1",
         "predicate_passed": false,

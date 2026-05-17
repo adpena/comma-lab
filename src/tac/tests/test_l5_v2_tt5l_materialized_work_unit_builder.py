@@ -101,6 +101,9 @@ def test_tt5l_materialized_work_unit_builder_outputs_valid_plan(tmp_path: Path) 
     assert status["tt5l_sideinfo_stats"]["nonzero_values"] == 27_000
     assert payload["archive"]["path"] == "experiments/results/tt5l/random_lsb/archive.zip"
     assert payload["archive"]["sha256"] == _sha256(archive)
+    assert payload["run_id"].endswith(f"random_lsb_{_sha256(archive)[:12]}")
+    assert payload["run_id"] in payload["outputs"]["contest_cpu"]
+    assert payload["run_id"] in payload["outputs"]["contest_cuda"]
     assert payload["runtime"]["submission_dir"] == "experiments/results/tt5l/runtime"
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
@@ -119,6 +122,9 @@ def test_tt5l_materialized_work_unit_builder_outputs_valid_plan(tmp_path: Path) 
         for command in payload["commands"].values()
         for token in command
     )
+    assert "--skip-axis-if-promotable-anchor-exists" not in status[
+        "operator_execute_command_template_after_review"
+    ]
 
 
 def test_select_tt5l_variant_archive_verifies_manifest_sha(tmp_path: Path) -> None:

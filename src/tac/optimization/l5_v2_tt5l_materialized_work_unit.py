@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
@@ -57,6 +58,7 @@ TT5L_MATERIALIZED_PAIRED_WORK_UNIT_CLAIM_NOTES = (
     "l5_v2_paired_measurement:"
     "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
 )
+_SAFE_TOKEN_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 def _sha256_file(path: Path) -> str:
@@ -81,6 +83,31 @@ def _resolve_repo_path(path: str | Path, repo_root: Path) -> Path:
     if not candidate.is_absolute():
         candidate = repo_root / candidate
     return candidate.resolve()
+
+
+def _slug(value: object) -> str:
+    text = str(value or "").strip().lower().replace("/", "_")
+    text = _SAFE_TOKEN_RE.sub("_", text).strip("._-")
+    return text or "unknown"
+
+
+def _materialized_run_id(
+    *,
+    materialized_from: Mapping[str, Any] | None,
+    archive_sha256: str,
+) -> str:
+    variant = ""
+    if isinstance(materialized_from, Mapping):
+        variant = str(materialized_from.get("variant") or "").strip()
+    suffix_parts = []
+    if variant:
+        suffix_parts.append(_slug(variant))
+    suffix_parts.append(str(archive_sha256 or "")[:12])
+    return (
+        TT5L_MATERIALIZED_PAIRED_WORK_UNIT_RUN_ID
+        + "_"
+        + "_".join(part for part in suffix_parts if part)
+    )
 
 
 def _variant_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -183,6 +210,10 @@ def build_tt5l_materialized_paired_work_unit_plan(
     runtime_rel = _repo_relative(runtime_dir, root)
     archive_sha = _sha256_file(archive_path)
     archive_bytes = archive_path.stat().st_size
+    run_id = _materialized_run_id(
+        materialized_from=materialized_from,
+        archive_sha256=archive_sha,
+    )
     runtime_by_axis = _runtime_manifest_by_axis(
         submission_dir=runtime_dir,
         repo_root=root,
@@ -200,12 +231,12 @@ def build_tt5l_materialized_paired_work_unit_plan(
         "contest_cuda": (
             output_root
             / "modal_auth_eval"
-            / f"{TT5L_MATERIALIZED_PAIRED_WORK_UNIT_RUN_ID}_cuda"
+            / f"{run_id}_cuda"
         ).as_posix(),
         "contest_cpu": (
             output_root
             / "modal_auth_eval_cpu"
-            / f"{TT5L_MATERIALIZED_PAIRED_WORK_UNIT_RUN_ID}_cpu"
+            / f"{run_id}_cpu"
         ).as_posix(),
     }
     notes_by_axis = {
@@ -226,7 +257,7 @@ def build_tt5l_materialized_paired_work_unit_plan(
             output_dir=outputs["contest_cpu"],
             pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
             lane_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_LANES["contest_cpu"],
-            instance_job_id=f"{TT5L_MATERIALIZED_PAIRED_WORK_UNIT_RUN_ID}_cpu",
+            instance_job_id=f"{run_id}_cpu",
             claim_agent=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_CLAIM_AGENT,
             claim_notes=notes_by_axis["contest_cpu"],
             submission_dir=runtime_rel,
@@ -242,7 +273,7 @@ def build_tt5l_materialized_paired_work_unit_plan(
             gpu=gpu,
             pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
             lane_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_LANES["contest_cuda"],
-            instance_job_id=f"{TT5L_MATERIALIZED_PAIRED_WORK_UNIT_RUN_ID}_cuda",
+            instance_job_id=f"{run_id}_cuda",
             claim_agent=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_CLAIM_AGENT,
             claim_notes=notes_by_axis["contest_cuda"],
             submission_dir=runtime_rel,
@@ -255,6 +286,8 @@ def build_tt5l_materialized_paired_work_unit_plan(
             datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         ),
         "tool": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_TOOL,
+        "run_id": run_id,
+        "output_root": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_OUTPUT_ROOT,
         "pair_group_id": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
         "required_axes": ["contest_cuda", "contest_cpu"],
         "archive": {
@@ -325,6 +358,7 @@ def render_tt5l_materialized_paired_work_unit_markdown(
         f"- schema: `{payload.get('schema')}`",
         f"- tool: `{payload.get('tool')}`",
         f"- materialized artifact: `{TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH}`",
+        f"- run_id: `{payload.get('run_id')}`",
         f"- score_claim: `{str(payload.get('score_claim')).lower()}`",
         f"- promotion_eligible: `{str(payload.get('promotion_eligible')).lower()}`",
         (

@@ -23,7 +23,7 @@
       "--inflate-sh",
       "inflate.sh",
       "--output-dir",
-      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
       "--detach",
       "--provider-detach-ack",
       "--pair-group-id",
@@ -31,7 +31,7 @@
       "--lane-id",
       "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
       "--instance-job-id",
-      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
       "--claim-agent",
       "codex:l5_v2_paired_measurement_dispatch",
       "--claim-notes",
@@ -53,7 +53,7 @@
       "--inflate-sh",
       "inflate.sh",
       "--output-dir",
-      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda",
+      "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda",
       "--gpu",
       "T4",
       "--detach",
@@ -63,7 +63,7 @@
       "--lane-id",
       "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda",
       "--instance-job-id",
-      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda",
+      "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda",
       "--claim-agent",
       "codex:l5_v2_paired_measurement_dispatch",
       "--claim-notes",
@@ -74,7 +74,7 @@
       "5518199a6f95f43366aa37bfb7452ae76892abdda73ff489f1fffaaf1dd27583"
     ]
   },
-  "created_at_utc": "2026-05-17T04:31:16Z",
+  "created_at_utc": "2026-05-17T04:44:46Z",
   "dispatch_attempted": false,
   "existing_anchors_reused": {
     "contest_cpu": null,
@@ -287,9 +287,10 @@
     "Provider dispatch still requires operator review and explicit --execute."
   ],
   "operator_execute_required": true,
+  "output_root": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact",
   "outputs": {
-    "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu",
-    "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda"
+    "contest_cpu": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu",
+    "contest_cuda": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda"
   },
   "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
   "planning_only": true,
@@ -302,6 +303,7 @@
     "contest_cuda",
     "contest_cpu"
   ],
+  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8",
   "runtime": {
     "expected_runtime_content_tree_sha256_by_axis": {
       "contest_cpu": "b9bd9ffecaac4d926b4c9174cdd7e23cb872f3139e1abf617cd4423e3a65e9c0",

@@ -141,11 +141,17 @@ def _write_standard_tt5l_materialized_work_unit_plan(
     pair_group_id = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
     cpu_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu"
     cuda_lane = "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cuda"
+    run_id = "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb"
+    output_root = "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact"
+    cpu_output = f"{output_root}/modal_auth_eval_cpu/{run_id}_cpu"
+    cuda_output = f"{output_root}/modal_auth_eval/{run_id}_cuda"
     path.write_text(
         json.dumps(
             {
                 "schema": "modal_paired_auth_eval_dispatch_plan_v2",
                 "pair_group_id": pair_group_id,
+                "run_id": run_id,
+                "output_root": output_root,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "archive": {
@@ -169,6 +175,10 @@ def _write_standard_tt5l_materialized_work_unit_plan(
                     "contest_cpu": cpu_lane,
                     "contest_cuda": cuda_lane,
                 },
+                "outputs": {
+                    "contest_cpu": cpu_output,
+                    "contest_cuda": cuda_output,
+                },
                 "commands": {
                     "contest_cpu": [
                         ".venv/bin/modal",
@@ -185,6 +195,10 @@ def _write_standard_tt5l_materialized_work_unit_plan(
                         pair_group_id,
                         "--lane-id",
                         cpu_lane,
+                        "--instance-job-id",
+                        f"{run_id}_cpu",
+                        "--output-dir",
+                        cpu_output,
                         "--expected-runtime-tree-sha256",
                         "b" * 64,
                         "--provider-detach-ack",
@@ -204,6 +218,10 @@ def _write_standard_tt5l_materialized_work_unit_plan(
                         pair_group_id,
                         "--lane-id",
                         cuda_lane,
+                        "--instance-job-id",
+                        f"{run_id}_cuda",
+                        "--output-dir",
+                        cuda_output,
                         "--expected-runtime-tree-sha256",
                         "c" * 64,
                         "--provider-detach-ack",
@@ -2412,6 +2430,9 @@ def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
         "operator_execute_command_template_after_review"
     ]
     assert "--execute" in action["operator_execute_command_template_after_review"]
+    assert "--skip-axis-if-promotable-anchor-exists" not in action[
+        "operator_execute_command_template_after_review"
+    ]
     assert "experiments/modal_auth_eval.py" not in action[
         "operator_execute_command_template_after_review"
     ]

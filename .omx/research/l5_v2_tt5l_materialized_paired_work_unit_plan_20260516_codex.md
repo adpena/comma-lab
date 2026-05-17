@@ -3,6 +3,7 @@
 - schema: `modal_paired_auth_eval_dispatch_plan_v2`
 - tool: `tools/build_l5_v2_tt5l_materialized_paired_work_unit.py`
 - materialized artifact: `.omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json`
+- run_id: `l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8`
 - score_claim: `false`
 - promotion_eligible: `false`
 - ready_for_exact_eval_dispatch: `false`
