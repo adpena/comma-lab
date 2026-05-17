@@ -34,6 +34,28 @@ AxisLabel = Literal[
     "diagnostic",
 ]
 
+AnchorCoordinateSystem = Literal[
+    "raw_archive_byte",
+    "zip_member_payload_byte",
+    "compressed_stream_uniform_surrogate",
+    "logical_section_parameter_response",
+    "grammar_aware_operator_response",
+    "codec_symbol_response",
+]
+
+RateColumnSemantics = Literal[
+    "none",
+    "byte_count_delta",
+    "uniform_per_archive_byte",
+    "score_response_measured",
+]
+
+ProjectionDomain = Literal[
+    "operator_delta",
+    "byte_count_delta",
+    "byte_value_delta",
+]
+
 RAW_ARCHIVE_GRAINS: frozenset[str] = frozenset({"raw_archive_bit", "raw_archive_byte"})
 OPERATOR_GRAINS: frozenset[str] = frozenset(
     {
@@ -45,6 +67,23 @@ OPERATOR_GRAINS: frozenset[str] = frozenset(
 
 VALID_AXIS_LABELS: frozenset[str] = frozenset(
     {"contest_cpu", "contest_cuda", "paired_contest_cpu_cuda", "diagnostic"}
+)
+FULL_CONTEST_AXIS_LABELS: frozenset[str] = frozenset(
+    {"contest_cpu", "contest_cuda", "paired_contest_cpu_cuda"}
+)
+BLOCKED_ANCHOR_COORDINATES: frozenset[str] = frozenset(
+    {
+        "raw_archive_byte",
+        "zip_member_payload_byte",
+        "compressed_stream_uniform_surrogate",
+    }
+)
+VALID_ANCHOR_COORDINATES: frozenset[str] = frozenset(
+    {
+        "logical_section_parameter_response",
+        "grammar_aware_operator_response",
+        "codec_symbol_response",
+    }
 )
 
 
@@ -66,6 +105,33 @@ class MasterGradientFeasibility:
     evidence_grade: str
     verdict: str
     recommended_probe_grain: str
+    blockers: tuple[str, ...]
+    required_proofs: tuple[str, ...]
+    rationale: tuple[str, ...]
+
+    def to_manifest(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class MasterGradientAnchorAuthority:
+    """Authority audit for a proposed master-gradient anchor sidecar."""
+
+    coordinate_system: str
+    axis_label: str | None
+    n_pairs_used: int | None
+    n_pairs_total: int | None
+    rate_column_semantics: str
+    projection_domain: str
+    anchor_valid: bool
+    ready_for_operator_probe: bool
+    ready_for_provider_dispatch: bool
+    score_claim: bool
+    promotion_eligible: bool
+    rank_or_kill_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+    evidence_grade: str
+    verdict: str
     blockers: tuple[str, ...]
     required_proofs: tuple[str, ...]
     rationale: tuple[str, ...]
@@ -198,6 +264,115 @@ def audit_master_gradient_probe_plan(
         blockers=blockers,
         required_proofs=tuple(dict.fromkeys(required)),
         rationale=rationale,
+    )
+
+
+def audit_master_gradient_anchor_authority(
+    *,
+    coordinate_system: AnchorCoordinateSystem | str,
+    axis_label: AxisLabel | str | None,
+    n_pairs_used: int | None = None,
+    n_pairs_total: int | None = None,
+    rate_column_semantics: RateColumnSemantics | str = "none",
+    projection_domain: ProjectionDomain | str = "operator_delta",
+) -> MasterGradientAnchorAuthority:
+    """Audit whether a gradient sidecar can steer ranking or dispatch.
+
+    The anchor may still be a useful diagnostic. It becomes route-authority only
+    when the coordinate system is on the packet-valid manifold, axis labeling is
+    honest, and rate semantics do not confuse byte-value perturbations with
+    archive byte-count deltas.
+    """
+
+    coord = str(coordinate_system)
+    axis = None if axis_label is None else str(axis_label)
+    rate_sem = str(rate_column_semantics)
+    domain = str(projection_domain)
+    blockers: list[str] = []
+    required: list[str] = []
+    rationale: list[str] = []
+
+    if axis is None:
+        blockers.append("missing_axis_label")
+        required.append("axis_label")
+    elif axis not in VALID_AXIS_LABELS:
+        blockers.append("unknown_axis_label")
+        required.append("axis_label_in_contest_cpu_contest_cuda_paired_or_diagnostic")
+
+    if coord in BLOCKED_ANCHOR_COORDINATES:
+        blockers.append(f"{coord}_coordinate_system_not_packet_valid")
+        required.append("packet_valid_operator_or_codec_symbol_coordinate_system")
+        rationale.append(
+            "gradient anchors over raw or compressed packet bytes are not local score derivatives"
+        )
+    elif coord not in VALID_ANCHOR_COORDINATES:
+        blockers.append("unknown_coordinate_system")
+        required.append("known_packet_valid_coordinate_system")
+    else:
+        rationale.append(
+            "packet-valid operator or codec-symbol coordinates can support response probes"
+        )
+
+    if (
+        axis in FULL_CONTEST_AXIS_LABELS
+        and n_pairs_used is not None
+        and n_pairs_total is not None
+        and n_pairs_total > 0
+        and n_pairs_used < n_pairs_total
+    ):
+        blockers.append("subset_gradient_cannot_be_labeled_full_contest_axis")
+        required.append("full_axis_sample_count_or_diagnostic_axis_label")
+        rationale.append(
+            "a subset gradient can be a diagnostic prior, but not a full contest-axis anchor"
+        )
+
+    if n_pairs_used is not None and n_pairs_used <= 0:
+        blockers.append("n_pairs_used_must_be_positive")
+    if n_pairs_total is not None and n_pairs_total <= 0:
+        blockers.append("n_pairs_total_must_be_positive")
+
+    if (
+        rate_sem == "uniform_per_archive_byte"
+        and domain == "byte_value_delta"
+    ):
+        blockers.append("rate_column_confuses_byte_value_delta_with_archive_byte_count_delta")
+        required.append("separate_archive_byte_count_delta_or_measured_score_response")
+        rationale.append(
+            "archive rate changes with packet length, not with the numeric value of an existing byte"
+        )
+    elif rate_sem not in {
+        "none",
+        "byte_count_delta",
+        "uniform_per_archive_byte",
+        "score_response_measured",
+    }:
+        blockers.append("unknown_rate_column_semantics")
+        required.append("known_rate_column_semantics")
+
+    if domain not in {"operator_delta", "byte_count_delta", "byte_value_delta"}:
+        blockers.append("unknown_projection_domain")
+        required.append("known_projection_domain")
+
+    ready = not blockers and coord in VALID_ANCHOR_COORDINATES
+    return MasterGradientAnchorAuthority(
+        coordinate_system=coord,
+        axis_label=axis,
+        n_pairs_used=n_pairs_used,
+        n_pairs_total=n_pairs_total,
+        rate_column_semantics=rate_sem,
+        projection_domain=domain,
+        anchor_valid=ready,
+        ready_for_operator_probe=ready,
+        ready_for_provider_dispatch=False,
+        score_claim=False,
+        promotion_eligible=False,
+        rank_or_kill_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+        evidence_grade="[planning; master-gradient anchor authority audit]",
+        verdict="anchor_ready_for_operator_probe" if ready else "blocked_anchor_false_authority",
+        blockers=tuple(dict.fromkeys(blockers)),
+        required_proofs=tuple(dict.fromkeys(required)),
+        rationale=tuple(rationale),
     )
 
 
