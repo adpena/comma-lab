@@ -20,7 +20,8 @@ from typing import Any
 
 from tac.exact_eval_custody import (
     extract_archive_sha256,
-    extract_runtime_tree_sha256,
+    extract_expected_runtime_tree_sha256,
+    extract_observed_runtime_tree_sha256,
     finite_float,
     normalize_sha256,
     positive_int,
@@ -359,13 +360,26 @@ def _archive_sha_for_payload(payload: Mapping[str, Any]) -> str:
 
 
 def _runtime_sha_for_payload(payload: Mapping[str, Any]) -> str:
-    direct = extract_runtime_tree_sha256(payload)
+    direct = extract_observed_runtime_tree_sha256(payload)
     if direct:
         return direct
     for nested_key in ("runtime_custody", "custody", "provenance"):
         nested = payload.get(nested_key)
         if isinstance(nested, Mapping):
-            candidate = extract_runtime_tree_sha256(nested)
+            candidate = extract_observed_runtime_tree_sha256(nested)
+            if candidate:
+                return candidate
+    return ""
+
+
+def _expected_runtime_sha_for_payload(payload: Mapping[str, Any]) -> str:
+    direct = extract_expected_runtime_tree_sha256(payload)
+    if direct:
+        return direct
+    for nested_key in ("runtime_custody", "custody", "provenance"):
+        nested = payload.get(nested_key)
+        if isinstance(nested, Mapping):
+            candidate = extract_expected_runtime_tree_sha256(nested)
             if candidate:
                 return candidate
     return ""
@@ -475,6 +489,7 @@ def _axis_evidence_from_payload(
         "axis": axis,
         "archive_sha256": _archive_sha_for_payload(payload),
         "runtime_tree_sha256": _runtime_sha_for_payload(payload),
+        "expected_runtime_tree_sha256": _expected_runtime_sha_for_payload(payload),
         "score": _first_finite_float(
             payload,
             (
@@ -566,7 +581,7 @@ def _axis_custody_blockers(
         evidence,
         expected_axis=axis,
         expected_archive_sha256=evidence.get("archive_sha256"),
-        expected_runtime_tree_sha256=evidence.get("runtime_tree_sha256"),
+        expected_runtime_tree_sha256=evidence.get("expected_runtime_tree_sha256"),
         require_artifact_path=True,
         require_hardware=True,
         require_auth_eval_command=True,
@@ -737,6 +752,14 @@ def build_l5_v2_probe_observation_intake(
             for row in axis_rows
             if row.get("axis")
         }
+        observed_runtime_by_axis = {
+            axis: digest
+            for axis, digest in (
+                (axis, normalize_sha256(value))
+                for axis, value in runtime_by_axis.items()
+            )
+            if digest
+        }
         evidence_grade = (
             "contest_axis_artifact_intake_not_architecture_lock_evidence"
             if axes
@@ -758,10 +781,12 @@ def build_l5_v2_probe_observation_intake(
                 predicate_id="l5_v2_probe_observation_intake_v1",
                 predicate_passed=False,
                 archive_sha256=archive_sha,
-                runtime_tree_sha256_by_axis=runtime_by_axis,
+                runtime_tree_sha256_by_axis=observed_runtime_by_axis,
                 axis_evidence=tuple(axis_rows),
                 sideinfo_consumed=False,
-                byte_closed_archive=bool(archive_sha and runtime_by_axis),
+                byte_closed_archive=bool(
+                    archive_sha and len(observed_runtime_by_axis) == len(axes)
+                ),
                 notes=(
                     "auto-intake only; axes are grouped by exact archive SHA so "
                     "stale and newly materialized TT5L runs cannot be mixed; "

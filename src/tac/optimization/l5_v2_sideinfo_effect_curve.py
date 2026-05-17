@@ -15,7 +15,11 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from tac.exact_eval_custody import normalize_sha256, validate_exact_eval_evidence
+from tac.exact_eval_custody import (
+    extract_expected_runtime_tree_sha256,
+    extract_observed_runtime_content_tree_sha256,
+    validate_exact_eval_evidence,
+)
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_NONZERO_SIDEINFO_VARIANTS,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
@@ -55,34 +59,7 @@ def _score_from_validation(
 
 
 def _runtime_content_tree_sha256(evidence: Mapping[str, Any]) -> str:
-    for key in (
-        "runtime_content_tree_sha256",
-        "expected_runtime_content_tree_sha256",
-        "inflate_runtime_content_tree_sha256",
-    ):
-        digest = normalize_sha256(evidence.get(key))
-        if digest:
-            return digest
-    for outer_key in (
-        "runtime_manifest",
-        "inflate_runtime_manifest",
-        "runtime_custody",
-        "provenance",
-    ):
-        nested = evidence.get(outer_key)
-        if not isinstance(nested, Mapping):
-            continue
-        digest = normalize_sha256(nested.get("runtime_content_tree_sha256"))
-        if digest:
-            return digest
-        inflate_manifest = nested.get("inflate_runtime_manifest")
-        if isinstance(inflate_manifest, Mapping):
-            digest = normalize_sha256(
-                inflate_manifest.get("runtime_content_tree_sha256")
-            )
-            if digest:
-                return digest
-    return ""
+    return extract_observed_runtime_content_tree_sha256(evidence)
 
 
 def _sideinfo_liveness_for_cell(
@@ -135,6 +112,7 @@ def _normalize_cell(
         require_devices=True,
         require_inflated_outputs_manifest=True,
         require_raw_output_aggregate_sha256=True,
+        expected_runtime_tree_sha256=extract_expected_runtime_tree_sha256(evidence),
         artifact_base_dir=repo_root,
     )
     blockers.extend(f"exact_eval_{blocker}" for blocker in validation.blockers)
@@ -149,6 +127,7 @@ def _normalize_cell(
         "n_samples": validation.n_samples,
         "archive_sha256": validation.archive_sha256,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
+        "expected_runtime_tree_sha256": extract_expected_runtime_tree_sha256(evidence),
         "runtime_content_tree_sha256": _runtime_content_tree_sha256(evidence),
         "hardware": str(evidence.get("hardware") or ""),
         "inflate_device": str(evidence.get("inflate_device") or ""),

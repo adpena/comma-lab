@@ -312,6 +312,148 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
     assert "l5_v2_probe_contest_evidence_grade_missing" not in tt5l["blockers"]
 
 
+def test_l5_v2_probe_intake_rejects_expected_runtime_hash_as_custody(
+    tmp_path: Path,
+) -> None:
+    result_dir = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "modal_auth_eval"
+        / "tt5l_cuda_expected_only"
+    )
+    raw_sha = "c" * 64
+    artifact = _write_json(
+        result_dir / "contest_auth_eval.json",
+        {
+            "archive_size_bytes": 34_603,
+            "avg_posenet_dist": 0.18,
+            "avg_segnet_dist": 0.025,
+            "canonical_score": contest_score(
+                seg_dist=0.025,
+                pose_dist=0.18,
+                archive_bytes=34_603,
+            ),
+            "exact_cuda_evidence": True,
+            "lane_id": "lane_time_traveler_l5_autonomy_exact_cuda",
+            "n_samples": 600,
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cuda",
+                "expected_runtime_tree_sha256": "b" * 64,
+                "gpu_model": "Tesla T4",
+                "inflated_output_manifest": {
+                    "payload": {
+                        "aggregate_sha256": raw_sha,
+                    },
+                },
+                "sys_argv": [
+                    "experiments/contest_auth_eval.py",
+                    "--device",
+                    "cuda",
+                    "--inflate-device",
+                    "auto",
+                ],
+            },
+            "raw_output_aggregate_sha256": raw_sha,
+            "score_axis": "contest_cuda",
+        },
+    )
+    (artifact.parent / "contest_auth_eval.stdout.log").write_text(
+        "contest auth eval completed\n",
+        encoding="utf-8",
+    )
+    manifest_path = artifact.parent / "inflated_outputs_manifest.json"
+    manifest_path.write_text(
+        json.dumps({"aggregate_sha256": raw_sha}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
+
+    source = intake["source_records"][0]
+    assert source["recognized_for_observation"] is True
+    assert source["custody_valid_for_observation"] is False
+    assert source["accepted_for_observation"] is False
+    assert source["axis_evidence"]["runtime_tree_sha256"] == ""
+    assert "runtime_tree_sha_invalid" in source["custody_blockers"]
+    tt5l = {
+        row["candidate_id"]: row
+        for row in intake["verdict"]["evaluated_observations"]
+    }["time_traveler_l5_autonomy"]
+    assert tt5l["byte_closed_archive"] is False
+
+
+def test_l5_v2_probe_intake_rejects_expected_runtime_hash_mismatch(
+    tmp_path: Path,
+) -> None:
+    result_dir = (
+        tmp_path
+        / "experiments"
+        / "results"
+        / "modal_auth_eval"
+        / "tt5l_cuda_runtime_mismatch"
+    )
+    raw_sha = "c" * 64
+    artifact = _write_json(
+        result_dir / "contest_auth_eval.json",
+        {
+            "archive_size_bytes": 34_603,
+            "avg_posenet_dist": 0.18,
+            "avg_segnet_dist": 0.025,
+            "canonical_score": contest_score(
+                seg_dist=0.025,
+                pose_dist=0.18,
+                archive_bytes=34_603,
+            ),
+            "exact_cuda_evidence": True,
+            "lane_id": "lane_time_traveler_l5_autonomy_exact_cuda",
+            "n_samples": 600,
+            "provenance": {
+                "archive_sha256": "a" * 64,
+                "device": "cuda",
+                "expected_runtime_tree_sha256": "d" * 64,
+                "gpu_model": "Tesla T4",
+                "inflate_runtime_manifest": {
+                    "runtime_tree_sha256": "b" * 64,
+                },
+                "inflated_output_manifest": {
+                    "payload": {
+                        "aggregate_sha256": raw_sha,
+                    },
+                },
+                "sys_argv": [
+                    "experiments/contest_auth_eval.py",
+                    "--device",
+                    "cuda",
+                    "--inflate-device",
+                    "auto",
+                ],
+            },
+            "raw_output_aggregate_sha256": raw_sha,
+            "score_axis": "contest_cuda",
+        },
+    )
+    (artifact.parent / "contest_auth_eval.stdout.log").write_text(
+        "contest auth eval completed\n",
+        encoding="utf-8",
+    )
+    manifest_path = artifact.parent / "inflated_outputs_manifest.json"
+    manifest_path.write_text(
+        json.dumps({"aggregate_sha256": raw_sha}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
+
+    source = intake["source_records"][0]
+    assert source["recognized_for_observation"] is True
+    assert source["custody_valid_for_observation"] is False
+    assert source["axis_evidence"]["runtime_tree_sha256"] == "b" * 64
+    assert source["axis_evidence"]["expected_runtime_tree_sha256"] == "d" * 64
+    assert "runtime_tree_sha_mismatch" in source["custody_blockers"]
+
+
 def test_l5_v2_probe_intake_accepts_modal_cpu_platform_custody(
     tmp_path: Path,
 ) -> None:

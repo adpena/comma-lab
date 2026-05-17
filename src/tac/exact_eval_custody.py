@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import re
+import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -113,6 +114,27 @@ def _clean_text(value: object) -> str:
     """Return stripped string text for JSON scalar fields."""
 
     return str(value or "").strip()
+
+
+def _command_text(value: object) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _command_flag_value(command: str, flag: str) -> str:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        parts = command.split()
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return str(parts[idx + 1]).strip()
+    prefix = f"{flag}="
+    for part in parts:
+        if part.startswith(prefix):
+            return part[len(prefix) :].strip()
+    return ""
 
 
 def _contains_token(value: str, tokens: frozenset[str]) -> bool:
@@ -303,7 +325,19 @@ def extract_archive_sha256(mapping: Mapping[str, Any]) -> str:
 
 
 def extract_runtime_tree_sha256(mapping: Mapping[str, Any]) -> str:
-    """Extract runtime-tree SHA from top-level or nested custody manifests."""
+    """Extract observed runtime-tree SHA from custody manifests.
+
+    This default helper is intentionally custody-safe: expected/planned hashes
+    are not evidence that an exact-eval artifact actually used the runtime.
+    Use ``extract_runtime_tree_sha256_allow_expected`` only for legacy
+    non-promotional audits that explicitly need broad fallback extraction.
+    """
+
+    return extract_observed_runtime_tree_sha256(mapping)
+
+
+def extract_runtime_tree_sha256_allow_expected(mapping: Mapping[str, Any]) -> str:
+    """Extract runtime-tree SHA including expected/planned fallback fields."""
 
     for key in (
         "candidate_runtime_tree_sha256",
@@ -331,6 +365,165 @@ def extract_runtime_tree_sha256(mapping: Mapping[str, Any]) -> str:
             value = inflate_manifest.get("runtime_tree_sha256")
             if is_sha256_hex(value):
                 return str(value).strip().lower()
+    return ""
+
+
+def extract_expected_runtime_tree_sha256(mapping: Mapping[str, Any]) -> str:
+    """Extract planned/expected runtime-tree SHA for mismatch checks only."""
+
+    command_candidates: list[object] = [
+        mapping.get("auth_eval_command"),
+        mapping.get("command"),
+        mapping.get("sys_argv"),
+    ]
+    for key in (
+        "expected_runtime_tree_sha256",
+        "expected_inflate_runtime_tree_sha256",
+    ):
+        value = mapping.get(key)
+        if is_sha256_hex(value):
+            return str(value).strip().lower()
+    for outer_key in (
+        "runtime_manifest",
+        "inflate_runtime_manifest",
+        "runtime_custody",
+        "provenance",
+    ):
+        nested = mapping.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        command_candidates.extend(
+            (
+                nested.get("auth_eval_command"),
+                nested.get("command"),
+                nested.get("sys_argv"),
+            )
+        )
+        for key in (
+            "expected_runtime_tree_sha256",
+            "expected_inflate_runtime_tree_sha256",
+        ):
+            value = nested.get(key)
+            if is_sha256_hex(value):
+                return str(value).strip().lower()
+        inflate_manifest = nested.get("inflate_runtime_manifest")
+        if isinstance(inflate_manifest, Mapping):
+            for key in (
+                "expected_runtime_tree_sha256",
+                "expected_inflate_runtime_tree_sha256",
+            ):
+                value = inflate_manifest.get(key)
+                if is_sha256_hex(value):
+                    return str(value).strip().lower()
+    for candidate in command_candidates:
+        digest = normalize_sha256(
+            _command_flag_value(
+                _command_text(candidate),
+                "--expected-runtime-tree-sha256",
+            )
+        )
+        if digest:
+            return digest
+    return ""
+
+
+def extract_observed_runtime_tree_sha256(mapping: Mapping[str, Any]) -> str:
+    """Extract only observed runtime-tree SHA evidence.
+
+    Expected/planned hashes are useful for mismatch checks, but they are not
+    custody evidence that a scored exact-eval artifact actually used that
+    runtime. L5/L5-v2 promotion gates use this stricter extractor before
+    passing evidence into exact-eval validation.
+    """
+
+    for key in (
+        "observed_runtime_tree_sha256",
+        "actual_runtime_tree_sha256",
+        "uploaded_runtime_tree_sha256",
+        "runtime_tree_sha256",
+        "inflate_runtime_tree_sha256",
+    ):
+        value = mapping.get(key)
+        if is_sha256_hex(value):
+            return str(value).strip().lower()
+    for outer_key in (
+        "runtime_manifest",
+        "inflate_runtime_manifest",
+        "runtime_custody",
+        "provenance",
+    ):
+        nested = mapping.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        for key in (
+            "observed_runtime_tree_sha256",
+            "actual_runtime_tree_sha256",
+            "uploaded_runtime_tree_sha256",
+            "runtime_tree_sha256",
+            "inflate_runtime_tree_sha256",
+        ):
+            value = nested.get(key)
+            if is_sha256_hex(value):
+                return str(value).strip().lower()
+        inflate_manifest = nested.get("inflate_runtime_manifest")
+        if isinstance(inflate_manifest, Mapping):
+            for key in (
+                "observed_runtime_tree_sha256",
+                "actual_runtime_tree_sha256",
+                "uploaded_runtime_tree_sha256",
+                "runtime_tree_sha256",
+                "inflate_runtime_tree_sha256",
+            ):
+                value = inflate_manifest.get(key)
+                if is_sha256_hex(value):
+                    return str(value).strip().lower()
+    return ""
+
+
+def extract_observed_runtime_content_tree_sha256(mapping: Mapping[str, Any]) -> str:
+    """Extract only observed runtime-content-tree SHA evidence."""
+
+    for key in (
+        "observed_runtime_content_tree_sha256",
+        "actual_runtime_content_tree_sha256",
+        "uploaded_runtime_content_tree_sha256",
+        "runtime_content_tree_sha256",
+        "inflate_runtime_content_tree_sha256",
+    ):
+        value = mapping.get(key)
+        if is_sha256_hex(value):
+            return str(value).strip().lower()
+    for outer_key in (
+        "runtime_manifest",
+        "inflate_runtime_manifest",
+        "runtime_custody",
+        "provenance",
+    ):
+        nested = mapping.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        for key in (
+            "observed_runtime_content_tree_sha256",
+            "actual_runtime_content_tree_sha256",
+            "uploaded_runtime_content_tree_sha256",
+            "runtime_content_tree_sha256",
+            "inflate_runtime_content_tree_sha256",
+        ):
+            value = nested.get(key)
+            if is_sha256_hex(value):
+                return str(value).strip().lower()
+        inflate_manifest = nested.get("inflate_runtime_manifest")
+        if isinstance(inflate_manifest, Mapping):
+            for key in (
+                "observed_runtime_content_tree_sha256",
+                "actual_runtime_content_tree_sha256",
+                "uploaded_runtime_content_tree_sha256",
+                "runtime_content_tree_sha256",
+                "inflate_runtime_content_tree_sha256",
+            ):
+                value = inflate_manifest.get(key)
+                if is_sha256_hex(value):
+                    return str(value).strip().lower()
     return ""
 
 
@@ -554,7 +747,11 @@ __all__ = [
     "ExactEvalEvidenceValidation",
     "contest_score",
     "extract_archive_sha256",
+    "extract_expected_runtime_tree_sha256",
+    "extract_observed_runtime_content_tree_sha256",
+    "extract_observed_runtime_tree_sha256",
     "extract_runtime_tree_sha256",
+    "extract_runtime_tree_sha256_allow_expected",
     "finite_float",
     "is_sha256_hex",
     "normalize_sha256",

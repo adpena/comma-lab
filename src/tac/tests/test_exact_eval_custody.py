@@ -11,7 +11,11 @@ from tac.exact_eval_custody import (
     CONTEST_EXACT_SAMPLE_COUNT,
     contest_score,
     extract_archive_sha256,
+    extract_expected_runtime_tree_sha256,
+    extract_observed_runtime_content_tree_sha256,
+    extract_observed_runtime_tree_sha256,
     extract_runtime_tree_sha256,
+    extract_runtime_tree_sha256_allow_expected,
     is_sha256_hex,
     validate_exact_eval_evidence,
 )
@@ -31,6 +35,63 @@ def test_extract_runtime_tree_sha256_from_nested_manifests() -> None:
             }
         )
         == runtime_sha
+    )
+
+
+def test_observed_runtime_hash_extractors_reject_expected_only_fields() -> None:
+    runtime_sha = "b" * 64
+    content_sha = "c" * 64
+
+    expected_only = {
+        "expected_runtime_tree_sha256": runtime_sha,
+        "expected_runtime_content_tree_sha256": content_sha,
+        "provenance": {
+            "expected_runtime_tree_sha256": runtime_sha,
+            "inflate_runtime_manifest": {
+                "expected_runtime_tree_sha256": runtime_sha,
+                "expected_runtime_content_tree_sha256": content_sha,
+            },
+        },
+    }
+
+    assert extract_runtime_tree_sha256(expected_only) == ""
+    assert extract_runtime_tree_sha256_allow_expected(expected_only) == runtime_sha
+    assert extract_observed_runtime_tree_sha256(expected_only) == ""
+    assert extract_observed_runtime_content_tree_sha256(expected_only) == ""
+    assert (
+        extract_expected_runtime_tree_sha256(
+            {
+                "auth_eval_command": (
+                    "contest_auth_eval --device cuda "
+                    f"--expected-runtime-tree-sha256 {runtime_sha}"
+                )
+            }
+        )
+        == runtime_sha
+    )
+    assert (
+        extract_observed_runtime_tree_sha256(
+            {
+                "provenance": {
+                    "inflate_runtime_manifest": {
+                        "runtime_tree_sha256": runtime_sha,
+                    },
+                },
+            }
+        )
+        == runtime_sha
+    )
+    assert (
+        extract_observed_runtime_content_tree_sha256(
+            {
+                "provenance": {
+                    "inflate_runtime_manifest": {
+                        "runtime_content_tree_sha256": content_sha,
+                    },
+                },
+            }
+        )
+        == content_sha
     )
 
 

@@ -53,6 +53,7 @@
           "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
           "axis": "contest_cpu",
           "eval_device": "cpu",
+          "expected_runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
           "hardware": "Linux x86_64",
           "inflate_device": "cpu",
           "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
@@ -73,6 +74,7 @@
           "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
           "axis": "contest_cuda",
           "eval_device": "cuda",
+          "expected_runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
           "hardware": "Tesla T4",
           "inflate_device": "auto",
           "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
@@ -160,6 +162,7 @@
               "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
               "axis": "contest_cpu",
               "eval_device": "cpu",
+              "expected_runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
               "hardware": "Linux x86_64",
               "inflate_device": "cpu",
               "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
@@ -180,6 +183,7 @@
               "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
               "axis": "contest_cuda",
               "eval_device": "cuda",
+              "expected_runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
               "hardware": "Tesla T4",
               "inflate_device": "auto",
               "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
@@ -309,6 +313,7 @@
                 "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
                 "axis": "contest_cpu",
                 "eval_device": "cpu",
+                "expected_runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
                 "hardware": "Linux x86_64",
                 "inflate_device": "cpu",
                 "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
@@ -329,6 +334,7 @@
                 "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
                 "axis": "contest_cuda",
                 "eval_device": "cuda",
+                "expected_runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
                 "hardware": "Tesla T4",
                 "inflate_device": "auto",
                 "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
@@ -391,7 +397,7 @@
         "selected_delta_source": "paired_axis_score_delta",
         "tool": "tools/probe_l5_v2_staircase_disambiguator.py"
       },
-      "verdict_sha256": "ff6dc2015a3254ce21e561ed0c1b519baf37b593c8f7ba2d56e3601cedc53f73"
+      "verdict_sha256": "8b8ee9e4b74dfa99dab137a7ce1c3b88af0998bbb071b8987c634c8f37a10fc0"
     },
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
@@ -409,7 +415,7 @@
         "source_file_missing"
       ],
       "exists": false,
-      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cpu/contest_auth_eval.json"
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cpu/contest_auth_eval.json"
     },
     {
       "accepted_for_observation": false,
@@ -417,7 +423,7 @@
         "source_file_missing"
       ],
       "exists": false,
-      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8_cuda/contest_auth_eval.json"
+      "path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190_cuda/contest_auth_eval.json"
     },
     {
       "accepted_for_observation": true,
@@ -429,6 +435,7 @@
         "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
         "axis": "contest_cpu",
         "eval_device": "cpu",
+        "expected_runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
         "hardware": "Linux x86_64",
         "inflate_device": "cpu",
         "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
@@ -461,6 +468,7 @@
         "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
         "axis": "contest_cuda",
         "eval_device": "cuda",
+        "expected_runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
         "hardware": "Tesla T4",
         "inflate_device": "auto",
         "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
@@ -493,6 +501,7 @@
         "auth_eval_command": "",
         "axis": "contest_cuda",
         "eval_device": "",
+        "expected_runtime_tree_sha256": "",
         "hardware": "",
         "inflate_device": "",
         "inflated_outputs_manifest_path": "",
@@ -533,6 +542,7 @@
         "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
         "axis": "contest_cuda",
         "eval_device": "cuda",
+        "expected_runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
         "hardware": "Tesla T4",
         "inflate_device": "auto",
         "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
@@ -565,6 +575,7 @@
         "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
         "axis": "contest_cuda",
         "eval_device": "cuda",
+        "expected_runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
         "hardware": "Tesla T4",
         "inflate_device": "auto",
         "inflated_outputs_manifest_path": "experiments/results/modal_auth_eval/time_traveler_recovered_tt5l_25ep_exact_cuda_20260514T105300Z/inflated_outputs_manifest.json",
@@ -742,6 +753,7 @@
             "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval_cpu/archive.zip --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cpu --keep-work-dir --work-dir /root/modal_auth_eval_cpu_work/eval_work --inflate-timeout 1800 --evaluate-timeout 5400 --expected-runtime-tree-sha256 2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
             "axis": "contest_cpu",
             "eval_device": "cpu",
+            "expected_runtime_tree_sha256": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
             "hardware": "Linux x86_64",
             "inflate_device": "cpu",
             "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/inflated_outputs_manifest.json",
@@ -762,6 +774,7 @@
             "auth_eval_command": "/workspace/pact/experiments/contest_auth_eval.py --archive /tmp/modal_auth_eval/archive.zip --inflate-sh /tmp/modal_auth_eval/submission_dir/inflate.sh --upstream-dir /workspace/pact/upstream --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --keep-work-dir --work-dir /root/modal_auth_eval_work/eval_work --inflate-timeout 1800 --evaluate-timeout 1800 --inflate-device auto --expected-runtime-tree-sha256 2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
             "axis": "contest_cuda",
             "eval_device": "cuda",
+            "expected_runtime_tree_sha256": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28",
             "hardware": "Tesla T4",
             "inflate_device": "auto",
             "inflated_outputs_manifest_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/inflated_outputs_manifest.json",
