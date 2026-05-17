@@ -32843,8 +32843,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/hardware_exploits_design_and_implementation_landed_20260517.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -32902,5 +32902,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T12:45:31Z"
+  "updated_at": "2026-05-17T12:48:56Z"
 }
