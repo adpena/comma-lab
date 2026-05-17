@@ -2438,6 +2438,102 @@ def test_l5_v2_tt5l_probe_action_advances_after_work_unit_materialized(
     ]
 
 
+def test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    _write_tt5l_archive_zip(archive_path, nonzero_side_info=True)
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
+    )
+    blocker_path = tmp_path / l5_v2.TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH
+    blocker_path.parent.mkdir(parents=True, exist_ok=True)
+    blocker_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_tt5l_materialized_provider_blocker_v1",
+                "provider": "modal",
+                "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+                "archive_sha256": archive_sha,
+                "pair_group_id": (
+                    "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+                ),
+                "resolved": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+    action = tt5l["next_non_pr106_l5_action"]
+    provider_blocker = action["provider_blocker_status"]
+
+    assert action["action_id"] == (
+        "resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider"
+    )
+    assert provider_blocker["active"] is True
+    assert provider_blocker["failure_class"] == (
+        "modal_workspace_billing_cycle_spend_limit_reached"
+    )
+    assert action["ready_for_operator_dispatch"] is False
+    assert action["ready_for_alternate_provider_planning"] is True
+    assert action["dispatch_attempted"] is True
+    assert (
+        "l5_v2_tt5l_modal_provider_blocker_active:"
+        "modal_workspace_billing_cycle_spend_limit_reached"
+        in tt5l["blockers"]
+    )
+
+
 def test_l5_v2_tt5l_materialized_work_unit_rejects_all_zero_sideinfo(
     tmp_path: Path,
 ) -> None:

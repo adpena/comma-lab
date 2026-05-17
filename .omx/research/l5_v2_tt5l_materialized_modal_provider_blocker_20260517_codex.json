@@ -1,0 +1,17 @@
+{
+  "archive_bytes": 38911,
+  "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
+  "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+  "attempted_at_utc": "2026-05-17T04:57:21Z",
+  "attempted_command_tool": "tools/dispatch_modal_paired_auth_eval.py",
+  "command_returncode": 1,
+  "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+  "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+  "promotion_eligible": false,
+  "provider": "modal",
+  "provider_error": "App creation failed: workspace billing cycle spend limit reached",
+  "resolved": false,
+  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8",
+  "schema": "l5_v2_tt5l_materialized_provider_blocker_v1",
+  "score_claim": false
+}

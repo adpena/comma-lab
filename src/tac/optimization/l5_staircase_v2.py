@@ -110,6 +110,9 @@ TT5L_PROBE_OBSERVATION_INTAKE_REPORT_PATH = (
 TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH = (
     ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json"
 )
+TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_tt5l_materialized_modal_provider_blocker_20260517_codex.json"
+)
 TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID = (
     "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
 )
@@ -3375,6 +3378,11 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
     if payload and payload.get("skip_axis_if_promotable_anchor_exists") is True:
         operator_plan_parts.append(" --skip-axis-if-promotable-anchor-exists")
     operator_plan_command = "".join(operator_plan_parts)
+    provider_blocker_status = _tt5l_materialized_modal_provider_blocker_status(
+        repo_root=repo_root,
+        archive_sha256=archive_sha256,
+        pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
+    )
 
     return {
         "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",
@@ -3397,11 +3405,86 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         "operator_plan_command_template": operator_plan_command,
         "operator_execute_command_template_after_review": operator_plan_command
         + " --execute",
+        "provider_blocker_status": provider_blocker_status,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
         "dispatch_attempted": False,
         "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def _tt5l_materialized_modal_provider_blocker_status(
+    *,
+    repo_root: Path,
+    archive_sha256: str,
+    pair_group_id: str,
+) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1",
+            "artifact_path": TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "active": False,
+            "provider": "",
+            "failure_class": "",
+            "resolved": False,
+            "blocker": "",
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            blockers.append("l5_v2_tt5l_modal_provider_blocker_not_object")
+    if payload and payload.get("schema") != "l5_v2_tt5l_materialized_provider_blocker_v1":
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_schema_mismatch")
+    provider = str(payload.get("provider") or "").strip() if payload else ""
+    failure_class = str(payload.get("failure_class") or "").strip() if payload else ""
+    payload_archive_sha = str(payload.get("archive_sha256") or "").strip() if payload else ""
+    payload_pair_group_id = str(payload.get("pair_group_id") or "").strip() if payload else ""
+    resolved = payload.get("resolved") is True if payload else False
+    if payload and provider != "modal":
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_provider_not_modal")
+    if payload and payload_archive_sha != archive_sha256:
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch")
+    if payload and payload_pair_group_id != pair_group_id:
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_pair_group_mismatch")
+    if payload and payload.get("score_claim") is not False:
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_score_claim_not_false")
+    if payload and payload.get("promotion_eligible") is not False:
+        blockers.append("l5_v2_tt5l_modal_provider_blocker_promotion_not_false")
+    active = (
+        bool(payload)
+        and not blockers
+        and not resolved
+        and failure_class == "modal_workspace_billing_cycle_spend_limit_reached"
+    )
+    blocker = (
+        "l5_v2_tt5l_modal_provider_blocker_active:"
+        "modal_workspace_billing_cycle_spend_limit_reached"
+        if active
+        else ""
+    )
+    return {
+        "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1",
+        "artifact_path": TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not blockers,
+        "active": active,
+        "provider": provider,
+        "failure_class": failure_class,
+        "resolved": resolved,
+        "blocker": blocker,
+        "blockers": list(dict.fromkeys(blockers + ([blocker] if blocker else []))),
     }
 
 
@@ -3486,6 +3569,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         )
         if sideinfo_effect_curve_valid:
             blockers.extend(str(blocker) for blocker in timing_smoke_status["blockers"])
+    provider_blocker_status = materialized_work_unit_status["provider_blocker_status"]
+    if provider_blocker_status["active"] is True:
+        blockers.extend(str(blocker) for blocker in provider_blocker_status["blockers"])
 
     if not dykstra_valid:
         next_action = {
@@ -3619,7 +3705,45 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     elif (
         not probe_valid
         and materialized_work_unit_status["artifact_valid"] is True
+        and materialized_work_unit_status["provider_blocker_status"]["active"] is True
     ):
+        next_action = {
+            "action_id": (
+                "resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider"
+            ),
+            "phase": "probe_disambiguator_paired_measurements",
+            "probe_status": "tt5l_work_unit_materialized_provider_blocked",
+            "materialized_work_unit_status": materialized_work_unit_status,
+            "provider_blocker_status": materialized_work_unit_status[
+                "provider_blocker_status"
+            ],
+            "operator_plan_command_template": materialized_work_unit_status[
+                "operator_plan_command_template"
+            ],
+            "operator_execute_command_template_after_review": materialized_work_unit_status[
+                "operator_execute_command_template_after_review"
+            ],
+            "execution_order": [
+                "resolve_modal_workspace_billing_cycle_spend_limit_or_select_alternate_provider",
+                "execute_canonical_paired_auth_eval_against_same_archive_and_runtime",
+                "harvest_both_axes_through_provider_specific_recovery",
+                "convert_returned_results_into_l5_v2_probe_observations",
+            ],
+            "score_lowering_unblocker": (
+                "TT5L has a byte-closed archive/runtime work unit, but the "
+                "Modal provider path is currently blocked before job spawn by "
+                "workspace billing limit. This is provider capacity, not a "
+                "method result."
+            ),
+            "ready_for_operator_dispatch": False,
+            "ready_for_provider_dispatch": False,
+            "ready_for_alternate_provider_planning": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": True,
+        }
+    elif not probe_valid and materialized_work_unit_status["artifact_valid"] is True:
         next_action = {
             "action_id": "review_and_execute_l5_v2_tt5l_materialized_paired_measurement",
             "phase": "probe_disambiguator_paired_measurements",
