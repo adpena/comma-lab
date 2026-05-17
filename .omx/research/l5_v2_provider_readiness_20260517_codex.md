@@ -1,13 +1,14 @@
 # Cloud provider readiness
 
-Generated: `2026-05-17T08:19:48Z`
+Generated: `2026-05-17T09:05:06Z`
 
 This is a read-only provider inventory. It is not a dispatch, score claim, or promotion artifact.
 
-Context: TT5L side-info effect-curve work units are byte-closed, but provider
-execution is still blocked. This inventory records the live provider surface
-after surfacing the 5-variant dispatch queue in
-`l5_v2_tt5l_sideinfo_dispatch_plan_visibility_20260517_codex.md`.
+Context: TT5L side-info effect-curve work units are byte-closed, the Lightning
+paired-axis dry-run plan is source-current, and architecture lock still refuses
+score/promotion authority. Provider execution remains blocked. This inventory
+records the live provider surface after refreshing
+`l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex`.
 
 Command:
 
@@ -32,3 +33,5 @@ Implication for L5 v2:
 - Lightning SDK exists, but quota/studio route/claim prerequisites are not
   cleared.
 - Kaggle is proxy-only and cannot promote or rank TT5L.
+- The next material TT5L action is provider unblock plus lane claims, not a
+  new source-custody review.
