@@ -32570,11 +32570,11 @@
       "id": "lane_deep_adversarial_review_substrate_design_meta_20260517",
       "name": "Deep adversarial review: META substrate design 4-of-4 pattern",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/deep_adversarial_review_substrate_design_meta_20260517.md (META-review memo + T4 escalation memo)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32597,8 +32597,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/deep_adversarial_review_substrate_design_meta_20260517.md + .omx/research/t4_symposium_substrate_design_class_shift_question_20260517.md + .omx/state/council_deliberation_posterior.jsonl anchor"
         },
         "deploy_runbook": {
           "status": false,
@@ -32615,5 +32615,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T11:53:52Z"
+  "updated_at": "2026-05-17T12:04:40Z"
 }
