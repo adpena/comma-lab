@@ -263,6 +263,7 @@ def _sideinfo_exact_eval_custody_blockers(
         require_auth_eval_command=True,
         require_log_path=True,
         require_devices=True,
+        require_artifact_sha256=True,
         require_inflated_outputs_manifest=True,
         require_raw_output_aggregate_sha256=True,
         artifact_base_dir=artifact_base_dir,

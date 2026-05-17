@@ -286,6 +286,7 @@ def _axis_evidence_blockers(
             require_auth_eval_command=True,
             require_log_path=True,
             require_devices=True,
+            require_artifact_sha256=True,
             require_inflated_outputs_manifest=True,
             require_raw_output_aggregate_sha256=True,
             artifact_base_dir=repo_root,
@@ -331,6 +332,8 @@ def _axis_evidence_blockers(
                 "l5_v2_probe_axis_artifact_path_outside_repo"
             ),
             "artifact_path_file_missing": "l5_v2_probe_axis_artifact_path_file_missing",
+            "artifact_sha_invalid": "l5_v2_probe_axis_artifact_sha_invalid",
+            "artifact_sha_mismatch": "l5_v2_probe_axis_artifact_sha_mismatch",
             "score_formula_mismatch": "l5_v2_probe_axis_score_formula_mismatch",
             "raw_output_aggregate_sha_invalid": (
                 "l5_v2_probe_axis_raw_output_aggregate_sha_invalid"

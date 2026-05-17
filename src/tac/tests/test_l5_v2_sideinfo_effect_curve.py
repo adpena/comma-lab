@@ -311,6 +311,33 @@ def test_sideinfo_effect_curve_rejects_expected_runtime_tree_mismatch(
     )
 
 
+def test_sideinfo_effect_curve_rejects_artifact_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    for cell in cells:
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained":
+            evidence = cell["evidence"]
+            assert isinstance(evidence, dict)
+            evidence["artifact_sha256"] = "d" * 64
+            break
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+    trained_cuda = next(
+        row
+        for row in payload["observed_cells"]
+        if row["axis"] == "contest_cuda" and row["variant"] == "trained"
+    )
+
+    assert payload["predicate_passed"] is False
+    assert trained_cuda["artifact_sha256"] == "d" * 64
+    assert "exact_eval_artifact_sha_mismatch" in trained_cuda["blockers"]
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_blocked:contest_cuda:trained"
+        in payload["contract_blockers"]
+    )
+
+
 def test_sideinfo_effect_curve_rejects_unpaired_variant_archive(
     tmp_path: Path,
 ) -> None:

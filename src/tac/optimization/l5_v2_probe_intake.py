@@ -532,6 +532,7 @@ def _axis_evidence_from_payload(
         "auth_eval_command": command,
         "log_path": _local_auth_eval_log_path(path, payload, repo_root=repo_root),
         "artifact_path": artifact_path,
+        "artifact_sha256": _sha256_file(path),
         "inflated_outputs_manifest_path": inflated_manifest_path,
         "inflated_outputs_manifest_sha256": _manifest_sha_for_payload(
             payload,
@@ -563,6 +564,7 @@ def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
         "auth_eval_command",
         "log_path",
         "artifact_path",
+        "artifact_sha256",
         "inflated_outputs_manifest_path",
         "inflated_outputs_manifest_sha256",
         "raw_output_aggregate_sha256",
@@ -587,6 +589,7 @@ def _axis_custody_blockers(
         require_auth_eval_command=True,
         require_log_path=True,
         require_devices=True,
+        require_artifact_sha256=True,
         require_inflated_outputs_manifest=True,
         require_raw_output_aggregate_sha256=True,
         artifact_base_dir=repo_root,

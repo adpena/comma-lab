@@ -32,13 +32,15 @@ def _axis_evidence(
     axis: str,
     *,
     repo_root: Path | None = None,
+    candidate_id: str = "candidate",
     score_delta: float = 0.0,
 ) -> dict[str, object]:
     archive_bytes = 1
     score = 25.0 * archive_bytes / 37_545_489
-    log_path = f"experiments/results/l5_v2_probe/{axis}.log"
-    artifact_path = f"experiments/results/l5_v2_probe/{axis}.json"
-    manifest_path = f"experiments/results/l5_v2_probe/{axis}_inflated_outputs_manifest.json"
+    stem = f"{candidate_id}_{axis}"
+    log_path = f"experiments/results/l5_v2_probe/{stem}.log"
+    artifact_path = f"experiments/results/l5_v2_probe/{stem}.json"
+    manifest_path = f"experiments/results/l5_v2_probe/{stem}_inflated_outputs_manifest.json"
     raw_output_aggregate_sha256 = "c" * 64
     manifest_sha256 = "d" * 64
     if repo_root is not None:
@@ -50,6 +52,7 @@ def _axis_evidence(
             f'{{"axis":"{axis}","score_delta":{score_delta}}}\n',
             encoding="utf-8",
         )
+        artifact_sha256 = _file_sha256(artifact_file)
         manifest_file = repo_root / manifest_path
         manifest_file.write_text(
             json.dumps(
@@ -75,6 +78,7 @@ def _axis_evidence(
         "auth_eval_command": f"contest_auth_eval --axis {axis}",
         "log_path": log_path,
         "artifact_path": artifact_path,
+        "artifact_sha256": artifact_sha256 if repo_root is not None else "",
         "inflated_outputs_manifest_path": manifest_path,
         "inflated_outputs_manifest_sha256": manifest_sha256,
         "raw_output_aggregate_sha256": raw_output_aggregate_sha256,
@@ -105,7 +109,12 @@ def _eligible(repo_root: Path, candidate_id: str, delta: float) -> L5V2ProbeObse
             "contest_cuda": "b" * 64,
         },
         axis_evidence=tuple(
-            _axis_evidence(axis, repo_root=repo_root, score_delta=delta)
+            _axis_evidence(
+                axis,
+                repo_root=repo_root,
+                candidate_id=candidate_id,
+                score_delta=delta,
+            )
             for axis in ("contest_cpu", "contest_cuda")
         ),
         sideinfo_consumed=True,
@@ -611,6 +620,34 @@ def test_l5_v2_probe_verifies_artifact_files_and_hashes(tmp_path: Path) -> None:
     )
     outside_verdict = evaluate_l5_v2_probe((outside_repo,), repo_root=tmp_path)
     assert "l5_v2_probe_artifact_path_outside_repo" in outside_verdict[
+        "evaluated_observations"
+    ][0]["blockers"]
+
+
+def test_l5_v2_probe_requires_axis_artifact_hash_binding(tmp_path: Path) -> None:
+    valid = _eligible(tmp_path, "time_traveler_l5_autonomy", -0.050)
+
+    missing_rows = [dict(row) for row in valid.axis_evidence]
+    next(row for row in missing_rows if row["axis"] == "contest_cuda").pop(
+        "artifact_sha256"
+    )
+    missing_verdict = evaluate_l5_v2_probe(
+        (dataclasses.replace(valid, axis_evidence=tuple(missing_rows)),),
+        repo_root=tmp_path,
+    )
+    assert "l5_v2_probe_axis_artifact_sha_invalid:contest_cuda" in missing_verdict[
+        "evaluated_observations"
+    ][0]["blockers"]
+
+    mismatched_rows = [dict(row) for row in valid.axis_evidence]
+    next(row for row in mismatched_rows if row["axis"] == "contest_cuda")[
+        "artifact_sha256"
+    ] = "d" * 64
+    mismatched_verdict = evaluate_l5_v2_probe(
+        (dataclasses.replace(valid, axis_evidence=tuple(mismatched_rows)),),
+        repo_root=tmp_path,
+    )
+    assert "l5_v2_probe_axis_artifact_sha_mismatch:contest_cuda" in mismatched_verdict[
         "evaluated_observations"
     ][0]["blockers"]
 

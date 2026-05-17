@@ -90,6 +90,7 @@ def _cell_artifacts(repo_root: Path, *, axis: str, variant: str) -> dict[str, st
     log.write_text("ok\n", encoding="utf-8")
     return {
         "artifact_path": str(artifact.relative_to(repo_root)),
+        "artifact_sha256": hashlib.sha256(artifact.read_bytes()).hexdigest(),
         "log_path": str(log.relative_to(repo_root)),
         "inflated_outputs_manifest_path": str(manifest.relative_to(repo_root)),
         "inflated_outputs_manifest_sha256": _write_manifest(
@@ -304,6 +305,48 @@ def test_l5_v2_schedule_rejects_custody_light_sideinfo_curve(tmp_path: Path) -> 
         "tt5l_sideinfo_effect_curve_cell_exact_eval_inflated_outputs_manifest_path_missing:"
         "contest_cpu:trained"
         in blockers
+    )
+
+
+def test_l5_v2_schedule_requires_sideinfo_cell_artifact_hash_binding(
+    tmp_path: Path,
+) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cuda" and row["variant"] == "trained":
+            row.pop("artifact_sha256")
+            break
+
+    missing = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
+    )
+
+    assert missing["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_artifact_sha_invalid:"
+        "contest_cuda:trained"
+        in missing["sideinfo_effect_curve_blockers"]
+    )
+
+    curve = _complete_sideinfo_effect_curve(tmp_path)
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cuda" and row["variant"] == "trained":
+            row["artifact_sha256"] = "d" * 64
+            break
+
+    mismatched = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
+    )
+
+    assert mismatched["sideinfo_effect_curve_valid"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_artifact_sha_mismatch:"
+        "contest_cuda:trained"
+        in mismatched["sideinfo_effect_curve_blockers"]
     )
 
 

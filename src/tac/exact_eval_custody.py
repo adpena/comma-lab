@@ -68,6 +68,7 @@ class ExactEvalEvidenceValidation:
     annotations: tuple[str, ...] = ()
     archive_sha256: str = ""
     runtime_tree_sha256: str = ""
+    artifact_sha256: str = ""
     score: float | None = None
     seg_dist: float | None = None
     pose_dist: float | None = None
@@ -538,6 +539,7 @@ def validate_exact_eval_evidence(
     require_auth_eval_command: bool = True,
     require_log_path: bool = True,
     require_devices: bool = False,
+    require_artifact_sha256: bool = False,
     require_inflated_outputs_manifest: bool = False,
     require_raw_output_aggregate_sha256: bool = False,
     annotation_prefix: str = "",
@@ -565,6 +567,9 @@ def validate_exact_eval_evidence(
 
     archive_sha = normalize_sha256(evidence.get("archive_sha256"))
     runtime_sha = normalize_sha256(evidence.get("runtime_tree_sha256"))
+    artifact_sha = normalize_sha256(
+        evidence.get("artifact_sha256") or evidence.get("exact_eval_artifact_sha256")
+    )
     expected_archive_sha = normalize_sha256(expected_archive_sha256)
     expected_runtime_sha = normalize_sha256(expected_runtime_tree_sha256)
 
@@ -645,6 +650,8 @@ def validate_exact_eval_evidence(
         blockers.append("log_path_missing")
     if require_artifact_path and not _clean_text(evidence.get("artifact_path")):
         blockers.append("artifact_path_missing")
+    if require_artifact_sha256 and not artifact_sha:
+        blockers.append("artifact_sha_invalid")
 
     raw_output_aggregate_sha = normalize_sha256(
         evidence.get("raw_output_aggregate_sha256")
@@ -690,6 +697,8 @@ def validate_exact_eval_evidence(
                 blockers.append("artifact_path_outside_base_dir")
             elif artifact_path is None or not artifact_path.is_file():
                 blockers.append("artifact_path_file_missing")
+            elif artifact_sha and _sha256_file(artifact_path) != artifact_sha:
+                blockers.append("artifact_sha_mismatch")
         if (
             require_inflated_outputs_manifest
             and "inflated_outputs_manifest_path_missing" not in blockers
@@ -732,6 +741,7 @@ def validate_exact_eval_evidence(
         annotations=tuple(annotations),
         archive_sha256=archive_sha,
         runtime_tree_sha256=runtime_sha,
+        artifact_sha256=artifact_sha,
         score=score,
         seg_dist=seg_dist,
         pose_dist=pose_dist,

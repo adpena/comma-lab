@@ -10,6 +10,7 @@ every cell?
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -62,6 +63,26 @@ def _runtime_content_tree_sha256(evidence: Mapping[str, Any]) -> str:
     return extract_observed_runtime_content_tree_sha256(evidence)
 
 
+def _artifact_sha256_for_evidence(evidence: Mapping[str, Any], *, repo_root: Path) -> str:
+    explicit = str(
+        evidence.get("artifact_sha256")
+        or evidence.get("exact_eval_artifact_sha256")
+        or ""
+    ).strip()
+    if explicit:
+        return explicit
+    artifact_path = str(evidence.get("artifact_path") or "").strip()
+    if not artifact_path:
+        return ""
+    candidate = Path(artifact_path)
+    resolved = candidate if candidate.is_absolute() else repo_root / candidate
+    try:
+        payload = resolved.read_bytes()
+    except OSError:
+        return ""
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _sideinfo_liveness_for_cell(
     cell: Mapping[str, Any],
     evidence: Mapping[str, Any],
@@ -103,13 +124,20 @@ def _normalize_cell(
         blockers.append(f"variant_unrecognized:{variant or '<missing>'}")
 
     validation = validate_exact_eval_evidence(
-        evidence,
+        {
+            **dict(evidence),
+            "artifact_sha256": _artifact_sha256_for_evidence(
+                evidence,
+                repo_root=repo_root,
+            ),
+        },
         expected_axis=axis if axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES else None,
         require_artifact_path=True,
         require_hardware=True,
         require_auth_eval_command=True,
         require_log_path=True,
         require_devices=True,
+        require_artifact_sha256=True,
         require_inflated_outputs_manifest=True,
         require_raw_output_aggregate_sha256=True,
         expected_runtime_tree_sha256=extract_expected_runtime_tree_sha256(evidence),
@@ -128,6 +156,7 @@ def _normalize_cell(
         "archive_sha256": validation.archive_sha256,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
         "expected_runtime_tree_sha256": extract_expected_runtime_tree_sha256(evidence),
+        "artifact_sha256": validation.artifact_sha256,
         "runtime_content_tree_sha256": _runtime_content_tree_sha256(evidence),
         "hardware": str(evidence.get("hardware") or ""),
         "inflate_device": str(evidence.get("inflate_device") or ""),

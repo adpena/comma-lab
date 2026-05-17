@@ -208,6 +208,59 @@ def test_validate_exact_eval_evidence_requires_full_frame_output_custody(
     assert "raw_output_aggregate_sha_invalid" in missing_verdict.blockers
 
 
+def test_validate_exact_eval_evidence_can_require_artifact_sha256(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_contest_evidence(tmp_path)
+    artifact_path = tmp_path / str(evidence["artifact_path"])
+    evidence["artifact_sha256"] = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+
+    verdict = validate_exact_eval_evidence(
+        evidence,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_artifact_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+
+    assert verdict.blockers == ()
+    assert verdict.artifact_sha256 == evidence["artifact_sha256"]
+
+    alias = dict(evidence)
+    alias["exact_eval_artifact_sha256"] = alias.pop("artifact_sha256")
+    alias_verdict = validate_exact_eval_evidence(
+        alias,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_artifact_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+    assert alias_verdict.blockers == ()
+    assert alias_verdict.artifact_sha256 == evidence["artifact_sha256"]
+
+    missing = dict(evidence)
+    missing.pop("artifact_sha256")
+    missing_verdict = validate_exact_eval_evidence(
+        missing,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_artifact_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+    assert "artifact_sha_invalid" in missing_verdict.blockers
+
+    mismatched = dict(evidence)
+    mismatched["artifact_sha256"] = "d" * 64
+    mismatch_verdict = validate_exact_eval_evidence(
+        mismatched,
+        expected_axis="contest_cuda",
+        require_artifact_path=True,
+        require_artifact_sha256=True,
+        artifact_base_dir=tmp_path,
+    )
+    assert "artifact_sha_mismatch" in mismatch_verdict.blockers
+
+
 def test_validate_exact_eval_evidence_rejects_manifest_aggregate_mismatch(
     tmp_path: Path,
 ) -> None:

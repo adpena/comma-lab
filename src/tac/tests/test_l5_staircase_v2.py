@@ -405,6 +405,7 @@ def _probe_observation_payload(
                 ),
                 "log_path": log_path,
                 "artifact_path": axis_artifact_path,
+                "artifact_sha256": _file_sha256(axis_artifact_file),
                 "inflated_outputs_manifest_path": manifest_path,
                 "inflated_outputs_manifest_sha256": _file_sha256(manifest_file),
                 "raw_output_aggregate_sha256": raw_output_aggregate_sha,
@@ -975,6 +976,7 @@ def _tt5l_sideinfo_cell_artifacts(
     log.write_text("ok\n", encoding="utf-8")
     return {
         "artifact_path": str(artifact.relative_to(repo_root)),
+        "artifact_sha256": _file_sha256(artifact),
         "log_path": str(log.relative_to(repo_root)),
         "inflated_outputs_manifest_path": str(manifest.relative_to(repo_root)),
         "inflated_outputs_manifest_sha256": _write_aggregate_manifest(

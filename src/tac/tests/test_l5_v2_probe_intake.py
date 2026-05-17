@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -289,6 +290,9 @@ def test_l5_v2_probe_intake_recovers_direct_auth_eval_provenance_and_local_log(
     intake = build_l5_v2_probe_observation_intake([artifact], repo_root=tmp_path)
 
     evidence = intake["source_records"][0]["axis_evidence"]
+    assert evidence["artifact_sha256"] == hashlib.sha256(
+        artifact.read_bytes()
+    ).hexdigest()
     assert evidence["auth_eval_command"] == (
         "experiments/contest_auth_eval.py --device cuda --inflate-device auto"
     )
