@@ -108,28 +108,6 @@ def _render_latest_md(result: PromotedResult) -> str:
     )
 
 
-def _render_current_focus_md(result: PromotedResult) -> str:
-    return (
-        f"# Current Focus — {result.promoted_at}\n\n"
-        "## Floor\n"
-        f"- **Official score**: {result.score:.2f}\n"
-        f"- **Variant**: {result.variant}\n"
-        f"- **Platform**: {result.platform}\n"
-        f"- **Epoch**: {result.epoch}\n"
-    )
-
-
-def _render_next_experiments_md(result: PromotedResult) -> str:
-    return (
-        "# next experiments\n\n"
-        f"## promoted floor: {result.score:.2f} ({result.variant})\n\n"
-        "## next steps\n\n"
-        "1. Preserve the promoted artifact and keep the canonical state synced from one record.\n"
-        "2. Evaluate live Modal h96 artifacts against the promoted floor.\n"
-        "3. Treat Kaggle as secondary until a deliberate tac-first retry is ready.\n"
-    )
-
-
 def _render_findings_md(result: PromotedResult) -> str:
     return (
         f"# Findings\n\n## {result.promoted_at[:10]} promoted floor\n\n"
@@ -236,8 +214,6 @@ def doctor_repo(repo_root: str | Path) -> DoctorReport:
         )
 
     surface_expectations = {
-        ".omx/state/current_focus.md": _render_current_focus_md(result),
-        ".omx/state/next_experiments.md": _render_next_experiments_md(result),
         ".omx/research/findings.md": _render_findings_md(result),
         ".ralph/run_log.md": _render_run_log_md(result),
     }
@@ -349,10 +325,6 @@ def sync_repo(repo_root: str | Path) -> SyncResult:
         changed.append(result.summary_path)
     if _atomic_write_text(root / "reports" / "latest.md", _render_latest_md(result)):
         changed.append("reports/latest.md")
-    if _atomic_write_text(root / ".omx" / "state" / "current_focus.md", _render_current_focus_md(result)):
-        changed.append(".omx/state/current_focus.md")
-    if _atomic_write_text(root / ".omx" / "state" / "next_experiments.md", _render_next_experiments_md(result)):
-        changed.append(".omx/state/next_experiments.md")
     if _atomic_write_text(root / ".omx" / "research" / "findings.md", _render_findings_md(result)):
         changed.append(".omx/research/findings.md")
     if _atomic_write_text(root / ".ralph" / "run_log.md", _render_run_log_md(result)):

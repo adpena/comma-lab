@@ -123,6 +123,13 @@ class StateSyncTests(unittest.TestCase):
     def test_sync_repo_repairs_projections_and_marks_stale_managed_session(self) -> None:
         from src.comma_lab import state_sync
 
+        current_focus_before = (
+            self.repo_root / ".omx" / "state" / "current_focus.md"
+        ).read_text()
+        next_experiments_before = (
+            self.repo_root / ".omx" / "state" / "next_experiments.md"
+        ).read_text()
+
         result = state_sync.sync_repo(self.repo_root)
 
         self.assertTrue(result.changed_paths)
@@ -139,6 +146,16 @@ class StateSyncTests(unittest.TestCase):
         )
         self.assertEqual(manifest["status"], "stale")
         self.assertIn("process/session not found", manifest["notes"])
+        self.assertEqual(
+            (self.repo_root / ".omx" / "state" / "current_focus.md").read_text(),
+            current_focus_before,
+        )
+        self.assertEqual(
+            (self.repo_root / ".omx" / "state" / "next_experiments.md").read_text(),
+            next_experiments_before,
+        )
+        self.assertNotIn(".omx/state/current_focus.md", result.changed_paths)
+        self.assertNotIn(".omx/state/next_experiments.md", result.changed_paths)
 
     def test_sync_repo_writes_promoted_ledgers(self) -> None:
         from src.comma_lab import state_sync
