@@ -32105,8 +32105,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/phase_1b_z6_lift_pr95_paradigm_landed_20260516.md"
         },
         "deploy_runbook": {
           "status": true,
@@ -32205,5 +32205,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T02:28:51Z"
+  "updated_at": "2026-05-17T02:29:12Z"
 }
