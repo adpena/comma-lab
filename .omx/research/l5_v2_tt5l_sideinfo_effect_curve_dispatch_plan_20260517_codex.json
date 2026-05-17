@@ -1,10 +1,6 @@
 {
   "adjudication_required": true,
   "blockers": [
-    "exact_dispatch_authority:contest_cpu:report_txt_missing",
-    "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-    "exact_dispatch_authority:contest_cuda:report_txt_missing",
-    "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
     "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
     "requires_dispatch_lane_claim_before_auth_eval",
     "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -12,18 +8,18 @@
   ],
   "classification": "byte_closed_dispatch_plan_no_score_claim; paired CPU/CUDA exact-eval cells still required before TT5L side-info usefulness claims",
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T14:45:54Z",
+  "generated_at_utc": "2026-05-17T15:14:50Z",
   "manifest_blockers": [],
   "measurement_id": "measure_tt5l_sideinfo_effect_curve",
   "operator_execute_required": true,
-  "plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972",
+  "plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_7f9dc3f41851ef3a",
   "planning_only": true,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
-  "ready_for_operator_dispatch": false,
+  "ready_for_operator_dispatch": true,
   "ready_for_provider_dispatch": false,
-  "ready_work_unit_count": 0,
+  "ready_work_unit_count": 5,
   "required_axes": [
     "contest_cpu",
     "contest_cuda"
@@ -40,7 +36,7 @@
   "score_claim_valid": false,
   "source_manifest_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
   "source_manifest_schema": "tt5l_sideinfo_variant_packets_v1",
-  "source_manifest_sha256": "80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459",
+  "source_manifest_sha256": "53520df3292bcf9a1f4dce23f4da0ea65f7e54de5d07b42ee80aee4b2a9966ec",
   "source_variant_report_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md",
   "tool": "tools/build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
   "work_unit_count": 5,
@@ -60,10 +56,6 @@
         "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102_cuda"
       },
       "blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
         "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -71,12 +63,7 @@
       ],
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-      ],
+      "dispatch_blockers": [],
       "dispatch_command": [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -114,18 +101,38 @@
       "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_zero --expected-archive-sha256 b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3 --run-id l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_zero --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=zero;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102;archive_sha=b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
       "exact_dispatch_authority": {
         "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive_manifest.json",
-        "authorized": false,
+        "authorized": true,
         "axis_verdicts": {
           "contest_cpu": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 34373,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 34373,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+                "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+                "candidate_archive_bytes": 34373,
+                "candidate_archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 34265,
+                    "compress_type": 8,
+                    "crc32": "5460da8a",
+                    "file_size": 34250,
+                    "name": "0.bin",
+                    "sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "zero"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
               "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
@@ -147,6 +154,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -450,10 +463,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -506,15 +519,35 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:zero:contest_cpu"
           },
           "contest_cuda": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 34373,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 34373,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+                "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+                "candidate_archive_bytes": 34373,
+                "candidate_archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 34265,
+                    "compress_type": 8,
+                    "crc32": "5460da8a",
+                    "file_size": 34250,
+                    "name": "0.bin",
+                    "sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "zero"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
               "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
@@ -536,6 +569,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -839,10 +878,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -895,12 +934,7 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:zero:contest_cuda"
           }
         },
-        "blockers": [
-          "exact_dispatch_authority:contest_cpu:report_txt_missing",
-          "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-          "exact_dispatch_authority:contest_cuda:report_txt_missing",
-          "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-        ],
+        "blockers": [],
         "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "required_axes": [
           "contest_cpu",
@@ -962,10 +996,6 @@
       "provider": "modal",
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_operator_review_and_execute_flag",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
@@ -973,7 +1003,7 @@
         "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": false,
+      "ready_for_operator_dispatch": true,
       "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
@@ -991,9 +1021,9 @@
       ],
       "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
       "runtime": {
-        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-        "runtime_file_count": 10,
-        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+        "runtime_file_count": 11,
+        "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
         "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
       },
       "score_claim": false,
@@ -1009,6 +1039,32 @@
       "variant_manifest_row": {
         "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
         "archive_bytes": 34373,
+        "archive_manifest": {
+          "archive_bytes": 34373,
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+          "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+          "candidate_archive_bytes": 34373,
+          "candidate_archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+          "dispatch_attempted": false,
+          "members": [
+            {
+              "compress_size": 34265,
+              "compress_type": 8,
+              "crc32": "5460da8a",
+              "file_size": 34250,
+              "name": "0.bin",
+              "sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce"
+            }
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+          "score_claim": false,
+          "variant": "zero"
+        },
+        "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive_manifest.json",
+        "archive_manifest_sha256": "ae733a159d4270836d1519aa12c5e3425679f9cdbc440949491539835a84ec9e",
         "archive_member": "0.bin",
         "archive_member_bytes": 34250,
         "archive_member_sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce",
@@ -1163,10 +1219,6 @@
         "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190_cuda"
       },
       "blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
         "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -1174,12 +1226,7 @@
       ],
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-      ],
+      "dispatch_blockers": [],
       "dispatch_command": [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -1217,18 +1264,38 @@
       "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_random_lsb --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=random_lsb;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190;archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
       "exact_dispatch_authority": {
         "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive_manifest.json",
-        "authorized": false,
+        "authorized": true,
         "axis_verdicts": {
           "contest_cpu": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 38681,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 38681,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+                "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+                "candidate_archive_bytes": 38681,
+                "candidate_archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 38573,
+                    "compress_type": 8,
+                    "crc32": "2ec61f5c",
+                    "file_size": 38558,
+                    "name": "0.bin",
+                    "sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "random_lsb"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
               "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
@@ -1250,6 +1317,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -1553,10 +1626,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -1609,15 +1682,35 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:random_lsb:contest_cpu"
           },
           "contest_cuda": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 38681,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 38681,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+                "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+                "candidate_archive_bytes": 38681,
+                "candidate_archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 38573,
+                    "compress_type": 8,
+                    "crc32": "2ec61f5c",
+                    "file_size": 38558,
+                    "name": "0.bin",
+                    "sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "random_lsb"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
               "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
@@ -1639,6 +1732,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -1942,10 +2041,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -1998,12 +2097,7 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:random_lsb:contest_cuda"
           }
         },
-        "blockers": [
-          "exact_dispatch_authority:contest_cpu:report_txt_missing",
-          "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-          "exact_dispatch_authority:contest_cuda:report_txt_missing",
-          "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-        ],
+        "blockers": [],
         "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "required_axes": [
           "contest_cpu",
@@ -2065,10 +2159,6 @@
       "provider": "modal",
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_operator_review_and_execute_flag",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
@@ -2076,7 +2166,7 @@
         "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": false,
+      "ready_for_operator_dispatch": true,
       "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
@@ -2094,9 +2184,9 @@
       ],
       "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
       "runtime": {
-        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-        "runtime_file_count": 10,
-        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+        "runtime_file_count": 11,
+        "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
         "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
       },
       "score_claim": false,
@@ -2112,6 +2202,32 @@
       "variant_manifest_row": {
         "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
         "archive_bytes": 38681,
+        "archive_manifest": {
+          "archive_bytes": 38681,
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+          "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+          "candidate_archive_bytes": 38681,
+          "candidate_archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+          "dispatch_attempted": false,
+          "members": [
+            {
+              "compress_size": 38573,
+              "compress_type": 8,
+              "crc32": "2ec61f5c",
+              "file_size": 38558,
+              "name": "0.bin",
+              "sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63"
+            }
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+          "score_claim": false,
+          "variant": "random_lsb"
+        },
+        "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive_manifest.json",
+        "archive_manifest_sha256": "0cf581d53bc4310a6dde57c4c1fba7d14c43e6f23b89b4be8f4dc676dd88ba07",
         "archive_member": "0.bin",
         "archive_member_bytes": 38558,
         "archive_member_sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63",
@@ -2264,10 +2380,6 @@
         "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4_cuda"
       },
       "blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
         "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -2275,12 +2387,7 @@
       ],
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-      ],
+      "dispatch_blockers": [],
       "dispatch_command": [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -2318,18 +2425,38 @@
       "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_shuffled --expected-archive-sha256 c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3 --run-id l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=shuffled;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4;archive_sha=c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
       "exact_dispatch_authority": {
         "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive_manifest.json",
-        "authorized": false,
+        "authorized": true,
         "axis_verdicts": {
           "contest_cpu": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 43284,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 43284,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+                "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+                "candidate_archive_bytes": 43284,
+                "candidate_archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 43176,
+                    "compress_type": 8,
+                    "crc32": "4c36d611",
+                    "file_size": 43161,
+                    "name": "0.bin",
+                    "sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "shuffled"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
               "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
@@ -2351,6 +2478,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -2654,10 +2787,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -2710,15 +2843,35 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:shuffled:contest_cpu"
           },
           "contest_cuda": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 43284,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 43284,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+                "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+                "candidate_archive_bytes": 43284,
+                "candidate_archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 43176,
+                    "compress_type": 8,
+                    "crc32": "4c36d611",
+                    "file_size": 43161,
+                    "name": "0.bin",
+                    "sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "shuffled"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
               "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
@@ -2740,6 +2893,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -3043,10 +3202,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -3099,12 +3258,7 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:shuffled:contest_cuda"
           }
         },
-        "blockers": [
-          "exact_dispatch_authority:contest_cpu:report_txt_missing",
-          "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-          "exact_dispatch_authority:contest_cuda:report_txt_missing",
-          "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-        ],
+        "blockers": [],
         "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "required_axes": [
           "contest_cpu",
@@ -3166,10 +3320,6 @@
       "provider": "modal",
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_operator_review_and_execute_flag",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
@@ -3177,7 +3327,7 @@
         "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": false,
+      "ready_for_operator_dispatch": true,
       "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
@@ -3195,9 +3345,9 @@
       ],
       "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
       "runtime": {
-        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-        "runtime_file_count": 10,
-        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+        "runtime_file_count": 11,
+        "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
         "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
       },
       "score_claim": false,
@@ -3213,6 +3363,32 @@
       "variant_manifest_row": {
         "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
         "archive_bytes": 43284,
+        "archive_manifest": {
+          "archive_bytes": 43284,
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+          "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+          "candidate_archive_bytes": 43284,
+          "candidate_archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+          "dispatch_attempted": false,
+          "members": [
+            {
+              "compress_size": 43176,
+              "compress_type": 8,
+              "crc32": "4c36d611",
+              "file_size": 43161,
+              "name": "0.bin",
+              "sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00"
+            }
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+          "score_claim": false,
+          "variant": "shuffled"
+        },
+        "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive_manifest.json",
+        "archive_manifest_sha256": "8d375acde35fea4db1c7e32b22871f056992e4b9983917b8b325b59b9d93a796",
         "archive_member": "0.bin",
         "archive_member_bytes": 43161,
         "archive_member_sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00",
@@ -3365,10 +3541,6 @@
         "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779_cuda"
       },
       "blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
         "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -3376,12 +3548,7 @@
       ],
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-      ],
+      "dispatch_blockers": [],
       "dispatch_command": [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -3419,18 +3586,38 @@
       "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_trained --expected-archive-sha256 f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a --run-id l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_trained --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=trained;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779;archive_sha=f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
       "exact_dispatch_authority": {
         "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive_manifest.json",
-        "authorized": false,
+        "authorized": true,
         "axis_verdicts": {
           "contest_cpu": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 43323,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 43323,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+                "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+                "candidate_archive_bytes": 43323,
+                "candidate_archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 43215,
+                    "compress_type": 8,
+                    "crc32": "546c624e",
+                    "file_size": 43200,
+                    "name": "0.bin",
+                    "sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "trained"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
               "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
@@ -3452,6 +3639,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -3755,10 +3948,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -3810,15 +4003,35 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:trained:contest_cpu"
           },
           "contest_cuda": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 43323,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 43323,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+                "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+                "candidate_archive_bytes": 43323,
+                "candidate_archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 43215,
+                    "compress_type": 8,
+                    "crc32": "546c624e",
+                    "file_size": 43200,
+                    "name": "0.bin",
+                    "sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "trained"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
               "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
@@ -3840,6 +4053,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -4143,10 +4362,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -4198,12 +4417,7 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:trained:contest_cuda"
           }
         },
-        "blockers": [
-          "exact_dispatch_authority:contest_cpu:report_txt_missing",
-          "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-          "exact_dispatch_authority:contest_cuda:report_txt_missing",
-          "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-        ],
+        "blockers": [],
         "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "required_axes": [
           "contest_cpu",
@@ -4265,10 +4479,6 @@
       "provider": "modal",
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_operator_review_and_execute_flag",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
@@ -4276,7 +4486,7 @@
         "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": false,
+      "ready_for_operator_dispatch": true,
       "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
@@ -4294,9 +4504,9 @@
       ],
       "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
       "runtime": {
-        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-        "runtime_file_count": 10,
-        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+        "runtime_file_count": 11,
+        "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
         "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
       },
       "score_claim": false,
@@ -4312,6 +4522,32 @@
       "variant_manifest_row": {
         "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
         "archive_bytes": 43323,
+        "archive_manifest": {
+          "archive_bytes": 43323,
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+          "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+          "candidate_archive_bytes": 43323,
+          "candidate_archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+          "dispatch_attempted": false,
+          "members": [
+            {
+              "compress_size": 43215,
+              "compress_type": 8,
+              "crc32": "546c624e",
+              "file_size": 43200,
+              "name": "0.bin",
+              "sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3"
+            }
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+          "score_claim": false,
+          "variant": "trained"
+        },
+        "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive_manifest.json",
+        "archive_manifest_sha256": "45764dc0ffc16c5236abf107a4f7da4b3ce534e872202f99b25fad14a70633e4",
         "archive_member": "0.bin",
         "archive_member_bytes": 43200,
         "archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
@@ -4464,10 +4700,6 @@
         "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998_cuda"
       },
       "blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
         "score_claim_forbidden_until_effect_curve_artifact_passes",
@@ -4475,12 +4707,7 @@
       ],
       "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
       "dispatch_attempted": false,
-      "dispatch_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-      ],
+      "dispatch_blockers": [],
       "dispatch_command": [
         ".venv/bin/python",
         "tools/dispatch_modal_paired_auth_eval.py",
@@ -4518,18 +4745,38 @@
       "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_ablated --expected-archive-sha256 ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39 --run-id l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_ablated --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=ablated;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998;archive_sha=ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
       "exact_dispatch_authority": {
         "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive_manifest.json",
-        "authorized": false,
+        "authorized": true,
         "axis_verdicts": {
           "contest_cpu": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 42419,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 42419,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+                "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+                "candidate_archive_bytes": 42419,
+                "candidate_archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 42311,
+                    "compress_type": 8,
+                    "crc32": "505ff189",
+                    "file_size": 42296,
+                    "name": "0.bin",
+                    "sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "ablated"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
               "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
@@ -4551,6 +4798,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -4854,10 +5107,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -4910,15 +5163,35 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:ablated:contest_cpu"
           },
           "contest_cuda": {
-            "authorized": false,
-            "blockers": [
-              "report_txt_missing",
-              "archive_manifest_missing"
-            ],
+            "authorized": true,
+            "blockers": [],
             "contest_exact_eval_target": true,
             "facts": {
               "archive_bytes": 42419,
-              "archive_manifest": null,
+              "archive_manifest": {
+                "archive_bytes": 42419,
+                "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+                "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+                "candidate_archive_bytes": 42419,
+                "candidate_archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+                "dispatch_attempted": false,
+                "members": [
+                  {
+                    "compress_size": 42311,
+                    "compress_type": 8,
+                    "crc32": "505ff189",
+                    "file_size": 42296,
+                    "name": "0.bin",
+                    "sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea"
+                  }
+                ],
+                "promotion_eligible": false,
+                "rank_or_kill_eligible": false,
+                "ready_for_exact_eval_dispatch": false,
+                "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+                "score_claim": false,
+                "variant": "ablated"
+              },
               "archive_manifest_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive_manifest.json",
               "archive_path": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
               "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
@@ -4940,6 +5213,12 @@
                     "relative_path": "inflate.sh",
                     "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
                     "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+                  },
+                  {
+                    "bytes": 2787,
+                    "relative_path": "report.txt",
+                    "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+                    "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
                   },
                   {
                     "bytes": 0,
@@ -5243,10 +5522,10 @@
                   "tac_root_relative_path": "src/tac",
                   "unresolved_modules": []
                 },
-                "runtime_content_tree_sha256": "632f4cc6451287e4e9a89f43756ad7dab4e0777ef987cc01a6aba31f4cd61bce",
-                "runtime_file_count": 10,
+                "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+                "runtime_file_count": 11,
                 "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-                "runtime_tree_sha256": "f786e822cbca0dc8c5ff2785f50d31c3c4a60628067f4fa51a52254b9779cd97",
+                "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
                 "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
                 "upstream_evaluate_py": {
                   "bytes": 6005,
@@ -5299,12 +5578,7 @@
             "source": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan:ablated:contest_cuda"
           }
         },
-        "blockers": [
-          "exact_dispatch_authority:contest_cpu:report_txt_missing",
-          "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-          "exact_dispatch_authority:contest_cuda:report_txt_missing",
-          "exact_dispatch_authority:contest_cuda:archive_manifest_missing"
-        ],
+        "blockers": [],
         "dispatch_claims_path": ".omx/state/active_lane_dispatch_claims.md",
         "required_axes": [
           "contest_cpu",
@@ -5366,10 +5640,6 @@
       "provider": "modal",
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
-        "exact_dispatch_authority:contest_cpu:report_txt_missing",
-        "exact_dispatch_authority:contest_cpu:archive_manifest_missing",
-        "exact_dispatch_authority:contest_cuda:report_txt_missing",
-        "exact_dispatch_authority:contest_cuda:archive_manifest_missing",
         "requires_operator_review_and_execute_flag",
         "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
         "requires_dispatch_lane_claim_before_auth_eval",
@@ -5377,7 +5647,7 @@
         "requires_paired_cpu_cuda_exact_eval_before_score_claim"
       ],
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": false,
+      "ready_for_operator_dispatch": true,
       "ready_for_provider_dispatch": false,
       "required_axes": [
         "contest_cpu",
@@ -5395,9 +5665,9 @@
       ],
       "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
       "runtime": {
-        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-        "runtime_file_count": 10,
-        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+        "runtime_file_count": 11,
+        "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
         "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
       },
       "score_claim": false,
@@ -5413,6 +5683,32 @@
       "variant_manifest_row": {
         "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
         "archive_bytes": 42419,
+        "archive_manifest": {
+          "archive_bytes": 42419,
+          "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+          "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+          "candidate_archive_bytes": 42419,
+          "candidate_archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+          "dispatch_attempted": false,
+          "members": [
+            {
+              "compress_size": 42311,
+              "compress_type": 8,
+              "crc32": "505ff189",
+              "file_size": 42296,
+              "name": "0.bin",
+              "sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea"
+            }
+          ],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+          "score_claim": false,
+          "variant": "ablated"
+        },
+        "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive_manifest.json",
+        "archive_manifest_sha256": "dffd322cebc3eb77170dbf289077fa36951798315f71ca5093ed06a38620a918",
         "archive_member": "0.bin",
         "archive_member_bytes": 42296,
         "archive_member_sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea",

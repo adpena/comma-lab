@@ -123,6 +123,18 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
         archive_path = tmp_path / row["archive_path"]
         assert archive_path.exists()
         assert row["archive_sha256"] == _sha_file(archive_path)
+        archive_manifest_path = tmp_path / row["archive_manifest_path"]
+        assert archive_manifest_path.is_file()
+        assert row["archive_manifest_sha256"] == _sha_file(archive_manifest_path)
+        archive_manifest = json.loads(archive_manifest_path.read_text(encoding="utf-8"))
+        assert archive_manifest["schema"] == "tt5l_sideinfo_variant_archive_manifest_v1"
+        assert archive_manifest["archive_sha256"] == row["archive_sha256"]
+        assert archive_manifest["candidate_archive_sha256"] == row["archive_sha256"]
+        assert archive_manifest["archive_bytes"] == row["archive_bytes"]
+        assert archive_manifest["candidate_archive_bytes"] == row["archive_bytes"]
+        assert archive_manifest["members"][0]["name"] == "0.bin"
+        assert archive_manifest["score_claim"] is False
+        assert archive_manifest["promotion_eligible"] is False
         assert row["score_claim"] is False
         assert row["rank_or_kill_eligible"] is False
         assert row["dispatch_attempted"] is False
@@ -179,6 +191,42 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
     assert rows["random_lsb"]["archive_member_sha_changed_from_source"] is True
     assert rows["random_lsb"]["sideinfo_section_sha_changed_from_source"] is True
     assert rows["ablated"]["sideinfo_liveness"]["nonzero_values"] == 2
+
+
+def test_build_tt5l_sideinfo_variant_packets_materializes_runtime_report(
+    tmp_path: Path,
+) -> None:
+    source_sideinfo = np.zeros((TT5L_CONTEST_NUM_PAIRS, 45), dtype=np.int8)
+    source_sideinfo[:, 0] = 1
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_tt5l_archive_zip(source_archive, source_sideinfo)
+    runtime = tmp_path / "submission_dir"
+    runtime.mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    inflate_sh.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    inflate_sh.chmod(0o755)
+
+    manifest = build_tt5l_sideinfo_variant_packets(
+        source_archive=source_archive,
+        output_root=tmp_path / "variants",
+        repo_root=tmp_path,
+        submission_dir=runtime,
+    )
+
+    report_path = tmp_path / manifest["runtime"]["report_path"]
+    assert report_path.is_file()
+    report = report_path.read_text(encoding="utf-8")
+    assert "score_claim: false" in report
+    assert "paired contest CPU/CUDA exact-eval cells required" in report
+    assert "variant=trained" in report
+    assert "archive_manifest_path=" in report
+    assert manifest["runtime"]["available"] is True
+    runtime_files = {
+        row["relative_path"]
+        for row in manifest["runtime"]["manifest"]["files"]
+    }
+    assert "inflate.sh" in runtime_files
+    assert "report.txt" in runtime_files
 
 
 def test_build_tt5l_sideinfo_variant_packets_blocks_noop_variant_bytes(

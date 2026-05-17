@@ -79,6 +79,14 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _write_json(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _repo_relative(path: Path, repo_root: Path) -> str:
     try:
         return str(path.resolve().relative_to(repo_root.resolve()))
@@ -135,6 +143,100 @@ def _write_archive_zip(
         kwargs["compresslevel"] = 9
     with zipfile.ZipFile(path, "w", **kwargs) as zf:
         zf.writestr(info, member_bytes)
+
+
+def _archive_member_rows(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with zipfile.ZipFile(path, "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            data = zf.read(info.filename)
+            rows.append(
+                {
+                    "name": info.filename,
+                    "file_size": int(info.file_size),
+                    "compress_size": int(info.compress_size),
+                    "compress_type": int(info.compress_type),
+                    "crc32": f"{int(info.CRC):08x}",
+                    "sha256": _sha256_bytes(data),
+                }
+            )
+    return rows
+
+
+def _write_variant_archive_manifest(
+    *,
+    archive_path: Path,
+    repo_root: Path,
+    variant: str,
+) -> tuple[Path, dict[str, Any]]:
+    archive_sha = _sha256_file(archive_path)
+    payload = {
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "variant": variant,
+        "archive_path": _repo_relative(archive_path, repo_root),
+        "archive_sha256": archive_sha,
+        "candidate_archive_sha256": archive_sha,
+        "archive_bytes": archive_path.stat().st_size,
+        "candidate_archive_bytes": archive_path.stat().st_size,
+        "members": _archive_member_rows(archive_path),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "dispatch_attempted": False,
+    }
+    manifest_path = archive_path.parent / "archive_manifest.json"
+    _write_json(manifest_path, payload)
+    return manifest_path, payload
+
+
+def _write_runtime_report(
+    *,
+    submission_dir: str | Path | None,
+    repo_root: Path,
+    source_archive_path: Path,
+    source_archive_sha256: str,
+    source_archive_bytes: int,
+    source_archive_member: str,
+    variant_rows: list[Mapping[str, Any]],
+) -> str:
+    if submission_dir is None:
+        return ""
+    runtime_dir = Path(submission_dir)
+    if not runtime_dir.is_absolute():
+        runtime_dir = repo_root / runtime_dir
+    if not runtime_dir.is_dir():
+        return ""
+    report_path = runtime_dir / "report.txt"
+    lines = [
+        "L5 v2 TT5L side-info effect-curve runtime custody",
+        "",
+        "score_claim: false",
+        "promotion_eligible: false",
+        "ready_for_exact_eval_dispatch: false",
+        "dispatch_attempted: false",
+        "classification: runtime custody report only; paired contest CPU/CUDA exact-eval cells required before score claims",
+        "",
+        f"source_archive_path: {_repo_relative(source_archive_path, repo_root)}",
+        f"source_archive_sha256: {source_archive_sha256}",
+        f"source_archive_bytes: {source_archive_bytes}",
+        f"source_archive_member: {source_archive_member}",
+        "",
+        "variant_archives:",
+    ]
+    for row in variant_rows:
+        lines.append(
+            "- "
+            f"variant={row.get('variant')} "
+            f"archive_path={row.get('archive_path')} "
+            f"archive_sha256={row.get('archive_sha256')} "
+            f"archive_bytes={row.get('archive_bytes')} "
+            f"archive_manifest_path={row.get('archive_manifest_path')}"
+        )
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return _repo_relative(report_path, repo_root)
 
 
 def _replace_sideinfo_blob(
@@ -405,6 +507,11 @@ def build_tt5l_sideinfo_variant_packets(
         archive_bytes = archive_path.stat().st_size
         archive_sha = _sha256_file(archive_path)
         archive_member_sha = _sha256_bytes(variant_blob)
+        archive_manifest_path, archive_manifest = _write_variant_archive_manifest(
+            archive_path=archive_path,
+            repo_root=root,
+            variant=variant,
+        )
         sideinfo_section_sha = str(side_section["sha256"])
         sideinfo_liveness = side_info_liveness_stats(sideinfo)
         same_as_zero = bool(np.array_equal(sideinfo, zero_sideinfo))
@@ -426,9 +533,12 @@ def build_tt5l_sideinfo_variant_packets(
             "archive_path": _repo_relative(archive_path, root),
             "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
+            "archive_manifest_path": _repo_relative(archive_manifest_path, root),
+            "archive_manifest_sha256": _sha256_file(archive_manifest_path),
             "archive_member": member_info.filename,
             "archive_member_sha256": archive_member_sha,
             "archive_member_bytes": len(variant_blob),
+            "archive_manifest": archive_manifest,
             "source_archive_sha256": source_archive_sha,
             "source_archive_member_sha256": source_archive_member_sha,
             "source_sideinfo_section_sha256": source_sideinfo_section_sha,
@@ -507,10 +617,21 @@ def build_tt5l_sideinfo_variant_packets(
             "tt5l_source_num_pairs_not_full_contest:"
             f"{int(parsed.num_pairs)}_expected_{TT5L_CONTEST_NUM_PAIRS}"
         )
+    runtime_report_path = _write_runtime_report(
+        submission_dir=submission_dir,
+        repo_root=root,
+        source_archive_path=source_path,
+        source_archive_sha256=source_archive_sha,
+        source_archive_bytes=source_path.stat().st_size,
+        source_archive_member=member_info.filename,
+        variant_rows=variant_rows,
+    )
     runtime = _runtime_custody(
         submission_dir=submission_dir,
         repo_root=root,
     )
+    if runtime_report_path:
+        runtime["report_path"] = runtime_report_path
     manifest_blockers.extend(str(item) for item in runtime.get("blockers", []))
 
     return {

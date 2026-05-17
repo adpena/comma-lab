@@ -18,7 +18,7 @@
     ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md"
   ],
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T05:28:00Z",
+  "generated_at_utc": "2026-05-17T15:14:47Z",
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
@@ -46,6 +46,12 @@
           "relative_path": "inflate.sh",
           "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/inflate.sh",
           "sha256": "a2742764dc51d1fa84dc9233a10a2bcf9a6fd85e4fe775c6f8ecc9db5dbe8046"
+        },
+        {
+          "bytes": 2787,
+          "relative_path": "report.txt",
+          "repo_relative_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+          "sha256": "a39bafeb144166a72d026e44e1ac1ec1e2b1254ccbc4e1304f2a2277fa790724"
         },
         {
           "bytes": 0,
@@ -161,10 +167,10 @@
             "sha256": "9f75e30439a335c4ebd33fe094964c12bd512e4795b522bfa936f181d5d66bca"
           },
           {
-            "bytes": 20266,
+            "bytes": 27614,
             "module": "tac.exact_eval_custody",
             "relative_path": "src/tac/exact_eval_custody.py",
-            "sha256": "5f05cc7f6219722fce159bf426e2892bb08e16b56e19058014db40c76f56a794"
+            "sha256": "3c16f7c1c6e2b52566fd6fe6655318a7fa5c62228c6447a9d2c65399c1d7863b"
           },
           {
             "bytes": 56197,
@@ -191,10 +197,10 @@
             "sha256": "350e63186767601a75b39c61598b11f188e4f11be5482f1a19d949db367dea64"
           },
           {
-            "bytes": 24483,
+            "bytes": 25991,
             "module": "tac.optimization.l5_v2_probe_disambiguator",
             "relative_path": "src/tac/optimization/l5_v2_probe_disambiguator.py",
-            "sha256": "b39c1a26f6fb170532a1c42edb4ee90314bad88360090694c447d7e54f64c880"
+            "sha256": "95683b71c103aaf50aa31fa9653818885d9268b14bed702c6d7e3ac8f0a15dfb"
           },
           {
             "bytes": 13962,
@@ -349,10 +355,10 @@
         "tac_root_relative_path": "src/tac",
         "unresolved_modules": []
       },
-      "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-      "runtime_file_count": 10,
+      "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+      "runtime_file_count": 11,
       "runtime_root": "/Users/adpena/Projects/pact/experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
-      "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+      "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
       "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
       "upstream_evaluate_py": {
         "bytes": 6005,
@@ -360,9 +366,10 @@
         "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
       }
     },
-    "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
-    "runtime_file_count": 10,
-    "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+    "report_path": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir/report.txt",
+    "runtime_content_tree_sha256": "81d7e86d3804f42b51d70a9247768685a19d3948bf746bef3fbb089fb096d88b",
+    "runtime_file_count": 11,
+    "runtime_tree_sha256": "4d7d6aeb733e3cb08307a2a9abe9fe8b4d164d33218f3967108324f9f29b0cf7",
     "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
   },
   "schema": "tt5l_sideinfo_variant_packets_v1",
@@ -475,6 +482,32 @@
     {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
       "archive_bytes": 34373,
+      "archive_manifest": {
+        "archive_bytes": 34373,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "candidate_archive_bytes": 34373,
+        "candidate_archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "dispatch_attempted": false,
+        "members": [
+          {
+            "compress_size": 34265,
+            "compress_type": 8,
+            "crc32": "5460da8a",
+            "file_size": 34250,
+            "name": "0.bin",
+            "sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce"
+          }
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "score_claim": false,
+        "variant": "zero"
+      },
+      "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive_manifest.json",
+      "archive_manifest_sha256": "ae733a159d4270836d1519aa12c5e3425679f9cdbc440949491539835a84ec9e",
       "archive_member": "0.bin",
       "archive_member_bytes": 34250,
       "archive_member_sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce",
@@ -615,6 +648,32 @@
     {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
       "archive_bytes": 38681,
+      "archive_manifest": {
+        "archive_bytes": 38681,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "candidate_archive_bytes": 38681,
+        "candidate_archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "dispatch_attempted": false,
+        "members": [
+          {
+            "compress_size": 38573,
+            "compress_type": 8,
+            "crc32": "2ec61f5c",
+            "file_size": 38558,
+            "name": "0.bin",
+            "sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63"
+          }
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "score_claim": false,
+        "variant": "random_lsb"
+      },
+      "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive_manifest.json",
+      "archive_manifest_sha256": "0cf581d53bc4310a6dde57c4c1fba7d14c43e6f23b89b4be8f4dc676dd88ba07",
       "archive_member": "0.bin",
       "archive_member_bytes": 38558,
       "archive_member_sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63",
@@ -753,6 +812,32 @@
     {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
       "archive_bytes": 43284,
+      "archive_manifest": {
+        "archive_bytes": 43284,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "candidate_archive_bytes": 43284,
+        "candidate_archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "dispatch_attempted": false,
+        "members": [
+          {
+            "compress_size": 43176,
+            "compress_type": 8,
+            "crc32": "4c36d611",
+            "file_size": 43161,
+            "name": "0.bin",
+            "sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00"
+          }
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "score_claim": false,
+        "variant": "shuffled"
+      },
+      "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive_manifest.json",
+      "archive_manifest_sha256": "8d375acde35fea4db1c7e32b22871f056992e4b9983917b8b325b59b9d93a796",
       "archive_member": "0.bin",
       "archive_member_bytes": 43161,
       "archive_member_sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00",
@@ -891,6 +976,32 @@
     {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
       "archive_bytes": 43323,
+      "archive_manifest": {
+        "archive_bytes": 43323,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "candidate_archive_bytes": 43323,
+        "candidate_archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "dispatch_attempted": false,
+        "members": [
+          {
+            "compress_size": 43215,
+            "compress_type": 8,
+            "crc32": "546c624e",
+            "file_size": 43200,
+            "name": "0.bin",
+            "sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3"
+          }
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "score_claim": false,
+        "variant": "trained"
+      },
+      "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive_manifest.json",
+      "archive_manifest_sha256": "45764dc0ffc16c5236abf107a4f7da4b3ce534e872202f99b25fad14a70633e4",
       "archive_member": "0.bin",
       "archive_member_bytes": 43200,
       "archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
@@ -1029,6 +1140,32 @@
     {
       "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
       "archive_bytes": 42419,
+      "archive_manifest": {
+        "archive_bytes": 42419,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "candidate_archive_bytes": 42419,
+        "candidate_archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "dispatch_attempted": false,
+        "members": [
+          {
+            "compress_size": 42311,
+            "compress_type": 8,
+            "crc32": "505ff189",
+            "file_size": 42296,
+            "name": "0.bin",
+            "sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea"
+          }
+        ],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "tt5l_sideinfo_variant_archive_manifest_v1",
+        "score_claim": false,
+        "variant": "ablated"
+      },
+      "archive_manifest_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive_manifest.json",
+      "archive_manifest_sha256": "dffd322cebc3eb77170dbf289077fa36951798315f71ca5093ed06a38620a918",
       "archive_member": "0.bin",
       "archive_member_bytes": 42296,
       "archive_member_sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea",

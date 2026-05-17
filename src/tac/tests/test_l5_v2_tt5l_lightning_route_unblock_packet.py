@@ -255,6 +255,23 @@ def test_tt5l_route_unblock_packet_fails_closed_on_source_relevant_diff(
     assert packet["ready_for_provider_dispatch"] is False
 
 
+def test_tt5l_route_unblock_packet_fails_closed_on_dirty_source_relevant_diff(
+    tmp_path: Path,
+) -> None:
+    packet = _build(
+        tmp_path,
+        current_head_commit="a" * 40,
+        source_relevant_diff_paths=("src/tac/optimization/tt5l_sideinfo_variant_packets.py",),
+    )
+
+    plan = packet["source_artifacts"]["sideinfo_lightning_paired_axis_plan"]
+    assert plan["source_commit_matches_current_head"] is True
+    assert plan["source_relevant_paths_match_current_head"] is False
+    assert "paired_axis_plan:source_relevant_paths_changed" in packet["blockers"]
+    assert packet["score_claim"] is False
+    assert packet["ready_for_provider_dispatch"] is False
+
+
 def test_tt5l_route_unblock_packet_records_missing_artifact_without_authority(
     tmp_path: Path,
 ) -> None:

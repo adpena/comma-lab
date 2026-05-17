@@ -211,9 +211,9 @@ def _source_relevant_paths_match(
 ) -> bool:
     if not source_commit:
         return False
-    if source_commit == current_head_commit:
-        return True
-    return not list(source_relevant_diff_paths)
+    if list(source_relevant_diff_paths):
+        return False
+    return True
 
 
 def build_l5_v2_tt5l_lightning_route_unblock_packet(

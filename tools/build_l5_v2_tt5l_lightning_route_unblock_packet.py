@@ -96,17 +96,6 @@ def _source_relevant_diff_paths(
     current_head_commit: str,
     extra_source_paths: tuple[str, ...] = (),
 ) -> list[str]:
-    if not source_commit or not current_head_commit or source_commit == current_head_commit:
-        return []
-    proc = subprocess.run(
-        ["git", "diff", "--name-only", source_commit, current_head_commit],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if proc.returncode != 0:
-        return ["<git-diff-failed>"]
     source_paths = {
         path
         for path in (
@@ -115,10 +104,37 @@ def _source_relevant_diff_paths(
         )
         if path
     }
+    raw_paths: list[str] = []
+    if source_commit and current_head_commit and source_commit != current_head_commit:
+        proc = subprocess.run(
+            ["git", "diff", "--name-only", source_commit, current_head_commit],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode != 0:
+            return ["<git-diff-failed>"]
+        raw_paths.extend(line.strip() for line in proc.stdout.splitlines())
+
+    for command in (
+        ["git", "diff", "--name-only"],
+        ["git", "diff", "--name-only", "--cached"],
+    ):
+        proc = subprocess.run(
+            command,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode != 0:
+            return ["<git-diff-failed>"]
+        raw_paths.extend(line.strip() for line in proc.stdout.splitlines())
+
     out: list[str] = []
-    for line in proc.stdout.splitlines():
-        path = line.strip()
-        if path and path in source_paths:
+    for path in raw_paths:
+        if path and path in source_paths and path not in out:
             out.append(path)
     return out
 
