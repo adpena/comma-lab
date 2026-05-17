@@ -2080,8 +2080,143 @@ def write_matrix_json(matrix: CompositionMatrix, path: str) -> None:
         json.dump(payload, f, indent=2, sort_keys=True)
 
 
+# ── Catalog #322 phantom-provenance revert helper ────────────────────────
+#
+# Per operator NON-NEGOTIABLE 2026-05-17 ("We need to fix all and redo") +
+# Option B falsifier (`.omx/state/wyner_ziv_deliverability/option_b_archive
+# _member_sweep_20260517T221034.json`) + Catalog #321 STRICT gate landed by
+# Option C (`feedback_fix_pre_entropy_prober_phantom_score_plus_catalog_321
+# _strict_gate_landed_20260517.md`): the 3 candidates `pr101_state_dict` /
+# `pr106_state_dict` / `posenet_class_sensitivity` were REJECTED_RESEARCH_
+# SIDECAR — their bytes are research artifacts (.pt state dicts under
+# `.omx/tmp/`, not contest archive.zip members).
+#
+# Any α value derived from these candidates is phantom-provenance and must
+# NOT feed `tools/cathedral_autopilot_autonomous_loop.py::adjust_predicted_
+# delta_for_composition_alpha_v2` (the SUPER_ADDITIVE / ADDITIVE / SUB-
+# ADDITIVE / SATURATING cascade). The pairwise_alpha_*.json files written
+# by sister #823's Q6-OP3 probe carry phantom-provenance pair keys; this
+# helper provides the canonical revert path for ANY downstream consumer
+# (canonical_substrate_inventory rows + substrate_composition_matrix.json
+# entries) that may inherit them.
+
+# The canonical phantom-provenance candidate set (Catalog #321 anchor).
+PHANTOM_PROVENANCE_CANDIDATE_TOKENS: frozenset[str] = frozenset({
+    "pr101_state_dict",
+    "pr106_state_dict",
+    "posenet_class_sensitivity",
+})
+
+
+def _row_cites_phantom_provenance(row: SubstrateRow) -> bool:
+    """Return True if a SubstrateRow's identity/literature fields cite a
+    phantom-provenance candidate per Catalog #321.
+
+    Scans substrate_id + name + lane_id + landing_memo + literature_anchor
+    + source_supports for any phantom token. Case-insensitive.
+    """
+    haystack = " ".join([
+        row.substrate_id or "",
+        row.name or "",
+        row.lane_id or "",
+        row.landing_memo or "",
+        row.literature_anchor or "",
+        row.source_supports or "",
+    ]).lower()
+    return any(tok in haystack for tok in PHANTOM_PROVENANCE_CANDIDATE_TOKENS)
+
+
+def revert_phantom_source_rows(
+    inventory: list[SubstrateRow] | None = None,
+    *,
+    matrix_path: Path | str | None = None,
+) -> dict[str, Any]:
+    """Audit canonical_substrate_inventory + substrate_composition_matrix.json
+    for phantom-provenance rows per Catalog #321 / #322 and return the
+    revert manifest.
+
+    Per CLAUDE.md "Forbidden premature KILL" + "KILL/FALSIFIED memory
+    verdicts" + Catalog #321 sister discipline: this helper REPORTS the
+    set of phantom-provenance rows + REMOVES them from the in-memory
+    inventory list (mutating it in place if provided). It does NOT
+    persist a revert to disk for the canonical inventory (the inventory
+    is source-coded in this module, not a JSON file).
+
+    For the substrate_composition_matrix.json file: if a phantom pair key
+    is detected, this helper emits a structured advisory dict but does
+    NOT mutate the file (callers route through the canonical
+    fcntl-locked write surface via the autopilot loop).
+
+    Returns
+    -------
+    dict
+        ``{
+            "inventory_phantom_rows": [substrate_id, ...],
+            "inventory_phantom_count": int,
+            "matrix_phantom_pair_keys": [pair_key, ...],
+            "matrix_phantom_count": int,
+            "catalog_321_compliant": bool,
+            "advisory": str,
+        }``
+    """
+    inv = inventory if inventory is not None else canonical_substrate_inventory()
+    inv_phantom: list[str] = []
+    survivors: list[SubstrateRow] = []
+    for row in inv:
+        if _row_cites_phantom_provenance(row):
+            inv_phantom.append(row.substrate_id)
+        else:
+            survivors.append(row)
+    if inventory is not None and inv_phantom:
+        # Mutate in place when caller passed an inventory list.
+        inventory.clear()
+        inventory.extend(survivors)
+
+    matrix_phantom: list[str] = []
+    p = Path(matrix_path) if matrix_path is not None else None
+    if p is None:
+        # Best-effort default location — sister Catalog #245 / autopilot loop convention.
+        p = Path(".omx/state/substrate_composition_matrix.json")
+    if p.is_file():
+        try:
+            payload = json.loads(p.read_text(encoding="utf-8"))
+            entries = payload.get("entries", {}) if isinstance(payload, dict) else {}
+            if isinstance(entries, dict):
+                for pair_key in entries.keys():
+                    key_lower = str(pair_key).lower()
+                    if any(tok in key_lower for tok in PHANTOM_PROVENANCE_CANDIDATE_TOKENS):
+                        matrix_phantom.append(str(pair_key))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            # Defer to the canonical loader's stricter validation.
+            pass
+
+    advisory_lines: list[str] = []
+    if inv_phantom:
+        advisory_lines.append(
+            f"REVERTED {len(inv_phantom)} canonical_inventory rows citing phantom-provenance candidates "
+            f"(per Catalog #321 REJECTED_RESEARCH_SIDECAR)"
+        )
+    if matrix_phantom:
+        advisory_lines.append(
+            f"FLAGGED {len(matrix_phantom)} pair keys in substrate_composition_matrix.json carrying "
+            f"phantom-provenance tokens — caller MUST revert via canonical fcntl-locked write surface"
+        )
+    if not advisory_lines:
+        advisory_lines.append("CLEAN — no phantom-provenance rows or pair keys detected")
+
+    return {
+        "inventory_phantom_rows": inv_phantom,
+        "inventory_phantom_count": len(inv_phantom),
+        "matrix_phantom_pair_keys": matrix_phantom,
+        "matrix_phantom_count": len(matrix_phantom),
+        "catalog_321_compliant": not inv_phantom and not matrix_phantom,
+        "advisory": "; ".join(advisory_lines),
+    }
+
+
 __all__ = [
     "DISPATCH_COST_USD_MIDPOINT",
+    "PHANTOM_PROVENANCE_CANDIDATE_TOKENS",
     "SCHEMA_VERSION",
     "Composability",
     "CompositionMatrix",
@@ -2097,6 +2232,7 @@ __all__ = [
     "per_substrate_pareto_rows",
     "predicted_composite_delta",
     "rank_substrates_by_ev_per_dollar",
+    "revert_phantom_source_rows",
     "serialize_matrix",
     "serialize_pareto_rows",
     "write_matrix_json",

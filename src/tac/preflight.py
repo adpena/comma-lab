@@ -2529,6 +2529,65 @@ def preflight_all(
         check_substrate_wyner_ziv_reweight_has_deliverability_proof(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #321 - NO PHANTOM WYNER-ZIV SAVINGS FROM
+        # RESEARCH SIDECAR. Per Q4 HALT 2026-05-17
+        # (feedback_q4_wyner_ziv_pr101_state_dict_first_empirical_anchor_build_HALTED_premise_failure_20260517.md)
+        # + CLAUDE.md "Apples-to-apples evidence discipline" + FORBIDDEN
+        # PATTERNS "phantom-score directory trap" + Catalog #287 (empirical-
+        # claim-without-evidence-tag). Refuses pre-entropy probe artifacts
+        # at .omx/state/wyner_ziv_deliverability/pre_entropy_candidate_
+        # substrates_*.json whose row carries positive
+        # deliverable_score_savings_estimate but validation_status is NOT
+        # VALIDATED_CONTEST_MEMBER (i.e., the probed bytes are a research
+        # sidecar .pt / .npy / .npz / .pth / .pkl / .bin standalone file,
+        # never charged by the contest rate term `25 * archive_bytes /
+        # 37_545_489`). Companion runtime fix at
+        # tools/pre_entropy_substrate_pivot_prober.py adds
+        # _validate_substrate_bytes_ship_in_contest_archive + threads
+        # validation_status through every result row + adds
+        # probe_substrate_archive_member as the canonical Q4 Option B
+        # method. Sister of Catalog #249 / #287 / #245 / #131. STRICT-from-
+        # byte-one per CLAUDE.md "Strict-flip atomicity rule" — live count
+        # at landing: 0 (corrected artifact emitted in same commit batch
+        # via prober refactor). Memory:
+        # feedback_fix_pre_entropy_prober_phantom_score_plus_catalog_321_strict_gate_landed_20260517.md.
+        check_no_phantom_wyner_ziv_savings_from_research_sidecar(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-17 Catalog #322 - NO AUTOPILOT ADJUSTMENT DERIVED FROM
+        # PHANTOM-PROVENANCE COMPOSITION_ALPHA. Per REDO+PIVOT comprehensive
+        # fix 2026-05-17 (operator NON-NEGOTIABLE *"We need to fix all and
+        # redo"*). Sister of Catalog #321 at the downstream autopilot-
+        # consumer surface. Refuses substrate_composition_matrix.json
+        # entries whose pair_key contains a Catalog #321 phantom-provenance
+        # token (`pr101_state_dict` / `pr106_state_dict` /
+        # `posenet_class_sensitivity`) OR pairwise_alpha_*.json artifacts
+        # under `.omx/state/wyner_ziv_deliverability/` that reference the
+        # same tokens (those artifacts emit α values that would silently
+        # feed `apply_substrate_composition_matrix_to_candidates` and
+        # corrupt the autopilot v2 cascade `adjust_predicted_delta_for_
+        # composition_alpha_v2`). STRICT-from-byte-one per CLAUDE.md
+        # "Strict-flip atomicity rule" — live count at landing: 0 (2
+        # phantom pairwise_alpha files quarantined to
+        # `.omx/state/wyner_ziv_deliverability/quarantine_phantom_pre_
+        # catalog_322/` in same commit batch). Sister of Catalog #321 /
+        # #131 / #138 / #245. Memory:
+        # feedback_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_landed_20260517.md.
+        check_no_autopilot_adjustment_derived_from_phantom_provenance_composition_alpha(
+            strict=True, verbose=verbose,
+        )
+        # 2026-05-17 Catalog #323 - NO SCORE CLAIM WITHOUT CANONICAL PROVENANCE.
+        # META-class umbrella per operator NON-NEGOTIABLE *"We need to fix the
+        # provenance issue for all and fix it permanently and canonically and
+        # make it easy"*. Subsumes 5 sister gates (#287/#249/#319/#321/#823)
+        # via the canonical tac.provenance contract. Initial wire-in is WARN-
+        # ONLY per CLAUDE.md "Strict-flip atomicity rule" because legacy
+        # artifacts carry baseline violations (~188 at landing); strict-flip
+        # pending operator-routed backfill sweep. Sister gates KEPT at STRICT
+        # as defense-in-depth.
+        check_no_score_claim_without_canonical_provenance(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -70289,6 +70348,806 @@ def check_substrate_wyner_ziv_reweight_has_deliverability_proof(
         raise PreflightError(
             "check_substrate_wyner_ziv_reweight_has_deliverability_proof found "
             f"{len(violations)} violation(s):\n" + "\n".join(violations)
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Catalog #320 — check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation
+# ---------------------------------------------------------------------------
+#
+# Sister gate of Catalog #6 (`check_no_scorer_load_at_inflate`) and Catalog #7
+# (`check_training_scripts_have_auth_eval`) at the WZ-pipeline-stage codec
+# primitive surface.
+#
+# Per CLAUDE.md "Strict scorer rule — non-negotiable" + the canonical pipeline
+# primitive at ``tac.codec.wyner_ziv_layer``: the
+# :class:`tac.codec.wyner_ziv_layer.WynerZivLayerConfig` dataclass forbids
+# ``side_info_source="scorer_compressed"`` unless ``operator_attested_scorer_side_info=True``
+# AND ``rationale_for_scorer_side_info`` is non-empty.
+#
+# The runtime guard is enforced by :class:`WynerZivLayerConfig.__post_init__`
+# which raises :class:`ScorerSideInfoForbiddenError` on construction. This
+# preflight gate is the structural sister that scans source text for
+# ``WynerZivLayerConfig(...)`` constructions that hardcode
+# ``side_info_source="scorer_compressed"`` WITHOUT also passing
+# ``operator_attested_scorer_side_info=True`` AND a non-placeholder
+# ``rationale_for_scorer_side_info``.
+#
+# Initial wire-in: STUB (raises NotImplementedError when called). The sister
+# follow-on subagent will implement the AST scan + waiver semantics + tests.
+# This stub holds the catalog # reserved per CLAUDE.md "Catalog #N must be
+# claimed via canonical serializer per Catalog #186".
+#
+# Lane: ``lane_wyner_ziv_pipeline_stage_codec_primitive_20260517``
+# Memory: ``feedback_wyner_ziv_pipeline_stage_codec_primitive_landed_20260517.md``
+
+_CATALOG_320_NOT_YET_IMPLEMENTED_MESSAGE = (
+    "check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation: "
+    "STUB — runtime guard at WynerZivLayerConfig.__post_init__ is active; "
+    "static AST scan for `WynerZivLayerConfig(side_info_source=\"scorer_compressed\", ...)` "
+    "without paired `operator_attested_scorer_side_info=True` + non-empty "
+    "`rationale_for_scorer_side_info` is deferred to sister follow-on per "
+    "lane_wyner_ziv_pipeline_stage_codec_primitive_20260517."
+)
+
+
+def check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #320 — STUB sister of Catalog #6 / #7 / #319 for WZ codec layer.
+
+    Per CLAUDE.md "Strict scorer rule — non-negotiable" + the canonical
+    pipeline primitive at :mod:`tac.codec.wyner_ziv_layer`: the runtime
+    :class:`WynerZivLayerConfig.__post_init__` guard already refuses
+    ``side_info_source="scorer_compressed"`` without operator attestation.
+    This preflight stub holds Catalog #320 reserved for the AST-scan sister
+    landing.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True and the AST scan implementation lands, raise
+            :class:`PreflightError` on any violation.
+        verbose: If True, print stub status banner.
+
+    Raises:
+        NotImplementedError: when called. Sister follow-on will land the AST
+            scan + waiver semantics + tests.
+    """
+    if verbose:
+        print(
+            "  [check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation] "
+            "STUB — runtime guard active; AST scan deferred"
+        )
+    raise NotImplementedError(_CATALOG_320_NOT_YET_IMPLEMENTED_MESSAGE)
+
+
+# ---------------------------------------------------------------------------
+# Catalog #321 — check_no_phantom_wyner_ziv_savings_from_research_sidecar
+# ---------------------------------------------------------------------------
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + the Q4 HALT memo
+# 2026-05-17 (`feedback_q4_wyner_ziv_pr101_state_dict_first_empirical_anchor_
+# build_HALTED_premise_failure_20260517.md`): pre-entropy probe artifacts
+# under `.omx/state/wyner_ziv_deliverability/pre_entropy_candidate_substrates_
+# *.json` MUST NOT carry positive `deliverable_score_savings_estimate` for
+# rows whose `validation_status` is NOT `VALIDATED_CONTEST_MEMBER` —
+# research-sidecar bytes (.pt / .npy / .npz / .pth / .pkl / .bin standalone
+# files) are never charged by the contest rate term `25 * archive_bytes /
+# 37_545_489`, so any positive deliverable claim against them is a phantom
+# score per CLAUDE.md FORBIDDEN_PATTERNS "Forbidden misleading-directory-
+# name (the phantom-score directory trap)" + "Forbidden empirical-claim-
+# without-evidence-tag".
+#
+# Sister of Catalog #249 (phantom-score directory) + Catalog #287
+# (docstring-overstatement-without-evidence-tag) + Catalog #245 (Modal
+# call_id ledger canonical helper pattern this gate operationalizes for
+# the prober artifact surface) + Catalog #131 (no bare writes to shared
+# state).
+#
+# The companion runtime fix at `tools/pre_entropy_substrate_pivot_prober.py`
+# adds `_validate_substrate_bytes_ship_in_contest_archive` + threads
+# `validation_status`/`validation_reason`/`evidence_grade_per_row` through
+# every result row + adds `probe_substrate_archive_member` as the canonical
+# apples-to-apples method per Q4 Option B (probe an actual contest archive.zip
+# member rather than a standalone sidecar). This gate is the STRICT structural
+# self-protection so the bug class cannot recur in any future probe artifact.
+#
+# Lane: ``lane_fix_pre_entropy_prober_phantom_score_plus_catalog_321_strict_gate_20260517``
+# Memory: ``feedback_fix_pre_entropy_prober_phantom_score_plus_catalog_321_strict_gate_landed_20260517.md``
+
+_CATALOG_321_PHANTOM_SAVINGS_WAIVER_TOKEN = (
+    "# RESEARCH_SIDECAR_PHANTOM_SCORE_OK:"
+)
+
+
+def _check_321_waiver_has_valid_rationale(text: str) -> bool:
+    """Return True iff the waiver marker is followed by a non-placeholder
+    rationale of at least 4 characters."""
+    if _CATALOG_321_PHANTOM_SAVINGS_WAIVER_TOKEN not in text:
+        return False
+    idx = text.find(_CATALOG_321_PHANTOM_SAVINGS_WAIVER_TOKEN)
+    rationale = text[idx + len(_CATALOG_321_PHANTOM_SAVINGS_WAIVER_TOKEN):].strip()
+    if not rationale or len(rationale) < 4:
+        return False
+    lowered = rationale.lower()
+    if "<rationale>" in lowered or "<reason>" in lowered:
+        return False
+    return True
+
+
+def check_no_phantom_wyner_ziv_savings_from_research_sidecar(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #321 — refuse pre-entropy probe artifacts whose positive
+    deliverable_score_savings_estimate field comes from a research-sidecar
+    candidate (not a VALIDATED_CONTEST_MEMBER).
+
+    Scans every JSON file under
+    ``.omx/state/wyner_ziv_deliverability/pre_entropy_candidate_substrates_*.json``
+    (excluding the Q4-HALT-aware probe artifacts named `*_corrected_*` which
+    are by definition emitting the Catalog #321 validation outcome).
+
+    A row is flagged if ALL of:
+      - ``deliverable_score_savings_estimate > 0.0``
+      - ``validation_status`` is NOT ``"VALIDATED_CONTEST_MEMBER"``
+      - The row carries no inline
+        ``# RESEARCH_SIDECAR_PHANTOM_SCORE_OK:<rationale>`` waiver token.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-artifact diagnostic.
+
+    Returns:
+        List of violation messages, one per offending row.
+    """
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    artifact_dir = root / ".omx" / "state" / "wyner_ziv_deliverability"
+    violations: list[str] = []
+
+    # Pre-entropy probe artifacts only (the pattern this gate exists to
+    # police). Sister `probe_*.json` files are different schema — out of
+    # scope.
+    candidates = (
+        sorted(artifact_dir.glob("pre_entropy_candidate_substrates_*.json"))
+        if artifact_dir.exists()
+        else []
+    )
+
+    for path in candidates:
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            violations.append(
+                f"{path}: Catalog #321 could not read probe artifact: {exc}"
+            )
+            continue
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            violations.append(
+                f"{path}: Catalog #321 could not parse probe artifact JSON: {exc}"
+            )
+            continue
+        if not isinstance(payload, dict):
+            continue
+        rows = payload.get("per_substrate_results")
+        if not isinstance(rows, dict):
+            continue
+
+        for substrate_name, row in rows.items():
+            if not isinstance(row, dict):
+                continue
+            deliverable = row.get("deliverable_score_savings_estimate")
+            if not isinstance(deliverable, (int, float)):
+                continue
+            if deliverable <= 0.0:
+                continue
+            validation_status = row.get("validation_status")
+            if validation_status == "VALIDATED_CONTEST_MEMBER":
+                continue
+            # Row claims positive deliverable but is not validated as a
+            # contest member. Allow waiver via inline comment ON THE ROW
+            # (we scan the full raw text for the waiver token near the
+            # substrate name — JSON has no native line comments so the
+            # waiver lives in a sister `validation_reason` field OR in
+            # a `_phantom_score_waiver` field that the operator inserts
+            # manually).
+            row_waiver_text = (
+                str(row.get("validation_reason") or "")
+                + " "
+                + str(row.get("_phantom_score_waiver") or "")
+                + " "
+                + str(row.get("evidence_grade_per_row") or "")
+            )
+            if _check_321_waiver_has_valid_rationale(row_waiver_text):
+                continue
+            violations.append(
+                f"{path}::{substrate_name}: Catalog #321 violation: "
+                f"deliverable_score_savings_estimate={deliverable} > 0 but "
+                f"validation_status={validation_status!r} (not "
+                "VALIDATED_CONTEST_MEMBER). Per Q4 HALT 2026-05-17: "
+                "research-sidecar bytes are never charged by the contest "
+                "rate term. Fix: re-run the prober (which now defaults to "
+                "validate); OR add inline "
+                "`# RESEARCH_SIDECAR_PHANTOM_SCORE_OK:<rationale>` waiver "
+                "in the row's `validation_reason` field if this is a "
+                "deliberate diagnostic-only artifact."
+            )
+
+    # Sister scan: master_gradient_consumers OptimalPerPairTreatmentPlan
+    # artifacts that cite a Wyner-Ziv hoist whose DeliverabilityProof
+    # underlying bytes path is a research sidecar. The check looks for
+    # artifacts under `.omx/state/master_gradient_consumers/optimal_plan_*.json`
+    # whose row references both `wyner_ziv` + a `.pt`/`.npy`/etc. path
+    # WITHOUT a same-row waiver. This sister surface is forward-looking
+    # — at landing no such artifacts exist; the scan is a no-op until
+    # the master-gradient consumer surface emits them.
+    consumer_dir = root / ".omx" / "state" / "master_gradient_consumers"
+    if consumer_dir.exists():
+        for path in sorted(consumer_dir.glob("optimal_plan_*.json")):
+            try:
+                raw = path.read_text(encoding="utf-8")
+                payload = json.loads(raw)
+            except (OSError, json.JSONDecodeError) as exc:
+                violations.append(
+                    f"{path}: Catalog #321 could not parse optimal_plan: {exc}"
+                )
+                continue
+            if not isinstance(payload, dict):
+                continue
+            plan_rows = payload.get("treatments")
+            if not isinstance(plan_rows, list):
+                continue
+            for plan_row in plan_rows:
+                if not isinstance(plan_row, dict):
+                    continue
+                if "wyner_ziv" not in str(plan_row).lower():
+                    continue
+                # Look for any reference to a research sidecar extension
+                # in this row's deliverability_proof_path / bytes_path
+                proof_path = str(
+                    plan_row.get("deliverability_proof_path")
+                    or plan_row.get("underlying_bytes_path")
+                    or ""
+                )
+                if not proof_path:
+                    continue
+                lower_proof = proof_path.lower()
+                if not any(
+                    lower_proof.endswith(ext)
+                    for ext in (".pt", ".npy", ".npz", ".pth", ".pkl", ".bin")
+                ):
+                    continue
+                row_waiver_text = str(plan_row.get("_phantom_score_waiver") or "")
+                if _check_321_waiver_has_valid_rationale(row_waiver_text):
+                    continue
+                violations.append(
+                    f"{path}::treatments[{plan_rows.index(plan_row)}]: "
+                    f"Catalog #321 violation: Wyner-Ziv treatment cites "
+                    f"DeliverabilityProof underlying path {proof_path!r} "
+                    "which is a research sidecar extension; bytes are "
+                    "never charged by the contest rate term. Per Q4 HALT "
+                    "2026-05-17."
+                )
+
+    if verbose:
+        if violations:
+            print("  [check_no_phantom_wyner_ziv_savings_from_research_sidecar]")
+            for v in violations:
+                print(f"    - {v}")
+        else:
+            print(
+                "  [check_no_phantom_wyner_ziv_savings_from_research_sidecar] OK"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_phantom_wyner_ziv_savings_from_research_sidecar found "
+            f"{len(violations)} violation(s):\n" + "\n".join(violations)
+        )
+    return violations
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Catalog #322 — check_no_autopilot_adjustment_derived_from_phantom_provenance_composition_alpha
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Source: REDO+PIVOT comprehensive fix 2026-05-17 (operator NON-NEGOTIABLE
+# *"We need to fix all and redo"*). Sister of Catalog #321 (phantom-score
+# from research sidecar; refuses pre-entropy probe artifacts) at the
+# downstream autopilot-consumer surface.
+#
+# Bug class: sister #823's pairwise_alpha probe (`pairwise_alpha_<utc>.json`)
+# under `.omx/state/wyner_ziv_deliverability/` computed α values from the
+# 3 candidates Catalog #321 explicitly REJECTED_RESEARCH_SIDECAR
+# (`pr101_state_dict`, `pr106_state_dict`, `posenet_class_sensitivity`).
+# Those α values feed `tools/cathedral_autopilot_autonomous_loop.py::
+# adjust_predicted_delta_for_composition_alpha_v2` via the canonical
+# `.omx/state/substrate_composition_matrix.json` posterior (loader at
+# `load_substrate_composition_alpha_index`). Sister #823 self-flagged the
+# specific SUPER_ADDITIVE α=4.74 row as FALSE_SIGNAL but the broader
+# phantom-provenance pattern was not extincted.
+#
+# This gate scans `.omx/state/substrate_composition_matrix.json` for any
+# pair_key in `entries` containing a phantom-provenance token (the canonical
+# Catalog #321 set: `pr101_state_dict` / `pr106_state_dict` /
+# `posenet_class_sensitivity`). Acceptance: same-line/per-row
+# `# PHANTOM_PROVENANCE_OK:<rationale>` waiver in the entry's
+# `validation_reason` / `_phantom_provenance_waiver` field with a
+# non-placeholder rationale of >=4 chars (placeholder `<rationale>` /
+# `<reason>` literals rejected).
+#
+# Sister gate of Catalog #321 (entry-side phantom revert) + Catalog #131
+# (bare state writes) + Catalog #138 (strict-load discipline) + Catalog #245
+# (canonical fcntl-locked ledger pattern).
+
+_CATALOG_322_PHANTOM_PROVENANCE_WAIVER_TOKEN = (
+    "# PHANTOM_PROVENANCE_OK:"
+)
+
+_CATALOG_322_PHANTOM_PROVENANCE_TOKENS: tuple[str, ...] = (
+    "pr101_state_dict",
+    "pr106_state_dict",
+    "posenet_class_sensitivity",
+)
+
+
+def _check_322_waiver_has_valid_rationale(text: str) -> bool:
+    """Return True iff the waiver marker is followed by a non-placeholder
+    rationale of at least 4 characters."""
+    if _CATALOG_322_PHANTOM_PROVENANCE_WAIVER_TOKEN not in text:
+        return False
+    idx = text.find(_CATALOG_322_PHANTOM_PROVENANCE_WAIVER_TOKEN)
+    rationale = text[idx + len(_CATALOG_322_PHANTOM_PROVENANCE_WAIVER_TOKEN):].strip()
+    if not rationale or len(rationale) < 4:
+        return False
+    lowered = rationale.lower()
+    if "<rationale>" in lowered or "<reason>" in lowered:
+        return False
+    return True
+
+
+def check_no_autopilot_adjustment_derived_from_phantom_provenance_composition_alpha(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #322 — refuse substrate_composition_matrix.json entries whose
+    pair_key contains a Catalog #321 phantom-provenance token.
+
+    Phantom-provenance tokens are the 3 candidates Catalog #321 rejected as
+    REJECTED_RESEARCH_SIDECAR:
+      - ``pr101_state_dict``
+      - ``pr106_state_dict``
+      - ``posenet_class_sensitivity``
+
+    Any pair_key in ``entries`` whose lowercased form contains one of these
+    tokens is refused unless the entry's most-recent row carries a
+    ``# PHANTOM_PROVENANCE_OK:<rationale>`` waiver in the row's
+    ``validation_reason`` OR ``_phantom_provenance_waiver`` field with a
+    non-placeholder rationale of at least 4 characters.
+
+    Also scans the canonical `pairwise_alpha_*.json` artifacts under
+    `.omx/state/wyner_ziv_deliverability/` for top-level `candidates_probed`
+    arrays containing phantom-provenance tokens — those artifacts emit
+    α values that would silently feed
+    `apply_substrate_composition_matrix_to_candidates` if surfaced into the
+    canonical matrix.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-artifact diagnostic.
+
+    Returns:
+        List of violation messages, one per offending pair key / artifact.
+    """
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    # Surface 1: canonical substrate composition matrix
+    matrix_path = root / ".omx" / "state" / "substrate_composition_matrix.json"
+    if matrix_path.is_file():
+        try:
+            raw = matrix_path.read_text(encoding="utf-8")
+            payload = json.loads(raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            violations.append(
+                f"{matrix_path}: Catalog #322 could not parse matrix JSON: {exc}"
+            )
+        else:
+            if isinstance(payload, dict):
+                entries = payload.get("entries", {})
+                if isinstance(entries, dict):
+                    for pair_key, rows in entries.items():
+                        key_lower = str(pair_key).lower()
+                        offending = [
+                            t for t in _CATALOG_322_PHANTOM_PROVENANCE_TOKENS
+                            if t in key_lower
+                        ]
+                        if not offending:
+                            continue
+                        # Check for per-row waiver in the most-recent row.
+                        latest_row = {}
+                        if isinstance(rows, list) and rows:
+                            latest_row = max(
+                                (r for r in rows if isinstance(r, dict)),
+                                key=lambda r: r.get("written_at_utc", ""),
+                                default={},
+                            )
+                        row_waiver_text = (
+                            str(latest_row.get("validation_reason") or "")
+                            + " "
+                            + str(latest_row.get("_phantom_provenance_waiver") or "")
+                        )
+                        if _check_322_waiver_has_valid_rationale(row_waiver_text):
+                            continue
+                        violations.append(
+                            f"{matrix_path}::entries[{pair_key!r}]: "
+                            f"Catalog #322 violation: pair_key contains phantom-"
+                            f"provenance token(s) {offending} per Catalog #321 "
+                            "REJECTED_RESEARCH_SIDECAR. The α value feeds the "
+                            "autopilot v2 cascade (adjust_predicted_delta_for_"
+                            "composition_alpha_v2) and would corrupt dispatch "
+                            "ranking. Fix: revert via the canonical helper "
+                            "`tac.optimization.substrate_composition_matrix."
+                            "revert_phantom_source_rows()` OR add inline "
+                            "`# PHANTOM_PROVENANCE_OK:<rationale>` waiver in "
+                            "the row's `_phantom_provenance_waiver` field."
+                        )
+
+    # Surface 2: pairwise_alpha probe artifacts that could promote phantom α
+    # into the canonical matrix surface.
+    wz_dir = root / ".omx" / "state" / "wyner_ziv_deliverability"
+    if wz_dir.is_dir():
+        for path in sorted(wz_dir.glob("pairwise_alpha_*.json")):
+            try:
+                raw = path.read_text(encoding="utf-8")
+                payload = json.loads(raw)
+            except (OSError, json.JSONDecodeError) as exc:
+                violations.append(
+                    f"{path}: Catalog #322 could not parse pairwise_alpha: {exc}"
+                )
+                continue
+            if not isinstance(payload, dict):
+                continue
+            # The probe records the candidate set as `candidates_probed` or
+            # similar arrays + the pair_results dict; either surface flags.
+            text = json.dumps(payload).lower()
+            offending = [
+                t for t in _CATALOG_322_PHANTOM_PROVENANCE_TOKENS
+                if t in text
+            ]
+            if not offending:
+                continue
+            row_waiver_text = (
+                str(payload.get("validation_reason") or "")
+                + " "
+                + str(payload.get("_phantom_provenance_waiver") or "")
+            )
+            if _check_322_waiver_has_valid_rationale(row_waiver_text):
+                continue
+            violations.append(
+                f"{path}: Catalog #322 violation: pairwise_alpha artifact "
+                f"references phantom-provenance candidate(s) {offending} per "
+                "Catalog #321 REJECTED_RESEARCH_SIDECAR. These α values must "
+                "NOT be promoted into the canonical substrate composition "
+                "matrix. Fix: re-run the probe against VALIDATED_CONTEST_MEMBER "
+                "archive members only (per Option B sweep landed 2026-05-17), "
+                "OR add a top-level `_phantom_provenance_waiver` field with "
+                "`# PHANTOM_PROVENANCE_OK:<rationale>` if this is a deliberate "
+                "diagnostic-only artifact."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_no_autopilot_adjustment_derived_from_phantom_"
+                "provenance_composition_alpha]"
+            )
+            for v in violations:
+                print(f"    - {v}")
+        else:
+            print(
+                "  [check_no_autopilot_adjustment_derived_from_phantom_"
+                "provenance_composition_alpha] OK"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_autopilot_adjustment_derived_from_phantom_provenance_"
+            f"composition_alpha found {len(violations)} violation(s):\n"
+            + "\n".join(violations)
+        )
+    return violations
+
+
+# =============================================================================
+# Catalog #323 — check_no_score_claim_without_canonical_provenance
+# =============================================================================
+# META-class umbrella gate (2026-05-17) per operator NON-NEGOTIABLE *"We need
+# to fix the provenance issue for all and fix it permanently and canonically
+# and make it easy"*.
+#
+# Subsumes 5 sister gates (#287 docstring-overstatement / #249 misleading-
+# directory-name / #319 autopilot-venn-reweight / #321 research-sidecar /
+# #823 byte-identity artifact) by enforcing the canonical Provenance
+# contract at the persisted-artifact-row surface.
+#
+# Scans .omx/state/*.json + .omx/state/*.jsonl + experiments/results/
+# build_manifest.json + experiments/results/auth_eval_*.json + sister
+# canonical persisted artifacts. For each row with a score-claiming key
+# WITHOUT a `provenance: {...}` sub-object validated via
+# `validate_provenance`, refuses.
+#
+# Companion canonical helper: tac.provenance package (~1100 LOC across 4
+# files); canonical audit tool: tools/audit_provenance_compliance.py.
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# because legacy artifacts carry baseline violations (188 at landing per
+# audit_provenance_compliance.py sweep). Strict-flip pending operator-
+# routed backfill sweep that drives violations to 0.
+#
+# Sister gates KEPT as defense-in-depth (they remain strict at their own
+# surface); #323 is the umbrella that catches what sister gates miss.
+
+_CHECK_323_SCORE_CLAIM_KEYS: tuple[str, ...] = (
+    "score",
+    "score_value",
+    "contest_score",
+    "final_score",
+    "predicted_score",
+    "canonical_score",
+    "canonical_score_recomputed",
+    "canonical_score_contest_cuda",
+    "canonical_score_contest_cpu",
+    "score_recomputed",
+    "score_recomputed_from_components",
+    "score_recomputed_from_contest_components",
+    "score_recomputed_from_public_components",
+    "score_contest_cuda",
+    "score_contest_cpu",
+    "contest_cuda_score_recomputed",
+    "contest_cpu_score_recomputed",
+    "empirical_score",
+    "diagnostic_cpu_score",
+    "deliverable_score_savings_estimate",
+    "deliverable_savings",
+    "composition_alpha",
+    "alpha",
+    "alpha_savings_ratio_form",
+    "savings",
+    "delta_s",
+    "delta_score",
+    "score_savings",
+    "auth_eval_score",
+    "auth_eval_recomputed_score",
+    "score_recomputed_from_auth_eval",
+    "recomputed_score",
+)
+
+_CHECK_323_SCAN_PATTERNS: tuple[str, ...] = (
+    ".omx/state/**/*.json",
+    ".omx/state/**/*.jsonl",
+    "experiments/results/**/build_manifest.json",
+    "experiments/results/**/auth_eval_*.json",
+    "experiments/results/**/contest_auth_eval_*.json",
+    "experiments/results/**/optimal_plan_*.json",
+    "submissions/*/dual_eval_adjudicated.json",
+)
+
+_CHECK_323_EXCLUDE_MARKERS: tuple[str, ...] = (
+    "/.venv/",
+    "/__pycache__/",
+    "/node_modules/",
+    "/.git/",
+    "/build/lib/",
+    "_intake_",  # vendored PR intake clones (Catalog #109)
+    "/.omx/oss_export/",
+    "/vendored/",
+    "/reports/raw/",
+    "/.omx/state/archive/",
+    "/.omx/state/quarantine",
+)
+
+_CHECK_323_WAIVER_RE = re.compile(
+    r"#\s*PROVENANCE_CANONICAL_WAIVED:\s*(?P<rationale>.+?)\s*$"
+)
+
+
+def _check_323_waiver_has_valid_rationale(text: str) -> bool:
+    """Return True only for an explicit non-placeholder Catalog #323 waiver."""
+    m = _CHECK_323_WAIVER_RE.search(text)
+    if not m:
+        return False
+    rationale = (m.group("rationale") or "").strip()
+    if not rationale:
+        return False
+    if rationale in ("<rationale>", "<reason>"):
+        return False
+    return len(rationale) >= 3
+
+
+def check_no_score_claim_without_canonical_provenance(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+    max_artifacts_to_scan: int = 10000,
+) -> list[str]:
+    """STRICT preflight gate Catalog #323 — canonical Provenance umbrella.
+
+    Refuses persisted score-claiming artifact rows that lack a canonical
+    `provenance` sub-object (or have an invalid one).
+
+    Args:
+        strict: If True, raise PreflightError when violations found.
+        verbose: If True, print per-violation detail.
+        repo_root: Repo root path; defaults to the repo enclosing this file.
+        max_artifacts_to_scan: Safety cap (default 10k).
+
+    Returns:
+        List of violation descriptions (empty if clean).
+
+    Raises:
+        PreflightError: if strict and violations non-empty.
+    """
+    import json as _json
+
+    if verbose:
+        print("  [check_no_score_claim_without_canonical_provenance]")
+
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent.parent
+
+    violations: list[str] = []
+    seen: set[Path] = set()
+    scanned = 0
+
+    for pattern in _CHECK_323_SCAN_PATTERNS:
+        for path in root.glob(pattern):
+            if path in seen:
+                continue
+            s = str(path)
+            if any(m in s for m in _CHECK_323_EXCLUDE_MARKERS):
+                continue
+            if not path.is_file():
+                continue
+            seen.add(path)
+            scanned += 1
+            if scanned > max_artifacts_to_scan:
+                break
+
+            try:
+                raw = path.read_text()
+            except (OSError, UnicodeDecodeError):
+                continue
+
+            if not raw.strip():
+                continue
+
+            # File-level waiver check (first 30 lines). Only comment-style
+            # header lines count here; JSON string values are handled by the
+            # per-row waiver check below so placeholders cannot masquerade as
+            # file-level waiver comments.
+            header_waiver_lines = [
+                line
+                for line in raw.splitlines()[:30]
+                if line.lstrip().startswith("#")
+                and "PROVENANCE_CANONICAL_WAIVED:" in line
+            ]
+            if header_waiver_lines:
+                if any(
+                    _check_323_waiver_has_valid_rationale(line)
+                    for line in header_waiver_lines
+                ):
+                    continue
+
+            # Parse rows
+            rows: list[dict] = []
+            if path.suffix == ".jsonl":
+                for line in raw.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = _json.loads(line)
+                        if isinstance(obj, dict):
+                            rows.append(obj)
+                    except _json.JSONDecodeError:
+                        continue
+            else:
+                try:
+                    obj = _json.loads(raw)
+                except _json.JSONDecodeError:
+                    continue
+                if isinstance(obj, dict):
+                    rows.append(obj)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        if isinstance(item, dict):
+                            rows.append(item)
+
+            for row_idx, row in enumerate(rows):
+                score_keys = [k for k in _CHECK_323_SCORE_CLAIM_KEYS if k in row]
+                if not score_keys:
+                    continue
+                # Per-row waiver
+                if any(
+                    isinstance(v, str)
+                    and _check_323_waiver_has_valid_rationale(v)
+                    for v in row.values()
+                ):
+                    continue
+
+                if "provenance" not in row:
+                    rel = path.relative_to(root) if root in path.parents or root == path.parent else path
+                    violations.append(
+                        f"{rel} row {row_idx}: score-claim keys {score_keys}"
+                        f" but no 'provenance' sub-object (Catalog #323)"
+                    )
+                    continue
+
+                prov_dict = row["provenance"]
+                if not isinstance(prov_dict, dict):
+                    rel = path.relative_to(root) if root in path.parents or root == path.parent else path
+                    violations.append(
+                        f"{rel} row {row_idx}: 'provenance' is not a dict"
+                        f" (type={type(prov_dict).__name__})"
+                    )
+                    continue
+
+                # Reconstruct + validate
+                try:
+                    from tac.provenance import audit_score_claim_dict
+                    valid, blockers = audit_score_claim_dict(row)
+                    if not valid:
+                        rel = path.relative_to(root) if root in path.parents or root == path.parent else path
+                        blocker_summary = "; ".join(blockers[:3])
+                        violations.append(
+                            f"{rel} row {row_idx}: invalid Provenance:"
+                            f" {blocker_summary}"
+                        )
+                except Exception as exc:
+                    rel = path.relative_to(root) if root in path.parents or root == path.parent else path
+                    violations.append(
+                        f"{rel} row {row_idx}: validator raised: {exc!r}"
+                    )
+
+        if scanned > max_artifacts_to_scan:
+            break
+
+    if violations:
+        if verbose:
+            print(
+                f"  [check_no_score_claim_without_canonical_provenance] {len(violations)} violation(s)"
+            )
+            for v in violations[:5]:
+                print(f"    - {v}")
+    else:
+        if verbose:
+            print(
+                "  [check_no_score_claim_without_canonical_provenance] OK"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_no_score_claim_without_canonical_provenance (Catalog #323)"
+            f" found {len(violations)} violation(s); persisted score-claim"
+            " artifacts MUST carry a canonical 'provenance' sub-object per"
+            " tac.provenance contract. See"
+            " docs/provenance_canonical_usage.md or run"
+            " tools/audit_provenance_compliance.py --summary for the"
+            " operator-facing report.\n\nFirst 10 violations:\n"
+            + "\n".join(violations[:10])
         )
     return violations
 
