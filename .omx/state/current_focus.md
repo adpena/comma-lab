@@ -38,7 +38,10 @@ retiring the L5/L5-v2 staircase:
 4. **Original Z6 FiLM path**: do not dispatch as-is; replace with
    per-frame-renderer-axis ego-motion conditioning.
 5. **PR106/HNeRV local-basin work**: useful as forensic control and byte
-   lessons only; do not let it crowd out Rule #6 or L5-v2 actuation.
+   lessons only; do not let it crowd out Rule #6 or L5-v2 actuation. The
+   2026-05-17 format0D WIP adversarial review classifies format0D as a local
+   best `[contest-CUDA T4]` forensic/control anchor, not a public
+   `[contest-CPU]` frontier or submission candidate.
 
 ## Current L5 v2 / TT5L State
 
@@ -95,6 +98,22 @@ retiring the L5/L5-v2 staircase:
    per-pair-conditioning substrates.
 6. **Z6 replacement design**: per-frame-renderer-axis ego-motion variant,
    not FiLM-bottlenecked Z6.
+
+## Latest WIP Review
+
+- `.omx/research/alien_tech_reverse_engineering_pr106_format0_family_20260517.md`
+  is untracked partner WIP and was left unmodified.
+- `.omx/research/full_problem_space_reverse_engineering_cpu_gpu_both_20260517.md`
+  is also untracked partner WIP and was left unmodified. Its executive
+  summary reinforces the paired CPU/CUDA hardware-axis split and scorer
+  decomposition, but it is not a current score, dispatch, or promotion
+  authority until landed and reviewed.
+- Reviewed disposition:
+  `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
+- Key action change: harvest format0D's two-pass additive grammar as a donor
+  primitive for Rule #6 A1/FEC6 byte-closed bolt-ons, but do not route the P0
+  queue back into PR106-only local-basin polish. Any direct PR106 revisit must
+  start with CPU/CUDA raw-output xray and extra-stream ablations.
 
 ## Dispatch Discipline
 

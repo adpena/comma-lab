@@ -54,6 +54,13 @@ architecture-lock/TT5L custody artifacts.
 - Lane class: frontier-breaking byte-coding bolt-on.
 - Required work: per-tensor byte map, Brotli/LZMA/Huffman tournament, manifest
   of consumed byte sections, monolithic archive grammar, no-op detector.
+- 2026-05-17 PR106 donor constraint:
+  `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`
+  validates format0D's two-pass additive grammar as a real mechanism but
+  classifies the PR106 lane itself as local-basin forensic/control evidence.
+  If this queue uses the format0D idea, transplant the primitive onto the
+  verified A1/FEC6 CPU anchor with a CPU-aware objective and paired CPU/CUDA
+  plan; do not retread PR106-only polish as P0.
 - 2026-05-17 byte-escape profiler:
   `.omx/research/a1_rule6_byte_escape_profile_20260517_codex.md` classifies
   the current A1 runtime grammar as `saturated_byte_only_current_runtime`.
@@ -126,7 +133,8 @@ architecture-lock/TT5L custody artifacts.
 - A1 latent sidecar remains local/proxy until a full 600-pair byte-different
   runtime-consumed packet exists.
 - PR106 packet variants remain forensic control and exact-eval lessons, not
-  the active score-lowering priority.
+  the active score-lowering priority. Latest reviewed disposition:
+  `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - Existing Z3HV2 direct-residual exports are measured controls, not active
   frontier candidates: paired Z3 v2 full scored `0.1986956456779881`
   `[contest-CPU]` and `0.23170948072940661` `[contest-CUDA]` with archive
