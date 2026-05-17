@@ -11,15 +11,18 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from tac.optimizer.exact_readiness import (
+    claim_status_terminal,
     is_sha256,
+    parse_claim_rows,
     readiness_blockers,
     resolve_path,
 )
 
 CONTEST_EXACT_EVAL_TARGET_MODE = "contest_exact_eval"
+ClaimPolicy = Literal["preclaim_conflict_check", "require_active_claim"]
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,39 @@ def _optional_resolved_path(
     return None
 
 
+def active_dispatch_claim_present(
+    *,
+    lane_id: str,
+    dispatch_claims_path: Path | None,
+    platform: str | None = None,
+    instance_job_ids: Iterable[str] = (),
+) -> bool:
+    if dispatch_claims_path is None or not dispatch_claims_path.is_file():
+        return False
+    platform_token = str(platform or "").strip().lower()
+    allowed_job_ids = {
+        str(item).strip()
+        for item in instance_job_ids
+        if str(item).strip()
+    }
+    closed_job_ids: set[str] = set()
+    for row in parse_claim_rows(dispatch_claims_path):
+        if row["lane_id"] != lane_id:
+            continue
+        if platform_token and row["platform"].strip().lower() != platform_token:
+            continue
+        job_id = row["instance_job_id"].strip()
+        if allowed_job_ids and job_id not in allowed_job_ids:
+            continue
+        if claim_status_terminal(row["status"]):
+            closed_job_ids.add(job_id)
+            continue
+        if job_id in closed_job_ids:
+            continue
+        return True
+    return False
+
+
 def exact_dispatch_authority(
     row: Mapping[str, Any],
     *,
@@ -114,6 +150,9 @@ def exact_dispatch_authority(
     operator_override_reason: str | None = None,
     extra_clearable_source_blockers: Iterable[str] = (),
     dispatch_claims_path: str | Path | None = None,
+    claim_policy: ClaimPolicy = "preclaim_conflict_check",
+    required_claim_platform: str | None = None,
+    required_claim_instance_job_ids: Iterable[str] = (),
 ) -> ExactDispatchAuthorityVerdict:
     """Return fail-closed authority for a paid exact-eval dispatch row."""
 
@@ -123,6 +162,8 @@ def exact_dispatch_authority(
     ready_flag = row.get("ready_for_exact_eval_dispatch") is True
     contest_target = CONTEST_EXACT_EVAL_TARGET_MODE in _target_modes(row)
     blockers: list[str] = []
+    if claim_policy not in {"preclaim_conflict_check", "require_active_claim"}:
+        blockers.append(f"unknown_claim_policy:{claim_policy}")
 
     if row.get("score_claim") is True:
         blockers.append("score_claim_true_requires_result_review")
@@ -157,8 +198,34 @@ def exact_dispatch_authority(
         operator_override_reason=operator_override_reason,
         extra_clearable_source_blockers=extra_clearable_source_blockers,
         dispatch_claims_path=claims_path,
+        ignore_active_claim_conflicts=claim_policy == "require_active_claim",
     )
     blockers.extend(readiness)
+    facts["claim_policy"] = claim_policy
+
+    lane_id = facts.get("lane_id")
+    if claim_policy == "require_active_claim":
+        if claims_path is None:
+            blockers.append("active_dispatch_claim_required_missing_claims_path")
+        elif not isinstance(lane_id, str) or not lane_id.strip():
+            blockers.append("active_dispatch_claim_required_missing_lane_id")
+        elif not active_dispatch_claim_present(
+            lane_id=lane_id,
+            dispatch_claims_path=claims_path,
+            platform=required_claim_platform,
+            instance_job_ids=required_claim_instance_job_ids,
+        ):
+            suffix = ""
+            required_jobs = [
+                str(item).strip()
+                for item in required_claim_instance_job_ids
+                if str(item).strip()
+            ]
+            if required_claim_platform:
+                suffix += f":platform={required_claim_platform}"
+            if required_jobs:
+                suffix += ":job_id=" + ",".join(sorted(required_jobs))
+            blockers.append("active_dispatch_claim_required_not_found" + suffix)
 
     declared_runtime_sha = row.get("runtime_tree_sha256")
     runtime_manifest = facts.get("runtime_manifest")
@@ -187,6 +254,8 @@ def exact_dispatch_authority(
 
 __all__ = [
     "CONTEST_EXACT_EVAL_TARGET_MODE",
+    "ClaimPolicy",
     "ExactDispatchAuthorityVerdict",
+    "active_dispatch_claim_present",
     "exact_dispatch_authority",
 ]

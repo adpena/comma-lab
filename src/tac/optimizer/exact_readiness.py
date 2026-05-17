@@ -88,6 +88,7 @@ BLOCKED_SOURCE_BLOCKER_PREFIXES = (
 TERMINAL_CLAIM_PREFIXES = (
     "completed_",
     "failed_",
+    "timed_out",
     "preempted",
     "cancelled",
     "refused_dispatch",
@@ -720,6 +721,7 @@ def readiness_blockers(
     extra_clearable_source_blockers: Iterable[str] = (),
     dispatch_claims_path: Path | None = None,
     claim_ttl_hours: float = 24.0,
+    ignore_active_claim_conflicts: bool = False,
 ) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     facts: dict[str, Any] = {}
@@ -742,7 +744,11 @@ def readiness_blockers(
     if not isinstance(effective_lane_id, str) or not effective_lane_id.strip():
         blockers.append("lane_id_missing")
     facts["lane_id"] = effective_lane_id
-    if isinstance(effective_lane_id, str) and effective_lane_id.strip():
+    if (
+        isinstance(effective_lane_id, str)
+        and effective_lane_id.strip()
+        and not ignore_active_claim_conflicts
+    ):
         blockers.extend(
             active_claim_conflicts(
                 effective_lane_id,

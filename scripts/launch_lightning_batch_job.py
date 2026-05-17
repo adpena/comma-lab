@@ -62,9 +62,10 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     validate_local_artifact_dir,
     validate_studio_machine_class_pair,
 )
+from tac.optimizer.exact_dispatch_authority import active_dispatch_claim_present  # noqa: E402
+from tac.optimizer.exact_readiness import claim_status_terminal  # noqa: E402
 from tac.public_submission_refs import parse_public_pr_refs_csv  # noqa: E402
 from tac.repo_io import json_text, read_json, write_json  # noqa: E402
-from tools.claim_lane_dispatch import TERMINAL_PREFIXES as _DISPATCH_CLAIM_TERMINAL_PREFIXES  # noqa: E402
 
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -298,32 +299,9 @@ _DISPATCH_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
 
 
 def _dispatch_claim_status_is_terminal(status: str) -> bool:
-    return any(status.startswith(prefix) for prefix in _DISPATCH_CLAIM_TERMINAL_PREFIXES)
+    """Backward-compatible wrapper around the canonical claim terminal check."""
 
-
-def _read_dispatch_claim_rows(path: Path) -> list[dict[str, str]]:
-    if not path.exists():
-        return []
-    rows: list[dict[str, str]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.startswith("| "):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 8 or cells[0] in {"timestamp_utc", "---"}:
-            continue
-        rows.append(
-            {
-                "timestamp_utc": cells[0],
-                "agent": cells[1],
-                "lane_id": cells[2],
-                "platform": cells[3],
-                "instance_job_id": cells[4],
-                "predicted_eta_utc": cells[5],
-                "status": cells[6],
-                "notes": cells[7],
-            }
-        )
-    return rows
+    return claim_status_terminal(status)
 
 
 def _require_dispatch_claim_for_submit(args: argparse.Namespace, *, role: str) -> None:
@@ -346,19 +324,12 @@ def _require_dispatch_claim_for_submit(args: argparse.Namespace, *, role: str) -
     acceptable_job_ids = {job_name}
     if job_name:
         acceptable_job_ids.add(lightning_sdk_job_name(job_name))
-    closed_job_ids: set[str] = set()
-    for row in _read_dispatch_claim_rows(claims_path):
-        if row["lane_id"] != lane_id:
-            continue
-        if row["platform"].lower() != "lightning":
-            continue
-        if row["instance_job_id"] not in acceptable_job_ids:
-            continue
-        if _dispatch_claim_status_is_terminal(row["status"]):
-            closed_job_ids.add(row["instance_job_id"])
-            continue
-        if row["instance_job_id"] in closed_job_ids:
-            continue
+    if active_dispatch_claim_present(
+        lane_id=lane_id,
+        dispatch_claims_path=claims_path,
+        platform="lightning",
+        instance_job_ids=acceptable_job_ids,
+    ):
         return
     if skip_reason:
         return
