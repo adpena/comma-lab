@@ -30,11 +30,11 @@ LANE_ID = "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
 DEFAULT_VIDEO_PATH = "upstream/videos/0.mkv"
 DEFAULT_FULL_OUTPUT_DIR = (
     "experiments/results/time_traveler_l5_z6/"
-    "disambiguator_full_film_smoke_20260516_codex"
+    "disambiguator_full_film_real_video_smoke_20260516_codex"
 )
 DEFAULT_IDENTITY_OUTPUT_DIR = (
     "experiments/results/time_traveler_l5_z6/"
-    "disambiguator_identity_smoke_20260516_codex"
+    "disambiguator_identity_real_video_smoke_20260516_codex"
 )
 DEFAULT_OUTPUT_JSON = (
     ".omx/research/"
@@ -59,6 +59,26 @@ SMOKE_PROXY_BLOCKERS = [
     "no_byte_closed_score_anchor",
     "not_paradigm_claim_authority",
 ]
+
+
+def _proxy_evidence_grade(smoke_target_mode: object) -> str:
+    if smoke_target_mode == "real-video":
+        return "smoke_proxy_real_video_pair_no_scorer"
+    return "smoke_proxy_synthetic_pair"
+
+
+def _proxy_blockers(smoke_target_mode: object) -> list[str]:
+    first = (
+        "smoke_proxy_real_video_no_scorer"
+        if smoke_target_mode == "real-video"
+        else "smoke_proxy_synthetic_no_scorer"
+    )
+    return [
+        first,
+        "no_contest_cpu_cuda_pair",
+        "no_byte_closed_score_anchor",
+        "not_paradigm_claim_authority",
+    ]
 
 
 def _sha256_file(path: Path) -> str:
@@ -171,6 +191,7 @@ def _mode_stats_row(
         "requested_epochs": payload.get("requested_epochs"),
         "lambda_residual_entropy": payload.get("lambda_residual_entropy"),
         "predictor_kernel_size": payload.get("predictor_kernel_size"),
+        "smoke_target_mode": payload.get("smoke_target_mode"),
         "smoke_ego_motion_mode": payload.get("smoke_ego_motion_mode"),
         "ego_motion_nonzero_fraction": payload.get("ego_motion_nonzero_fraction"),
         "ego_motion_l2": payload.get("ego_motion_l2"),
@@ -196,6 +217,7 @@ def _smoke_command(
     epochs: int,
     device: str,
     seed: int,
+    target_mode: str,
     ego_motion_mode: str,
 ) -> list[str]:
     command = [
@@ -211,6 +233,8 @@ def _smoke_command(
         device,
         "--seed",
         str(seed),
+        "--smoke-target-mode",
+        target_mode,
         "--smoke-ego-motion-mode",
         ego_motion_mode,
         "--smoke",
@@ -225,7 +249,8 @@ def build_plan_payload(
     epochs: int = 3,
     device: str = "cpu",
     seed: int = 0,
-    ego_motion_mode: str = "ramp",
+    target_mode: str = "real-video",
+    ego_motion_mode: str = "real-video",
 ) -> dict[str, Any]:
     """Return the paired smoke command plan without asserting a result."""
 
@@ -246,6 +271,7 @@ def build_plan_payload(
             {
                 "mode": "full_film_predictor",
                 "identity_predictor": False,
+                "smoke_target_mode": target_mode,
                 "smoke_ego_motion_mode": ego_motion_mode,
                 "output_dir": DEFAULT_FULL_OUTPUT_DIR,
                 "stats_path": f"{DEFAULT_FULL_OUTPUT_DIR}/stats.json",
@@ -255,12 +281,14 @@ def build_plan_payload(
                     epochs=epochs,
                     device=device,
                     seed=seed,
+                    target_mode=target_mode,
                     ego_motion_mode=ego_motion_mode,
                 ),
             },
             {
                 "mode": "identity_predictor",
                 "identity_predictor": True,
+                "smoke_target_mode": target_mode,
                 "smoke_ego_motion_mode": ego_motion_mode,
                 "output_dir": DEFAULT_IDENTITY_OUTPUT_DIR,
                 "stats_path": f"{DEFAULT_IDENTITY_OUTPUT_DIR}/stats.json",
@@ -270,12 +298,14 @@ def build_plan_payload(
                     epochs=epochs,
                     device=device,
                     seed=seed,
+                    target_mode=target_mode,
                     ego_motion_mode=ego_motion_mode,
                 ),
             },
         ],
         "reactivation_criteria": [
             "run both smoke commands from same git SHA and seed",
+            "keep smoke_target_mode matched across both arms",
             "keep smoke_ego_motion_mode matched across both arms",
             "compare stats through this tool",
             "do not assert Z6 paradigm movement until paired contest CPU/CUDA exact eval exists",
@@ -302,6 +332,7 @@ def evaluate_stats_pair(
         "smoke_epoch_cap",
         "lambda_residual_entropy",
         "predictor_kernel_size",
+        "smoke_target_mode",
         "smoke_ego_motion_mode",
     ):
         _require_same_config(full, identity, key)
@@ -325,17 +356,18 @@ def evaluate_stats_pair(
         verdict = "indeterminate_tie_smoke_proxy_only"
         proxy_preferred = "tie"
 
+    smoke_target_mode = full.get("smoke_target_mode")
     return {
         "schema": SCHEMA,
         "probe_id": PROBE_ID,
         "lane_id": LANE_ID,
         "substrate_tag": SUBSTRATE_TAG,
-        "evidence_grade": "smoke_proxy_synthetic_pair",
+        "evidence_grade": _proxy_evidence_grade(smoke_target_mode),
         "verdict": verdict,
         "proxy_preferred_mode": proxy_preferred,
         "paired": True,
         **FALSE_AUTHORITY_FLAGS,
-        "blockers": SMOKE_PROXY_BLOCKERS,
+        "blockers": _proxy_blockers(smoke_target_mode),
         "source_stats": [
             _mode_stats_row(
                 full,
@@ -357,7 +389,11 @@ def evaluate_stats_pair(
             "full_minus_identity_archive_bytes": delta_archive,
         },
         "result_review": {
-            "classification": "smoke_proxy_only",
+            "classification": (
+                "real_video_smoke_proxy_only"
+                if smoke_target_mode == "real-video"
+                else "synthetic_smoke_proxy_only"
+            ),
             "score_formula_recomputed": False,
             "score_formula_recompute_blocker": "no seg_dist/pose_dist/contest archive score fields in smoke stats",
             "component_score_authority": False,
@@ -407,6 +443,8 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
                     f"### {row.get('mode')}",
                     "",
                     f"- identity_predictor: `{row.get('identity_predictor')}`",
+                    f"- smoke_target_mode: `{row.get('smoke_target_mode')}`",
+                    f"- smoke_ego_motion_mode: `{row.get('smoke_ego_motion_mode')}`",
                     f"- stats_path: `{row.get('stats_path')}`",
                     "",
                     "```bash",
@@ -431,6 +469,9 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
                     f"- final_recon: `{row.get('final_recon')}`",
                     f"- final_residual: `{row.get('final_residual')}`",
                     f"- archive_bytes: `{row.get('archive_bytes')}`",
+                    f"- smoke_target_mode: `{row.get('smoke_target_mode')}`",
+                    f"- smoke_ego_motion_mode: `{row.get('smoke_ego_motion_mode')}`",
+                    f"- ego_motion_nonzero_fraction: `{row.get('ego_motion_nonzero_fraction')}`",
                 ]
             )
     deltas = payload.get("deltas")
@@ -460,9 +501,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
+        "--smoke-target-mode",
+        choices=("synthetic", "real-video"),
+        default="real-video",
+    )
+    parser.add_argument(
         "--smoke-ego-motion-mode",
-        choices=("ramp", "zero", "random"),
-        default="ramp",
+        choices=("ramp", "zero", "random", "real-video"),
+        default="real-video",
     )
     parser.add_argument("--output-json", type=Path, default=Path(DEFAULT_OUTPUT_JSON))
     parser.add_argument("--output-md", type=Path, default=Path(DEFAULT_OUTPUT_MD))
@@ -480,6 +526,7 @@ def main(argv: list[str] | None = None) -> int:
                 epochs=args.epochs,
                 device=args.device,
                 seed=args.seed,
+                target_mode=args.smoke_target_mode,
                 ego_motion_mode=args.smoke_ego_motion_mode,
             )
         else:

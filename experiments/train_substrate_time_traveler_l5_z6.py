@@ -66,6 +66,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 
 # Catalog #241/#242 META layer substrate contract — single source-of-truth
 # for trainer + recipe + lane registry + cost band envelope.
@@ -74,6 +75,7 @@ from tac.substrate_registry import SubstrateContract, register_substrate
 # Catalog #205 canonical inflate device-fork — token visible to Catalog #270
 # Tier 3 substrate-correctness verifier.
 from tac.substrates._shared.inflate_runtime import select_inflate_device  # noqa: F401
+from tac.substrates._shared.trainer_skeleton import decode_real_pairs as _decode_real_pairs
 
 # Catalog #164 canonical scorer-loss helper routing — token visible to
 # Catalog #270 Tier 1 dispatch-optimization-protocol verifier.
@@ -313,11 +315,21 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--smoke-ego-motion-mode",
-        choices=("ramp", "zero", "random"),
+        choices=("ramp", "zero", "random", "real-video"),
         default="ramp",
         help=(
             "Smoke-only ego-motion proxy. Default ramp exercises FiLM "
-            "conditioning; zero is retained only as a cargo-cult control."
+            "conditioning; real-video derives a proxy from upstream video frame "
+            "deltas; zero is retained only as a cargo-cult control."
+        ),
+    )
+    p.add_argument(
+        "--smoke-target-mode",
+        choices=("synthetic", "real-video"),
+        default="synthetic",
+        help=(
+            "Smoke target source. synthetic is fastest; real-video decodes the "
+            "first tiny contest-video pair batch through the canonical pyav helper."
         ),
     )
 
@@ -386,6 +398,7 @@ def _populate_smoke_ego_motion(
     *,
     mode: str,
     seed: int,
+    real_video_ego_motion: torch.Tensor | None = None,
 ) -> None:
     """Populate smoke ego-motion so FiLM conditioning is actually exercised."""
 
@@ -394,6 +407,18 @@ def _populate_smoke_ego_motion(
         substrate.cfg.predictor_ego_motion_dim,
     )
     target_device = substrate.ego_motion_buffer.device
+    if mode == "real-video":
+        if real_video_ego_motion is None:
+            raise ValueError(
+                "real-video smoke ego-motion mode requires decoded real-video features"
+            )
+        if tuple(real_video_ego_motion.shape) != shape:
+            raise ValueError(
+                f"real-video ego-motion shape {tuple(real_video_ego_motion.shape)} "
+                f"!= expected {shape}"
+            )
+        substrate.ego_motion_buffer.copy_(real_video_ego_motion.to(target_device))
+        return
     if mode == "zero":
         substrate.ego_motion_buffer.zero_()
         return
@@ -414,8 +439,84 @@ def _populate_smoke_ego_motion(
     raise ValueError(f"unknown smoke ego-motion mode: {mode!r}")
 
 
+def _ego_motion_from_smoke_targets(
+    target0: torch.Tensor,
+    target1: torch.Tensor,
+    *,
+    ego_motion_dim: int,
+) -> torch.Tensor:
+    """Derive a tiny deterministic ego-motion proxy from real-video smoke targets."""
+
+    if target0.shape != target1.shape:
+        raise ValueError(
+            f"target0 shape {tuple(target0.shape)} != target1 shape {tuple(target1.shape)}"
+        )
+    if target0.dim() != 4 or target0.shape[1] != 3:
+        raise ValueError(
+            "smoke targets must be shaped (num_pairs, 3, height, width)"
+        )
+    if ego_motion_dim <= 0:
+        raise ValueError(f"ego_motion_dim must be > 0; got {ego_motion_dim}")
+    diff = target1 - target0
+    channel_mean_delta = diff.mean(dim=(2, 3))
+    abs_delta_mean = diff.abs().mean(dim=(1, 2, 3), keepdim=False).unsqueeze(1)
+    features = torch.cat([channel_mean_delta, abs_delta_mean], dim=1)
+    features = features - features.mean(dim=0, keepdim=True)
+    scale = features.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
+    features = features / scale
+    if features.shape[1] < ego_motion_dim:
+        repeats = math.ceil(ego_motion_dim / features.shape[1])
+        features = features.repeat(1, repeats)
+    return features[:, :ego_motion_dim].contiguous()
+
+
+def _decode_real_video_smoke_targets(
+    video_path: Path,
+    cfg: Z6PredictiveCodingConfig,
+    *,
+    device: str,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Decode a tiny real-video smoke batch and its frame-delta ego proxy."""
+
+    pairs = _decode_real_pairs(
+        video_path,
+        n_pairs=cfg.num_pairs,
+        max_pairs=cfg.num_pairs,
+        substrate_tag=SUBSTRATE_TAG,
+        repo_root=REPO_ROOT,
+    )
+    pairs = pairs.to(device=device, dtype=torch.float32) / 255.0
+    flat = pairs.reshape(
+        cfg.num_pairs * 2,
+        3,
+        pairs.shape[-2],
+        pairs.shape[-1],
+    )
+    resized = F.interpolate(
+        flat,
+        size=(cfg.output_height, cfg.output_width),
+        mode="bilinear",
+        align_corners=False,
+    )
+    resized_pairs = resized.view(
+        cfg.num_pairs,
+        2,
+        3,
+        cfg.output_height,
+        cfg.output_width,
+    ).contiguous()
+    target0 = resized_pairs[:, 0]
+    target1 = resized_pairs[:, 1]
+    ego_motion = _ego_motion_from_smoke_targets(
+        target0,
+        target1,
+        ego_motion_dim=cfg.predictor_ego_motion_dim,
+    )
+    return target0, target1, ego_motion
+
+
 def _smoke_main(args: argparse.Namespace) -> int:
-    """Smoke entry: tiny config, synthetic data, ≤3 epochs, no scorer load."""
+    """Smoke entry: tiny config, ≤3 epochs, no scorer load."""
     torch.manual_seed(args.seed)
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -439,22 +540,32 @@ def _smoke_main(args: argparse.Namespace) -> int:
         lambda_residual_entropy=args.lambda_residual_entropy,
     )
     substrate = Z6PredictiveCodingSubstrate(cfg).to(args.device)
+    real_video_ego_motion: torch.Tensor | None = None
+    if (
+        args.smoke_target_mode == "real-video"
+        or args.smoke_ego_motion_mode == "real-video"
+    ):
+        target0, target1, real_video_ego_motion = _decode_real_video_smoke_targets(
+            args.video_path,
+            cfg,
+            device=args.device,
+        )
+    else:
+        target0 = torch.rand(
+            num_pairs, 3, cfg.output_height, cfg.output_width, device=args.device
+        )
+        target1 = torch.rand(
+            num_pairs, 3, cfg.output_height, cfg.output_width, device=args.device
+        )
     _populate_smoke_ego_motion(
         substrate,
         mode=args.smoke_ego_motion_mode,
         seed=args.seed,
+        real_video_ego_motion=real_video_ego_motion,
     )
     print(f"[z6-smoke] param breakdown: {substrate.num_parameters_breakdown()}")
     print(f"[z6-smoke] identity_predictor={cfg.identity_predictor}")
     print(f"[z6-smoke] smoke_ego_motion_mode={args.smoke_ego_motion_mode}")
-
-    # Synthetic frame targets per pair (Catalog #114 allowed in smoke path only)
-    synth_targets_0 = torch.rand(
-        num_pairs, 3, cfg.output_height, cfg.output_width, device=args.device
-    )
-    synth_targets_1 = torch.rand(
-        num_pairs, 3, cfg.output_height, cfg.output_width, device=args.device
-    )
 
     opt = torch.optim.AdamW(substrate.parameters(), lr=args.lr)
     losses = []
@@ -464,8 +575,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         rgb_0, rgb_1, z_t = substrate.reconstruct_pair(idx)
         # Pixel-MSE proxy + residual-norm proxy in smoke
         recon_loss = (
-            (rgb_0 - synth_targets_0).pow(2).mean()
-            + (rgb_1 - synth_targets_1).pow(2).mean()
+            (rgb_0 - target0).pow(2).mean()
+            + (rgb_1 - target1).pow(2).mean()
         )
         residual_loss = args.lambda_residual_entropy * substrate.residuals.pow(2).mean()
         loss = recon_loss + residual_loss
@@ -500,6 +611,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
         "latent_init_std": cfg.latent_init_std,
         "smoke": True,
+        "smoke_target_mode": args.smoke_target_mode,
         "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
         "requested_epochs": args.epochs,
         "effective_epochs": effective_epochs,
@@ -528,7 +640,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "lambda_residual_entropy": args.lambda_residual_entropy,
         "predictor_kernel_size": args.predictor_kernel_size,
         "identity_predictor": args.identity_predictor,
+        "smoke_target_mode": args.smoke_target_mode,
         "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
+        "video_path": str(args.video_path),
         "ego_motion_nonzero_fraction": float(
             (substrate.ego_motion_buffer.detach().abs() > 0).float().mean().item()
         ),

@@ -254,18 +254,18 @@ def build_probe_payload(*, seed: int = 0) -> dict[str, Any]:
             "full FiLM predictor receives nonzero gradients in the smoke graph",
             "zero-ego control does not exercise FiLM conditioning",
             "ramp ego-motion control changes predictor output and confirms the conditioning path is live",
-            "identity-vs-full smoke result is not a fair falsification of ego-motion predictive coding",
+            "identity-vs-full smoke remains proxy-only until scorer-bearing paired CPU/CUDA evidence exists",
         ],
         "blockers": [
-            "z6_smoke_ego_motion_is_synthetic_proxy_not_real_pose_signal",
-            "current_z6_smoke_uses_synthetic_targets_without_real_temporal_pose_signal",
+            "liveness_probe_uses_synthetic_control_targets",
+            "real_video_identity_disambiguator_still_has_no_scorer",
             "no_scorer_load",
             "no_contest_cpu_cuda_pair",
             "not_score_or_paradigm_authority",
         ],
         "recommended_next_actions": [
-            "populate ego_motion_buffer from real-video PoseNet/proxy features before rerunning identity disambiguator",
-            "rerun Z6 identity disambiguator on real-video paired smoke after ego-motion population",
+            "consume the Z6 identity disambiguator in smoke_target_mode=real-video and smoke_ego_motion_mode=real-video before full_main work",
+            "replace frame-delta proxy with PoseNet/proxy ego-motion before paid dispatch",
             "keep full_main council-gated until predictor-vs-identity wins on a real signal axis",
         ],
     }

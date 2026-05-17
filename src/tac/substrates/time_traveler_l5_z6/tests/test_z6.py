@@ -123,6 +123,26 @@ def test_smoke_populates_nonzero_ego_motion_by_default_control() -> None:
     assert float(sub.ego_motion_buffer.pow(2).sum().sqrt().item()) == 0.0
 
 
+def test_smoke_real_video_ego_motion_proxy_uses_frame_deltas() -> None:
+    """Real-video smoke proxy derives nonzero pair features from frame deltas."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6_trainer
+
+    frame0 = torch.zeros(5, 3, 8, 8)
+    frame1 = frame0.clone()
+    for pair_idx in range(5):
+        frame1[pair_idx, :, :, :] = float(pair_idx) / 10.0
+    ego = z6_trainer._ego_motion_from_smoke_targets(
+        frame0,
+        frame1,
+        ego_motion_dim=4,
+    )
+
+    assert ego.shape == (5, 4)
+    assert torch.isfinite(ego).all()
+    assert float(ego.abs().sum().item()) > 0.0
+    assert torch.allclose(ego.mean(dim=0), torch.zeros(4), atol=1e-6)
+
+
 def test_remote_driver_verifies_active_claim_and_preserves_full_epoch_default() -> None:
     """Remote driver must verify the active claim and keep full default at 300."""
     src = DRIVER_PATH.read_text(encoding="utf-8")

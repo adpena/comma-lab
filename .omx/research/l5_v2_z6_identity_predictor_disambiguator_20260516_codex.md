@@ -3,7 +3,7 @@
 - schema: `z6_predictive_coding_vs_identity_disambiguator_v1`
 - probe_id: `z6_predictive_coding_vs_identity_disambiguator`
 - lane_id: `lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516`
-- evidence_grade: `smoke_proxy_synthetic_pair`
+- evidence_grade: `smoke_proxy_real_video_pair_no_scorer`
 - verdict: `identity_predictor_proxy_lower_loss`
 - score_claim: `false`
 - promotion_eligible: `false`
@@ -18,30 +18,36 @@ This report is a Z6-specific probe surface. It can route the next engineering ac
 
 ### full_film_predictor
 
-- path: `experiments/results/time_traveler_l5_z6/disambiguator_full_film_ramp_smoke_20260516_codex/stats.json`
-- sha256: `e57701256967d108c1d387c7dd61222d20f14ae5c75ff51858f78b1b3bb4f58f`
-- final_loss_proxy: `0.1679897904396057`
-- final_recon: `0.16757340729236603`
-- final_residual: `0.0004163846024312079`
-- archive_bytes: `42682`
+- path: `experiments/results/time_traveler_l5_z6/disambiguator_full_film_real_video_smoke_20260516_codex/stats.json`
+- sha256: `da8224727f9106495e5d708662bb510a2184a96c7cf12c482b86dca1bf6ce257`
+- final_loss_proxy: `0.31760331988334656`
+- final_recon: `0.3171869218349457`
+- final_residual: `0.0004163839912507683`
+- archive_bytes: `42723`
+- smoke_target_mode: `real-video`
+- smoke_ego_motion_mode: `real-video`
+- ego_motion_nonzero_fraction: `1.0`
 
 ### identity_predictor
 
-- path: `experiments/results/time_traveler_l5_z6/disambiguator_identity_ramp_smoke_20260516_codex/stats.json`
-- sha256: `3b7c306b142595e241da84a9a8ede4cd011d2868b893fbf29e903d099751b340`
-- final_loss_proxy: `0.16791336238384247`
-- final_recon: `0.16755691170692444`
-- final_residual: `0.0003564539656508714`
-- archive_bytes: `39529`
+- path: `experiments/results/time_traveler_l5_z6/disambiguator_identity_real_video_smoke_20260516_codex/stats.json`
+- sha256: `af0a49e9430e92ffa2f5462f3de56d70c7acc2dfd614a8db4a7b359d2878c435`
+- final_loss_proxy: `0.317548006772995`
+- final_recon: `0.31719154119491577`
+- final_residual: `0.00035645384923554957`
+- archive_bytes: `39568`
+- smoke_target_mode: `real-video`
+- smoke_ego_motion_mode: `real-video`
+- ego_motion_nonzero_fraction: `1.0`
 
 ## Deltas
-- identity_minus_full_loss_proxy: `-7.642805576324463e-05`
-- identity_minus_full_recon: `-1.6495585441589355e-05`
-- identity_minus_full_residual: `-5.99306367803365e-05`
-- full_minus_identity_archive_bytes: `3153`
+- identity_minus_full_loss_proxy: `-5.53131103515625e-05`
+- identity_minus_full_recon: `4.6193599700927734e-06`
+- identity_minus_full_residual: `-5.9930142015218735e-05`
+- full_minus_identity_archive_bytes: `3155`
 
 ## Blockers
-- `smoke_proxy_synthetic_no_scorer`
+- `smoke_proxy_real_video_no_scorer`
 - `no_contest_cpu_cuda_pair`
 - `no_byte_closed_score_anchor`
 - `not_paradigm_claim_authority`

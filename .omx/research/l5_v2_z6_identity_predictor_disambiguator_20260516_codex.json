@@ -1,17 +1,17 @@
 {
   "blockers": [
-    "smoke_proxy_synthetic_no_scorer",
+    "smoke_proxy_real_video_no_scorer",
     "no_contest_cpu_cuda_pair",
     "no_byte_closed_score_anchor",
     "not_paradigm_claim_authority"
   ],
   "deltas": {
-    "full_minus_identity_archive_bytes": 3153,
-    "identity_minus_full_loss_proxy": -7.642805576324463e-05,
-    "identity_minus_full_recon": -1.6495585441589355e-05,
-    "identity_minus_full_residual": -5.99306367803365e-05
+    "full_minus_identity_archive_bytes": 3155,
+    "identity_minus_full_loss_proxy": -5.53131103515625e-05,
+    "identity_minus_full_recon": 4.6193599700927734e-06,
+    "identity_minus_full_residual": -5.9930142015218735e-05
   },
-  "evidence_grade": "smoke_proxy_synthetic_pair",
+  "evidence_grade": "smoke_proxy_real_video_pair_no_scorer",
   "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
   "paired": true,
   "paradigm_claim_allowed": false,
@@ -27,7 +27,7 @@
   "ready_for_exact_eval_dispatch": false,
   "ready_for_paid_dispatch": false,
   "result_review": {
-    "classification": "smoke_proxy_only",
+    "classification": "real_video_smoke_proxy_only",
     "component_score_authority": false,
     "contest_compliance_authority": false,
     "next_authoritative_gate": "paired contest CPU/CUDA exact eval after council-gated full_main implementation",
@@ -38,24 +38,25 @@
   "score_claim": false,
   "source_stats": [
     {
-      "archive_bytes": 42682,
-      "ego_motion_l2": 2.7144834995269775,
+      "archive_bytes": 42723,
+      "ego_motion_l2": 4.4721360206604,
       "ego_motion_nonzero_fraction": 1.0,
       "epochs": 3,
       "evidence_grade": "smoke-no-scorer",
-      "final_loss_proxy": 0.1679897904396057,
-      "final_recon": 0.16757340729236603,
-      "final_residual": 0.0004163846024312079,
+      "final_loss_proxy": 0.31760331988334656,
+      "final_recon": 0.3171869218349457,
+      "final_residual": 0.0004163839912507683,
       "identity_predictor": false,
       "lambda_residual_entropy": 1.0,
       "mode": "full_film_predictor",
-      "path": "experiments/results/time_traveler_l5_z6/disambiguator_full_film_ramp_smoke_20260516_codex/stats.json",
+      "path": "experiments/results/time_traveler_l5_z6/disambiguator_full_film_real_video_smoke_20260516_codex/stats.json",
       "predictor_kernel_size": 3,
       "requested_epochs": 3,
-      "sha256": "e57701256967d108c1d387c7dd61222d20f14ae5c75ff51858f78b1b3bb4f58f",
-      "smoke_ego_motion_mode": "ramp",
+      "sha256": "da8224727f9106495e5d708662bb510a2184a96c7cf12c482b86dca1bf6ce257",
+      "smoke_ego_motion_mode": "real-video",
+      "smoke_target_mode": "real-video",
       "stats_payload": {
-        "archive_bytes": 42682,
+        "archive_bytes": 42723,
         "cfg": {
           "decoder_channels": [
             12,
@@ -81,13 +82,13 @@
           "predictor_hidden_dim": 16,
           "predictor_kernel_size": 3
         },
-        "ego_motion_l2": 2.7144834995269775,
+        "ego_motion_l2": 4.4721360206604,
         "ego_motion_nonzero_fraction": 1.0,
         "epochs": 3,
         "evidence_grade": "smoke-no-scorer",
-        "final_loss_proxy": 0.1679897904396057,
-        "final_recon": 0.16757340729236603,
-        "final_residual": 0.0004163846024312079,
+        "final_loss_proxy": 0.31760331988334656,
+        "final_recon": 0.3171869218349457,
+        "final_residual": 0.0004163839912507683,
         "identity_predictor": false,
         "lambda_residual_entropy": 1.0,
         "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
@@ -105,30 +106,33 @@
         "requested_epochs": 3,
         "score_claim_valid": false,
         "smoke": true,
-        "smoke_ego_motion_mode": "ramp",
+        "smoke_ego_motion_mode": "real-video",
         "smoke_epoch_cap": 3,
-        "substrate_tag": "time_traveler_l5_z6"
+        "smoke_target_mode": "real-video",
+        "substrate_tag": "time_traveler_l5_z6",
+        "video_path": "upstream/videos/0.mkv"
       }
     },
     {
-      "archive_bytes": 39529,
-      "ego_motion_l2": 2.7144834995269775,
+      "archive_bytes": 39568,
+      "ego_motion_l2": 4.4721360206604,
       "ego_motion_nonzero_fraction": 1.0,
       "epochs": 3,
       "evidence_grade": "smoke-no-scorer",
-      "final_loss_proxy": 0.16791336238384247,
-      "final_recon": 0.16755691170692444,
-      "final_residual": 0.0003564539656508714,
+      "final_loss_proxy": 0.317548006772995,
+      "final_recon": 0.31719154119491577,
+      "final_residual": 0.00035645384923554957,
       "identity_predictor": true,
       "lambda_residual_entropy": 1.0,
       "mode": "identity_predictor",
-      "path": "experiments/results/time_traveler_l5_z6/disambiguator_identity_ramp_smoke_20260516_codex/stats.json",
+      "path": "experiments/results/time_traveler_l5_z6/disambiguator_identity_real_video_smoke_20260516_codex/stats.json",
       "predictor_kernel_size": 3,
       "requested_epochs": 3,
-      "sha256": "3b7c306b142595e241da84a9a8ede4cd011d2868b893fbf29e903d099751b340",
-      "smoke_ego_motion_mode": "ramp",
+      "sha256": "af0a49e9430e92ffa2f5462f3de56d70c7acc2dfd614a8db4a7b359d2878c435",
+      "smoke_ego_motion_mode": "real-video",
+      "smoke_target_mode": "real-video",
       "stats_payload": {
-        "archive_bytes": 39529,
+        "archive_bytes": 39568,
         "cfg": {
           "decoder_channels": [
             12,
@@ -154,13 +158,13 @@
           "predictor_hidden_dim": 16,
           "predictor_kernel_size": 3
         },
-        "ego_motion_l2": 2.7144834995269775,
+        "ego_motion_l2": 4.4721360206604,
         "ego_motion_nonzero_fraction": 1.0,
         "epochs": 3,
         "evidence_grade": "smoke-no-scorer",
-        "final_loss_proxy": 0.16791336238384247,
-        "final_recon": 0.16755691170692444,
-        "final_residual": 0.0003564539656508714,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
         "identity_predictor": true,
         "lambda_residual_entropy": 1.0,
         "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
@@ -178,9 +182,11 @@
         "requested_epochs": 3,
         "score_claim_valid": false,
         "smoke": true,
-        "smoke_ego_motion_mode": "ramp",
+        "smoke_ego_motion_mode": "real-video",
         "smoke_epoch_cap": 3,
-        "substrate_tag": "time_traveler_l5_z6"
+        "smoke_target_mode": "real-video",
+        "substrate_tag": "time_traveler_l5_z6",
+        "video_path": "upstream/videos/0.mkv"
       }
     }
   ],

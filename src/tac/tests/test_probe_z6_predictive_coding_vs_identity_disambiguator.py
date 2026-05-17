@@ -36,6 +36,7 @@ def _stats(*, identity: bool, loss: float, archive_bytes: int = 1024) -> dict[st
         "archive_bytes": archive_bytes,
         "lambda_residual_entropy": 1.0,
         "predictor_kernel_size": 3,
+        "smoke_target_mode": "real-video",
         "smoke_ego_motion_mode": "ramp",
         "ego_motion_nonzero_fraction": 1.0,
         "ego_motion_l2": 2.714,
@@ -64,7 +65,9 @@ def test_z6_disambiguator_plan_is_fail_closed_and_paired() -> None:
     assert [row["identity_predictor"] for row in commands] == [False, True]
     assert "--smoke" in commands[0]["command"]
     assert "--smoke-ego-motion-mode" in commands[0]["command"]
-    assert "ramp" in commands[0]["command"]
+    assert "--smoke-target-mode" in commands[0]["command"]
+    assert "real-video" in commands[0]["command"]
+    assert "real-video" in commands[1]["command"]
     assert "--identity-predictor" not in commands[0]["command"]
     assert "--identity-predictor" in commands[1]["command"]
     assert "no_contest_cpu_cuda_pair" in payload["blockers"]
@@ -92,12 +95,14 @@ def test_z6_disambiguator_compares_paired_smoke_stats(tmp_path: Path) -> None:
     )
 
     assert payload["verdict"] == "full_film_predictor_proxy_lower_loss"
+    assert payload["evidence_grade"] == "smoke_proxy_real_video_pair_no_scorer"
     assert payload["proxy_preferred_mode"] == "full_film_predictor"
     assert payload["score_claim"] is False
     assert payload["paradigm_claim_allowed"] is False
     assert payload["deltas"]["identity_minus_full_loss_proxy"] == pytest.approx(0.05)
     assert payload["deltas"]["full_minus_identity_archive_bytes"] == 200
-    assert payload["result_review"]["classification"] == "smoke_proxy_only"
+    assert payload["result_review"]["classification"] == "real_video_smoke_proxy_only"
+    assert "smoke_proxy_real_video_no_scorer" in payload["blockers"]
     assert [row["mode"] for row in payload["source_stats"]] == [
         "full_film_predictor",
         "identity_predictor",
