@@ -1,0 +1,837 @@
+{
+  "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+  "best_proxy_id": "random_control",
+  "blockers": [
+    "real_video_smoke_proxy_no_scorer",
+    "no_contest_cpu_cuda_pair",
+    "no_byte_closed_score_anchor",
+    "not_paradigm_claim_authority"
+  ],
+  "candidate_count": 6,
+  "device": "cpu",
+  "epochs": 3,
+  "evidence_grade": "real_video_smoke_proxy_no_scorer",
+  "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+  "paradigm_claim_allowed": false,
+  "probe_id": "z6_real_video_ego_proxy_sweep",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "recommended_next_actions": [
+    "do not spend on Z6 full-FiLM until a scorer-bearing or PoseNet-derived ego proxy beats identity in smoke",
+    "try a PoseNet/SegNet-derived ego proxy or redesign predictor objective before paid dispatch",
+    "if no proxy beats identity, retire Z6-v1 FiLM as measured configuration only, not the whole L5 staircase"
+  ],
+  "rows": [
+    {
+      "full_film": {
+        "archive_bytes": 42752,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 0.0,
+        "ego_motion_nonzero_fraction": 0.0,
+        "final_loss_proxy": 0.31760311126708984,
+        "final_recon": 0.31718671321868896,
+        "final_residual": 0.0004163839330431074,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.31873568892478943,
+            "recon": 0.31828778982162476,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.3181670606136322,
+            "recon": 0.3177351653575897,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.31760311126708984,
+            "recon": 0.31718671321868896,
+            "residual": 0.0004163839330431074
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "zero"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3226,
+      "identity": {
+        "archive_bytes": 39526,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 0.0,
+        "ego_motion_nonzero_fraction": 0.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "zero"
+      },
+      "identity_minus_full_loss_proxy": -5.510449409484863e-05,
+      "identity_minus_full_recon": 4.827976226806641e-06,
+      "identity_minus_full_residual": -5.993008380755782e-05,
+      "proxy_id": "zero"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42696,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 2.7144834995269775,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.31760233640670776,
+        "final_recon": 0.3171859383583069,
+        "final_residual": 0.00041638402035459876,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3187353312969208,
+            "recon": 0.3182874321937561,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.31816643476486206,
+            "recon": 0.3177345395088196,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.31760233640670776,
+            "recon": 0.3171859383583069,
+            "residual": 0.00041638402035459876
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "ramp"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3152,
+      "identity": {
+        "archive_bytes": 39544,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 2.7144834995269775,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "ramp"
+      },
+      "identity_minus_full_loss_proxy": -5.4329633712768555e-05,
+      "identity_minus_full_recon": 5.602836608886719e-06,
+      "identity_minus_full_residual": -5.993017111904919e-05,
+      "proxy_id": "ramp"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42721,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.31760331988334656,
+        "final_recon": 0.3171869218349457,
+        "final_residual": 0.0004163839912507683,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.31873610615730286,
+            "recon": 0.3182882070541382,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318167507648468,
+            "recon": 0.31773561239242554,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.31760331988334656,
+            "recon": 0.3171869218349457,
+            "residual": 0.0004163839912507683
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "frame_delta"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3155,
+      "identity": {
+        "archive_bytes": 39566,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "frame_delta"
+      },
+      "identity_minus_full_loss_proxy": -5.53131103515625e-05,
+      "identity_minus_full_recon": 4.6193599700927734e-06,
+      "identity_minus_full_residual": -5.9930142015218735e-05,
+      "proxy_id": "frame_delta"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42731,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.3176027536392212,
+        "final_recon": 0.3171863555908203,
+        "final_residual": 0.0004163839330431074,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3187357485294342,
+            "recon": 0.31828784942626953,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.3181670308113098,
+            "recon": 0.31773513555526733,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.3176027536392212,
+            "recon": 0.3171863555908203,
+            "residual": 0.0004163839330431074
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "moment_proxy"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3165,
+      "identity": {
+        "archive_bytes": 39566,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "moment_proxy"
+      },
+      "identity_minus_full_loss_proxy": -5.474686622619629e-05,
+      "identity_minus_full_recon": 5.185604095458984e-06,
+      "identity_minus_full_residual": -5.993008380755782e-05,
+      "proxy_id": "moment_proxy"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42730,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.3176027834415436,
+        "final_recon": 0.3171863853931427,
+        "final_residual": 0.0004163839912507683,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.31873583793640137,
+            "recon": 0.3182879388332367,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.3181670308113098,
+            "recon": 0.31773513555526733,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.3176027834415436,
+            "recon": 0.3171863853931427,
+            "residual": 0.0004163839912507683
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "quadrant_delta"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3161,
+      "identity": {
+        "archive_bytes": 39569,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "quadrant_delta"
+      },
+      "identity_minus_full_loss_proxy": -5.4776668548583984e-05,
+      "identity_minus_full_recon": 5.155801773071289e-06,
+      "identity_minus_full_residual": -5.9930142015218735e-05,
+      "proxy_id": "quadrant_delta"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42740,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 3.638317346572876,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.3176020085811615,
+        "final_recon": 0.3171856105327606,
+        "final_residual": 0.0004163839330431074,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3187350928783417,
+            "recon": 0.318287193775177,
+            "residual": 0.0004479026538319886
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.31816622614860535,
+            "recon": 0.31773433089256287,
+            "residual": 0.0004319039289839566
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.3176020085811615,
+            "recon": 0.3171856105327606,
+            "residual": 0.0004163839330431074
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "random_control"
+      },
+      "full_film_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3171,
+      "identity": {
+        "archive_bytes": 39569,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 3.638317346572876,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "random_control"
+      },
+      "identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+      "identity_minus_full_recon": 5.930662155151367e-06,
+      "identity_minus_full_residual": -5.993008380755782e-05,
+      "proxy_id": "random_control"
+    }
+  ],
+  "schema": "z6_real_video_ego_proxy_sweep_v1",
+  "score_claim": false,
+  "seed": 0,
+  "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke",
+  "video_path": "upstream/videos/0.mkv"
+}
