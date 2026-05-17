@@ -43,7 +43,6 @@ from tac.preflight import (
     check_operator_wrapper_validates_required_input_files_pre_dispatch,
 )
 
-
 # ----------------------------------------------------------------------------
 # Helper unit tests
 # ----------------------------------------------------------------------------
@@ -561,3 +560,550 @@ def test_meta_meta_gates_clean_post_wave_1_landing() -> None:
         )
         == 0
     )
+
+
+# ----------------------------------------------------------------------------
+# Wave 2 (2026-05-16) driver-path-expectation extension tests
+# ----------------------------------------------------------------------------
+# Bug-class anchor: STC v2 Modal T4 dispatch fc-01KRSVKF9VEESQY2FS33FF4WDM
+# rc=25 at 1.56s (2026-05-17T02:17:51Z). Wave 1's trainer-side fix is INERT
+# for generic Modal dispatchers because experiments/modal_train_lane.py
+# passes trainer_module_path=None to build_training_image. The driver
+# shell script must defensively resolve required-input file paths across
+# multiple candidate locations.
+# ----------------------------------------------------------------------------
+
+
+def test_driver_has_defensive_path_resolution_canonical_helper_positive() -> None:
+    """Canonical helper function name triggers defensive-resolution acceptance."""
+    text = textwrap.dedent(
+        """
+        #!/bin/bash
+        WORKSPACE="${WORKSPACE:-/workspace/pact}"
+        resolve_required_input_modal_aware() {
+            local env_var="$1"
+            local rel_path="$2"
+            echo "$WORKSPACE/$rel_path"
+        }
+        ANCHOR="$(resolve_required_input_modal_aware FOO experiments/results/x.zip)"
+        """
+    )
+    assert _check_152_driver_has_defensive_path_resolution(text) is True
+
+
+def test_driver_has_defensive_path_resolution_explicit_candidate_probe_positive() -> None:
+    """Explicit /workspace/pact + /tmp/pact probe satisfies defensive-resolution."""
+    text = textwrap.dedent(
+        """
+        #!/bin/bash
+        for candidate in \
+            "/workspace/pact/experiments/results/x.zip" \
+            "/tmp/pact/experiments/results/x.zip"; do
+            [ -f "$candidate" ] && ANCHOR="$candidate"
+        done
+        """
+    )
+    assert _check_152_driver_has_defensive_path_resolution(text) is True
+
+
+def test_driver_has_defensive_path_resolution_modal_runtime_conditional_positive() -> None:
+    """MODAL_RUNTIME-conditional branch satisfies defensive-resolution."""
+    text = textwrap.dedent(
+        """
+        #!/bin/bash
+        if [ "${MODAL_RUNTIME:-0}" = "1" ]; then
+            ANCHOR="/tmp/pact/experiments/results/x.zip"
+        else
+            ANCHOR="$WORKSPACE/experiments/results/x.zip"
+        fi
+        """
+    )
+    assert _check_152_driver_has_defensive_path_resolution(text) is True
+
+
+def test_driver_has_defensive_path_resolution_negative() -> None:
+    """Plain $WORKSPACE/path usage without defensive idiom is NOT recognized."""
+    text = textwrap.dedent(
+        """
+        #!/bin/bash
+        WORKSPACE="${WORKSPACE:-/workspace/pact}"
+        ANCHOR="$WORKSPACE/experiments/results/x.zip"
+        if [ ! -f "$ANCHOR" ]; then
+            exit 25
+        fi
+        """
+    )
+    assert _check_152_driver_has_defensive_path_resolution(text) is False
+
+
+def test_driver_has_path_waiver_accepts_rationale() -> None:
+    """Same-line waiver with substantive rationale is accepted."""
+    text = "ANCHOR=...  # DRIVER_PATH_MODAL_AWARE_OK:operator pre-stages via Modal volume\n"
+    rationales = _check_152_driver_has_path_waiver(text)
+    assert "operator pre-stages via Modal volume" in rationales
+
+
+def test_driver_has_path_waiver_rejects_placeholder() -> None:
+    """Placeholder <rationale> + <reason> + empty literals are REJECTED."""
+    for placeholder in ("<rationale>", "<reason>", ""):
+        text = f"ANCHOR=...  # DRIVER_PATH_MODAL_AWARE_OK:{placeholder}\n"
+        rationales = _check_152_driver_has_path_waiver(text)
+        if placeholder == "":
+            # Empty waiver text => regex captures empty string => rejected.
+            assert rationales == set()
+        else:
+            assert placeholder not in rationales
+
+
+def test_driver_has_path_waiver_accepts_sister_required_input_modal_staged_marker() -> None:
+    """The Wave 1 REQUIRED_INPUT_MODAL_STAGED_OK marker is ALSO accepted."""
+    text = (
+        "ANCHOR=...  # REQUIRED_INPUT_MODAL_STAGED_OK:operator stages via volume\n"
+    )
+    rationales = _check_152_driver_has_path_waiver(text)
+    assert "operator stages via volume" in rationales
+
+
+def test_driver_references_required_input_full_path_positive() -> None:
+    """Driver text containing the full relative path is recognized."""
+    text = "ANCHOR=$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+    assert (
+        _check_152_driver_references_required_input(
+            text, "experiments/results/lane_a_landed/archive_lane_a.zip"
+        )
+        is True
+    )
+
+
+def test_driver_references_required_input_basename_with_context_positive() -> None:
+    """Driver text with basename + context tokens is recognized."""
+    text = """
+        # Anchor archive from lane_a_landed
+        ANCHOR="/some/path/experiments/results/lane_a_landed/archive_lane_a.zip"
+    """
+    assert (
+        _check_152_driver_references_required_input(
+            text, "experiments/results/lane_a_landed/archive_lane_a.zip"
+        )
+        is True
+    )
+
+
+def test_driver_references_required_input_negative_unrelated_file() -> None:
+    """Driver text without any reference to the file does NOT trigger."""
+    text = "echo hello\nWORKSPACE=/tmp/pact\n"
+    assert (
+        _check_152_driver_references_required_input(
+            text, "experiments/results/lane_a_landed/archive_lane_a.zip"
+        )
+        is False
+    )
+
+
+def test_driver_references_required_input_empty_path() -> None:
+    """Empty default_path does NOT match anything."""
+    assert _check_152_driver_references_required_input("some text", "") is False
+
+
+def test_live_repo_stc_v2_driver_has_defensive_resolution() -> None:
+    """Live regression: scripts/remote_lane_substrate_stc_v2.sh carries
+    the canonical Wave 2 defensive resolver after the driver fix lands."""
+    repo_root = Path(__file__).resolve().parents[3]
+    driver = repo_root / "scripts" / "remote_lane_substrate_stc_v2.sh"
+    if not driver.is_file():
+        pytest.skip("STC v2 driver not present in this checkout")
+    text = driver.read_text(encoding="utf-8")
+    assert _check_152_driver_has_defensive_path_resolution(text), (
+        "STC v2 driver MUST carry canonical defensive path resolution per "
+        "Wave 2 Catalog #152 extension (lane "
+        "lane_stc_v2_driver_fix_catalog_152_driver_path_extension_20260516)"
+    )
+
+
+def test_live_repo_a1_plus_lapose_driver_has_defensive_resolution() -> None:
+    """Live regression: scripts/remote_lane_substrate_a1_plus_lapose.sh carries
+    the canonical Wave 2 defensive resolver."""
+    repo_root = Path(__file__).resolve().parents[3]
+    driver = repo_root / "scripts" / "remote_lane_substrate_a1_plus_lapose.sh"
+    if not driver.is_file():
+        pytest.skip("a1_plus_lapose driver not present in this checkout")
+    text = driver.read_text(encoding="utf-8")
+    assert _check_152_driver_has_defensive_path_resolution(text), (
+        "a1_plus_lapose driver MUST carry canonical defensive path resolution "
+        "per Wave 2 Catalog #152 extension"
+    )
+
+
+def test_live_repo_a1_plus_wavelet_residual_driver_has_defensive_resolution() -> None:
+    """Live regression: scripts/remote_lane_substrate_a1_plus_wavelet_residual.sh
+    carries the canonical Wave 2 defensive resolver."""
+    repo_root = Path(__file__).resolve().parents[3]
+    driver = (
+        repo_root
+        / "scripts"
+        / "remote_lane_substrate_a1_plus_wavelet_residual.sh"
+    )
+    if not driver.is_file():
+        pytest.skip("a1_plus_wavelet_residual driver not present in this checkout")
+    text = driver.read_text(encoding="utf-8")
+    assert _check_152_driver_has_defensive_path_resolution(text), (
+        "a1_plus_wavelet_residual driver MUST carry canonical defensive "
+        "path resolution per Wave 2 Catalog #152 extension"
+    )
+
+
+def test_live_repo_driver_path_expectation_extension_zero_violations() -> None:
+    """End-to-end live regression: with Wave 2 driver fixes landed, the
+    extended Catalog #152 gate has 0 driver-path-expectation violations."""
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Expected 0 driver-path-expectation violations; got "
+        f"{len(driver_violations)}: {driver_violations[:3]}"
+    )
+
+
+def test_synthetic_modal_recipe_with_undefensive_driver_flagged(
+    tmp_path: Path,
+) -> None:
+    """End-to-end: synthetic Modal recipe + non-defensive driver triggers
+    a driver-path-expectation violation."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    (repo / "experiments").mkdir()
+    # Create a synthetic substrate driver that consumes a results/** file
+    # without defensive resolution.
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_undefensive.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            set -euo pipefail
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            if [ ! -f "$ANCHOR" ]; then
+                exit 25
+            fi
+            """
+        )
+    )
+    # Synthetic recipe.
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_undefensive.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) >= 1, (
+        f"Expected >=1 driver violation for non-defensive driver; got "
+        f"{len(driver_violations)}: {violations}"
+    )
+    assert any(
+        "fc-01KRSVKF9VEESQY2FS33FF4WDM" in v for v in driver_violations
+    ), "Violation message must cite the bug-class anchor (STC v2 fc-id)"
+
+
+def test_synthetic_modal_recipe_with_defensive_driver_passes(tmp_path: Path) -> None:
+    """End-to-end: synthetic Modal recipe + defensive driver passes."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    (repo / "experiments").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_defensive.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            set -euo pipefail
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            resolve_required_input_modal_aware() {
+                local env_var="$1"
+                local rel_path="$2"
+                echo "$WORKSPACE/$rel_path"
+            }
+            ANCHOR="$(resolve_required_input_modal_aware FOO experiments/results/lane_a_landed/archive_lane_a.zip)"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_defensive.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Expected 0 driver violations for defensive driver; got "
+        f"{len(driver_violations)}: {driver_violations}"
+    )
+
+
+def test_synthetic_modal_recipe_with_waivered_undefensive_driver_passes(
+    tmp_path: Path,
+) -> None:
+    """End-to-end: undefensive driver with same-line waiver passes."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_waivered.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            set -euo pipefail
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            # DRIVER_PATH_MODAL_AWARE_OK:operator pre-stages anchor via Modal volume mechanism
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_waivered.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Expected 0 driver violations after waiver; got: {driver_violations}"
+    )
+
+
+def test_synthetic_modal_recipe_with_placeholder_waiver_rejected(tmp_path: Path) -> None:
+    """Placeholder waiver does NOT excuse the driver-path violation."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_placeholder.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            set -euo pipefail
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            # DRIVER_PATH_MODAL_AWARE_OK:<rationale>
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_placeholder.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) >= 1, (
+        f"Placeholder waiver MUST NOT excuse violation; got "
+        f"{len(driver_violations)}: {violations}"
+    )
+
+
+def test_synthetic_modal_recipe_non_substrate_driver_skipped(tmp_path: Path) -> None:
+    """Non-substrate lane scripts are out of scope (only
+    scripts/remote_lane_substrate_*.sh are scanned)."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    # Lane script NOT under remote_lane_substrate_*; out of scope.
+    driver = repo / "scripts" / "remote_lane_other_thing.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_other_thing.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Non-substrate driver MUST be out of scope; got "
+        f"{len(driver_violations)}: {driver_violations}"
+    )
+
+
+def test_synthetic_modal_recipe_non_modal_platform_skipped(tmp_path: Path) -> None:
+    """Non-Modal recipes are out of scope (Vast.ai/Lightning/Kaggle)."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_vast.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_vast.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: vastai
+            lane_script: scripts/remote_lane_substrate_synthetic_vast.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Non-Modal platform recipes MUST be out of scope; got "
+        f"{len(driver_violations)}: {driver_violations}"
+    )
+
+
+def test_synthetic_modal_recipe_driver_not_consuming_required_input_skipped(
+    tmp_path: Path,
+) -> None:
+    """Driver that does NOT consume any required-input file is out of scope."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_noinput.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            # Driver does not reference the recipe's required-input file at all.
+            echo "Just train; no anchor needed"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_noinput.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    violations = check_operator_wrapper_validates_required_input_files_pre_dispatch(
+        repo_root=repo, strict=False, verbose=False
+    )
+    driver_violations = [v for v in violations if "Modal driver script" in v]
+    assert len(driver_violations) == 0, (
+        f"Driver not consuming the required input MUST be out of scope; "
+        f"got {len(driver_violations)}: {driver_violations}"
+    )
+
+
+def test_strict_mode_raises_with_catalog_152_driver_path_message(tmp_path: Path) -> None:
+    """Strict mode raises PreflightError citing Catalog #152."""
+    repo = tmp_path / "repo"
+    (repo / ".omx" / "operator_authorize_recipes").mkdir(parents=True)
+    (repo / "scripts").mkdir()
+    driver = repo / "scripts" / "remote_lane_substrate_synthetic_strict.sh"
+    driver.write_text(
+        textwrap.dedent(
+            """
+            #!/bin/bash
+            WORKSPACE="${WORKSPACE:-/workspace/pact}"
+            ANCHOR="$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+            """
+        )
+    )
+    (repo / ".omx" / "operator_authorize_recipes" / "synth_modal.yaml").write_text(
+        textwrap.dedent(
+            """
+            platform: modal
+            lane_script: scripts/remote_lane_substrate_synthetic_strict.sh
+            required_input_files:
+              - flag: --anchor
+                default_path: experiments/results/lane_a_landed/archive_lane_a.zip
+            """
+        )
+    )
+    with pytest.raises(PreflightError) as exc_info:
+        check_operator_wrapper_validates_required_input_files_pre_dispatch(
+            repo_root=repo, strict=True, verbose=False
+        )
+    err = str(exc_info.value)
+    assert (
+        "check_operator_wrapper_validates_required_input_files_pre_dispatch" in err
+    )
+
+
+def test_canonical_defensive_patterns_constant_pinned() -> None:
+    """The defensive-pattern set MUST include the canonical helper name +
+    other recognized idioms (regression guard)."""
+    from tac.preflight import _CHECK_152_DRIVER_DEFENSIVE_PATTERNS
+
+    pattern_strs = [p.pattern for p in _CHECK_152_DRIVER_DEFENSIVE_PATTERNS]
+    # Canonical helper name must be present.
+    assert any(
+        "resolve_required_input_modal_aware" in p for p in pattern_strs
+    ), "Canonical resolver name must be in defensive patterns"
+    # MODAL_RUNTIME conditional pattern must be present.
+    assert any("MODAL_RUNTIME" in p for p in pattern_strs), (
+        "MODAL_RUNTIME conditional pattern must be in defensive patterns"
+    )
+
+
+def test_waiver_marker_constants_pinned() -> None:
+    """The waiver-marker tuple MUST include BOTH the dedicated marker AND
+    the Wave 1 sister marker (regression guard)."""
+    from tac.preflight import _CHECK_152_DRIVER_WAIVER_TOKENS
+
+    assert "DRIVER_PATH_MODAL_AWARE_OK" in _CHECK_152_DRIVER_WAIVER_TOKENS
+    assert "REQUIRED_INPUT_MODAL_STAGED_OK" in _CHECK_152_DRIVER_WAIVER_TOKENS

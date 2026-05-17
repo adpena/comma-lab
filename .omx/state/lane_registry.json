@@ -32283,11 +32283,11 @@
       "id": "lane_probe_outcomes_canonical_ledger_bake_in_20260516",
       "name": "Probe Outcomes Canonical Ledger 4-Layer Bake-In",
       "phase": 4.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/probe_outcomes_ledger.py + tools/check_predecessor_probe_outcome.py + Catalog #313 STRICT preflight gate + tools/operator_authorize.py wire-in (Layer 4)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32302,16 +32302,16 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #313 check_dispatch_target_has_no_predecessor_adjudicated_outcome STRICT @ 0; 27 dedicated tests in src/tac/tests/test_check_313_dispatch_target_no_predecessor_probe_outcome.py"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/probe_outcomes_canonical_ledger_landed_20260516.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -32369,5 +32369,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T02:56:01Z"
+  "updated_at": "2026-05-17T03:05:22Z"
 }
