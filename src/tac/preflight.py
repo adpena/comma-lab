@@ -2502,6 +2502,27 @@ def preflight_all(
         check_substrate_design_memo_has_cargo_cult_audit_section(
             strict=False, verbose=verbose,
         )
+        # 2026-05-16 Catalog #314 - COMMIT-SWAP-INVESTIGATION absorption-
+        # pattern detection. Refuses bare commits whose file list
+        # intersects an in-flight subagent's declared `files_touched`
+        # checkpoint within the preceding 60-minute window. Per CLAUDE.md
+        # "Bugs must be permanently fixed AND self-protected against" +
+        # 2 empirical anchors today (WAVE-D 2c957c31e 2026-05-15 +
+        # STC v2 FIX 2026-05-16 commits `89d89c27e` + `c09c6e1c8` +
+        # `5562afc3c`). Sister of #117 (last-50 serializer usage; #314
+        # is the per-absorption-fingerprint complement that catches the
+        # bug class even when #117 has legacy backlog) + #157 / #174 /
+        # #216 / #289 (commit-swap protection family) + #230 (bulk-
+        # rewrite ownership map) + #302 (sister subagent scope overlap
+        # via checkpoint JSONL). Initial wire-in is WARN-ONLY per
+        # "Strict-flip atomicity rule" — live count at landing: 1
+        # (today's `89d89c27e` absorption is the canonical anchor).
+        # Strict-flip pending operator-routed audit + waiver backfill
+        # on the absorption-anchor commits. Memory:
+        # feedback_commit_swap_absorption_pattern_investigation_landed_20260516.md.
+        check_no_subagent_files_touched_absorption_in_bare_commits(
+            strict=False, verbose=verbose,
+        )
         # 2026-05-16 Catalog #304 - SUBSTRATE CODEC NO CLOSED-FORM CDF
         # WITHOUT EMPIRICAL BIT-SPEND PROOF. Per CLAUDE.md "Bit-level
         # deconstruction and entropy discipline" + NSCS06 v6
@@ -68461,6 +68482,458 @@ def check_dispatch_target_has_no_predecessor_adjudicated_outcome(
             "add same-line `# PROBE_PREDECESSOR_OVERRIDE_OK:<rationale>` "
             "waiver.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #314 - check_no_subagent_files_touched_absorption_in_bare_commits
+#
+# COMMIT-SWAP-INVESTIGATION self-protection 2026-05-16 per CLAUDE.md
+# "Bugs must be permanently fixed AND self-protected against" non-negotiable
+# + 2 empirical anchors today: (a) WAVE-D 2c957c31e forensic finding
+# 2026-05-15 (CODEX-FIX-WAVE absorbed DISPATCH-OPTIMIZATION's preflight.py
+# + CLAUDE.md edits via DROP-FLAG-AND-RETRY pattern; closed by Catalog #289);
+# (b) STC v2 FIX 2026-05-16 (commits `89d89c27e` "Harden L5 sideinfo and
+# dispatch probe gates" + `c09c6e1c8` "Preserve probe outcomes landing memo"
+# absorbed STC v2 FIX's `src/tac/preflight.py` + `src/tac/tests/test_check_152_*`
+# + 3 driver scripts + `CLAUDE.md` edits BEFORE STC v2 FIX's canonical
+# serializer call ran; Catalog #157 --expected-content-sha256 did NOT trigger
+# rc=4 because absorbed content IS the working-tree state at lock-acquire).
+#
+# ROOT CAUSE: the operator's `/commit` slash command (commit-commands plugin
+# at ~/.claude/plugins/marketplaces/claude-plugins-official/plugins/
+# commit-commands/commands/commit.md) does bare `git add` + `git commit`
+# directly (NOT through `tools/subagent_commit_serializer.py`). When invoked
+# while a sister subagent has uncommitted edits in the shared working tree,
+# the bare `git add` packages whatever the LLM thinks is relevant — which
+# can include the sister's still-in-flight edits. The resulting commit
+# carries a terse subject like "Preserve probe outcomes landing memo" or
+# "Harden L5 sideinfo and dispatch probe gates" and the sister's work is
+# silently attributed to the wrong commit body.
+#
+# WHY existing protections did not extinct this:
+# - Catalog #117 (subagent commit serializer must be used) IS detecting the
+#   bare commits (12 violations in last 50 today, including all 3 absorption
+#   commits) but is wired warn-only per legacy backlog. It DETECTS but does
+#   NOT BLOCK.
+# - Catalog #157 / #174 / #216 / #289 (--expected-content-sha256 family)
+#   protect against sister-edits-during-lock-wait + drop-flag-and-retry,
+#   not bare-commit-absorbs-files-before-serializer.
+# - Catalog #230 (bulk-rewrite ownership map) covers the COMMIT-MESSAGE
+#   surface; not the bare-commit-with-terse-subject case.
+# - Catalog #302 (sister subagent scope overlap via checkpoint JSONL) covers
+#   the SIMULTANEOUS-EDIT surface (2+ subagents both editing same files);
+#   not the BARE-COMMIT-ABSORBS-IN-FLIGHT-FILES case.
+#
+# This gate closes the absorption-pattern surface as a dedicated detector
+# scoped to the empirical fingerprint: a bare commit (not in serializer log,
+# no NO_SERIALIZER_OK waiver) containing files declared as `files_touched`
+# by an in-flight subagent (status=in_progress) within a ~60-minute window
+# preceding the commit timestamp.
+#
+# The detection is POST-HOC (the commit already landed). This is by design:
+# we cannot block the `/commit` slash command from within preflight because
+# preflight runs before commit, not before edit. The structural value is
+# operator-facing alert + machine-readable evidence for the next subagent
+# wave so the absorption is detected within the same session rather than
+# discovered weeks later when the operator wonders "why did THIS commit
+# include files I never asked about?".
+#
+# Sister of: Catalog #117 (last-50 commit serializer usage gate; #314 is
+# the per-absorption-fingerprint complement that catches the bug class even
+# when #117 has legacy backlog), Catalog #157 / #174 / #216 / #289 (commit-
+# swap protection family), Catalog #230 (bulk-rewrite ownership map),
+# Catalog #302 (sister subagent scope overlap via checkpoint JSONL —
+# edit-time-checkpoint surface).
+#
+# Together they extinct the multi-subagent edit/commit collision class at
+# SEVEN surfaces: edit-time-checkpoint (#302) + edit-time-bulk-op (#230) +
+# commit-time-pre-pre-lock (#157) + commit-time-staged (#216) + commit-
+# time-lock-arbitration (#117) + post-resolution-residual-marker (#248) +
+# bare-commit-absorbs-in-flight-files (#314).
+#
+# Initial wire-in is WARN-ONLY per CLAUDE.md "Strict-flip atomicity rule"
+# — live count at landing: 1 (today's `89d89c27e` absorption of STC v2's
+# preflight.py + CLAUDE.md + 3 driver scripts is the canonical anchor).
+# Strict-flip pending operator-routed audit + waiver backfill on the
+# absorption-anchor commits.
+# ============================================================================
+
+
+# Files exempt from absorption-fingerprint detection (commonly multi-subagent
+# state; mirrors Catalog #302 _CHECK_302_EXEMPT_FILES). These files are
+# legitimately mutated by many subagents concurrently and absorption is not
+# a bug-class signature for them.
+_CHECK_314_EXEMPT_FILES = frozenset({
+    ".omx/state/modal_call_id_ledger.jsonl",
+    ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/state/commit-serializer.log",
+    ".omx/state/catalog-claim.log",
+    ".omx/state/subagent_progress.jsonl",
+    ".omx/state/lane_registry.json",
+    ".omx/state/lane_maturity_audit.log",
+    ".omx/state/continual_learning_posterior.jsonl",
+    ".omx/state/cost_band_posterior.jsonl",
+    ".omx/state/next_catalog_number.txt",
+    ".omx/state/probe_outcomes.jsonl",
+    "MEMORY.md",
+})
+
+# Waiver tokens accepted on the commit message body.
+_CHECK_314_WAIVER_TOKENS = (
+    "# ABSORPTION_PATTERN_OK:",
+    "# NO_SERIALIZER_OK:",  # Sister waiver from Catalog #117 also accepted
+)
+_CHECK_314_WAIVER_PLACEHOLDERS = ("<rationale>", "<reason>")
+
+# Window: how far BEFORE the commit timestamp to scan for in-flight subagent
+# checkpoints. 60 minutes mirrors Catalog #302's window.
+_CHECK_314_ABSORPTION_WINDOW_SECONDS = 60 * 60
+
+
+def _check_314_parse_iso_utc(ts):
+    """Parse an ISO-UTC timestamp; return aware-datetime or None on failure."""
+    if not isinstance(ts, str):
+        return None
+    try:
+        if ts.endswith("Z"):
+            ts = ts[:-1] + "+00:00"
+        d = _dt.datetime.fromisoformat(ts)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=_dt.UTC)
+        return d
+    except (TypeError, ValueError):
+        return None
+
+
+def _check_314_message_has_waiver(message):
+    """Return True if the commit message body carries a non-placeholder waiver."""
+    if not isinstance(message, str):
+        return False
+    for token in _CHECK_314_WAIVER_TOKENS:
+        idx = message.find(token)
+        if idx == -1:
+            continue
+        tail = message[idx + len(token):].strip()
+        if not tail:
+            continue
+        # Reject placeholder rationales
+        skip = False
+        for placeholder in _CHECK_314_WAIVER_PLACEHOLDERS:
+            if tail.startswith(placeholder):
+                skip = True
+                break
+        if skip:
+            continue
+        # Require at least 4 chars of real rationale (mirror #302/#303 etc).
+        if len(tail.split("\n", 1)[0]) >= 4:
+            return True
+    return False
+
+
+def _check_314_load_serializer_commit_hashes(repo_root):
+    """Return the set of full + short SHAs known to the serializer log."""
+    seen = set()
+    log_path = repo_root / ".omx" / "state" / "commit-serializer.log"
+    if not log_path.is_file():
+        return seen
+    try:
+        for raw in log_path.read_text(encoding="utf-8").splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+            except (ValueError, json.JSONDecodeError):
+                continue
+            if not isinstance(rec, dict):
+                continue
+            if rec.get("commit_rc") not in (0, "0"):
+                continue
+            for key in ("head_after", "commit_sha", "sha"):
+                h = rec.get(key)
+                if isinstance(h, str) and h:
+                    seen.add(h)
+    except OSError:
+        pass
+    return seen
+
+
+def _check_314_load_in_flight_subagent_files(repo_root):
+    """Return list of (subagent_id, ts_utc, files_set, notes, status) per row.
+
+    Reads `.omx/state/subagent_progress.jsonl` and returns ONE entry per
+    JSONL row (NOT just the latest per subagent_id; absorption detection
+    requires the row whose `written_at_utc` is the most-recent BEFORE the
+    bare commit time, not the most-recent overall).
+
+    A row is included if it has a parseable `written_at_utc`, a non-empty
+    `files_touched` list (after exempt-file filtering), and status in
+    {in_progress, complete, blocked}.
+    """
+    out = []
+    jsonl_path = repo_root / ".omx" / "state" / "subagent_progress.jsonl"
+    if not jsonl_path.is_file():
+        return out
+    try:
+        with jsonl_path.open("r", encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    row = json.loads(raw)
+                except (ValueError, json.JSONDecodeError):
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                sid = row.get("subagent_id")
+                if not isinstance(sid, str) or not sid:
+                    continue
+                ts = _check_314_parse_iso_utc(row.get("written_at_utc"))
+                if ts is None:
+                    continue
+                status = row.get("status")
+                if status not in ("in_progress", "complete", "blocked"):
+                    continue
+                files_touched = row.get("files_touched") or []
+                if not isinstance(files_touched, list):
+                    continue
+                files_set = set()
+                for f in files_touched:
+                    if not isinstance(f, str):
+                        continue
+                    f_stripped = f.strip()
+                    if not f_stripped:
+                        continue
+                    # Some subagents register files as a single space-separated
+                    # string (legacy convention from operator-issued
+                    # checkpoints). Normalize by splitting on whitespace.
+                    candidates = f_stripped.split() if " " in f_stripped else [f_stripped]
+                    for c in candidates:
+                        if c and c not in _CHECK_314_EXEMPT_FILES:
+                            files_set.add(c)
+                if not files_set:
+                    continue
+                notes = row.get("notes") or ""
+                out.append((sid, ts, files_set, notes if isinstance(notes, str) else "", status))
+    except OSError:
+        return out
+    return out
+
+
+def check_no_subagent_files_touched_absorption_in_bare_commits(
+    *,
+    repo_root=None,
+    strict: bool = False,
+    verbose: bool = False,
+    last_n_commits: int = 50,
+    now_utc=None,
+) -> list[str]:
+    """Catalog #314 - refuse bare commits whose file list intersects an
+    in-flight subagent's declared `files_touched` checkpoint within the
+    preceding 60-minute absorption window.
+
+    COMMIT-SWAP-INVESTIGATION 2026-05-16 self-protection per CLAUDE.md
+    "Bugs must be permanently fixed AND self-protected against" non-
+    negotiable + 2 empirical anchors today.
+
+    Scans the last ``last_n_commits`` commits. For each commit NOT in the
+    serializer log AND not carrying ``# ABSORPTION_PATTERN_OK:<rationale>``
+    or ``# NO_SERIALIZER_OK:<rationale>`` waiver, parses the commit's
+    timestamp + file list and intersects with the `files_touched` of every
+    subagent_progress.jsonl row whose ``written_at_utc`` falls within
+    ``[commit_time - 60min, commit_time]`` AND whose status is in_progress
+    / complete / blocked. Any overlap (excluding common-shared exempt
+    files) is flagged as an absorption-pattern signature.
+
+    Bug class: bare ``git commit`` via the operator's ``/commit`` slash
+    command (commit-commands plugin) packages whatever is in the shared
+    working tree, which can include sister subagent's in-flight edits.
+    Today's commits ``89d89c27e`` "Harden L5 sideinfo and dispatch probe
+    gates" and ``c09c6e1c8`` "Preserve probe outcomes landing memo"
+    absorbed STC v2 FIX subagent's edits to ``src/tac/preflight.py``,
+    ``src/tac/tests/test_check_152_modal_mounted_input_extension.py``,
+    ``CLAUDE.md``, and 3 driver scripts BEFORE STC v2 FIX's canonical
+    serializer call ran. Catalog #157 --expected-content-sha256 did NOT
+    fire rc=4 because the absorbed content IS the working-tree state at
+    lock-acquire time.
+
+    Memory: ``feedback_commit_swap_absorption_pattern_investigation_landed_20260516.md``.
+    Lane: ``lane_commit_swap_absorption_pattern_investigation_20260516``.
+    """
+    repo_root = Path(repo_root or REPO_ROOT)
+
+    if now_utc is None:
+        now_utc = _dt.datetime.now(_dt.UTC)
+
+    seen_serializer_hashes = _check_314_load_serializer_commit_hashes(
+        repo_root
+    )
+    in_flight = _check_314_load_in_flight_subagent_files(repo_root)
+
+    # Read recent commits' metadata (sha, ISO timestamp, subject, body) in
+    # one call; file lists in a second call per commit. Mixing %b (body)
+    # with --name-only via a single git log invocation produces fragile
+    # parsing because file lists and body lines both use \n; the cleanest
+    # path is two passes.
+    try:
+        meta_result = subprocess.run(
+            [
+                "git", "log", f"-{last_n_commits}",
+                "--format=%H%x09%cI%x09%s%x1e%b%x1f",
+            ],
+            cwd=repo_root, capture_output=True, text=True, timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return []
+    if meta_result.returncode != 0:
+        return []
+
+    # Parse meta records: <sha>\t<iso>\t<subject>\x1e<body>\x1f
+    commits = []
+    for raw_record in meta_result.stdout.split("\x1f"):
+        raw_record = raw_record.strip("\n").strip()
+        if not raw_record:
+            continue
+        sep_idx = raw_record.find("\x1e")
+        if sep_idx == -1:
+            head = raw_record
+            body = ""
+        else:
+            head = raw_record[:sep_idx]
+            body = raw_record[sep_idx + 1:]
+        meta_parts = head.split("\t", 2)
+        if len(meta_parts) < 3:
+            continue
+        commits.append({
+            "full_sha": meta_parts[0],
+            "iso_ts": meta_parts[1],
+            "subject": meta_parts[2],
+            "body": body,
+        })
+
+    violations: list[str] = []
+    for c in commits:
+        full_sha = c["full_sha"]
+        iso_ts = c["iso_ts"]
+        subject = c["subject"]
+        body = c["body"]
+        commit_msg = subject + "\n" + body
+        short_sha = full_sha[:7]
+
+        # Skip commits that DID go through the serializer (Catalog #117 +
+        # the per-prefix matcher handle them; if the serializer was used,
+        # Catalog #157 / #174 / #216 / #289 already protect this commit).
+        # Match exact hash OR any serializer entry where one prefixes the other.
+        if full_sha in seen_serializer_hashes:
+            continue
+        matched = False
+        for seen in seen_serializer_hashes:
+            if seen.startswith(full_sha) or full_sha.startswith(seen):
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Skip commits with explicit waiver
+        if _check_314_message_has_waiver(commit_msg):
+            continue
+
+        # Fetch file list via a per-commit `git show --name-only --format=`.
+        # Using --pretty=format: suppresses the header so stdout is the
+        # name-only listing (one per line). Empty output indicates a merge
+        # or an empty commit; we treat empty as no signal.
+        try:
+            files_result = subprocess.run(
+                [
+                    "git", "show", "--name-only", "--format=", full_sha,
+                ],
+                cwd=repo_root, capture_output=True, text=True, timeout=5,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            continue
+        if files_result.returncode != 0:
+            continue
+        file_lines = [
+            ln.strip() for ln in files_result.stdout.splitlines() if ln.strip()
+        ]
+
+        # Filter files: drop common-shared exempts
+        commit_files = set()
+        for f in file_lines:
+            if not f or f in _CHECK_314_EXEMPT_FILES:
+                continue
+            commit_files.add(f)
+        if not commit_files:
+            continue
+
+        commit_ts = _check_314_parse_iso_utc(iso_ts)
+        if commit_ts is None:
+            continue
+
+        # Check for absorption signature against in-flight subagents.
+        # The absorption window is: subagent checkpoint at time T_sub
+        # registered files; bare commit at time T_commit (T_sub <= T_commit
+        # <= T_sub + 60min) contains those files. We dedupe per subagent so
+        # multiple checkpoints by the same subagent within the window only
+        # produce ONE violation per (commit, subagent).
+        seen_collisions = set()
+        for sid, sub_ts, sub_files, _sub_notes, sub_status in in_flight:
+            try:
+                delta = (commit_ts - sub_ts).total_seconds()
+            except (TypeError, ValueError):
+                continue
+            if delta < 0 or delta > _CHECK_314_ABSORPTION_WINDOW_SECONDS:
+                continue
+            overlap = commit_files & sub_files
+            if not overlap:
+                continue
+            collision_key = (short_sha, sid)
+            if collision_key in seen_collisions:
+                continue
+            seen_collisions.add(collision_key)
+            overlap_str = ", ".join(sorted(overlap)[:5])
+            n_overlap = len(overlap)
+            more = "" if n_overlap <= 5 else f" (+{n_overlap - 5} more)"
+            violations.append(
+                f"commit {short_sha} ({subject[:50]!r}, "
+                f"committed {iso_ts}) ABSORBED files declared as "
+                f"files_touched by in-flight subagent {sid!r} (checkpoint "
+                f"at {sub_ts.isoformat()}, status={sub_status}). "
+                f"Overlapping files: {{ {overlap_str} }}{more}. Per "
+                f"CLAUDE.md \"Bugs must be permanently fixed AND self-"
+                f"protected against\" + Catalog #314 COMMIT-SWAP-"
+                f"INVESTIGATION. Either (a) commit via "
+                f"`tools/subagent_commit_serializer.py` with "
+                f"--expected-content-sha256 per Catalog #157, (b) add "
+                f"`# ABSORPTION_PATTERN_OK:<rationale>` waiver to the "
+                f"commit body (e.g. via `git notes append`), OR (c) add "
+                f"`# NO_SERIALIZER_OK:<rationale>` waiver from sister "
+                f"Catalog #117."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_no_subagent_files_touched_absorption_in_bare_commits] "
+                f"{len(violations)} absorption-signature commit(s)"
+            )
+        else:
+            print(
+                "  [check_no_subagent_files_touched_absorption_in_bare_commits] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_no_subagent_files_touched_absorption_in_bare_commits found "
+            f"{len(violations)} commit(s) carrying the absorption-pattern "
+            "signature: bare git commit (not in serializer log, no waiver) "
+            "containing files declared as `files_touched` by an in-flight "
+            "subagent within the preceding 60 minutes. Per CLAUDE.md Catalog "
+            "#314 COMMIT-SWAP-INVESTIGATION 2026-05-16 (sister of #117 / "
+            "#157 / #174 / #216 / #230 / #289 / #302).\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations
 

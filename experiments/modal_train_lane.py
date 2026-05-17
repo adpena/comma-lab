@@ -37,13 +37,19 @@ Cross-references:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import modal
 
+from tac.deploy.modal.mount_manifest import (
+    build_training_image,
+    collect_extra_mount_paths,
+    collect_tier_required_input_files,
+)
 from tac.deploy.modal.runtime import (
     DALI_DISABLE_NVML_VALUE,
     PYTORCH_CUDA_ALLOC_CONF_VALUE,
 )
-from tac.deploy.modal.mount_manifest import build_training_image
 
 app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
@@ -124,10 +130,7 @@ image = (
 # hand-curated list. The canonical builder ALWAYS mounts the structural
 # minimum (src / scripts / upstream / submissions / experiments / tools /
 # pyproject.toml) and discovers `required_input_file=True` flags from any
-# trainer module the caller names. modal_train_lane.py does NOT name a single
-# trainer module (it dispatches arbitrary `scripts/remote_lane_*.sh`), so we
-# pass `trainer_module_path=None` and let lane scripts mount any required
-# inputs through their own bootstrap.
+# trainer module the caller names.
 #
 # Per Catalog #153 (`check_modal_dispatcher_uses_canonical_mount_builder`),
 # this is the ONLY supported mount pattern for experiments/modal_*.py going
@@ -135,6 +138,35 @@ image = (
 # entries to hand-curated lists IS the bug class (see 2026-05-12 Modal A100
 # dispatch fc-01KREJST89QHFRWJXHAKXD850C that crashed for exactly this
 # reason).
+#
+# WAVE-3 (2026-05-16) DEEPER STRUCTURAL FIX per
+# `.omx/research/stc_v2_driver_path_layer_fix_landed_20260516.md` Follow-on
+# op-routable #4 + the STC v2 FIX subagent's CRITICAL DEEPER FINDING (commit
+# 7dd8a5412): The Modal image is built at MODULE-LOAD time but the lane
+# script (and therefore the canonical trainer module) is only known at
+# DISPATCH time. The image cannot be rebuilt per-dispatch (Modal image
+# caching + @app.function decorator constraints). Trainer-side
+# TIER_1_EXTRA_MOUNT_PATHS declarations therefore CANNOT participate in the
+# Modal image build for this generic dispatcher.
+#
+# CANONICAL FIX (Option 2 — payload staging): The dispatcher derives the
+# trainer module path from the lane_script at main() time, reads each
+# declared TIER_1_EXTRA_MOUNT_PATHS (+ MODAL_EXTRA_MOUNT_PATHS) file into
+# bytes, and threads them as a `dict[rel_path, bytes]` arg through to
+# `_run_lane_inner` which materializes them under `/tmp/pact/<rel>` on the
+# worker after the structural mount copy. This:
+#   - Honors trainer-side TIER_1_EXTRA_MOUNT_PATHS declarations structurally
+#   - Works for files under experiments/results/** (the Modal-IGNORED subtree
+#     per DEFAULT_RESULTS_IGNORE — exactly the STC v2 / a1_plus_lapose /
+#     a1_plus_wavelet_residual anchor-archive class)
+#   - Preserves Modal image caching (image is invariant per app)
+#   - Mirrors the existing claim_ledger_bytes serialization pattern
+#
+# Cross-references:
+#   - Catalog #152 Wave 1 + Wave 2 driver-path extension
+#   - Catalog #153 canonical mount builder
+#   - Catalog #166 Modal HEAD parity ledger
+#   - HNeRV parity discipline L9 (Runtime closure)
 #
 # T2-C absorption: the previous `_RESULTS_MOUNTS` conditional (8 LOC of
 # dead-conditional mount paths for `public_pr95_intake_20260504_codex` +
@@ -158,6 +190,132 @@ training_image = build_training_image(
 )
 
 
+def _derive_trainer_module_path(lane_script: str, repo_root: Path) -> Path | None:
+    """Derive canonical trainer module path from lane_script.
+
+    Convention: ``scripts/remote_lane_substrate_<id>.sh`` →
+    ``experiments/train_substrate_<id>.py`` (per CLAUDE.md "Subagent
+    coherence-by-default" canonical mapping). Returns ``None`` if the lane
+    script does not follow the substrate convention OR the inferred trainer
+    file does not exist.
+
+    WAVE-3 deeper structural fix per STC v2 FIX CRITICAL DEEPER FINDING
+    (commit 7dd8a5412): the generic dispatcher cannot name a single trainer
+    module at module-load time, but it CAN derive one at dispatch time from
+    the lane_script.
+    """
+    script_name = Path(lane_script).name
+    # Canonical substrate driver naming convention
+    prefix = "remote_lane_substrate_"
+    if not script_name.startswith(prefix) or not script_name.endswith(".sh"):
+        return None
+    substrate_id = script_name[len(prefix):-len(".sh")]
+    candidate = repo_root / "experiments" / f"train_substrate_{substrate_id}.py"
+    if not candidate.is_file():
+        return None
+    return candidate
+
+
+def _collect_trainer_extra_mount_payload(
+    trainer_module_path: Path | None,
+    repo_root: Path,
+) -> dict:
+    """Read trainer-declared TIER_1_EXTRA_MOUNT_PATHS (+ MODAL_EXTRA_MOUNT_PATHS)
+    into a ``{rel_path: bytes}`` dict suitable for serialization to the Modal
+    worker.
+
+    Returns an empty dict if:
+    - ``trainer_module_path`` is None (legacy dispatchers / unmapped lane scripts)
+    - the trainer module has no extra-mount declarations
+    - the trainer module cannot be imported (logged + skipped, not raised)
+
+    Skips paths under STRUCTURAL_MINIMUM_DIRS (already mounted) so we do not
+    double-mount common files. Only reads files under
+    ``experiments/results/**`` (the Modal-IGNORED subtree per
+    ``DEFAULT_RESULTS_IGNORE``) and other paths outside the structural mount
+    set.
+
+    Per CLAUDE.md "Subagent coherence-by-default": this is the trainer-side
+    contract enforcement at the dispatcher layer.
+    """
+    import sys as _sys
+
+    payload: dict = {}
+    if trainer_module_path is None:
+        return payload
+
+    # Import the trainer module via the canonical mount-manifest helper to
+    # honor the same import semantics (importlib.util.spec_from_file_location
+    # avoids polluting sys.modules).
+    try:
+        from tac.deploy.modal.mount_manifest import _import_trainer_module
+        trainer_module = _import_trainer_module(trainer_module_path)
+    except Exception as exc:
+        print(
+            f"[modal-train-lane][WAVE-3] WARN: trainer module {trainer_module_path} "
+            f"could not be imported for extra-mount discovery: {type(exc).__name__}: {exc}. "
+            f"Proceeding without trainer-declared extras (lane script must self-bootstrap).",
+            file=_sys.stderr,
+        )
+        return payload
+
+    extras = collect_extra_mount_paths(trainer_module)
+    # Also collect required-input-file defaults so generic dispatcher honors
+    # the same `required_input_file=True` contract Catalog #152 enforces for
+    # operator wrappers. Many of these defaults live under
+    # ``experiments/results/**`` (the Modal-IGNORED subtree) — exactly the
+    # bug class the STC v2 anchor archive triggered.
+    required_inputs = collect_tier_required_input_files(trainer_module)
+    extras_paths = list(extras) + [path for _flag, path in required_inputs]
+
+    # Paths that are already in the structural minimum mount set are skipped
+    # (they get mounted via STRUCTURAL_MINIMUM_DIRS without `results/**`
+    # ignored, OR they live OUTSIDE the ignored subtree so the structural
+    # mount already covers them).
+    structural_top_dirs = {
+        "src", "scripts", "upstream", "submissions", "tools",
+    }
+    # `experiments/` is mounted WITH `results/**` ignored — so files under
+    # `experiments/results/` MUST be staged via payload bytes; files under
+    # other `experiments/` subdirs are already covered.
+    for entry in extras_paths:
+        rel_text = str(entry).strip()
+        if not rel_text:
+            continue
+        local = entry if entry.is_absolute() else (repo_root / entry)
+        # Resolve relative-to-repo-root for the payload key.
+        try:
+            rel = str(local.resolve().relative_to(repo_root.resolve()))
+        except ValueError:
+            # Outside repo root — payload key is the absolute path so the
+            # worker materializes it at the same absolute location.
+            rel = str(local)
+        # Skip if already in structural mount set + not under Modal-IGNORED
+        # results/** subtree.
+        top = rel.split("/", 1)[0] if "/" in rel else rel
+        if top in structural_top_dirs:
+            continue
+        if top == "experiments" and not rel.startswith("experiments/results/"):
+            # experiments/ is structurally mounted with results/** ignored;
+            # experiments/<non-results> is already covered.
+            continue
+        # File must exist + be a regular file (not a dir — payload staging
+        # is byte-stream only; directories require recursive walk which is
+        # not yet supported).
+        if not local.is_file():
+            print(
+                f"[modal-train-lane][WAVE-3] WARN: trainer-declared extra mount "
+                f"{rel} not found at {local} — skipping (declare on disk or "
+                "remove from TIER_1_EXTRA_MOUNT_PATHS).",
+                file=_sys.stderr,
+            )
+            continue
+        if rel in payload:
+            continue
+        payload[rel] = local.read_bytes()
+    return payload
+
+
 def _run_lane_inner(
     lane_script: str,
     label: str,
@@ -167,8 +325,20 @@ def _run_lane_inner(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
-    """Container-side execution. Imports MUST be local (Modal serialization)."""
+    """Container-side execution. Imports MUST be local (Modal serialization).
+
+    WAVE-3 (2026-05-16): ``trainer_extra_mount_payload`` is a
+    ``{rel_path: bytes}`` dict carrying every file the trainer's
+    ``TIER_1_EXTRA_MOUNT_PATHS`` / ``MODAL_EXTRA_MOUNT_PATHS`` /
+    ``required_input_file=True`` defaults pointed at, but which were NOT
+    in the structural mount set (typically files under
+    ``experiments/results/**`` which Modal's image build ignores per
+    ``DEFAULT_RESULTS_IGNORE``). The worker materializes each entry under
+    ``/tmp/pact/<rel>`` after the structural copy. Backward compat: ``None``
+    or empty dict = no-op.
+    """
     import json
     import os
     import shutil
@@ -199,6 +369,35 @@ def _run_lane_inner(
     claim_path = workspace / ".omx/state/active_lane_dispatch_claims.md"
     claim_path.parent.mkdir(parents=True, exist_ok=True)
     claim_path.write_bytes(claim_ledger_bytes)  # BARE_WRITE_OK: single-writer Modal worker copies immutable local claim snapshot
+
+    # WAVE-3 (2026-05-16) deeper structural fix per STC v2 FIX CRITICAL
+    # DEEPER FINDING: trainer-declared TIER_1_EXTRA_MOUNT_PATHS /
+    # MODAL_EXTRA_MOUNT_PATHS / required_input_file=True defaults that live
+    # under experiments/results/** (Modal-IGNORED subtree per
+    # DEFAULT_RESULTS_IGNORE) are staged here as bytes payloads. Sister of
+    # Wave 2's driver-side defensive resolver (scripts/remote_lane_substrate_*.sh
+    # resolve_required_input_modal_aware helper) — Wave 2 catches it at the
+    # driver layer; Wave 3 catches it at the dispatcher layer.
+    #
+    # The payload was computed at LOCAL dispatch time by
+    # _collect_trainer_extra_mount_payload reading the trainer module's
+    # extra-mount declarations. Materializing under /tmp/pact/<rel> means
+    # the driver's WORKSPACE-anchored path lookups (e.g.
+    # $WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip)
+    # resolve correctly without any defensive multi-candidate probing.
+    if trainer_extra_mount_payload:
+        print(
+            f"[modal-train-lane][WAVE-3] staging {len(trainer_extra_mount_payload)} "
+            f"trainer-declared extra mount path(s) under {workspace}"
+        )
+        for rel, data in trainer_extra_mount_payload.items():
+            # Resolve under workspace (relative) or as absolute (rare).
+            rel_path = Path(rel)
+            target = rel_path if rel_path.is_absolute() else workspace / rel_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            # BARE_WRITE_OK: single-writer Modal worker materializing
+            # immutable local trainer-declared payload snapshot
+            target.write_bytes(data)
 
     os.chdir(workspace)
 
@@ -634,6 +833,7 @@ def run_lane_training_t4(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
     return _run_lane_inner(
         lane_script,
@@ -644,6 +844,7 @@ def run_lane_training_t4(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds=max_seconds,
+        trainer_extra_mount_payload=trainer_extra_mount_payload,
     )
 
 
@@ -662,6 +863,7 @@ def run_lane_training_a10g(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
     return _run_lane_inner(
         lane_script,
@@ -672,6 +874,7 @@ def run_lane_training_a10g(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds=max_seconds,
+        trainer_extra_mount_payload=trainer_extra_mount_payload,
     )
 
 
@@ -690,6 +893,7 @@ def run_lane_training_a100(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
     return _run_lane_inner(
         lane_script,
@@ -700,6 +904,7 @@ def run_lane_training_a100(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds=max_seconds,
+        trainer_extra_mount_payload=trainer_extra_mount_payload,
     )
 
 
@@ -718,6 +923,7 @@ def run_lane_training_h100(
     mounted_code_git_branch: str,
     sentinel_sha256_local: dict,
     max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
 ) -> dict:
     return _run_lane_inner(
         lane_script,
@@ -728,6 +934,7 @@ def run_lane_training_h100(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds=max_seconds,
+        trainer_extra_mount_payload=trainer_extra_mount_payload,
     )
 
 
@@ -1310,6 +1517,49 @@ def main(
         import hashlib as _hashlib
         sentinel_sha256_local[rel] = _hashlib.sha256(p.read_bytes()).hexdigest()
 
+    # WAVE-3 (2026-05-16) deeper structural fix per STC v2 FIX CRITICAL
+    # DEEPER FINDING (commit 7dd8a5412): derive trainer module path from
+    # lane_script + collect trainer-declared TIER_1_EXTRA_MOUNT_PATHS /
+    # MODAL_EXTRA_MOUNT_PATHS / required_input_file=True defaults into bytes
+    # payload. The worker materializes each entry under /tmp/pact/<rel>
+    # after the structural copy. This makes trainer-side declarations
+    # STRUCTURALLY EFFECTIVE for the generic Modal dispatcher (previously
+    # `trainer_module_path=None` made them inert).
+    trainer_module_path_resolved = _derive_trainer_module_path(
+        lane_script, repo_root
+    )
+    if trainer_module_path_resolved is not None:
+        print(
+            f"[modal-train-lane][WAVE-3] derived trainer module from "
+            f"lane_script: {trainer_module_path_resolved.relative_to(repo_root)}"
+        )
+        trainer_extra_mount_payload = _collect_trainer_extra_mount_payload(
+            trainer_module_path_resolved, repo_root
+        )
+        if trainer_extra_mount_payload:
+            print(
+                f"[modal-train-lane][WAVE-3] staging "
+                f"{len(trainer_extra_mount_payload)} trainer-declared extra "
+                f"mount path(s) as bytes payload: "
+                f"{sorted(trainer_extra_mount_payload.keys())}"
+            )
+        else:
+            print(
+                "[modal-train-lane][WAVE-3] trainer module has no extra-mount "
+                "declarations (TIER_1_EXTRA_MOUNT_PATHS empty + no "
+                "required_input_file under experiments/results/**)"
+            )
+    else:
+        trainer_extra_mount_payload = {}
+        # Non-substrate lane scripts (e.g. legacy `scripts/remote_lane_*.sh`
+        # without the `_substrate_` infix) follow self-bootstrap convention.
+        print(
+            f"[modal-train-lane][WAVE-3] lane_script {lane_script!r} does not "
+            "follow substrate naming convention "
+            "(scripts/remote_lane_substrate_<id>.sh) — relying on lane "
+            "script self-bootstrap for any required inputs."
+        )
+
     # CRITICAL: use .spawn() not .remote() for detached runs.
     # `.remote()` is cancelled when the local CLI disconnects, even with
     # --detach (Modal's warning: ".remote() calls in detached apps may be
@@ -1329,6 +1579,7 @@ def main(
         mounted_code_git_branch,
         sentinel_sha256_local,
         max_seconds,
+        trainer_extra_mount_payload,
     )
     call_id = function_call_id(fn_call)
 
