@@ -55,12 +55,21 @@ Post-L1 evidence:
 - effective_recommended_next_action_id: `completed_or_superseded:ratify_and_build_rudin_k8_l1_scaffold`
 - ready_for_l1_build: `False`
 - ready_for_l1_scaffold_dispatch: `False`
-- post_l1_recommended_next_action_status: `not_applicable`
-- post_l1_recommended_next_action_id: ``
-- blockers: `['requires_t3_ratification_before_l1_scaffold_dispatch', 'requires_dykstra_feasibility_intersection_before_paid_smoke', 'requires_byte_mutation_proof_before_score_or_rank_authority']`
+- post_l1_recommended_next_action_status: `proxy_positive_requires_ratification`
+- post_l1_recommended_next_action_id: `run_rudin_t3_ratification_scorer_probe_before_paid_dispatch`
+- blockers: `['requires_t3_ratification_before_l1_scaffold_dispatch', 'requires_dykstra_feasibility_intersection_before_paid_smoke', 'requires_byte_mutation_proof_before_score_or_rank_authority', 'rudin_proxy_positive_requires_t3_ratification_and_scorer_probe']`
 - l1_build_blockers: `['l1_scaffold_present_next_action_completed_or_superseded']`
 
 Expected first artifacts:
+
+Post-L1 evidence:
+- artifact_present=`True`
+- artifact_valid=`True`
+- verdict=`MEANINGFUL_INTERPRETABILITY`
+- allowed_to_spend=`False`
+- measured_summary=`tax=0.01784276143750971;pixels=40150;frames=10`
+- `.omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json` present=`True`
+- `tools/probe_rudin_floor_substrate_disambiguator.py` present=`True`
 - `src/tac/substrates/rudin_floor_interpretable_ml/` present=`True`
 - `experiments/train_substrate_rudin_floor_interpretable_ml.py` present=`True`
 - `.omx/operator_authorize_recipes/substrate_rudin_floor_interpretable_ml_modal_t4_dispatch.yaml` present=`True`

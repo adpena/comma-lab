@@ -1082,6 +1082,25 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert "l1_scaffold_present_next_action_completed_or_superseded" in rudin[
         "l1_build_blockers"
     ]
+    assert rudin["post_l1_probe_evidence"]["schema"] == (
+        l5_v2.RUDIN_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA
+    )
+    assert rudin["post_l1_probe_evidence"]["artifact_present"] is True
+    assert rudin["post_l1_probe_evidence"]["artifact_valid"] is True
+    assert rudin["post_l1_probe_evidence"]["verdict"] == (
+        l5_v2.RUDIN_MEANINGFUL_INTERPRETABILITY_VERDICT
+    )
+    assert rudin["post_l1_probe_evidence"]["allowed_to_spend"] is False
+    assert rudin["post_l1_recommended_next_action_status"] == (
+        "proxy_positive_requires_ratification"
+    )
+    assert rudin["post_l1_recommended_next_action_id"] == (
+        "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch"
+    )
+    assert (
+        "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+        in rudin["blockers"]
+    )
 
     tishby = rows["tishby_ib_pure_substrate"]
     assert tishby["ready_for_recommended_next_action"] is False
@@ -1176,6 +1195,8 @@ def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() ->
         "`blocked_pending_redesign_or_next_candidate`"
     ) in report
     assert "identity_dominates_all_tested_ego_proxies_real_video_smoke" in report
+    assert "MEANINGFUL_INTERPRETABILITY" in report
+    assert "proxy_positive_requires_ratification" in report
     assert "blocked_pending_conditioning_or_mine" in report
     assert "d4=INDEPENDENT;vib=TRACTABLE" in report
     assert "score_claim: `false`" in report
@@ -1264,6 +1285,14 @@ def test_l5_v2_asymptotic_pursuit_candidates_fail_closed_without_ledgers(
     assert tishby["post_l1_probe_evidence"]["artifact_valid"] is False
     assert "tishby_d4_probe_missing" in tishby["blockers"]
     assert "tishby_vib_tractability_missing" in tishby["blockers"]
+    rudin = next(
+        row
+        for row in payload["candidates"]
+        if row["candidate_id"] == "rudin_floor_interpretable_ml_substrate"
+    )
+    assert rudin["post_l1_probe_evidence"]["artifact_present"] is False
+    assert rudin["post_l1_probe_evidence"]["artifact_valid"] is False
+    assert "rudin_proxy_disambiguator_missing" in rudin["blockers"]
 
 
 def test_l5_v2_asymptotic_pursuit_candidates_require_registry_with_ledger(

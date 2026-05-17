@@ -231,6 +231,16 @@ TISHBY_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA = (
 )
 TISHBY_D4_INDEPENDENT_VERDICT = "INDEPENDENT"
 TISHBY_VIB_TRACTABLE_VERDICT = "TRACTABLE"
+RUDIN_PROXY_DISAMBIGUATOR_TOOL_PATH = (
+    "tools/probe_rudin_floor_substrate_disambiguator.py"
+)
+RUDIN_PROXY_DISAMBIGUATOR_ARTIFACT_PATH = (
+    ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json"
+)
+RUDIN_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA = (
+    "rudin_post_l1_probe_evidence_status_v1"
+)
+RUDIN_MEANINGFUL_INTERPRETABILITY_VERDICT = "MEANINGFUL_INTERPRETABILITY"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -358,6 +368,8 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
             "archive grammar, pure-Python inflate, and byte-mutation proof."
         ),
         expected_first_artifacts=(
+            RUDIN_PROXY_DISAMBIGUATOR_ARTIFACT_PATH,
+            RUDIN_PROXY_DISAMBIGUATOR_TOOL_PATH,
             "src/tac/substrates/rudin_floor_interpretable_ml/",
             "experiments/train_substrate_rudin_floor_interpretable_ml.py",
             (
@@ -510,6 +522,10 @@ def l5_v2_asymptotic_pursuit_candidates(
                 repo_root=resolved_repo_root,
             )
             post_l1_probe_evidence = z6_post_l1_proxy_evidence
+        elif candidate.candidate_id == "rudin_floor_interpretable_ml_substrate":
+            post_l1_probe_evidence = _rudin_post_l1_probe_evidence_status(
+                repo_root=resolved_repo_root,
+            )
         elif candidate.candidate_id == "tishby_ib_pure_substrate":
             post_l1_probe_evidence = _tishby_post_l1_probe_evidence_status(
                 repo_root=resolved_repo_root,
@@ -924,6 +940,100 @@ def _tishby_post_l1_probe_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         "allowed_to_spend": False,
         "allowed_to_spend_on_tishby_path_vib": False,
         "measured_summary": f"d4_mi_bits={d4_mi};vib_worst_snr={vib_snr}",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_paid_dispatch": False,
+        "paradigm_claim_allowed": False,
+        "recommended_next_action_status": recommended_next_action_status,
+        "recommended_next_action_id": recommended_next_action_id,
+        "recommended_next_action": recommended_next_action,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def _rudin_post_l1_probe_evidence_status(*, repo_root: Path) -> dict[str, Any]:
+    """Return fail-closed Rudin post-L1 probe evidence for dispatch routing."""
+
+    artifact_path = repo_root / RUDIN_PROXY_DISAMBIGUATOR_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload = _load_probe_artifact_mapping(
+        artifact_path,
+        blockers=blockers,
+        blocker_prefix="rudin_proxy_disambiguator",
+    )
+    if payload and payload.get("substrate_id") != "rudin_floor_interpretable_ml":
+        blockers.append("rudin_proxy_disambiguator_substrate_id_mismatch")
+    if payload and payload.get("score_claim") is not False:
+        blockers.append("rudin_proxy_disambiguator_score_claim_not_false")
+    if payload and payload.get("promotion_eligible") is not False:
+        blockers.append("rudin_proxy_disambiguator_promotion_eligible_not_false")
+    if payload and payload.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("rudin_proxy_disambiguator_exact_dispatch_not_false")
+    if payload and payload.get("score_axis") != "design_time_disambiguator_proxy":
+        blockers.append("rudin_proxy_disambiguator_score_axis_mismatch")
+
+    verdict = str(payload.get("verdict") or "")
+    meaningful = verdict == RUDIN_MEANINGFUL_INTERPRETABILITY_VERDICT
+    if meaningful:
+        blockers.append(
+            "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+        )
+        recommended_next_action_id = (
+            "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch"
+        )
+        recommended_next_action = (
+            "Rudin proxy is meaningful, but it is still a design-time proxy. "
+            "Run T3 ratification plus a scorer-bearing probe before paid "
+            "dispatch or any score/paradigm claim."
+        )
+        recommended_next_action_status = "proxy_positive_requires_ratification"
+    elif payload and not blockers:
+        blockers.append("rudin_proxy_not_meaningful_research_redesign_required")
+        recommended_next_action_id = "redesign_rudin_rule_basis_before_dispatch"
+        recommended_next_action = (
+            "Rudin proxy did not validate the interpretability premise; redesign "
+            "the rule basis before paid dispatch."
+        )
+        recommended_next_action_status = "blocked_pending_redesign"
+    else:
+        recommended_next_action_id = "run_rudin_proxy_disambiguator"
+        recommended_next_action = (
+            "Run and preserve the Rudin design-time proxy disambiguator before "
+            "paid dispatch."
+        )
+        recommended_next_action_status = "missing_or_invalid_probe_evidence"
+
+    return {
+        "schema": RUDIN_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA,
+        "tool_path": RUDIN_PROXY_DISAMBIGUATOR_TOOL_PATH,
+        "artifact_path": RUDIN_PROXY_DISAMBIGUATOR_ARTIFACT_PATH,
+        "artifact_present": artifact_path.is_file(),
+        "artifact_sha256": (
+            _sha256_file(artifact_path) if artifact_path.is_file() else ""
+        ),
+        "artifact_valid": bool(payload)
+        and not [
+            blocker
+            for blocker in blockers
+            if blocker
+            not in {
+                "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+            }
+        ],
+        "verdict": verdict,
+        "interpretability_tax_estimate": payload.get("interpretability_tax_estimate"),
+        "total_pixels": payload.get("total_pixels"),
+        "n_frames": payload.get("n_frames"),
+        "fallback_used": payload.get("fallback_used"),
+        "meaningful_interpretability_proxy": meaningful,
+        "allowed_to_spend": False,
+        "allowed_to_spend_on_rudin_floor": False,
+        "measured_summary": (
+            f"tax={payload.get('interpretability_tax_estimate')};"
+            f"pixels={payload.get('total_pixels')};frames={payload.get('n_frames')}"
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -5210,6 +5320,10 @@ __all__ = [
     "PR106_PACKETIR_CANDIDATE_MATRIX_ARTIFACT_SHA256",
     "PREDICTED_DELTA_AXIS",
     "PREDICTED_DELTA_BAND",
+    "RUDIN_MEANINGFUL_INTERPRETABILITY_VERDICT",
+    "RUDIN_POST_L1_PROBE_EVIDENCE_STATUS_SCHEMA",
+    "RUDIN_PROXY_DISAMBIGUATOR_ARTIFACT_PATH",
+    "RUDIN_PROXY_DISAMBIGUATOR_TOOL_PATH",
     "SUBJECT_ID",
     "TISHBY_D4_INDEPENDENT_VERDICT",
     "TISHBY_D4_PROBE_ARTIFACT_PATH",

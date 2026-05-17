@@ -1,0 +1,45 @@
+{
+  "completed_at_utc": "2026-05-17T00:59:36Z",
+  "design_memo": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
+  "downsample_factor": 16,
+  "fallback_used": false,
+  "interpretability_tax_estimate": 0.01784276143750971,
+  "interpretability_tax_thresholds": {
+    "meaningful_max": 0.05,
+    "weak_max": 0.15
+  },
+  "lane_id": "lane_rudin_floor_l1_scaffold_substrate_build_20260516",
+  "n_frames": 10,
+  "per_rule_mse_mean": {
+    "lane": 0.0,
+    "misc": 0.011047320641695859,
+    "road": 0.03828465826038636,
+    "sky": 0.0,
+    "vehicle": 0.09977960980417958
+  },
+  "per_rule_support": {
+    "lane": 0,
+    "misc": 31815,
+    "road": 7590,
+    "sky": 0,
+    "vehicle": 745
+  },
+  "predicted_band_implication": "[0.150, 0.180] Mid achievable per design memo \u00a718",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "result_review_blockers": [
+    "probe_is_design_time_proxy_not_empirical_anchor",
+    "pixel_color_clustering_substitutes_for_real_segnet_classification",
+    "phase_2_council_approval_required_to_lift_full_main_NotImplementedError"
+  ],
+  "score_axis": "design_time_disambiguator_proxy",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "substrate_id": "rudin_floor_interpretable_ml",
+  "total_pixels": 40150,
+  "verdict": "MEANINGFUL_INTERPRETABILITY",
+  "verdict_rc": 0,
+  "video_exists": true,
+  "video_path": "upstream/videos/0.mkv"
+}

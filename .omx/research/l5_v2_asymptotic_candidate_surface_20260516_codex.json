@@ -4,6 +4,7 @@
     "requires_z6_l1_scaffold_before_paid_dispatch",
     "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
     "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
+    "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe",
     "requires_t3_ratification_before_l1_scaffold_dispatch",
     "requires_dykstra_feasibility_intersection_before_paid_smoke",
     "requires_byte_mutation_proof_before_score_or_rank_authority",
@@ -256,7 +257,8 @@
       "blockers": [
         "requires_t3_ratification_before_l1_scaffold_dispatch",
         "requires_dykstra_feasibility_intersection_before_paid_smoke",
-        "requires_byte_mutation_proof_before_score_or_rank_authority"
+        "requires_byte_mutation_proof_before_score_or_rank_authority",
+        "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
       ],
       "candidate_id": "rudin_floor_interpretable_ml_substrate",
       "cost_band_usd": [
@@ -272,6 +274,14 @@
       "effective_recommended_next_action_id": "completed_or_superseded:ratify_and_build_rudin_k8_l1_scaffold",
       "expected_first_artifact_status": [
         {
+          "path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+          "present": true
+        },
+        {
+          "path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+          "present": true
+        },
+        {
           "path": "src/tac/substrates/rudin_floor_interpretable_ml/",
           "present": true
         },
@@ -285,6 +295,8 @@
         }
       ],
       "expected_first_artifacts": [
+        ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+        "tools/probe_rudin_floor_substrate_disambiguator.py",
         "src/tac/substrates/rudin_floor_interpretable_ml/",
         "experiments/train_substrate_rudin_floor_interpretable_ml.py",
         ".omx/operator_authorize_recipes/substrate_rudin_floor_interpretable_ml_modal_t4_dispatch.yaml"
@@ -300,6 +312,14 @@
         "canonical_replacement_lane_id": "",
         "canonical_replacement_lane_registered": false,
         "expected_first_artifact_status": [
+          {
+            "path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+            "present": true
+          },
+          {
+            "path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+            "present": true
+          },
           {
             "path": "src/tac/substrates/rudin_floor_interpretable_ml/",
             "present": true
@@ -317,7 +337,7 @@
         "lane_id": "lane_rudin_floor_interpretable_ml_substrate_scoping_design_20260516",
         "lane_registry_registered": true,
         "ledger_present": true,
-        "ledger_sha256": "a9484ebc2deeec44128005d46e3c024b90682140b3afa4b0a691726a552794c5",
+        "ledger_sha256": "29bc3c6c605f1840f9e8b48443f552df556d574840def0e5fe7af175402ed88c",
         "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
         "next_prerequisite_status": {
           "action": "The originally recommended L1 action is complete or superseded; advance using l1_build_blockers/dependency_blockers rather than rebuilding the same scaffold.",
@@ -331,15 +351,43 @@
             "requires_byte_mutation_proof_before_score_or_rank_authority"
           ],
           "l1_scaffold_present": true,
-          "post_l1_recommended_next_action": "",
-          "post_l1_recommended_next_action_id": "",
-          "post_l1_recommended_next_action_status": "not_applicable",
+          "post_l1_recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+          "post_l1_recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+          "post_l1_recommended_next_action_status": "proxy_positive_requires_ratification",
           "ready_for_l1_build": false,
           "ready_for_l1_scaffold_dispatch": false,
           "ready_for_recommended_next_action": false,
           "status": "completed_or_superseded"
         },
-        "post_l1_probe_evidence": null,
+        "post_l1_probe_evidence": {
+          "allowed_to_spend": false,
+          "allowed_to_spend_on_rudin_floor": false,
+          "artifact_path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+          "artifact_present": true,
+          "artifact_sha256": "eab9e8f697accd1762b8bc0dfa0298069ed32618e226031c3845dd6f2f707ec7",
+          "artifact_valid": true,
+          "blockers": [
+            "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+          ],
+          "fallback_used": false,
+          "interpretability_tax_estimate": 0.01784276143750971,
+          "meaningful_interpretability_proxy": true,
+          "measured_summary": "tax=0.01784276143750971;pixels=40150;frames=10",
+          "n_frames": 10,
+          "paradigm_claim_allowed": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "ready_for_paid_dispatch": false,
+          "recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+          "recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+          "recommended_next_action_status": "proxy_positive_requires_ratification",
+          "schema": "rudin_post_l1_probe_evidence_status_v1",
+          "score_claim": false,
+          "tool_path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+          "total_pixels": 40150,
+          "verdict": "MEANINGFUL_INTERPRETABILITY"
+        },
         "post_l1_proxy_evidence": null,
         "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
         "schema": "l5_v2_asymptotic_next_action_status_v1"
@@ -348,12 +396,40 @@
       "lane_registry_registered": true,
       "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "local_ledger_present": true,
-      "local_ledger_sha256": "a9484ebc2deeec44128005d46e3c024b90682140b3afa4b0a691726a552794c5",
-      "post_l1_probe_evidence": null,
+      "local_ledger_sha256": "29bc3c6c605f1840f9e8b48443f552df556d574840def0e5fe7af175402ed88c",
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_rudin_floor": false,
+        "artifact_path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "eab9e8f697accd1762b8bc0dfa0298069ed32618e226031c3845dd6f2f707ec7",
+        "artifact_valid": true,
+        "blockers": [
+          "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+        ],
+        "fallback_used": false,
+        "interpretability_tax_estimate": 0.01784276143750971,
+        "meaningful_interpretability_proxy": true,
+        "measured_summary": "tax=0.01784276143750971;pixels=40150;frames=10",
+        "n_frames": 10,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+        "recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+        "recommended_next_action_status": "proxy_positive_requires_ratification",
+        "schema": "rudin_post_l1_probe_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+        "total_pixels": 40150,
+        "verdict": "MEANINGFUL_INTERPRETABILITY"
+      },
       "post_l1_proxy_evidence": null,
-      "post_l1_recommended_next_action": "",
-      "post_l1_recommended_next_action_id": "",
-      "post_l1_recommended_next_action_status": "not_applicable",
+      "post_l1_recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+      "post_l1_recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+      "post_l1_recommended_next_action_status": "proxy_positive_requires_ratification",
       "primary_axis": "architecture_decode_contract_scorer_relationship_class_shift",
       "promotion_eligible": false,
       "rank_or_kill_eligible": false,
@@ -677,6 +753,14 @@
       "canonical_replacement_lane_registered": false,
       "expected_first_artifact_status": [
         {
+          "path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+          "present": true
+        },
+        {
+          "path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+          "present": true
+        },
+        {
           "path": "src/tac/substrates/rudin_floor_interpretable_ml/",
           "present": true
         },
@@ -693,7 +777,7 @@
       "lane_id": "lane_rudin_floor_interpretable_ml_substrate_scoping_design_20260516",
       "lane_registry_registered": true,
       "ledger_present": true,
-      "ledger_sha256": "a9484ebc2deeec44128005d46e3c024b90682140b3afa4b0a691726a552794c5",
+      "ledger_sha256": "29bc3c6c605f1840f9e8b48443f552df556d574840def0e5fe7af175402ed88c",
       "local_ledger_path": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",
       "next_prerequisite_status": {
         "action": "The originally recommended L1 action is complete or superseded; advance using l1_build_blockers/dependency_blockers rather than rebuilding the same scaffold.",
@@ -707,15 +791,43 @@
           "requires_byte_mutation_proof_before_score_or_rank_authority"
         ],
         "l1_scaffold_present": true,
-        "post_l1_recommended_next_action": "",
-        "post_l1_recommended_next_action_id": "",
-        "post_l1_recommended_next_action_status": "not_applicable",
+        "post_l1_recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+        "post_l1_recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+        "post_l1_recommended_next_action_status": "proxy_positive_requires_ratification",
         "ready_for_l1_build": false,
         "ready_for_l1_scaffold_dispatch": false,
         "ready_for_recommended_next_action": false,
         "status": "completed_or_superseded"
       },
-      "post_l1_probe_evidence": null,
+      "post_l1_probe_evidence": {
+        "allowed_to_spend": false,
+        "allowed_to_spend_on_rudin_floor": false,
+        "artifact_path": ".omx/research/rudin_floor_proxy_disambiguator_20260516_codex.json",
+        "artifact_present": true,
+        "artifact_sha256": "eab9e8f697accd1762b8bc0dfa0298069ed32618e226031c3845dd6f2f707ec7",
+        "artifact_valid": true,
+        "blockers": [
+          "rudin_proxy_positive_requires_t3_ratification_and_scorer_probe"
+        ],
+        "fallback_used": false,
+        "interpretability_tax_estimate": 0.01784276143750971,
+        "meaningful_interpretability_proxy": true,
+        "measured_summary": "tax=0.01784276143750971;pixels=40150;frames=10",
+        "n_frames": 10,
+        "paradigm_claim_allowed": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "ready_for_paid_dispatch": false,
+        "recommended_next_action": "Rudin proxy is meaningful, but it is still a design-time proxy. Run T3 ratification plus a scorer-bearing probe before paid dispatch or any score/paradigm claim.",
+        "recommended_next_action_id": "run_rudin_t3_ratification_scorer_probe_before_paid_dispatch",
+        "recommended_next_action_status": "proxy_positive_requires_ratification",
+        "schema": "rudin_post_l1_probe_evidence_status_v1",
+        "score_claim": false,
+        "tool_path": "tools/probe_rudin_floor_substrate_disambiguator.py",
+        "total_pixels": 40150,
+        "verdict": "MEANINGFUL_INTERPRETABILITY"
+      },
       "post_l1_proxy_evidence": null,
       "ready_for_l1_build_semantics": "l1_scaffold_present_next_action_completed",
       "schema": "l5_v2_asymptotic_next_action_status_v1"
