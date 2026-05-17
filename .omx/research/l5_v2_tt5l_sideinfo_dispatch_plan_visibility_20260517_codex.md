@@ -43,3 +43,26 @@ missing cells.
 Provider execution still requires resolving the Modal blocker or making the
 Lightning provider path executable-current with identity, workspace, machine,
 source manifest, remote CUDA probe, lane claims, and harvest flow.
+
+## Validation
+
+Commands run from repo root:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q -p no:cacheprovider src/tac/tests/test_l5_staircase_v2.py
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q -p no:cacheprovider src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py
+.venv/bin/python -m py_compile src/tac/optimization/l5_staircase_v2.py src/tac/tests/test_l5_staircase_v2.py tools/build_l5_v2_architecture_lock_packet.py
+git diff --check
+.venv/bin/ruff check src/tac/optimization/l5_staircase_v2.py src/tac/tests/test_l5_staircase_v2.py
+.venv/bin/python tools/review_tracker.py selftest
+```
+
+Results:
+
+- `src/tac/tests/test_l5_staircase_v2.py`: `127 passed`
+- dispatch-plan focused suites: `9 passed`
+- `py_compile`: clean
+- `git diff --check`: clean
+- `ruff`: clean
+- `review_tracker.py selftest`: all tests passed; known duplicate-name warning
+  remains `tac.tests.test_dispatch_advisor::_load_advisor`
