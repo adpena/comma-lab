@@ -257,6 +257,16 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_preflight(
     for field in _FALSE_AUTHORITY_FLAGS:
         if plan.get(field) is not False:
             blockers.append(f"source_lightning_paired_axis_plan_{field}_not_false")
+    source_plan_commit = str(plan.get("source_commit") or "").strip()
+    current_commit = str(current_head_commit or "").strip()
+    source_claim_blockers: list[str] = []
+    if not source_plan_commit:
+        source_claim_blockers.append("source_plan_commit_missing")
+    elif not current_commit:
+        source_claim_blockers.append("current_head_commit_missing")
+    elif source_plan_commit != current_commit:
+        source_claim_blockers.append("source_plan_commit_mismatch_current_head")
+    blockers.extend(source_claim_blockers)
 
     cells: list[dict[str, Any]] = []
     cell_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
@@ -287,7 +297,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_preflight(
             local_artifact_dir = str(source_cell.get("local_artifact_dir") or "").strip()
             spec = source_cell.get("spec") if isinstance(source_cell.get("spec"), Mapping) else {}
             command_sha256 = str(source_cell.get("command_sha256") or "").strip()
-            cell_blockers: list[str] = []
+            cell_blockers: list[str] = list(source_claim_blockers)
             if not source_cell:
                 cell_blockers.append("source_cell_missing")
             if source_cell.get("ready_for_operator_dispatch") is not True:
@@ -382,8 +392,11 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_preflight(
         "source_plan_sha256": plan_sha256,
         "source_plan_schema": plan.get("schema"),
         "source_plan_generated_at_utc": plan.get("generated_at_utc"),
-        "source_plan_commit": plan.get("source_commit"),
-        "current_head_commit": current_head_commit,
+        "source_plan_commit": source_plan_commit,
+        "current_head_commit": current_commit,
+        "source_plan_commit_matches_current_head": bool(
+            source_plan_commit and current_commit and source_plan_commit == current_commit
+        ),
         "required_variants": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS),
         "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
         "cell_count": len(cells),

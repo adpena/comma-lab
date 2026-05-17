@@ -47,7 +47,7 @@ def test_tt5l_lightning_execution_preflight_builds_per_axis_claim_templates(
         plan_path=plan_path,
         repo_root=tmp_path,
         claims_text="",
-        current_head_commit="b" * 40,
+        current_head_commit=str(plan["source_commit"]),
     )
 
     expected_count = len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS) * len(
@@ -58,6 +58,7 @@ def test_tt5l_lightning_execution_preflight_builds_per_axis_claim_templates(
     assert preflight["promotion_eligible"] is False
     assert preflight["ready_for_exact_eval_dispatch"] is False
     assert preflight["dispatch_attempted"] is False
+    assert preflight["source_plan_commit_matches_current_head"] is True
     assert preflight["cell_count"] == expected_count
     assert preflight["ready_cell_count"] == expected_count
     assert preflight["ready_for_operator_claiming"] is True
@@ -110,6 +111,7 @@ def test_tt5l_lightning_execution_preflight_fails_closed_on_active_claim_conflic
         plan_path=plan_path,
         repo_root=tmp_path,
         claims_text=claims_text,
+        current_head_commit=str(plan["source_commit"]),
     )
 
     zero_cpu = next(
@@ -132,6 +134,7 @@ def test_tt5l_lightning_execution_preflight_json_and_markdown_are_axis_labelled(
         plan=plan,
         plan_path=plan_path,
         repo_root=tmp_path,
+        current_head_commit=str(plan["source_commit"]),
     )
 
     decoded = json.loads(l5_v2_tt5l_sideinfo_lightning_execution_preflight_json(preflight))
@@ -172,7 +175,7 @@ def test_tt5l_lightning_execution_preflight_cli_writes_json_and_markdown(
             "--repo-root",
             str(tmp_path),
             "--current-head-commit",
-            "c" * 40,
+            "a" * 40,
         ],
         capture_output=True,
         text=True,
@@ -182,5 +185,29 @@ def test_tt5l_lightning_execution_preflight_cli_writes_json_and_markdown(
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["ready_for_operator_claiming"] is True
+    assert payload["source_plan_commit_matches_current_head"] is True
     assert "score_claim=false" in proc.stdout
     assert output_md.is_file()
+
+
+def test_tt5l_lightning_execution_preflight_blocks_stale_source_plan_commit(
+    tmp_path: Path,
+) -> None:
+    plan_path, plan = _write_plan(tmp_path)
+
+    preflight = build_l5_v2_tt5l_sideinfo_lightning_execution_preflight(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+        claims_text="",
+        current_head_commit="b" * 40,
+    )
+
+    assert preflight["source_plan_commit_matches_current_head"] is False
+    assert preflight["ready_cell_count"] == 0
+    assert preflight["ready_for_operator_claiming"] is False
+    assert "source_plan_commit_mismatch_current_head" in preflight["blockers"]
+    assert all(
+        "source_plan_commit_mismatch_current_head" in cell["blockers"]
+        for cell in preflight["cells"]
+    )

@@ -4279,7 +4279,30 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert "tools/build_l5_v2_architecture_lock_packet.py" in status[
         "source_relevant_paths"
     ]
+    assert "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py" in status[
+        "source_relevant_paths"
+    ]
+    assert (
+        "tools/verify_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py"
+        in status["source_relevant_paths"]
+    )
+    assert (
+        "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
+        in status["source_relevant_paths"]
+    )
     assert "src/tac/exact_eval_custody.py" in status["source_relevant_paths"]
+    assert (
+        "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_harvest.py"
+        in status["source_relevant_paths"]
+    )
+    assert (
+        "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_bundle.py"
+        in status["source_relevant_paths"]
+    )
+    assert (
+        "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py"
+        in status["source_relevant_paths"]
+    )
     assert status["source_relevant_paths_match"] is True
     assert status["source_custody_valid"] is True
     assert status["source_custody_current_for_execution"] is True

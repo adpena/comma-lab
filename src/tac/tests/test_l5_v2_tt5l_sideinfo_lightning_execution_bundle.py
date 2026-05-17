@@ -43,7 +43,7 @@ def _write_inputs(tmp_path: Path) -> tuple[Path, Path, Path, dict[str, object], 
         plan_path=plan_path,
         repo_root=tmp_path,
         claims_text="",
-        current_head_commit="b" * 40,
+        current_head_commit=str(plan["source_commit"]),
     )
     preflight_path = tmp_path / ".omx/research/preflight.json"
     preflight_path.write_text(
