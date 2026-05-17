@@ -1,0 +1,175 @@
+{
+  "evidence_semantics": "provider_inventory_no_dispatch_no_score_claim",
+  "generated_at_utc": "2026-05-17T10:48:40Z",
+  "kaggle_kernel_ref": "adpena/comma-gpu-lane-smoke",
+  "providers": [
+    {
+      "blockers": [
+        "modal_billing_not_checked",
+        "cuda_runtime_import_probe_not_run"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:38Z",
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/modal",
+        "--version"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Harvest active Modal A1 calls before refiring.",
+        "Run the Modal CUDA scorer import probe before any score-lowering job.",
+        "Use claim_lane_dispatch.py before every new Modal GPU job."
+      ],
+      "provider": "modal",
+      "proxy_only": false,
+      "score_lowering_role": "primary_short_cuda_dispatch_and_exact_eval_candidate",
+      "status": "ready_cli_check_runtime_probe_next",
+      "stderr_excerpt": "",
+      "stdout_excerpt": "modal client version: 1.4.2"
+    },
+    {
+      "blockers": [],
+      "checked_at_utc": "2026-05-17T10:48:38Z",
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/kaggle",
+        "kernels",
+        "status",
+        "adpena/comma-gpu-lane-smoke"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Use Kaggle for Optuna/CMA-ES/proxy curves only.",
+        "Write score_claim=false and ready_for_exact_eval_dispatch=false into Kaggle outputs.",
+        "Promote any winning config to a contract-supported exact-CUDA provider (modal, lightning, vastai) before score claims."
+      ],
+      "provider": "kaggle",
+      "proxy_only": true,
+      "score_lowering_role": "free_gpu_proxy_sweeps_config_curves_and_warm_starts_only",
+      "status": "ready_proxy",
+      "stderr_excerpt": "",
+      "stdout_excerpt": "Warning: Looks like you're using an outdated `kaggle`` version (installed: {current_version}), please consider upgrading to the latest version ({latest_version_str}) adpena/comma-gpu-lane-smoke has status \"KernelWorkerStatus.COMPLETE\""
+    },
+    {
+      "blockers": [
+        "credits_or_quota_not_checked",
+        "no_dispatch_claim",
+        "lightning_teamspace_missing",
+        "lightning_owner_missing",
+        "lightning_ssh_target_missing"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:38Z",
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/python",
+        "-c",
+        "import importlib.metadata as m; print(m.version('lightning-sdk'))"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Set LIGHTNING_TEAMSPACE plus LIGHTNING_SDK_USER or LIGHTNING_ORG before Lightning dispatch.",
+        "Set LIGHTNING_SSH_TARGET and stage the source manifest before remote preflight.",
+        "Run `scripts/launch_lightning_batch_job.py doctor --require-ssh --require-machine-inventory --require-remote-supply-chain` before any Lightning dispatch.",
+        "Use claim_lane_dispatch.py before every non-dry-run Lightning job.",
+        "Treat Lightning exact CUDA only after artifact custody and adjudication land."
+      ],
+      "provider": "lightning",
+      "proxy_only": false,
+      "score_lowering_role": "claimed_cuda_batch_jobs_when_credits_quota_and_studio_route_are_ready",
+      "status": "ready_sdk_missing_lightning_route",
+      "stderr_excerpt": "",
+      "stdout_excerpt": "2026.4.23"
+    },
+    {
+      "blockers": [
+        "vastai_api_key_missing"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:38Z",
+      "command": [
+        "/Users/adpena/Projects/pact/.venv/bin/vastai"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Run `vastai set api-key <key>` before any Vast.ai launch."
+      ],
+      "provider": "vastai",
+      "proxy_only": false,
+      "score_lowering_role": "claimed_cuda_dispatch_when_api_key_offer_and_heartbeat_are_ready",
+      "status": "blocked_credentials_missing",
+      "stderr_excerpt": "",
+      "stdout_excerpt": ""
+    },
+    {
+      "blockers": [
+        "aws_session_expired"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:38Z",
+      "command": [
+        "/opt/homebrew/bin/aws",
+        "sts",
+        "get-caller-identity",
+        "--output",
+        "json"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Run `aws login`, then re-run this readiness tool."
+      ],
+      "provider": "aws",
+      "proxy_only": false,
+      "score_lowering_role": "future_ec2_gpu_fallback_after_login_budget_quota",
+      "status": "blocked_auth",
+      "stderr_excerpt": "aws: [ERROR]: Your session has expired. Please reauthenticate using 'aws login'.",
+      "stdout_excerpt": ""
+    },
+    {
+      "blockers": [
+        "azure_not_logged_in"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:39Z",
+      "command": [
+        "az",
+        "account",
+        "show",
+        "--output",
+        "json"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Run `az login`, then re-run this readiness tool."
+      ],
+      "provider": "azure",
+      "proxy_only": false,
+      "score_lowering_role": "future_spot_gpu_fallback_after_login_budget_quota",
+      "status": "blocked_auth",
+      "stderr_excerpt": "ERROR: Please run 'az login' to setup account.",
+      "stdout_excerpt": ""
+    },
+    {
+      "blockers": [
+        "gcp_billing_not_enabled_or_not_readable",
+        "gpu_quota_not_checked"
+      ],
+      "checked_at_utc": "2026-05-17T10:48:40Z",
+      "command": [
+        "gcloud",
+        "billing",
+        "projects",
+        "describe",
+        "personal-mbp-2026",
+        "--format=json"
+      ],
+      "exact_cuda_evidence_allowed": false,
+      "next_actions": [
+        "Enable billing on the selected GCP project or switch to a billed project.",
+        "Then query T4/L4 GPU quotas before any CUDA dispatch."
+      ],
+      "provider": "gcp",
+      "proxy_only": false,
+      "score_lowering_role": "future_cuda_dispatch_after_billing_and_gpu_quota",
+      "status": "blocked_billing",
+      "stderr_excerpt": "",
+      "stdout_excerpt": "{ \"billingAccountName\": \"\", \"billingEnabled\": false, \"name\": \"projects/personal-mbp-2026/billingInfo\", \"projectId\": \"personal-mbp-2026\" }"
+    }
+  ],
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "cloud_provider_readiness_v1",
+  "score_claim": false
+}
