@@ -32324,11 +32324,11 @@
       "id": "lane_stc_v2_driver_fix_catalog_152_driver_path_extension_20260516",
       "name": "STC v2 driver fix + Catalog #152 driver-path-expectation extension",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Driver script fix: scripts/remote_lane_substrate_stc_v2.sh + sister drivers a1_plus_lapose + a1_plus_wavelet_residual with canonical resolve_required_input_modal_aware helper; Catalog #152 Wave 2 driver-path-expectation extension in src/tac/preflight.py with 3 new helpers + 3 new constants; live count 0; commits 89d89c27e (source) + c09c6e1c8 (tests) + 7dd8a5412 (memo) due to sister-subagent absorption per Catalog #230"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32343,20 +32343,20 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "Catalog #152 extended with driver-path-expectation sub-check; live count 0 across 3 driver script fixes + new sub-scan loop in check_operator_wrapper_validates_required_input_files_pre_dispatch; META-meta sister gates #118/#159/#176/#185 all clean post-landing"
         },
         "three_clean_review": {
           "status": false,
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/stc_v2_driver_path_layer_fix_landed_20260516.md (commit 7dd8a5412)"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_stc_v2.sh + sister drivers updated with canonical defensive resolver pattern (Wave 2 Catalog #152 extension)"
         }
       },
       "notes": ""
@@ -32369,5 +32369,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T03:05:22Z"
+  "updated_at": "2026-05-17T03:10:45Z"
 }
