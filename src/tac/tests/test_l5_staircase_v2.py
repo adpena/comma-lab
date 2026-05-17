@@ -3932,6 +3932,59 @@ def test_l5_v2_tt5l_first_anchor_timing_requires_custody_artifact(
     )
 
 
+def test_l5_v2_tt5l_first_anchor_timing_accepts_paired_axis_timings(
+    tmp_path: Path,
+) -> None:
+    artifact_path = _write_tt5l_first_anchor_timing_smoke_artifact(tmp_path)
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    axis_timings = {}
+    for axis, elapsed in (("contest_cpu", 293.7), ("contest_cuda", 53.2)):
+        result_path = (
+            tmp_path
+            / "experiments"
+            / "results"
+            / "time_traveler_l5_v2"
+            / f"{axis}_contest_auth_eval.json"
+        )
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        result_path.write_text(
+            json.dumps(
+                {
+                    "canonical_score": 3.9,
+                    "contest_auth_eval_elapsed_seconds": elapsed,
+                    "score_axis": axis,
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        axis_timings[axis] = {
+            "contest_auth_eval_artifact_path": str(result_path.relative_to(tmp_path)),
+            "contest_auth_eval_artifact_sha256": _file_sha256(result_path),
+            "contest_auth_eval_elapsed_seconds": elapsed,
+            "score_axis": axis,
+        }
+    payload["axis_timings"] = axis_timings
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    _write_tt5l_dykstra_artifact(tmp_path)
+    _write_tt5l_sideinfo_effect_curve_artifact(tmp_path)
+    evidence = _valid_gate_evidence_payloads(tmp_path)
+    evidence.pop("exact_anchor_or_diagnostic_pair")
+
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+    packet = l5_v2_architecture_lock_packet(gate_evidence=evidence, repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert tt5l["first_anchor_timing_smoke_artifact_valid"] is True
+    assert tt5l["first_anchor_timing_smoke_status"]["axis_timings"][
+        "contest_cpu"
+    ]["contest_auth_eval_elapsed_seconds"] == 293.7
+    assert "## First Anchor Timing Smoke" in report
+    assert "contest_cuda" in report
+
+
 def test_l5_v2_tt5l_first_anchor_timing_rejects_mismatched_result_hash(
     tmp_path: Path,
 ) -> None:

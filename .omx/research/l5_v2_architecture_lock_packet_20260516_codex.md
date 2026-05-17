@@ -18,7 +18,7 @@
 - `probe_gate_evidence_valid`: `False`
 - `paired_axis_plan_evidence_valid`: `True`
 - `sideinfo_effect_curve_artifact_valid`: `False`
-- `first_anchor_timing_smoke_artifact_valid`: `False`
+- `first_anchor_timing_smoke_artifact_valid`: `True`
 - `anchor_pair_evidence_valid`: `True`
 
 ## Prediction Band
@@ -62,6 +62,18 @@
 - candidate `z5_predictive_coding_world_model`: eligible=`False`, axes=`[]`, blockers=`['l5_v2_probe_artifact_path_missing', 'l5_v2_probe_artifact_sha_invalid', 'l5_v2_probe_predicate_failed', 'l5_v2_probe_paired_exact_axes_missing', 'l5_v2_probe_byte_closed_archive_missing', 'l5_v2_probe_sideinfo_consumption_missing', 'l5_v2_probe_archive_sha_invalid', 'l5_v2_probe_runtime_tree_sha_invalid', 'l5_v2_probe_axis_evidence_missing:contest_cpu', 'l5_v2_probe_axis_evidence_missing:contest_cuda']`
 - candidate `time_traveler_l5_autonomy`: eligible=`False`, axes=`['contest_cpu', 'contest_cuda']`, blockers=`['l5_v2_probe_predicate_failed', 'l5_v2_probe_sideinfo_consumption_missing', 'l5_v2_probe_axis_score_delta_missing:contest_cpu', 'l5_v2_probe_axis_score_delta_missing:contest_cuda']`
 
+## First Anchor Timing Smoke
+
+- artifact_path: `.omx/research/l5_v2_tt5l_first_anchor_timing_smoke_20260517_codex.json`
+- artifact_valid: `True`
+- provider: `modal`
+- hardware: `linux_x86_64_cpu + Tesla T4 CUDA paired exact auth eval`
+- elapsed_seconds: `296.600486271`
+- seconds_per_candidate: `296.600486271`
+- axis_timings: `{'contest_cpu': {'contest_auth_eval_artifact_path': 'experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json', 'contest_auth_eval_artifact_sha256': '2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af', 'contest_auth_eval_elapsed_seconds': 293.79739159300004, 'evaluate_elapsed_seconds': 194.805340313, 'inflate_elapsed_seconds': 95.58252872700001, 'modal_elapsed_seconds': 296.600486271, 'score_axis': 'contest_cpu'}, 'contest_cuda': {'contest_auth_eval_artifact_path': 'experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json', 'contest_auth_eval_artifact_sha256': '300fedc535226513497596e5e89b9eb18f8ccd48815a256fee307b618d8d82be', 'contest_auth_eval_elapsed_seconds': 53.279486186, 'evaluate_elapsed_seconds': 28.000436932999996, 'inflate_elapsed_seconds': 14.870239315000001, 'modal_elapsed_seconds': 56.412989613, 'score_axis': 'contest_cuda'}}`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Materialized TT5L Provider Routing
 
 - work_unit_artifact_valid: `True`
@@ -79,7 +91,6 @@
 - `requires_all_l5_v2_gate_evidence_valid`
 - `requires_c1_z5_tt5l_probe_gate_evidence`
 - `requires_paired_cpu_cuda_sideinfo_effect_curve`
-- `requires_tt5l_first_anchor_timing_smoke_artifact`
 
 ## Authority
 

@@ -3,8 +3,7 @@
   "architecture_lock_blockers": [
     "requires_all_l5_v2_gate_evidence_valid",
     "requires_c1_z5_tt5l_probe_gate_evidence",
-    "requires_paired_cpu_cuda_sideinfo_effect_curve",
-    "requires_tt5l_first_anchor_timing_smoke_artifact"
+    "requires_paired_cpu_cuda_sideinfo_effect_curve"
   ],
   "artifact_path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
   "authority_semantics": "lock/no-lock planning packet only; no score, rank, promotion, or exact-dispatch authority",
@@ -362,7 +361,7 @@
     "all_gate_evidence_valid": false,
     "anchor_pair_evidence_valid": true,
     "dykstra_score_axis_sanity_valid": true,
-    "first_anchor_timing_smoke_artifact_valid": false,
+    "first_anchor_timing_smoke_artifact_valid": true,
     "move_level_feasibility_artifact_valid": true,
     "paired_axis_plan_evidence_valid": true,
     "probe_gate_evidence_valid": false,
@@ -462,31 +461,57 @@
     },
     "dykstra_score_axis_sanity_valid": true,
     "first_anchor_timing_smoke_allowed": false,
-    "first_anchor_timing_smoke_artifact_valid": false,
+    "first_anchor_timing_smoke_artifact_valid": true,
     "first_anchor_timing_smoke_status": {
-      "artifact_exists": false,
-      "artifact_path": ".omx/state/tt5l_first_anchor_timing_smoke.json",
-      "artifact_valid": false,
-      "blockers": [
-        "tt5l_first_anchor_timing_smoke_artifact_missing"
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_tt5l_first_anchor_timing_smoke_20260517_codex.json",
+      "artifact_valid": true,
+      "axis_timings": {
+        "contest_cpu": {
+          "contest_auth_eval_artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+          "contest_auth_eval_artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
+          "contest_auth_eval_elapsed_seconds": 293.79739159300004,
+          "evaluate_elapsed_seconds": 194.805340313,
+          "inflate_elapsed_seconds": 95.58252872700001,
+          "modal_elapsed_seconds": 296.600486271,
+          "score_axis": "contest_cpu"
+        },
+        "contest_cuda": {
+          "contest_auth_eval_artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+          "contest_auth_eval_artifact_sha256": "300fedc535226513497596e5e89b9eb18f8ccd48815a256fee307b618d8d82be",
+          "contest_auth_eval_elapsed_seconds": 53.279486186,
+          "evaluate_elapsed_seconds": 28.000436932999996,
+          "inflate_elapsed_seconds": 14.870239315000001,
+          "modal_elapsed_seconds": 56.412989613,
+          "score_axis": "contest_cuda"
+        }
+      },
+      "blockers": [],
+      "command_argv": [
+        "paired-modal-auth-eval-recovered",
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/paired_dispatch_execute_plan_20260516T2324Z.json",
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+        "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json"
       ],
-      "command_argv": null,
-      "elapsed_seconds": null,
-      "hardware": null,
-      "predicate_id": null,
-      "predicate_passed": null,
+      "elapsed_seconds": 296.600486271,
+      "hardware": "linux_x86_64_cpu + Tesla T4 CUDA paired exact auth eval",
+      "predicate_id": "tt5l_first_anchor_timing_smoke_rate_v1",
+      "predicate_passed": true,
       "promotion_eligible": false,
-      "provider": null,
-      "provider_call_id": null,
+      "provider": "modal",
+      "provider_call_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
       "ready_for_exact_eval_dispatch": false,
-      "required_axes": [],
-      "result_artifact_path": null,
-      "result_artifact_sha256": null,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "result_artifact_path": ".omx/research/l5_v2_tt5l_paired_exact_anchor_pair_20260516_codex.json",
+      "result_artifact_sha256": "a390882dadc6160e40f3745faf49c4002de4aa4e64e864ecb54dab4fa9d0dc85",
       "schema": "l5_v2_tt5l_first_anchor_timing_smoke_status_v1",
       "score_claim": false,
-      "seconds_per_candidate": null,
+      "seconds_per_candidate": 296.600486271,
       "seconds_per_epoch": null,
-      "subject_id": null
+      "subject_id": "lane_time_traveler_l5_autonomy_substrate_20260513"
     },
     "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
     "materialized_tt5l_paired_work_unit_status": {
@@ -986,7 +1011,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "da5ce7f52b7be480e67378a69dc651e8736feb6b",
+      "current_head_commit": "73e66c96a9147e30929cd5cd58facd1f3c435324",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",

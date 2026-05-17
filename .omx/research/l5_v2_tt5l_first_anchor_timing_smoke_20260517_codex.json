@@ -1,0 +1,48 @@
+{
+  "axis_timings": {
+    "contest_cpu": {
+      "contest_auth_eval_artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+      "contest_auth_eval_artifact_sha256": "2cba8aff95751754dc378888b8fc1cdbd6a0cf4d1e7b5c91e527a2efbd5b01af",
+      "contest_auth_eval_elapsed_seconds": 293.79739159300004,
+      "evaluate_elapsed_seconds": 194.805340313,
+      "inflate_elapsed_seconds": 95.58252872700001,
+      "modal_elapsed_seconds": 296.600486271,
+      "score_axis": "contest_cpu"
+    },
+    "contest_cuda": {
+      "contest_auth_eval_artifact_path": "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json",
+      "contest_auth_eval_artifact_sha256": "300fedc535226513497596e5e89b9eb18f8ccd48815a256fee307b618d8d82be",
+      "contest_auth_eval_elapsed_seconds": 53.279486186,
+      "evaluate_elapsed_seconds": 28.000436932999996,
+      "inflate_elapsed_seconds": 14.870239315000001,
+      "modal_elapsed_seconds": 56.412989613,
+      "score_axis": "contest_cuda"
+    }
+  },
+  "command_argv": [
+    "paired-modal-auth-eval-recovered",
+    "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/paired_dispatch_execute_plan_20260516T2324Z.json",
+    "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval_cpu/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cpu/contest_auth_eval.json",
+    "experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact/modal_auth_eval/l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_cuda/contest_auth_eval.json"
+  ],
+  "elapsed_seconds": 296.600486271,
+  "generated_at_utc": "2026-05-17T08:02:31Z",
+  "generated_by_tool": "tools/build_tt5l_first_anchor_timing_smoke_artifact.py",
+  "hardware": "linux_x86_64_cpu + Tesla T4 CUDA paired exact auth eval",
+  "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+  "predicate_id": "tt5l_first_anchor_timing_smoke_rate_v1",
+  "predicate_passed": true,
+  "promotion_eligible": false,
+  "provider": "modal",
+  "provider_call_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
+  "ready_for_exact_eval_dispatch": false,
+  "required_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "result_artifact_path": ".omx/research/l5_v2_tt5l_paired_exact_anchor_pair_20260516_codex.json",
+  "result_artifact_sha256": "a390882dadc6160e40f3745faf49c4002de4aa4e64e864ecb54dab4fa9d0dc85",
+  "schema": "tt5l_first_anchor_timing_smoke_v1",
+  "score_claim": false,
+  "seconds_per_candidate": 296.600486271
+}

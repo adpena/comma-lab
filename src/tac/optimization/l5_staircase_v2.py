@@ -167,7 +167,7 @@ TT5L_FIRST_ANCHOR_TIMING_SMOKE_TOOL_PATH = (
     "tools/build_tt5l_first_anchor_timing_smoke_artifact.py"
 )
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_ARTIFACT_PATH = (
-    ".omx/state/tt5l_first_anchor_timing_smoke.json"
+    ".omx/research/l5_v2_tt5l_first_anchor_timing_smoke_20260517_codex.json"
 )
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_SCHEMA = "tt5l_first_anchor_timing_smoke_v1"
 TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID = (
@@ -3153,6 +3153,89 @@ def _tt5l_first_anchor_timing_smoke_status(*, repo_root: Path) -> dict[str, Any]
     ):
         blockers.append("tt5l_first_anchor_timing_smoke_rate_metric_missing")
 
+    axis_timings_payload = payload.get("axis_timings")
+    axis_timings = (
+        axis_timings_payload if isinstance(axis_timings_payload, Mapping) else {}
+    )
+    if payload and axis_timings:
+        missing_axis_timings = [
+            axis for axis in _REQUIRED_EXACT_AXES if axis not in axis_timings
+        ]
+        if missing_axis_timings:
+            blockers.append(
+                "tt5l_first_anchor_timing_smoke_axis_timings_missing:"
+                + ",".join(missing_axis_timings)
+            )
+        for axis, raw_axis_timing in axis_timings.items():
+            axis_name = str(axis)
+            if axis_name not in _REQUIRED_EXACT_AXES:
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_timing_unexpected_axis:"
+                    + axis_name
+                )
+                continue
+            if not isinstance(raw_axis_timing, Mapping):
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_timing_not_object:"
+                    + axis_name
+                )
+                continue
+            axis_elapsed = _json_float(
+                raw_axis_timing.get("contest_auth_eval_elapsed_seconds")
+            )
+            if axis_elapsed is None or axis_elapsed <= 0:
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_elapsed_missing:"
+                    + axis_name
+                )
+            axis_result_path = str(
+                raw_axis_timing.get("contest_auth_eval_artifact_path") or ""
+            ).strip()
+            resolved_axis_result: Path | None = None
+            if not axis_result_path:
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_result_path_missing:"
+                    + axis_name
+                )
+            elif _is_transient_artifact_path(axis_result_path):
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_result_path_transient:"
+                    + axis_name
+                )
+            else:
+                resolved_axis_result, axis_result_error = _resolve_artifact_path(
+                    axis_result_path,
+                    repo_root,
+                )
+                if axis_result_error is not None:
+                    blockers.append(
+                        "tt5l_first_anchor_timing_smoke_axis_result_path_"
+                        f"{axis_result_error}:{axis_name}"
+                    )
+                    resolved_axis_result = None
+                elif resolved_axis_result is None or not resolved_axis_result.is_file():
+                    blockers.append(
+                        "tt5l_first_anchor_timing_smoke_axis_result_missing:"
+                        + axis_name
+                    )
+                    resolved_axis_result = None
+            axis_result_sha = str(
+                raw_axis_timing.get("contest_auth_eval_artifact_sha256") or ""
+            ).strip().lower()
+            if not _SHA256_HEX_RE.fullmatch(axis_result_sha):
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_result_sha_invalid:"
+                    + axis_name
+                )
+            elif (
+                resolved_axis_result is not None
+                and _sha256_file(resolved_axis_result) != axis_result_sha
+            ):
+                blockers.append(
+                    "tt5l_first_anchor_timing_smoke_axis_result_sha_mismatch:"
+                    + axis_name
+                )
+
     result_artifact_path = str(payload.get("result_artifact_path") or "").strip()
     resolved_result_artifact: Path | None = None
     if not result_artifact_path:
@@ -3210,6 +3293,7 @@ def _tt5l_first_anchor_timing_smoke_status(*, repo_root: Path) -> dict[str, Any]
         "elapsed_seconds": elapsed_seconds,
         "seconds_per_epoch": seconds_per_epoch,
         "seconds_per_candidate": seconds_per_candidate,
+        "axis_timings": dict(axis_timings) if axis_timings else {},
         "result_artifact_path": result_artifact_path or None,
         "result_artifact_sha256": result_artifact_sha256 or None,
         "score_claim": False,
@@ -6609,6 +6693,9 @@ def render_l5_v2_architecture_lock_packet_markdown(
     probe_gate_artifact_status = tt5l.get("probe_gate_artifact_status")
     if not isinstance(probe_gate_artifact_status, Mapping):
         probe_gate_artifact_status = {}
+    first_anchor_timing_smoke_status = tt5l.get("first_anchor_timing_smoke_status")
+    if not isinstance(first_anchor_timing_smoke_status, Mapping):
+        first_anchor_timing_smoke_status = {}
     paired_axis_plan_status = tt5l.get(
         "sideinfo_effect_curve_lightning_paired_axis_plan_status"
     )
@@ -6796,6 +6883,44 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 f"axes=`{candidate.get('exact_axes', [])}`, "
                 f"blockers=`{candidate.get('blockers', [])}`"
             )
+    if first_anchor_timing_smoke_status:
+        lines.extend(
+            [
+                "",
+                "## First Anchor Timing Smoke",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{first_anchor_timing_smoke_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{first_anchor_timing_smoke_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- provider: "
+                    f"`{first_anchor_timing_smoke_status.get('provider')}`"
+                ),
+                (
+                    "- hardware: "
+                    f"`{first_anchor_timing_smoke_status.get('hardware')}`"
+                ),
+                (
+                    "- elapsed_seconds: "
+                    f"`{first_anchor_timing_smoke_status.get('elapsed_seconds')}`"
+                ),
+                (
+                    "- seconds_per_candidate: "
+                    f"`{first_anchor_timing_smoke_status.get('seconds_per_candidate')}`"
+                ),
+                (
+                    "- axis_timings: "
+                    f"`{first_anchor_timing_smoke_status.get('axis_timings', {})}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
     if materialized_work_unit_status or provider_blocker_status or alternate_provider_plan_status:
         lines.extend(
             [
