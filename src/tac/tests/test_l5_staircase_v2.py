@@ -4095,6 +4095,15 @@ def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
     assert "build_l5_v2_sideinfo_effect_curve.py" in tt5l[
         "next_non_pr106_l5_action"
     ]["command_template"]
+    assert "build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py" in tt5l[
+        "next_non_pr106_l5_action"
+    ]["command_template"]
+    assert tt5l["next_non_pr106_l5_action"]["harvest_cells_artifact_path"] == (
+        l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH
+    )
+    assert tt5l["next_non_pr106_l5_action"]["harvest_cells_tool_path"] == (
+        "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
+    )
     assert (
         tt5l["next_non_pr106_l5_action"]["architecture_lock_blocker"]
         == "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
@@ -4135,6 +4144,82 @@ def test_l5_v2_tt5l_sideinfo_effect_curve_status_preserves_partial_negative_evid
         "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
         in status["blockers"]
     )
+
+
+def test_l5_v2_tt5l_sideinfo_harvest_cells_status_preserves_pair_identity(
+    tmp_path: Path,
+) -> None:
+    artifact_path = (
+        tmp_path / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    cells = []
+    for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        archive_sha = _sha(80_000 + variant_idx)
+        pair_group_id = f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
+        run_id = f"l5_v2_tt5l_sideinfo_effect_curve_{variant}"
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            cells.append(
+                {
+                    "axis": axis,
+                    "variant": variant,
+                    "archive_sha256": archive_sha,
+                    "pair_group_id": pair_group_id,
+                    "run_id": run_id,
+                    "sideinfo_liveness": _tt5l_sideinfo_liveness(variant),
+                    "blockers": [
+                        f"harvested_exact_eval_artifact_missing:{variant}:{axis}"
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                }
+            )
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": (
+                    l5_v2.L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA
+                ),
+                "source_plan": "plan.json",
+                "source_variant_manifest": "variants.json",
+                "cell_count": 10,
+                "harvested_exact_eval_artifact_count": 0,
+                "missing_exact_eval_artifact_count": 10,
+                "cells": cells,
+                "blockers": [
+                    "harvested_exact_eval_artifact_missing:trained:contest_cpu"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    status = l5_v2.tt5l_sideinfo_effect_curve_harvest_cells_status(
+        repo_root=tmp_path
+    )
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is True
+    assert status["cell_count"] == 10
+    assert status["expected_cell_count"] == 10
+    assert status["harvested_exact_eval_artifact_count"] == 0
+    assert status["missing_exact_eval_artifact_count"] == 10
+    assert status["cell_blockers"] == [
+        "harvested_exact_eval_artifact_missing:trained:contest_cpu"
+    ]
+    trained = [
+        row for row in status["observed_cells"] if row["variant"] == "trained"
+    ]
+    assert len({row["pair_group_id"] for row in trained}) == 1
+    assert len({row["run_id"] for row in trained}) == 1
 
 
 def test_l5_v2_architecture_lock_packet_renders_partial_sideinfo_evidence(
@@ -4409,6 +4494,7 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "paired_axis_plan_evidence_valid",
         "sideinfo_effect_curve_artifact_valid",
         "sideinfo_effect_curve_status",
+        "sideinfo_effect_curve_harvest_cells_status",
         "materialized_tt5l_paired_work_unit_status",
         "blockers",
     ):

@@ -50,17 +50,32 @@
 - score_claim: `false`
 - promotion_eligible: `false`
 
+## Sideinfo Harvest Cells
+
+- artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json`
+- artifact_valid: `True`
+- tool_path: `tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py`
+- cells: `10`/`10`
+- harvested_exact_eval_artifact_count: `0`
+- missing_exact_eval_artifact_count: `10`
+- source_plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
+- cell_blockers: `['harvested_exact_eval_artifact_missing:zero:contest_cpu', 'harvested_exact_eval_artifact_missing:zero:contest_cuda', 'harvested_exact_eval_artifact_missing:random_lsb:contest_cpu', 'harvested_exact_eval_artifact_missing:random_lsb:contest_cuda', 'harvested_exact_eval_artifact_missing:shuffled:contest_cpu', 'harvested_exact_eval_artifact_missing:shuffled:contest_cuda', 'harvested_exact_eval_artifact_missing:trained:contest_cpu', 'harvested_exact_eval_artifact_missing:trained:contest_cuda', 'harvested_exact_eval_artifact_missing:ablated:contest_cpu', 'harvested_exact_eval_artifact_missing:ablated:contest_cuda']`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Sideinfo Effect Curve
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json`
 - artifact_valid: `False`
 - measurement_id: `measure_tt5l_sideinfo_effect_curve`
 - predicate_passed: `False`
-- observed_cell_count: `1`
-- missing_cells: `['contest_cpu/ablated', 'contest_cpu/random_lsb', 'contest_cpu/shuffled', 'contest_cpu/trained', 'contest_cpu/zero', 'contest_cuda/ablated', 'contest_cuda/random_lsb', 'contest_cuda/shuffled', 'contest_cuda/zero']`
+- observed_cell_count: `10`
+- missing_cells: `[]`
 - effect_blockers: `['trained_not_best_or_tied:contest_cpu', 'trained_not_best_or_tied:contest_cuda']`
-- axis_effects: `{'contest_cpu': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': None}, 'contest_cuda': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': 3.9007398365396795}}`
-- observed_cell `contest_cuda/trained`: score=`3.9007398365396795`, sideinfo_nonzero_fraction=`0.0`, sideinfo_nonzero_values=`0`/`27000`, archive_sha256=`2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a`, runtime_content_tree_sha256=`105fc0834cfb8a54b8f46edb81a030d076369c3062f3066c1800602f9d6035f5`
+- axis_effects: `{'contest_cpu': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': None}, 'contest_cuda': {'best_control_score': None, 'best_control_variant': '', 'delta_vs_best_control': None, 'trained_beats_or_ties_best_control': False, 'trained_score': None}}`
+- observed_cell `contest_cpu/zero`: score=`None`, sideinfo_nonzero_fraction=`0.0`, sideinfo_nonzero_values=`0`/`27000`, archive_sha256=`b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3`, runtime_content_tree_sha256=``
+- observed_cell `contest_cuda/zero`: score=`None`, sideinfo_nonzero_fraction=`0.0`, sideinfo_nonzero_values=`0`/`27000`, archive_sha256=`b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3`, runtime_content_tree_sha256=``
+- observed_cell `contest_cpu/random_lsb`: score=`None`, sideinfo_nonzero_fraction=`1.0`, sideinfo_nonzero_values=`27000`/`27000`, archive_sha256=`ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`, runtime_content_tree_sha256=``
 - score_claim: `false`
 - promotion_eligible: `false`
 

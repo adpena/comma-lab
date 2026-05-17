@@ -53,6 +53,10 @@ from tac.optimization.l5_v2_probe_intake import (
     L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA,
     L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH,
 )
+from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_harvest import (
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA,
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH,
+)
 from tac.optimization.prediction_band import (
     BandSource,
     BaselineRef,
@@ -181,6 +185,10 @@ TT5L_FIRST_ANCHOR_TIMING_SMOKE_PREDICATE_ID = (
     "tt5l_first_anchor_timing_smoke_rate_v1"
 )
 TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH = L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH
+TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json"
+)
 TT5L_DYKSTRA_SUBSTRATE_ID = "time_traveler_l5_5move"
 TT5L_DYKSTRA_SCORE_FORMULA = (
     "100*seg_dist+sqrt(10*pose_dist)+25*archive_bytes/37545489"
@@ -3429,6 +3437,136 @@ def tt5l_sideinfo_effect_curve_status(
     return _tt5l_sideinfo_effect_curve_status(repo_root=resolved_repo_root)
 
 
+def _tt5l_sideinfo_effect_curve_harvest_cells_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        blockers.append("tt5l_sideinfo_effect_curve_harvest_cells_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("tt5l_sideinfo_effect_curve_harvest_cells_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+            else:
+                blockers.append("tt5l_sideinfo_effect_curve_harvest_cells_not_object")
+    if payload and payload.get("schema") != L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA:
+        blockers.append("tt5l_sideinfo_effect_curve_harvest_cells_schema_mismatch")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+    ):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"tt5l_sideinfo_effect_curve_harvest_cells_{field}_not_false")
+    cells = payload.get("cells") if isinstance(payload.get("cells"), list) else []
+    expected_cells = {
+        f"{axis}:{variant}"
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    }
+    observed_cells: list[dict[str, Any]] = []
+    observed_keys: set[str] = set()
+    for raw_cell in cells:
+        if not isinstance(raw_cell, Mapping):
+            blockers.append("tt5l_sideinfo_effect_curve_harvest_cells_cell_not_object")
+            continue
+        axis = str(raw_cell.get("axis") or "")
+        variant = str(raw_cell.get("variant") or "")
+        key = f"{axis}:{variant}"
+        observed_keys.add(key)
+        liveness = raw_cell.get("sideinfo_liveness")
+        if not isinstance(liveness, Mapping):
+            liveness = {}
+        cell_blockers = raw_cell.get("blockers")
+        observed_cells.append(
+            {
+                "axis": axis,
+                "variant": variant,
+                "archive_sha256": str(raw_cell.get("archive_sha256") or ""),
+                "pair_group_id": str(raw_cell.get("pair_group_id") or ""),
+                "run_id": str(raw_cell.get("run_id") or ""),
+                "sideinfo_checked": liveness.get("checked"),
+                "sideinfo_nonzero_fraction": liveness.get("nonzero_fraction"),
+                "sideinfo_nonzero_values": liveness.get("nonzero_values"),
+                "sideinfo_total_values": liveness.get("total_values"),
+                "blockers": list(cell_blockers) if isinstance(cell_blockers, list) else [],
+            }
+        )
+        for field in ("axis", "variant", "archive_sha256", "pair_group_id", "run_id"):
+            if not str(raw_cell.get(field) or "").strip():
+                blockers.append(
+                    f"tt5l_sideinfo_effect_curve_harvest_cells_cell_{field}_missing:"
+                    f"{axis or '<missing>'}:{variant or '<missing>'}"
+                )
+        if liveness.get("checked") is not True:
+            blockers.append(
+                "tt5l_sideinfo_effect_curve_harvest_cells_sideinfo_unchecked:"
+                f"{axis or '<missing>'}:{variant or '<missing>'}"
+            )
+    missing_cells = sorted(expected_cells - observed_keys)
+    extra_cells = sorted(observed_keys - expected_cells)
+    if missing_cells:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_harvest_cells_missing_cells:"
+            + ",".join(missing_cells)
+        )
+    if extra_cells:
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_harvest_cells_extra_cells:"
+            + ",".join(extra_cells)
+        )
+    artifact_structurally_valid = artifact_path.is_file() and not blockers
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_status_v1",
+        "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_present": artifact_path.is_file(),
+        "artifact_structurally_valid": artifact_structurally_valid,
+        "artifact_valid": artifact_structurally_valid,
+        "tool_path": L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH,
+        "source_plan": str(payload.get("source_plan") or ""),
+        "source_variant_manifest": str(payload.get("source_variant_manifest") or ""),
+        "cell_count": len(observed_cells),
+        "expected_cell_count": len(expected_cells),
+        "harvested_exact_eval_artifact_count": payload.get(
+            "harvested_exact_eval_artifact_count"
+        ),
+        "missing_exact_eval_artifact_count": payload.get(
+            "missing_exact_eval_artifact_count"
+        ),
+        "observed_cells": observed_cells,
+        "blockers": list(dict.fromkeys(blockers)),
+        "cell_blockers": (
+            list(payload.get("blockers")) if isinstance(payload.get("blockers"), list) else []
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def tt5l_sideinfo_effect_curve_harvest_cells_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return public TT5L side-info harvest-cell custody status."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    return _tt5l_sideinfo_effect_curve_harvest_cells_status(
+        repo_root=resolved_repo_root
+    )
+
+
 def _tt5l_sideinfo_effect_curve_dispatch_plan_status(
     *,
     repo_root: Path,
@@ -4720,6 +4858,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     sideinfo_effect_curve_dispatch_plan_status = (
         _tt5l_sideinfo_effect_curve_dispatch_plan_status(repo_root=repo_root)
     )
+    sideinfo_effect_curve_harvest_cells_status = (
+        _tt5l_sideinfo_effect_curve_harvest_cells_status(repo_root=repo_root)
+    )
     sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
         repo_root=repo_root
     )
@@ -4796,6 +4937,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.extend(
             str(blocker)
             for blocker in sideinfo_effect_curve_dispatch_plan_status["blockers"]
+        )
+    if (
+        sideinfo_effect_curve_harvest_cells_status["artifact_exists"] is True
+        and sideinfo_effect_curve_harvest_cells_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker)
+            for blocker in sideinfo_effect_curve_harvest_cells_status["blockers"]
         )
 
     if not dykstra_valid:
@@ -5146,13 +5295,26 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "action_id": "measure_tt5l_sideinfo_effect_curve",
             "phase": "sideinfo_causal_effect_curve",
             "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+            "harvest_cells_artifact_path": (
+                TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH
+            ),
+            "harvest_cells_tool_path": (
+                L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH
+            ),
             "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
             "command_template": (
                 "run paired CPU/CUDA TT5L side-info variants "
-                "zero, random_lsb, shuffled, trained, and ablated; then "
+                "zero, random_lsb, shuffled, trained, and ablated into the "
+                "Lightning plan local_artifact_dir paths; then "
+                f".venv/bin/python {L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH} "
+                f"--lightning-plan-json {TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH} "
+                f"--output-json {TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH} "
+                "--repo-root . "
+                "&& "
                 f".venv/bin/python {L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH} "
-                "--cell-json <paired_tt5l_sideinfo_cells.json> "
+                f"--cell-json {TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH} "
                 f"--output-json {TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH} "
+                "--repo-root . "
                 "&& "
                 f".venv/bin/python {L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH} "
                 f"--probe-intake-json {TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH} "
@@ -5161,6 +5323,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 f"--output-md {L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH}"
             ),
             "expected_artifacts": [
+                TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
                 TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
                 L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
                 L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
@@ -5268,6 +5431,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "sideinfo_effect_curve_allowed": sideinfo_effect_curve_allowed,
         "sideinfo_effect_curve_artifact_valid": sideinfo_effect_curve_valid,
         "sideinfo_effect_curve_status": sideinfo_effect_curve_status,
+        "sideinfo_effect_curve_harvest_cells_status": (
+            sideinfo_effect_curve_harvest_cells_status
+        ),
         "first_anchor_timing_smoke_artifact_valid": timing_smoke_valid,
         "first_anchor_timing_smoke_status": timing_smoke_status,
         "first_anchor_timing_smoke_allowed": first_anchor_timing_smoke_allowed,
@@ -6958,6 +7124,11 @@ def render_l5_v2_architecture_lock_packet_markdown(
     sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
     if not isinstance(sideinfo_effect_curve_status, Mapping):
         sideinfo_effect_curve_status = {}
+    sideinfo_effect_curve_harvest_cells_status = tt5l.get(
+        "sideinfo_effect_curve_harvest_cells_status"
+    )
+    if not isinstance(sideinfo_effect_curve_harvest_cells_status, Mapping):
+        sideinfo_effect_curve_harvest_cells_status = {}
     sideinfo_effect_curve_dispatch_plan_status = tt5l.get(
         "sideinfo_effect_curve_dispatch_plan_status"
     )
@@ -7098,6 +7269,49 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 (
                     "- execution_blockers: "
                     f"`{paired_axis_plan_status.get('execution_blockers', [])}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if sideinfo_effect_curve_harvest_cells_status:
+        lines.extend(
+            [
+                "",
+                "## Sideinfo Harvest Cells",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- tool_path: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('tool_path')}`"
+                ),
+                (
+                    "- cells: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('cell_count')}`/"
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('expected_cell_count')}`"
+                ),
+                (
+                    "- harvested_exact_eval_artifact_count: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('harvested_exact_eval_artifact_count')}`"
+                ),
+                (
+                    "- missing_exact_eval_artifact_count: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('missing_exact_eval_artifact_count')}`"
+                ),
+                (
+                    "- source_plan: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('source_plan')}`"
+                ),
+                (
+                    "- cell_blockers: "
+                    f"`{sideinfo_effect_curve_harvest_cells_status.get('cell_blockers', [])[:10]}`"
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
@@ -7439,6 +7653,7 @@ __all__ = [
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_PATH",
     "TT5L_SIDEINFO_CONSUMPTION_PROOF_ARTIFACT_SHA256",
     "TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH",
+    "TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH",
     "Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT",
@@ -7472,5 +7687,6 @@ __all__ = [
     "render_l5_v2_asymptotic_candidate_surface_markdown",
     "tt5l_first_anchor_timing_smoke_status",
     "tt5l_move_level_feasibility_status",
+    "tt5l_sideinfo_effect_curve_harvest_cells_status",
     "tt5l_sideinfo_effect_curve_status",
 ]
