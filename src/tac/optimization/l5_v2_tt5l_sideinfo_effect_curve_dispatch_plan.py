@@ -766,6 +766,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
         if not isinstance(archive_bytes, int):
             archive_bytes = None
         pair_group_id = _variant_pair_group_id(variant, archive_sha) if archive_sha else ""
+        run_id = _variant_run_id(variant, archive_sha) if archive_sha else ""
         variant_blockers = _dedupe(
             list(manifest_blockers) + archive_blockers + custody_blockers
         )
@@ -805,6 +806,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
                         "variant": variant,
                         "axis": axis,
                         "pair_group_id": pair_group_id,
+                        "run_id": run_id,
                         "archive_sha256": archive_sha,
                         "source_plan": source_dispatch_plan,
                     },
@@ -848,6 +850,12 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
                     "queue_metadata_axis_matches_cell": (
                         spec.queue_metadata.get("axis") == axis
                     ),
+                    "queue_metadata_pair_group_matches_cell": (
+                        spec.queue_metadata.get("pair_group_id") == pair_group_id
+                    ),
+                    "queue_metadata_run_id_matches_cell": (
+                        spec.queue_metadata.get("run_id") == run_id
+                    ),
                     "stderr_empty": (
                         (not materialize_dry_runs)
                         or (stderr_path.is_file() and stderr_path.stat().st_size == 0)
@@ -886,6 +894,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
                 "archive_sha256": archive_sha,
                 "archive_size_bytes": archive_bytes,
                 "pair_group_id": pair_group_id,
+                "run_id": run_id,
                 "local_artifact_dir": local_dir_rel,
                 "state_path": str(state_path.relative_to(root)),
                 "dry_run_stdout_path": str(stdout_path.relative_to(root)),
@@ -1046,7 +1055,7 @@ def render_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_markdown(
             "`INFLATE_REQUIRE_CUDA=1`.",
             "- All ten `dry_run.stderr` files are zero bytes when the plan is ready.",
             "- Queue metadata carries the expected `axis`, `variant`, `pair_group_id`, "
-            "`archive_sha256`, and source dispatch-plan pointer for every cell.",
+            "`run_id`, `archive_sha256`, and source dispatch-plan pointer for every cell.",
             "",
             "## Reactivation Criteria",
             "",

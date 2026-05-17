@@ -64,7 +64,11 @@ def test_tt5l_lightning_paired_axis_plan_materializes_ten_exact_eval_cells(
         assert spec["queue_metadata"]["axis"] == cell["axis"]
         assert spec["queue_metadata"]["variant"] == cell["variant"]
         assert spec["queue_metadata"]["pair_group_id"] == cell["pair_group_id"]
+        assert spec["queue_metadata"]["run_id"] == cell["run_id"]
         assert spec["queue_metadata"]["archive_sha256"] == cell["archive_sha256"]
+        assert cell["run_id"].startswith(
+            f"l5_v2_tt5l_sideinfo_effect_curve_{cell['variant']}_"
+        )
         state_path, stdout_path, stderr_path = _state_paths(cell)
         for path in (state_path, stdout_path, stderr_path):
             assert (tmp_path / path).is_file()
@@ -143,6 +147,7 @@ def test_tt5l_lightning_paired_axis_plan_json_and_markdown_are_durable(
     assert "[contest-CUDA]" in report
     assert "CPU cells are `exact_cpu_eval`" in report
     assert "CUDA cells are `exact_cuda_eval`" in report
+    assert "`run_id`" in report
 
 
 def test_tt5l_lightning_paired_axis_plan_cli_writes_json_and_markdown(

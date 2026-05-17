@@ -4384,6 +4384,18 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
     for (variant, axis), cell in cell_by_key.items():
         expected_device = "cpu" if axis == "contest_cpu" else "cuda"
         expected_role = f"exact_{expected_device}_eval"
+        pair_group_id = str(cell.get("pair_group_id") or "").strip()
+        run_id = str(cell.get("run_id") or "").strip()
+        if not pair_group_id:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_pair_group_id_missing:"
+                f"{variant}:{axis}"
+            )
+        if not run_id:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_run_id_missing:"
+                f"{variant}:{axis}"
+            )
         if cell.get("role") != expected_role:
             validation_blockers.append(
                 "l5_v2_tt5l_lightning_paired_axis_plan_role_mismatch:"
@@ -4440,6 +4452,23 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
                     "l5_v2_tt5l_lightning_paired_axis_plan_spec_role_mismatch:"
                     f"{variant}:{axis}"
                 )
+            queue_metadata = spec.get("queue_metadata")
+            if not isinstance(queue_metadata, Mapping):
+                validation_blockers.append(
+                    "l5_v2_tt5l_lightning_paired_axis_plan_spec_queue_metadata_missing:"
+                    f"{variant}:{axis}"
+                )
+            else:
+                if queue_metadata.get("pair_group_id") != pair_group_id:
+                    validation_blockers.append(
+                        "l5_v2_tt5l_lightning_paired_axis_plan_"
+                        f"spec_pair_group_id_mismatch:{variant}:{axis}"
+                    )
+                if queue_metadata.get("run_id") != run_id:
+                    validation_blockers.append(
+                        "l5_v2_tt5l_lightning_paired_axis_plan_"
+                        f"spec_run_id_mismatch:{variant}:{axis}"
+                    )
             adjudication = spec.get("adjudication")
             if (
                 not isinstance(adjudication, Mapping)

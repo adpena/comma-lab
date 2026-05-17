@@ -1251,11 +1251,15 @@ def _tt5l_lightning_paired_axis_plan_cell(
 ) -> dict[str, object]:
     required_device = "cpu" if axis == "contest_cpu" else "cuda"
     role = f"exact_{required_device}_eval"
+    pair_group_id = f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
+    run_id = f"l5_v2_tt5l_sideinfo_effect_curve_{variant}"
     return {
         "variant": variant,
         "axis": axis,
         "role": role,
         "required_device": required_device,
+        "pair_group_id": pair_group_id,
+        "run_id": run_id,
         "archive_sha256": _sha(100 + seed),
         "command_sha256": _sha(200 + seed),
         "state_sha256": _sha(300 + seed),
@@ -1276,6 +1280,12 @@ def _tt5l_lightning_paired_axis_plan_cell(
         "spec": {
             "role": role,
             "adjudication": {"required_device": required_device},
+            "queue_metadata": {
+                "variant": variant,
+                "axis": axis,
+                "pair_group_id": pair_group_id,
+                "run_id": run_id,
+            },
         },
     }
 
@@ -3886,6 +3896,48 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert "- all_cells_dry_run_structurally_valid: `True`" in report
     assert "- execution_ready: `False`" in report
     assert "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only" in report
+
+
+def test_l5_v2_tt5l_lightning_paired_axis_plan_status_rejects_missing_run_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(1))
+    payload = _tt5l_lightning_paired_axis_plan_payload()
+    first = payload["cells"][0]
+    assert isinstance(first, dict)
+    first.pop("run_id")
+    spec = first["spec"]
+    assert isinstance(spec, dict)
+    queue_metadata = spec["queue_metadata"]
+    assert isinstance(queue_metadata, dict)
+    queue_metadata.pop("run_id")
+    artifact_path = (
+        tmp_path
+        / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ]
+
+    assert status["artifact_valid"] is False
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_run_id_missing:"
+        "zero:contest_cpu"
+        in status["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_spec_run_id_mismatch:"
+        "zero:contest_cpu"
+        in status["blockers"]
+    )
 
 
 def test_l5_v2_tt5l_lightning_paired_axis_plan_status_allows_head_only_drift(
