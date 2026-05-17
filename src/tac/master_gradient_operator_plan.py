@@ -67,6 +67,46 @@ class MasterGradientOperatorRow:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class CandidateModificationSpec:
+    """Packet-valid modification candidate for a score-response row.
+
+    This is the explicit replacement for raw ``{byte_idx: delta}`` maps. A
+    spec names a logical packet section and grammar-aware mutation operator;
+    it never carries archive-byte coordinates. Packet proofs stay explicit so
+    an operator-row manifest can be useful for planning without becoming a
+    dispatchable score claim.
+    """
+
+    spec_id: str
+    source_archive_path: str | None
+    source_archive_sha256: str | None
+    source_archive_bytes: int | None
+    operator_id: str
+    section_name: str
+    section_role: str
+    mutation_grain: str
+    mutation_operator: str
+    axis_label: str
+    response_matrix_columns: tuple[str, ...]
+    packet_proofs_required: tuple[str, ...]
+    packet_proofs_available: bool
+    ready_for_operator_probe: bool
+    ready_for_provider_dispatch: bool
+    score_claim: bool
+    promotion_eligible: bool
+    rank_or_kill_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+    dispatch_attempted: bool
+    coordinate_system: str
+    raw_archive_byte_coordinates_allowed: bool
+    blockers: tuple[str, ...]
+    rationale: tuple[str, ...]
+
+    def to_manifest(self) -> dict[str, object]:
+        return asdict(self)
+
+
 def build_master_gradient_operator_plan(
     layout_manifest: dict[str, Any],
     *,
@@ -127,6 +167,14 @@ def build_master_gradient_operator_plan(
     )
     if any(row.blockers for row in rows):
         top_level_blockers.append("operator_rows_blocked_until_packet_proofs_land")
+    candidate_specs = [
+        _candidate_spec_from_row(
+            row,
+            layout_manifest=layout_manifest,
+            packet_proofs_available=packet_proofs_available,
+        )
+        for row in rows
+    ]
 
     return {
         "schema": "tac_master_gradient_operator_plan_v1",
@@ -148,8 +196,12 @@ def build_master_gradient_operator_plan(
         "source_archive_bytes": layout_manifest.get("archive_bytes"),
         "logical_grammar": grammar,
         "operator_row_count": len(rows),
+        "candidate_modification_spec_count": len(candidate_specs),
         "skipped_section_count": len(skipped_sections),
         "rows": [row.to_manifest() for row in rows],
+        "candidate_modification_specs": [
+            spec.to_manifest() for spec in candidate_specs
+        ],
         "skipped_sections": skipped_sections,
         "blockers": _unique((*top_level_blockers, *row_blockers)),
         "next_step": (
@@ -192,6 +244,7 @@ def build_master_gradient_operator_plan_payload(
             "packet_proofs_available": bool(packet_proofs_available),
             "plan_count": 0,
             "operator_row_count": 0,
+            "candidate_modification_spec_count": 0,
             "raw_archive_byte_rows_emitted": 0,
             "plans": [],
             "blockers": _unique(("batch_runs_missing", *single["blockers"])),
@@ -218,6 +271,9 @@ def build_master_gradient_operator_plan_payload(
         "packet_proofs_available": bool(packet_proofs_available),
         "plan_count": len(plans),
         "operator_row_count": sum(int(plan["operator_row_count"]) for plan in plans),
+        "candidate_modification_spec_count": sum(
+            int(plan["candidate_modification_spec_count"]) for plan in plans
+        ),
         "raw_archive_byte_rows_emitted": sum(
             int(plan["raw_archive_byte_rows_emitted"]) for plan in plans
         ),
@@ -287,6 +343,48 @@ def _mutation_operator(section_name: str, section_role: str) -> str:
     return "logical_section_entropy_tournament"
 
 
+def _candidate_spec_from_row(
+    row: MasterGradientOperatorRow,
+    *,
+    layout_manifest: dict[str, Any],
+    packet_proofs_available: bool,
+) -> CandidateModificationSpec:
+    archive_bytes = _optional_int(layout_manifest.get("archive_bytes"))
+    archive_sha = layout_manifest.get("archive_sha256")
+    source_archive_sha256 = None if archive_sha is None else str(archive_sha)
+    archive_path = layout_manifest.get("archive_path")
+    source_archive_path = None if archive_path is None else str(archive_path)
+    return CandidateModificationSpec(
+        spec_id=f"candidate_modification::{row.operator_id}",
+        source_archive_path=source_archive_path,
+        source_archive_sha256=source_archive_sha256,
+        source_archive_bytes=archive_bytes,
+        operator_id=row.operator_id,
+        section_name=row.section_name,
+        section_role=row.section_role,
+        mutation_grain="grammar_aware_operator",
+        mutation_operator=row.mutation_operator,
+        axis_label=row.axis_label,
+        response_matrix_columns=RESPONSE_MATRIX_COLUMNS,
+        packet_proofs_required=PACKET_PROOFS,
+        packet_proofs_available=bool(packet_proofs_available),
+        ready_for_operator_probe=row.ready_for_operator_probe,
+        ready_for_provider_dispatch=False,
+        score_claim=False,
+        promotion_eligible=False,
+        rank_or_kill_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+        dispatch_attempted=False,
+        coordinate_system="grammar_aware_operator_response",
+        raw_archive_byte_coordinates_allowed=False,
+        blockers=row.blockers,
+        rationale=(
+            "candidate modification specs are grammar-coordinate rows, not raw archive-byte deltas",
+            *row.rationale,
+        ),
+    )
+
+
 def _operator_rationale(section_name: str, section_role: str) -> tuple[str, ...]:
     operator = _mutation_operator(section_name, section_role)
     if operator == "decoder_codec_coordinate_response":
@@ -332,6 +430,7 @@ def _unique(values: Any) -> tuple[str, ...]:
 __all__ = [
     "PACKET_PROOFS",
     "RESPONSE_MATRIX_COLUMNS",
+    "CandidateModificationSpec",
     "MasterGradientOperatorRow",
     "build_master_gradient_operator_plan",
     "build_master_gradient_operator_plan_payload",
