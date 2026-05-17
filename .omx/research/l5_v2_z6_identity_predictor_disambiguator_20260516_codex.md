@@ -18,27 +18,27 @@ This report is a Z6-specific probe surface. It can route the next engineering ac
 
 ### full_film_predictor
 
-- path: `experiments/results/time_traveler_l5_z6/disambiguator_full_film_smoke_20260516_codex/stats.json`
-- sha256: `ca76380008a3256582ce3ee8f58c56cc7f6a82df3c7d8b2c4818ccd36ce10518`
-- final_loss_proxy: `0.16798947751522064`
-- final_recon: `0.16757309436798096`
-- final_residual: `0.000416384544223547`
-- archive_bytes: `42643`
+- path: `experiments/results/time_traveler_l5_z6/disambiguator_full_film_ramp_smoke_20260516_codex/stats.json`
+- sha256: `e57701256967d108c1d387c7dd61222d20f14ae5c75ff51858f78b1b3bb4f58f`
+- final_loss_proxy: `0.1679897904396057`
+- final_recon: `0.16757340729236603`
+- final_residual: `0.0004163846024312079`
+- archive_bytes: `42682`
 
 ### identity_predictor
 
-- path: `experiments/results/time_traveler_l5_z6/disambiguator_identity_smoke_20260516_codex/stats.json`
-- sha256: `235eed2236032ecfabad395b236e58def06d7195b6e41120a1556ee3014ce11b`
+- path: `experiments/results/time_traveler_l5_z6/disambiguator_identity_ramp_smoke_20260516_codex/stats.json`
+- sha256: `3b7c306b142595e241da84a9a8ede4cd011d2868b893fbf29e903d099751b340`
 - final_loss_proxy: `0.16791336238384247`
 - final_recon: `0.16755691170692444`
 - final_residual: `0.0003564539656508714`
-- archive_bytes: `39480`
+- archive_bytes: `39529`
 
 ## Deltas
-- identity_minus_full_loss_proxy: `-7.611513137817383e-05`
-- identity_minus_full_recon: `-1.6182661056518555e-05`
-- identity_minus_full_residual: `-5.9930578572675586e-05`
-- full_minus_identity_archive_bytes: `3163`
+- identity_minus_full_loss_proxy: `-7.642805576324463e-05`
+- identity_minus_full_recon: `-1.6495585441589355e-05`
+- identity_minus_full_residual: `-5.99306367803365e-05`
+- full_minus_identity_archive_bytes: `3153`
 
 ## Blockers
 - `smoke_proxy_synthetic_no_scorer`

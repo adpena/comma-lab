@@ -236,7 +236,7 @@ def build_probe_payload(*, seed: int = 0) -> dict[str, Any]:
         and not zero_full["film_conditioning_exercised"]
         and ramp_full["film_conditioning_exercised"]
     ):
-        verdict = "z6_predictor_live_smoke_film_conditioning_cargo_cult"
+        verdict = "z6_predictor_live_ramp_smoke_exercises_film_synthetic_only"
     elif not zero_full["predictor_gradient_live"]:
         verdict = "z6_predictor_gradient_missing_engineering_bug"
     else:
@@ -252,12 +252,12 @@ def build_probe_payload(*, seed: int = 0) -> dict[str, Any]:
         "rows": rows,
         "findings": [
             "full FiLM predictor receives nonzero gradients in the smoke graph",
-            "current zero-ego smoke does not exercise FiLM conditioning",
+            "zero-ego control does not exercise FiLM conditioning",
             "ramp ego-motion control changes predictor output and confirms the conditioning path is live",
             "identity-vs-full smoke result is not a fair falsification of ego-motion predictive coding",
         ],
         "blockers": [
-            "current_z6_smoke_uses_zero_ego_motion_buffer",
+            "z6_smoke_ego_motion_is_synthetic_proxy_not_real_pose_signal",
             "current_z6_smoke_uses_synthetic_targets_without_real_temporal_pose_signal",
             "no_scorer_load",
             "no_contest_cpu_cuda_pair",

@@ -109,6 +109,20 @@ def test_smoke_effective_epochs_caps_default_full_epoch_count() -> None:
     assert z6_trainer._smoke_effective_epochs(0) == 1
 
 
+def test_smoke_populates_nonzero_ego_motion_by_default_control() -> None:
+    """Ramp smoke mode prevents zero-ego FiLM cargo-cult probes."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6_trainer
+
+    sub = Z6PredictiveCodingSubstrate(_tiny_config())
+    z6_trainer._populate_smoke_ego_motion(sub, mode="ramp", seed=0)
+    assert float((sub.ego_motion_buffer.abs() > 0).float().mean().item()) == 1.0
+    assert float(sub.ego_motion_buffer.pow(2).sum().sqrt().item()) > 0.0
+
+    z6_trainer._populate_smoke_ego_motion(sub, mode="zero", seed=0)
+    assert float((sub.ego_motion_buffer.abs() > 0).float().mean().item()) == 0.0
+    assert float(sub.ego_motion_buffer.pow(2).sum().sqrt().item()) == 0.0
+
+
 def test_remote_driver_verifies_active_claim_and_preserves_full_epoch_default() -> None:
     """Remote driver must verify the active claim and keep full default at 300."""
     src = DRIVER_PATH.read_text(encoding="utf-8")

@@ -36,6 +36,9 @@ def _stats(*, identity: bool, loss: float, archive_bytes: int = 1024) -> dict[st
         "archive_bytes": archive_bytes,
         "lambda_residual_entropy": 1.0,
         "predictor_kernel_size": 3,
+        "smoke_ego_motion_mode": "ramp",
+        "ego_motion_nonzero_fraction": 1.0,
+        "ego_motion_l2": 2.714,
         "identity_predictor": identity,
         "score_claim_valid": False,
         "evidence_grade": "smoke-no-scorer",
@@ -60,6 +63,8 @@ def test_z6_disambiguator_plan_is_fail_closed_and_paired() -> None:
     commands = payload["paired_smoke_commands"]
     assert [row["identity_predictor"] for row in commands] == [False, True]
     assert "--smoke" in commands[0]["command"]
+    assert "--smoke-ego-motion-mode" in commands[0]["command"]
+    assert "ramp" in commands[0]["command"]
     assert "--identity-predictor" not in commands[0]["command"]
     assert "--identity-predictor" in commands[1]["command"]
     assert "no_contest_cpu_cuda_pair" in payload["blockers"]

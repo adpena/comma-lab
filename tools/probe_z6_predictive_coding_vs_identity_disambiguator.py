@@ -171,6 +171,9 @@ def _mode_stats_row(
         "requested_epochs": payload.get("requested_epochs"),
         "lambda_residual_entropy": payload.get("lambda_residual_entropy"),
         "predictor_kernel_size": payload.get("predictor_kernel_size"),
+        "smoke_ego_motion_mode": payload.get("smoke_ego_motion_mode"),
+        "ego_motion_nonzero_fraction": payload.get("ego_motion_nonzero_fraction"),
+        "ego_motion_l2": payload.get("ego_motion_l2"),
         "final_loss_proxy": payload.get("final_loss_proxy"),
         "final_recon": payload.get("final_recon"),
         "final_residual": payload.get("final_residual"),
@@ -193,6 +196,7 @@ def _smoke_command(
     epochs: int,
     device: str,
     seed: int,
+    ego_motion_mode: str,
 ) -> list[str]:
     command = [
         ".venv/bin/python",
@@ -207,6 +211,8 @@ def _smoke_command(
         device,
         "--seed",
         str(seed),
+        "--smoke-ego-motion-mode",
+        ego_motion_mode,
         "--smoke",
     ]
     if identity_predictor:
@@ -219,6 +225,7 @@ def build_plan_payload(
     epochs: int = 3,
     device: str = "cpu",
     seed: int = 0,
+    ego_motion_mode: str = "ramp",
 ) -> dict[str, Any]:
     """Return the paired smoke command plan without asserting a result."""
 
@@ -239,6 +246,7 @@ def build_plan_payload(
             {
                 "mode": "full_film_predictor",
                 "identity_predictor": False,
+                "smoke_ego_motion_mode": ego_motion_mode,
                 "output_dir": DEFAULT_FULL_OUTPUT_DIR,
                 "stats_path": f"{DEFAULT_FULL_OUTPUT_DIR}/stats.json",
                 "command": _smoke_command(
@@ -247,11 +255,13 @@ def build_plan_payload(
                     epochs=epochs,
                     device=device,
                     seed=seed,
+                    ego_motion_mode=ego_motion_mode,
                 ),
             },
             {
                 "mode": "identity_predictor",
                 "identity_predictor": True,
+                "smoke_ego_motion_mode": ego_motion_mode,
                 "output_dir": DEFAULT_IDENTITY_OUTPUT_DIR,
                 "stats_path": f"{DEFAULT_IDENTITY_OUTPUT_DIR}/stats.json",
                 "command": _smoke_command(
@@ -260,11 +270,13 @@ def build_plan_payload(
                     epochs=epochs,
                     device=device,
                     seed=seed,
+                    ego_motion_mode=ego_motion_mode,
                 ),
             },
         ],
         "reactivation_criteria": [
             "run both smoke commands from same git SHA and seed",
+            "keep smoke_ego_motion_mode matched across both arms",
             "compare stats through this tool",
             "do not assert Z6 paradigm movement until paired contest CPU/CUDA exact eval exists",
             "keep full_main council-gated until real-video training path is implemented",
@@ -290,6 +302,7 @@ def evaluate_stats_pair(
         "smoke_epoch_cap",
         "lambda_residual_entropy",
         "predictor_kernel_size",
+        "smoke_ego_motion_mode",
     ):
         _require_same_config(full, identity, key)
 
@@ -446,6 +459,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--smoke-ego-motion-mode",
+        choices=("ramp", "zero", "random"),
+        default="ramp",
+    )
     parser.add_argument("--output-json", type=Path, default=Path(DEFAULT_OUTPUT_JSON))
     parser.add_argument("--output-md", type=Path, default=Path(DEFAULT_OUTPUT_MD))
     return parser.parse_args(argv)
@@ -462,6 +480,7 @@ def main(argv: list[str] | None = None) -> int:
                 epochs=args.epochs,
                 device=args.device,
                 seed=args.seed,
+                ego_motion_mode=args.smoke_ego_motion_mode,
             )
         else:
             full_stats_path = _resolve_repo_path(args.full_stats, repo_root=repo_root)

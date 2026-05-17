@@ -4,7 +4,7 @@
 - probe_id: `z6_predictor_liveness_and_ego_motion_cargo_cult_probe`
 - lane_id: `lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516`
 - evidence_grade: `synthetic_liveness_probe_no_scorer`
-- verdict: `z6_predictor_live_smoke_film_conditioning_cargo_cult`
+- verdict: `z6_predictor_live_ramp_smoke_exercises_film_synthetic_only`
 - score_claim: `false`
 - promotion_eligible: `false`
 - rank_or_kill_eligible: `false`
@@ -45,12 +45,12 @@ This is an engineering liveness/cargo-cult probe. It explains whether the Z6 ide
 
 ## Findings
 - full FiLM predictor receives nonzero gradients in the smoke graph
-- current zero-ego smoke does not exercise FiLM conditioning
+- zero-ego control does not exercise FiLM conditioning
 - ramp ego-motion control changes predictor output and confirms the conditioning path is live
 - identity-vs-full smoke result is not a fair falsification of ego-motion predictive coding
 
 ## Blockers
-- current_z6_smoke_uses_zero_ego_motion_buffer
+- z6_smoke_ego_motion_is_synthetic_proxy_not_real_pose_signal
 - current_z6_smoke_uses_synthetic_targets_without_real_temporal_pose_signal
 - no_scorer_load
 - no_contest_cpu_cuda_pair

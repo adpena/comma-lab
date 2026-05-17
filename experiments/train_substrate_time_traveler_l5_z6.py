@@ -311,6 +311,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "Catalog #125 hook #6"
         ),
     )
+    p.add_argument(
+        "--smoke-ego-motion-mode",
+        choices=("ramp", "zero", "random"),
+        default="ramp",
+        help=(
+            "Smoke-only ego-motion proxy. Default ramp exercises FiLM "
+            "conditioning; zero is retained only as a cargo-cult control."
+        ),
+    )
 
     # Predictive-coding Lagrangian weights
     p.add_argument(
@@ -372,6 +381,39 @@ def _smoke_effective_epochs(requested_epochs: int) -> int:
     return max(1, min(int(requested_epochs), 3))
 
 
+def _populate_smoke_ego_motion(
+    substrate: Z6PredictiveCodingSubstrate,
+    *,
+    mode: str,
+    seed: int,
+) -> None:
+    """Populate smoke ego-motion so FiLM conditioning is actually exercised."""
+
+    shape = (
+        substrate.cfg.num_pairs,
+        substrate.cfg.predictor_ego_motion_dim,
+    )
+    target_device = substrate.ego_motion_buffer.device
+    if mode == "zero":
+        substrate.ego_motion_buffer.zero_()
+        return
+    if mode == "ramp":
+        values = torch.linspace(
+            -1.0,
+            1.0,
+            steps=shape[0] * shape[1],
+            device=target_device,
+        ).view(shape)
+        substrate.ego_motion_buffer.copy_(values)
+        return
+    if mode == "random":
+        generator = torch.Generator(device="cpu").manual_seed(int(seed) + 17)
+        values = torch.randn(shape, generator=generator, device="cpu").to(target_device)
+        substrate.ego_motion_buffer.copy_(values)
+        return
+    raise ValueError(f"unknown smoke ego-motion mode: {mode!r}")
+
+
 def _smoke_main(args: argparse.Namespace) -> int:
     """Smoke entry: tiny config, synthetic data, ≤3 epochs, no scorer load."""
     torch.manual_seed(args.seed)
@@ -397,8 +439,14 @@ def _smoke_main(args: argparse.Namespace) -> int:
         lambda_residual_entropy=args.lambda_residual_entropy,
     )
     substrate = Z6PredictiveCodingSubstrate(cfg).to(args.device)
+    _populate_smoke_ego_motion(
+        substrate,
+        mode=args.smoke_ego_motion_mode,
+        seed=args.seed,
+    )
     print(f"[z6-smoke] param breakdown: {substrate.num_parameters_breakdown()}")
     print(f"[z6-smoke] identity_predictor={cfg.identity_predictor}")
+    print(f"[z6-smoke] smoke_ego_motion_mode={args.smoke_ego_motion_mode}")
 
     # Synthetic frame targets per pair (Catalog #114 allowed in smoke path only)
     synth_targets_0 = torch.rand(
@@ -452,6 +500,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
         "latent_init_std": cfg.latent_init_std,
         "smoke": True,
+        "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
         "requested_epochs": args.epochs,
         "effective_epochs": effective_epochs,
     }
@@ -479,6 +528,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "lambda_residual_entropy": args.lambda_residual_entropy,
         "predictor_kernel_size": args.predictor_kernel_size,
         "identity_predictor": args.identity_predictor,
+        "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
+        "ego_motion_nonzero_fraction": float(
+            (substrate.ego_motion_buffer.detach().abs() > 0).float().mean().item()
+        ),
+        "ego_motion_l2": float(
+            substrate.ego_motion_buffer.detach().pow(2).sum().sqrt().item()
+        ),
         "cfg": asdict(cfg),
         "score_claim_valid": False,
         "evidence_grade": "smoke-no-scorer",
@@ -491,7 +547,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     print(
         f"[z6-smoke] OK final_loss={final['loss']:.6f} archive={len(archive_bytes)}B "
-        f"kernel={args.predictor_kernel_size} identity={args.identity_predictor}"
+        f"kernel={args.predictor_kernel_size} identity={args.identity_predictor} "
+        f"ego={args.smoke_ego_motion_mode}"
     )
     return 0
 

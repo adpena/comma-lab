@@ -31,7 +31,9 @@ def test_z6_liveness_probe_finds_zero_ego_cargo_cult_condition() -> None:
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_paid_dispatch"] is False
     assert payload["paradigm_claim_allowed"] is False
-    assert payload["verdict"] == "z6_predictor_live_smoke_film_conditioning_cargo_cult"
+    assert payload["verdict"] == (
+        "z6_predictor_live_ramp_smoke_exercises_film_synthetic_only"
+    )
 
     zero = rows["full_film_zero_ego"]
     assert zero["predictor_param_count"] > 0
@@ -87,7 +89,9 @@ def test_z6_liveness_cli_writes_json_and_markdown(tmp_path: Path) -> None:
 
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(output_json.read_text(encoding="utf-8"))
-    assert payload["verdict"] == "z6_predictor_live_smoke_film_conditioning_cargo_cult"
+    assert payload["verdict"] == (
+        "z6_predictor_live_ramp_smoke_exercises_film_synthetic_only"
+    )
     assert output_md.read_text(encoding="utf-8").startswith(
         "# L5 v2 Z6 predictor liveness probe"
     )
