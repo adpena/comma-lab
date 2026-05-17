@@ -6,24 +6,27 @@
     "no_contest_cpu_cuda_pair",
     "no_byte_closed_score_anchor",
     "not_paradigm_claim_authority",
-    "ego_proxy_semantics_not_hard_earned"
+    "ego_proxy_semantics_not_hard_earned",
+    "posenet_pose_proxy_not_best"
   ],
-  "candidate_count": 6,
+  "candidate_count": 7,
   "device": "cpu",
   "epochs": 3,
   "evidence_grade": "real_video_smoke_proxy_no_scorer",
+  "include_posenet_proxy": true,
   "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
   "paired_control_initialization": "shared_modules_seed_order_matched_v2",
   "paradigm_claim_allowed": false,
+  "posenet_proxy_tested": true,
   "probe_id": "z6_real_video_ego_proxy_sweep",
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
   "ready_for_paid_dispatch": false,
   "recommended_next_actions": [
-    "treat the full-FiLM win as predictor-capacity liveness, not a score or paradigm claim",
-    "run a scorer-bearing or PoseNet-derived ego proxy probe before paid dispatch",
-    "if the best proxy remains zero/random, redesign the ego-conditioning objective before full_main"
+    "do not paid-dispatch Z6-v1 full-FiLM from this probe: PoseNet-derived ego did not beat random/zero controls",
+    "either run a true scorer-bearing paired probe or redesign the ego-conditioning objective before full_main",
+    "advance Z7/Z8 only as new measured configurations, not as an automatic Z6-v1 promotion"
   ],
   "rows": [
     {
@@ -925,11 +928,167 @@
       "identity_minus_full_recon": 5.304813385009766e-06,
       "identity_minus_full_residual": 0.0,
       "proxy_id": "random_control"
+    },
+    {
+      "full_film": {
+        "archive_bytes": 42964,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": false,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.31754279136657715,
+        "final_recon": 0.3171863257884979,
+        "final_residual": 0.00035645387833938,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.31867438554763794,
+            "recon": 0.31828778982162476,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.31810635328292847,
+            "recon": 0.31773507595062256,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.31754279136657715,
+            "recon": 0.3171863257884979,
+            "residual": 0.00035645387833938
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 40,
+          "total": 22554
+        },
+        "proxy_id": "posenet_pose"
+      },
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3397,
+      "identity": {
+        "archive_bytes": 39567,
+        "cfg": {
+          "decoder_channels": [
+            12,
+            10,
+            8,
+            6
+          ],
+          "decoder_embed_dim": 16,
+          "decoder_initial_grid_h": 3,
+          "decoder_initial_grid_w": 4,
+          "decoder_num_upsample_blocks": 4,
+          "encoder_hidden_dim": 64,
+          "encoder_input_channels": 3,
+          "identity_predictor": true,
+          "lambda_residual_entropy": 1.0,
+          "latent_dim": 8,
+          "latent_init_std": 0.02,
+          "num_pairs": 5,
+          "output_height": 48,
+          "output_width": 64,
+          "predictor_ego_motion_dim": 4,
+          "predictor_film_mlp_hidden_dim": 8,
+          "predictor_hidden_dim": 16,
+          "predictor_kernel_size": 3
+        },
+        "ego_motion_l2": 4.4721360206604,
+        "ego_motion_nonzero_fraction": 1.0,
+        "final_loss_proxy": 0.317548006772995,
+        "final_recon": 0.31719154119491577,
+        "final_residual": 0.00035645384923554957,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss": 0.3186761736869812,
+            "recon": 0.318289577960968,
+            "residual": 0.00038659939309582114
+          },
+          {
+            "epoch": 1.0,
+            "loss": 0.318109929561615,
+            "recon": 0.3177386522293091,
+            "residual": 0.00037126996903680265
+          },
+          {
+            "epoch": 2.0,
+            "loss": 0.317548006772995,
+            "recon": 0.31719154119491577,
+            "residual": 0.00035645384923554957
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 40,
+          "total": 20922
+        },
+        "proxy_id": "posenet_pose"
+      },
+      "identity_minus_full_loss_proxy": 5.21540641784668e-06,
+      "identity_minus_full_recon": 5.21540641784668e-06,
+      "identity_minus_full_residual": -2.9103830456733704e-11,
+      "proxy_id": "posenet_pose"
     }
   ],
   "schema": "z6_real_video_ego_proxy_sweep_v1",
   "score_claim": false,
   "seed": 0,
+  "semantic_ego_proxy_ids": [
+    "frame_delta",
+    "moment_proxy",
+    "posenet_pose",
+    "quadrant_delta"
+  ],
   "semantic_ego_proxy_supported": false,
   "verdict": "full_film_proxy_found_real_video_smoke",
   "video_path": "upstream/videos/0.mkv"

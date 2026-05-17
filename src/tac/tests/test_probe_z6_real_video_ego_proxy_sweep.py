@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -57,6 +58,58 @@ def test_z6_ego_proxy_candidates_are_finite_and_paired() -> None:
     assert float(candidates["quadrant_delta"].abs().sum().item()) > 0.0
 
 
+def test_z6_ego_proxy_sweep_accepts_extra_semantic_proxy() -> None:
+    tool = _load_tool()
+    target0, target1 = _tiny_targets(num_pairs=2)
+    extra = {
+        "posenet_pose": torch.tensor(
+            [[-1.0, 0.0, 1.0, 0.5], [1.0, 0.0, -1.0, -0.5]],
+            dtype=torch.float32,
+        )
+    }
+
+    payload = tool.run_sweep_on_targets(
+        target0=target0,
+        target1=target1,
+        extra_ego_proxies=extra,
+        epochs=1,
+        seed=7,
+        lr=1e-4,
+    )
+
+    proxy_ids = {row["proxy_id"] for row in payload["rows"]}
+    assert "posenet_pose" in proxy_ids
+    assert "posenet_pose" in payload["semantic_ego_proxy_ids"]
+    assert payload["posenet_proxy_tested"] is True
+    assert payload["candidate_count"] == 7
+    assert isinstance(payload["semantic_ego_proxy_supported"], bool)
+
+
+def test_z6_ego_proxy_sweep_rejects_duplicate_or_bad_extra_proxy() -> None:
+    tool = _load_tool()
+    target0, target1 = _tiny_targets(num_pairs=2)
+
+    with pytest.raises(ValueError, match="duplicate ego proxy"):
+        tool.run_sweep_on_targets(
+            target0=target0,
+            target1=target1,
+            extra_ego_proxies={"zero": torch.zeros(2, 4)},
+            epochs=1,
+            seed=7,
+            lr=1e-4,
+        )
+
+    with pytest.raises(ValueError, match="shape"):
+        tool.run_sweep_on_targets(
+            target0=target0,
+            target1=target1,
+            extra_ego_proxies={"posenet_pose": torch.zeros(2, 5)},
+            epochs=1,
+            seed=7,
+            lr=1e-4,
+        )
+
+
 def test_z6_ego_proxy_sweep_is_fail_closed_and_paired() -> None:
     tool = _load_tool()
     target0, target1 = _tiny_targets(num_pairs=2)
@@ -81,6 +134,7 @@ def test_z6_ego_proxy_sweep_is_fail_closed_and_paired() -> None:
         "shared_modules_seed_order_matched_v2"
     )
     assert isinstance(payload["semantic_ego_proxy_supported"], bool)
+    assert payload["posenet_proxy_tested"] is False
     assert payload["candidate_count"] == 6
     assert len(payload["rows"]) == 6
     assert payload["best_proxy_id"] in {row["proxy_id"] for row in payload["rows"]}

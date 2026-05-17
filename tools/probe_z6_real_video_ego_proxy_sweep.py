@@ -52,6 +52,14 @@ FALSE_AUTHORITY_FLAGS = {
     "paradigm_claim_allowed": False,
 }
 PAIRED_CONTROL_INITIALIZATION = "shared_modules_seed_order_matched_v2"
+SEMANTIC_EGO_PROXY_IDS = frozenset(
+    {
+        "frame_delta",
+        "moment_proxy",
+        "quadrant_delta",
+        "posenet_pose",
+    }
+)
 
 
 def _tiny_cfg(*, identity_predictor: bool, num_pairs: int = 5) -> Z6PredictiveCodingConfig:
@@ -177,6 +185,45 @@ def build_ego_proxy_candidates(
     }
 
 
+def build_posenet_pose_proxy(
+    target0: torch.Tensor,
+    target1: torch.Tensor,
+    *,
+    upstream_dir: Path,
+    ego_motion_dim: int,
+    device: str = "cpu",
+    batch_size: int = 8,
+) -> torch.Tensor:
+    """Return a PoseNet-derived ego proxy for the tiny smoke targets.
+
+    This is a compress-time/scientific probe only. It loads the official
+    PoseNet scorer locally, extracts the first six pose coordinates from each
+    target pair, normalizes them, and truncates/repeats to the Z6 ego-motion
+    dimension. The resulting proxy is not score authority and is never used at
+    inflate time.
+    """
+
+    from tac.scorer import load_default_scorers
+
+    if target0.shape != target1.shape:
+        raise ValueError("target0 and target1 shapes must match")
+    if target0.dim() != 4 or target0.shape[1] != 3:
+        raise ValueError("targets must be shaped (num_pairs, 3, height, width)")
+    posenet, _segnet = load_default_scorers(upstream_dir, device=device)
+    pairs = torch.stack([target0, target1], dim=1).to(
+        device=device,
+        dtype=torch.float32,
+    ) * 255.0
+    chunks: list[torch.Tensor] = []
+    with torch.inference_mode():
+        for start in range(0, pairs.shape[0], max(1, int(batch_size))):
+            batch = pairs[start : start + max(1, int(batch_size))]
+            out = posenet(posenet.preprocess_input(batch))
+            chunks.append(out["pose"][..., :6].detach().to("cpu", dtype=torch.float32))
+    pose = torch.cat(chunks, dim=0)
+    return _normalize_features(pose, ego_motion_dim=ego_motion_dim).to(target0.device)
+
+
 def _train_one(
     *,
     target0: torch.Tensor,
@@ -271,6 +318,7 @@ def run_sweep_on_targets(
     *,
     target0: torch.Tensor,
     target1: torch.Tensor,
+    extra_ego_proxies: dict[str, torch.Tensor] | None = None,
     epochs: int = 3,
     seed: int = 0,
     lr: float = 5e-4,
@@ -283,6 +331,16 @@ def run_sweep_on_targets(
         ego_motion_dim=4,
         seed=seed,
     )
+    if extra_ego_proxies:
+        for proxy_id, ego_motion in extra_ego_proxies.items():
+            if proxy_id in candidates:
+                raise ValueError(f"duplicate ego proxy candidate: {proxy_id!r}")
+            if tuple(ego_motion.shape) != tuple(next(iter(candidates.values())).shape):
+                raise ValueError(
+                    f"ego proxy {proxy_id!r} shape {tuple(ego_motion.shape)} "
+                    f"!= expected {tuple(next(iter(candidates.values())).shape)}"
+                )
+            candidates[proxy_id] = ego_motion
     rows: list[dict[str, Any]] = []
     for proxy_id, ego_motion in candidates.items():
         full = _train_one(
@@ -332,7 +390,8 @@ def run_sweep_on_targets(
     )
     semantic_proxy_supported = bool(best_row["full_film_proxy_wins"]) and str(
         best_row["proxy_id"]
-    ) not in {"zero", "random_control"}
+    ) in SEMANTIC_EGO_PROXY_IDS
+    posenet_proxy_tested = "posenet_pose" in candidates
     blockers = [
         "real_video_smoke_proxy_no_scorer",
         "no_contest_cpu_cuda_pair",
@@ -341,7 +400,15 @@ def run_sweep_on_targets(
     ]
     if not semantic_proxy_supported:
         blockers.append("ego_proxy_semantics_not_hard_earned")
-    if bool(best_row["full_film_proxy_wins"]):
+    if posenet_proxy_tested and str(best_row["proxy_id"]) != "posenet_pose":
+        blockers.append("posenet_pose_proxy_not_best")
+    if bool(best_row["full_film_proxy_wins"]) and posenet_proxy_tested and not semantic_proxy_supported:
+        recommended_next_actions = [
+            "do not paid-dispatch Z6-v1 full-FiLM from this probe: PoseNet-derived ego did not beat random/zero controls",
+            "either run a true scorer-bearing paired probe or redesign the ego-conditioning objective before full_main",
+            "advance Z7/Z8 only as new measured configurations, not as an automatic Z6-v1 promotion",
+        ]
+    elif bool(best_row["full_film_proxy_wins"]):
         recommended_next_actions = [
             "treat the full-FiLM win as predictor-capacity liveness, not a score or paradigm claim",
             "run a scorer-bearing or PoseNet-derived ego proxy probe before paid dispatch",
@@ -364,6 +431,8 @@ def run_sweep_on_targets(
         "epochs": max(1, min(int(epochs), 3)),
         "seed": seed,
         "candidate_count": len(rows),
+        "posenet_proxy_tested": posenet_proxy_tested,
+        "semantic_ego_proxy_ids": sorted(SEMANTIC_EGO_PROXY_IDS),
         "best_proxy_id": best_row["proxy_id"],
         "semantic_ego_proxy_supported": semantic_proxy_supported,
         "best_identity_minus_full_loss_proxy": best_row[
@@ -379,6 +448,8 @@ def run_sweep_from_video(
     *,
     video_path: Path,
     device: str = "cpu",
+    include_posenet_proxy: bool = False,
+    upstream_dir: Path = REPO_ROOT / "upstream",
     epochs: int = 3,
     seed: int = 0,
     lr: float = 5e-4,
@@ -390,9 +461,19 @@ def run_sweep_from_video(
         cfg,
         device=device,
     )
+    extra_ego_proxies: dict[str, torch.Tensor] = {}
+    if include_posenet_proxy:
+        extra_ego_proxies["posenet_pose"] = build_posenet_pose_proxy(
+            target0,
+            target1,
+            upstream_dir=upstream_dir,
+            ego_motion_dim=cfg.predictor_ego_motion_dim,
+            device=device,
+        )
     payload = run_sweep_on_targets(
         target0=target0,
         target1=target1,
+        extra_ego_proxies=extra_ego_proxies,
         epochs=epochs,
         seed=seed,
         lr=lr,
@@ -402,6 +483,7 @@ def run_sweep_from_video(
     except ValueError:
         payload["video_path"] = video_path.name
     payload["device"] = device
+    payload["include_posenet_proxy"] = include_posenet_proxy
     return payload
 
 
@@ -416,7 +498,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- verdict: `{payload.get('verdict')}`",
         f"- paired_control_initialization: `{payload.get('paired_control_initialization')}`",
         f"- best_proxy_id: `{payload.get('best_proxy_id')}`",
+        f"- posenet_proxy_tested: `{payload.get('posenet_proxy_tested')}`",
         f"- semantic_ego_proxy_supported: `{payload.get('semantic_ego_proxy_supported')}`",
+        f"- semantic_ego_proxy_ids: `{payload.get('semantic_ego_proxy_ids')}`",
         f"- best_identity_minus_full_loss_proxy: `{payload.get('best_identity_minus_full_loss_proxy')}`",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",
@@ -477,6 +561,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--video-path", type=Path, default=DEFAULT_VIDEO_PATH)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--upstream-dir", type=Path, default=REPO_ROOT / "upstream")
+    parser.add_argument(
+        "--include-posenet-proxy",
+        action="store_true",
+        help=(
+            "Add a local PoseNet-derived ego proxy candidate. This loads the "
+            "official PoseNet scorer for probe construction only; output remains "
+            "no-score and non-promotional."
+        ),
+    )
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -495,6 +589,12 @@ def main(argv: list[str] | None = None) -> int:
         payload = run_sweep_from_video(
             video_path=video_path,
             device=args.device,
+            include_posenet_proxy=args.include_posenet_proxy,
+            upstream_dir=(
+                args.upstream_dir
+                if args.upstream_dir.is_absolute()
+                else repo_root / args.upstream_dir
+            ),
             epochs=args.epochs,
             seed=args.seed,
             lr=args.lr,

@@ -7,7 +7,9 @@
 - verdict: `full_film_proxy_found_real_video_smoke`
 - paired_control_initialization: `shared_modules_seed_order_matched_v2`
 - best_proxy_id: `random_control`
+- posenet_proxy_tested: `True`
 - semantic_ego_proxy_supported: `False`
+- semantic_ego_proxy_ids: `['frame_delta', 'moment_proxy', 'posenet_pose', 'quadrant_delta']`
 - best_identity_minus_full_loss_proxy: `5.304813385009766e-06`
 - score_claim: `false`
 - promotion_eligible: `false`
@@ -92,14 +94,27 @@ This sweep is a no-scorer real-video smoke proxy. It tests whether any cheap ego
 - full_paired_control_initialization: `shared_modules_seed_order_matched_v2`
 - identity_paired_control_initialization: `shared_modules_seed_order_matched_v2`
 
+### posenet_pose
+
+- full_film_proxy_wins: `True`
+- identity_minus_full_loss_proxy: `5.21540641784668e-06`
+- identity_minus_full_recon: `5.21540641784668e-06`
+- identity_minus_full_residual: `-2.9103830456733704e-11`
+- full_minus_identity_archive_bytes: `3397`
+- full_film_loss_proxy: `0.31754279136657715`
+- identity_loss_proxy: `0.317548006772995`
+- full_paired_control_initialization: `shared_modules_seed_order_matched_v2`
+- identity_paired_control_initialization: `shared_modules_seed_order_matched_v2`
+
 ## Blockers
 - real_video_smoke_proxy_no_scorer
 - no_contest_cpu_cuda_pair
 - no_byte_closed_score_anchor
 - not_paradigm_claim_authority
 - ego_proxy_semantics_not_hard_earned
+- posenet_pose_proxy_not_best
 
 ## Recommended Next Actions
-- treat the full-FiLM win as predictor-capacity liveness, not a score or paradigm claim
-- run a scorer-bearing or PoseNet-derived ego proxy probe before paid dispatch
-- if the best proxy remains zero/random, redesign the ego-conditioning objective before full_main
+- do not paid-dispatch Z6-v1 full-FiLM from this probe: PoseNet-derived ego did not beat random/zero controls
+- either run a true scorer-bearing paired probe or redesign the ego-conditioning objective before full_main
+- advance Z7/Z8 only as new measured configurations, not as an automatic Z6-v1 promotion

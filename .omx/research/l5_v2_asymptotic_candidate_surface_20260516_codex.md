@@ -27,7 +27,7 @@ This is a planning and no-signal-loss surface. It records whether asymptotic L5-
 - ready_for_l1_scaffold_dispatch: `False`
 - post_l1_recommended_next_action_status: `proxy_capacity_found_requires_semantic_ego_probe`
 - post_l1_recommended_next_action_id: `z6_proxy_capacity_found_require_semantic_ego_probe`
-- blockers: `['requires_z6_l1_scaffold_before_paid_dispatch', 'requires_identity_predictor_disambiguator_result_before_paradigm_claim', 'requires_paired_cpu_cuda_anchor_before_score_or_rank_authority', 'z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned']`
+- blockers: `['requires_z6_l1_scaffold_before_paid_dispatch', 'requires_identity_predictor_disambiguator_result_before_paradigm_claim', 'requires_paired_cpu_cuda_anchor_before_score_or_rank_authority', 'z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned', 'z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best']`
 - l1_build_blockers: `['l1_scaffold_present_next_action_completed_or_superseded']`
 
 Expected first artifacts:
@@ -37,7 +37,7 @@ Post-L1 evidence:
 - artifact_valid=`True`
 - verdict=`full_film_proxy_found_real_video_smoke`
 - allowed_to_spend=`False`
-- measured_summary=`best_proxy=random_control identity_minus_full_loss_proxy=5.304813385009766e-06 semantic_ego_proxy_supported=False`
+- measured_summary=`best_proxy=random_control identity_minus_full_loss_proxy=5.304813385009766e-06 posenet_proxy_tested=True semantic_ego_proxy_supported=False`
 - `src/tac/substrates/time_traveler_l5_z6/` present=`True`
 - `experiments/train_substrate_time_traveler_l5_z6.py` present=`True`
 - `tools/probe_z6_predictive_coding_vs_identity_disambiguator.py` present=`True`

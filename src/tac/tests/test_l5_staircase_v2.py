@@ -1041,6 +1041,7 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         == "shared_modules_seed_order_matched_v2"
     )
     assert z6["post_l1_proxy_evidence"]["full_film_proxy_found"] is True
+    assert z6["post_l1_proxy_evidence"]["posenet_proxy_tested"] is True
     assert z6["post_l1_proxy_evidence"]["semantic_ego_proxy_supported"] is False
     assert z6["post_l1_proxy_evidence"]["score_claim"] is False
     assert z6["post_l1_proxy_evidence"]["ready_for_paid_dispatch"] is False
@@ -1074,6 +1075,10 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     )
     assert (
         "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned"
+        in z6["blockers"]
+    )
+    assert (
+        "z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best"
         in z6["blockers"]
     )
 

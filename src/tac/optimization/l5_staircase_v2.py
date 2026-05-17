@@ -778,6 +778,7 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         verdict == Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT
     )
     semantic_ego_proxy_supported = payload.get("semantic_ego_proxy_supported") is True
+    posenet_proxy_tested = payload.get("posenet_proxy_tested") is True
     if identity_dominates:
         blockers.append(
             "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
@@ -796,6 +797,10 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         blockers.append(
             "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned"
         )
+        if posenet_proxy_tested and payload.get("best_proxy_id") != "posenet_pose":
+            blockers.append(
+                "z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best"
+            )
         recommended_next_action_id = "z6_proxy_capacity_found_require_semantic_ego_probe"
         recommended_next_action = (
             "Full-FiLM beat identity under matched shared initialization, but "
@@ -833,10 +838,12 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             not in {
                 "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep",
                 "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned",
+                "z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best",
             }
         ],
         "verdict": verdict,
         "best_proxy_id": payload.get("best_proxy_id"),
+        "posenet_proxy_tested": payload.get("posenet_proxy_tested"),
         "semantic_ego_proxy_supported": payload.get("semantic_ego_proxy_supported"),
         "paired_control_initialization": payload.get("paired_control_initialization"),
         "best_identity_minus_full_loss_proxy": payload.get(
@@ -850,6 +857,7 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             f"best_proxy={payload.get('best_proxy_id')} "
             f"identity_minus_full_loss_proxy="
             f"{payload.get('best_identity_minus_full_loss_proxy')} "
+            f"posenet_proxy_tested={payload.get('posenet_proxy_tested')} "
             f"semantic_ego_proxy_supported={payload.get('semantic_ego_proxy_supported')}"
         ),
         "score_claim": False,
