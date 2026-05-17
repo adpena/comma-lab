@@ -38,8 +38,57 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_stc_clean_source_v2_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
+# === Catalog #152 driver-path-expectation discipline (2026-05-16 extension) ===
+# Bug-class anchor: STC v2 Modal T4 dispatch fc-01KRSVKF9VEESQY2FS33FF4WDM
+# (2026-05-17T02:17:51Z) rc=25 at 1.56s with "FATAL: Lane A anchor archive
+# missing at /tmp/pact/experiments/results/lane_a_landed/archive_lane_a.zip".
+# Root cause: experiments/modal_train_lane.py calls build_training_image with
+# trainer_module_path=None (line 154), so the trainer's TIER_1_EXTRA_MOUNT_PATHS
+# (Wave 1 fix at experiments/train_substrate_stc_v2.py:111) is NEVER consumed
+# by the canonical mount builder. The driver must defensively probe multiple
+# candidate locations (Modal mount → Modal workspace copy → Vast.ai workspace)
+# and explicitly fail with diagnostic context if all are missing.
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + operator-prescribed
+# Option 1 (driver-side defensive resolution + STRICT preflight Catalog #152
+# extension).
+resolve_required_input_modal_aware() {
+    # Usage: resolve_required_input_modal_aware <env_var_name> <relative_path_under_repo>
+    # Echoes the resolved absolute path or empty string if not found.
+    local env_var="$1"
+    local rel_path="$2"
+    local override="${!env_var:-}"
+    if [ -n "$override" ] && [ -f "$override" ]; then
+        echo "$override"
+        return 0
+    fi
+    # Probe in order of likelihood:
+    #   1. $WORKSPACE/<rel> (canonical Vast.ai layout; also Modal post-copytree)
+    #   2. /workspace/pact/<rel> (Modal read-only mount root; survives if
+    #      shutil.copytree at modal_train_lane.py:195 didn't pick up an
+    #      add_local_file-mounted file under an add_local_dir-ignored parent)
+    #   3. /tmp/pact/<rel> (Modal writable workspace; explicit fallback if
+    #      WORKSPACE env wasn't injected by env.sh source)
+    local candidates=(
+        "$WORKSPACE/$rel_path"
+        "/workspace/pact/$rel_path"
+        "/tmp/pact/$rel_path"
+    )
+    local candidate
+    for candidate in "${candidates[@]}"; do
+        if [ -f "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 STC_V2_VIDEO_PATH="${STC_V2_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
+# Modal-aware anchor archive resolution per Catalog #152 driver-path-expectation
+# discipline. Default still points at $WORKSPACE for Vast.ai layout; the
+# Modal-aware probe happens in Stage 1b (defensive resolution).
 STC_V2_ANCHOR_ARCHIVE="${STC_V2_ANCHOR_ARCHIVE:-$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip}"
 STC_V2_OUTPUT_DIR="${STC_V2_OUTPUT_DIR:-$OUTPUT_DIR}"
 STC_V2_EPOCHS="${STC_V2_EPOCHS:-1}"
@@ -112,12 +161,41 @@ fi
 # pre-dispatch validation sister check; the canonical operator_authorize.py
 # routes through tools/validate_dispatch_required_inputs.py before reaching
 # this script, so this is defense-in-depth).
-if [ ! -f "$STC_V2_ANCHOR_ARCHIVE" ]; then
-    log "FATAL: Lane A anchor archive missing at $STC_V2_ANCHOR_ARCHIVE"
-    log "       STC v2 swap-archive requires renderer.bin + optimized_poses.pt"
-    log "       from Lane A; the lane has no fallback path."
+#
+# Modal-aware resolution per Catalog #152 driver-path-expectation extension
+# (2026-05-16). The previous hardcoded $STC_V2_ANCHOR_ARCHIVE check failed
+# on Modal because modal_train_lane.py:154 passes trainer_module_path=None
+# to build_training_image, so the trainer's TIER_1_EXTRA_MOUNT_PATHS
+# (Wave 1 fix) is INERT for generic Modal dispatches. The resolver
+# probes $WORKSPACE → /workspace/pact → /tmp/pact in order and updates
+# STC_V2_ANCHOR_ARCHIVE to the actual found path so downstream stages
+# (trainer subprocess at Stage 4) see the right value.
+log "stage_1b_anchor_resolve_begin requested=$STC_V2_ANCHOR_ARCHIVE workspace=$WORKSPACE modal_runtime=${MODAL_RUNTIME:-0}"
+RESOLVED_ANCHOR="$(resolve_required_input_modal_aware STC_V2_ANCHOR_ARCHIVE "experiments/results/lane_a_landed/archive_lane_a.zip")"
+if [ -z "$RESOLVED_ANCHOR" ]; then
+    log "FATAL: Lane A anchor archive missing in every candidate location"
+    log "       Probed:"
+    log "         1. \$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip = $WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip"
+    log "         2. /workspace/pact/experiments/results/lane_a_landed/archive_lane_a.zip (Modal read-only mount)"
+    log "         3. /tmp/pact/experiments/results/lane_a_landed/archive_lane_a.zip (Modal writable workspace)"
+    log "       (MODAL_RUNTIME=${MODAL_RUNTIME:-0}, override env STC_V2_ANCHOR_ARCHIVE=${STC_V2_ANCHOR_ARCHIVE:-unset})"
+    log "       Diagnostic: STC v2 swap-archive requires renderer.bin + optimized_poses.pt from Lane A;"
+    log "       the lane has no fallback path. Under Modal, this means the canonical"
+    log "       mount manifest at tac.deploy.modal.mount_manifest.build_training_image did NOT stage"
+    log "       the anchor archive — modal_train_lane.py passes trainer_module_path=None so"
+    log "       TIER_1_EXTRA_MOUNT_PATHS is inert. Operator action: declare the file via"
+    log "       a Modal-aware mount mechanism OR pre-stage via volume."
+    log "       Bug-class anchor: fc-01KRSVKF9VEESQY2FS33FF4WDM rc=25 (2026-05-17T02:17:51Z)."
     exit 25
 fi
+if [ "$RESOLVED_ANCHOR" != "$STC_V2_ANCHOR_ARCHIVE" ]; then
+    log "stage_1b_anchor_resolved_via_fallback original=$STC_V2_ANCHOR_ARCHIVE resolved=$RESOLVED_ANCHOR"
+    STC_V2_ANCHOR_ARCHIVE="$RESOLVED_ANCHOR"
+else
+    log "stage_1b_anchor_resolved_at_expected_path path=$RESOLVED_ANCHOR"
+fi
+ANCHOR_BYTES=$(stat -c '%s' "$STC_V2_ANCHOR_ARCHIVE" 2>/dev/null || stat -f '%z' "$STC_V2_ANCHOR_ARCHIVE" 2>/dev/null || echo 0)
+log "stage_1b_anchor_resolve_done path=$STC_V2_ANCHOR_ARCHIVE bytes=$ANCHOR_BYTES"
 
 # Stage 2: provenance + remote code parity.
 log "stage_2_provenance_begin"

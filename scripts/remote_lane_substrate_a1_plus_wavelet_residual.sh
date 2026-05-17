@@ -37,6 +37,37 @@ LOG_DIR="${LOG_DIR:-$WORKSPACE/lane_a1_plus_wavelet_results}"
 OUTPUT_DIR="${OUTPUT_DIR:-$LOG_DIR/output}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
+# === Catalog #152 driver-path-expectation discipline (Wave 2, 2026-05-16) ===
+# Sister of STC v2 driver fix (lane lane_stc_v2_driver_fix_catalog_152_
+# driver_path_extension_20260516). modal_train_lane.py passes
+# trainer_module_path=None to build_training_image, so a trainer's
+# TIER_1_EXTRA_MOUNT_PATHS is INERT for generic Modal dispatchers. Driver
+# scripts that consume required-input files under the Modal-IGNORED
+# `experiments/results/**` subtree MUST defensively resolve paths.
+resolve_required_input_modal_aware() {
+    local env_var="$1"
+    local rel_path="$2"
+    local override="${!env_var:-}"
+    if [ -n "$override" ] && [ -f "$override" ]; then
+        echo "$override"
+        return 0
+    fi
+    local candidates=(
+        "$WORKSPACE/$rel_path"
+        "/workspace/pact/$rel_path"
+        "/tmp/pact/$rel_path"
+    )
+    local candidate
+    for candidate in "${candidates[@]}"; do
+        if [ -f "$candidate" ]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
 A1_PLUS_WAVELET_A1_ARCHIVE="${A1_PLUS_WAVELET_A1_ARCHIVE:-$WORKSPACE/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip}"
 A1_PLUS_WAVELET_PAIR_MANIFEST="${A1_PLUS_WAVELET_PAIR_MANIFEST:-$WORKSPACE/.omx/research/artifacts/lapose_motion_atoms_20260505_codex/lapose_motion_atom_manifest_fixture.json}"
@@ -137,7 +168,19 @@ if [ -z "${PYBIN:-}" ] || [ ! -x "$PYBIN" ]; then
     exit 24
 fi
 
-# Stage 1b: validate required input files PRE-dispatch (Catalog #152).
+# Stage 1b: resolve + validate required input files PRE-dispatch (Catalog #152).
+log "stage_1b_required_input_files_resolve_begin requested_a1_archive=$A1_PLUS_WAVELET_A1_ARCHIVE"
+RESOLVED_A1_ARCHIVE="$(resolve_required_input_modal_aware A1_PLUS_WAVELET_A1_ARCHIVE "experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip")"
+if [ -z "$RESOLVED_A1_ARCHIVE" ]; then
+    log "FATAL: A1 archive missing in Modal-aware candidate locations"
+    log "       Probed: $WORKSPACE/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip"
+    log "               /workspace/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip"
+    log "               /tmp/pact/experiments/results/track4_sg_a1_t178000_20260509/submission_dir/archive.zip"
+    exit 25
+fi
+A1_PLUS_WAVELET_A1_ARCHIVE="$RESOLVED_A1_ARCHIVE"
+export A1_PLUS_WAVELET_A1_ARCHIVE
+log "stage_1b_required_input_files_resolve_done a1_archive=$A1_PLUS_WAVELET_A1_ARCHIVE"
 log "stage_1b_required_input_files_validate_begin"
 "$PYBIN" "$WORKSPACE/tools/validate_dispatch_required_inputs.py" \
     --trainer "$WORKSPACE/experiments/train_substrate_a1_plus_wavelet_residual.py" \

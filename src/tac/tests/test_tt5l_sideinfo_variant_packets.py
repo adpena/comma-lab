@@ -15,6 +15,7 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
 )
 from tac.optimization.tt5l_sideinfo_variant_packets import (
+    TT5L_CONTEST_NUM_PAIRS,
     build_tt5l_sideinfo_variant_packets,
     read_tt5l_archive_zip,
     tt5l_sideinfo_variant_arrays,
@@ -108,6 +109,10 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
     assert manifest["ready_for_exact_eval_dispatch"] is False
     assert manifest["variant_count"] == 5
     assert "tt5l_source_trained_sideinfo_all_zero" not in manifest["blockers"]
+    assert (
+        f"tt5l_source_num_pairs_not_full_contest:3_expected_{TT5L_CONTEST_NUM_PAIRS}"
+        in manifest["blockers"]
+    )
     rows = {row["variant"]: row for row in manifest["variants"]}
     assert tuple(rows) == L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
 
@@ -150,6 +155,10 @@ def test_build_tt5l_sideinfo_variant_packets_fails_closed_on_all_zero_source(
     )
 
     assert "tt5l_source_trained_sideinfo_all_zero" in manifest["blockers"]
+    assert (
+        f"tt5l_source_num_pairs_not_full_contest:3_expected_{TT5L_CONTEST_NUM_PAIRS}"
+        in manifest["blockers"]
+    )
     rows = {row["variant"]: row for row in manifest["variants"]}
     assert "trained_variant_degenerate_from_zero_source" in rows["trained"]["blockers"]
     assert "shuffled_variant_degenerate_from_zero_source" in rows["shuffled"]["blockers"]
@@ -218,6 +227,10 @@ def test_build_tt5l_sideinfo_variant_packets_cli_writes_json_and_markdown(
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["variant_count"] == 5
     assert "tt5l_source_trained_sideinfo_all_zero" in payload["blockers"]
+    assert (
+        f"tt5l_source_num_pairs_not_full_contest:2_expected_{TT5L_CONTEST_NUM_PAIRS}"
+        in payload["blockers"]
+    )
     assert "submission_runtime_dir_missing" in payload["blockers"]
     assert payload["runtime"]["available"] is False
     assert output_md.read_text(encoding="utf-8").startswith(

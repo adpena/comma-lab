@@ -2614,6 +2614,14 @@ def preflight_all(
         check_hierarchical_predictive_coding_has_canonical_quadruple(
             strict=True, verbose=verbose,
         )
+        # 2026-05-16 Catalog #313 - PROBE-OUTCOMES-BAKE-IN. Refuse dispatch
+        # wrappers that target a recipe whose substrate already has a recent
+        # blocking adjudicated probe outcome in the canonical ledger. This
+        # prevents retreading an INDEPENDENT/KILL/DEFER probe result without a
+        # fresh sister probe, council override, or explicit same-line waiver.
+        check_dispatch_target_has_no_predecessor_adjudicated_outcome(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-15 Catalog #266 / #267 / #268 / #269 - codex review
         # bkrbqet3p 4 self-protection gates. Memory:
         # feedback_codex_fix_wave_bkrbqet3p_4_findings_LANDED_20260515.md.
@@ -37586,6 +37594,9 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     # Catalog #245 — canonical Modal call_id ledger.
     "modal_call_id_ledger",
     "MODAL_CALL_ID_LEDGER_PATH",
+    # Catalog #313 — canonical probe-outcomes ledger.
+    "probe_outcomes.jsonl",
+    "PROBE_OUTCOMES_LEDGER_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -37635,6 +37646,10 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "update_call_id_outcome",
     "load_call_ids_strict",
     "_append_event_locked",
+    # Catalog #313 — canonical probe-outcomes ledger helpers.
+    "register_probe_outcome",
+    "update_probe_outcome",
+    "load_outcomes_strict",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -37655,6 +37670,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/deploy/lightning/active_jobs_state.py",  # canonical (this lane)
     "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
     "src/tac/deploy/modal/call_id_ledger.py",  # canonical (Catalog #245)
+    "src/tac/probe_outcomes_ledger.py",  # canonical (Catalog #313)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
@@ -42413,6 +42429,65 @@ _CHECK_152_PLACEHOLDER_RATIONALES = frozenset((
     "<rationale>", "<reason>", "",
 ))
 
+# ---------------------------------------------------------------------------
+# Catalog #152 driver-path-expectation extension (2026-05-16, Wave 2).
+#
+# Bug-class anchor: STC v2 Modal T4 dispatch fc-01KRSVKF9VEESQY2FS33FF4WDM
+# (2026-05-17T02:17:51Z) rc=25 at 1.56s. The Wave 1 trainer-side fix
+# (TIER_1_EXTRA_MOUNT_PATHS declaration) is structurally INERT for generic
+# Modal dispatchers because ``experiments/modal_train_lane.py:154`` passes
+# ``trainer_module_path=None`` to ``build_training_image``. The CANONICAL
+# Modal mount manifest never reads any trainer's extra-mount-paths tuple
+# for this dispatcher. The driver shell script must defensively resolve
+# required-input file paths across multiple candidate locations (Modal
+# read-only mount, Modal writable workspace copy, Vast.ai workspace) and
+# fail with diagnostic context if all are missing.
+#
+# Refuses any ``scripts/remote_lane_substrate_*.sh`` driver whose lane
+# script is referenced by at least one Modal recipe (platform: modal) AND
+# that does NOT contain a recognized defensive-resolution pattern for at
+# least one required input file. Defensive resolution = (a) a helper
+# function that probes multiple candidate paths, OR (b) explicit per-input
+# probe lines that test multiple ``$WORKSPACE`` / ``/workspace/pact`` /
+# ``/tmp/pact`` candidates, OR (c) same-line waiver
+# ``# DRIVER_PATH_MODAL_AWARE_OK:<rationale>``.
+#
+# Sister of Catalog #163 (sentinel-when-sourcing-bootstrap) + Catalog #244
+# (canonical NVML block) + Catalog #166 (Modal HEAD-parity ledger) +
+# Catalog #201 (sentinels under Modal mount set). Together they extinct
+# the Modal-vs-Vast.ai mount-layout-divergence bug class at FOUR surfaces:
+# bootstrap source-time (#163) + canonical env hygiene (#244) +
+# source-parity sentinel-hash (#166) + sentinel-mount-set parity (#201) +
+# driver path-expectation defensive resolution (#152 extension).
+_CHECK_152_DRIVER_PATH_WAIVER_RE = re.compile(
+    r"#\s*DRIVER_PATH_MODAL_AWARE_OK:([^\n]+)"
+)
+# Tokens that indicate a driver script uses defensive multi-candidate
+# resolution for required-input files. Any ONE present in a driver body
+# satisfies the check (the driver has SOME modal-aware path resolution).
+_CHECK_152_DRIVER_DEFENSIVE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Canonical helper-function pattern (added by Wave 2 fix).
+    re.compile(r"\bresolve_required_input_modal_aware\b"),
+    # Explicit probe of 2+ candidate path roots (Modal-aware idiom).
+    re.compile(r'/workspace/pact/[^"\s]*.*?/tmp/pact/', re.DOTALL),
+    re.compile(r'/tmp/pact/[^"\s]*.*?/workspace/pact/', re.DOTALL),
+    # MODAL_RUNTIME-conditional branch (the operator's prescribed pattern).
+    re.compile(r"MODAL_RUNTIME.*?(?:then|=)"),
+    # Modal-aware path-mapping helper (alternate canonical name).
+    re.compile(r"\b_modal_workspace_env\b"),
+    re.compile(r"\bresolve_modal_path\b"),
+)
+# Same-line waivers on driver-script lines that reference required input
+# files. Two waiver tokens accepted: the canonical Catalog #152 anchor
+# waiver AND the dedicated driver-path-expectation waiver.
+_CHECK_152_DRIVER_WAIVER_TOKENS: tuple[str, ...] = (
+    "DRIVER_PATH_MODAL_AWARE_OK",
+    "REQUIRED_INPUT_MODAL_STAGED_OK",
+)
+# Driver scripts that are out-of-scope by design (they don't actually
+# dispatch to Modal directly; they're documentation or smoke-only).
+_CHECK_152_DRIVER_PATH_EXEMPT_DRIVERS: frozenset[str] = frozenset()
+
 
 def _check_152_default_path_is_modal_ignored(default_path: str) -> bool:
     """Return True iff ``default_path`` falls under a Modal-IGNORED subtree.
@@ -42566,6 +42641,80 @@ def _check_152_collect_modal_staged_recipe_waivers(recipe_text: str) -> set[str]
         if rationale and rationale not in _CHECK_152_PLACEHOLDER_RATIONALES:
             out.add(rationale)
     return out
+
+
+def _check_152_driver_has_defensive_path_resolution(driver_text: str) -> bool:
+    """Return True iff the driver script uses defensive multi-candidate
+    resolution for required-input files (per Catalog #152 driver-path
+    extension).
+
+    Defensive resolution = ANY of:
+      - Canonical helper invocation (``resolve_required_input_modal_aware``,
+        ``_modal_workspace_env``, ``resolve_modal_path``).
+      - Explicit probe of 2+ candidate roots
+        (``/workspace/pact/...`` AND ``/tmp/pact/...`` in proximity).
+      - ``MODAL_RUNTIME``-conditional branching that maps paths differently
+        under Modal vs Vast.ai.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": these patterns
+    are recognized as the canonical defensive idioms for Modal-aware path
+    resolution. A driver that uses ANY of them is considered defensive.
+    """
+    for pattern in _CHECK_152_DRIVER_DEFENSIVE_PATTERNS:
+        if pattern.search(driver_text):
+            return True
+    return False
+
+
+def _check_152_driver_has_path_waiver(driver_text: str) -> set[str]:
+    """Return non-placeholder rationales from driver-path waivers.
+
+    Accepts BOTH the dedicated ``DRIVER_PATH_MODAL_AWARE_OK`` marker AND
+    the existing Catalog #152 ``REQUIRED_INPUT_MODAL_STAGED_OK`` marker
+    (the latter is operator-recognized as the Modal-stage waiver for
+    out-of-band file staging).
+    """
+    out: set[str] = set()
+    for marker in _CHECK_152_DRIVER_WAIVER_TOKENS:
+        for m in re.finditer(
+            rf"#\s*{re.escape(marker)}:([^\n]+)", driver_text
+        ):
+            rationale = m.group(1).strip()
+            if rationale and rationale not in _CHECK_152_PLACEHOLDER_RATIONALES:
+                out.add(rationale)
+    return out
+
+
+def _check_152_driver_references_required_input(
+    driver_text: str, default_path: str
+) -> bool:
+    """Return True iff the driver script references ``default_path`` (or its
+    basename / a parent-dir token) as a required-input file path.
+
+    The driver script either hardcodes the full path in a check like
+    ``if [ ! -f "$STC_V2_ANCHOR_ARCHIVE" ]`` OR computes the path from
+    ``$WORKSPACE``. We accept ANY reference to the relative path or its
+    canonical filename so the gate fires when the driver is in fact
+    consuming the required input.
+    """
+    if not default_path:
+        return False
+    normalized = default_path.strip().lstrip("./")
+    if not normalized:
+        return False
+    if normalized in driver_text:
+        return True
+    # Try just the basename for path-fragment references.
+    basename = normalized.rsplit("/", 1)[-1]
+    if basename and basename in driver_text:
+        # Require co-occurrence with a path-context token to avoid false
+        # positives on common basenames.
+        if any(
+            tok in driver_text
+            for tok in ("experiments/results/", "lane_a_landed", "anchor_archive")
+        ):
+            return True
+    return False
 
 
 def check_operator_wrapper_validates_required_input_files_pre_dispatch(
@@ -42841,6 +42990,132 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
                     f"fc-01KRSB76H04HM4958V2HX2JZZ4 rc=25 (2026-05-16)."
                 )
                 violations.append(msg)
+
+    # ----------------------------------------------------------------------
+    # Catalog #152 driver-path-expectation extension (2026-05-16 Wave 2).
+    # Bug-class anchor: STC v2 Modal T4 dispatch fc-01KRSVKF9VEESQY2FS33FF4WDM
+    # (2026-05-17T02:17:51Z) rc=25. Wave 1's trainer-side fix
+    # (TIER_1_EXTRA_MOUNT_PATHS) is INERT for experiments/modal_train_lane.py
+    # dispatches because the dispatcher passes trainer_module_path=None to
+    # build_training_image, so the trainer's extra-mount-paths tuple is
+    # never read by the canonical mount builder. The driver shell script
+    # must defensively resolve required-input file paths across multiple
+    # candidate locations (Modal read-only mount, Modal writable workspace
+    # copy, Vast.ai workspace) and fail with diagnostic context if all are
+    # missing.
+    #
+    # Iterates every Modal recipe with a lane_script field; for each
+    # referenced driver, requires defensive multi-candidate resolution
+    # OR a same-line waiver.
+    if recipes_dir.is_dir():
+        try:
+            import yaml as _yaml_2  # type: ignore[import-untyped]
+        except ImportError:
+            _yaml_2 = None  # type: ignore[assignment]
+        # Cache driver-script reads so we don't read the same driver twice
+        # when N recipes reference the same driver.
+        driver_text_cache: dict[str, str] = {}
+        for recipe_path in sorted(recipes_dir.glob("*.yaml")):
+            rel_recipe = str(recipe_path.relative_to(root))
+            if _yaml_2 is None:
+                continue
+            try:
+                recipe_text = recipe_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            try:
+                data = _yaml_2.safe_load(recipe_text) or {}
+            except Exception:
+                continue
+            if not isinstance(data, dict):
+                continue
+            if data.get("platform") != "modal":
+                continue
+            # Find the lane script referenced by this recipe. Canonical
+            # field is `lane_script`; fall back to nested modal.lane_script.
+            lane_script_rel = data.get("lane_script")
+            if not lane_script_rel:
+                modal_cfg = data.get("modal") or {}
+                if isinstance(modal_cfg, dict):
+                    lane_script_rel = modal_cfg.get("lane_script")
+            if not lane_script_rel or not isinstance(lane_script_rel, str):
+                continue
+            # Only scope to substrate driver scripts (sister driver scripts
+            # under scripts/remote_lane_substrate_*.sh are the canonical
+            # surface that exhibits the bug class). Other lane scripts
+            # (e.g. operator-only smoke wrappers) are out of scope.
+            if not lane_script_rel.startswith("scripts/remote_lane_substrate_"):
+                continue
+            if lane_script_rel.endswith(".sh") is False:
+                continue
+            if lane_script_rel in _CHECK_152_DRIVER_PATH_EXEMPT_DRIVERS:
+                continue
+            driver_path = root / lane_script_rel
+            if not driver_path.is_file():
+                continue
+            # Read driver text (cached).
+            if lane_script_rel not in driver_text_cache:
+                try:
+                    driver_text_cache[lane_script_rel] = driver_path.read_text(
+                        encoding="utf-8", errors="replace"
+                    )
+                except OSError:
+                    driver_text_cache[lane_script_rel] = ""
+            driver_text = driver_text_cache[lane_script_rel]
+            if not driver_text:
+                continue
+            # Check if any required_input_files entry under a
+            # Modal-IGNORED prefix is referenced by the driver.
+            required_inputs = data.get("required_input_files") or []
+            if not isinstance(required_inputs, list):
+                required_inputs = []
+            triggered_inputs: list[tuple[str, str]] = []
+            for entry in required_inputs:
+                if not isinstance(entry, dict):
+                    continue
+                default_path = entry.get("default_path") or ""
+                flag = entry.get("flag") or "<unknown>"
+                if not isinstance(default_path, str):
+                    continue
+                if not _check_152_default_path_is_modal_ignored(default_path):
+                    continue
+                if _check_152_driver_references_required_input(
+                    driver_text, default_path
+                ):
+                    triggered_inputs.append((flag, default_path))
+            if not triggered_inputs:
+                # Driver doesn't actually consume any Modal-IGNORED required
+                # input — no path-expectation discipline needed.
+                continue
+            # Acceptance: defensive multi-candidate resolution OR waiver.
+            if _check_152_driver_has_defensive_path_resolution(driver_text):
+                continue
+            if _check_152_driver_has_path_waiver(driver_text):
+                continue
+            # Build violation message naming each triggered required input.
+            input_list = "; ".join(
+                f"{flag}={path}" for flag, path in triggered_inputs[:3]
+            )
+            if len(triggered_inputs) > 3:
+                input_list += f"; ... ({len(triggered_inputs) - 3} more)"
+            msg = (
+                f"{lane_script_rel}: Modal driver script consumes "
+                f"required-input file(s) under Modal-IGNORED "
+                f"`experiments/results/**` subtree ({input_list}) but "
+                f"does NOT use defensive multi-candidate path resolution. "
+                f"Under Modal, `experiments/modal_train_lane.py` passes "
+                f"`trainer_module_path=None` to `build_training_image`, so "
+                f"the trainer's `TIER_1_EXTRA_MOUNT_PATHS` declaration is "
+                f"INERT — the canonical mount builder never reads it. The "
+                f"driver MUST defensively probe $WORKSPACE → "
+                f"/workspace/pact → /tmp/pact candidate roots, OR use the "
+                f"`resolve_required_input_modal_aware` helper, OR carry "
+                f"a same-line `# DRIVER_PATH_MODAL_AWARE_OK:<rationale>` "
+                f"waiver. Bug-class anchor: STC v2 Modal T4 dispatch "
+                f"fc-01KRSVKF9VEESQY2FS33FF4WDM rc=25 "
+                f"(2026-05-17T02:17:51Z; recipe={rel_recipe})."
+            )
+            violations.append(msg)
 
     if verbose:
         if violations:
@@ -67874,6 +68149,317 @@ def check_hierarchical_predictive_coding_has_canonical_quadruple(
             "hierarchical predictive coding without the canonical Rao-"
             "Ballard + Mallat-CDF + DreamerV3 + Wyner-Ziv quadruple. Per "
             "Z6/Z7/Z8 Pattern I + Catalog #312.\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #313 - check_dispatch_target_has_no_predecessor_adjudicated_outcome
+# ─────────────────────────────────────────────────────────────────────────
+#
+# PROBE-OUTCOMES-BAKE-IN self-protection 2026-05-16 per operator NON-NEGOTIABLE
+# directive: bake in the FULL 4-layer canonical pattern per the Catalog #245
+# Modal call_id ledger exemplar so probe-disambiguator verdicts are queryable
+# AND gate dispatch BEFORE we re-run something an existing adjudicated probe
+# already settled.
+#
+# Bug class anchor: 2026-05-16 ATW v2 D4 H(latent|scorer_class) probe (call_id
+# n/a; Codex `tools/run_atw_v2_d4_probe_from_a1.py` $0.30 CPU smoke 2026-05-16
+# 22:47:41Z) returned INDEPENDENT verdict (MI=0.006385 bits/symbol; 2 orders
+# of magnitude below MEANINGFUL_CONDITIONING threshold). Without a canonical
+# adjudicated-outcomes ledger, future subagent dispatchers can re-fire ATW v2
+# Phase 2 dispatch on the same architectural surface despite the apparatus
+# having already settled the question. Sister anchors: Wunderkind G1 v2 per-
+# pair-dominant SegNet argmax reducer DEFER verdict (council Q1 SPLIT-VERDICT
+# per Catalog #308); other probe outcomes across 60+ memos in `.omx/research/`.
+#
+# The canonical primary index lives at `.omx/state/probe_outcomes.jsonl` via
+# `tac.probe_outcomes_ledger` (Layer 1). The operator-facing CLI lives at
+# `tools/check_predecessor_probe_outcome.py` (Layer 2). This gate (Layer 3)
+# refuses operator-authorize callsites (`tools/operator_authorize.py` +
+# sister wrappers under `scripts/operator_authorize_substrate_*.sh`) that
+# dispatch on recipes with a recent blocking adjudicated verdict in
+# {INDEPENDENT, KILL, DEFER}. Layer 4 wires the runtime check into
+# `tools/operator_authorize.py::_check_predecessor_probe_outcome`.
+#
+# Sister of:
+# - Catalog #245 (Modal call_id ledger) - exemplar 4-layer pattern
+# - Catalog #131 (no bare writes to shared state) - PROBE_OUTCOMES_LEDGER_PATH
+#   is registered there so direct writes outside the canonical helper refuse
+# - Catalog #138 (state writers strict load) - load_outcomes_strict mirrors
+# - Catalog #292 (per-deliberation assumption surfacing) - this gate's
+#   amendment adds the standing question "has this probe / dispatch already
+#   been executed and adjudicated?"
+# - Catalog #240 (recipe-vs-trainer chain) - sister at the dispatch-flow
+#   coherence surface
+# - Catalog #243 (local pre-deploy harness) + #271 (codex pre-dispatch review)
+#   - same operator-authorize insertion pattern
+# - Catalog #167 (smoke-before-full pattern) - sister dispatch-flow gate
+
+_CHECK_313_DISPATCH_TOKENS: tuple[str, ...] = (
+    "modal run",
+    "modal_train_lane",
+    "launch_lane_on_vastai",
+    "launch_lane_lightning",
+    "vastai create instance",
+    "lightning run",
+    "lightning.ai run",
+    "kaggle kernels push",
+    "operator_authorize.py",
+)
+
+_CHECK_313_WAIVER_MARKER = "PROBE_PREDECESSOR_OVERRIDE_OK"
+_CHECK_313_WAIVER_RE = re.compile(
+    r"#\s*" + re.escape(_CHECK_313_WAIVER_MARKER) + r":(?P<rationale>[^#\n\r]*)"
+)
+# Recipe literal extractors: match `--recipe <name-or-path>` and direct
+# `.omx/operator_authorize_recipes/<basename>.yaml` mentions. Operator wrappers
+# usually pass recipe names without `.yaml`, while ledgers store repo-relative
+# YAML paths, so extraction canonicalizes both forms below.
+_CHECK_313_RECIPE_ARG_RE = re.compile(
+    r"--recipe(?:=|\s+)[\"']?(?P<token>[A-Za-z0-9_./\-]+)(?:[\"'\s\\]|$)"
+)
+_CHECK_313_RECIPE_PATH_RE = re.compile(
+    r"(?P<token>(?:\.omx/)?operator_authorize_recipes/[A-Za-z0-9_.\-]+\.ya?ml)"
+)
+# Also accept ``recipe.name`` references that resolve to a recipe in the
+# canonical recipes dir; the gate falls back to substrate-level lookup.
+_CHECK_313_SCAN_ROOTS: tuple[str, ...] = ("tools", "scripts", "experiments", "src/tac")
+
+# Exempt path markers per CLAUDE.md mutation frontier + DERIVED_OUTPUT
+# (Catalog #113) + vendored-intake (Catalog #109).
+_CHECK_313_EXEMPT_PATH_MARKERS: tuple[str, ...] = (
+    "experiments/results/",
+    "_intake_",
+    ".omx/oss_export/",
+    "vendored",
+    "/tests/",
+    "test_",
+    "build/lib/",
+    "reports/raw/",
+    "submissions/exact_current/",
+)
+
+# Self-exempt files: the gate's canonical helper + CLI + the gate's own
+# scanning code in this file.
+_CHECK_313_SELF_EXEMPT: tuple[str, ...] = (
+    "src/tac/preflight.py",
+    "src/tac/probe_outcomes_ledger.py",
+    "tools/check_predecessor_probe_outcome.py",
+)
+
+
+def _check_313_path_is_exempt(rel_path: str) -> bool:
+    """Return True if the file is exempt from #313 scope."""
+    s = rel_path.replace("\\", "/")
+    if s in _CHECK_313_SELF_EXEMPT:
+        return True
+    for marker in _CHECK_313_EXEMPT_PATH_MARKERS:
+        if marker in s:
+            return True
+    if s.endswith("_test.py") or "/test_" in s:
+        return True
+    return False
+
+
+def _check_313_line_has_dispatch_token(line: str) -> bool:
+    """Return True if ``line`` mentions a known dispatch token (case-sensitive)."""
+    for tok in _CHECK_313_DISPATCH_TOKENS:
+        if tok in line:
+            return True
+    return False
+
+
+def _check_313_line_has_waiver(line: str) -> bool:
+    """Return True if ``line`` carries a valid same-line waiver."""
+    m = _CHECK_313_WAIVER_RE.search(line)
+    if not m:
+        return False
+    rationale = m.group("rationale").strip()
+    if not rationale:
+        return False
+    if rationale.lower() in {"<rationale>", "<reason>"}:
+        return False
+    return True
+
+
+def _check_313_extract_recipe_paths(line: str) -> list[str]:
+    """Extract recipe path literals from a dispatch invocation line."""
+    tokens = [
+        *(m.group("token") for m in _CHECK_313_RECIPE_ARG_RE.finditer(line)),
+        *(m.group("token") for m in _CHECK_313_RECIPE_PATH_RE.finditer(line)),
+    ]
+    paths: list[str] = []
+    for token in tokens:
+        cleaned = token.strip().strip("\"'").rstrip(";,)")
+        if not cleaned:
+            continue
+        if "operator_authorize_recipes/" in cleaned:
+            if cleaned.startswith(".omx/"):
+                paths.append(cleaned)
+            else:
+                paths.append(f".omx/{cleaned}")
+            continue
+        if cleaned.endswith((".yaml", ".yml")) and "/" in cleaned:
+            paths.append(cleaned)
+            continue
+        if cleaned.endswith((".yaml", ".yml")):
+            paths.append(f".omx/operator_authorize_recipes/{cleaned}")
+            continue
+        paths.append(f".omx/operator_authorize_recipes/{cleaned}.yaml")
+    return list(dict.fromkeys(paths))
+
+
+def check_dispatch_target_has_no_predecessor_adjudicated_outcome(
+    *,
+    repo_root: Path | str | None = None,
+    ledger_path: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #313 - refuse dispatch wrappers that target a recipe whose
+    substrate has a recent blocking adjudicated probe-outcome verdict.
+
+    PROBE-OUTCOMES-BAKE-IN self-protection (2026-05-16): canonical 4-layer
+    pattern per Catalog #245 Modal call_id ledger exemplar. The canonical
+    primary index lives at ``.omx/state/probe_outcomes.jsonl`` via
+    ``tac.probe_outcomes_ledger``. This gate scans dispatch wrappers under
+    ``tools/``, ``scripts/``, ``experiments/``, ``src/tac/`` (excluding
+    self-exempt + vendored + DERIVED_OUTPUT) for lines that contain a known
+    dispatch token (``modal run`` / ``modal_train_lane`` / ``launch_lane_on_vastai``
+    / etc.) plus a recipe path literal. For each such (file, line, recipe)
+    triple, the gate queries the canonical ledger via
+    ``latest_blocking_outcome_by_recipe(recipe_path)``. If the recipe has a
+    recent blocking adjudicated verdict in {INDEPENDENT, KILL, DEFER}, the
+    line is flagged.
+
+    Acceptance: same-line ``# PROBE_PREDECESSOR_OVERRIDE_OK:<rationale>``
+    waiver with non-placeholder rationale (placeholder ``<rationale>`` /
+    ``<reason>`` literals rejected so the gate's docstring example cannot
+    self-waive).
+
+    STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule"
+    + "Bugs must be permanently fixed AND self-protected against" non-
+    negotiables. Live count at landing: 0 (the live wire-in goes through
+    ``tools/operator_authorize.py`` which has its own paired-env bypass per
+    Catalog #199; the gate fires structurally so any future dispatch wrapper
+    that bypasses the canonical operator-authorize entry point is refused
+    BEFORE the GPU meter starts).
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    a blocking outcome does NOT mean the lane is killed - it means the
+    apparatus has already adjudicated this probe within the staleness
+    window. The gate REFUSES re-dispatch unless either:
+      (a) Sister probe with alternative reducer adjudicates (Catalog #308
+          alternative-probe-methodologies enumeration).
+      (b) Council ratifies a fresh evidence override.
+      (c) Operator override via paired-env per Catalog #199 sister rule.
+
+    Memory: ``feedback_probe_outcomes_canonical_ledger_landed_20260516.md``.
+    Lane: ``lane_probe_outcomes_canonical_ledger_bake_in_20260516``.
+    """
+    repo_path = Path(repo_root or REPO_ROOT).resolve()
+    # Import the canonical ledger helper lazily to avoid a circular import
+    # at preflight.py top of file (the ledger imports nothing from preflight).
+    try:
+        from tac.probe_outcomes_ledger import latest_blocking_outcome_by_recipe
+    except ImportError:
+        # Canonical helper missing - gate cannot evaluate; return empty
+        # (fail-OPEN by design; the missing helper itself is a structural
+        # bug that other gates catch separately).
+        if verbose:
+            print(
+                "  [check_dispatch_target_has_no_predecessor_adjudicated_outcome] "
+                "skipped: tac.probe_outcomes_ledger not importable"
+            )
+        return []
+
+    if ledger_path is not None:
+        ledger_target = Path(ledger_path)
+    else:
+        ledger_target = None  # canonical default inside helper
+
+    violations: list[str] = []
+    for scan_root in _CHECK_313_SCAN_ROOTS:
+        root_path = repo_path / scan_root
+        if not root_path.is_dir():
+            continue
+        for entry in root_path.rglob("*"):
+            if not entry.is_file():
+                continue
+            if entry.suffix not in (".py", ".sh"):
+                continue
+            try:
+                rel = str(entry.relative_to(repo_path))
+            except ValueError:
+                continue
+            if _check_313_path_is_exempt(rel):
+                continue
+            try:
+                text = entry.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for lineno, raw_line in enumerate(text.splitlines(), start=1):
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if not _check_313_line_has_dispatch_token(raw_line):
+                    continue
+                recipe_paths = _check_313_extract_recipe_paths(raw_line)
+                if not recipe_paths:
+                    continue
+                if _check_313_line_has_waiver(raw_line):
+                    continue
+                for recipe_path in recipe_paths:
+                    try:
+                        view = latest_blocking_outcome_by_recipe(
+                            recipe_path,
+                            path=ledger_target,
+                        )
+                    except Exception:
+                        # Ledger query failure - treat as no-block (fail-OPEN
+                        # for query errors; the gate is one layer of many).
+                        continue
+                    if view is None:
+                        continue
+                    violations.append(
+                        f"{rel}:{lineno}: dispatch wrapper targets recipe "
+                        f"{recipe_path!r} whose substrate {view.substrate!r} "
+                        f"has blocking probe verdict {view.verdict!r} "
+                        f"(probe_id={view.probe_id!r}; "
+                        f"adjudicated_at={view.adjudicated_at_utc}; "
+                        f"evidence={view.evidence_path!r}). Per Catalog #313 "
+                        "PROBE-OUTCOMES-BAKE-IN: the apparatus has already "
+                        "adjudicated this probe within the 30-day staleness "
+                        "window. Either (a) address the blocker via sister "
+                        "probe with alternative reducer (Catalog #308), (b) "
+                        "have the council ratify fresh-evidence override, OR "
+                        "(c) add same-line "
+                        "`# PROBE_PREDECESSOR_OVERRIDE_OK:<rationale>` waiver."
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_dispatch_target_has_no_predecessor_adjudicated_outcome] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_dispatch_target_has_no_predecessor_adjudicated_outcome] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_dispatch_target_has_no_predecessor_adjudicated_outcome "
+            f"found {len(violations)} dispatch wrapper(s) targeting recipes "
+            "with recent blocking probe-disambiguator verdicts in "
+            "{INDEPENDENT, KILL, DEFER}. Per CLAUDE.md Catalog #313 + "
+            "Forbidden premature KILL: a blocking outcome does NOT mean the "
+            "lane is killed; the apparatus has already adjudicated the probe "
+            "within the 30-day staleness window. Address the blocker OR "
+            "add same-line `# PROBE_PREDECESSOR_OVERRIDE_OK:<rationale>` "
+            "waiver.\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

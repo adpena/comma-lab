@@ -44,6 +44,7 @@ from tac.substrates.time_traveler_l5_autonomy.archive import (
 
 TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA = L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA
 TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH = L5V2_TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH
+TT5L_CONTEST_NUM_PAIRS = 600
 DEFAULT_TT5L_SOURCE_ARCHIVE_PATH = (
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SOURCE_ARCHIVE_PATH
 )
@@ -434,6 +435,11 @@ def build_tt5l_sideinfo_variant_packets(
     ]
     if int(source_liveness.get("nonzero_values") or 0) <= 0:
         manifest_blockers.append("tt5l_source_trained_sideinfo_all_zero")
+    if int(parsed.num_pairs) != TT5L_CONTEST_NUM_PAIRS:
+        manifest_blockers.append(
+            "tt5l_source_num_pairs_not_full_contest:"
+            f"{int(parsed.num_pairs)}_expected_{TT5L_CONTEST_NUM_PAIRS}"
+        )
     runtime = _runtime_custody(
         submission_dir=submission_dir,
         repo_root=root,
@@ -567,6 +573,7 @@ __all__ = [
     "DEFAULT_TT5L_SIDEINFO_VARIANT_REPORT_PATH",
     "DEFAULT_TT5L_SIDEINFO_VARIANT_SUBMISSION_DIR",
     "DEFAULT_TT5L_SOURCE_ARCHIVE_PATH",
+    "TT5L_CONTEST_NUM_PAIRS",
     "TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA",
     "TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH",
     "build_tt5l_sideinfo_variant_packets",

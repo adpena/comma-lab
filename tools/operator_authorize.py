@@ -391,6 +391,99 @@ def _validate_required_input_files(
         )
 
 
+def _check_predecessor_probe_outcome(recipe_path: Path) -> None:
+    """Catalog #313 — refuse dispatch if recipe's substrate has a recent
+    blocking probe-disambiguator verdict in the canonical ledger.
+
+    Operator directive 2026-05-16 (PROBE-OUTCOMES-BAKE-IN subagent): *"bake
+    in the FULL 4-layer canonical pattern per the Catalog #245 Modal call_id
+    ledger exemplar so probe-disambiguator verdicts are queryable across
+    sessions and gating dispatch BEFORE we re-run something an existing
+    adjudicated probe already settled"*.
+
+    The canonical adjudicated-outcomes ledger lives at
+    ``.omx/state/probe_outcomes.jsonl`` via ``tac.probe_outcomes_ledger``.
+    Empirical anchor: ATW v2 D4 H(latent|scorer_class) probe (Codex
+    ``tools/run_atw_v2_d4_probe_from_a1.py`` 2026-05-16 22:47:41Z) returned
+    ``INDEPENDENT`` verdict (MI=0.006385 bits/symbol; 2 orders of magnitude
+    below MEANINGFUL_CONDITIONING threshold 0.5). Without this gate, future
+    subagent dispatchers could re-fire ATW v2 Phase 2 dispatch despite the
+    apparatus having already settled the question — burning paid GPU.
+
+    Per CLAUDE.md "Forbidden premature KILL without research exhaustion":
+    a blocking outcome does NOT mean the lane is killed — it means the
+    apparatus has already adjudicated this probe within the 30-day
+    staleness window. Override via paired-env (Catalog #199 sister rule):
+        OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1
+        OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE=<text>
+
+    Bare ``OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1`` without
+    paired rationale raises SystemExit.
+    """
+    bypass_active = (
+        os.environ.get("OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT") == "1"
+    )
+    if bypass_active:
+        rationale = os.environ.get(
+            "OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE", ""
+        ).strip()
+        if not rationale:
+            raise SystemExit(
+                "[operator-authorize] FATAL: "
+                "OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1 "
+                "requires paired "
+                "OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE=<text> "
+                "(per CLAUDE.md paired-env discipline + Catalog #199 sister rule "
+                "+ Catalog #313). Refusing to skip predecessor probe-outcome "
+                "check without rationale."
+            )
+        print(
+            f"[operator-authorize] [PROBE-PREDECESSOR BYPASS ACTIVE] "
+            f"reason={rationale!r}; recipe={recipe_path}",
+            file=sys.stderr,
+        )
+        return
+
+    try:
+        from tac.probe_outcomes_ledger import latest_blocking_outcome_by_recipe
+    except ImportError:
+        print(
+            "[operator-authorize] WARN: tac.probe_outcomes_ledger not "
+            "importable; skipping Catalog #313 predecessor probe-outcome "
+            "check (operator should investigate)",
+            file=sys.stderr,
+        )
+        return
+
+    try:
+        view = latest_blocking_outcome_by_recipe(recipe_path)
+    except Exception as exc:
+        print(
+            f"[operator-authorize] WARN: Catalog #313 ledger query failed "
+            f"({exc}); skipping predecessor probe-outcome check",
+            file=sys.stderr,
+        )
+        return
+
+    if view is None:
+        return
+
+    raise SystemExit(
+        f"[operator-authorize] FATAL: probe-disambiguator predecessor verdict "
+        f"{view.verdict} blocks dispatch (substrate={view.substrate}; "
+        f"probe_id={view.probe_id}; adjudicated_at={view.adjudicated_at_utc}; "
+        f"evidence={view.evidence_path}; metric={view.metric_name}="
+        f"{view.metric_value} vs threshold={view.threshold}). "
+        f"Per Catalog #313 PROBE-OUTCOMES-BAKE-IN: the apparatus has already "
+        f"adjudicated this probe within the 30-day staleness window. Either "
+        f"(a) address the blocker via sister probe with alternative reducer "
+        f"(Catalog #308), (b) have the council ratify fresh-evidence "
+        f"override, OR (c) set "
+        f"OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_VERDICT=1 + paired "
+        f"OPERATOR_AUTHORIZE_PROBE_PREDECESSOR_BYPASS_RATIONALE=<text>."
+    )
+
+
 def _run_local_pre_deploy_check(
     trainer_path: str,
     recipe_name: str,
@@ -1966,6 +2059,15 @@ def main(argv: list[str] | None = None) -> int:
                 "no trainer path - skipping local validation",
                 file=sys.stderr,
             )
+
+    # 2026-05-16 Catalog #313 — PROBE-OUTCOMES-BAKE-IN. Refuse dispatch if
+    # this recipe's substrate has a recent blocking probe-disambiguator
+    # verdict in the canonical adjudicated-outcomes ledger. Empirical anchor:
+    # ATW v2 D4 H(latent|scorer_class) probe returned INDEPENDENT verdict
+    # 2026-05-16 — without this gate the apparatus could re-fire dispatch on
+    # the same architectural surface despite the question already being
+    # settled. Paired-env bypass per Catalog #199 sister rule.
+    _check_predecessor_probe_outcome(recipe.path)
 
     # Local pre-deploy check (WIRE-AND-INTEGRATE-ALL 2026-05-15). Catches bug
     # classes (syntax errors, NotImplementedError stubs, non-canonical archive
