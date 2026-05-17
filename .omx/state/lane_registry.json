@@ -32611,11 +32611,11 @@
       "id": "lane_t4_symposium_substrate_design_class_shift_20260517",
       "name": "T4 SYMPOSIUM substrate design class-shift adjudication",
       "phase": 4.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/t4_symposium_substrate_design_class_shift_deliberation_20260517.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32638,8 +32638,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/t4_symposium_substrate_design_class_shift_deliberation_20260517.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -32688,6 +32688,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_orthogonal_optimization_methods_audit_20260517",
+      "name": "Orthogonal Optimization Methods Audit",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -32697,5 +32738,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T12:16:58Z"
+  "updated_at": "2026-05-17T12:23:44Z"
 }
