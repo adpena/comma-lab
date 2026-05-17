@@ -93,6 +93,13 @@
       ],
       "dry_run_command_sha256": "36a974602033bb50b29dfeab80970370c8ae8b3c50b8ed90b6fb58e03ebe37a8",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu",
       "local_archive": {
@@ -144,7 +151,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23688,
-      "stdout_sha256": "6cabc760c57263aeb74cfb18c34db921fe27d632a5f74cef1c44448bee51aeb5",
+      "stdout_sha256": "604932ecdc2e81144c1f1e7b9dccdc641e77f77108ce6b48984e33010a368790",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -234,6 +241,13 @@
       ],
       "dry_run_command_sha256": "631cdc20e9051f995cd8db8abf9c48e52ce97bc444cd6900eadaa3767e04dd4b",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cuda",
       "local_archive": {
@@ -285,7 +299,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42659,
-      "stdout_sha256": "f35b501c969258d0c1d1081ca50dcac37ec6d850b87b9892c6ed706636a43538",
+      "stdout_sha256": "3236bda4694f19b6742bd6594d1c2e64cb2f08bb97bca60b814214385113e6bd",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -375,6 +389,13 @@
       ],
       "dry_run_command_sha256": "7a46a30ad7ac100d8e4c1b963269a1b0344033197f444cb132b201b33521d1d2",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cpu",
       "local_archive": {
@@ -426,7 +447,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 24120,
-      "stdout_sha256": "1c4b0e8f4d1aa5300cb72a548174bbd14b29f348f29468b4412b6baceb82de3b",
+      "stdout_sha256": "e041d19dd7530a3359a996eceb8d10fde2d88db9b184da16a585423795efa6c5",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -516,6 +537,13 @@
       ],
       "dry_run_command_sha256": "a19ea200fc59e919f3bdcf3525da27da34f93ab4aa1fc5494e468195c205e8f6",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cuda",
       "local_archive": {
@@ -567,7 +595,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 43103,
-      "stdout_sha256": "63fbdd2538b51ce47289588b38f9bccd2e7167a0fc41507ec7279fca3daafabc",
+      "stdout_sha256": "9ee9aba1264d208e9deda3da8d653c2a694631f43527df3f2ba5ecf9d1372f1c",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -657,6 +685,13 @@
       ],
       "dry_run_command_sha256": "f100b8c2515561e39c13854369eee1c08118f76c4b0b3c9033b2f9f22f53752e",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cpu",
       "local_archive": {
@@ -708,7 +743,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23976,
-      "stdout_sha256": "03cef1b401ea90621b9bf95323b3f830e6d065ba86d182eab627b9fd64fb0db5",
+      "stdout_sha256": "cc5f47868710f8ebc4c7c80745bc1f3b0405be945b4fdc9e939e62c0866d73d9",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -798,6 +833,13 @@
       ],
       "dry_run_command_sha256": "5ffa118f9447feb9394cdf43fb48d547e8a35be05c0e93d0f7fcfdc93cd4375b",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cuda",
       "local_archive": {
@@ -849,7 +891,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42955,
-      "stdout_sha256": "3f4b65793b0b3f1a0206ab69ce6690e7e2adbad0a2bae30afbfb089f58a3b6be",
+      "stdout_sha256": "26a83fe4a925bcf77a82f9c3ea44a568d0ddb436fc5e67ce4e763914a5df21e9",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -939,6 +981,13 @@
       ],
       "dry_run_command_sha256": "9cf06c8831cf13521556236154ef0ba76d8c1750d987fce9f0b749f13ca4a3a2",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cpu",
       "local_archive": {
@@ -990,7 +1039,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "a1b9d821c6a6837b97caee411371c3b0c5d4e33052143c8985d8b10015007d69",
+      "stdout_sha256": "80868c46bb978c0119b0eeb010d0951ad66b20fb5c442bc26c882dc5d578ced1",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1080,6 +1129,13 @@
       ],
       "dry_run_command_sha256": "07c9e3cb63c3fd6746bb66ed2e82e0866cd076847641fcc88d0cd80397c128aa",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cuda",
       "local_archive": {
@@ -1131,7 +1187,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "a219cc6e4fba9f0e152b2f4d0d7088f5375294b3ee9d720ee7cb7c0032dd8994",
+      "stdout_sha256": "2c3dfca3be3d52843d7fc8c717af621cd539c2054fa3a3ef870064a6f45ae14c",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1221,6 +1277,13 @@
       ],
       "dry_run_command_sha256": "6709a0edaf9d5d69f8a3256617122337bbc00acdaf84770999d613bfc1004769",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cpu",
       "local_archive": {
@@ -1272,7 +1335,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "563a3214a38e378a181bf6ae0866b760d1d3b5fe9f4972f7d3aed53009983549",
+      "stdout_sha256": "f10a62d2730aae6cad6e637ab378a4d823ded5bc27f80219a6e8d8708b7f9ff3",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1362,6 +1425,13 @@
       ],
       "dry_run_command_sha256": "afaec310878e7d0a9a2d371fe98221adec60357006e3878a8b635df6d1d18f59",
       "dry_run_record_parsed": true,
+      "dry_run_state_file": {
+        "checked": true,
+        "exists": true,
+        "latest_record_parsed": true,
+        "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/launcher_dry_run_state.json",
+        "stdout_core_matched": true
+      },
       "dry_run_state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/launcher_dry_run_state.json",
       "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cuda",
       "local_archive": {
@@ -1413,7 +1483,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "7062a98bb08aaa9732afac406ea7706392433308f6786e8a3e8bd12a435d753d",
+      "stdout_sha256": "ff5614d74072f0fa3ff0d5fcb79df87c72cc60ca1b6769744251b8dcc1dc213a",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1444,13 +1514,13 @@
       "ablated"
     ]
   },
-  "current_head_commit": "a203ee106496ffe2179574c965357aec259ec18b",
+  "current_head_commit": "a984bdba7f2b5517e01ae9139a0bea5957c25332",
   "dispatch_attempted": false,
   "dry_run_cells_exercised": 10,
   "dry_run_cells_total": 10,
   "expected_cell_count": 10,
   "failed_cell_count": 0,
-  "generated_at_utc": "2026-05-17T10:57:22Z",
+  "generated_at_utc": "2026-05-17T11:02:48Z",
   "passed_cell_count": 10,
   "planning_only": true,
   "promotion_eligible": false,

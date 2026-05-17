@@ -1,7 +1,7 @@
 {
   "schema": "l5_v2_tt5l_lightning_route_unblock_packet_v1",
-  "generated_at_utc": "2026-05-17T10:57:44Z",
-  "current_head_commit": "a203ee106496ffe2179574c965357aec259ec18b",
+  "generated_at_utc": "2026-05-17T11:03:01Z",
+  "current_head_commit": "a984bdba7f2b5517e01ae9139a0bea5957c25332",
   "purpose": "Turn the L5 v2 TT5L Lightning alternate-provider blocker into an executable, false-authority-safe operator unblock checklist.",
   "source_artifacts": {
     "provider_readiness": {
@@ -14,13 +14,13 @@
     },
     "sideinfo_execution_bundle_dry_run_verification": {
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
-      "sha256": "2ad7c8cba1cf3bd3bb4c29a4548391f3b05d1528912e9a4dfee84b43e478c521",
+      "sha256": "785093cfdbf27788a62b1081d8e3fb24eb8171a87103781993b328fad57230b6",
       "all_dry_runs_passed": true,
       "passed_cell_count": 10
     },
     "architecture_lock_packet": {
       "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
-      "sha256": "f459bcaad101a0d35572d2cfabcf68eb328c185dec7396342ecaa6b14aaa93bc"
+      "sha256": "7667cbd04ccd69d9413a46e23f5860e47e17d07d42ea0e263aa84adbcbb96431"
     },
     "legacy_cuda_only_alt_provider_plan": {
       "path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
@@ -53,6 +53,7 @@
     "local_lightning_sdk_version": "2026.4.23",
     "provider_readiness_probe_completed": true,
     "bundle_all_10_dry_run_commands_parse": true,
+    "bundle_all_10_dry_run_state_files_match_stdout_core": true,
     "bundle_axes": [
       "contest_cpu",
       "contest_cuda"
@@ -141,6 +142,7 @@
     "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
     "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
     "The 10-cell bundle now embeds the T4/g4dn torch and uv env pins required by scripts/launch_lightning_batch_job.py before non-dry-run exact-eval submit.",
+    "The dry-run verifier now compares every launcher stdout record against the latest record persisted at the cell state path across dry_run, queue, and spec.",
     "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required."
   ]
 }

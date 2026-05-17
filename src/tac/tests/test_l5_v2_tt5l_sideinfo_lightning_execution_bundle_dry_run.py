@@ -224,7 +224,7 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
 
 def _fake_runner(
     command: str,
-    _repo_root: Path,
+    repo_root: Path,
     _timeout_seconds: int,
     *,
     cuda_marker: bool = True,
@@ -270,6 +270,14 @@ def _fake_runner(
         },
         "spec": {"command": command_text},
     }
+    state_path = _arg_value(argv, "--state-path")
+    if state_path:
+        resolved_state_path = repo_root / state_path
+        resolved_state_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_state_path.write_text(
+            json.dumps([record], sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     return DryRunCommandResult(
         returncode=0,
         stdout=json.dumps(record, sort_keys=True),
@@ -305,6 +313,7 @@ def test_tt5l_lightning_bundle_dry_run_verifier_accepts_all_cells(
     assert payload["blockers"] == []
     first = payload["cells"][0]
     assert first["verified"] is True
+    assert first["dry_run_state_file"]["stdout_core_matched"] is True
     assert first["queue"]["launcher_command_sha_matches_source_spec"] is False
     assert first["queue"]["command_sha_delta_classification"] == "expected_submit_layer_delta"
 
@@ -371,6 +380,44 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_t4_without_runtime_env(
     assert any(
         "non_dry_run_t4_runtime_env_missing:UV_INDEX_STRATEGY=unsafe-best-match"
         in blocker
+        for blocker in payload["blockers"]
+    )
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_stale_state_file(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    def stale_state_runner(
+        command: str,
+        repo_root: Path,
+        timeout: int,
+    ) -> DryRunCommandResult:
+        result = _fake_runner(command, repo_root, timeout)
+        argv = shlex.split(command)
+        state_path = repo_root / _arg_value(argv, "--state-path")
+        stale_record = json.loads(result.stdout)
+        stale_record["queue"]["queue_metadata"]["axis"] = "stale_axis"
+        state_path.write_text(
+            json.dumps([stale_record], sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return result
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=stale_state_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert any(
+        "dry_run_state_stdout_queue_mismatch" in blocker
         for blocker in payload["blockers"]
     )
 

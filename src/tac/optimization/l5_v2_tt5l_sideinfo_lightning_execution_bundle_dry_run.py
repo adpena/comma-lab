@@ -222,6 +222,52 @@ def _load_dry_run_record(stdout: str) -> tuple[Mapping[str, Any], list[str]]:
     return {}, blockers
 
 
+def _load_latest_state_record(
+    *,
+    argv: Sequence[str],
+    repo_root: Path,
+) -> tuple[Mapping[str, Any], dict[str, Any], list[str]]:
+    blockers: list[str] = []
+    raw_state_path = _arg_value(argv, "--state-path")
+    if not raw_state_path:
+        return {}, {"path": "", "exists": False, "checked": False}, [
+            "dry_run_state_path_arg_missing"
+        ]
+    state_path = _resolve_repo_path(raw_state_path, repo_root)
+    summary = {
+        "path": _repo_relative(state_path, repo_root),
+        "exists": state_path.is_file(),
+        "checked": True,
+        "latest_record_parsed": False,
+        "stdout_core_matched": False,
+    }
+    if not state_path.is_file():
+        return {}, summary, ["dry_run_state_file_missing"]
+    try:
+        loaded = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, summary, ["dry_run_state_file_json_invalid"]
+    if not isinstance(loaded, list):
+        return {}, summary, ["dry_run_state_file_not_record_list"]
+    rows = [row for row in loaded if isinstance(row, Mapping)]
+    if not rows:
+        return {}, summary, ["dry_run_state_file_no_mapping_records"]
+    summary["latest_record_parsed"] = True
+    return rows[-1], summary, blockers
+
+
+def _state_stdout_core_blockers(
+    *,
+    state_record: Mapping[str, Any],
+    stdout_record: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    for field in ("dry_run", "queue", "spec"):
+        if state_record.get(field) != stdout_record.get(field):
+            blockers.append(f"dry_run_state_stdout_{field}_mismatch")
+    return blockers
+
+
 def _cell_by_key(cells: Iterable[Mapping[str, Any]]) -> dict[tuple[str, str], Mapping[str, Any]]:
     out: dict[tuple[str, str], Mapping[str, Any]] = {}
     for cell in cells:
@@ -624,6 +670,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
             queue_summary: dict[str, Any] = {}
             parse_blockers: list[str] = []
             archive_summary: dict[str, Any] = {}
+            state_summary: dict[str, Any] = {}
             if cell:
                 archive_summary, archive_blockers = _local_archive_status(
                     cell=cell,
@@ -642,6 +689,18 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
                 record, parse_blockers = _load_dry_run_record(result.stdout)
                 cell_blockers.extend(parse_blockers)
                 if record:
+                    state_record, state_summary, state_blockers = (
+                        _load_latest_state_record(argv=result.argv, repo_root=root)
+                    )
+                    cell_blockers.extend(state_blockers)
+                    if state_record:
+                        state_core_blockers = _state_stdout_core_blockers(
+                            state_record=state_record,
+                            stdout_record=record,
+                        )
+                        if not state_core_blockers:
+                            state_summary["stdout_core_matched"] = True
+                        cell_blockers.extend(state_core_blockers)
                     queue_summary, queue_blockers = _validate_queue_record(
                         cell=cell,
                         record=record,
@@ -661,6 +720,7 @@ def build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
                     "local_artifact_dir": str(cell.get("local_artifact_dir") or ""),
                     "local_archive": archive_summary,
                     "dry_run_state_path": str(cell.get("dry_run_state_path") or ""),
+                    "dry_run_state_file": state_summary,
                     "dry_run_command_sha256": _sha256_text(command) if command else "",
                     "dry_run_command_argv": list(result.argv),
                     "returncode": result.returncode,
