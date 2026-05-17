@@ -119,6 +119,14 @@ retiring the L5/L5-v2 staircase:
   and `tac.master_gradient_feasibility`: replace `(N_archive_bytes, 3)` bit/byte
   flip probes with `(N_valid_mutation_operators, 3)` packet-valid score-response
   rows that rebuild ZIP metadata/CRC and prove inflate success.
+- Master-gradient operator-response planning surface is now materialized in
+  `tac.master_gradient_operator_plan` and
+  `tools/build_master_gradient_operator_plan.py`. Ledger:
+  `.omx/research/master_gradient_operator_response_plan_landed_20260517_codex.md`.
+  This supersedes raw-byte/autograd-per-archive-byte wording in untracked WIP
+  campaign notes without editing partner WIP: the only valid next object is a
+  grammar-aware operator-row manifest, still `score_claim=false` and
+  dispatch-ineligible until packet closure proofs exist.
 - Reviewed disposition:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - FEC6 CPU frontier submission-surface adversarial review:

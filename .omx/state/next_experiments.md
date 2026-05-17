@@ -106,6 +106,12 @@ architecture-lock/TT5L custody artifacts.
   grammar section or mutation operator, rebuild ZIP metadata/CRC, prove inflate
   success, carry an axis label, and keep `score_claim=false` until exact result
   review.
+- Landed planning surface:
+  `tac.master_gradient_operator_plan` plus
+  `tools/build_master_gradient_operator_plan.py`. The tool consumes a
+  parser-proven `tac_frontier_archive_layout_v1` manifest or archive path and
+  emits grammar-aware operator rows only; raw archive-byte rows emitted must
+  remain `0`.
 - Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
   operator-row manifest may proceed after
   `tools/audit_master_gradient_feasibility.py` reports
