@@ -1,0 +1,120 @@
+{
+  "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_alt_provider_plan_v1",
+  "generated_at_utc": "2026-05-17T05:54:42Z",
+  "generated_by": "codex",
+  "provider": "lightning",
+  "purpose": "Preserve the current five-variant TT5L side-info effect-curve Lightning exact-CUDA dry-run signal after Modal failed before app creation on workspace billing limits.",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "classification": "cuda_dry_run_plan_only_no_score_claim; exact CPU/CUDA paired effect-curve evidence still required",
+  "source_dispatch_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json",
+  "source_dispatch_plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972",
+  "modal_billing_blocker": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_modal_billing_blocker_20260517_codex.json",
+  "supersedes_stale_plan": {
+    "path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+    "reason": "That earlier alternate-provider ledger covers one older random_lsb archive only and names stale SHA b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 plus the old recovered exact-eval runtime. It must not be used for the current five-variant side-info effect curve."
+  },
+  "runtime": {
+    "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+    "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32"
+  },
+  "required_axes_for_effect_curve": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "covered_axis": "contest_cuda",
+  "uncovered_axis_blocker": "Lightning plan covers exact CUDA only. The paired contest-CPU axis remains blocked until Modal billing is fixed or a separate Linux CPU exact-eval provider route is implemented.",
+  "execution_blockers": [
+    "missing_lightning_ssh_target",
+    "missing_lightning_teamspace",
+    "source_manifest_not_staged_to_lightning_workspace",
+    "remote_cuda_runtime_not_probed",
+    "non_dry_run_requires_dispatch_lane_claim"
+  ],
+  "dry_run_summary": {
+    "status": "DRY_RUN",
+    "all_submit_readiness_ok": true,
+    "all_submit_readiness_blockers": [],
+    "queued_at_utc": "2026-05-17T05:52:35Z",
+    "machine": "T4",
+    "role": "exact_cuda_eval",
+    "adjudication_mode": "forensic_broad_band_no_score_claim",
+    "required_device": "cuda",
+    "required_samples": 600
+  },
+  "variant_records": [
+    {
+      "variant": "zero",
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "archive_size_bytes": 34373,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "job_name": "l5-v2-tt5l-sideinfo-zero-cuda-20260517",
+      "command_sha256": "37a254d18f2b713f688b04f30f338bbdbc74ca42e35f5af2bcdc9034861145d0",
+      "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/zero",
+      "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/zero",
+      "dry_run_stdout_sha256": "c42cbfd798e9a0070f0b4810a025bca9968b43cbb76dd20724cd7490f52b5ed0",
+      "state_json_sha256": "48b97d743d90bc40137d26bccbcba2ca74138fc1a307a34aa7e526c70f0e846f"
+    },
+    {
+      "variant": "random_lsb",
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "archive_size_bytes": 38681,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "job_name": "l5-v2-tt5l-sideinfo-random_lsb-cuda-20260517",
+      "command_sha256": "f588d56de5780c64682e26d56a08538e0a163d11cb69936e8bebaddea6b2674e",
+      "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/random_lsb",
+      "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/random_lsb",
+      "dry_run_stdout_sha256": "fa3ecacbe24926175a3705650ee0b8b7eaf8f4b26000d83b7173b1ea06d3b91b",
+      "state_json_sha256": "14b1b932a08e3106f0e18b09bf8a81484c6c407fe02fdcc36f797ccf80020879"
+    },
+    {
+      "variant": "shuffled",
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "archive_size_bytes": 43284,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "job_name": "l5-v2-tt5l-sideinfo-shuffled-cuda-20260517",
+      "command_sha256": "68f9eac3ef4ccec02a47113d9a0736e74732f5378b7e18cf2bf7f6462f831bf5",
+      "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/shuffled",
+      "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/shuffled",
+      "dry_run_stdout_sha256": "aeea7910e7315de27473ad6e7d6538e07a671e332b609ef3021df99726f0a89b",
+      "state_json_sha256": "706481ea12d245ba807081ca4d5f11d95ab00ad8d7af6164f4dd26acba7af7ee"
+    },
+    {
+      "variant": "trained",
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "archive_size_bytes": 43323,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "job_name": "l5-v2-tt5l-sideinfo-trained-cuda-20260517",
+      "command_sha256": "d2f4e03790953dc7c631dad155ed01a79e76f200cbd130aa959aabf29d539a63",
+      "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/trained",
+      "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/trained",
+      "dry_run_stdout_sha256": "d45d4c96346def7706ec0eeac103fb8586aa8c10e930eca3b186981bbed2a6c9",
+      "state_json_sha256": "010c8939ea95d81659942bb08ca437f9619aefbceac46d7e1fe4ef03d557a57f"
+    },
+    {
+      "variant": "ablated",
+      "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "archive_size_bytes": 42419,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "job_name": "l5-v2-tt5l-sideinfo-ablated-cuda-20260517",
+      "command_sha256": "4eef7e4d4ea88ded98ee79b086cf350bd82aa25998482afce7906a7299b51d7e",
+      "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/ablated",
+      "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve/ablated",
+      "dry_run_stdout_sha256": "1a4492516b3ad7b083bea7aabf7580979c329eab40419fe3dde1d5a7f1cecd7e",
+      "state_json_sha256": "685b87737336e8bbc6665b5d12d018937c72696f0418a47f69d3088b4510c9d8"
+    }
+  ],
+  "reactivation_criteria": [
+    "For Lightning CUDA: configure LIGHTNING_SSH_TARGET, LIGHTNING_TEAMSPACE, and source staging; run remote supply-chain and CUDA preflight; then claim the per-variant contest_cuda lane before non-dry-run exact-eval.",
+    "For paired effect-curve claims: obtain matching contest_cpu and contest_cuda exact-eval artifacts for all five current archive SHA-256 values.",
+    "For Modal: after billing limit is raised, prefer the existing paired Modal dispatch plan because it covers both CPU and CUDA axes with one pair-group discipline.",
+    "Reject any provider plan that names stale archive SHA b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7 for the current side-info effect curve."
+  ]
+}
