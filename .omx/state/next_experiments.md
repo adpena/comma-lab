@@ -9,8 +9,9 @@ Authority:
 - `dispatch_attempted=false`
 
 This queue supersedes the stale 2026-05-09 A1-sidecar/Phase-1 queue. It is
-derived from the May 17 T4 symposium, the parent-scope `.omx` Markdown scan,
-and the current L5-v2 architecture-lock/TT5L custody artifacts.
+derived from the May 17 T4 symposium, the parent-scope `.omx` Markdown scan
+including ignored auto-memory/tmp Markdown, and the current L5-v2
+architecture-lock/TT5L custody artifacts.
 
 ## Active Anchor
 
@@ -44,6 +45,11 @@ and the current L5-v2 architecture-lock/TT5L custody artifacts.
 - Lane class: frontier-breaking byte-coding bolt-on.
 - Required work: per-tensor byte map, Brotli/LZMA/Huffman tournament, manifest
   of consumed byte sections, monolithic archive grammar, no-op detector.
+- No-ignore scan constraint: do not retread generic zero-order arithmetic
+  coding on HNeRV-like latent bytes. The ignored auto-memory snapshot preserves
+  a concrete warning that Brotli can beat zero-order entropy via LZ77/context;
+  first profile section-conditioned entropy, then choose a terminal coder per
+  stream with byte-consumption proof.
 - Dispatch policy: local byte/provenance proof first; paired CPU/CUDA exact
   only after a byte-different packet consumes changed bytes at inflate time.
 

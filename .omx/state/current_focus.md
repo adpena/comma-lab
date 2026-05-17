@@ -80,12 +80,19 @@ retiring the L5/L5-v2 staircase:
 ## Parent-Scope OMX Markdown Scan
 
 On 2026-05-17, the Markdown scan was widened from `.omx/research` to all
-`.omx/**/*.md`. Relevant non-research control surfaces checked:
+`.omx/**/*.md`, then repeated with `--hidden --no-ignore` so ignored
+`.omx/auto_memory_snapshot_*` and `.omx/tmp` Markdown were not silently
+excluded. Relevant non-research control surfaces checked:
 
 - `.omx/state/current_focus.md` - refreshed by this file.
 - `.omx/state/next_experiments.md` - refreshed alongside this file.
 - `.omx/state/active_lane_dispatch_claims.md` - current source for dispatch
   conflict/terminal status.
+- `.omx/auto_memory_snapshot_20260504T230223Z/*.md` - ignored historical
+  Claude/OMX memory snapshot; no current L5/TT5L authority, but it preserves
+  no-signal-loss, stack-order, entropy-coder, and remote-tarball lessons.
+- `.omx/tmp/*.md` - ignored temporary appendices and detached clone READMEs;
+  useful as forensic inputs only, not current score authority.
 - `.omx/notepad.md` - stale April AV1/Track-B notebook, not current L5
   authority.
 - `.omx/release_manifest_v0.2.0-rc1.md` - release hygiene context, not current
@@ -95,6 +102,8 @@ On 2026-05-17, the Markdown scan was widened from `.omx/research` to all
 
 Detailed scan ledger:
 `.omx/research/l5_v2_omx_parent_markdown_scope_refresh_20260517_codex.md`.
+No-ignore follow-up ledger:
+`.omx/research/l5_v2_omx_parent_markdown_no_ignore_refresh_20260517_codex.md`.
 
 ## Required Refresh Cadence
 
