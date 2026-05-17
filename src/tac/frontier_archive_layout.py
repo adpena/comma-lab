@@ -26,6 +26,9 @@ PR101_DECODER_BLOB_LEN = 162_164
 PR101_LATENT_BLOB_LEN = 15_387
 PR101_INNER_MEMBER_NAME = "x"
 
+HNERV_PREFIX_LEN = 4
+A1_DECODER_SECTION_TOTAL = HNERV_PREFIX_LEN + PR101_DECODER_BLOB_LEN
+
 PR106_INNER_MEMBER_NAME = "0.bin"
 PR106_HEADER_LEN = 4
 PR106_HEADER_MAGIC = 0xFF
@@ -92,6 +95,56 @@ def _inspect_pr101_inner(member_name: str, blob: bytes) -> dict[str, Any] | None
         "component_budget_implication": (
             "no_zip_member_mask_or_pose_budget; logical edits must target decoder_blob, "
             "latent_blob, or sidecar_blob under the PR101 parser"
+        ),
+    }
+
+
+def _inspect_a1_prefixed_inner(member_name: str, blob: bytes) -> dict[str, Any] | None:
+    if member_name != PR101_INNER_MEMBER_NAME:
+        return None
+    parsed = _parse_a1_prefixed_blob(blob)
+    if parsed is None:
+        return None
+    return {
+        "grammar": "a1_prefixed_hnerv_microcodec",
+        "parser_confidence": "x_member_u32_decoder_section_total_and_fixed_latent_window",
+        "parser_proof_strength": "u32_decoder_section_total_equals_a1_boundary",
+        "parser_ambiguous": False,
+        "parser_alternatives": ["a1_prefixed_hnerv_microcodec"],
+        "single_member_name": member_name,
+        "member_bytes": len(blob),
+        "wire_format": "A1_PREFIXED_HNERV",
+        "decoder_section_total_field": parsed["section_total"],
+        "sections": [
+            _section(
+                "decoder_section_total_u32le",
+                offset=0,
+                data=blob[:HNERV_PREFIX_LEN],
+                role="internal_length_header",
+            ),
+            _section(
+                "decoder_blob",
+                offset=HNERV_PREFIX_LEN,
+                data=parsed["decoder_blob"],
+                role="renderer_decoder_weights",
+            ),
+            _section(
+                "latent_blob",
+                offset=parsed["latent_start"],
+                data=parsed["latent_blob"],
+                role="latent_motion_or_frame_conditioning",
+            ),
+            _section(
+                "sidecar_blob",
+                offset=parsed["sidecar_start"],
+                data=parsed["sidecar_blob"],
+                role="latent_sidecar_not_separate_pose_or_mask_member",
+            ),
+        ],
+        "component_budget_implication": (
+            "A1 no-dead-K packet; logical edits must target decoder_blob, "
+            "latent_blob, or sidecar_blob under the prefixed A1 parser. "
+            "PR101 fixed-offset surgery at offset 0 is not byte-faithful for this packet."
         ),
     }
 
@@ -355,6 +408,30 @@ def _parse_a2k1_blob(blob: bytes) -> dict[str, Any] | None:
     }
 
 
+def _parse_a1_prefixed_blob(blob: bytes) -> dict[str, Any] | None:
+    minimum = A1_DECODER_SECTION_TOTAL + PR101_LATENT_BLOB_LEN
+    if len(blob) < minimum:
+        return None
+    section_total = int.from_bytes(blob[:HNERV_PREFIX_LEN], "little")
+    if section_total != A1_DECODER_SECTION_TOTAL:
+        return None
+    latent_start = section_total
+    latent_end = latent_start + PR101_LATENT_BLOB_LEN
+    if latent_end > len(blob):
+        return None
+    sidecar = blob[latent_end:]
+    if not sidecar:
+        return None
+    return {
+        "section_total": section_total,
+        "decoder_blob": blob[HNERV_PREFIX_LEN:section_total],
+        "latent_start": latent_start,
+        "latent_blob": blob[latent_start:latent_end],
+        "sidecar_start": latent_end,
+        "sidecar_blob": sidecar,
+    }
+
+
 def _parse_cplx1_blob(blob: bytes) -> dict[str, Any] | None:
     minimum = CPLX1_HEADER_LEN + CPLX1_BYTE_MAP_LEN_FIELD_LEN + PR101_LATENT_BLOB_LEN
     if len(blob) < minimum:
@@ -415,6 +492,7 @@ def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, An
             _inspect_a2k1_inner(member_name, blob),
             _inspect_cplx1_inner(member_name, blob),
             _inspect_pr106_inner(member_name, blob),
+            _inspect_a1_prefixed_inner(member_name, blob),
             _inspect_pr101_inner(member_name, blob),
         )
         if candidate is not None
@@ -452,6 +530,16 @@ def _resolve_logical_layout(member_name: str, blob: bytes) -> tuple[dict[str, An
             "PR106 selected over fixed-offset PR101 because both PR106 logical Brotli streams decode"
         )
         return pr106, []
+
+    a1 = next((candidate for candidate in candidates if candidate["grammar"] == "a1_prefixed_hnerv_microcodec"), None)
+    if a1 is not None and a1.get("parser_proof_strength") == "u32_decoder_section_total_equals_a1_boundary":
+        a1["parser_ambiguous"] = False
+        a1["parser_alternatives"] = [str(candidate["grammar"]) for candidate in candidates]
+        a1["ambiguity_resolution"] = (
+            "A1 prefixed layout selected over fixed-offset PR101 because the "
+            "u32 decoder-section header equals the verified A1 boundary"
+        )
+        return a1, []
 
     return None, [
         "Multiple internal grammars matched; logical layout is ambiguous and must fail closed.",

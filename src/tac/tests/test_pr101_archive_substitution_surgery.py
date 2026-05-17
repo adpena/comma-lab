@@ -80,6 +80,19 @@ def test_split_rejects_too_short_blob() -> None:
         mod._split_pr101_inner_blob(short_blob)
 
 
+def test_split_rejects_a1_prefixed_no_dead_k_layout() -> None:
+    mod = _load_tool_module()
+    blob = (
+        mod.A1_PREFIXED_DECODER_SECTION_TOTAL.to_bytes(4, "little")
+        + b"\xa1" * mod.PR101_DECODER_BLOB_LEN
+        + b"\xb2" * mod.PR101_LATENT_BLOB_LEN
+        + b"\xc3" * 607
+    )
+
+    with pytest.raises(ValueError, match="A1 prefixed no-dead-K layout"):
+        mod._split_pr101_inner_blob(blob)
+
+
 def test_read_inner_blob_rejects_wrong_member_name(tmp_path) -> None:
     mod = _load_tool_module()
     archive = tmp_path / "wrong_name.zip"

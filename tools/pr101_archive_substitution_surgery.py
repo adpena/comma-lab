@@ -64,6 +64,7 @@ PR101_DECODER_BLOB_LEN = 162_164
 PR101_LATENT_BLOB_LEN = 15_387
 PR101_TOTAL_INNER_BYTES_NOMINAL = 178_158  # decoder + latent + 607-byte sidecar
 PR101_INNER_MEMBER_NAME = "x"
+A1_PREFIXED_DECODER_SECTION_TOTAL = 4 + PR101_DECODER_BLOB_LEN
 
 
 @dataclass
@@ -122,6 +123,16 @@ def _split_pr101_inner_blob(blob: bytes) -> tuple[bytes, bytes, bytes]:
     Validates the blob is at least DECODER_BLOB_LEN + LATENT_BLOB_LEN bytes;
     sidecar is whatever's left (PR101 default is 607 bytes but it varies).
     """
+    if (
+        len(blob) >= A1_PREFIXED_DECODER_SECTION_TOTAL + PR101_LATENT_BLOB_LEN
+        and int.from_bytes(blob[:4], "little") == A1_PREFIXED_DECODER_SECTION_TOTAL
+    ):
+        raise ValueError(
+            "inner blob appears to use the A1 prefixed no-dead-K layout "
+            "(uint32 decoder_section_total header at byte 0). This PR101 "
+            "fixed-offset surgery tool would slice the decoder four bytes early; "
+            "use an A1-specific splitter/builder instead."
+        )
     if len(blob) < PR101_DECODER_BLOB_LEN + PR101_LATENT_BLOB_LEN:
         raise ValueError(
             f"inner blob length {len(blob)} < required minimum "

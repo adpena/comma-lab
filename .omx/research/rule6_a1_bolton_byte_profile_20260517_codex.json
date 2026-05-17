@@ -1,0 +1,386 @@
+{
+  "schema": "payload_entropy_density_map_v1",
+  "archive_path": "submissions/a1/archive.zip",
+  "payload_size": 178162,
+  "evidence_tag": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "sections": {
+    "header": {
+      "size": 4,
+      "byte_range": [
+        0,
+        4
+      ],
+      "first_order_entropy_bpb": 2.0,
+      "conditional_entropy_bpb": {
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0
+      },
+      "shannon_floor_bytes_1st_order": 1,
+      "max_savings_bytes_1st_order": 3
+    },
+    "decoder_blob": {
+      "size": 162164,
+      "byte_range": [
+        4,
+        162168
+      ],
+      "first_order_entropy_bpb": 7.998424748434303,
+      "conditional_entropy_bpb": {
+        "1": 7.670586114245004,
+        "2": 1.6285667570036053,
+        "3": 0.009444377963902259
+      },
+      "shannon_floor_bytes_1st_order": 162133,
+      "max_savings_bytes_1st_order": 31
+    },
+    "latent_blob": {
+      "size": 15387,
+      "byte_range": [
+        162168,
+        177555
+      ],
+      "first_order_entropy_bpb": 7.988287210567584,
+      "conditional_entropy_bpb": {
+        "1": 5.69476116641351,
+        "2": 0.22511823186184596,
+        "3": 0.001170046801872075
+      },
+      "shannon_floor_bytes_1st_order": 15365,
+      "max_savings_bytes_1st_order": 22
+    },
+    "sidecar_blob": {
+      "size": 607,
+      "byte_range": [
+        177555,
+        178162
+      ],
+      "first_order_entropy_bpb": 7.710458167173371,
+      "conditional_entropy_bpb": {
+        "1": 1.5217702058556468,
+        "2": 0.009917355371900825,
+        "3": 0.0
+      },
+      "shannon_floor_bytes_1st_order": 586,
+      "max_savings_bytes_1st_order": 21
+    }
+  },
+  "windowed_entropy": {
+    "decoder_blob@w128": {
+      "n_windows": 2532,
+      "min_h_bpb": 6.248587426036062,
+      "max_h_bpb": 6.732307324168044,
+      "mean_h_bpb": 6.546135214543201,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 130368,
+          "h_bpb": 6.248587426036062
+        },
+        {
+          "window_start": 142848,
+          "h_bpb": 6.297857007961506
+        },
+        {
+          "window_start": 36352,
+          "h_bpb": 6.31426220694674
+        },
+        {
+          "window_start": 151552,
+          "h_bpb": 6.326057324168044
+        },
+        {
+          "window_start": 40064,
+          "h_bpb": 6.329107007961507
+        },
+        {
+          "window_start": 45440,
+          "h_bpb": 6.32988720694674
+        },
+        {
+          "window_start": 95744,
+          "h_bpb": 6.333717089725436
+        },
+        {
+          "window_start": 140160,
+          "h_bpb": 6.333717089725436
+        },
+        {
+          "window_start": 29184,
+          "h_bpb": 6.337546972504132
+        },
+        {
+          "window_start": 36544,
+          "h_bpb": 6.341682324168044
+        }
+      ]
+    },
+    "latent_blob@w128": {
+      "n_windows": 239,
+      "min_h_bpb": 6.341682324168044,
+      "max_h_bpb": 6.734375,
+      "mean_h_bpb": 6.555743607621272,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 14528,
+          "h_bpb": 6.341682324168044
+        },
+        {
+          "window_start": 9152,
+          "h_bpb": 6.370084449350855
+        },
+        {
+          "window_start": 5184,
+          "h_bpb": 6.388557324168044
+        },
+        {
+          "window_start": 8768,
+          "h_bpb": 6.39238720694674
+        },
+        {
+          "window_start": 13824,
+          "h_bpb": 6.39238720694674
+        },
+        {
+          "window_start": 13120,
+          "h_bpb": 6.395436890740202
+        },
+        {
+          "window_start": 12480,
+          "h_bpb": 6.396217089725436
+        },
+        {
+          "window_start": 128,
+          "h_bpb": 6.40801220694674
+        },
+        {
+          "window_start": 12416,
+          "h_bpb": 6.421569531114784
+        },
+        {
+          "window_start": 4160,
+          "h_bpb": 6.422857007961506
+        }
+      ]
+    },
+    "sidecar_blob@w128": {
+      "n_windows": 8,
+      "min_h_bpb": 6.509727441389348,
+      "max_h_bpb": 6.706954882778696,
+      "mean_h_bpb": 6.598058618126033,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 320,
+          "h_bpb": 6.509727441389348
+        }
+      ]
+    },
+    "decoder_blob@w512": {
+      "n_windows": 2526,
+      "min_h_bpb": 7.448441477316289,
+      "max_h_bpb": 7.700504975582047,
+      "mean_h_bpb": 7.584159858886141,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 45440,
+          "h_bpb": 7.448441477316289
+        },
+        {
+          "window_start": 29760,
+          "h_bpb": 7.4696475260173285
+        },
+        {
+          "window_start": 130240,
+          "h_bpb": 7.469655873058604
+        },
+        {
+          "window_start": 130176,
+          "h_bpb": 7.4754676398990405
+        },
+        {
+          "window_start": 29696,
+          "h_bpb": 7.479822578576092
+        },
+        {
+          "window_start": 119104,
+          "h_bpb": 7.480262807892517
+        },
+        {
+          "window_start": 127232,
+          "h_bpb": 7.480917587340275
+        },
+        {
+          "window_start": 19776,
+          "h_bpb": 7.483154397941303
+        },
+        {
+          "window_start": 3008,
+          "h_bpb": 7.483185672220606
+        },
+        {
+          "window_start": 45312,
+          "h_bpb": 7.485535806044572
+        }
+      ]
+    },
+    "latent_blob@w512": {
+      "n_windows": 233,
+      "min_h_bpb": 7.498774038639235,
+      "max_h_bpb": 7.687633705141065,
+      "mean_h_bpb": 7.600301373036885,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 13312,
+          "h_bpb": 7.498774038639235
+        },
+        {
+          "window_start": 4800,
+          "h_bpb": 7.507897152824894
+        },
+        {
+          "window_start": 13376,
+          "h_bpb": 7.518204384151099
+        },
+        {
+          "window_start": 13440,
+          "h_bpb": 7.525247403770003
+        },
+        {
+          "window_start": 8768,
+          "h_bpb": 7.527024807089841
+        },
+        {
+          "window_start": 4736,
+          "h_bpb": 7.529620120483922
+        },
+        {
+          "window_start": 13248,
+          "h_bpb": 7.539782754307887
+        },
+        {
+          "window_start": 1984,
+          "h_bpb": 7.540494723012185
+        },
+        {
+          "window_start": 12224,
+          "h_bpb": 7.545036574495179
+        },
+        {
+          "window_start": 11328,
+          "h_bpb": 7.549182967183486
+        }
+      ]
+    },
+    "sidecar_blob@w512": {
+      "n_windows": 2,
+      "min_h_bpb": 7.664839943564426,
+      "max_h_bpb": 7.6673400341927005,
+      "mean_h_bpb": 7.666089988878563,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 64,
+          "h_bpb": 7.664839943564426
+        }
+      ]
+    },
+    "decoder_blob@w2048": {
+      "n_windows": 2502,
+      "min_h_bpb": 7.8742292348678635,
+      "max_h_bpb": 7.927893447953715,
+      "mean_h_bpb": 7.903541290537453,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 54208,
+          "h_bpb": 7.8742292348678635
+        },
+        {
+          "window_start": 118784,
+          "h_bpb": 7.8751722985420605
+        },
+        {
+          "window_start": 59840,
+          "h_bpb": 7.877078716980773
+        },
+        {
+          "window_start": 54272,
+          "h_bpb": 7.877584491010067
+        },
+        {
+          "window_start": 54016,
+          "h_bpb": 7.877854316159281
+        },
+        {
+          "window_start": 54144,
+          "h_bpb": 7.877938156071016
+        },
+        {
+          "window_start": 118720,
+          "h_bpb": 7.878187358399834
+        },
+        {
+          "window_start": 59776,
+          "h_bpb": 7.878602696091753
+        },
+        {
+          "window_start": 59712,
+          "h_bpb": 7.878914986889268
+        },
+        {
+          "window_start": 54336,
+          "h_bpb": 7.879557177275778
+        }
+      ]
+    },
+    "latent_blob@w2048": {
+      "n_windows": 209,
+      "min_h_bpb": 7.88992759407259,
+      "max_h_bpb": 7.929328243571532,
+      "mean_h_bpb": 7.910562326029739,
+      "lowest_5pct_windows": [
+        {
+          "window_start": 7616,
+          "h_bpb": 7.88992759407259
+        },
+        {
+          "window_start": 7808,
+          "h_bpb": 7.891203612726444
+        },
+        {
+          "window_start": 7744,
+          "h_bpb": 7.891449156481301
+        },
+        {
+          "window_start": 7680,
+          "h_bpb": 7.8921935908969045
+        },
+        {
+          "window_start": 11584,
+          "h_bpb": 7.892308093838396
+        },
+        {
+          "window_start": 11904,
+          "h_bpb": 7.893402806658609
+        },
+        {
+          "window_start": 7552,
+          "h_bpb": 7.893574964742665
+        },
+        {
+          "window_start": 11712,
+          "h_bpb": 7.894016177804463
+        },
+        {
+          "window_start": 7872,
+          "h_bpb": 7.8940876534364675
+        },
+        {
+          "window_start": 11648,
+          "h_bpb": 7.894293008315721
+        }
+      ]
+    }
+  },
+  "conditional_entropy_orders": {}
+}

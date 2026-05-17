@@ -8,6 +8,7 @@ from pathlib import Path
 import brotli
 
 from tac.frontier_archive_layout import (
+    A1_DECODER_SECTION_TOTAL,
     A2K1_MAGIC,
     CPLX1_MAGIC,
     PR101_DECODER_BLOB_LEN,
@@ -49,6 +50,37 @@ def test_pr101_single_member_has_parser_proven_logical_sections(tmp_path: Path) 
     ]
     assert manifest["logical_layout"]["sections"][0]["len"] == PR101_DECODER_BLOB_LEN
     assert "do not infer mask/pose budgets" in " ".join(manifest["cautions"])
+
+
+def test_a1_prefixed_member_selects_header_grammar_over_pr101_fallback(tmp_path: Path) -> None:
+    decoder = b"d" * PR101_DECODER_BLOB_LEN
+    latent = b"l" * PR101_LATENT_BLOB_LEN
+    sidecar = b"s" * 607
+    archive = tmp_path / "a1.zip"
+    _stored_zip(
+        archive,
+        PR101_INNER_MEMBER_NAME,
+        A1_DECODER_SECTION_TOTAL.to_bytes(4, "little") + decoder + latent + sidecar,
+    )
+
+    manifest = inspect_frontier_archive_layout(archive)
+    logical = manifest["logical_layout"]
+
+    assert logical["grammar"] == "a1_prefixed_hnerv_microcodec"
+    assert logical["decoder_section_total_field"] == A1_DECODER_SECTION_TOTAL
+    assert logical["parser_ambiguous"] is False
+    assert "pr101_fixed_offset_hnerv_microcodec" in logical["parser_alternatives"]
+    assert [section["name"] for section in logical["sections"]] == [
+        "decoder_section_total_u32le",
+        "decoder_blob",
+        "latent_blob",
+        "sidecar_blob",
+    ]
+    assert logical["sections"][1]["offset"] == 4
+    assert logical["sections"][2]["offset"] == A1_DECODER_SECTION_TOTAL
+    assert "fixed-offset surgery at offset 0 is not byte-faithful" in (
+        logical["component_budget_implication"]
+    )
 
 
 def test_a2k1_single_member_has_magic_and_variable_decoder_sections(tmp_path: Path) -> None:
