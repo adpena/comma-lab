@@ -57,6 +57,12 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_harvest import (
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA,
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH,
 )
+from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_preflight import (
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_REPORT_PATH,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_SCHEMA,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_TOOL_PATH,
+)
 from tac.optimization.prediction_band import (
     BandSource,
     BaselineRef,
@@ -309,12 +315,14 @@ _TT5L_CONTEST_RAW_OUTPUT_FRAME_NBYTES = 874 * 1164 * 3
 _TT5L_LIGHTNING_PAIRED_AXIS_STATIC_SOURCE_PATHS = (
     "tools/build_l5_v2_architecture_lock_packet.py",
     "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py",
+    "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_preflight.py",
     "tools/build_tt5l_sideinfo_variant_packets.py",
     "src/tac/exact_eval_custody.py",
     "src/tac/optimization/l5_staircase_v2.py",
     "src/tac/optimization/l5_v2_measurement_schedule.py",
     "src/tac/optimization/l5_v2_sideinfo_effect_curve.py",
     "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+    "src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution_preflight.py",
     "src/tac/optimization/tt5l_sideinfo_variant_packets.py",
     "src/tac/deploy/lightning/batch_jobs.py",
     "scripts/launch_lightning_batch_job.py",
@@ -4736,6 +4744,210 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
     }
 
 
+def _tt5l_sideinfo_lightning_execution_preflight_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = (
+        repo_root / L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH
+    )
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    expected_cell_count = (
+        len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+        * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+    )
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_status_v1",
+            "artifact_path": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "tool_path": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_TOOL_PATH,
+            "source_plan": "",
+            "source_plan_sha256": "",
+            "source_plan_sha256_matches": False,
+            "cell_count": 0,
+            "expected_cell_count": expected_cell_count,
+            "ready_cell_count": 0,
+            "ready_for_operator_claiming": False,
+            "ready_for_provider_dispatch": False,
+            "covered_axes": [],
+            "covered_variants": [],
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append("tt5l_sideinfo_lightning_execution_preflight_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append("tt5l_sideinfo_lightning_execution_preflight_not_object")
+
+    if payload and payload.get("schema") != (
+        L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_SCHEMA
+    ):
+        validation_blockers.append("tt5l_sideinfo_lightning_execution_preflight_schema_mismatch")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "dispatch_attempted",
+        "ready_for_provider_dispatch",
+    ):
+        if payload and payload.get(field) is not False:
+            validation_blockers.append(
+                f"tt5l_sideinfo_lightning_execution_preflight_{field}_not_false"
+            )
+
+    cells = _mapping_items(payload.get("cells") if payload else None)
+    if payload and len(cells) != expected_cell_count:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_preflight_cell_count_mismatch"
+        )
+    cell_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    duplicate_cells: list[str] = []
+    for cell in cells:
+        variant = str(cell.get("variant") or "").strip()
+        axis = str(cell.get("axis") or "").strip()
+        key = (variant, axis)
+        if key in cell_by_key:
+            duplicate_cells.append(f"{variant}:{axis}")
+        elif variant and axis:
+            cell_by_key[key] = cell
+    if duplicate_cells:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_preflight_duplicate_cells:"
+            + ",".join(sorted(duplicate_cells))
+        )
+    missing_cells = [
+        f"{variant}:{axis}"
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        if (variant, axis) not in cell_by_key
+    ]
+    if missing_cells:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_preflight_missing_cells:"
+            + ",".join(missing_cells)
+        )
+    for (variant, axis), cell in cell_by_key.items():
+        expected_lane_id = (
+            "lane_l5_v2_tt5l_sideinfo_effect_curve_"
+            f"{variant}_{axis}"
+        )
+        if cell.get("lane_id") != expected_lane_id:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_preflight_lane_id_mismatch:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("ready_for_provider_dispatch") is not False:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_preflight_cell_provider_ready:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("ready_for_operator_claiming") is not True:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_preflight_cell_not_ready:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("active_claim_conflicts"):
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_preflight_active_claim_conflict:"
+                f"{variant}:{axis}"
+            )
+        for command_field in (
+            "claim_command",
+            "terminal_success_claim_template",
+            "terminal_failure_claim_template",
+            "harvest_probe_command_template",
+        ):
+            command = str(cell.get(command_field) or "")
+            if not command:
+                validation_blockers.append(
+                    "tt5l_sideinfo_lightning_execution_preflight_command_missing:"
+                    f"{variant}:{axis}:{command_field}"
+                )
+            elif command_field != "harvest_probe_command_template":
+                if "tools/claim_lane_dispatch.py claim" not in command:
+                    validation_blockers.append(
+                        "tt5l_sideinfo_lightning_execution_preflight_claim_command_invalid:"
+                        f"{variant}:{axis}:{command_field}"
+                    )
+                if expected_lane_id not in command:
+                    validation_blockers.append(
+                        "tt5l_sideinfo_lightning_execution_preflight_claim_lane_missing:"
+                        f"{variant}:{axis}:{command_field}"
+                    )
+            elif (
+                "build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
+                not in command
+            ):
+                validation_blockers.append(
+                    "tt5l_sideinfo_lightning_execution_preflight_harvest_command_invalid:"
+                    f"{variant}:{axis}"
+                )
+
+    source_plan = str(payload.get("source_plan") or "").strip() if payload else ""
+    source_plan_path = repo_root / source_plan if source_plan else None
+    source_plan_sha256 = (
+        str(payload.get("source_plan_sha256") or "").strip() if payload else ""
+    )
+    source_plan_actual_sha256 = (
+        _sha256_file(source_plan_path)
+        if source_plan_path is not None and source_plan_path.is_file()
+        else ""
+    )
+    source_plan_sha256_matches = bool(
+        source_plan_sha256
+        and source_plan_actual_sha256
+        and source_plan_sha256 == source_plan_actual_sha256
+    )
+    if payload and not source_plan_sha256_matches:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_preflight_source_plan_sha_mismatch"
+        )
+    blockers = [
+        *validation_blockers,
+        *[
+            str(blocker)
+            for blocker in (payload.get("blockers") if payload else []) or []
+            if str(blocker)
+        ],
+    ]
+    ready_cell_count = (
+        int(payload.get("ready_cell_count"))
+        if payload and isinstance(payload.get("ready_cell_count"), int)
+        else 0
+    )
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_status_v1",
+        "artifact_path": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not blockers,
+        "tool_path": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_TOOL_PATH,
+        "source_plan": source_plan,
+        "source_plan_sha256": source_plan_sha256,
+        "source_plan_actual_sha256": source_plan_actual_sha256,
+        "source_plan_sha256_matches": source_plan_sha256_matches,
+        "cell_count": len(cells),
+        "expected_cell_count": expected_cell_count,
+        "ready_cell_count": ready_cell_count,
+        "ready_for_operator_claiming": (
+            bool(payload)
+            and payload.get("ready_for_operator_claiming") is True
+            and not blockers
+        ),
+        "ready_for_provider_dispatch": False,
+        "covered_axes": sorted({axis for _, axis in cell_by_key}),
+        "covered_variants": sorted({variant for variant, _ in cell_by_key}),
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
 def _tt5l_materialized_modal_provider_blocker_status(
     *,
     repo_root: Path,
@@ -4855,6 +5067,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             repo_root=repo_root
         )
     )
+    lightning_execution_preflight_status = (
+        _tt5l_sideinfo_lightning_execution_preflight_status(repo_root=repo_root)
+    )
     sideinfo_effect_curve_dispatch_plan_status = (
         _tt5l_sideinfo_effect_curve_dispatch_plan_status(repo_root=repo_root)
     )
@@ -4929,6 +5144,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.extend(
             str(blocker)
             for blocker in lightning_paired_axis_plan_status["blockers"]
+        )
+    if (
+        lightning_execution_preflight_status["artifact_exists"] is True
+        and lightning_execution_preflight_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker)
+            for blocker in lightning_execution_preflight_status["blockers"]
         )
     if (
         sideinfo_effect_curve_dispatch_plan_status["artifact_exists"] is True
@@ -5301,9 +5524,20 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "harvest_cells_tool_path": (
                 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH
             ),
+            "lightning_execution_preflight_tool_path": (
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_TOOL_PATH
+            ),
+            "lightning_execution_preflight_artifact_path": (
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH
+            ),
             "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
             "command_template": (
-                "run paired CPU/CUDA TT5L side-info variants "
+                f".venv/bin/python {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_TOOL_PATH} "
+                f"--lightning-plan-json {TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH} "
+                f"--output-json {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH} "
+                f"--output-md {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_REPORT_PATH} "
+                "--repo-root . "
+                "&& run paired CPU/CUDA TT5L side-info variants "
                 "zero, random_lsb, shuffled, trained, and ablated into the "
                 "Lightning plan local_artifact_dir paths; then "
                 f".venv/bin/python {L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH} "
@@ -5323,6 +5557,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 f"--output-md {L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH}"
             ),
             "expected_artifacts": [
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_REPORT_PATH,
                 TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
                 TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
                 L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
@@ -5447,6 +5683,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "materialized_tt5l_paired_work_unit_status": materialized_work_unit_status,
         "sideinfo_effect_curve_lightning_paired_axis_plan_status": (
             lightning_paired_axis_plan_status
+        ),
+        "sideinfo_lightning_execution_preflight_status": (
+            lightning_execution_preflight_status
         ),
         "sideinfo_effect_curve_dispatch_plan_status": (
             sideinfo_effect_curve_dispatch_plan_status
@@ -7121,6 +7360,11 @@ def render_l5_v2_architecture_lock_packet_markdown(
     )
     if not isinstance(paired_axis_plan_status, Mapping):
         paired_axis_plan_status = {}
+    lightning_execution_preflight_status = tt5l.get(
+        "sideinfo_lightning_execution_preflight_status"
+    )
+    if not isinstance(lightning_execution_preflight_status, Mapping):
+        lightning_execution_preflight_status = {}
     sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
     if not isinstance(sideinfo_effect_curve_status, Mapping):
         sideinfo_effect_curve_status = {}
@@ -7269,6 +7513,46 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 (
                     "- execution_blockers: "
                     f"`{paired_axis_plan_status.get('execution_blockers', [])}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if lightning_execution_preflight_status:
+        lines.extend(
+            [
+                "",
+                "## Lightning Execution Preflight",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{lightning_execution_preflight_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{lightning_execution_preflight_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- tool_path: "
+                    f"`{lightning_execution_preflight_status.get('tool_path')}`"
+                ),
+                (
+                    "- source_plan_sha256_matches: "
+                    f"`{lightning_execution_preflight_status.get('source_plan_sha256_matches')}`"
+                ),
+                (
+                    "- cells: "
+                    f"`{lightning_execution_preflight_status.get('ready_cell_count')}`/"
+                    f"`{lightning_execution_preflight_status.get('cell_count')}`"
+                ),
+                (
+                    "- ready_for_operator_claiming: "
+                    f"`{lightning_execution_preflight_status.get('ready_for_operator_claiming')}`"
+                ),
+                "- ready_for_provider_dispatch: `false`",
+                (
+                    "- blockers: "
+                    f"`{lightning_execution_preflight_status.get('blockers', [])}`"
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
