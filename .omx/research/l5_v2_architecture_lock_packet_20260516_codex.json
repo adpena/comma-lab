@@ -13,12 +13,11 @@
   "campaign_id": "campaign_time_traveler_l5_v2_staircase_20260516",
   "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
   "next_non_pr106_l5_action": {
-    "action_id": "populate_and_evaluate_c1_z5_tt5l_probe_observations",
-    "command_template": ".venv/bin/python tools/audit_l5_v2_probe_observations.py --output-json .omx/research/l5_v2_probe_observation_intake_20260516_codex.json --output-md .omx/research/l5_v2_probe_observation_intake_20260516_codex.md --probe-gate-out .omx/research/l5_v2_probe_gate_artifact_20260516_codex.json",
-    "expected_artifacts": [
-      ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
-      ".omx/research/l5_v2_probe_observation_intake_20260516_codex.md",
-      ".omx/research/l5_v2_probe_gate_artifact_20260516_codex.json"
+    "action_id": "materialize_l5_v2_paired_probe_measurements",
+    "execution_order": [
+      "build_l5_v2_lattice_measurement_schedule",
+      "build_l5_v2_paired_measurement_dispatch_plan",
+      "fill_each_work_unit_archive_runtime_sha_and_operator_execute_flag"
     ],
     "input_template": ".omx/research/l5_v2_probe_template_20260516_codex.json",
     "measurement_schedule_command_template": ".venv/bin/python tools/build_l5_v2_lattice_measurement_schedule.py --probe-intake-json .omx/research/l5_v2_probe_observation_intake_20260516_codex.json --output-json .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json --output-md .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md",
@@ -26,13 +25,38 @@
       ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json",
       ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md"
     ],
-    "measurement_schedule_semantics": "planning-only first-match lattice; routes the next paired C1/Z5/TT5L measurements without score, rank, promotion, or dispatch authority",
     "measurement_schedule_tool_path": "tools/build_l5_v2_lattice_measurement_schedule.py",
-    "phase": "probe_disambiguator",
-    "probe_status": "observation_intake_required",
+    "paired_measurement_dispatch_plan_command_template": ".venv/bin/python tools/build_l5_v2_paired_measurement_dispatch_plan.py --schedule-json .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json --output-json .omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json --output-md .omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.md",
+    "paired_measurement_dispatch_plan_expected_artifacts": [
+      ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json",
+      ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.md"
+    ],
+    "paired_measurement_dispatch_plan_tool_path": "tools/build_l5_v2_paired_measurement_dispatch_plan.py",
+    "phase": "probe_disambiguator_paired_measurements",
+    "probe_observation_intake_artifact_path": ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
+    "probe_observation_intake_status": {
+      "architecture_lock_allowed": false,
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
+      "artifact_valid_for_measurement_planning": true,
+      "blockers": [],
+      "candidate_ids": [
+        "c1_world_model_foveation",
+        "z5_predictive_coding_world_model",
+        "time_traveler_l5_autonomy"
+      ],
+      "evaluated_observation_count": 3,
+      "intake_schema": "l5_v2_probe_observation_intake_v1",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "l5_v2_probe_observation_intake_status_v1",
+      "score_claim": false
+    },
+    "probe_status": "observation_intake_present_fail_closed",
     "promotion_eligible": false,
     "ready_for_exact_eval_dispatch": false,
-    "score_claim": false
+    "score_claim": false,
+    "score_lowering_unblocker": "paired exact C1/Z5/TT5L observations are the next material L5 v2 staircase evidence; re-running intake without new source artifacts is a retread"
   },
   "planning_only": true,
   "promotion_eligible": false,
@@ -176,6 +200,95 @@
       "subject_id": null
     },
     "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
+    "materialized_tt5l_paired_work_unit_status": {
+      "archive_bytes": 34603,
+      "archive_path": "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_tt5l_materialized_paired_work_unit_plan_20260516_codex.json",
+      "artifact_valid": false,
+      "blockers": [
+        "l5_v2_tt5l_materialized_paired_work_unit_tt5l_sideinfo_all_zero"
+      ],
+      "dispatch_attempted": false,
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip --submission-dir experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_plan_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip --submission-dir experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "runtime_content_tree_sha256_by_axis": {
+        "contest_cpu": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+        "contest_cuda": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718"
+      },
+      "runtime_tree_sha256_by_axis": {
+        "contest_cpu": "2b2b9dfdb0f3e59af3511e4502a3a4c0cbe9c1f52405b98eb4dec331db248584",
+        "contest_cuda": "2b0dcb5a148ddef7bf56c833bd46fa5830bdde88929b9fd417b4985bea678a28"
+      },
+      "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",
+      "score_claim": false,
+      "submission_dir": "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+      "tt5l_sideinfo_stats": {
+        "all_zero_pair_count": 600,
+        "archive_member": "0.bin",
+        "checked": true,
+        "dtype": "int8",
+        "error": "",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "num_pairs": 600,
+        "per_pair_bytes": 45,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000,
+        "valid": true
+      }
+    },
     "measurement_schedule_artifact_path": ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json",
     "measurement_schedule_promotion_eligible": false,
     "measurement_schedule_ready_for_exact_eval_dispatch": false,
@@ -227,12 +340,11 @@
       "tool_sha256": "eb6fcfa8979c6752bec50eae6fc9c2cba3b1872de4cf8039cf03cf06c0e84f55"
     },
     "next_non_pr106_l5_action": {
-      "action_id": "populate_and_evaluate_c1_z5_tt5l_probe_observations",
-      "command_template": ".venv/bin/python tools/audit_l5_v2_probe_observations.py --output-json .omx/research/l5_v2_probe_observation_intake_20260516_codex.json --output-md .omx/research/l5_v2_probe_observation_intake_20260516_codex.md --probe-gate-out .omx/research/l5_v2_probe_gate_artifact_20260516_codex.json",
-      "expected_artifacts": [
-        ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
-        ".omx/research/l5_v2_probe_observation_intake_20260516_codex.md",
-        ".omx/research/l5_v2_probe_gate_artifact_20260516_codex.json"
+      "action_id": "materialize_l5_v2_paired_probe_measurements",
+      "execution_order": [
+        "build_l5_v2_lattice_measurement_schedule",
+        "build_l5_v2_paired_measurement_dispatch_plan",
+        "fill_each_work_unit_archive_runtime_sha_and_operator_execute_flag"
       ],
       "input_template": ".omx/research/l5_v2_probe_template_20260516_codex.json",
       "measurement_schedule_command_template": ".venv/bin/python tools/build_l5_v2_lattice_measurement_schedule.py --probe-intake-json .omx/research/l5_v2_probe_observation_intake_20260516_codex.json --output-json .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json --output-md .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md",
@@ -240,19 +352,62 @@
         ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json",
         ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.md"
       ],
-      "measurement_schedule_semantics": "planning-only first-match lattice; routes the next paired C1/Z5/TT5L measurements without score, rank, promotion, or dispatch authority",
       "measurement_schedule_tool_path": "tools/build_l5_v2_lattice_measurement_schedule.py",
-      "phase": "probe_disambiguator",
-      "probe_status": "observation_intake_required",
+      "paired_measurement_dispatch_plan_command_template": ".venv/bin/python tools/build_l5_v2_paired_measurement_dispatch_plan.py --schedule-json .omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json --output-json .omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json --output-md .omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.md",
+      "paired_measurement_dispatch_plan_expected_artifacts": [
+        ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.json",
+        ".omx/research/l5_v2_paired_measurement_dispatch_plan_20260516_codex.md"
+      ],
+      "paired_measurement_dispatch_plan_tool_path": "tools/build_l5_v2_paired_measurement_dispatch_plan.py",
+      "phase": "probe_disambiguator_paired_measurements",
+      "probe_observation_intake_artifact_path": ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
+      "probe_observation_intake_status": {
+        "architecture_lock_allowed": false,
+        "artifact_exists": true,
+        "artifact_path": ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
+        "artifact_valid_for_measurement_planning": true,
+        "blockers": [],
+        "candidate_ids": [
+          "c1_world_model_foveation",
+          "z5_predictive_coding_world_model",
+          "time_traveler_l5_autonomy"
+        ],
+        "evaluated_observation_count": 3,
+        "intake_schema": "l5_v2_probe_observation_intake_v1",
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "l5_v2_probe_observation_intake_status_v1",
+        "score_claim": false
+      },
+      "probe_status": "observation_intake_present_fail_closed",
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,
-      "score_claim": false
+      "score_claim": false,
+      "score_lowering_unblocker": "paired exact C1/Z5/TT5L observations are the next material L5 v2 staircase evidence; re-running intake without new source artifacts is a retread"
     },
     "non_pr106_staircase_priority": true,
     "packetir_is_optional_stack_evidence": true,
     "paired_axis_plan_evidence_valid": false,
     "priority": "tt5l_first_non_pr106_l5_v2_staircase",
     "probe_gate_evidence_valid": false,
+    "probe_observation_intake_status": {
+      "architecture_lock_allowed": false,
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_probe_observation_intake_20260516_codex.json",
+      "artifact_valid_for_measurement_planning": true,
+      "blockers": [],
+      "candidate_ids": [
+        "c1_world_model_foveation",
+        "z5_predictive_coding_world_model",
+        "time_traveler_l5_autonomy"
+      ],
+      "evaluated_observation_count": 3,
+      "intake_schema": "l5_v2_probe_observation_intake_v1",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "l5_v2_probe_observation_intake_status_v1",
+      "score_claim": false
+    },
     "probe_tool_exists": true,
     "probe_tool_path": "tools/probe_l5_v2_staircase_disambiguator.py",
     "promotion_eligible": false,
@@ -265,11 +420,17 @@
     "sideinfo_effect_curve_allowed": true,
     "sideinfo_effect_curve_artifact_valid": false,
     "sideinfo_effect_curve_status": {
-      "artifact_path": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve.jsonl",
-      "artifact_present": false,
+      "artifact_path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",
+      "artifact_present": true,
       "artifact_valid": false,
       "blockers": [
-        "tt5l_sideinfo_effect_curve_artifact_missing"
+        "tt5l_sideinfo_effect_curve_predicate_not_passed",
+        "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cpu",
+        "tt5l_sideinfo_effect_curve_effect_blocked:trained_not_best_or_tied:contest_cuda",
+        "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
+        "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
+        "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
+        "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
       ],
       "promotion_eligible": false,
       "ready_for_exact_eval_dispatch": false,

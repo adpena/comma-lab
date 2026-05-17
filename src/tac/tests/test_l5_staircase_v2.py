@@ -2935,6 +2935,46 @@ def test_l5_v2_architecture_lock_packet_allows_only_after_full_custody(
     assert "score, rank, promotion" in report
 
 
+def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
+    live = l5_v2_architecture_lock_packet()
+    artifact_path = REPO_ROOT / l5_v2.L5_V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH
+    report_path = REPO_ROOT / l5_v2.L5_V2_ARCHITECTURE_LOCK_PACKET_REPORT_PATH
+    assert artifact_path.is_file()
+    assert report_path.is_file()
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    for field in (
+        "schema",
+        "subject_id",
+        "campaign_id",
+        "lane_id",
+        "architecture_lock_allowed",
+        "architecture_lock_blockers",
+        "required_checks",
+        "next_non_pr106_l5_action",
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        assert artifact[field] == live[field]
+
+    artifact_tt5l = artifact["tt5l_campaign_readiness"]
+    live_tt5l = live["tt5l_campaign_readiness"]
+    for field in (
+        "next_non_pr106_l5_action",
+        "dykstra_feasibility_artifact_valid",
+        "move_level_feasibility_artifact_valid",
+        "sideinfo_gate_evidence_valid",
+        "probe_gate_evidence_valid",
+        "paired_axis_plan_evidence_valid",
+        "sideinfo_effect_curve_artifact_valid",
+        "sideinfo_effect_curve_status",
+        "materialized_tt5l_paired_work_unit_status",
+        "blockers",
+    ):
+        assert artifact_tt5l[field] == live_tt5l[field]
+
+
 def test_l5_v2_architecture_lock_packet_cli_writes_no_lock_packet(
     tmp_path: Path,
 ) -> None:

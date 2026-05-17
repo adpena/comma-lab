@@ -22,11 +22,12 @@
     "requires_archive_sha256",
     "requires_submission_dir_or_inflate_runtime",
     "requires_operator_execute_flag",
+    "l5_v2_probe_axis_score_delta_missing:contest_cpu",
     "l5_v2_probe_axis_score_delta_missing:contest_cuda"
   ],
   "dispatch_attempted": false,
   "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
-  "plan_id": "l5_v2_paired_measurement_dispatch_244c26f82d119112",
+  "plan_id": "l5_v2_paired_measurement_dispatch_d245f341e39a5c9b",
   "planning_only": true,
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
@@ -41,7 +42,7 @@
   "score_claim_valid": false,
   "source_schedule_path": ".omx/research/l5_v2_lattice_measurement_schedule_20260516_codex.json",
   "source_schedule_schema": "l5_v2_lattice_measurement_schedule_v1",
-  "source_schedule_sha256": "4c84c366dfa82f3930c37c9666811b35152f373a040dd0c6d086a0969689d14d",
+  "source_schedule_sha256": "f278c7a9abb0b737fad134b2a00e72f1c9d071068a62051d9dc3d7966432082a",
   "tool": "tools/build_l5_v2_paired_measurement_dispatch_plan.py",
   "work_unit_count": 3,
   "work_units": [
@@ -307,9 +308,8 @@
       },
       "blockers": [
         "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
         "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_score_delta_missing:contest_cpu",
         "l5_v2_probe_axis_score_delta_missing:contest_cuda",
         "requires_byte_closed_archive_path",
         "requires_archive_sha256",
@@ -371,9 +371,8 @@
       },
       "measurement_blockers_to_close": [
         "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
         "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_score_delta_missing:contest_cpu",
         "l5_v2_probe_axis_score_delta_missing:contest_cuda"
       ],
       "measurement_id": "measure_tt5l_autonomy_paired_exact",
@@ -386,9 +385,8 @@
       "rank_or_kill_eligible": false,
       "readiness_blockers": [
         "l5_v2_probe_predicate_failed",
-        "l5_v2_probe_paired_exact_axes_missing",
         "l5_v2_probe_sideinfo_consumption_missing",
-        "l5_v2_probe_axis_evidence_missing:contest_cpu",
+        "l5_v2_probe_axis_score_delta_missing:contest_cpu",
         "l5_v2_probe_axis_score_delta_missing:contest_cuda",
         "requires_byte_closed_archive_path",
         "requires_archive_sha256",
