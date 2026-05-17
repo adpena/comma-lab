@@ -1,17 +1,19 @@
 {
-  "best_identity_minus_full_loss_proxy": -5.4001808166503906e-05,
+  "best_identity_minus_full_loss_proxy": 5.304813385009766e-06,
   "best_proxy_id": "random_control",
   "blockers": [
     "real_video_smoke_proxy_no_scorer",
     "no_contest_cpu_cuda_pair",
     "no_byte_closed_score_anchor",
-    "not_paradigm_claim_authority"
+    "not_paradigm_claim_authority",
+    "ego_proxy_semantics_not_hard_earned"
   ],
   "candidate_count": 6,
   "device": "cpu",
   "epochs": 3,
   "evidence_grade": "real_video_smoke_proxy_no_scorer",
   "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+  "paired_control_initialization": "shared_modules_seed_order_matched_v2",
   "paradigm_claim_allowed": false,
   "probe_id": "z6_real_video_ego_proxy_sweep",
   "promotion_eligible": false,
@@ -19,14 +21,14 @@
   "ready_for_exact_eval_dispatch": false,
   "ready_for_paid_dispatch": false,
   "recommended_next_actions": [
-    "do not spend on Z6 full-FiLM until a scorer-bearing or PoseNet-derived ego proxy beats identity in smoke",
-    "try a PoseNet/SegNet-derived ego proxy or redesign predictor objective before paid dispatch",
-    "if no proxy beats identity, retire Z6-v1 FiLM as measured configuration only, not the whole L5 staircase"
+    "treat the full-FiLM win as predictor-capacity liveness, not a score or paradigm claim",
+    "run a scorer-bearing or PoseNet-derived ego proxy probe before paid dispatch",
+    "if the best proxy remains zero/random, redesign the ego-conditioning objective before full_main"
   ],
   "rows": [
     {
       "full_film": {
-        "archive_bytes": 42752,
+        "archive_bytes": 43035,
         "cfg": {
           "decoder_channels": [
             12,
@@ -54,29 +56,37 @@
         },
         "ego_motion_l2": 0.0,
         "ego_motion_nonzero_fraction": 0.0,
-        "final_loss_proxy": 0.31760311126708984,
-        "final_recon": 0.31718671321868896,
-        "final_residual": 0.0004163839330431074,
+        "final_loss_proxy": 0.3175433278083801,
+        "final_recon": 0.3171868622303009,
+        "final_residual": 0.00035645387833938,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.31873568892478943,
-            "recon": 0.31828778982162476,
-            "residual": 0.0004479026538319886
+            "loss": 0.31867387890815735,
+            "recon": 0.31828728318214417,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.3181670606136322,
-            "recon": 0.3177351653575897,
-            "residual": 0.0004319039289839566
+            "loss": 0.31810620427131653,
+            "recon": 0.3177349269390106,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.31760311126708984,
-            "recon": 0.31718671321868896,
-            "residual": 0.0004163839330431074
+            "loss": 0.3175433278083801,
+            "recon": 0.3171868622303009,
+            "residual": 0.00035645387833938
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -88,8 +98,8 @@
         },
         "proxy_id": "zero"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3226,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3509,
       "identity": {
         "archive_bytes": 39526,
         "cfg": {
@@ -143,6 +153,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -153,14 +171,14 @@
         },
         "proxy_id": "zero"
       },
-      "identity_minus_full_loss_proxy": -5.510449409484863e-05,
-      "identity_minus_full_recon": 4.827976226806641e-06,
-      "identity_minus_full_residual": -5.993008380755782e-05,
+      "identity_minus_full_loss_proxy": 4.678964614868164e-06,
+      "identity_minus_full_recon": 4.678964614868164e-06,
+      "identity_minus_full_residual": -2.9103830456733704e-11,
       "proxy_id": "zero"
     },
     {
       "full_film": {
-        "archive_bytes": 42696,
+        "archive_bytes": 43106,
         "cfg": {
           "decoder_channels": [
             12,
@@ -188,29 +206,37 @@
         },
         "ego_motion_l2": 2.7144834995269775,
         "ego_motion_nonzero_fraction": 1.0,
-        "final_loss_proxy": 0.31760233640670776,
-        "final_recon": 0.3171859383583069,
-        "final_residual": 0.00041638402035459876,
+        "final_loss_proxy": 0.3175434470176697,
+        "final_recon": 0.31718698143959045,
+        "final_residual": 0.00035645384923554957,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.3187353312969208,
-            "recon": 0.3182874321937561,
-            "residual": 0.0004479026538319886
+            "loss": 0.3186742067337036,
+            "recon": 0.31828761100769043,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.31816643476486206,
-            "recon": 0.3177345395088196,
-            "residual": 0.0004319039289839566
+            "loss": 0.318106472492218,
+            "recon": 0.3177351951599121,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.31760233640670776,
-            "recon": 0.3171859383583069,
-            "residual": 0.00041638402035459876
+            "loss": 0.3175434470176697,
+            "recon": 0.31718698143959045,
+            "residual": 0.00035645384923554957
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -222,8 +248,8 @@
         },
         "proxy_id": "ramp"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3152,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3562,
       "identity": {
         "archive_bytes": 39544,
         "cfg": {
@@ -277,6 +303,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -287,14 +321,14 @@
         },
         "proxy_id": "ramp"
       },
-      "identity_minus_full_loss_proxy": -5.4329633712768555e-05,
-      "identity_minus_full_recon": 5.602836608886719e-06,
-      "identity_minus_full_residual": -5.993017111904919e-05,
+      "identity_minus_full_loss_proxy": 4.559755325317383e-06,
+      "identity_minus_full_recon": 4.559755325317383e-06,
+      "identity_minus_full_residual": 0.0,
       "proxy_id": "ramp"
     },
     {
       "full_film": {
-        "archive_bytes": 42721,
+        "archive_bytes": 43023,
         "cfg": {
           "decoder_channels": [
             12,
@@ -322,29 +356,37 @@
         },
         "ego_motion_l2": 4.4721360206604,
         "ego_motion_nonzero_fraction": 1.0,
-        "final_loss_proxy": 0.31760331988334656,
-        "final_recon": 0.3171869218349457,
-        "final_residual": 0.0004163839912507683,
+        "final_loss_proxy": 0.31754323840141296,
+        "final_recon": 0.31718677282333374,
+        "final_residual": 0.00035645384923554957,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.31873610615730286,
-            "recon": 0.3182882070541382,
-            "residual": 0.0004479026538319886
+            "loss": 0.3186742067337036,
+            "recon": 0.31828761100769043,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.318167507648468,
-            "recon": 0.31773561239242554,
-            "residual": 0.0004319039289839566
+            "loss": 0.31810641288757324,
+            "recon": 0.31773513555526733,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.31760331988334656,
-            "recon": 0.3171869218349457,
-            "residual": 0.0004163839912507683
+            "loss": 0.31754323840141296,
+            "recon": 0.31718677282333374,
+            "residual": 0.00035645384923554957
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -356,8 +398,8 @@
         },
         "proxy_id": "frame_delta"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3155,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3457,
       "identity": {
         "archive_bytes": 39566,
         "cfg": {
@@ -411,6 +453,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -421,14 +471,14 @@
         },
         "proxy_id": "frame_delta"
       },
-      "identity_minus_full_loss_proxy": -5.53131103515625e-05,
-      "identity_minus_full_recon": 4.6193599700927734e-06,
-      "identity_minus_full_residual": -5.9930142015218735e-05,
+      "identity_minus_full_loss_proxy": 4.76837158203125e-06,
+      "identity_minus_full_recon": 4.76837158203125e-06,
+      "identity_minus_full_residual": 0.0,
       "proxy_id": "frame_delta"
     },
     {
       "full_film": {
-        "archive_bytes": 42731,
+        "archive_bytes": 43053,
         "cfg": {
           "decoder_channels": [
             12,
@@ -456,29 +506,37 @@
         },
         "ego_motion_l2": 4.4721360206604,
         "ego_motion_nonzero_fraction": 1.0,
-        "final_loss_proxy": 0.3176027536392212,
-        "final_recon": 0.3171863555908203,
-        "final_residual": 0.0004163839330431074,
+        "final_loss_proxy": 0.31754305958747864,
+        "final_recon": 0.3171865940093994,
+        "final_residual": 0.00035645384923554957,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.3187357485294342,
-            "recon": 0.31828784942626953,
-            "residual": 0.0004479026538319886
+            "loss": 0.31867408752441406,
+            "recon": 0.3182874917984009,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.3181670308113098,
-            "recon": 0.31773513555526733,
-            "residual": 0.0004319039289839566
+            "loss": 0.3181062340736389,
+            "recon": 0.317734956741333,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.3176027536392212,
-            "recon": 0.3171863555908203,
-            "residual": 0.0004163839330431074
+            "loss": 0.31754305958747864,
+            "recon": 0.3171865940093994,
+            "residual": 0.00035645384923554957
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -490,8 +548,8 @@
         },
         "proxy_id": "moment_proxy"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3165,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3487,
       "identity": {
         "archive_bytes": 39566,
         "cfg": {
@@ -545,6 +603,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -555,14 +621,14 @@
         },
         "proxy_id": "moment_proxy"
       },
-      "identity_minus_full_loss_proxy": -5.474686622619629e-05,
-      "identity_minus_full_recon": 5.185604095458984e-06,
-      "identity_minus_full_residual": -5.993008380755782e-05,
+      "identity_minus_full_loss_proxy": 4.947185516357422e-06,
+      "identity_minus_full_recon": 4.947185516357422e-06,
+      "identity_minus_full_residual": 0.0,
       "proxy_id": "moment_proxy"
     },
     {
       "full_film": {
-        "archive_bytes": 42730,
+        "archive_bytes": 43077,
         "cfg": {
           "decoder_channels": [
             12,
@@ -590,29 +656,37 @@
         },
         "ego_motion_l2": 4.4721360206604,
         "ego_motion_nonzero_fraction": 1.0,
-        "final_loss_proxy": 0.3176027834415436,
-        "final_recon": 0.3171863853931427,
-        "final_residual": 0.0004163839912507683,
+        "final_loss_proxy": 0.31754353642463684,
+        "final_recon": 0.3171870708465576,
+        "final_residual": 0.00035645387833938,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.31873583793640137,
-            "recon": 0.3182879388332367,
-            "residual": 0.0004479026538319886
+            "loss": 0.3186746835708618,
+            "recon": 0.31828808784484863,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.3181670308113098,
-            "recon": 0.31773513555526733,
-            "residual": 0.0004319039289839566
+            "loss": 0.3181067705154419,
+            "recon": 0.317735493183136,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.3176027834415436,
-            "recon": 0.3171863853931427,
-            "residual": 0.0004163839912507683
+            "loss": 0.31754353642463684,
+            "recon": 0.3171870708465576,
+            "residual": 0.00035645387833938
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -624,8 +698,8 @@
         },
         "proxy_id": "quadrant_delta"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3161,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3508,
       "identity": {
         "archive_bytes": 39569,
         "cfg": {
@@ -679,6 +753,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -689,14 +771,14 @@
         },
         "proxy_id": "quadrant_delta"
       },
-      "identity_minus_full_loss_proxy": -5.4776668548583984e-05,
-      "identity_minus_full_recon": 5.155801773071289e-06,
-      "identity_minus_full_residual": -5.9930142015218735e-05,
+      "identity_minus_full_loss_proxy": 4.470348358154297e-06,
+      "identity_minus_full_recon": 4.470348358154297e-06,
+      "identity_minus_full_residual": -2.9103830456733704e-11,
       "proxy_id": "quadrant_delta"
     },
     {
       "full_film": {
-        "archive_bytes": 42740,
+        "archive_bytes": 43074,
         "cfg": {
           "decoder_channels": [
             12,
@@ -724,29 +806,37 @@
         },
         "ego_motion_l2": 3.638317346572876,
         "ego_motion_nonzero_fraction": 1.0,
-        "final_loss_proxy": 0.3176020085811615,
-        "final_recon": 0.3171856105327606,
-        "final_residual": 0.0004163839330431074,
+        "final_loss_proxy": 0.31754270195961,
+        "final_recon": 0.31718623638153076,
+        "final_residual": 0.00035645384923554957,
         "identity_predictor": false,
         "losses": [
           {
             "epoch": 0.0,
-            "loss": 0.3187350928783417,
-            "recon": 0.318287193775177,
-            "residual": 0.0004479026538319886
+            "loss": 0.31867361068725586,
+            "recon": 0.3182870149612427,
+            "residual": 0.00038659939309582114
           },
           {
             "epoch": 1.0,
-            "loss": 0.31816622614860535,
-            "recon": 0.31773433089256287,
-            "residual": 0.0004319039289839566
+            "loss": 0.3181058168411255,
+            "recon": 0.3177345395088196,
+            "residual": 0.00037126996903680265
           },
           {
             "epoch": 2.0,
-            "loss": 0.3176020085811615,
-            "recon": 0.3171856105327606,
-            "residual": 0.0004163839330431074
+            "loss": 0.31754270195961,
+            "recon": 0.31718623638153076,
+            "residual": 0.00035645384923554957
           }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
         ],
         "param_breakdown": {
           "decoder": 18042,
@@ -758,8 +848,8 @@
         },
         "proxy_id": "random_control"
       },
-      "full_film_proxy_wins": false,
-      "full_minus_identity_archive_bytes": 3171,
+      "full_film_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3505,
       "identity": {
         "archive_bytes": 39569,
         "cfg": {
@@ -813,6 +903,14 @@
             "residual": 0.00035645384923554957
           }
         ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "paired_control_shared_modules": [
+          "encoder",
+          "decoder",
+          "latent_init",
+          "residuals",
+          "ego_motion_buffer"
+        ],
         "param_breakdown": {
           "decoder": 18042,
           "encoder": 2832,
@@ -823,15 +921,16 @@
         },
         "proxy_id": "random_control"
       },
-      "identity_minus_full_loss_proxy": -5.4001808166503906e-05,
-      "identity_minus_full_recon": 5.930662155151367e-06,
-      "identity_minus_full_residual": -5.993008380755782e-05,
+      "identity_minus_full_loss_proxy": 5.304813385009766e-06,
+      "identity_minus_full_recon": 5.304813385009766e-06,
+      "identity_minus_full_residual": 0.0,
       "proxy_id": "random_control"
     }
   ],
   "schema": "z6_real_video_ego_proxy_sweep_v1",
   "score_claim": false,
   "seed": 0,
-  "verdict": "identity_dominates_all_tested_ego_proxies_real_video_smoke",
+  "semantic_ego_proxy_supported": false,
+  "verdict": "full_film_proxy_found_real_video_smoke",
   "video_path": "upstream/videos/0.mkv"
 }

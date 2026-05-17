@@ -36,6 +36,9 @@ def _stats(*, identity: bool, loss: float, archive_bytes: int = 1024) -> dict[st
         "archive_bytes": archive_bytes,
         "lambda_residual_entropy": 1.0,
         "predictor_kernel_size": 3,
+        "paired_control_initialization": (
+            "shared_modules_seed_order_matched_v2"
+        ),
         "smoke_target_mode": "real-video",
         "smoke_ego_motion_mode": "ramp",
         "ego_motion_nonzero_fraction": 1.0,
@@ -55,6 +58,9 @@ def test_z6_disambiguator_plan_is_fail_closed_and_paired() -> None:
 
     assert payload["schema"] == tool.SCHEMA
     assert payload["verdict"] == "pending_paired_smoke_stats"
+    assert payload["paired_control_initialization"] == (
+        "shared_modules_seed_order_matched_v2"
+    )
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["rank_or_kill_eligible"] is False
@@ -102,6 +108,9 @@ def test_z6_disambiguator_compares_paired_smoke_stats(tmp_path: Path) -> None:
     assert payload["deltas"]["identity_minus_full_loss_proxy"] == pytest.approx(0.05)
     assert payload["deltas"]["full_minus_identity_archive_bytes"] == 200
     assert payload["result_review"]["classification"] == "real_video_smoke_proxy_only"
+    assert payload["result_review"]["paired_control_initialization"] == (
+        "shared_modules_seed_order_matched_v2"
+    )
     assert "smoke_proxy_real_video_no_scorer" in payload["blockers"]
     assert [row["mode"] for row in payload["source_stats"]] == [
         "full_film_predictor",
@@ -109,6 +118,9 @@ def test_z6_disambiguator_compares_paired_smoke_stats(tmp_path: Path) -> None:
     ]
     assert payload["source_stats"][0]["stats_payload"]["identity_predictor"] is False
     assert payload["source_stats"][1]["stats_payload"]["identity_predictor"] is True
+    assert payload["source_stats"][0]["paired_control_initialization"] == (
+        "shared_modules_seed_order_matched_v2"
+    )
 
 
 def test_z6_disambiguator_rejects_authoritative_or_mismatched_stats(
@@ -131,6 +143,18 @@ def test_z6_disambiguator_rejects_authoritative_or_mismatched_stats(
         )
 
     identity["score_claim_valid"] = False
+    identity["paired_control_initialization"] = "stale_unmatched_seed_order"
+    identity_path.write_text(json.dumps(identity), encoding="utf-8")
+    with pytest.raises(ValueError, match="paired_control_initialization"):
+        tool.evaluate_stats_pair(
+            full_stats_path=full_path,
+            identity_stats_path=identity_path,
+            repo_root=tmp_path,
+        )
+
+    identity["paired_control_initialization"] = (
+        "shared_modules_seed_order_matched_v2"
+    )
     identity["predictor_kernel_size"] = 5
     identity_path.write_text(json.dumps(identity), encoding="utf-8")
     with pytest.raises(ValueError, match="must match predictor_kernel_size"):

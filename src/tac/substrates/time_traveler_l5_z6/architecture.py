@@ -368,15 +368,10 @@ class Z6PredictiveCodingSubstrate(nn.Module):
             output_height=cfg.output_height,
             output_width=cfg.output_width,
         )
-        self.predictor = FilmConditionedNextFramePredictor(
-            latent_dim=cfg.latent_dim,
-            hidden_dim=cfg.predictor_hidden_dim,
-            film_mlp_hidden_dim=cfg.predictor_film_mlp_hidden_dim,
-            ego_motion_dim=cfg.predictor_ego_motion_dim,
-            kernel_size=cfg.predictor_kernel_size,
-            identity_predictor=cfg.identity_predictor,
-        )
-        # z_0 — the initial state
+        # Initialize shared trainable state before the mode-specific predictor.
+        # This keeps full-FiLM vs identity-predictor controls apples-to-apples:
+        # with the same seed, shared decoder/latent/residual tensors match even
+        # though the identity predictor has no trainable parameters.
         self.latent_init = nn.Parameter(
             torch.empty(cfg.latent_dim).normal_(std=cfg.latent_init_std)
         )
@@ -391,6 +386,14 @@ class Z6PredictiveCodingSubstrate(nn.Module):
             "ego_motion_buffer",
             torch.zeros(cfg.num_pairs, cfg.predictor_ego_motion_dim),
             persistent=True,
+        )
+        self.predictor = FilmConditionedNextFramePredictor(
+            latent_dim=cfg.latent_dim,
+            hidden_dim=cfg.predictor_hidden_dim,
+            film_mlp_hidden_dim=cfg.predictor_film_mlp_hidden_dim,
+            ego_motion_dim=cfg.predictor_ego_motion_dim,
+            kernel_size=cfg.predictor_kernel_size,
+            identity_predictor=cfg.identity_predictor,
         )
 
     def reconstruct_pair(

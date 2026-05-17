@@ -77,6 +77,10 @@ def test_z6_ego_proxy_sweep_is_fail_closed_and_paired() -> None:
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["ready_for_paid_dispatch"] is False
     assert payload["paradigm_claim_allowed"] is False
+    assert payload["paired_control_initialization"] == (
+        "shared_modules_seed_order_matched_v2"
+    )
+    assert isinstance(payload["semantic_ego_proxy_supported"], bool)
     assert payload["candidate_count"] == 6
     assert len(payload["rows"]) == 6
     assert payload["best_proxy_id"] in {row["proxy_id"] for row in payload["rows"]}
@@ -86,6 +90,12 @@ def test_z6_ego_proxy_sweep_is_fail_closed_and_paired() -> None:
     for row in payload["rows"]:
         assert row["full_film"]["identity_predictor"] is False
         assert row["identity"]["identity_predictor"] is True
+        assert row["full_film"]["paired_control_initialization"] == (
+            "shared_modules_seed_order_matched_v2"
+        )
+        assert row["identity"]["paired_control_initialization"] == (
+            "shared_modules_seed_order_matched_v2"
+        )
         assert isinstance(row["identity_minus_full_loss_proxy"], float)
         assert isinstance(row["identity_minus_full_recon"], float)
         assert isinstance(row["identity_minus_full_residual"], float)

@@ -323,6 +323,44 @@ def test_num_parameters_breakdown() -> None:
     assert breakdown["total"] == expected_total
 
 
+def test_identity_and_full_predictor_controls_share_initial_state_by_seed() -> None:
+    """Same-seed paired controls must not differ in shared substrate state."""
+
+    torch.manual_seed(123)
+    full = Z6PredictiveCodingSubstrate(_tiny_config())
+    torch.manual_seed(123)
+    identity = Z6PredictiveCodingSubstrate(
+        Z6PredictiveCodingConfig(
+            latent_dim=8,
+            decoder_embed_dim=16,
+            decoder_channels=(12, 10, 8, 6),
+            decoder_num_upsample_blocks=4,
+            num_pairs=5,
+            output_height=48,
+            output_width=64,
+            predictor_hidden_dim=16,
+            predictor_film_mlp_hidden_dim=8,
+            predictor_ego_motion_dim=4,
+            identity_predictor=True,
+        )
+    )
+
+    for module_name in ("encoder", "decoder"):
+        full_state = getattr(full, module_name).state_dict()
+        identity_state = getattr(identity, module_name).state_dict()
+        assert full_state.keys() == identity_state.keys()
+        for key in full_state:
+            assert torch.equal(full_state[key], identity_state[key]), (
+                module_name,
+                key,
+            )
+    assert torch.equal(full.latent_init, identity.latent_init)
+    assert torch.equal(full.residuals, identity.residuals)
+    assert torch.equal(full.ego_motion_buffer, identity.ego_motion_buffer)
+    assert full.predictor.num_parameters() > 0
+    assert identity.predictor.num_parameters() == 0
+
+
 def test_reconstruct_pair_invalid_indices() -> None:
     cfg = _tiny_config(num_pairs=5)
     sub = Z6PredictiveCodingSubstrate(cfg)

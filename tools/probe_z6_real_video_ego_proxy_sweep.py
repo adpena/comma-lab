@@ -51,6 +51,7 @@ FALSE_AUTHORITY_FLAGS = {
     "ready_for_paid_dispatch": False,
     "paradigm_claim_allowed": False,
 }
+PAIRED_CONTROL_INITIALIZATION = "shared_modules_seed_order_matched_v2"
 
 
 def _tiny_cfg(*, identity_predictor: bool, num_pairs: int = 5) -> Z6PredictiveCodingConfig:
@@ -246,6 +247,14 @@ def _train_one(
     return {
         "proxy_id": proxy_id,
         "identity_predictor": identity_predictor,
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
+        "paired_control_shared_modules": [
+            "encoder",
+            "decoder",
+            "latent_init",
+            "residuals",
+            "ego_motion_buffer",
+        ],
         "final_loss_proxy": final["loss"],
         "final_recon": final["recon"],
         "final_residual": final["residual"],
@@ -321,32 +330,48 @@ def run_sweep_on_targets(
         if bool(best_row["full_film_proxy_wins"])
         else "identity_dominates_all_tested_ego_proxies_real_video_smoke"
     )
+    semantic_proxy_supported = bool(best_row["full_film_proxy_wins"]) and str(
+        best_row["proxy_id"]
+    ) not in {"zero", "random_control"}
+    blockers = [
+        "real_video_smoke_proxy_no_scorer",
+        "no_contest_cpu_cuda_pair",
+        "no_byte_closed_score_anchor",
+        "not_paradigm_claim_authority",
+    ]
+    if not semantic_proxy_supported:
+        blockers.append("ego_proxy_semantics_not_hard_earned")
+    if bool(best_row["full_film_proxy_wins"]):
+        recommended_next_actions = [
+            "treat the full-FiLM win as predictor-capacity liveness, not a score or paradigm claim",
+            "run a scorer-bearing or PoseNet-derived ego proxy probe before paid dispatch",
+            "if the best proxy remains zero/random, redesign the ego-conditioning objective before full_main",
+        ]
+    else:
+        recommended_next_actions = [
+            "do not spend on Z6 full-FiLM until a scorer-bearing or PoseNet-derived ego proxy beats identity in smoke",
+            "try a PoseNet/SegNet-derived ego proxy or redesign predictor objective before paid dispatch",
+            "if no proxy beats identity, retire Z6-v1 FiLM as measured configuration only, not the whole L5 staircase",
+        ]
     return {
         "schema": SCHEMA,
         "probe_id": PROBE_ID,
         "lane_id": LANE_ID,
         "evidence_grade": "real_video_smoke_proxy_no_scorer",
         "verdict": verdict,
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
         **FALSE_AUTHORITY_FLAGS,
         "epochs": max(1, min(int(epochs), 3)),
         "seed": seed,
         "candidate_count": len(rows),
         "best_proxy_id": best_row["proxy_id"],
+        "semantic_ego_proxy_supported": semantic_proxy_supported,
         "best_identity_minus_full_loss_proxy": best_row[
             "identity_minus_full_loss_proxy"
         ],
         "rows": rows,
-        "blockers": [
-            "real_video_smoke_proxy_no_scorer",
-            "no_contest_cpu_cuda_pair",
-            "no_byte_closed_score_anchor",
-            "not_paradigm_claim_authority",
-        ],
-        "recommended_next_actions": [
-            "do not spend on Z6 full-FiLM until a scorer-bearing or PoseNet-derived ego proxy beats identity in smoke",
-            "try a PoseNet/SegNet-derived ego proxy or redesign predictor objective before paid dispatch",
-            "if no proxy beats identity, retire Z6-v1 FiLM as measured configuration only, not the whole L5 staircase",
-        ],
+        "blockers": blockers,
+        "recommended_next_actions": recommended_next_actions,
     }
 
 
@@ -389,7 +414,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
         f"- lane_id: `{payload.get('lane_id')}`",
         f"- evidence_grade: `{payload.get('evidence_grade')}`",
         f"- verdict: `{payload.get('verdict')}`",
+        f"- paired_control_initialization: `{payload.get('paired_control_initialization')}`",
         f"- best_proxy_id: `{payload.get('best_proxy_id')}`",
+        f"- semantic_ego_proxy_supported: `{payload.get('semantic_ego_proxy_supported')}`",
         f"- best_identity_minus_full_loss_proxy: `{payload.get('best_identity_minus_full_loss_proxy')}`",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",
@@ -417,6 +444,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 f"- full_minus_identity_archive_bytes: `{row['full_minus_identity_archive_bytes']}`",
                 f"- full_film_loss_proxy: `{row['full_film']['final_loss_proxy']}`",
                 f"- identity_loss_proxy: `{row['identity']['final_loss_proxy']}`",
+                f"- full_paired_control_initialization: `{row['full_film']['paired_control_initialization']}`",
+                f"- identity_paired_control_initialization: `{row['identity']['paired_control_initialization']}`",
             ]
         )
     for section, key in (

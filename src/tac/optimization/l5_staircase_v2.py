@@ -219,6 +219,9 @@ Z6_REAL_VIDEO_EGO_PROXY_SWEEP_SCHEMA = "z6_real_video_ego_proxy_sweep_v1"
 Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT = (
     "identity_dominates_all_tested_ego_proxies_real_video_smoke"
 )
+Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT = (
+    "full_film_proxy_found_real_video_smoke"
+)
 Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA = "z6_post_l1_proxy_evidence_status_v1"
 TISHBY_D4_PROBE_ARTIFACT_PATH = (
     ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json"
@@ -771,6 +774,10 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
     identity_dominates = (
         verdict == Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT
     )
+    full_film_proxy_found = (
+        verdict == Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT
+    )
+    semantic_ego_proxy_supported = payload.get("semantic_ego_proxy_supported") is True
     if identity_dominates:
         blockers.append(
             "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
@@ -785,6 +792,19 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             "Tishby rather than retreading this configuration."
         )
         recommended_next_action_status = "blocked_pending_redesign_or_next_candidate"
+    elif payload and full_film_proxy_found and not semantic_ego_proxy_supported:
+        blockers.append(
+            "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned"
+        )
+        recommended_next_action_id = "z6_proxy_capacity_found_require_semantic_ego_probe"
+        recommended_next_action = (
+            "Full-FiLM beat identity under matched shared initialization, but "
+            "the best proxy did not prove ego-motion semantics. Run a "
+            "PoseNet/scorer-derived ego proxy probe before paid dispatch."
+        )
+        recommended_next_action_status = (
+            "proxy_capacity_found_requires_semantic_ego_probe"
+        )
     elif payload and not blockers:
         recommended_next_action_id = "z6_proxy_sweep_found_full_film_candidate"
         recommended_next_action = (
@@ -811,21 +831,26 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             for blocker in blockers
             if blocker
             not in {
-                "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+                "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep",
+                "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned",
             }
         ],
         "verdict": verdict,
         "best_proxy_id": payload.get("best_proxy_id"),
+        "semantic_ego_proxy_supported": payload.get("semantic_ego_proxy_supported"),
+        "paired_control_initialization": payload.get("paired_control_initialization"),
         "best_identity_minus_full_loss_proxy": payload.get(
             "best_identity_minus_full_loss_proxy"
         ),
         "identity_dominates_all_tested_real_video_proxies": identity_dominates,
+        "full_film_proxy_found": full_film_proxy_found,
         "allowed_to_spend": False,
         "allowed_to_spend_on_z6_full_film": False,
         "measured_summary": (
             f"best_proxy={payload.get('best_proxy_id')} "
             f"identity_minus_full_loss_proxy="
-            f"{payload.get('best_identity_minus_full_loss_proxy')}"
+            f"{payload.get('best_identity_minus_full_loss_proxy')} "
+            f"semantic_ego_proxy_supported={payload.get('semantic_ego_proxy_supported')}"
         ),
         "score_claim": False,
         "promotion_eligible": False,
@@ -5362,6 +5387,7 @@ __all__ = [
     "TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH",
     "Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH",
+    "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_SCHEMA",
     "Z6_REAL_VIDEO_EGO_PROXY_SWEEP_TOOL_PATH",

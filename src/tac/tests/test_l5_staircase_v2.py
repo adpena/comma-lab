@@ -1034,8 +1034,14 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert z6["post_l1_proxy_evidence"]["artifact_present"] is True
     assert z6["post_l1_proxy_evidence"]["artifact_valid"] is True
     assert z6["post_l1_proxy_evidence"]["verdict"] == (
-        l5_v2.Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT
+        l5_v2.Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT
     )
+    assert (
+        z6["post_l1_proxy_evidence"]["paired_control_initialization"]
+        == "shared_modules_seed_order_matched_v2"
+    )
+    assert z6["post_l1_proxy_evidence"]["full_film_proxy_found"] is True
+    assert z6["post_l1_proxy_evidence"]["semantic_ego_proxy_supported"] is False
     assert z6["post_l1_proxy_evidence"]["score_claim"] is False
     assert z6["post_l1_proxy_evidence"]["ready_for_paid_dispatch"] is False
     assert (
@@ -1043,15 +1049,15 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         is False
     )
     assert z6["post_l1_recommended_next_action_status"] == (
-        "blocked_pending_redesign_or_next_candidate"
+        "proxy_capacity_found_requires_semantic_ego_probe"
     )
     assert z6["post_l1_recommended_next_action_id"] == (
-        "advance_z6_only_with_posenet_or_scorer_ego_proxy_or_skip_to_z7"
+        "z6_proxy_capacity_found_require_semantic_ego_probe"
     )
     assert z6_status["post_l1_proxy_evidence"] == z6["post_l1_proxy_evidence"]
     assert z6_status["next_prerequisite_status"][
         "post_l1_recommended_next_action_status"
-    ] == "blocked_pending_redesign_or_next_candidate"
+    ] == "proxy_capacity_found_requires_semantic_ego_probe"
     assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
@@ -1067,7 +1073,7 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         in z6["blockers"]
     )
     assert (
-        "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
+        "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned"
         in z6["blockers"]
     )
 
@@ -1192,9 +1198,9 @@ def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() ->
     assert "recommended_next_action_status: `completed_or_superseded`" in report
     assert (
         "post_l1_recommended_next_action_status: "
-        "`blocked_pending_redesign_or_next_candidate`"
+        "`proxy_capacity_found_requires_semantic_ego_probe`"
     ) in report
-    assert "identity_dominates_all_tested_ego_proxies_real_video_smoke" in report
+    assert "full_film_proxy_found_real_video_smoke" in report
     assert "MEANINGFUL_INTERPRETABILITY" in report
     assert "proxy_positive_requires_ratification" in report
     assert "blocked_pending_conditioning_or_mine" in report

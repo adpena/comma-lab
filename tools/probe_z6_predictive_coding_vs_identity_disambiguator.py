@@ -53,6 +53,7 @@ FALSE_AUTHORITY_FLAGS = {
     "ready_for_paid_dispatch": False,
     "paradigm_claim_allowed": False,
 }
+PAIRED_CONTROL_INITIALIZATION = "shared_modules_seed_order_matched_v2"
 SMOKE_PROXY_BLOCKERS = [
     "smoke_proxy_synthetic_no_scorer",
     "no_contest_cpu_cuda_pair",
@@ -153,6 +154,12 @@ def _validate_z6_smoke_stats(
     _expect_bool(payload, "promotion_eligible", False)
     _expect_bool(payload, "ready_for_exact_eval_dispatch", False)
     _expect_bool(payload, "identity_predictor", expected_identity)
+    if payload.get("paired_control_initialization") != PAIRED_CONTROL_INITIALIZATION:
+        raise ValueError(
+            f"{label}: paired_control_initialization must be "
+            f"{PAIRED_CONTROL_INITIALIZATION!r}; regenerate paired smoke stats "
+            "with matched shared initialization"
+        )
     _expect_number(payload, "final_loss_proxy")
     _expect_optional_number(payload, "final_recon")
     _expect_optional_number(payload, "final_residual")
@@ -191,6 +198,9 @@ def _mode_stats_row(
         "requested_epochs": payload.get("requested_epochs"),
         "lambda_residual_entropy": payload.get("lambda_residual_entropy"),
         "predictor_kernel_size": payload.get("predictor_kernel_size"),
+        "paired_control_initialization": payload.get(
+            "paired_control_initialization"
+        ),
         "smoke_target_mode": payload.get("smoke_target_mode"),
         "smoke_ego_motion_mode": payload.get("smoke_ego_motion_mode"),
         "ego_motion_nonzero_fraction": payload.get("ego_motion_nonzero_fraction"),
@@ -261,6 +271,7 @@ def build_plan_payload(
         "substrate_tag": SUBSTRATE_TAG,
         "evidence_grade": "plan_only_no_smoke_stats",
         "verdict": "pending_paired_smoke_stats",
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
         **FALSE_AUTHORITY_FLAGS,
         "blockers": [
             "full_film_smoke_stats_missing",
@@ -366,6 +377,7 @@ def evaluate_stats_pair(
         "verdict": verdict,
         "proxy_preferred_mode": proxy_preferred,
         "paired": True,
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
         **FALSE_AUTHORITY_FLAGS,
         "blockers": _proxy_blockers(smoke_target_mode),
         "source_stats": [
@@ -394,6 +406,7 @@ def evaluate_stats_pair(
                 if smoke_target_mode == "real-video"
                 else "synthetic_smoke_proxy_only"
             ),
+            "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
             "score_formula_recomputed": False,
             "score_formula_recompute_blocker": "no seg_dist/pose_dist/contest archive score fields in smoke stats",
             "component_score_authority": False,
@@ -419,6 +432,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         f"- lane_id: `{payload.get('lane_id')}`",
         f"- evidence_grade: `{payload.get('evidence_grade')}`",
         f"- verdict: `{payload.get('verdict')}`",
+        f"- paired_control_initialization: `{payload.get('paired_control_initialization')}`",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",
         "- rank_or_kill_eligible: `false`",
@@ -469,6 +483,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
                     f"- final_recon: `{row.get('final_recon')}`",
                     f"- final_residual: `{row.get('final_residual')}`",
                     f"- archive_bytes: `{row.get('archive_bytes')}`",
+                    f"- paired_control_initialization: `{row.get('paired_control_initialization')}`",
                     f"- smoke_target_mode: `{row.get('smoke_target_mode')}`",
                     f"- smoke_ego_motion_mode: `{row.get('smoke_ego_motion_mode')}`",
                     f"- ego_motion_nonzero_fraction: `{row.get('ego_motion_nonzero_fraction')}`",

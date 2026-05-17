@@ -94,6 +94,7 @@ DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
 SUBSTRATE_TAG = "time_traveler_l5_z6"
 SUBSTRATE_LANE_ID = "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
+PAIRED_CONTROL_INITIALIZATION = "shared_modules_seed_order_matched_v2"
 
 
 # ---------------------------------------------------------------------------
@@ -640,6 +641,14 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "lambda_residual_entropy": args.lambda_residual_entropy,
         "predictor_kernel_size": args.predictor_kernel_size,
         "identity_predictor": args.identity_predictor,
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
+        "paired_control_shared_modules": [
+            "encoder",
+            "decoder",
+            "latent_init",
+            "residuals",
+            "ego_motion_buffer",
+        ],
         "smoke_target_mode": args.smoke_target_mode,
         "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
         "video_path": str(args.video_path),
