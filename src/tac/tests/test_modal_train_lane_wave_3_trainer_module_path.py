@@ -349,6 +349,57 @@ def test_collect_trainer_extra_mount_payload_skips_non_results_experiments_paths
     assert "experiments/fixtures/data.bin" not in payload
 
 
+def test_collect_trainer_extra_mount_payload_recursively_stages_nonstructural_dirs(
+    modal_train_lane_module, tmp_path
+) -> None:
+    """Trainer-declared directory paths outside structural mounts are staged
+    as deterministic per-file payload entries."""
+    fake_repo = tmp_path / "fake_repo_dir"
+    fake_repo.mkdir()
+    (fake_repo / "experiments").mkdir()
+    payload_dir = fake_repo / ".omx" / "research" / "artifacts" / "dir_payload"
+    nested = payload_dir / "nested"
+    nested.mkdir(parents=True)
+    (payload_dir / "a.bin").write_bytes(b"a-bytes")
+    (nested / "b.bin").write_bytes(b"b-bytes")
+    trainer_content = (
+        "TIER_1_EXTRA_MOUNT_PATHS = "
+        "('.omx/research/artifacts/dir_payload',)\n"
+    )
+    trainer_path = fake_repo / "experiments" / "train_substrate_test_dir.py"
+    trainer_path.write_text(trainer_content)
+
+    payload = modal_train_lane_module._collect_trainer_extra_mount_payload(
+        trainer_path, fake_repo
+    )
+
+    assert payload == {
+        ".omx/research/artifacts/dir_payload/a.bin": b"a-bytes",
+        ".omx/research/artifacts/dir_payload/nested/b.bin": b"b-bytes",
+    }
+
+
+def test_collect_trainer_extra_mount_payload_skips_structural_directories(
+    modal_train_lane_module, tmp_path
+) -> None:
+    """Directories already covered by structural Modal mounts stay out of
+    the payload to avoid duplicate staging."""
+    fake_repo = tmp_path / "fake_repo_structural_dir"
+    fake_repo.mkdir()
+    (fake_repo / "experiments").mkdir()
+    structural_dir = fake_repo / "submissions" / "a1"
+    structural_dir.mkdir(parents=True)
+    (structural_dir / "archive.zip").write_bytes(b"archive")
+    trainer_path = fake_repo / "experiments" / "train_substrate_test_struct.py"
+    trainer_path.write_text("TIER_1_EXTRA_MOUNT_PATHS = ('submissions/a1',)\n")
+
+    payload = modal_train_lane_module._collect_trainer_extra_mount_payload(
+        trainer_path, fake_repo
+    )
+
+    assert payload == {}
+
+
 def test_collect_trainer_extra_mount_payload_handles_missing_file_with_warn(
     modal_train_lane_module, tmp_path, capsys
 ) -> None:

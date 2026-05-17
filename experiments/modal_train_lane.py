@@ -348,9 +348,33 @@ def _collect_trainer_extra_mount_payload(
             # experiments/ is structurally mounted with results/** ignored;
             # experiments/<non-results> is already covered.
             continue
-        # File must exist + be a regular file (not a dir — payload staging
-        # is byte-stream only; directories require recursive walk which is
-        # not yet supported).
+        if local.is_dir():
+            staged_any = False
+            for child in sorted(local.rglob("*")):
+                if not child.is_file():
+                    continue
+                try:
+                    child_suffix = child.relative_to(local).as_posix()
+                except ValueError:
+                    continue
+                if not child_suffix:
+                    continue
+                child_rel = (
+                    str(Path(rel) / child_suffix)
+                    if Path(rel).is_absolute()
+                    else f"{rel.rstrip('/')}/{child_suffix}"
+                )
+                if child_rel in payload:
+                    continue
+                payload[child_rel] = child.read_bytes()
+                staged_any = True
+            if not staged_any:
+                print(
+                    f"[modal-train-lane][WAVE-3] WARN: trainer-declared extra mount "
+                    f"directory {rel} at {local} contains no regular files — skipping.",
+                    file=_sys.stderr,
+                )
+            continue
         if not local.is_file():
             print(
                 f"[modal-train-lane][WAVE-3] WARN: trainer-declared extra mount "

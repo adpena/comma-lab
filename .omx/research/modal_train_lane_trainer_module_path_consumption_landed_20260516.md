@@ -89,20 +89,20 @@ Each wrapper:
 
 ## Test coverage
 
-`src/tac/tests/test_modal_train_lane_wave_3_trainer_module_path.py` — 26 tests:
+`src/tac/tests/test_modal_train_lane_wave_3_trainer_module_path.py` — 28 tests:
 - Static source-level regression guards (8 tests): import declarations / helper definitions / _run_lane_inner payload kwarg / 4-wrapper threading / main derivation + spawn / non-substrate lane warning / module-load image build preserved for caching
 - Dynamic helper unit tests (8 tests): STC v2 / a1_plus_lapose / a1_plus_wavelet_residual canonical mapping / legacy lane returns None / missing trainer returns None / non-sh suffix returns None / None trainer → empty payload / structural-skip filter / non-results experiments skip / missing-file WARN + skip / broken-trainer WARN + empty
 - Live-repo regression guards (4 tests): STC v2 anchor archive in payload / a1_plus_lapose A1 base archive in payload / a1_plus_wavelet_residual A1 base archive in payload / sane_hnerv empty payload (backward compat)
 - Wave 3 + sister hardening compat (4 tests): duplicate-registry fallback wrapper preserves payload discovery; partial-import tolerance; live-repo regression bounded
 
-Test run: **26 / 26 pass**. Plus sister regression: `test_modal_train_lane_hardening.py` 10 / 10 + `test_mount_manifest.py` 32 / 32 = **66 / 66 pass**.
+Test run: **28 / 28 pass**. Plus sister regression: `test_modal_train_lane_hardening.py` 10 / 10 + `test_mount_manifest.py` 32 / 32 = **66 / 66 pass**.
 
 ## Affected substrate trainers (now structurally functional)
 
 - `experiments/train_substrate_stc_v2.py` — Lane A anchor archive (`experiments/results/lane_a_landed/archive_lane_a.zip`, 694KB) now staged structurally; previously failed dispatch rc=25 / 1.6s
 - `experiments/train_substrate_a1_plus_lapose.py` — A1 base archive + lapose motion atoms manifest staged structurally
 - `experiments/train_substrate_a1_plus_wavelet_residual.py` — A1 base archive staged structurally
-- `experiments/train_substrate_stack_of_stacks.py` — `submissions/a1` directory declared (NOTE: directories are NOT yet supported by WAVE-3 — current implementation only handles regular files; this is a known gap for stack_of_stacks specifically; sister-subagent or follow-on can extend the helper to recursively walk directories if needed)
+- `experiments/train_substrate_stack_of_stacks.py` — `submissions/a1` directory declared. Follow-up correction: `submissions/` is already in `STRUCTURAL_MINIMUM_DIRS`, so this specific directory is intentionally skipped by the payload helper and still arrives through the Modal structural mount. The real gap was non-structural directory declarations; follow-up commit adds deterministic recursive per-file staging for those directories.
 
 ## STRICT preflight gate
 
@@ -161,7 +161,7 @@ Checkpoint trace: `.omx/state/subagent_progress.jsonl` rows for `wave3_modal_tra
 
 1. **Re-dispatch STC v2 Modal smoke** with the WAVE-3 fix to verify the Lane A anchor archive resolves at `$WORKSPACE/experiments/results/lane_a_landed/archive_lane_a.zip` on the Modal worker without driver-side defensive probing
 2. **Land STRICT preflight gate** `check_modal_dispatcher_consumes_trainer_module_path` per the design above; coordinate with COMMIT-SWAP-INVESTIGATION sister-subagent to avoid preflight.py edit collision
-3. **Extend `_collect_trainer_extra_mount_payload` to support directory entries** — `submissions/a1` in `train_substrate_stack_of_stacks.py:206` is currently SKIPPED via the file-only check; recursive walk + tar-archive payload would extend coverage
+3. **Closed in follow-up**: `_collect_trainer_extra_mount_payload` now supports non-structural directory entries by recursively staging deterministic per-file payload keys. Structural directories such as `submissions/a1` remain skipped because Modal already mounts `submissions/` as part of the structural minimum.
 4. **Audit other `experiments/modal_*.py` dispatchers** for the same `trainer_module_path=None` anti-pattern; modal_train_lane.py is the canonical dispatcher but sister dispatchers (`modal_auth_eval.py`, `modal_component_sensitivity_shards.py`, etc.) may have similar gaps
 
 ---
@@ -181,7 +181,7 @@ Commits: `bce3a623d`, `b3eafb4fb`, `3318b3452`, `e09caa54a` (sister-subagent abs
 - **Dim 1 UNIQUENESS**: This dispatcher-layer fix is unique-and-complete-per-method (the STC v2 anchor archive + a1_plus_lapose + a1_plus_wavelet_residual cases were each verified empirically); no other dispatcher fix duplicates this.
 - **Dim 2 BEAUTY + ELEGANCE**: 2 helpers + 1 kwarg threaded through 4 wrappers + 1 spawn call. Total addition ~120 LOC. Reviewable in 5 minutes.
 - **Dim 3 DISTINCTNESS**: Distinct from Wave 2's driver-side defensive resolver (Wave 2 catches at driver; Wave 3 catches at dispatcher); together they extinct the bug class bidirectionally.
-- **Dim 4 RIGOR**: 6 premise verifications pre-edit + 26 dedicated tests + 79 sister regression tests pass.
+- **Dim 4 RIGOR**: 6 premise verifications pre-edit + 28 dedicated tests + 79 sister regression tests pass.
 - **Dim 5 OPTIMIZATION PER TECHNIQUE**: Canonical helpers reused (collect_extra_mount_paths + collect_tier_required_input_files); unique-where-needed (trainer derivation + payload staging filter).
 - **Dim 6 STACK-OF-STACKS-COMPOSABILITY**: Preserves Modal image caching across dispatches (image is invariant per app); the payload pattern composes with any number of trainer declarations.
 - **Dim 7 DETERMINISTIC REPRODUCIBILITY**: Payload bytes are SHA-stable; worker materialization is idempotent (write_bytes on a fresh /tmp/pact each dispatch).
