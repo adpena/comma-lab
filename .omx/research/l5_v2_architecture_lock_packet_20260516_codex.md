@@ -63,6 +63,21 @@
 - score_claim: `false`
 - promotion_eligible: `false`
 
+## Lightning Execution Bundle
+
+- artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json`
+- artifact_valid: `True`
+- tool_path: `tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py`
+- source_preflight_sha256_matches: `True`
+- source_plan_sha256_matches: `True`
+- cells: `10`/`10`
+- ready_for_dry_run_submit: `True`
+- ready_for_non_dry_run_submit: `false`
+- ready_for_provider_dispatch: `false`
+- blockers: `[]`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Sideinfo Harvest Cells
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json`

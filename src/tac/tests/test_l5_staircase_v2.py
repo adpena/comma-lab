@@ -1423,6 +1423,119 @@ def _write_tt5l_lightning_execution_preflight_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _write_tt5l_lightning_execution_bundle_artifact(repo_root: Path) -> Path:
+    source_preflight = _write_tt5l_lightning_execution_preflight_artifact(repo_root)
+    source_preflight_sha = _file_sha256(source_preflight)
+    source_plan = (
+        repo_root
+        / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+    )
+    source_plan_sha = _file_sha256(source_plan)
+    cells: list[dict[str, object]] = []
+    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            lane_id = f"lane_l5_v2_tt5l_sideinfo_effect_curve_{variant}_{axis}"
+            job_name = f"l5-v2-tt5l-sideinfo-{variant}-{axis}-test"
+            eval_device = "cpu" if axis == "contest_cpu" else "cuda"
+            cells.append(
+                {
+                    "planning_only": True,
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_provider_dispatch": False,
+                    "dispatch_attempted": False,
+                    "variant": variant,
+                    "axis": axis,
+                    "axis_label": "[contest-CPU]" if axis == "contest_cpu" else "[contest-CUDA]",
+                    "eval_device": eval_device,
+                    "lane_id": lane_id,
+                    "platform": "lightning",
+                    "job_name": job_name,
+                    "archive_path": f"experiments/results/{variant}/archive.zip",
+                    "archive_sha256": _sha(len(cells) + 10),
+                    "archive_size_bytes": 34567 + len(cells),
+                    "pair_group_id": f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}",
+                    "run_id": f"l5_v2_tt5l_sideinfo_effect_curve_{variant}",
+                    "local_artifact_dir": f"experiments/results/lightning_batch/{job_name}",
+                    "source_spec_command_sha256": _sha(len(cells) + 20),
+                    "claim_command": (
+                        ".venv/bin/python tools/claim_lane_dispatch.py claim "
+                        f"--lane-id {lane_id} --platform lightning "
+                        f"--instance-job-id {job_name}"
+                    ),
+                    "stage_source_manifest_command_template": (
+                        ".venv/bin/python scripts/lightning_repro_workspace.py "
+                        "--remote <lightning-ssh-target>"
+                    ),
+                    "dry_run_submit_command": (
+                        ".venv/bin/python scripts/launch_lightning_batch_job.py "
+                        "exact-eval --dry-run --adjudicate "
+                        f"--eval-device {eval_device} --dispatch-lane-id {lane_id}"
+                    ),
+                    "non_dry_run_submit_command_template": (
+                        ".venv/bin/python scripts/launch_lightning_batch_job.py "
+                        "exact-eval --studio <lightning-studio> "
+                        "--remote-preflight-ssh-target <lightning-ssh-target> "
+                        f"--eval-device {eval_device} --dispatch-lane-id {lane_id}"
+                    ),
+                    "terminal_success_claim_template": (
+                        ".venv/bin/python tools/claim_lane_dispatch.py claim "
+                        f"--force --lane-id {lane_id} --platform lightning "
+                        "--status completed_lightning_exact_eval_harvested"
+                    ),
+                    "terminal_failure_claim_template": (
+                        ".venv/bin/python tools/claim_lane_dispatch.py claim "
+                        f"--force --lane-id {lane_id} --platform lightning "
+                        "--status failed_lightning_exact_eval_no_score_claim"
+                    ),
+                    "harvest_probe_command_template": (
+                        ".venv/bin/python "
+                        "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
+                    ),
+                    "ready_for_dry_run_submit": True,
+                    "ready_for_non_dry_run_submit": False,
+                    "blockers": [],
+                }
+            )
+    artifact_path = (
+        repo_root
+        / l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
+                "planning_only": True,
+                "source_preflight": l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
+                "source_preflight_sha256": source_preflight_sha,
+                "source_plan": l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
+                "source_plan_sha256": source_plan_sha,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "dispatch_attempted": False,
+                "ready_for_provider_dispatch": False,
+                "ready_for_non_dry_run_submit": False,
+                "ready_for_dry_run_submit": True,
+                "cell_count": len(cells),
+                "ready_dry_run_cell_count": len(cells),
+                "cells": cells,
+                "blockers": [],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
 def _write_tt5l_dykstra_artifact(
     repo_root: Path,
     *,
@@ -4021,6 +4134,46 @@ def test_l5_v2_tt5l_readiness_surfaces_lightning_execution_preflight(
     assert "- source_plan_sha256_matches: `True`" in report
     assert "- cells: `10`/`10`" in report
     assert "- ready_for_operator_claiming: `True`" in report
+
+
+def test_l5_v2_tt5l_readiness_surfaces_lightning_execution_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(1))
+    _write_tt5l_lightning_execution_bundle_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_lightning_execution_bundle_status"
+    ]
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is True
+    assert status["tool_path"] == (
+        l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH
+    )
+    assert status["source_preflight_sha256_matches"] is True
+    assert status["source_plan_sha256_matches"] is True
+    assert status["cell_count"] == 10
+    assert status["expected_cell_count"] == 10
+    assert status["ready_dry_run_cell_count"] == 10
+    assert status["ready_for_dry_run_submit"] is True
+    assert status["ready_for_non_dry_run_submit"] is False
+    assert status["ready_for_provider_dispatch"] is False
+    assert status["covered_axes"] == ["contest_cpu", "contest_cuda"]
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+    assert "## Lightning Execution Bundle" in report
+    assert (
+        l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH
+        in report
+    )
+    assert "- source_preflight_sha256_matches: `True`" in report
+    assert "- source_plan_sha256_matches: `True`" in report
+    assert "- cells: `10`/`10`" in report
+    assert "- ready_for_dry_run_submit: `True`" in report
 
 
 def test_l5_v2_tt5l_lightning_paired_axis_plan_status_rejects_missing_run_id(
