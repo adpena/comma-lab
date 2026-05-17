@@ -1,7 +1,7 @@
 {
   "schema": "l5_v2_tt5l_lightning_route_unblock_packet_v1",
-  "generated_at_utc": "2026-05-17T10:50:00Z",
-  "current_head_commit": "49c412d5693afbf6fa25e6b7fa621c048ddce074",
+  "generated_at_utc": "2026-05-17T10:57:44Z",
+  "current_head_commit": "a203ee106496ffe2179574c965357aec259ec18b",
   "purpose": "Turn the L5 v2 TT5L Lightning alternate-provider blocker into an executable, false-authority-safe operator unblock checklist.",
   "source_artifacts": {
     "provider_readiness": {
@@ -10,17 +10,17 @@
     },
     "sideinfo_execution_bundle": {
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
-      "sha256": "aa871f49c4403272972e5a5c68b1f9bbd1a657be9923d3a40d39332efc6d60f1"
+      "sha256": "55179519703d56008ae8168c8d3b3209c0a90d00cd155a3dd84099e6df9564d1"
     },
     "sideinfo_execution_bundle_dry_run_verification": {
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
-      "sha256": "48dc9d8c0c5180ebaee5097bc1cc6582cc098f30c349049345f1a5c06d3d24ac",
+      "sha256": "2ad7c8cba1cf3bd3bb4c29a4548391f3b05d1528912e9a4dfee84b43e478c521",
       "all_dry_runs_passed": true,
       "passed_cell_count": 10
     },
     "architecture_lock_packet": {
       "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
-      "sha256": "936ddc2e88de4d1e551272298ad19c81a272a0941a15cf24c4576b242ebc9d37"
+      "sha256": "f459bcaad101a0d35572d2cfabcf68eb328c185dec7396342ecaa6b14aaa93bc"
     },
     "legacy_cuda_only_alt_provider_plan": {
       "path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
@@ -56,6 +56,13 @@
     "bundle_axes": [
       "contest_cpu",
       "contest_cuda"
+    ],
+    "bundle_t4_runtime_env_pins_embedded": true,
+    "bundle_t4_runtime_env_pins": [
+      "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+      "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
+      "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+      "UV_INDEX_STRATEGY=unsafe-best-match"
     ],
     "bundle_variants": [
       "zero",
@@ -133,6 +140,7 @@
   "no_signal_loss_notes": [
     "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
     "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
+    "The 10-cell bundle now embeds the T4/g4dn torch and uv env pins required by scripts/launch_lightning_batch_job.py before non-dry-run exact-eval submit.",
     "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required."
   ]
 }

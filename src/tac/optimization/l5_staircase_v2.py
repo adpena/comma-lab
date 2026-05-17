@@ -62,6 +62,7 @@ from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_REPORT_PATH,
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH,
+    T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV,
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH,
@@ -5058,6 +5059,10 @@ def _tt5l_sideinfo_lightning_execution_bundle_status(
             "tt5l_sideinfo_lightning_execution_bundle_missing_cells:"
             + ",".join(missing_cells)
         )
+
+    def _needs_t4_runtime_env(command: str) -> bool:
+        return bool(re.search(r"--machine\s+['\"]?(?:t4|g4dn)", command, re.IGNORECASE))
+
     for (variant, axis), cell in cell_by_key.items():
         expected_lane_id = (
             "lane_l5_v2_tt5l_sideinfo_effect_curve_"
@@ -5121,6 +5126,15 @@ def _tt5l_sideinfo_lightning_execution_bundle_status(
                 "tt5l_sideinfo_lightning_execution_bundle_non_dry_placeholders_missing:"
                 f"{variant}:{axis}"
             )
+        for label, command_text in (("dry_run", dry_run), ("non_dry", non_dry)):
+            if _needs_t4_runtime_env(command_text):
+                for runtime_env in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV:
+                    if f"--env {runtime_env}" not in command_text:
+                        validation_blockers.append(
+                            "tt5l_sideinfo_lightning_execution_bundle_"
+                            f"{label}_t4_runtime_env_missing:{variant}:{axis}:"
+                            f"{runtime_env}"
+                        )
         if "scripts/lightning_repro_workspace.py" not in str(
             cell.get("stage_source_manifest_command_template") or ""
         ):

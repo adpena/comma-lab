@@ -30,6 +30,7 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH,
+    T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV,
 )
 
 L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA = (
@@ -149,6 +150,28 @@ def _arg_value(argv: Sequence[str], flag: str) -> str:
 
 def _has_arg(argv: Sequence[str], flag: str) -> bool:
     return flag in argv
+
+
+def _machine_needs_runtime_env(machine: str) -> bool:
+    machine_l = machine.lower()
+    return "t4" in machine_l or "g4dn" in machine_l
+
+
+def _missing_runtime_envs(command: str) -> list[str]:
+    argv = shlex.split(command)
+    machine = _arg_value(argv, "--machine")
+    if not _machine_needs_runtime_env(machine):
+        return []
+    env_values = [
+        argv[idx + 1]
+        for idx, value in enumerate(argv[:-1])
+        if value == "--env"
+    ]
+    return [
+        expected
+        for expected in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV
+        if expected not in env_values
+    ]
 
 
 def _run_dry_run_command(
@@ -378,6 +401,12 @@ def _validate_static_cell(cell: Mapping[str, Any], argv: Sequence[str]) -> list[
         blockers.append("dry_run_source_manifest_arg_missing")
     if expected_role and f"--eval-device {expected_device}" not in command:
         blockers.append("dry_run_command_missing_eval_device_text")
+    for missing_env in _missing_runtime_envs(command):
+        blockers.append(f"dry_run_t4_runtime_env_missing:{missing_env}")
+    non_dry = str(cell.get("non_dry_run_submit_command_template") or "")
+    if non_dry:
+        for missing_env in _missing_runtime_envs(non_dry):
+            blockers.append(f"non_dry_run_t4_runtime_env_missing:{missing_env}")
     return blockers
 
 

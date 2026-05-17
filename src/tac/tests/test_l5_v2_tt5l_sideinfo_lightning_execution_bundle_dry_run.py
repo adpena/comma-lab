@@ -15,6 +15,7 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
+    T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV,
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA,
@@ -52,6 +53,26 @@ def _metadata(argv: list[str]) -> dict[str, str]:
     return out
 
 
+def _with_t4_runtime_env_args(argv: list[str]) -> list[str]:
+    out = list(argv)
+    for item in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV:
+        out.extend(["--env", item])
+    return out
+
+
+def _without_env_args(command: str) -> str:
+    argv = shlex.split(command)
+    out: list[str] = []
+    idx = 0
+    while idx < len(argv):
+        if argv[idx] == "--env":
+            idx += 2
+            continue
+        out.append(argv[idx])
+        idx += 1
+    return shlex.join(out)
+
+
 def _fake_bundle(repo_root: Path) -> dict[str, object]:
     cells: list[dict[str, object]] = []
     variants: list[dict[str, object]] = []
@@ -72,46 +93,67 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
                 f"l5_v2_tt5l_sideinfo_effect_curve_paired_axes/{variant}/{axis}"
             )
             command = shlex.join(
-                [
-                    ".venv/bin/python",
-                    "scripts/launch_lightning_batch_job.py",
-                    "exact-eval",
-                    "--state-path",
-                    f"{local_artifact_dir}/launcher_dry_run_state.json",
-                    "--job-name",
-                    f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
-                    "--expected-archive-sha256",
-                    archive_sha,
-                    "--expected-archive-size-bytes",
-                    "34373",
-                    "--local-artifact-dir",
-                    local_artifact_dir,
-                    "--dispatch-lane-id",
-                    lane_id,
-                    "--eval-device",
-                    device,
-                    "--source-manifest",
-                    f"experiments/results/lightning_batch/{variant}-{axis}/source_manifest.json",
-                    "--queue-metadata",
-                    f"variant={variant}",
-                    "--queue-metadata",
-                    f"axis={axis}",
-                    "--queue-metadata",
-                    f"lane_id={lane_id}",
-                    "--queue-metadata",
-                    f"pair_group_id={pair_group_id}",
-                    "--queue-metadata",
-                    f"run_id={run_id}",
-                    "--queue-metadata",
-                    f"archive_sha256={archive_sha}",
-                    "--queue-metadata",
-                    "source_plan="
-                    f"{L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH}",
-                    "--queue-metadata",
-                    f"source_spec_command_sha256={source_sha}",
-                    "--adjudicate",
-                    "--dry-run",
-                ]
+                _with_t4_runtime_env_args(
+                    [
+                        ".venv/bin/python",
+                        "scripts/launch_lightning_batch_job.py",
+                        "exact-eval",
+                        "--state-path",
+                        f"{local_artifact_dir}/launcher_dry_run_state.json",
+                        "--job-name",
+                        f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
+                        "--machine",
+                        "T4",
+                        "--expected-archive-sha256",
+                        archive_sha,
+                        "--expected-archive-size-bytes",
+                        "34373",
+                        "--local-artifact-dir",
+                        local_artifact_dir,
+                        "--dispatch-lane-id",
+                        lane_id,
+                        "--eval-device",
+                        device,
+                        "--source-manifest",
+                        f"experiments/results/lightning_batch/{variant}-{axis}/source_manifest.json",
+                        "--queue-metadata",
+                        f"variant={variant}",
+                        "--queue-metadata",
+                        f"axis={axis}",
+                        "--queue-metadata",
+                        f"lane_id={lane_id}",
+                        "--queue-metadata",
+                        f"pair_group_id={pair_group_id}",
+                        "--queue-metadata",
+                        f"run_id={run_id}",
+                        "--queue-metadata",
+                        f"archive_sha256={archive_sha}",
+                        "--queue-metadata",
+                        "source_plan="
+                        f"{L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH}",
+                        "--queue-metadata",
+                        f"source_spec_command_sha256={source_sha}",
+                        "--adjudicate",
+                        "--dry-run",
+                    ]
+                )
+            )
+            non_dry = shlex.join(
+                _with_t4_runtime_env_args(
+                    [
+                        ".venv/bin/python",
+                        "scripts/launch_lightning_batch_job.py",
+                        "exact-eval",
+                        "--job-name",
+                        f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
+                        "--machine",
+                        "T4",
+                        "--studio",
+                        "<lightning-studio>",
+                        "--remote-preflight-ssh-target",
+                        "<lightning-ssh-target>",
+                    ]
+                )
             )
             cells.append(
                 {
@@ -138,6 +180,7 @@ def _fake_bundle(repo_root: Path) -> dict[str, object]:
                     "local_artifact_dir": local_artifact_dir,
                     "dry_run_state_path": f"{local_artifact_dir}/launcher_dry_run_state.json",
                     "dry_run_submit_command": command,
+                    "non_dry_run_submit_command_template": non_dry,
                     "ready_for_dry_run_submit": True,
                     "ready_for_non_dry_run_submit": False,
                     "source_spec_command_sha256": source_sha,
@@ -294,6 +337,42 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_cuda_without_cuda_requir
     cuda_cells = [cell for cell in payload["cells"] if cell["axis"] == "contest_cuda"]
     assert cuda_cells
     assert all(cell["verified"] is False for cell in cuda_cells)
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_t4_without_runtime_env(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    first_cell = bundle["cells"][0]
+    assert isinstance(first_cell, dict)
+    first_cell["dry_run_submit_command"] = _without_env_args(
+        str(first_cell["dry_run_submit_command"])
+    )
+    first_cell["non_dry_run_submit_command_template"] = _without_env_args(
+        str(first_cell["non_dry_run_submit_command_template"])
+    )
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert any(
+        "dry_run_t4_runtime_env_missing:INFLATE_TORCH_SPEC=torch==2.5.1+cu124"
+        in blocker
+        for blocker in payload["blockers"]
+    )
+    assert any(
+        "non_dry_run_t4_runtime_env_missing:UV_INDEX_STRATEGY=unsafe-best-match"
+        in blocker
+        for blocker in payload["blockers"]
+    )
 
 
 def test_tt5l_lightning_bundle_dry_run_verifier_rejects_metadata_axis_drift(

@@ -14,6 +14,7 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
+    T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV,
     build_l5_v2_tt5l_sideinfo_lightning_execution_bundle,
     l5_v2_tt5l_sideinfo_lightning_execution_bundle_json,
     render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_markdown,
@@ -118,10 +119,14 @@ def test_tt5l_lightning_execution_bundle_builds_dry_run_commands(
     assert f"--dispatch-lane-id {zero_cpu['lane_id']}" in dry_run
     assert "--source-manifest experiments/results/lightning_batch/" in dry_run
     assert zero_cpu["source_spec_command_sha256"] in dry_run
+    for runtime_env in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV:
+        assert f"--env {runtime_env}" in dry_run
     non_dry = zero_cpu["non_dry_run_submit_command_template"]
     assert "--dry-run" not in non_dry
     assert "--studio '<lightning-studio>'" in non_dry
     assert "--remote-preflight-ssh-target '<lightning-ssh-target>'" in non_dry
+    for runtime_env in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV:
+        assert f"--env {runtime_env}" in non_dry
     assert zero_cpu["ready_for_provider_dispatch"] is False
     assert zero_cpu["ready_for_non_dry_run_submit"] is False
     assert "claim_command_must_be_run_first" in zero_cpu[

@@ -75,6 +75,12 @@ _SOURCE_DIRS = (
     "tools",
     "pyproject.toml",
 )
+T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV = (
+    "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+    "INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124",
+    "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+    "UV_INDEX_STRATEGY=unsafe-best-match",
+)
 
 
 def _sha256_file(path: Path) -> str:
@@ -207,6 +213,18 @@ def _adjudication_args(adjudication: Mapping[str, Any], archive_size_bytes: int)
     ]
 
 
+def _runtime_env_args_for_machine(machine: str) -> list[str]:
+    """Return launch-script env pins required by the selected machine class."""
+
+    machine_l = machine.lower()
+    if "t4" not in machine_l and "g4dn" not in machine_l:
+        return []
+    args: list[str] = []
+    for item in T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV:
+        args.extend(["--env", item])
+    return args
+
+
 def _launcher_base_command(
     *,
     spec: Mapping[str, Any],
@@ -249,6 +267,7 @@ def _launcher_base_command(
         machine,
         "--python-bin",
         ".venv/bin/python",
+        *_runtime_env_args_for_machine(machine),
         "--inflate-sh",
         f"{submission_dir.rstrip('/')}/inflate.sh",
         "--expected-archive-sha256",
@@ -768,6 +787,7 @@ __all__ = [
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_REPORT_PATH",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH",
+    "T4_LIGHTNING_EXACT_EVAL_RUNTIME_ENV",
     "build_l5_v2_tt5l_sideinfo_lightning_execution_bundle",
     "l5_v2_tt5l_sideinfo_lightning_execution_bundle_json",
     "render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_markdown",

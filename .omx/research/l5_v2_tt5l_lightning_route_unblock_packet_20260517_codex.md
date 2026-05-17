@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning route unblock packet
 
-**Generated:** 2026-05-17T10:50:00Z  
-**Commit:** `49c412d5693afbf6fa25e6b7fa621c048ddce074`
+**Generated:** 2026-05-17T10:57:44Z
+**Commit:** `a203ee106496ffe2179574c965357aec259ec18b`
 
 This packet turns the current TT5L Lightning blocker into an executable
 operator checklist. It is not a dispatch, score claim, or promotion artifact.
@@ -28,13 +28,19 @@ configuration:
 - 10-cell sideinfo execution bundle:
   `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json`
   - SHA-256:
-    `aa871f49c4403272972e5a5c68b1f9bbd1a657be9923d3a40d39332efc6d60f1`
+    `55179519703d56008ae8168c8d3b3209c0a90d00cd155a3dd84099e6df9564d1`
 - 10-cell dry-run verification:
   `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json`
   - SHA-256:
-    `48dc9d8c0c5180ebaee5097bc1cc6582cc098f30c349049345f1a5c06d3d24ac`
+    `2ad7c8cba1cf3bd3bb4c29a4548391f3b05d1528912e9a4dfee84b43e478c521`
   - all dry-runs passed: `true`
   - cells passed: `10/10`
+
+The refreshed bundle embeds the T4/g4dn exact-eval runtime pins required by
+`scripts/launch_lightning_batch_job.py`: `INFLATE_TORCH_SPEC=torch==2.5.1+cu124`,
+`INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124`,
+`UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124`, and
+`UV_INDEX_STRATEGY=unsafe-best-match`.
 
 The older `.omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json`
 is preserved as historical single-cell provider-blocker evidence. The 10-cell
