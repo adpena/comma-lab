@@ -32242,7 +32242,7 @@
       "id": "lane_z6_phase_2_sextet_council_20260516",
       "name": "Z6 Phase 2 sextet-pact council CONSENSUS deliberation",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
           "status": false,
@@ -32265,12 +32265,12 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "6-of-6 sextet pact CONSENSUS PROCEED_WITH_REVISIONS per .omx/research/sextet_council_z6_phase_2_consensus_20260516.md"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/sextet_council_z6_phase_2_consensus_20260516.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -32328,5 +32328,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T02:43:26Z"
+  "updated_at": "2026-05-17T02:47:40Z"
 }
