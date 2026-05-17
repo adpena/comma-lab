@@ -1,0 +1,91 @@
+{
+  "schema": "l5_v2_tt5l_sideinfo_effect_curve_provider_blocker_v1",
+  "recorded_at_utc": "2026-05-17T05:50:18Z",
+  "plan_artifact": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json",
+  "plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972",
+  "attempt_classification": "provider_app_creation_failed_before_lane_claim",
+  "provider": "modal",
+  "platform": "modal",
+  "dispatch_attempted": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "method_verdict": "indeterminate_provider_blocked",
+  "failure_message": "App creation failed: workspace billing cycle spend limit reached",
+  "failure_stage": "modal_app_creation_before_remote_wrapper_start",
+  "lane_claim_rows_created": false,
+  "output_artifacts_created": false,
+  "observed_claim_rows_query": "rg -n \"lane_l5_v2_tt5l_sideinfo_effect_curve|tt5l_sideinfo_effect_curve\" .omx/state/active_lane_dispatch_claims.md",
+  "observed_claim_rows_count": 0,
+  "observed_output_query": "find experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve -maxdepth 4 -type f",
+  "observed_output_file_count": 0,
+  "required_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+  "modal_uploaded_runtime_tree_sha256_by_axis": {
+    "contest_cpu": "025123f140784b92b0d6145a05df6e97aedace7cf3e620a10551454cfa8057a2",
+    "contest_cuda": "83f5f760000802b69abb187e8239403a0d8fd9ed21ec8d127fa0542ca91001aa"
+  },
+  "variant_attempts": [
+    {
+      "variant": "zero",
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "archive_bytes": 34373,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "lane_id_base": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero",
+      "returncode": 1,
+      "failure_message": "App creation failed: workspace billing cycle spend limit reached"
+    },
+    {
+      "variant": "random_lsb",
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "archive_bytes": 38681,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "lane_id_base": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+      "returncode": 1,
+      "failure_message": "App creation failed: workspace billing cycle spend limit reached"
+    },
+    {
+      "variant": "shuffled",
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "archive_bytes": 43284,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "lane_id_base": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+      "returncode": 1,
+      "failure_message": "App creation failed: workspace billing cycle spend limit reached"
+    },
+    {
+      "variant": "trained",
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "archive_bytes": 43323,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "lane_id_base": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained",
+      "returncode": 1,
+      "failure_message": "App creation failed: workspace billing cycle spend limit reached"
+    },
+    {
+      "variant": "ablated",
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "archive_bytes": 42419,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "lane_id_base": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated",
+      "returncode": 1,
+      "failure_message": "App creation failed: workspace billing cycle spend limit reached"
+    }
+  ],
+  "adversarial_review": {
+    "not_score_evidence": true,
+    "not_method_negative": true,
+    "not_sideinfo_usefulness_evidence": true,
+    "no_cpu_cuda_cells_harvested": true,
+    "no_remote_call_ids_observed": true,
+    "safe_reactivation_criteria": [
+      "Modal billing limit raised and the same current archive/runtime SHA set is re-fired through the paired dispatcher",
+      "A contest-compliant alternate provider plan materializes paired contest_cpu and contest_cuda exact-eval cells for all five variants",
+      "Any stale provider plan must be regenerated against the five current archive SHA-256 values before use"
+    ]
+  }
+}
