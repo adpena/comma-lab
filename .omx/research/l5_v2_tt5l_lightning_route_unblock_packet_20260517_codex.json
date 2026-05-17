@@ -1,0 +1,138 @@
+{
+  "schema": "l5_v2_tt5l_lightning_route_unblock_packet_v1",
+  "generated_at_utc": "2026-05-17T10:50:00Z",
+  "current_head_commit": "49c412d5693afbf6fa25e6b7fa621c048ddce074",
+  "purpose": "Turn the L5 v2 TT5L Lightning alternate-provider blocker into an executable, false-authority-safe operator unblock checklist.",
+  "source_artifacts": {
+    "provider_readiness": {
+      "path": ".omx/research/l5_v2_provider_readiness_refresh_20260517_codex.json",
+      "sha256": "9ae5433a2c769c1f39a9c9996c86cabe970225b5070c2ad3e620ee45a7459d65"
+    },
+    "sideinfo_execution_bundle": {
+      "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
+      "sha256": "aa871f49c4403272972e5a5c68b1f9bbd1a657be9923d3a40d39332efc6d60f1"
+    },
+    "sideinfo_execution_bundle_dry_run_verification": {
+      "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
+      "sha256": "48dc9d8c0c5180ebaee5097bc1cc6582cc098f30c349049345f1a5c06d3d24ac",
+      "all_dry_runs_passed": true,
+      "passed_cell_count": 10
+    },
+    "architecture_lock_packet": {
+      "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
+      "sha256": "936ddc2e88de4d1e551272298ad19c81a272a0941a15cf24c4576b242ebc9d37"
+    },
+    "legacy_cuda_only_alt_provider_plan": {
+      "path": ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json",
+      "role": "historical single-cell provider-blocker evidence; superseded for sideinfo effect-curve command source by the 10-cell bundle"
+    }
+  },
+  "current_route_verdict": {
+    "provider": "lightning",
+    "status": "blocked_on_operator_route_configuration",
+    "method_blocker": false,
+    "provider_blocker": true,
+    "execution_ready": false,
+    "ready_for_operator_dispatch": false,
+    "ready_for_provider_dispatch": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false
+  },
+  "remaining_blockers": [
+    "LIGHTNING_TEAMSPACE missing",
+    "LIGHTNING_SDK_USER or LIGHTNING_ORG missing",
+    "LIGHTNING_SSH_TARGET missing",
+    "Lightning machine inventory not checked",
+    "source manifest not staged to remote Lightning workspace",
+    "remote CUDA runtime not probed",
+    "active dispatch claims not created for non-dry-run cells"
+  ],
+  "verified_before_this_packet": {
+    "local_lightning_sdk_version": "2026.4.23",
+    "provider_readiness_probe_completed": true,
+    "bundle_all_10_dry_run_commands_parse": true,
+    "bundle_axes": [
+      "contest_cpu",
+      "contest_cuda"
+    ],
+    "bundle_variants": [
+      "zero",
+      "random_lsb",
+      "shuffled",
+      "trained",
+      "ablated"
+    ],
+    "dry_run_scope": "local parser and queue-spec custody only; no provider job, no score"
+  },
+  "operator_supplied_fields_required": {
+    "LIGHTNING_TEAMSPACE": "<lightning-teamspace>",
+    "LIGHTNING_SDK_USER_or_LIGHTNING_ORG": "<lightning-user-or-org>",
+    "LIGHTNING_SSH_TARGET": "<lightning-ssh-target>",
+    "LIGHTNING_STUDIO": "<lightning-studio>",
+    "identity_mode": "choose exactly one of --user <lightning-user> or --org <lightning-org>"
+  },
+  "pre_dispatch_command_order": [
+    {
+      "step": 1,
+      "name": "configure_lightning_route",
+      "command_template": "export LIGHTNING_TEAMSPACE='<lightning-teamspace>'; export LIGHTNING_SSH_TARGET='<lightning-ssh-target>'; export LIGHTNING_SDK_USER='<lightning-user>'  # or export LIGHTNING_ORG='<lightning-org>'"
+    },
+    {
+      "step": 2,
+      "name": "required_doctor",
+      "command_template": ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --json-out .omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json --run-id l5_v2_tt5l_lightning_required_doctor_20260517 --strict --ssh-target \"$LIGHTNING_SSH_TARGET\" --require-ssh --remote-supply-chain --require-remote-supply-chain --repo-dir /teamspace/studios/this_studio/pact --python-bin .venv/bin/python --teamspace \"$LIGHTNING_TEAMSPACE\" <--user-or---org> '<lightning-user-or-org>' --machine-inventory --require-machine-inventory --machine T4 --gpu-only"
+    },
+    {
+      "step": 3,
+      "name": "restage_source_manifest_per_cell",
+      "command_source": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json:cells[*].stage_source_manifest_command_template",
+      "required_replacements": {
+        "<lightning-ssh-target>": "$LIGHTNING_SSH_TARGET"
+      }
+    },
+    {
+      "step": 4,
+      "name": "claim_each_lane_before_non_dry_run",
+      "command_source": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json:cells[*].claim_command"
+    },
+    {
+      "step": 5,
+      "name": "submit_non_dry_run_after_placeholders_removed",
+      "command_source": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json:cells[*].non_dry_run_submit_command_template",
+      "required_replacements": {
+        "<lightning-studio>": "$LIGHTNING_STUDIO",
+        "<lightning-teamspace>": "$LIGHTNING_TEAMSPACE",
+        "<--user-or---org>": "--user or --org",
+        "<lightning-user-or-org>": "$LIGHTNING_SDK_USER or $LIGHTNING_ORG",
+        "<lightning-ssh-target>": "$LIGHTNING_SSH_TARGET"
+      }
+    },
+    {
+      "step": 6,
+      "name": "harvest_and_close_claims",
+      "command_source": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json:cells[*].harvest_probe_command_template plus terminal_success_claim_template or terminal_failure_claim_template"
+    },
+    {
+      "step": 7,
+      "name": "refresh_effect_curve_and_architecture_packet",
+      "command_template": ".venv/bin/python tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py --lightning-plan-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json --output-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json --repo-root . && .venv/bin/python tools/build_l5_v2_sideinfo_effect_curve.py --cell-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json --output-json .omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json --repo-root . && .venv/bin/python tools/build_l5_v2_architecture_lock_packet.py --repo-root ."
+    }
+  ],
+  "authority": {
+    "planning_only": true,
+    "score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_provider_dispatch": false,
+    "dispatch_attempted": false,
+    "provider_spend_attempted": false
+  },
+  "no_signal_loss_notes": [
+    "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
+    "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
+    "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required."
+  ]
+}
