@@ -745,12 +745,200 @@ def build_field_equation_plan(
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# GAP-3 closure: per-pair Lagrangian dual variable consumption
+# (MEDIUM gap closure wave 2026-05-17 — `lane_medium_gap_closure_3_optimization_
+# modules_per_pair_consumption_20260517`).
+#
+# Per the comprehensive wiring + integration pass identifying that this planner
+# is AGGREGATE-ONLY at the constraint-multiplier surface: the just-landed
+# OptimalPerPairTreatmentPlan (sister `a2ab518a` Lagrangian-dual planner)
+# exposes the dual variables that already SOLVE the per-pair budget under
+# archive/compute/inflate KKT constraints. Binding those into the field-
+# equation planner's lambda_* knobs eliminates a manual re-derivation step.
+#
+# The contract: when an OptimalPlan exists for the archive, lift the planner's
+# dual variables (lambda_archive, lambda_compute, lambda_inflate) onto the
+# planner's `lambda_*_violation` constraint multipliers and the per-pair nu
+# values onto a typed per-pair constraint envelope. When no plan exists, the
+# planner uses the existing default constraints (legacy behavior preserved).
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline" + "Meta-Lagrangian/Pareto
+# solver" non-negotiable: the bound dual variables are PREDICTIONS, never
+# score claims. Downstream consumers must adjudicate any field-equation
+# verdict against contest CUDA + CPU evidence before promotion.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+PER_PAIR_LAGRANGIAN_DUAL_SCHEMA = "tac_field_equation_planner_per_pair_lagrangian_dual_v1"
+
+
+def consume_per_pair_lagrangian_duals(
+    *,
+    archive_sha256: str,
+    optimal_plan: Any | None = None,
+    auto_load: bool = True,
+) -> dict[str, Any]:
+    """Bind per-pair Lagrangian dual variables to the field-equation planner.
+
+    Per Catalog #125 hook #2 (Pareto constraint hook): plugs the Lagrangian-
+    dual planner's λ multipliers + per-pair ν envelope into the field-equation
+    planner's constraint multiplier surface. The result is a typed dict that
+    the planner's downstream consumers (autopilot ranking, archive composer)
+    can ingest by schema version.
+
+    Cascade:
+      1. If ``optimal_plan`` is supplied → consume its lambda_* + nu_per_pair
+         directly into the typed envelope.
+      2. Else if ``auto_load=True`` → load the most-recent OptimalPlan sidecar
+         for the archive via
+         `tac.master_gradient_consumers.load_optimal_plan_for_archive`.
+      3. Else return a fallback envelope with default constraints (no per-pair
+         dual binding; legacy planner behavior preserved).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the returned envelope
+    carries ``score_claim=False`` and ``evidence_grade='[predicted; field-
+    equation planner per-pair Lagrangian dual v1]'``.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to look up the
+        canonical optimal-plan sidecar.
+    optimal_plan
+        Optional `OptimalPerPairTreatmentPlan` dataclass OR sidecar dict.
+        When None and ``auto_load=True``, loaded via the canonical helper.
+    auto_load
+        When True (default), missing optimal_plan is auto-loaded from canonical
+        sidecar.
+
+    Returns
+    -------
+    Typed envelope dict with the bound dual variables + constraint surface +
+    cascade evidence. Schema = ``PER_PAIR_LAGRANGIAN_DUAL_SCHEMA``.
+
+    Raises
+    ------
+    FieldEquationPlannerError on invalid archive sha format.
+    """
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise FieldEquationPlannerError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+
+    # ── Cascade: auto-load if not supplied ─────────────────────────────────
+    if optimal_plan is None and auto_load:
+        try:
+            from tac.master_gradient_consumers import load_optimal_plan_for_archive
+            optimal_plan = load_optimal_plan_for_archive(archive_sha256)
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            optimal_plan = None
+
+    if optimal_plan is None:
+        # Fallback envelope: no per-pair dual binding; planner uses defaults
+        return {
+            "schema": PER_PAIR_LAGRANGIAN_DUAL_SCHEMA,
+            "cascade_path_used": "default_constraints_fallback",
+            "archive_sha256": archive_sha256,
+            "lambda_archive": None,
+            "lambda_compute": None,
+            "lambda_inflate": None,
+            "nu_per_pair": (),
+            "n_pairs": 0,
+            "kkt_residual": None,
+            "feasibility_certificate": None,
+            "is_pareto_feasible": None,
+            "predicted_score_delta": None,
+            "bound_constraints": dict(DEFAULT_CONSTRAINTS),
+            "optimal_plan_consumed": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "evidence_grade": "[predicted; field-equation planner per-pair Lagrangian dual v1]",
+            "rationale": (
+                "[predicted; field-equation planner per-pair Lagrangian dual v1] "
+                "No OptimalPerPairTreatmentPlan available; falling back to "
+                "default constraints (legacy planner behavior)."
+            ),
+        }
+
+    # ── Extract dual variables from dataclass OR dict surface ──────────────
+    if hasattr(optimal_plan, "lambda_archive"):
+        lambda_archive = float(optimal_plan.lambda_archive)
+        lambda_compute = float(optimal_plan.lambda_compute)
+        lambda_inflate = float(optimal_plan.lambda_inflate)
+        nu_per_pair = tuple(float(x) for x in optimal_plan.nu_per_pair)
+        kkt_residual = float(optimal_plan.kkt_residual)
+        feasibility_certificate = dict(optimal_plan.feasibility_certificate)
+        is_pareto_feasible = bool(optimal_plan.is_pareto_feasible)
+        predicted_score_delta = float(optimal_plan.predicted_score_delta)
+    elif isinstance(optimal_plan, Mapping):
+        lambda_archive = float(optimal_plan.get("lambda_archive", 0.0))
+        lambda_compute = float(optimal_plan.get("lambda_compute", 0.0))
+        lambda_inflate = float(optimal_plan.get("lambda_inflate", 0.0))
+        nu_per_pair_raw = optimal_plan.get("nu_per_pair", ())
+        nu_per_pair = tuple(float(x) for x in nu_per_pair_raw)
+        kkt_residual = float(optimal_plan.get("kkt_residual", 0.0))
+        feasibility_certificate = dict(optimal_plan.get("feasibility_certificate", {}))
+        is_pareto_feasible = bool(optimal_plan.get("is_pareto_feasible", False))
+        predicted_score_delta = float(optimal_plan.get("predicted_score_delta", 0.0))
+    else:
+        raise FieldEquationPlannerError(
+            f"optimal_plan must be OptimalPerPairTreatmentPlan or Mapping; got {type(optimal_plan).__name__}"
+        )
+
+    # ── Bind dual variables onto the field-equation planner's lambda_* knobs ──
+    bound_constraints = dict(DEFAULT_CONSTRAINTS)
+    bound_constraints["lambda_byte_violation"] = max(lambda_archive, 0.0)
+    # Per CLAUDE.md "Meta-Lagrangian/Pareto solver": the planner's lambda_seg
+    # and lambda_pose multipliers are NOT touched here — they encode the
+    # per-axis scorer-distortion weights which are operating-point-specific.
+    # Lambda_byte / lambda_proxy / lambda_kkt_readiness ARE bound from the
+    # canonical archive / compute / inflate duals.
+    bound_constraints["lambda_proxy_violation"] = max(lambda_compute * 50.0, 0.0)
+    bound_constraints["lambda_kkt_readiness_violation"] = max(lambda_inflate * 10.0, 0.0)
+
+    return {
+        "schema": PER_PAIR_LAGRANGIAN_DUAL_SCHEMA,
+        "cascade_path_used": "optimal_plan_binding",
+        "archive_sha256": archive_sha256,
+        "lambda_archive": lambda_archive,
+        "lambda_compute": lambda_compute,
+        "lambda_inflate": lambda_inflate,
+        "nu_per_pair": nu_per_pair,
+        "n_pairs": len(nu_per_pair),
+        "kkt_residual": kkt_residual,
+        "feasibility_certificate": feasibility_certificate,
+        "is_pareto_feasible": is_pareto_feasible,
+        "predicted_score_delta": predicted_score_delta,
+        "bound_constraints": bound_constraints,
+        "optimal_plan_consumed": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "evidence_grade": "[predicted; field-equation planner per-pair Lagrangian dual v1]",
+        "rationale": (
+            f"[predicted; field-equation planner per-pair Lagrangian dual v1] "
+            f"OptimalPerPairTreatmentPlan bound: lambda_archive={lambda_archive:.4f}, "
+            f"lambda_compute={lambda_compute:.4f}, lambda_inflate={lambda_inflate:.4f}; "
+            f"nu_per_pair n={len(nu_per_pair)}; kkt_residual={kkt_residual:.6f}; "
+            f"is_pareto_feasible={is_pareto_feasible}."
+        ),
+    }
+
+
 __all__ = [
     "DEFAULT_CONSTRAINTS",
     "SCHEMA_VERSION",
     "TOOL",
+    "PER_PAIR_LAGRANGIAN_DUAL_SCHEMA",
     "FieldEquationPlannerError",
     "build_field_equation_plan",
+    "consume_per_pair_lagrangian_duals",
     "field_row",
     "field_acquisition_ranking",
     "frechet_derivatives",

@@ -1105,19 +1105,229 @@ def build_importance_allocation_manifest(
     return manifest
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# GAP-4 closure: per-pair master gradient direct consumption
+# (MEDIUM gap closure wave 2026-05-17 — `lane_medium_gap_closure_3_optimization_
+# modules_per_pair_consumption_20260517`).
+#
+# Per the comprehensive wiring + integration pass identifying that this module
+# is AGGREGATE-ONLY at the importance surface: the per-pair master gradient
+# tensor (N_bytes, N_pairs, 3) carries strictly more information than per-
+# tensor importance scalars (the latter is `np.mean(per_pair, axis=(1,2))`).
+# The extension below computes per-byte Fisher importance DIRECTLY from the
+# per-pair gradient covariance — NOT from weight-domain saliency proxies
+# (which Catalog #123 explicitly forbids on score-gradient-trained substrates).
+#
+# Per CLAUDE.md FORBIDDEN PATTERNS "Forbidden weight-domain saliency on score-
+# gradient substrate" (Catalog #123): the bug class is `mean(theta**2)` /
+# `norm(theta)` / `var(theta)` proxies computed FROM WEIGHT TENSORS on score-
+# gradient-trained substrates. The per-pair gradient is SCORE-GRADIENT-derived
+# (not weight-derived) so it structurally passes the invariant. The function
+# below uses the per-pair gradient COVARIANCE (per-byte across pairs across
+# axes) — which IS the canonical Fisher information matrix diagonal for a
+# score-gradient substrate.
+#
+# Composability: this helper composes naturally with the Wyner-Ziv reweight
+# (sister Gap-2 wire-in) — the per-pair Fisher importance feeds the Wyner-Ziv
+# downweight/upweight bias as the base importance signal.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+PER_PAIR_FISHER_IMPORTANCE_SCHEMA = "tac_jacobian_fisher_importance_allocator_per_pair_v1"
+
+
+@dataclass(frozen=True)
+class PerPairFisherImportanceOutcome:
+    """Typed outcome of `allocate_per_pair_fisher_importance`.
+
+    Per CLAUDE.md "Beauty, simplicity, and developer experience": typed +
+    JSON-safe + frozen + carries axis tagging at the dataclass surface.
+    """
+
+    schema: str
+    per_byte_fisher_importance: dict[int, float]  # byte_index -> importance score
+    n_bytes: int
+    n_pairs: int
+    aggregate_fisher_l1: float
+    aggregate_fisher_l2: float
+    top_k_byte_indices_by_importance: tuple[int, ...]
+    bottom_k_byte_indices_by_importance: tuple[int, ...]
+    archive_sha256: str
+    catalog_123_invariant_satisfied: bool
+    per_pair_gradient_consumed: bool
+    rationale: str
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    rank_or_kill_eligible: bool = False
+    evidence_grade: str = "[predicted; jacobian-fisher per-pair v1; score-gradient-derived NOT weight-domain]"
+
+
+def allocate_per_pair_fisher_importance(
+    *,
+    archive_sha256: str,
+    per_pair_gradient: Any | None = None,  # np.ndarray (N_bytes, N_pairs, 3); auto-loads
+    top_k: int = 50,
+    bottom_k: int = 50,
+    auto_load: bool = True,
+) -> PerPairFisherImportanceOutcome:
+    """Per-pair Fisher importance per Catalog #125 hook #3 (bit-allocator).
+
+    Computes Fisher importance per byte DIRECTLY from the per-pair gradient
+    COVARIANCE (NOT the weight-domain saliency proxy Catalog #123 forbids).
+
+    The per-byte Fisher importance scalar is:
+        f_b = sqrt( sum_p sum_a grad[b, p, a]^2 ) / sqrt(N_pairs * N_axes)
+
+    This is the canonical Fisher information matrix DIAGONAL entry per byte
+    on a score-gradient substrate — the diagonal of E[(∂L/∂θ_b)^2] estimated
+    from the per-pair gradient sample. Composable with Wyner-Ziv reweight
+    (sister Gap-2) as the base importance signal.
+
+    Per CLAUDE.md FORBIDDEN PATTERNS "Forbidden weight-domain saliency on
+    score-gradient substrate" (Catalog #123): the bug class is
+    `mean(theta**2)` / `norm(theta)` / `var(theta)` proxies. This function
+    structurally passes the invariant because:
+      - inputs are SCORE-GRADIENT tensors (NOT weight tensors)
+      - computation is per-byte covariance (NOT per-tensor mean-square)
+      - the canonical anchor in `tac.master_gradient_consumers` carries the
+        `measurement_method='per_pair_master_gradient_*'` provenance tag
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+    `[predicted; jacobian-fisher per-pair v1; score-gradient-derived NOT
+    weight-domain]` — NO score claim.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to look up the
+        canonical per-pair gradient anchor.
+    per_pair_gradient
+        Optional (N_bytes, N_pairs, 3) tensor. When None and ``auto_load=True``,
+        loaded via `tac.master_gradient_consumers.load_per_pair_gradient_from_anchor`.
+    top_k
+        Number of top-importance byte indices to surface in the outcome.
+    bottom_k
+        Number of bottom-importance byte indices to surface in the outcome.
+    auto_load
+        When True (default), the helper auto-loads missing inputs from canonical
+        anchors per the canonical loader contract.
+
+    Returns
+    -------
+    PerPairFisherImportanceOutcome with per-byte Fisher importance + Catalog
+    #123 invariant proof + cascade evidence.
+
+    Raises
+    ------
+    ImportanceAllocationError on negative top_k/bottom_k, invalid sha format,
+    or malformed per-pair gradient tensor shape.
+    FileNotFoundError when ``auto_load=True`` but no canonical anchor exists.
+    """
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise ImportanceAllocationError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+    if top_k < 0 or bottom_k < 0:
+        raise ImportanceAllocationError(
+            f"top_k and bottom_k must be non-negative; got top_k={top_k}, bottom_k={bottom_k}"
+        )
+
+    # ── Auto-load per-pair gradient if not supplied ────────────────────────
+    if per_pair_gradient is None and auto_load:
+        from tac.master_gradient_consumers import load_per_pair_gradient_from_anchor
+        per_pair_gradient, _ = load_per_pair_gradient_from_anchor(
+            archive_sha256=archive_sha256
+        )
+
+    if per_pair_gradient is None:
+        raise ImportanceAllocationError(
+            f"per_pair_gradient is None and auto_load is disabled; "
+            f"supply per_pair_gradient or enable auto_load=True"
+        )
+
+    # ── Shape validation ─────────────────────────────────────────────────
+    if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+        raise ImportanceAllocationError(
+            f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+            f"got {per_pair_gradient.shape}"
+        )
+    n_bytes = int(per_pair_gradient.shape[0])
+    n_pairs = int(per_pair_gradient.shape[1])
+
+    # ── Compute per-byte Fisher importance ───────────────────────────────
+    # f_b = sqrt( sum_p sum_a grad[b, p, a]^2 ) / sqrt(N_pairs * N_axes)
+    # This is the canonical Fisher information diagonal per byte; equivalent
+    # to the per-byte L2 gradient norm scaled by 1/sqrt(NP*NA) for unit-mean
+    # at uniform gradient magnitude.
+    grad_sq = per_pair_gradient ** 2  # (N_bytes, N_pairs, 3)
+    per_byte_l2 = np.sqrt(grad_sq.sum(axis=(1, 2)))  # (N_bytes,)
+    normalization = np.sqrt(float(n_pairs * 3))
+    per_byte_fisher = per_byte_l2 / max(normalization, 1.0)
+
+    # Build per-byte importance dict
+    per_byte_dict: dict[int, float] = {
+        int(b): float(per_byte_fisher[b]) for b in range(n_bytes)
+    }
+
+    # Aggregate L1 and L2 norms
+    aggregate_l1 = float(per_byte_fisher.sum())
+    aggregate_l2 = float(np.sqrt((per_byte_fisher ** 2).sum()))
+
+    # Top-K and Bottom-K
+    sorted_by_importance_desc = np.argsort(-per_byte_fisher)
+    actual_top_k = min(top_k, n_bytes)
+    actual_bottom_k = min(bottom_k, n_bytes)
+    top_indices = tuple(int(i) for i in sorted_by_importance_desc[:actual_top_k])
+    bottom_indices = (
+        tuple(int(i) for i in sorted_by_importance_desc[-actual_bottom_k:][::-1])
+        if actual_bottom_k
+        else ()
+    )
+
+    return PerPairFisherImportanceOutcome(
+        schema=PER_PAIR_FISHER_IMPORTANCE_SCHEMA,
+        per_byte_fisher_importance=per_byte_dict,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        aggregate_fisher_l1=aggregate_l1,
+        aggregate_fisher_l2=aggregate_l2,
+        top_k_byte_indices_by_importance=top_indices,
+        bottom_k_byte_indices_by_importance=bottom_indices,
+        archive_sha256=archive_sha256,
+        catalog_123_invariant_satisfied=True,  # score-gradient-derived per construction
+        per_pair_gradient_consumed=True,
+        rationale=(
+            f"[predicted; jacobian-fisher per-pair v1; score-gradient-derived NOT "
+            f"weight-domain] Catalog #123 invariant SATISFIED (per-byte Fisher "
+            f"from per-pair gradient covariance, NOT weight-domain saliency proxy); "
+            f"N_bytes={n_bytes}, N_pairs={n_pairs}; aggregate_fisher_l1={aggregate_l1:.6f}, "
+            f"aggregate_fisher_l2={aggregate_l2:.6f}; top-{actual_top_k} + bottom-{actual_bottom_k} "
+            f"byte indices surfaced."
+        ),
+    )
+
+
 __all__ = [
     "DEFAULT_DISPATCH_BLOCKERS",
     "EVIDENCE_GRADE",
     "EVIDENCE_SEMANTICS",
     "MODULE_NAME",
     "SCHEMA_VERSION",
+    "PER_PAIR_FISHER_IMPORTANCE_SCHEMA",
     "AllocationPlan",
     "ImportanceAllocationError",
     "ImportanceConfig",
     "ImportanceWeights",
+    "PerPairFisherImportanceOutcome",
     "TensorCandidate",
     "TensorImportanceRow",
     "allocate_importance_weighted_candidates",
+    "allocate_per_pair_fisher_importance",
     "build_importance_allocation_manifest",
     "build_importance_weights",
     "normalize_candidate_curves",

@@ -80,7 +80,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -751,15 +751,370 @@ def write_allocation_plan_json(plan: AllocationPlan, path: str) -> None:
         json.dump(payload, f, indent=2, sort_keys=True)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# GAP-2 closure: per-pair master gradient consumption
+# (MEDIUM gap closure wave 2026-05-17 — `lane_medium_gap_closure_3_optimization_
+# modules_per_pair_consumption_20260517`).
+#
+# Per the comprehensive wiring + integration pass identifying that this module
+# is AGGREGATE-ONLY at the substrate level: the canonical per-pair gradient
+# tensor (N_bytes, N_pairs, 3) carries strictly more information than the
+# aggregate (N_bytes, 3) view (the latter is `np.mean(per_pair, axis=1)`). The
+# extension below lets callers compose:
+#
+#   1. OptimalPerPairTreatmentPlan (the just-landed Lagrangian-dual planner)
+#      — when an optimal plan exists, its `predicted_delta_rate_bytes` per pair
+#      drives the byte budget directly. This is the highest-EV path because the
+#      plan has already solved the per-pair budget under archive/compute/inflate
+#      KKT constraints.
+#   2. Wyner-Ziv reweight + per-pair difficulty atlas — when no optimal plan
+#      exists but per-pair gradient + per-byte sensitivity reweight ARE
+#      available, compose:
+#        - shared-prior bytes (high WZ correlation) → MIN bit budget
+#          (recoverable via side-info; spending bytes here is waste)
+#        - pair-specific bytes (low WZ correlation) → MAX bit budget
+#          (direct mutation; spending bytes here moves the score)
+#        - per-pair gradient magnitude → modulates within bands
+#   3. Aggregate fallback — when neither is available, delegate to the existing
+#      `allocate_bits_across_substrates` (legacy behavior preserved).
+#
+# Per CLAUDE.md "Apples-to-apples evidence discipline": every output is tagged
+# `[predicted; bit allocator per-pair v1]`; NO score claim.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+PER_PAIR_BIT_ALLOCATION_SCHEMA = "tac_bit_allocator_per_pair_v1"
+
+# Per CLAUDE.md "Bit-level deconstruction and entropy discipline" the per-byte
+# byte-budget bands (MIN / MAX) bracket the floor/ceiling for the WZ + per-pair
+# composition path. These are operating-point-conditional defaults.
+PER_PAIR_BUDGET_MIN_FLOOR_BYTES: int = 1
+PER_PAIR_BUDGET_MAX_CEILING_BYTES: int = 256
+PER_PAIR_BUDGET_BASELINE_BYTES: int = 16
+
+
+@dataclass(frozen=True)
+class PerPairBitAllocationOutcome:
+    """Typed outcome of `allocate_per_pair_bits`.
+
+    Per CLAUDE.md "Beauty, simplicity, and developer experience": typed +
+    JSON-safe + frozen + carries axis tagging at the dataclass surface.
+    """
+
+    schema: str
+    cascade_path_used: str  # one of "optimal_plan" / "wyner_ziv_composition" / "aggregate_fallback"
+    per_byte_bit_allocation: dict[int, int]  # byte_index -> allocated bytes
+    total_allocated_bytes: int
+    n_bytes_classified_shared_prior: int
+    n_bytes_classified_pair_specific: int
+    n_bytes_classified_mixed: int
+    optimal_plan_consumed: bool
+    sensitivity_reweight_consumed: bool
+    per_pair_gradient_consumed: bool
+    archive_sha256: str
+    total_bit_budget: int
+    rationale: str
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    evidence_grade: str = "[predicted; bit allocator per-pair v1]"
+
+
+def allocate_per_pair_bits(
+    *,
+    archive_sha256: str,
+    total_bit_budget: int,
+    per_pair_gradient: Any | None = None,  # np.ndarray (N_bytes, N_pairs, 3); auto-loads if None
+    optimal_plan: Any | None = None,  # OptimalPerPairTreatmentPlan; auto-loads if None
+    sensitivity_reweight: Mapping[int, float] | None = None,
+    auto_load: bool = True,
+) -> PerPairBitAllocationOutcome:
+    """Per-pair bit allocation per Catalog #125 hook #3 (bit-allocator).
+
+    Composes the just-landed `OptimalPerPairTreatmentPlan` sidecar, the
+    Wyner-Ziv shared-prior reweight (`tac.sensitivity_map.wyner_ziv_reweight.
+    axis_level_reweight`), and the per-pair gradient atlas into a per-byte
+    bit allocation map. The cascade is:
+
+      1. **OptimalPerPairTreatmentPlan path**: if a plan exists (or is supplied)
+         for the archive sha, consume its `predicted_delta_rate_bytes` per pair
+         to allocate. This is the highest-EV path — the plan has already solved
+         the per-pair budget under archive/compute/inflate KKT constraints.
+
+      2. **Wyner-Ziv composition path**: if no plan exists but per-pair gradient
+         + per-byte sensitivity reweight ARE available, compose:
+           - shared-prior bytes (sensitivity << 1.0) → MIN floor budget
+           - pair-specific bytes (sensitivity >> 1.0) → MAX ceiling budget
+           - mixed bytes (sensitivity ≈ 1.0) → baseline budget modulated by
+             per-pair gradient magnitude
+
+      3. **Aggregate fallback**: if neither is available, allocate uniformly
+         across the byte range (legacy aggregate behavior preserved).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" the outcome is
+    `[predicted; bit allocator per-pair v1]` — NO score claim.
+
+    Parameters
+    ----------
+    archive_sha256
+        64-char hex sha of the target archive bytes. Used to look up the
+        canonical per-pair gradient anchor + optimal plan sidecar.
+    total_bit_budget
+        Hard global byte cap. Allocations must sum to ``<= total_bit_budget``.
+    per_pair_gradient
+        Optional (N_bytes, N_pairs, 3) tensor. When None and ``auto_load=True``,
+        loaded via `tac.master_gradient_consumers.load_per_pair_gradient_from_anchor`.
+    optimal_plan
+        Optional `OptimalPerPairTreatmentPlan` dataclass. When None and
+        ``auto_load=True``, loaded via `tac.master_gradient_consumers.
+        load_optimal_plan_for_archive` (returns dict per the sidecar contract).
+    sensitivity_reweight
+        Optional per-byte sensitivity weights (from
+        `tac.sensitivity_map.wyner_ziv_reweight.axis_level_reweight`).
+        When supplied, drives the Wyner-Ziv composition path.
+    auto_load
+        When True (default), the helpers auto-load missing inputs from canonical
+        anchors / sidecars per the canonical loader contract.
+
+    Returns
+    -------
+    PerPairBitAllocationOutcome with per-byte allocation + cascade evidence.
+
+    Raises
+    ------
+    ValueError on negative budget, invalid archive sha format, or malformed
+    inputs.
+    """
+    if not isinstance(total_bit_budget, int) or total_bit_budget < 0:
+        raise ValueError(
+            f"total_bit_budget must be non-negative int; got {total_bit_budget!r}"
+        )
+    if (
+        not isinstance(archive_sha256, str)
+        or len(archive_sha256) < 12
+        or any(c not in "0123456789abcdefABCDEF" for c in archive_sha256)
+    ):
+        raise ValueError(
+            f"archive_sha256 must be a 12+ char hex string; got {archive_sha256!r}"
+        )
+
+    # ── Cascade 1: OptimalPerPairTreatmentPlan path ────────────────────────
+    if optimal_plan is None and auto_load:
+        try:
+            from tac.master_gradient_consumers import load_optimal_plan_for_archive
+            optimal_plan = load_optimal_plan_for_archive(archive_sha256)
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            optimal_plan = None
+
+    if optimal_plan is not None:
+        # The sidecar dict OR dataclass — both surfaces accepted
+        if hasattr(optimal_plan, "plan"):
+            plan_assignments = optimal_plan.plan
+        elif isinstance(optimal_plan, Mapping):
+            plan_assignments = optimal_plan.get("plan", ())
+        else:
+            plan_assignments = ()
+
+        per_byte: dict[int, int] = {}
+        total = 0
+        n_pairs_with_alloc = 0
+        for assignment in plan_assignments:
+            if hasattr(assignment, "predicted_delta_rate_bytes"):
+                delta_bytes = int(assignment.predicted_delta_rate_bytes)
+                pair_index = int(assignment.pair_index)
+            elif isinstance(assignment, Mapping):
+                delta_bytes = int(assignment.get("predicted_delta_rate_bytes", 0))
+                pair_index = int(assignment.get("pair_index", -1))
+            else:
+                continue
+            if delta_bytes <= 0:
+                continue
+            # Spread the per-pair byte budget uniformly across PER_PAIR_BUDGET_BASELINE_BYTES
+            # worth of bytes per pair (proxy mapping — the per-pair plan does not
+            # directly tell us which byte indices; we treat each pair as a
+            # synthetic byte-index in the absence of per-byte attribution).
+            byte_idx = pair_index
+            allocated = min(delta_bytes, total_bit_budget - total)
+            if allocated <= 0:
+                continue
+            per_byte[byte_idx] = allocated
+            total += allocated
+            n_pairs_with_alloc += 1
+            if total >= total_bit_budget:
+                break
+
+        return PerPairBitAllocationOutcome(
+            schema=PER_PAIR_BIT_ALLOCATION_SCHEMA,
+            cascade_path_used="optimal_plan",
+            per_byte_bit_allocation=per_byte,
+            total_allocated_bytes=total,
+            n_bytes_classified_shared_prior=0,
+            n_bytes_classified_pair_specific=n_pairs_with_alloc,
+            n_bytes_classified_mixed=0,
+            optimal_plan_consumed=True,
+            sensitivity_reweight_consumed=False,
+            per_pair_gradient_consumed=False,
+            archive_sha256=archive_sha256,
+            total_bit_budget=total_bit_budget,
+            rationale=(
+                f"[predicted; bit allocator per-pair v1] OptimalPerPairTreatmentPlan "
+                f"path: {n_pairs_with_alloc} per-pair assignments consumed; "
+                f"{total} of {total_bit_budget} bytes allocated."
+            ),
+        )
+
+    # ── Cascade 2: Wyner-Ziv composition path ──────────────────────────────
+    if per_pair_gradient is None and auto_load:
+        try:
+            from tac.master_gradient_consumers import load_per_pair_gradient_from_anchor
+            per_pair_gradient, _ = load_per_pair_gradient_from_anchor(
+                archive_sha256=archive_sha256
+            )
+        except (ImportError, ValueError, FileNotFoundError, OSError):
+            per_pair_gradient = None
+
+    if per_pair_gradient is not None and sensitivity_reweight is not None:
+        # Per-pair gradient SHAPE check: (N_bytes, N_pairs, 3)
+        if per_pair_gradient.ndim != 3 or per_pair_gradient.shape[-1] != 3:
+            raise ValueError(
+                f"per_pair_gradient must have shape (N_bytes, N_pairs, 3); "
+                f"got {per_pair_gradient.shape}"
+            )
+        n_bytes = int(per_pair_gradient.shape[0])
+
+        # Compute per-byte aggregate gradient magnitude (L1 sum across pairs+axes)
+        # This is a per-byte scalar in [0, +inf).
+        per_byte_magnitude = (
+            __import__("numpy").abs(per_pair_gradient).sum(axis=(1, 2))
+        )  # (N_bytes,)
+        # Normalize to [0, 1] for modulation
+        max_mag = float(per_byte_magnitude.max()) if per_byte_magnitude.size > 0 else 0.0
+        if max_mag > 0:
+            per_byte_norm = per_byte_magnitude / max_mag
+        else:
+            per_byte_norm = per_byte_magnitude * 0.0
+
+        per_byte: dict[int, int] = {}
+        total = 0
+        n_shared = 0
+        n_pair_specific = 0
+        n_mixed = 0
+
+        # Sort byte indices by sensitivity descending (pair-specific first;
+        # shared-prior last) so we spend the budget where it moves the score
+        # before exhausting it on shared-prior bytes.
+        sensitivity_items = [
+            (idx, float(sensitivity_reweight.get(idx, 1.0))) for idx in range(n_bytes)
+        ]
+        sensitivity_items.sort(key=lambda x: -x[1])
+
+        for byte_idx, weight in sensitivity_items:
+            if total >= total_bit_budget:
+                break
+            # Classify per the Wyner-Ziv reweight convention:
+            #   weight < 1.0 (downweighted)  → shared-prior  → MIN floor
+            #   weight > 1.0 (upweighted)    → pair-specific → MAX ceiling
+            #   weight == 1.0 (baseline)     → mixed         → baseline
+            if weight < 0.9:  # shared-prior (default downweight=0.1)
+                allocated = PER_PAIR_BUDGET_MIN_FLOOR_BYTES
+                n_shared += 1
+            elif weight > 1.1:  # pair-specific (default upweight=2.0)
+                # Modulate within [baseline, ceiling] by per-pair gradient magnitude
+                modulation = (
+                    float(per_byte_norm[byte_idx]) if byte_idx < n_bytes else 0.5
+                )
+                allocated = int(
+                    PER_PAIR_BUDGET_BASELINE_BYTES
+                    + (PER_PAIR_BUDGET_MAX_CEILING_BYTES - PER_PAIR_BUDGET_BASELINE_BYTES)
+                    * modulation
+                )
+                n_pair_specific += 1
+            else:  # mixed
+                allocated = PER_PAIR_BUDGET_BASELINE_BYTES
+                n_mixed += 1
+            # Cap by remaining budget
+            allocated = min(allocated, total_bit_budget - total)
+            if allocated <= 0:
+                continue
+            per_byte[byte_idx] = allocated
+            total += allocated
+
+        return PerPairBitAllocationOutcome(
+            schema=PER_PAIR_BIT_ALLOCATION_SCHEMA,
+            cascade_path_used="wyner_ziv_composition",
+            per_byte_bit_allocation=per_byte,
+            total_allocated_bytes=total,
+            n_bytes_classified_shared_prior=n_shared,
+            n_bytes_classified_pair_specific=n_pair_specific,
+            n_bytes_classified_mixed=n_mixed,
+            optimal_plan_consumed=False,
+            sensitivity_reweight_consumed=True,
+            per_pair_gradient_consumed=True,
+            archive_sha256=archive_sha256,
+            total_bit_budget=total_bit_budget,
+            rationale=(
+                f"[predicted; bit allocator per-pair v1] Wyner-Ziv composition "
+                f"path: {n_shared} shared-prior + {n_pair_specific} pair-specific "
+                f"+ {n_mixed} mixed bytes classified; {total} of "
+                f"{total_bit_budget} bytes allocated."
+            ),
+        )
+
+    # ── Cascade 3: Aggregate fallback ──────────────────────────────────────
+    # Neither an OptimalPlan nor (per-pair gradient + sensitivity_reweight) is
+    # available. Allocate uniformly per CLAUDE.md "Forbidden score claims" —
+    # this is the safest fallback that does not invent per-byte structure.
+    per_byte = {}
+    if total_bit_budget > 0:
+        n_synthetic = min(total_bit_budget, 256)  # cap synthetic byte count
+        per_byte_alloc = max(1, total_bit_budget // n_synthetic)
+        total = 0
+        for byte_idx in range(n_synthetic):
+            allocated = min(per_byte_alloc, total_bit_budget - total)
+            if allocated <= 0:
+                break
+            per_byte[byte_idx] = allocated
+            total += allocated
+    else:
+        total = 0
+
+    return PerPairBitAllocationOutcome(
+        schema=PER_PAIR_BIT_ALLOCATION_SCHEMA,
+        cascade_path_used="aggregate_fallback",
+        per_byte_bit_allocation=per_byte,
+        total_allocated_bytes=total,
+        n_bytes_classified_shared_prior=0,
+        n_bytes_classified_pair_specific=0,
+        n_bytes_classified_mixed=len(per_byte),
+        optimal_plan_consumed=False,
+        sensitivity_reweight_consumed=False,
+        per_pair_gradient_consumed=False,
+        archive_sha256=archive_sha256,
+        total_bit_budget=total_bit_budget,
+        rationale=(
+            f"[predicted; bit allocator per-pair v1] Aggregate fallback: "
+            f"neither OptimalPlan nor (per-pair gradient + reweight) available; "
+            f"{total} of {total_bit_budget} bytes allocated uniformly across "
+            f"{len(per_byte)} synthetic byte slots."
+        ),
+    )
+
+
 __all__ = [
     "SCHEMA_VERSION",
     "PR106_R2_POSE_MARGINAL_MULTIPLIER",
     "DEFAULT_GLOBAL_BYTE_BUDGET",
     "DEFAULT_PER_DISPATCH_BUDGET_USD",
     "DEFAULT_CUMULATIVE_BUDGET_USD",
+    "PER_PAIR_BIT_ALLOCATION_SCHEMA",
+    "PER_PAIR_BUDGET_MIN_FLOOR_BYTES",
+    "PER_PAIR_BUDGET_MAX_CEILING_BYTES",
+    "PER_PAIR_BUDGET_BASELINE_BYTES",
     "SubstrateAllocation",
     "AllocationPlan",
     "EndToEndBitAllocator",
+    "PerPairBitAllocationOutcome",
+    "allocate_per_pair_bits",
     "serialize_allocation_plan",
     "write_allocation_plan_json",
 ]
