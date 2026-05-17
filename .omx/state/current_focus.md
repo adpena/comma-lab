@@ -246,6 +246,13 @@ No-ignore follow-up ledger:
 `.omx/research/l5_v2_omx_parent_markdown_no_ignore_refresh_20260517_codex.md`.
 FEC6 selector operator follow-up:
 `.omx/research/omx_parent_markdown_and_fec6_selector_operator_followup_20260517_codex.md`.
+Parent-scope active-claims bugfix:
+`.omx/research/omx_parent_markdown_modal_cpu_dispatch_bugfix_20260517_codex.md`
+records the fresh no-ignore `.omx` Markdown scan that found
+`master_gradient_fec6_modal_cpu_dispatch` failing with rc=2 after claim
+creation because `experiments/modal_train_lane.py` did not support `--gpu CPU`.
+The Modal dispatcher now has a CPU function target for tool dispatches; future
+real master-gradient work still needs a fresh active claim and normal custody.
 Latest TT5L route/doctor custody refresh is source-relevant-path clean but must
 be regenerated immediately before provider execution; the generated packet's
 recorded commit is a reproducibility input, not self-referential dispatch

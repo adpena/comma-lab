@@ -148,6 +148,13 @@ architecture-lock/TT5L custody artifacts.
   `CandidateModificationSpec` / operator-response row schema. The dirty
   cathedral-autopilot hook is anchor-presence diagnostics until candidates
   carry real packet-valid modification specs.
+- Parent-scope dispatch actuator fix:
+  `.omx/research/omx_parent_markdown_modal_cpu_dispatch_bugfix_20260517_codex.md`.
+  The `.omx/state/active_lane_dispatch_claims.md` parent Markdown scan found
+  `master_gradient_fec6_modal_cpu_dispatch` failed with rc=2 after claim
+  creation because `experiments/modal_train_lane.py` did not support
+  `--gpu CPU` even though the dispatch protocol and recipe allowed CPU tool
+  dispatches. The dispatcher now has a no-GPU Modal CPU function target.
 - Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
   operator-row manifest may proceed after
   `tools/audit_master_gradient_feasibility.py` reports

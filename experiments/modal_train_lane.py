@@ -981,6 +981,35 @@ def _run_lane_inner(
 
 @app.function(
     image=training_image,
+    timeout=14 * 3600,
+    volumes={"/modal_results": results_vol},
+)
+def run_lane_training_cpu(
+    lane_script: str,
+    label: str,
+    env_overrides: dict,
+    claim_ledger_bytes: bytes,
+    mounted_code_git_head: str,
+    mounted_code_git_branch: str,
+    sentinel_sha256_local: dict,
+    max_seconds: int = 14 * 3600,
+    trainer_extra_mount_payload: dict | None = None,
+) -> dict:
+    return _run_lane_inner(
+        lane_script,
+        label,
+        env_overrides,
+        claim_ledger_bytes,
+        mounted_code_git_head,
+        mounted_code_git_branch,
+        sentinel_sha256_local,
+        max_seconds=max_seconds,
+        trainer_extra_mount_payload=trainer_extra_mount_payload,
+    )
+
+
+@app.function(
+    image=training_image,
     gpu="T4",
     timeout=14 * 3600,  # 14h max — covers MAE-V (estimate)
     volumes={"/modal_results": results_vol},
@@ -1535,7 +1564,7 @@ def main(
     Args:
         lane_script: relative path like 'scripts/remote_lane_omega_hessian_qat.sh'
         label: short label used for output dir naming
-        gpu: 'T4', 'A10G', 'A100', or 'H100'
+        gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
         trainer_module_path: explicit trainer metadata module from recipe
@@ -1576,7 +1605,9 @@ def main(
                 k, v = kv.split("=", 1)
                 overrides[k.strip()] = v.strip()
 
-    if gpu == "T4":
+    if gpu in ("CPU", "cpu", "Cpu"):
+        fn = run_lane_training_cpu
+    elif gpu == "T4":
         fn = run_lane_training_t4
     elif gpu in ("A10G", "A10g"):
         fn = run_lane_training_a10g
@@ -1585,7 +1616,10 @@ def main(
     elif gpu in ("H100", "H100-80GB"):
         fn = run_lane_training_h100
     else:
-        print(f"FATAL: unsupported gpu '{gpu}'. Use T4, A10G, A100, or H100.", file=sys.stderr)
+        print(
+            f"FATAL: unsupported gpu '{gpu}'. Use CPU, T4, A10G, A100, or H100.",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
     cost_band_anchor = None

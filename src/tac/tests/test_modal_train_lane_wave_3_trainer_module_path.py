@@ -116,11 +116,12 @@ def test_modal_train_lane_run_lane_inner_accepts_payload_kwarg() -> None:
     assert "target.write_bytes(data)" in text
 
 
-def test_modal_train_lane_all_4_wrappers_thread_payload_kwarg() -> None:
-    """All 4 ``@app.function`` wrappers thread the payload kwarg through."""
+def test_modal_train_lane_all_5_wrappers_thread_payload_kwarg() -> None:
+    """All 5 ``@app.function`` wrappers thread the payload kwarg through."""
     text = SOURCE.read_text()
-    # 4 wrappers: T4 / A10G / A100 / H100
+    # 5 wrappers: CPU / T4 / A10G / A100 / H100
     for gpu_fn in (
+        "run_lane_training_cpu",
         "run_lane_training_t4",
         "run_lane_training_a10g",
         "run_lane_training_a100",
@@ -176,6 +177,17 @@ def test_modal_train_lane_main_warns_for_non_substrate_lane() -> None:
     # The literal text may be split across line continuations
     assert "follow substrate naming convention" in main_src
     assert "self-bootstrap" in main_src
+
+
+def test_modal_train_lane_main_supports_cpu_tool_dispatch() -> None:
+    """Modal CPU tool recipes must not fail after claim creation with rc=2."""
+    text = SOURCE.read_text()
+    main_src = text[text.index("@app.local_entrypoint()"):]
+    assert "def run_lane_training_cpu(" in text
+    assert "gpu: 'CPU', 'T4', 'A10G', 'A100', or 'H100'" in main_src
+    assert 'gpu in ("CPU", "cpu", "Cpu")' in main_src
+    assert "fn = run_lane_training_cpu" in main_src
+    assert "Use CPU, T4, A10G, A100, or H100" in main_src
 
 
 def test_modal_train_lane_keeps_module_load_image_build_for_caching() -> None:
