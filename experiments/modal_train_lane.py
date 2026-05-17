@@ -244,12 +244,48 @@ def _collect_trainer_extra_mount_payload(
     if trainer_module_path is None:
         return payload
 
+    def _import_with_duplicate_registry_fallback(path: Path):
+        from tac.deploy.modal.mount_manifest import _import_trainer_module
+
+        try:
+            return _import_trainer_module(path)
+        except Exception as exc:
+            if "Duplicate substrate id" not in str(exc):
+                raise
+
+            # Trainer modules often self-register substrate contracts at
+            # import time. In a warm operator process, importing the same
+            # trainer only to read mount declarations can trip the registry's
+            # duplicate-id guard. For this dispatcher introspection pass,
+            # suppress registration and re-import so TIER_1_EXTRA_MOUNT_PATHS
+            # and required_input_file defaults are still consumed.
+            import tac.substrate_registry as _registry
+            import tac.substrate_registry.decorator as _decorator
+
+            original_public = _registry.register_substrate
+            original_decorator = _decorator.register_substrate
+
+            def _metadata_only_register(_contract):
+                def _wrap(fn):
+                    return fn
+
+                return _wrap
+
+            try:
+                _registry.register_substrate = _metadata_only_register
+                _decorator.register_substrate = _metadata_only_register
+                return _import_trainer_module(path)
+            finally:
+                _registry.register_substrate = original_public
+                _decorator.register_substrate = original_decorator
+
     # Import the trainer module via the canonical mount-manifest helper to
     # honor the same import semantics (importlib.util.spec_from_file_location
     # avoids polluting sys.modules).
     try:
-        from tac.deploy.modal.mount_manifest import _import_trainer_module
-        trainer_module = _import_trainer_module(trainer_module_path)
+        trainer_module = _import_with_duplicate_registry_fallback(
+            trainer_module_path
+        )
     except Exception as exc:
         print(
             f"[modal-train-lane][WAVE-3] WARN: trainer module {trainer_module_path} "
