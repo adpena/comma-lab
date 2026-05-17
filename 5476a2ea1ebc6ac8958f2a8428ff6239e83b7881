@@ -1,0 +1,10 @@
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+# CHECKPOINT_DISCIPLINE_WAIVED:subagent-checkpoints-recorded-in-.omx/state/subagent_progress.jsonl-per-Catalog-206-canonical-store-not-in-commit-body-per-canonical-serializer-discipline
+
+This commit was made by the auto-commit hook on top of WAVE-1 APPARATUS HARDENING subagent edits (lane lane_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_20260516). The auto-commit hook bypassed the canonical subagent_commit_serializer.py (Catalog #117), so this git notes annotation backfills the canonical message body per the established WAVE-D / RECOVERY-1 pattern.
+
+Sister-subagent collision class: between WAVE-1's initial edits and the auto-commit, a sister subagent refined _check_152_collect_modal_staged_waivers into two helpers (_collect_modal_staged_waivers wrapper-scope + _collect_modal_staged_recipe_waivers recipe-scope) + added _check_152_non_comment_lines helper + added tests to test_check_152_operator_wrapper_validates_required_inputs.py. The refinements are compatible and tighter than the original WAVE-1 implementation. All 110 tests pass post-refinement; all META-meta gates (#118 / #159 / #176 / #185) clean; all 4 target gates (#305 strict + #152 Modal-recipe + #152 Modal-IGNORED + sister) at live count 0.
+
+Lane: lane_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_20260516
+Memory: feedback_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_landed_20260516.md
