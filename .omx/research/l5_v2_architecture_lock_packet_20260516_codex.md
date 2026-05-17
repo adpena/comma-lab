@@ -25,10 +25,14 @@
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
 - artifact_valid: `True`
+- source_commit: `649f44f7179216cc372fd18ad64f8a55b3d0aad0`
+- current_head_commit: `c7aa814161dcb3c5ba2cf53f7029e3861cdd0e7d`
+- source_commit_matches_head: `False`
 - cells: `10`/`10`
 - axes: `['contest_cpu', 'contest_cuda']`
 - all_cells_dry_run_ready: `True`
 - execution_ready: `False`
+- execution_blockers: `['l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_lightning_identity_and_workspace_preflight_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes', 'l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head']`
 - score_claim: `false`
 - promotion_eligible: `false`
 

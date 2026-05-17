@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import re
+import subprocess
 import zipfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -269,6 +270,7 @@ RUDIN_MEANINGFUL_INTERPRETABILITY_VERDICT = "MEANINGFUL_INTERPRETABILITY"
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+_GIT_COMMIT_HEX_RE = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 _REQUIRED_EXACT_AXES = ("contest_cpu", "contest_cuda")
 _TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES = frozenset({
     "contest_full_frame_consumption_proof",
@@ -3587,6 +3589,9 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             "covered_variants": [],
             "all_cells_dry_run_ready": False,
             "execution_ready": False,
+            "source_commit": "",
+            "current_head_commit": "",
+            "source_commit_matches_head": False,
             "blockers": [],
         }
     try:
@@ -3738,6 +3743,13 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         for blocker in (payload.get("blockers") if payload else []) or []
         if str(blocker)
     ]
+    source_commit = str(payload.get("source_commit") or "").strip() if payload else ""
+    current_head_commit = _git_head_commit(repo_root) if payload else ""
+    source_commit_matches_head = bool(
+        source_commit
+        and current_head_commit
+        and source_commit == current_head_commit
+    )
     dry_run_ready = (
         bool(payload)
         and not validation_blockers
@@ -3750,6 +3762,18 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             for blocker in top_blockers
         ),
     ]
+    if payload and not _GIT_COMMIT_HEX_RE.fullmatch(source_commit):
+        execution_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_missing_or_invalid"
+        )
+    elif payload and not current_head_commit:
+        execution_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_current_head_unknown"
+        )
+    elif payload and source_commit != current_head_commit:
+        execution_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        )
     return {
         "schema": (
             "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1"
@@ -3766,6 +3790,9 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         "covered_variants": covered_variants,
         "all_cells_dry_run_ready": dry_run_ready,
         "execution_ready": False,
+        "source_commit": source_commit,
+        "current_head_commit": current_head_commit,
+        "source_commit_matches_head": source_commit_matches_head,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -4453,6 +4480,23 @@ def _is_transient_artifact_path(path: str) -> bool:
 
 def _default_repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def _git_head_commit(repo_root: Path) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
 
 
 def _resolve_artifact_path(path: str, repo_root: Path) -> tuple[Path | None, str | None]:
@@ -6012,6 +6056,18 @@ def render_l5_v2_architecture_lock_packet_markdown(
                     f"`{paired_axis_plan_status.get('artifact_valid')}`"
                 ),
                 (
+                    "- source_commit: "
+                    f"`{paired_axis_plan_status.get('source_commit')}`"
+                ),
+                (
+                    "- current_head_commit: "
+                    f"`{paired_axis_plan_status.get('current_head_commit')}`"
+                ),
+                (
+                    "- source_commit_matches_head: "
+                    f"`{paired_axis_plan_status.get('source_commit_matches_head')}`"
+                ),
+                (
                     "- cells: "
                     f"`{paired_axis_plan_status.get('cell_count')}`/"
                     f"`{paired_axis_plan_status.get('expected_cell_count')}`"
@@ -6027,6 +6083,10 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 (
                     "- execution_ready: "
                     f"`{paired_axis_plan_status.get('execution_ready')}`"
+                ),
+                (
+                    "- execution_blockers: "
+                    f"`{paired_axis_plan_status.get('execution_blockers', [])}`"
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",

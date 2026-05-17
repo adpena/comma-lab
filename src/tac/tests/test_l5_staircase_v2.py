@@ -1117,6 +1117,7 @@ def _tt5l_lightning_paired_axis_plan_payload() -> dict[str, object]:
         "schema": (
             l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA
         ),
+        "source_commit": _sha(1),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -3187,7 +3188,9 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
 
 def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(1))
     _write_tt5l_lightning_paired_axis_plan_artifact(tmp_path)
 
     readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
@@ -3204,6 +3207,9 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert status["covered_variants"] == sorted(
         L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
     )
+    assert status["source_commit"] == _sha(1)
+    assert status["current_head_commit"] == _sha(1)
+    assert status["source_commit_matches_head"] is True
     assert status["all_cells_dry_run_ready"] is True
     assert status["execution_ready"] is False
     assert status["score_claim"] is False
@@ -3232,8 +3238,38 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
         in report
     )
     assert "- cells: `10`/`10`" in report
+    assert f"- source_commit: `{_sha(1)}`" in report
+    assert "- source_commit_matches_head: `True`" in report
     assert "- all_cells_dry_run_ready: `True`" in report
     assert "- execution_ready: `False`" in report
+    assert "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only" in report
+
+
+def test_l5_v2_tt5l_lightning_paired_axis_plan_status_surfaces_stale_source_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(2))
+    _write_tt5l_lightning_paired_axis_plan_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ]
+
+    assert status["artifact_valid"] is True
+    assert status["all_cells_dry_run_ready"] is True
+    assert status["source_commit"] == _sha(1)
+    assert status["current_head_commit"] == _sha(2)
+    assert status["source_commit_matches_head"] is False
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        in status["execution_blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        in status["blockers"]
+    )
 
 
 def test_l5_v2_tt5l_lightning_paired_axis_plan_status_rejects_missing_axis_cell(
