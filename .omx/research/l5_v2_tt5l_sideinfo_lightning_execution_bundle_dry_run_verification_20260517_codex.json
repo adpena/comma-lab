@@ -166,7 +166,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23688,
-      "stdout_sha256": "c7e796650e0ec2d73e09f0876c68b9d1054e6fd869083abc7d63016a2c8c6f26",
+      "stdout_sha256": "37644133c0dfec1a5ecc86cfc681da8c306ecd27dd8432cfaaaab1e4aa6d19ef",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -329,7 +329,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42659,
-      "stdout_sha256": "5a99717b5423c35ac62922d8448b54d3af9ab7511931d5cc2230e1bc6a9a93ee",
+      "stdout_sha256": "def75f8fc64a9cce6873446c1998329bb6abca1f81792e997081c1331a012302",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -492,7 +492,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 24120,
-      "stdout_sha256": "e4d28ee18101e7fa05c0fa2c734e3b688889e3ff0a64a190c6cdd6f636320c8e",
+      "stdout_sha256": "dab42cefee8148f890b2eb4ea76f7d3054abdef799edcb4bb46c89af3cd3da5a",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -655,7 +655,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 43103,
-      "stdout_sha256": "3a38ea62c7e2e70a5013432ac2ea35bdcf6334bad5e55953cce646413b0983d0",
+      "stdout_sha256": "e6c56c7b7dfd783a88c84f3460d281f181315191c8402cb12279dfc789a8e9fb",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -818,7 +818,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23976,
-      "stdout_sha256": "8306943b558caf1373ff92eb4548c0d19bbf65b6b74252880e3526908f3fe378",
+      "stdout_sha256": "92875be01e7edd1ef7eb401c904fe152f11fedd95e0703fc2cdb78e9cbd29ce7",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -981,7 +981,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42955,
-      "stdout_sha256": "7e0a751c23f5559236597284dd8cd181c9c42ca7540b36e21ac628b90d8264b9",
+      "stdout_sha256": "1dca80da1b3a17449e86bf6bd632f3bbc65d21265857163e2a4bdd2dc0194e9f",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -1144,7 +1144,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "94f154cec7696f141ccd81cce2eaeb2358e71473660dbf36c4293d7caf3bbd9e",
+      "stdout_sha256": "e9e7f34131b005586ed0e940137277d36219d4d8585b69351b796f88fd8b5c54",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1307,7 +1307,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "ae37f9152ec57929400acf3a829d0e29ef2b535f409219a353d70de354550bf9",
+      "stdout_sha256": "9fa2b2e9f99d1d7e7f587215d0f3b57fcb2b0c0a7a8fbd7c488388169d9b00ef",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1470,7 +1470,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "f7586cc01351069de06eb42c9db8afa19d8c6138c72af740ff47c52a1a239dfb",
+      "stdout_sha256": "43b8d388448890d33d71e0ecdfffa49bb5f176b429887869c6b0bff548a76283",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1633,7 +1633,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "9b15cf65922a7b166875c9147d6565cb87692723b36b094d7b8d69c31bc89cb7",
+      "stdout_sha256": "db3294dc3a4194938232476cf912a86cd232b30b4928fa1ea412ff00c9ee2680",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1667,13 +1667,13 @@
       "ablated"
     ]
   },
-  "current_head_commit": "3300600748fb421ae3feb68b29e93adb202e2f03",
+  "current_head_commit": "4b6ff1a6110fd78a0a79e6817a2d64369780f322",
   "dispatch_attempted": false,
   "dry_run_cells_exercised": 10,
   "dry_run_cells_total": 10,
   "expected_cell_count": 10,
   "failed_cell_count": 0,
-  "generated_at_utc": "2026-05-17T13:06:36Z",
+  "generated_at_utc": "2026-05-17T14:00:27Z",
   "passed_cell_count": 10,
   "planning_only": true,
   "promotion_eligible": false,
@@ -1688,7 +1688,7 @@
   "score_claim_valid": false,
   "source_bundle": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
   "source_bundle_schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
-  "source_bundle_sha256": "c4a4373cfaf049207469f37cb0bd147c1a5d40396997a0748ac6371308f44ffb",
+  "source_bundle_sha256": "261dedd76a052fe375529e959ba08361fdf1218061856d43aefcd68151f99d75",
   "source_bundle_tool": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py",
   "source_plan": {
     "cell_count": 10,
@@ -1702,7 +1702,7 @@
     "matches_bundle_sha256": true,
     "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
     "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
-    "sha256": "924e7b5979a9c106299c0697fabc185d9490d9637fd85eac058050b248f3b754"
+    "sha256": "afaea41dd7247a758422f467d345e12f30396ecedd7ca2642f76c5984065de81"
   },
   "tool": "tools/verify_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py"
 }

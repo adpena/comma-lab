@@ -10,7 +10,7 @@
     "score_claim": false
   },
   "blockers": [],
-  "current_head_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
+  "current_head_commit": "4b6ff1a6110fd78a0a79e6817a2d64369780f322",
   "current_route_verdict": {
     "dispatch_attempted": false,
     "execution_ready": false,
@@ -27,7 +27,7 @@
     "status": "blocked_on_operator_route_configuration"
   },
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T12:13:40Z",
+  "generated_at_utc": "2026-05-17T14:00:34Z",
   "no_signal_loss_notes": [
     "This packet is generated from live artifact SHA-256s, not hand-edited.",
     "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
@@ -115,7 +115,7 @@
       "expected_schema": "l5_v2_architecture_lock_packet_v1",
       "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
       "schema": "l5_v2_architecture_lock_packet_v1",
-      "sha256": "05625e5b019c1284ea5f7a0d59847d2148edb513d6e55018a96bf0d2486af370"
+      "sha256": "a91d0b745f979b882ce1930771b966ee62771c3b7ae0bdc43521d0c04cb0bf22"
     },
     "legacy_cuda_only_alt_provider_plan": {
       "blockers": [],
@@ -148,7 +148,7 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
-      "sha256": "5b0aaf1a259cf39cf3ede3cdc8b99264e68740c9c9b1c75eb57094a62d0a1402"
+      "sha256": "261dedd76a052fe375529e959ba08361fdf1218061856d43aefcd68151f99d75"
     },
     "sideinfo_execution_bundle_dry_run_verification": {
       "all_dry_runs_passed": true,
@@ -159,7 +159,7 @@
       "passed_cell_count": 10,
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_v1",
-      "sha256": "8e6ad410a6ee41303d643cded42cd3a972b894bb9bcd0cf497ca6cdb3e853e61"
+      "sha256": "fdd0392cdd9a908c8f0effed01f549a7cb67a1e153994f64b5557a5e731324db"
     },
     "sideinfo_execution_preflight": {
       "blockers": [],
@@ -167,7 +167,7 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_v1",
-      "sha256": "7fd702e364b02fb6510e961007e8018d681adc9d0e7bdfe64dd17d0637fba15e"
+      "sha256": "b96034f17bd0a529e2184acafcf8d103300847c7400dacddd45b0b65b181b553"
     },
     "sideinfo_harvest_cells": {
       "blockers": [],
@@ -177,7 +177,7 @@
       "missing_exact_eval_artifact_count": 10,
       "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_v1",
-      "sha256": "3af8fc5c41e0b69efa1ff1289f4ed7eae3579f61a1b87478194316981b1d32a2"
+      "sha256": "188b024b9f24796efccd4a353299fb9da3ae63cf5af6a20370faaa4a36b845ec"
     },
     "sideinfo_lightning_paired_axis_plan": {
       "blockers": [],
@@ -185,8 +185,8 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
-      "sha256": "8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1",
-      "source_commit": "24a6898e7b8b99cf319a5b962deefab6effa24e0",
+      "sha256": "afaea41dd7247a758422f467d345e12f30396ecedd7ca2642f76c5984065de81",
+      "source_commit": "4b6ff1a6110fd78a0a79e6817a2d64369780f322",
       "source_commit_matches_current_head": true,
       "source_relevant_diff_paths": [],
       "source_relevant_paths_match_current_head": true

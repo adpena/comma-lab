@@ -5,6 +5,13 @@ Commit: f9180c7621e0655bc14c826148393f329259b356
 Scope: L5 v2 / TT5L priority, non-HNeRV frontier work, lattice/graph,
 Cathedral/autopilot, exact-dispatch custody, and current bug-hunt backlog.
 
+Supersession note (2026-05-17, Codex): the parent-scope `.omx` Markdown scan
+and the May 17 T4 symposium update the active priority order. Rule #6 bolt-ons
+on verified A1 are now the immediate frontier-breaking path; L5 v2 / TT5L
+remains a parallel asymptotic-priority campaign, not abandoned. See
+`.omx/research/l5_v2_omx_parent_markdown_scope_refresh_20260517_codex.md`,
+`.omx/state/current_focus.md`, and `.omx/state/next_experiments.md`.
+
 Authority:
 
 - score_claim: false
@@ -26,14 +33,23 @@ dispatch-claim meanings that were previously conflated:
 This closes one custody ambiguity before L5 v2 / TT5L and stack candidates
 start generating paired exact CPU/CUDA anchors.
 
-L5 v2 / TT5L remains the top score-lowering priority. The method is not
-currently promoted or locked. The architecture lock packet says lock is still
-forbidden because all gate evidence is not valid, the side-info effect curve is
-not harvested, and probe gates are still incomplete.
+The immediate frontier-breaking priority is now Rule #6 bolt-on work on the
+verified A1 substrate. L5 v2 / TT5L remains the main asymptotic-priority
+campaign and should proceed in parallel. TT5L is not currently promoted or
+locked. The architecture lock packet says lock is still forbidden because all
+gate evidence is not valid, the side-info effect curve is not harvested, and
+probe gates are still incomplete.
 
 ## P0 Score-Lowering Roadmap
 
-1. TT5L side-info effect curve: execute the 10-cell paired CPU/CUDA Lightning
+1. Rule #6 A1 bolt-ons: build 2-3 byte-closed bolt-ons on verified A1 first:
+   Ballé-2018 hyperprior on A1 per-pair latent, PR101-style per-tensor byte-map
+   plus Brotli/LZMA/Huffman sidecar, and VQ-codebook on A1 per-pair latent.
+   Each must include archive grammar, export contract, consumed-byte proof,
+   KL-on-logits `T=2.0` distillation from frozen A1 teacher, and paired-axis
+   custody before any promotion wording.
+
+2. TT5L side-info effect curve: execute the 10-cell paired CPU/CUDA Lightning
    route after provider doctor passes. Required sequence: configure Lightning
    route, run required doctor, stage per-cell source manifests, create active
    lane claims, submit non-dry-run cells, harvest artifacts, close claims, then
@@ -41,28 +57,37 @@ not harvested, and probe gates are still incomplete.
    No score claim until harvested contest-auth-eval artifacts exist for all
    required cells.
 
-2. L5 v2 lattice probe completion: fill the missing paired exact observations
+3. L5 v2 lattice probe completion: fill the missing paired exact observations
    for C1 world-model foveation, Z5 predictive-coding world model, and TT5L.
    Architecture lock stays false until probe gate, side-info curve, paired-axis
    evidence, first-anchor timing smoke, and anchor-pair custody all pass.
 
-3. NSCS01 nullspace split renderer: run the head0 architecture disambiguator
+4. SCORER-AWARENESS probe wave: before any class-wide deferral of high-risk
+   per-pair-conditioning substrates, measure whether each substrate's
+   distinguishing feature reaches scorer attention/argmax maps and classify
+   conditioning versus regularization.
+
+5. Z6 per-frame-renderer-axis replacement: do not dispatch the original
+   FiLM-bottlenecked Z6. Replace it with ego-motion conditioning on the renderer
+   coordinate-sampling/per-frame axis or an equivalently direct renderer path.
+
+6. NSCS01 nullspace split renderer: run the head0 architecture disambiguator
    and smoke-before-full at the same archive bytes. The probe must measure
    frame-0 versus frame-1 PoseNet gradient norms, SegNet frame-0 perturbation
    invariance, head0 CNN-vs-MLP capacity, and paired CPU/CUDA exact follow-up.
    Full dispatch waits on smoke-green plus nontrivial frame-0 PoseNet signal.
 
-4. NSCS02 downsampled renderer: run the paired downsample-ratio smoke and the
+7. NSCS02 downsampled renderer: run the paired downsample-ratio smoke and the
    eval-roundtrip-chain disambiguator before any full dispatch. The key risk is
    spatial-frequency destruction from bicubic upsample; R=2 is a hypothesis,
    not a promoted setting.
 
-5. NSCS03 Ballé joint codec: run lambda_R plus sigma-floor co-sweep, then A100
+8. NSCS03 Ballé joint codec: run lambda_R plus sigma-floor co-sweep, then A100
    smoke, then byte-mutation no-op proof across entropy state, main latents,
    and hyper latents. Implement the differentiated EMA split as a documented
    substrate-specific fork before full dispatch.
 
-6. A-STACK NSCS01+NSCS02+NSCS03: do not dispatch composition before individual
+9. A-STACK NSCS01+NSCS02+NSCS03: do not dispatch composition before individual
    anchors. The recommended curriculum is sequential: NSCS02 spatial budget,
    then NSCS01 gradient-routing budget, then NSCS03 entropy-coding refinement.
    Current design band is prediction-only and must be Dykstra-gated.
