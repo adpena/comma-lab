@@ -72,6 +72,10 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _sha_text(value: object) -> str:
+    return hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+
+
 def _recursive_string_contains(value: object, needle: str) -> bool:
     if isinstance(value, str):
         return needle in value
@@ -1525,6 +1529,120 @@ def _write_tt5l_lightning_execution_bundle_artifact(repo_root: Path) -> Path:
                 "ready_for_dry_run_submit": True,
                 "cell_count": len(cells),
                 "ready_dry_run_cell_count": len(cells),
+                "cells": cells,
+                "blockers": [],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
+def _write_tt5l_lightning_execution_bundle_dry_run_artifact(repo_root: Path) -> Path:
+    source_bundle = _write_tt5l_lightning_execution_bundle_artifact(repo_root)
+    source_bundle_sha = _file_sha256(source_bundle)
+    bundle = json.loads(source_bundle.read_text(encoding="utf-8"))
+    cells: list[dict[str, object]] = []
+    for raw_cell in bundle["cells"]:
+        assert isinstance(raw_cell, dict)
+        axis = str(raw_cell["axis"])
+        device = "cpu" if axis == "contest_cpu" else "cuda"
+        cells.append(
+            {
+                "planning_only": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_provider_dispatch": False,
+                "dispatch_attempted": False,
+                "provider_spend_attempted": False,
+                "variant": raw_cell["variant"],
+                "axis": axis,
+                "axis_label": raw_cell["axis_label"],
+                "lane_id": raw_cell["lane_id"],
+                "archive_sha256": raw_cell["archive_sha256"],
+                "archive_size_bytes": raw_cell["archive_size_bytes"],
+                "pair_group_id": raw_cell["pair_group_id"],
+                "run_id": raw_cell["run_id"],
+                "local_artifact_dir": raw_cell["local_artifact_dir"],
+                "local_archive": {
+                    "path": raw_cell["archive_path"],
+                    "exists": True,
+                    "sha256": raw_cell["archive_sha256"],
+                    "bytes": raw_cell["archive_size_bytes"],
+                    "matches_cell": True,
+                    "matches_variant_manifest": True,
+                },
+                "dry_run_state_path": (
+                    f"{raw_cell['local_artifact_dir']}/launcher_dry_run_state.json"
+                ),
+                "dry_run_command_sha256": _sha_text(
+                    f"{raw_cell['lane_id']}:dry-run-command"
+                ),
+                "dry_run_command_argv": [
+                    ".venv/bin/python",
+                    "scripts/launch_lightning_batch_job.py",
+                    "exact-eval",
+                    "--dry-run",
+                ],
+                "returncode": 0,
+                "timed_out": False,
+                "stdout_sha256": _sha_text(f"{raw_cell['lane_id']}:stdout"),
+                "stderr_sha256": "",
+                "stdout_bytes": 100,
+                "stderr_bytes": 0,
+                "stderr_tail": "",
+                "dry_run_record_parsed": True,
+                "verified": True,
+                "queue": {
+                    "queue_role": f"exact_{device}_eval",
+                    "required_device": device,
+                    "required_samples": 600,
+                    "queue_command_sha256": _sha_text(f"{raw_cell['lane_id']}:queue"),
+                    "computed_spec_command_sha256": _sha_text(
+                        f"{raw_cell['lane_id']}:queue"
+                    ),
+                    "source_spec_command_sha256": raw_cell[
+                        "source_spec_command_sha256"
+                    ],
+                    "launcher_command_sha_matches_source_spec": False,
+                    "command_sha_delta_classification": "expected_submit_layer_delta",
+                    "command_sha_delta_rationale": "test fixture",
+                },
+                "blockers": [],
+            }
+        )
+    artifact_path = (
+        repo_root
+        / l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA,
+                "tool": l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH,
+                "source_bundle": l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH,
+                "source_bundle_sha256": source_bundle_sha,
+                "planning_only": True,
+                "score_claim": False,
+                "score_claim_valid": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "dispatch_attempted": False,
+                "provider_spend_attempted": False,
+                "ready_for_provider_dispatch": False,
+                "ready_for_non_dry_run_submit": False,
+                "ready_for_dry_run_submit": True,
+                "cell_count": len(cells),
+                "expected_cell_count": len(cells),
+                "passed_cell_count": len(cells),
+                "all_dry_runs_passed": True,
                 "cells": cells,
                 "blockers": [],
             },
@@ -4174,6 +4292,45 @@ def test_l5_v2_tt5l_readiness_surfaces_lightning_execution_bundle(
     assert "- source_plan_sha256_matches: `True`" in report
     assert "- cells: `10`/`10`" in report
     assert "- ready_for_dry_run_submit: `True`" in report
+
+
+def test_l5_v2_tt5l_readiness_surfaces_lightning_execution_bundle_dry_run_verifier(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(1))
+    _write_tt5l_lightning_execution_bundle_dry_run_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_lightning_execution_bundle_dry_run_status"
+    ]
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is True
+    assert status["tool_path"] == (
+        l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH
+    )
+    assert status["source_bundle_sha256_matches"] is True
+    assert status["cell_count"] == 10
+    assert status["expected_cell_count"] == 10
+    assert status["passed_cell_count"] == 10
+    assert status["all_dry_runs_passed"] is True
+    assert status["ready_for_dry_run_submit"] is True
+    assert status["ready_for_non_dry_run_submit"] is False
+    assert status["ready_for_provider_dispatch"] is False
+    assert status["covered_axes"] == ["contest_cpu", "contest_cuda"]
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+    assert "## Lightning Execution Bundle Dry-Run Verification" in report
+    assert (
+        l5_v2.L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH
+        in report
+    )
+    assert "- source_bundle_sha256_matches: `True`" in report
+    assert "- cells: `10`/`10`" in report
+    assert "- all_dry_runs_passed: `True`" in report
 
 
 def test_l5_v2_tt5l_lightning_paired_axis_plan_status_rejects_missing_run_id(

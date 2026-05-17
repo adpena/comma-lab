@@ -1,0 +1,348 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import hashlib
+import json
+import shlex
+from pathlib import Path
+
+from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+)
+from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
+)
+from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
+)
+from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run import (
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA,
+    DryRunCommandResult,
+    build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification,
+    l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_json,
+    render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_markdown,
+)
+
+
+def _sha(seed: object) -> str:
+    return hashlib.sha256(str(seed).encode("utf-8")).hexdigest()
+
+
+def _arg_value(argv: list[str], flag: str) -> str:
+    try:
+        idx = argv.index(flag)
+    except ValueError:
+        return ""
+    if idx + 1 >= len(argv):
+        return ""
+    return argv[idx + 1]
+
+
+def _metadata(argv: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    idx = 0
+    while idx < len(argv):
+        if argv[idx] == "--queue-metadata" and idx + 1 < len(argv):
+            key, value = argv[idx + 1].split("=", 1)
+            out[key] = value
+            idx += 2
+            continue
+        idx += 1
+    return out
+
+
+def _fake_bundle(repo_root: Path) -> dict[str, object]:
+    cells: list[dict[str, object]] = []
+    variants: list[dict[str, object]] = []
+    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+        archive_path = repo_root / "archives" / variant / "archive.zip"
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        archive_bytes = (f"archive:{variant}:".encode() * 4000)[:34373]
+        archive_path.write_bytes(archive_bytes)
+        archive_sha = hashlib.sha256(archive_bytes).hexdigest()
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            device = "cpu" if axis == "contest_cpu" else "cuda"
+            lane_id = f"lane_l5_v2_tt5l_sideinfo_effect_curve_{variant}_{axis}"
+            source_sha = _sha(f"{variant}:{axis}:source")
+            pair_group_id = f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}_{archive_sha[:12]}"
+            run_id = f"l5_v2_tt5l_sideinfo_effect_curve_{variant}_{archive_sha[:12]}"
+            local_artifact_dir = (
+                "experiments/results/lightning_batch/"
+                f"l5_v2_tt5l_sideinfo_effect_curve_paired_axes/{variant}/{axis}"
+            )
+            command = shlex.join(
+                [
+                    ".venv/bin/python",
+                    "scripts/launch_lightning_batch_job.py",
+                    "exact-eval",
+                    "--state-path",
+                    f"{local_artifact_dir}/launcher_dry_run_state.json",
+                    "--job-name",
+                    f"l5-v2-tt5l-sideinfo-{variant}-{device}-test",
+                    "--expected-archive-sha256",
+                    archive_sha,
+                    "--expected-archive-size-bytes",
+                    "34373",
+                    "--local-artifact-dir",
+                    local_artifact_dir,
+                    "--dispatch-lane-id",
+                    lane_id,
+                    "--eval-device",
+                    device,
+                    "--source-manifest",
+                    f"experiments/results/lightning_batch/{variant}-{axis}/source_manifest.json",
+                    "--queue-metadata",
+                    f"variant={variant}",
+                    "--queue-metadata",
+                    f"axis={axis}",
+                    "--queue-metadata",
+                    f"lane_id={lane_id}",
+                    "--queue-metadata",
+                    f"pair_group_id={pair_group_id}",
+                    "--queue-metadata",
+                    f"run_id={run_id}",
+                    "--queue-metadata",
+                    f"archive_sha256={archive_sha}",
+                    "--queue-metadata",
+                    "source_plan="
+                    f"{L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH}",
+                    "--queue-metadata",
+                    f"source_spec_command_sha256={source_sha}",
+                    "--adjudicate",
+                    "--dry-run",
+                ]
+            )
+            cells.append(
+                {
+                    "planning_only": True,
+                    "score_claim_valid": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_provider_dispatch": False,
+                    "dispatch_attempted": False,
+                    "variant": variant,
+                    "axis": axis,
+                    "axis_label": (
+                        "[contest-CPU]" if axis == "contest_cpu" else "[contest-CUDA]"
+                    ),
+                    "eval_device": device,
+                    "lane_id": lane_id,
+                    "archive_path": archive_path.relative_to(repo_root).as_posix(),
+                    "archive_sha256": archive_sha,
+                    "archive_size_bytes": 34373,
+                    "pair_group_id": pair_group_id,
+                    "run_id": run_id,
+                    "local_artifact_dir": local_artifact_dir,
+                    "dry_run_state_path": f"{local_artifact_dir}/launcher_dry_run_state.json",
+                    "dry_run_submit_command": command,
+                    "ready_for_dry_run_submit": True,
+                    "ready_for_non_dry_run_submit": False,
+                    "source_spec_command_sha256": source_sha,
+                    "blockers": [],
+                }
+            )
+        variants.append(
+            {
+                "variant": variant,
+                "archive_path": archive_path.relative_to(repo_root).as_posix(),
+                "archive_sha256": archive_sha,
+                "archive_bytes": 34373,
+            }
+        )
+    manifest_path = repo_root / ".omx/research/fake_variant_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps({"schema": "fake", "variants": variants}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "schema": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
+        "tool": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py",
+        "planning_only": True,
+        "score_claim_valid": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "ready_for_non_dry_run_submit": False,
+        "ready_for_dry_run_submit": True,
+        "source_variant_manifest": manifest_path.relative_to(repo_root).as_posix(),
+        "cell_count": len(cells),
+        "ready_dry_run_cell_count": len(cells),
+        "cells": cells,
+        "blockers": [],
+    }
+
+
+def _fake_runner(
+    command: str,
+    _repo_root: Path,
+    _timeout_seconds: int,
+    *,
+    cuda_marker: bool = True,
+    metadata_override: dict[str, str] | None = None,
+) -> DryRunCommandResult:
+    argv = shlex.split(command)
+    device = _arg_value(argv, "--eval-device")
+    metadata = _metadata(argv)
+    if metadata_override:
+        metadata.update(metadata_override)
+    role = f"exact_{device}_eval"
+    command_text = (
+        "set -euo pipefail\n"
+        "scripts/scan_lightning_supply_chain.py --phase pre\n"
+    )
+    if device == "cuda":
+        command_text += "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK\n"
+        command_text += "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK\n"
+        if cuda_marker:
+            command_text += "export INFLATE_REQUIRE_CUDA=1\n"
+    else:
+        command_text += "LIGHTNING_RUNNER_CPU_PREFLIGHT_OK\n"
+    command_text += (
+        "experiments/contest_auth_eval.py "
+        f"--device {device} "
+        "--archive archive.zip --output contest_auth_eval.json\n"
+    )
+    record = {
+        "dry_run": True,
+        "queue": {
+            "role": role,
+            "command_sha256": hashlib.sha256(command_text.encode("utf-8")).hexdigest(),
+            "expected_archive_sha256": _arg_value(argv, "--expected-archive-sha256"),
+            "expected_archive_size_bytes": int(
+                _arg_value(argv, "--expected-archive-size-bytes")
+            ),
+            "local_artifact_dir": _arg_value(argv, "--local-artifact-dir"),
+            "queue_metadata": metadata,
+            "adjudication": {
+                "required_device": device,
+                "required_samples": 600,
+            },
+        },
+        "spec": {"command": command_text},
+    }
+    return DryRunCommandResult(
+        returncode=0,
+        stdout=json.dumps(record, sort_keys=True),
+        stderr="",
+        argv=tuple(argv),
+    )
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_accepts_all_cells(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+        generated_at_utc="2026-05-17T00:00:00Z",
+    )
+
+    assert payload["schema"] == L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA
+    assert payload["all_dry_runs_passed"] is True
+    assert payload["passed_cell_count"] == 10
+    assert payload["ready_for_dry_run_submit"] is True
+    assert payload["ready_for_non_dry_run_submit"] is False
+    assert payload["ready_for_provider_dispatch"] is False
+    assert payload["dispatch_attempted"] is False
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["blockers"] == []
+    first = payload["cells"][0]
+    assert first["verified"] is True
+    assert first["queue"]["launcher_command_sha_matches_source_spec"] is False
+    assert first["queue"]["command_sha_delta_classification"] == "expected_submit_layer_delta"
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_cuda_without_cuda_requirement(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=lambda command, repo_root, timeout: _fake_runner(
+            command,
+            repo_root,
+            timeout,
+            cuda_marker=False,
+        ),
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert any(
+        "dry_run_spec_cuda_inflate_requirement_missing" in blocker
+        for blocker in payload["blockers"]
+    )
+    cuda_cells = [cell for cell in payload["cells"] if cell["axis"] == "contest_cuda"]
+    assert cuda_cells
+    assert all(cell["verified"] is False for cell in cuda_cells)
+
+
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_metadata_axis_drift(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=lambda command, repo_root, timeout: _fake_runner(
+            command,
+            repo_root,
+            timeout,
+            metadata_override={"axis": "contest_cuda"},
+        ),
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert any("dry_run_queue_metadata_axis_mismatch" in blocker for blocker in payload["blockers"])
+
+
+def test_tt5l_lightning_bundle_dry_run_json_and_markdown_keep_false_authority(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    decoded = json.loads(
+        l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_json(payload)
+    )
+    report = render_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_markdown(
+        payload
+    )
+
+    assert decoded["score_claim"] is False
+    assert decoded["promotion_eligible"] is False
+    assert decoded["provider_spend_attempted"] is False
+    assert "no provider work was dispatched" in report
+    assert "[contest-CPU]" in report
+    assert "[contest-CUDA]" in report
+    assert "ready_for_provider_dispatch: `false`" in report

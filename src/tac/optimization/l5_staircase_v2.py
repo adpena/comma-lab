@@ -63,6 +63,12 @@ from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA,
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH,
 )
+from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run import (
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_REPORT_PATH,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA,
+    L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH,
+)
 from tac.optimization.l5_v2_tt5l_sideinfo_lightning_execution_preflight import (
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH,
     L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_REPORT_PATH,
@@ -5213,6 +5219,208 @@ def _tt5l_sideinfo_lightning_execution_bundle_status(
     }
 
 
+def _tt5l_sideinfo_lightning_execution_bundle_dry_run_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = (
+        repo_root
+        / L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH
+    )
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    expected_cell_count = (
+        len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+        * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+    )
+    if not artifact_path.is_file():
+        return {
+            "schema": (
+                "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_status_v1"
+            ),
+            "artifact_path": (
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH
+            ),
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "tool_path": (
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH
+            ),
+            "source_bundle": "",
+            "source_bundle_sha256": "",
+            "source_bundle_actual_sha256": "",
+            "source_bundle_sha256_matches": False,
+            "cell_count": 0,
+            "expected_cell_count": expected_cell_count,
+            "passed_cell_count": 0,
+            "all_dry_runs_passed": False,
+            "ready_for_dry_run_submit": False,
+            "ready_for_non_dry_run_submit": False,
+            "ready_for_provider_dispatch": False,
+            "covered_axes": [],
+            "covered_variants": [],
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_json_invalid"
+        )
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_not_object"
+            )
+    if payload and payload.get("schema") != (
+        L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA
+    ):
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_schema_mismatch"
+        )
+    if payload and payload.get("planning_only") is not True:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_not_planning_only"
+        )
+    for field in (
+        "score_claim",
+        "score_claim_valid",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "dispatch_attempted",
+        "provider_spend_attempted",
+        "ready_for_provider_dispatch",
+        "ready_for_non_dry_run_submit",
+    ):
+        if payload and payload.get(field) is not False:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_"
+                f"{field}_not_false"
+            )
+    cells = _mapping_items(payload.get("cells") if payload else None)
+    if payload and len(cells) != expected_cell_count:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_cell_count_mismatch"
+        )
+    cell_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for cell in cells:
+        variant = str(cell.get("variant") or "").strip()
+        axis = str(cell.get("axis") or "").strip()
+        if variant and axis:
+            cell_by_key.setdefault((variant, axis), cell)
+    missing_cells = [
+        f"{variant}:{axis}"
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        if (variant, axis) not in cell_by_key
+    ]
+    if missing_cells:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_missing_cells:"
+            + ",".join(missing_cells)
+        )
+    for (variant, axis), cell in cell_by_key.items():
+        expected_role = "exact_cpu_eval" if axis == "contest_cpu" else "exact_cuda_eval"
+        expected_device = "cpu" if axis == "contest_cpu" else "cuda"
+        queue = cell.get("queue") if isinstance(cell.get("queue"), Mapping) else {}
+        local_archive = (
+            cell.get("local_archive")
+            if isinstance(cell.get("local_archive"), Mapping)
+            else {}
+        )
+        if cell.get("verified") is not True:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_cell_not_verified:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("returncode") != 0:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_returncode_nonzero:"
+                f"{variant}:{axis}"
+            )
+        if queue.get("queue_role") != expected_role:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_role_mismatch:"
+                f"{variant}:{axis}"
+            )
+        if queue.get("required_device") != expected_device:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_device_mismatch:"
+                f"{variant}:{axis}"
+            )
+        if local_archive.get("matches_cell") is not True:
+            validation_blockers.append(
+                "tt5l_sideinfo_lightning_execution_bundle_dry_run_archive_not_byte_closed:"
+                f"{variant}:{axis}"
+            )
+    source_bundle = str(payload.get("source_bundle") or "").strip() if payload else ""
+    source_bundle_path = repo_root / source_bundle if source_bundle else None
+    source_bundle_sha256 = (
+        str(payload.get("source_bundle_sha256") or "").strip() if payload else ""
+    )
+    source_bundle_actual_sha256 = (
+        _sha256_file(source_bundle_path)
+        if source_bundle_path is not None and source_bundle_path.is_file()
+        else ""
+    )
+    source_bundle_sha256_matches = bool(
+        source_bundle_sha256
+        and source_bundle_actual_sha256
+        and source_bundle_sha256 == source_bundle_actual_sha256
+    )
+    if payload and not source_bundle_sha256_matches:
+        validation_blockers.append(
+            "tt5l_sideinfo_lightning_execution_bundle_dry_run_source_bundle_sha_mismatch"
+        )
+    blockers = [
+        *validation_blockers,
+        *[
+            str(blocker)
+            for blocker in (payload.get("blockers") if payload else []) or []
+            if str(blocker)
+        ],
+    ]
+    passed_cell_count = (
+        int(payload.get("passed_cell_count"))
+        if payload and isinstance(payload.get("passed_cell_count"), int)
+        else 0
+    )
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_status_v1",
+        "artifact_path": (
+            L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH
+        ),
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not blockers,
+        "tool_path": L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH,
+        "source_bundle": source_bundle,
+        "source_bundle_sha256": source_bundle_sha256,
+        "source_bundle_actual_sha256": source_bundle_actual_sha256,
+        "source_bundle_sha256_matches": source_bundle_sha256_matches,
+        "cell_count": len(cells),
+        "expected_cell_count": expected_cell_count,
+        "passed_cell_count": passed_cell_count,
+        "all_dry_runs_passed": (
+            bool(payload)
+            and payload.get("all_dry_runs_passed") is True
+            and not blockers
+        ),
+        "ready_for_dry_run_submit": (
+            bool(payload)
+            and payload.get("ready_for_dry_run_submit") is True
+            and not blockers
+        ),
+        "ready_for_non_dry_run_submit": False,
+        "ready_for_provider_dispatch": False,
+        "covered_axes": sorted({axis for _, axis in cell_by_key}),
+        "covered_variants": sorted({variant for variant, _ in cell_by_key}),
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
 def _tt5l_materialized_modal_provider_blocker_status(
     *,
     repo_root: Path,
@@ -5338,6 +5546,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     lightning_execution_bundle_status = (
         _tt5l_sideinfo_lightning_execution_bundle_status(repo_root=repo_root)
     )
+    lightning_execution_bundle_dry_run_status = (
+        _tt5l_sideinfo_lightning_execution_bundle_dry_run_status(repo_root=repo_root)
+    )
     sideinfo_effect_curve_dispatch_plan_status = (
         _tt5l_sideinfo_effect_curve_dispatch_plan_status(repo_root=repo_root)
     )
@@ -5385,6 +5596,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     blockers.extend(str(blocker) for blocker in dykstra_status["blockers"])
     if dykstra_valid:
         blockers.extend(str(blocker) for blocker in move_level_status["blockers"])
+    if (
+        lightning_execution_bundle_dry_run_status["artifact_exists"] is True
+        and lightning_execution_bundle_dry_run_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker)
+            for blocker in lightning_execution_bundle_dry_run_status["blockers"]
+        )
     if sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid:
         blockers.extend(
             str(blocker) for blocker in sideinfo_effect_curve_status["blockers"]
@@ -5826,6 +6045,12 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 f"--output-json {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH} "
                 f"--output-md {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_REPORT_PATH} "
                 "--repo-root . "
+                "&& "
+                f".venv/bin/python {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH} "
+                f"--bundle-json {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH} "
+                f"--output-json {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH} "
+                f"--output-md {L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_REPORT_PATH} "
+                "--repo-root . "
                 "&& run paired CPU/CUDA TT5L side-info variants "
                 "zero, random_lsb, shuffled, trained, and ablated into the "
                 "Lightning plan local_artifact_dir paths; then "
@@ -5850,6 +6075,8 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
                 L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_REPORT_PATH,
                 L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH,
                 L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_REPORT_PATH,
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH,
+                L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_REPORT_PATH,
                 TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
                 TT5L_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
                 L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
@@ -5980,6 +6207,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         ),
         "sideinfo_lightning_execution_bundle_status": (
             lightning_execution_bundle_status
+        ),
+        "sideinfo_lightning_execution_bundle_dry_run_status": (
+            lightning_execution_bundle_dry_run_status
         ),
         "sideinfo_effect_curve_dispatch_plan_status": (
             sideinfo_effect_curve_dispatch_plan_status
@@ -7664,6 +7894,11 @@ def render_l5_v2_architecture_lock_packet_markdown(
     )
     if not isinstance(lightning_execution_bundle_status, Mapping):
         lightning_execution_bundle_status = {}
+    lightning_execution_bundle_dry_run_status = tt5l.get(
+        "sideinfo_lightning_execution_bundle_dry_run_status"
+    )
+    if not isinstance(lightning_execution_bundle_dry_run_status, Mapping):
+        lightning_execution_bundle_dry_run_status = {}
     sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
     if not isinstance(sideinfo_effect_curve_status, Mapping):
         sideinfo_effect_curve_status = {}
@@ -7897,6 +8132,47 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 (
                     "- blockers: "
                     f"`{lightning_execution_bundle_status.get('blockers', [])}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if lightning_execution_bundle_dry_run_status:
+        lines.extend(
+            [
+                "",
+                "## Lightning Execution Bundle Dry-Run Verification",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- tool_path: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('tool_path')}`"
+                ),
+                (
+                    "- source_bundle_sha256_matches: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('source_bundle_sha256_matches')}`"
+                ),
+                (
+                    "- cells: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('passed_cell_count')}`/"
+                    f"`{lightning_execution_bundle_dry_run_status.get('cell_count')}`"
+                ),
+                (
+                    "- all_dry_runs_passed: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('all_dry_runs_passed')}`"
+                ),
+                "- ready_for_non_dry_run_submit: `false`",
+                "- ready_for_provider_dispatch: `false`",
+                (
+                    "- blockers: "
+                    f"`{lightning_execution_bundle_dry_run_status.get('blockers', [])}`"
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
@@ -8220,6 +8496,10 @@ __all__ = [
     "L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH",
     "L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_ARTIFACT_PATH",
+    "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_ARTIFACT_PATH",
+    "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_REPORT_PATH",
+    "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_SCHEMA",
+    "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_DRY_RUN_TOOL_PATH",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_REPORT_PATH",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_SCHEMA",
     "L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_BUNDLE_TOOL_PATH",
