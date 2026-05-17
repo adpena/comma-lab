@@ -119,9 +119,8 @@ def test_project_per_param_gradient_to_per_byte_uniform_spread(tmp_path):
     np.testing.assert_allclose(actual_seg_mass, expected_seg_mass, rtol=1e-3)
     np.testing.assert_allclose(actual_pose_mass, expected_pose_mass, rtol=1e-3)
 
-    # Rate column uniform across all 100 bytes
-    expected_rate = 1.0 / CONTEST_RATE_DENOM_BYTES
-    np.testing.assert_allclose(G[:, 2], expected_rate, rtol=1e-6)
+    # Rate is a packet byte-count property, not a byte-value derivative.
+    np.testing.assert_allclose(G[:, 2], 0.0, rtol=0, atol=0)
 
 
 def test_project_zero_gradient_yields_zero_seg_and_pose_columns(tmp_path):
@@ -162,8 +161,8 @@ def test_project_zero_gradient_yields_zero_seg_and_pose_columns(tmp_path):
     assert G.shape == (50, 3)
     assert np.allclose(G[:, 0], 0.0)
     assert np.allclose(G[:, 1], 0.0)
-    # Rate column still uniform (non-zero)
-    assert (G[:, 2] > 0).all()
+    # Rate column stays zero until a packet-valid candidate measures byte-count delta.
+    assert np.allclose(G[:, 2], 0.0)
 
 
 def test_project_handles_missing_tensor_in_grad_dict(tmp_path):
@@ -261,6 +260,58 @@ def test_append_anchor_locked_roundtrip(tmp_path):
     assert row["gradient_tensor_kind"] == AGGREGATE_GRADIENT_TENSOR_KIND
 
 
+def test_master_gradient_records_scored_archive_and_subject_custody(tmp_path):
+    """Charged ZIP custody and differentiated payload custody must not collapse."""
+    sidecar = tmp_path / "grad.npy"
+    np.save(sidecar, np.zeros((10, 3), dtype=np.float32))
+
+    grad = MasterGradient(
+        archive_sha256="a" * 64,
+        scored_archive_sha256="a" * 64,
+        scored_archive_bytes=110,
+        gradient_subject_sha256="b" * 64,
+        gradient_subject_bytes=10,
+        gradient_byte_domain="zip_inner_member_payload",
+        n_pairs_used=8,
+        n_pairs_total=600,
+        operating_point=OperatingPoint(
+            d_seg=0.05, d_pose=1e-5, rate=110 / CONTEST_RATE_DENOM_BYTES, score=0.193
+        ),
+        gradient_array_path=str(sidecar),
+        n_bytes=10,
+        measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+        measurement_axis="[diagnostic-CPU]",
+        measurement_hardware="darwin_arm64_local_cpu_advisory",
+        measurement_call_id=None,
+        measurement_utc="2026-05-17T12:00:00+00:00",
+    )
+
+    assert grad.archive_sha256 == "a" * 64
+    assert grad.scored_archive_bytes == 110
+    assert grad.gradient_subject_sha256 == "b" * 64
+    assert grad.gradient_subject_bytes == grad.n_bytes
+    assert grad.gradient_byte_domain == "zip_inner_member_payload"
+
+
+def test_master_gradient_refuses_subject_byte_count_mismatch(tmp_path):
+    sidecar = tmp_path / "grad.npy"
+    np.save(sidecar, np.zeros((10, 3), dtype=np.float32))
+
+    with pytest.raises(ValueError, match="gradient_subject_bytes must equal n_bytes"):
+        MasterGradient(
+            archive_sha256="a" * 64,
+            gradient_subject_bytes=11,
+            operating_point=OperatingPoint(d_seg=0.05, d_pose=1e-5, rate=0.119, score=0.193),
+            gradient_array_path=str(sidecar),
+            n_bytes=10,
+            measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+            measurement_axis="[diagnostic-CPU]",
+            measurement_hardware="darwin_arm64_local_cpu_advisory",
+            measurement_call_id=None,
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        )
+
+
 def test_per_pair_master_gradient_load_and_predict_vector(tmp_path):
     """Per-pair anchors are typed and preserve the pair axis instead of collapsing it."""
     sidecar = tmp_path / "grad_per_pair.npy"
@@ -347,13 +398,53 @@ def test_update_from_anchor_preserves_per_pair_metadata(tmp_path):
     assert rows[0]["n_pairs"] == 2
 
 
+def test_update_from_anchor_preserves_archive_custody_metadata(tmp_path):
+    sidecar = tmp_path / "grad.npy"
+    np.save(sidecar, np.zeros((5, 3), dtype=np.float32))
+    ledger = tmp_path / "anchors.jsonl"
+
+    update_from_anchor(
+        {
+            "archive_sha256": "a" * 64,
+            "scored_archive_sha256": "a" * 64,
+            "scored_archive_bytes": 123,
+            "gradient_subject_sha256": "b" * 64,
+            "gradient_subject_bytes": 5,
+            "gradient_byte_domain": "zip_inner_member_payload",
+            "n_pairs_used": 8,
+            "n_pairs_total": 600,
+            "operating_point": {
+                "d_seg": 0.05,
+                "d_pose": 1e-5,
+                "rate": 123 / CONTEST_RATE_DENOM_BYTES,
+                "score": 0.193,
+            },
+            "gradient_array_path": str(sidecar),
+            "n_bytes": 5,
+            "measurement_method": "autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+            "measurement_axis": "[diagnostic-CPU]",
+            "measurement_hardware": "darwin_arm64_local_cpu_advisory",
+            "measurement_call_id": "call_diag",
+            "measurement_utc": "2026-05-17T12:00:00+00:00",
+        },
+        path=ledger,
+    )
+
+    row = load_anchors_lenient(ledger)[0]
+    assert row["scored_archive_sha256"] == "a" * 64
+    assert row["gradient_subject_sha256"] == "b" * 64
+    assert row["gradient_byte_domain"] == "zip_inner_member_payload"
+    assert row["n_pairs_used"] == 8
+    assert row["n_pairs_total"] == 600
+
+
 # ─────────────────────────────────────────────────────────────────────────── #
 # Test: rate-column analytical correctness                                     #
 # ─────────────────────────────────────────────────────────────────────────── #
 
 
-def test_rate_column_uses_canonical_denom(tmp_path):
-    """Rate column must equal 1.0 / CONTEST_RATE_DENOM_BYTES regardless of operating point."""
+def test_rate_column_is_zero_for_byte_value_derivatives(tmp_path):
+    """Changing an existing byte value does not change archive byte count."""
     layout = emg._Fec6ArchiveLayout(
         archive_path=tmp_path / "fake.bin",
         archive_sha256="d" * 64,
@@ -374,14 +465,11 @@ def test_rate_column_uses_canonical_denom(tmp_path):
         has_fp11_outer_wrapper=False,
     )
     G = emg.project_per_param_gradient_to_per_byte(layout, {}, {})
-    expected = 1.0 / CONTEST_RATE_DENOM_BYTES
-    # rtol=1e-6 accounts for float32-vs-float64 representation of the canonical denom
-    np.testing.assert_allclose(G[:, 2], expected, rtol=1e-6)
-    # Per CLAUDE.md "Apples-to-apples evidence discipline": the marginal application is
-    # downstream (predict_delta_s multiplies the rate column by the 25.0 marginal).
+    np.testing.assert_allclose(G[:, 2], 0.0, rtol=0, atol=0)
+    # The byte-count marginal remains canonical; packet-valid candidates must
+    # multiply it by a measured rate_bytes_delta after rebuilding the archive.
     op = OperatingPoint(d_seg=0.05, d_pose=1e-5, rate=0.119, score=0.193)
     _, _, rate_marg = compute_marginal_coefficients(op)
-    # rate_marg = 25 / 37545489; rate_col * rate_marg gives ΔS per byte-delta from rate
     np.testing.assert_allclose(rate_marg, 25.0 / CONTEST_RATE_DENOM_BYTES, rtol=1e-12)
 
 
@@ -411,6 +499,38 @@ def test_main_refuses_tmp_output_path(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as excinfo:
         emg.main(argv)
     assert "Forbidden /tmp paths" in str(excinfo.value) or "Catalog #220" in str(excinfo.value)
+
+
+def test_validate_measurement_authority_refuses_subset_contest_axis():
+    with pytest.raises(SystemExit, match="require the full pair set"):
+        emg._validate_measurement_authority(
+            axis="[contest-CPU]",
+            device="cpu",
+            hardware_substrate="linux_x86_64_modal_cpu",
+            n_pairs_used=8,
+            n_pairs_total=600,
+        )
+
+
+def test_validate_measurement_authority_allows_subset_diagnostic_axis():
+    emg._validate_measurement_authority(
+        axis="[diagnostic-CPU]",
+        device="cpu",
+        hardware_substrate="darwin_arm64_local_cpu_advisory",
+        n_pairs_used=8,
+        n_pairs_total=600,
+    )
+
+
+def test_validate_measurement_authority_refuses_advisory_contest_axis():
+    with pytest.raises(SystemExit, match="cannot be written from advisory"):
+        emg._validate_measurement_authority(
+            axis="[contest-CPU]",
+            device="cpu",
+            hardware_substrate="darwin_arm64_local_cpu_advisory",
+            n_pairs_used=600,
+            n_pairs_total=600,
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────── #

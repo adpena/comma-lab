@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: MIT
-"""Canonical master-gradient helper — per-byte score gradient at a measured operating point.
+"""Canonical master-gradient helper — diagnostic score-response tensor at a measured operating point.
 
-The *master gradient*[^master-gradient] is an internal nickname for the per-byte
-sensitivity of the contest scoring function at a specific operating point. It
-decomposes the additive scorer `S = 100*d_seg + sqrt(10*d_pose) + 25*R` at
-byte-grain so per-byte interventions can be ranked by predicted ΔS.
+The *master gradient*[^master-gradient] is an internal nickname for a diagnostic
+score-response tensor at a specific operating point. It decomposes the additive
+scorer `S = 100*d_seg + sqrt(10*d_pose) + 25*R` across a parser-known payload
+domain so grammar-aware interventions can be prioritized for real packet-valid
+probes.
+
+Authority boundary: this module is not a raw archive-byte optimizer. Promotion
+and rank/kill authority must route through `CandidateModificationSpec` rows with
+`grammar_aware_operator` coordinates and packet proofs; see
+`tac.master_gradient_operator_plan`.
 
 [^master-gradient]: Internal nickname; not a published term. Symposium memo
     .omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md §3.
@@ -28,9 +34,9 @@ The canonical 4-layer pattern mirrors Catalog #245 (Modal call_id ledger):
 - Layer 3: STRICT preflight gate refusing stale gradient citations (TODO follow-on)
 - Layer 4: autopilot rerank wire-in via tac.autopilot_rudin_daubechies.master_gradient_lens
 
-The gradient is OPERATING-POINT-LOCAL. Re-measurement cadence per use is in §3.6
-of the symposium memo. Autograd-based extraction (12 min wall-clock; $0.50-2.00
-on Modal CPU) makes per-wave refresh economical.
+The tensor is OPERATING-POINT-LOCAL and often measured on a sample subset. Such
+rows are diagnostic unless the ledger records full charged-archive custody,
+sample count, hardware substrate, and an authoritative axis label.
 """
 from __future__ import annotations
 
@@ -126,10 +132,13 @@ def compute_marginal_coefficients(op: OperatingPoint) -> tuple[float, float, flo
 
 @dataclass(frozen=True)
 class MasterGradient:
-    """Per-byte score gradient measured at a specific (archive, operating point, axis).
+    """Diagnostic score-response tensor measured at a specific operating point.
 
     The default aggregate gradient tensor is stored as a sidecar .npy file
-    (shape (N_bytes, 3), dtype float32, columns [seg, pose, rate]).
+    (shape (N_bytes, 3), dtype float32, columns [seg, pose, rate_bytes_delta]).
+    `N_bytes` is the gradient subject byte domain, not necessarily the charged
+    contest ZIP size. For one-member ZIP submissions this is commonly the inner
+    payload stream; charged ZIP custody is recorded separately.
 
     Per-pair extraction uses a sister tensor kind with shape
     (N_bytes, N_pairs, 3). It must stay explicitly typed; silently treating a
@@ -143,7 +152,7 @@ class MasterGradient:
     operating_point: OperatingPoint
     gradient_array_path: str
     n_bytes: int
-    measurement_method: str  # "autograd_per_parameter_projected" | "finite_difference_bit_flip" | ...
+    measurement_method: str  # "autograd_per_parameter_projected" | "finite-difference bit flip" | ...
     measurement_axis: str  # "[contest-CPU]" / "[contest-CUDA]"
     measurement_hardware: str  # e.g. "linux_x86_64_modal_cpu"
     measurement_call_id: str | None
@@ -152,6 +161,13 @@ class MasterGradient:
     rashomon_disagreement_score: float | None = None
     gradient_tensor_kind: str = AGGREGATE_GRADIENT_TENSOR_KIND
     n_pairs: int | None = None
+    scored_archive_sha256: str | None = None
+    scored_archive_bytes: int | None = None
+    gradient_subject_sha256: str | None = None
+    gradient_subject_bytes: int | None = None
+    gradient_byte_domain: str = "scored_archive_bytes"
+    n_pairs_used: int | None = None
+    n_pairs_total: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.archive_sha256, str) or len(self.archive_sha256) < 16:
@@ -183,6 +199,34 @@ class MasterGradient:
             raise ValueError(
                 "per-pair master-gradient anchors must set positive integer n_pairs"
             )
+        for field_name, value in (
+            ("scored_archive_sha256", self.scored_archive_sha256),
+            ("gradient_subject_sha256", self.gradient_subject_sha256),
+        ):
+            if value is not None and (
+                not isinstance(value, str)
+                or len(value) != 64
+                or any(ch not in "0123456789abcdefABCDEF" for ch in value)
+            ):
+                raise ValueError(f"{field_name} must be a 64-char hex sha256 when set")
+        for field_name, value in (
+            ("scored_archive_bytes", self.scored_archive_bytes),
+            ("gradient_subject_bytes", self.gradient_subject_bytes),
+            ("n_pairs_used", self.n_pairs_used),
+            ("n_pairs_total", self.n_pairs_total),
+        ):
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int) or value <= 0
+            ):
+                raise ValueError(f"{field_name} must be a positive integer when set")
+        if (
+            self.n_pairs_used is not None
+            and self.n_pairs_total is not None
+            and self.n_pairs_used > self.n_pairs_total
+        ):
+            raise ValueError("n_pairs_used cannot exceed n_pairs_total")
+        if self.gradient_subject_bytes is not None and self.gradient_subject_bytes != self.n_bytes:
+            raise ValueError("gradient_subject_bytes must equal n_bytes for the sidecar tensor")
 
     def load_gradient(self):
         """Load the (N_bytes, 3) float32 array; requires numpy."""
@@ -221,11 +265,13 @@ class MasterGradient:
         return compute_marginal_coefficients(self.operating_point)
 
     def predict_delta_s(self, byte_modifications: Mapping[int, float]) -> float:
-        """Predicted ΔS for a candidate byte-modification spec.
+        """Diagnostic ΔS for a local byte-value perturbation.
 
-        byte_modifications: {byte_idx: delta} where delta is the change in byte value.
-        Rate contribution is added separately if archive byte count changes (caller passes
-        rate-delta via the rate column; see tac.autopilot_rudin_daubechies.master_gradient_lens).
+        This helper is intentionally diagnostic: `byte_modifications` uses
+        sidecar-domain byte coordinates and is not a packet-valid archive
+        mutation. Score-lowering candidates must be materialized as
+        `CandidateModificationSpec` / `grammar_aware_operator` response rows
+        that rebuild ZIP metadata and measure `rate_bytes_delta` explicitly.
         """
         arr = self.load_gradient()
         coeffs = self.coefficients()
@@ -430,6 +476,31 @@ def update_from_anchor(anchor: dict, *, path: Path | None = None) -> None:
         ),
         n_pairs=(
             int(anchor["n_pairs"]) if anchor.get("n_pairs") is not None else None
+        ),
+        scored_archive_sha256=anchor.get("scored_archive_sha256"),
+        scored_archive_bytes=(
+            int(anchor["scored_archive_bytes"])
+            if anchor.get("scored_archive_bytes") is not None
+            else None
+        ),
+        gradient_subject_sha256=anchor.get("gradient_subject_sha256"),
+        gradient_subject_bytes=(
+            int(anchor["gradient_subject_bytes"])
+            if anchor.get("gradient_subject_bytes") is not None
+            else None
+        ),
+        gradient_byte_domain=str(
+            anchor.get("gradient_byte_domain", "scored_archive_bytes")
+        ),
+        n_pairs_used=(
+            int(anchor["n_pairs_used"])
+            if anchor.get("n_pairs_used") is not None
+            else None
+        ),
+        n_pairs_total=(
+            int(anchor["n_pairs_total"])
+            if anchor.get("n_pairs_total") is not None
+            else None
         ),
     )
     append_anchor_locked(grad, path=path)

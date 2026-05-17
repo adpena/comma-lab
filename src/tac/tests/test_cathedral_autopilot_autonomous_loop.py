@@ -2213,3 +2213,138 @@ def test_authorized_event_serialization_round_trip(tmp_path):
     assert serialized["halt_events"][0]["autopilot_claim_recorded"] is True
     # JSON round-trip:
     assert json.loads(json.dumps(serialized))["halt_events"][0]["autopilot_authorized"] is True
+
+
+def test_master_gradient_rerank_uses_structured_archive_sha256(tmp_path):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    archive_sha = _sha("d")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    # The reranker does not load the tensor yet; a real path is still clearer.
+    sidecar.write_bytes(b"not-loaded")
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("e"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=600,
+            n_pairs_total=600,
+            operating_point=OperatingPoint(
+                d_seg=0.0005,
+                d_pose=0.00003,
+                rate=178_517 / 37_545_489,
+                score=0.192,
+            ),
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+            measurement_axis="[contest-CPU]",
+            measurement_hardware="linux_x86_64_modal_cpu",
+            measurement_call_id="call-full",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand("not_a_hash", predicted_delta=-0.01, archive_sha256=archive_sha)
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cpu",
+        ledger_path=ledger,
+    )
+
+    assert ranked[0][1] == pytest.approx(-0.01)
+    assert "master-gradient-anchor-present" in ranked[0][2]
+    assert "zip_inner_member_payload" in ranked[0][2]
+
+
+def test_master_gradient_rerank_rejects_subset_anchor(tmp_path):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    archive_sha = _sha("f")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    sidecar.write_bytes(b"not-loaded")
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("a"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=8,
+            n_pairs_total=600,
+            operating_point=OperatingPoint(
+                d_seg=0.0005,
+                d_pose=0.00003,
+                rate=178_517 / 37_545_489,
+                score=0.192,
+            ),
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+            measurement_axis="[contest-CPU]",
+            measurement_hardware="linux_x86_64_modal_cpu",
+            measurement_call_id="call-subset",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand("not_a_hash", predicted_delta=-0.01, archive_sha256=archive_sha)
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cpu",
+        ledger_path=ledger,
+    )
+
+    assert ranked[0][1] == pytest.approx(-0.01)
+    assert "diagnostic-only" in ranked[0][2]
+
+
+def test_master_gradient_rerank_does_not_scrape_notes_or_candidate_id(tmp_path):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    anchor_sha = _sha("a")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    sidecar.write_bytes(b"not-loaded")
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=anchor_sha,
+            scored_archive_sha256=anchor_sha,
+            scored_archive_bytes=100,
+            operating_point=OperatingPoint(
+                d_seg=0.0005,
+                d_pose=0.00003,
+                rate=100 / 37_545_489,
+                score=0.192,
+            ),
+            gradient_array_path=str(sidecar),
+            n_bytes=100,
+            measurement_method="autograd_per_parameter_projected_fec6_int8_fp16_jacobian",
+            measurement_axis="[contest-CPU]",
+            measurement_hardware="linux_x86_64_modal_cpu",
+            measurement_call_id="call",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand(anchor_sha, predicted_delta=-0.01, archive_sha256="")
+    cand.notes = f"archive_sha256 {anchor_sha}"
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cpu",
+        ledger_path=ledger,
+    )
+
+    assert "structured archive_sha256 missing or malformed" in ranked[0][2]

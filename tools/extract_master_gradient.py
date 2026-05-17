@@ -6,7 +6,7 @@
 # auth-eval helper) are categorically inapplicable and are skipped by
 # ``src/tac/deploy/dispatch_protocol.py::_is_tool_dispatch`` via implicit
 # ``tools/*.py`` detection + the recipe's explicit ``dispatch_kind: tool`` field.
-"""Master-gradient extractor for byte-grain score sensitivity at a measured operating point.
+"""Master-gradient extractor for diagnostic score-response tensors.
 
 [verified-against: .omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md §3.2 REVISED]
 [verified-against: .omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md §1.1 op-routable #1]
@@ -25,7 +25,8 @@ The autograd path:
     backward(d_seg):   per-parameter d(d_seg)/d(theta)  [SegNet uses x[:, -1, ...] so only
                        frame_1 weights get gradient flow]
     backward(d_pose):  per-parameter d(d_pose)/d(theta)
-    rate analytical:   25 / 37,545,489 per byte uniformly
+    rate analytical:   archive byte-count term, recorded via packet-valid
+                       operator response rows rather than byte-value deltas
 
 Per-byte projection through the fec6 codec Jacobian:
     The fec6 archive grammar (per submission_dir/src/codec.py) stores:
@@ -46,6 +47,13 @@ Per-byte projection through the fec6 codec Jacobian:
 Output: master gradient ledger anchor at .omx/state/master_gradient_anchors.jsonl + sidecar
 .npy file at OUTPUT_NPY (caller-specified; symposium §3.6 use #7 mandates non-/tmp path).
 
+Authority boundary: this extractor emits diagnostic tensors only. Score-lowering
+authority must route through `CandidateModificationSpec` rows with
+`grammar_aware_operator` coordinates and packet proofs in
+`tac.master_gradient_operator_plan`. One-member contest ZIPs are charged as ZIP
+bytes but differentiated over their inner payload domain; both identities are
+recorded separately.
+
 CLI:
     .venv/bin/python tools/extract_master_gradient.py \\
         --archive submissions/fec6/archive.zip \\
@@ -60,6 +68,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import math
+import platform
 import struct
 import sys
 import time
@@ -289,7 +298,8 @@ def project_per_param_gradient_to_per_byte(
 ) -> np.ndarray:
     """Project per-parameter gradient through fec6 int8+fp16 Jacobian.
 
-    Returns: (n_archive_bytes, 3) float32 array with columns (seg, pose, rate).
+    Returns: (n_archive_bytes, 3) float32 array with columns
+    (seg, pose, rate_bytes_delta).
 
     Per-tensor Jacobian for the fec6 grammar:
         w = mantissa_byte_decoded_to_i8 * scale_fp16
@@ -314,8 +324,10 @@ def project_per_param_gradient_to_per_byte(
     The sign for ranking purposes is set to +1 by convention; downstream candidate
     generators that propose specific byte modifications should consult the codec.
 
-    Rate column is analytical: 1.0 / CONTEST_RATE_DENOM_BYTES per byte (uniform across
-    all archive bytes); the predict_delta_s helper multiplies by 25.0 marginal.
+    Rate column is zero for byte-value sensitivities. Archive byte-count changes
+    are not a derivative of an existing byte value; packet-valid operator rows
+    must measure and persist `rate_bytes_delta` explicitly after rebuilding ZIP
+    metadata and CRCs.
     """
     n_bytes = layout.n_archive_bytes
     G = np.zeros((n_bytes, 3), dtype=np.float32)
@@ -419,8 +431,10 @@ def project_per_param_gradient_to_per_byte(
             G[compressed_start:compressed_end, 0] += seg_per_byte
             G[compressed_start:compressed_end, 1] += pose_per_byte
 
-    # ── Rate (analytical, uniform across all archive bytes) ─────────────────
-    G[:, 2] = 1.0 / CONTEST_RATE_DENOM_BYTES
+    # ── Rate (operator-response only) ───────────────────────────────────────
+    # Changing an existing byte value does not change archive byte count. Rate
+    # deltas are measured on packet-valid candidates, not inferred here.
+    G[:, 2] = 0.0
 
     return G
 
@@ -704,6 +718,58 @@ def _add_inflate_src_to_path(inflate_py: Path) -> None:
         sys.path.insert(0, str(src_dir))
 
 
+def _default_hardware_substrate(device: str) -> str:
+    """Return a non-authoritative-by-default hardware tag for the current host."""
+    system = platform.system().lower() or "unknown"
+    machine = platform.machine().lower() or "unknown"
+    if system == "darwin":
+        return f"darwin_{machine}_local_{device}_advisory"
+    if system == "linux":
+        return f"linux_{machine}_{device}"
+    return f"{system}_{machine}_{device}_unknown"
+
+
+def _axis_is_authoritative(axis: str) -> bool:
+    return axis in {"[contest-CPU]", "[contest-CUDA]"}
+
+
+def _validate_measurement_authority(
+    *,
+    axis: str,
+    device: str,
+    hardware_substrate: str,
+    n_pairs_used: int,
+    n_pairs_total: int,
+) -> None:
+    """Fail closed when diagnostic or advisory extraction is labeled as contest authority."""
+    if n_pairs_used <= 0 or n_pairs_total <= 0 or n_pairs_used > n_pairs_total:
+        raise SystemExit(
+            f"invalid pair counts: n_pairs_used={n_pairs_used}, n_pairs_total={n_pairs_total}"
+        )
+    hardware_lower = hardware_substrate.lower()
+    if _axis_is_authoritative(axis) and n_pairs_used != n_pairs_total:
+        raise SystemExit(
+            f"{axis} master-gradient anchors require the full pair set "
+            f"(n_pairs_used={n_pairs_used}, n_pairs_total={n_pairs_total}); "
+            "use [diagnostic-CPU], [diagnostic-CUDA], or [macOS-CPU advisory] "
+            "for subset probes."
+        )
+    if _axis_is_authoritative(axis) and any(
+        token in hardware_lower for token in ("advisory", "darwin", "macos", "mps")
+    ):
+        raise SystemExit(
+            f"{axis} cannot be written from advisory hardware_substrate={hardware_substrate!r}"
+        )
+    if axis == "[contest-CUDA]" and device != "cuda":
+        raise SystemExit("[contest-CUDA] anchors require --device cuda")
+    if axis == "[contest-CPU]" and device != "cpu":
+        raise SystemExit("[contest-CPU] anchors require --device cpu")
+    if axis == "[macOS-CPU advisory]" and "darwin" not in hardware_lower:
+        raise SystemExit(
+            "[macOS-CPU advisory] anchors require a darwin/macos hardware_substrate"
+        )
+
+
 def _maybe_extract_inner_archive_from_zip(zip_path: Path) -> bytes:
     """If zip_path is a real .zip with a single 0.bin member, return its bytes; else assume it's already raw."""
     import zipfile
@@ -735,11 +801,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--archive", required=True, type=Path, help="Path to fec6 archive.zip or raw archive bytes")
     parser.add_argument("--inflate-py", required=True, type=Path, help="Path to submission_dir/inflate.py (the codec source)")
     parser.add_argument("--upstream-dir", required=True, type=Path, help="Path to upstream repository root (with models/posenet.safetensors etc.)")
-    parser.add_argument("--axis", required=True, choices=["[contest-CPU]", "[contest-CUDA]"], help="Score axis (lane-tagged per CLAUDE.md)")
+    parser.add_argument(
+        "--axis",
+        required=True,
+        choices=[
+            "[contest-CPU]",
+            "[contest-CUDA]",
+            "[diagnostic-CPU]",
+            "[diagnostic-CUDA]",
+            "[macOS-CPU advisory]",
+            "[MPS-PROXY]",
+        ],
+        help="Score axis tag. Contest tags require full pair count and authoritative hardware.",
+    )
     parser.add_argument("--output-npy", required=True, type=Path, help="Sidecar .npy path for the (n_bytes, 3) gradient array (NOT in /tmp per Catalog #220)")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Compute device (cpu for Modal CPU dispatch)")
     parser.add_argument("--video-path", default=None, type=Path, help="GT video path (defaults to upstream/videos/0.mkv)")
     parser.add_argument("--n-pairs-used", type=int, default=8, help="Pairs to use for forward+backward (CPU economics; default 8)")
+    parser.add_argument("--n-pairs-total", type=int, default=600, help="Total contest pair count for authority checks (default 600)")
     parser.add_argument("--call-id", default=None, help="Optional dispatch call_id for the ledger anchor")
     parser.add_argument("--hardware-substrate", default=None, help="Hardware substrate tag (default: derived from device)")
     parser.add_argument("--scratch-dir", default=None, type=Path, help="Scratch dir for raw archive bytes (default: alongside output-npy)")
@@ -766,8 +845,33 @@ def main(argv: Sequence[str] | None = None) -> int:
             "before .npy. Forbidden under /tmp per Catalog #220."
         ),
     )
+    parser.add_argument(
+        "--compute-dtype",
+        default="float32",
+        choices=["float32", "float64"],
+        help=(
+            "Autograd compute precision (default float32). float64 doubles per-op "
+            "precision (~7 decimal digits → ~15) but on Apple Silicon CPU fp64 is "
+            "scalar-only (no NEON SIMD) so ~4x wall-clock vs fp32. Use float64 for "
+            "the canonical max-precision anchor when extra decimal places at the "
+            "small-magnitude end matter (Hessian-vector products, Wyner-Ziv residual "
+            "amplitude estimates, per-pair Pareto envelope numerics)."
+        ),
+    )
+    parser.add_argument(
+        "--storage-dtype",
+        default=None,
+        choices=["float32", "float64"],
+        help=(
+            "Sidecar .npy storage precision (default: matches --compute-dtype). "
+            "Use 'float32' with --compute-dtype float64 to get fp64 accumulation + "
+            "fp32 final cast (precision lost only at the final cast; halves disk)."
+        ),
+    )
 
     args = parser.parse_args(argv)
+    if args.storage_dtype is None:
+        args.storage_dtype = args.compute_dtype
 
     if args.output_npy.is_absolute() and str(args.output_npy).startswith(("/tmp/", "/private/tmp/", "/var/tmp/")):
         raise SystemExit(
@@ -775,20 +879,50 @@ def main(argv: Sequence[str] | None = None) -> int:
             "'Forbidden /tmp paths in any persisted artifact' (Catalog #220 + transient-evidence trap)"
         )
 
+    hardware_substrate = args.hardware_substrate or _default_hardware_substrate(args.device)
+    _validate_measurement_authority(
+        axis=args.axis,
+        device=args.device,
+        hardware_substrate=hardware_substrate,
+        n_pairs_used=args.n_pairs_used,
+        n_pairs_total=args.n_pairs_total,
+    )
+
     _add_inflate_src_to_path(args.inflate_py)
     import codec as codec_module  # type: ignore[import-not-found]
     from model import HNeRVDecoder  # type: ignore[import-not-found]
     # Populate the CONV4 permutation cache
     _conv4_storage_perms(codec_module)
 
+    scored_archive_bytes = args.archive.read_bytes()
+    scored_archive_sha256 = _sha256_bytes(scored_archive_bytes)
     raw_archive_bytes = _maybe_extract_inner_archive_from_zip(args.archive)
+    gradient_subject_sha256 = _sha256_bytes(raw_archive_bytes)
+    gradient_byte_domain = (
+        "scored_archive_bytes"
+        if raw_archive_bytes == scored_archive_bytes
+        else "zip_inner_member_payload"
+    )
     scratch_dir = args.scratch_dir or args.output_npy.parent / "_extractor_scratch"
     scratch_archive = _serialize_archive_to_temp(raw_archive_bytes, scratch_dir)
 
+    print(
+        f"[master-gradient] charged archive sha256={scored_archive_sha256[:16]}... "
+        f"bytes={len(scored_archive_bytes)}"
+    )
+    print(
+        f"[master-gradient] gradient subject sha256={gradient_subject_sha256[:16]}... "
+        f"bytes={len(raw_archive_bytes)} domain={gradient_byte_domain}"
+    )
     print(f"[master-gradient] parsing archive layout from {scratch_archive} ({len(raw_archive_bytes)} bytes)")
     layout = parse_fec6_archive_layout(scratch_archive, codec_module)
+    if layout.archive_sha256 != gradient_subject_sha256:
+        raise RuntimeError(
+            "layout archive sha mismatch: "
+            f"layout={layout.archive_sha256}, subject={gradient_subject_sha256}"
+        )
 
-    print(f"[master-gradient] archive sha256={layout.archive_sha256[:16]}... n_bytes={layout.n_archive_bytes}")
+    print(f"[master-gradient] layout subject sha256={layout.archive_sha256[:16]}... n_bytes={layout.n_archive_bytes}")
     print(f"[master-gradient] decoder_blob {layout.decoder_blob_len}B, latent_blob {layout.latent_blob_len}B, sidecar {layout.sidecar_blob_len}B")
     print(f"[master-gradient] n_pairs={layout.n_pairs} eval_size={layout.eval_size} latent_dim={layout.latent_dim}")
 
@@ -799,8 +933,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     patch_token = patch_upstream_yuv6_globally()
 
     try:
+        # Resolve compute dtype per operator's max-precision directive (2026-05-17)
+        compute_torch_dtype = torch.float64 if args.compute_dtype == "float64" else torch.float32
+        storage_np_dtype = np.float64 if args.storage_dtype == "float64" else np.float32
+        print(
+            f"[master-gradient] compute_dtype={args.compute_dtype} "
+            f"storage_dtype={args.storage_dtype} "
+            f"(fp64 compute ~4x wall-clock on Apple Silicon CPU; "
+            f"~15 decimal digits vs fp32's ~7)"
+        )
+
         print(f"[master-gradient] loading scorers from {args.upstream_dir}")
         posenet, segnet = load_differentiable_scorers(args.upstream_dir, device=device)
+        # Cast scorers to compute dtype for autograd-precision parity with decoder
+        posenet = posenet.to(dtype=compute_torch_dtype)
+        segnet = segnet.to(dtype=compute_torch_dtype)
 
         # Parse decoder state_dict + latents from archive (using submitter codec)
         print("[master-gradient] decoding archive via canonical codec.parse_archive")
@@ -815,14 +962,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             latent_dim=meta["latent_dim"],
             base_channels=meta["base_channels"],
             eval_size=tuple(meta["eval_size"]),
-        ).to(device)
+        ).to(device).to(dtype=compute_torch_dtype)
         _stamp_decoder_with_archive_weights(decoder, decoder_sd)
 
         video_path = args.video_path or (args.upstream_dir / "videos" / "0.mkv")
         print(f"[master-gradient] loading {args.n_pairs_used} ground-truth pairs from {video_path}")
-        gt_pairs = _ground_truth_frame_pairs(video_path, args.n_pairs_used, tuple(meta["eval_size"]))
+        gt_pairs = _ground_truth_frame_pairs(video_path, args.n_pairs_used, tuple(meta["eval_size"])).to(dtype=compute_torch_dtype)
 
-        latents_tensor = latents.to(device)
+        latents_tensor = latents.to(device).to(dtype=compute_torch_dtype)
 
         backward_count = (2 * args.n_pairs_used) if args.preserve_per_pair else 2
         print(
@@ -844,7 +991,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             gt_pair_batch=gt_pairs,
             posenet=posenet,
             segnet=segnet,
-            archive_bytes_count=layout.n_archive_bytes,
+            archive_bytes_count=len(scored_archive_bytes),
             device=device,
             n_pairs_used=args.n_pairs_used,
             preserve_per_pair=args.preserve_per_pair,
@@ -869,18 +1016,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         if nans or infs:
             raise RuntimeError(f"projected gradient has {nans} NaN + {infs} Inf entries")
 
-        # Write sidecar
+        # Write sidecar — cast to storage_dtype per --storage-dtype contract
         args.output_npy.parent.mkdir(parents=True, exist_ok=True)
-        np.save(args.output_npy, G)
-        print(f"[master-gradient] wrote sidecar {args.output_npy} ({G.nbytes} bytes; shape={G.shape})")
+        G_to_save = G.astype(storage_np_dtype, copy=False) if G.dtype != storage_np_dtype else G
+        np.save(args.output_npy, G_to_save)
+        print(f"[master-gradient] wrote sidecar {args.output_npy} ({G_to_save.nbytes} bytes; shape={G_to_save.shape}; dtype={G_to_save.dtype})")
 
         # Optional ledger anchor
         if not args.no_anchor_write:
-            hardware_substrate = args.hardware_substrate or (
-                "linux_x86_64_modal_cpu" if device.type == "cpu" else f"linux_x86_64_modal_{device.type}"
-            )
             grad = MasterGradient(
-                archive_sha256=layout.archive_sha256,
+                archive_sha256=scored_archive_sha256,
                 operating_point=op,
                 gradient_array_path=str(args.output_npy.resolve()),
                 n_bytes=layout.n_archive_bytes,
@@ -891,6 +1036,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 measurement_utc=datetime.now(UTC).isoformat(),
                 pareto_facets=(),
                 rashomon_disagreement_score=None,
+                scored_archive_sha256=scored_archive_sha256,
+                scored_archive_bytes=len(scored_archive_bytes),
+                gradient_subject_sha256=gradient_subject_sha256,
+                gradient_subject_bytes=layout.n_archive_bytes,
+                gradient_byte_domain=gradient_byte_domain,
+                n_pairs_used=args.n_pairs_used,
+                n_pairs_total=args.n_pairs_total,
             )
             append_anchor_locked(grad)
             print(f"[master-gradient] appended anchor to {grad.gradient_array_path} (axis={args.axis})")
@@ -969,23 +1121,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                     f"per-pair gradient has {pp_nans} NaN + {pp_infs} Inf entries"
                 )
 
-            # Write sister sidecar
+            # Write sister sidecar — cast to storage_dtype per --storage-dtype contract
             per_pair_output_npy.parent.mkdir(parents=True, exist_ok=True)
-            np.save(per_pair_output_npy, G_per_pair)
+            G_pp_to_save = (
+                G_per_pair.astype(storage_np_dtype, copy=False)
+                if G_per_pair.dtype != storage_np_dtype else G_per_pair
+            )
+            np.save(per_pair_output_npy, G_pp_to_save)
             print(
                 f"[master-gradient] wrote per-pair sidecar {per_pair_output_npy} "
-                f"({G_per_pair.nbytes} bytes; shape={G_per_pair.shape})"
+                f"({G_pp_to_save.nbytes} bytes; shape={G_pp_to_save.shape}; dtype={G_pp_to_save.dtype})"
             )
 
             # Optional sister ledger anchor
             if not args.no_anchor_write:
-                hardware_substrate_pp = args.hardware_substrate or (
-                    "linux_x86_64_modal_cpu"
-                    if device.type == "cpu"
-                    else f"linux_x86_64_modal_{device.type}"
-                )
                 grad_pp = MasterGradient(
-                    archive_sha256=layout.archive_sha256,
+                    archive_sha256=scored_archive_sha256,
                     operating_point=op,
                     gradient_array_path=str(per_pair_output_npy.resolve()),
                     n_bytes=layout.n_archive_bytes,
@@ -994,7 +1145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         f"_per_pair_{args.n_pairs_used}pair"
                     ),
                     measurement_axis=args.axis,
-                    measurement_hardware=hardware_substrate_pp,
+                    measurement_hardware=hardware_substrate,
                     measurement_call_id=(
                         f"{args.call_id}_per_pair" if args.call_id else None
                     ),
@@ -1003,6 +1154,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                     rashomon_disagreement_score=None,
                     gradient_tensor_kind=PER_PAIR_GRADIENT_TENSOR_KIND,
                     n_pairs=args.n_pairs_used,
+                    scored_archive_sha256=scored_archive_sha256,
+                    scored_archive_bytes=len(scored_archive_bytes),
+                    gradient_subject_sha256=gradient_subject_sha256,
+                    gradient_subject_bytes=layout.n_archive_bytes,
+                    gradient_byte_domain=gradient_byte_domain,
+                    n_pairs_used=args.n_pairs_used,
+                    n_pairs_total=args.n_pairs_total,
                 )
                 append_anchor_locked(grad_pp)
                 print(
@@ -1014,7 +1172,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "[master-gradient] --no-anchor-write set; skipping per-pair ledger append"
                 )
 
-        print(f"[master-gradient] DONE [score-axis={args.axis}] sha256={layout.archive_sha256[:16]}")
+        print(
+            f"[master-gradient] DONE [score-axis={args.axis}] "
+            f"scored_sha256={scored_archive_sha256[:16]} "
+            f"subject_sha256={layout.archive_sha256[:16]}"
+        )
         return 0
     finally:
         unpatch_upstream_yuv6(patch_token)

@@ -3703,6 +3703,124 @@ def rerank_candidates_via_compressive_sensing_lattice(
     return out
 
 
+def rerank_candidates_via_master_gradient(
+    candidates: list[CandidateRow],
+    *,
+    panel_axis: str = "contest_cpu",
+    ledger_path: Path | None = None,
+) -> list[tuple[CandidateRow, float, str]]:
+    """Rerank candidates via the master gradient per symposium §3.6.
+
+    Sister of rerank_candidates_via_rudin_daubechies + rerank_candidates_via_compressive_sensing_lattice.
+    Implements the Phase-7 master-gradient lens per cathedral autopilot wire-in (Catalog #125 hook 4).
+
+    For each candidate, queries tac.master_gradient.latest_anchor_for_archive
+    keyed on the structured CandidateRow.archive_sha256 field. If a gradient
+    anchor exists, the current hook only annotates anchor availability. It does
+    not replace predicted_score_delta until the candidate carries a typed
+    CandidateModificationSpec / grammar_aware_operator response row with packet
+    proofs. If no anchor exists, the candidate falls through to
+    predicted_score_delta with a "no-master-gradient-anchor" tag.
+
+    Returns ``(candidate, predicted_delta_s, explanation)`` sorted ascending
+    (most-negative first = best score improvement).
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline" + the master-gradient
+    canonical contract in tac.master_gradient: predictions carry the
+    measurement_axis tag from the source anchor, so contest-CPU vs contest-CUDA
+    predictions are never silently mixed.
+
+    Per CLAUDE.md "Forbidden score claims": the returned predicted_delta_s
+    is explicitly tagged "[predicted, master-gradient-projection]" in the
+    explanation, never promoted to empirical without paired auth-eval.
+    """
+    if panel_axis not in {"contest_cpu", "contest_cuda"}:
+        raise ValueError(
+            f"unsupported master_gradient panel_axis={panel_axis!r}; expected contest_cpu or contest_cuda"
+        )
+    # Lazy import to avoid hard dep at module-import time per the autopilot pattern.
+    from tac.master_gradient import (
+        MASTER_GRADIENT_LEDGER_PATH,
+        latest_anchor_for_archive,
+    )
+
+    axis_tag = f"[contest-{'CPU' if panel_axis == 'contest_cpu' else 'CUDA'}]"
+    ledger = ledger_path or MASTER_GRADIENT_LEDGER_PATH
+    out: list[tuple[CandidateRow, float, str]] = []
+    for c in candidates:
+        sha_candidate = c.archive_sha256.strip().lower()
+        if not _is_sha256_hex(sha_candidate):
+            out.append(
+                (
+                    c,
+                    float(c.predicted_score_delta),
+                    f"[predicted, no-master-gradient-anchor, {axis_tag}] structured archive_sha256 missing or malformed",
+                )
+            )
+            continue
+        anchor = latest_anchor_for_archive(sha_candidate, path=ledger, axis=axis_tag)
+        if anchor is None:
+            out.append(
+                (
+                    c,
+                    float(c.predicted_score_delta),
+                    f"[predicted, no-master-gradient-anchor, {axis_tag}] no anchor for archive {sha_candidate[:12]}",
+                )
+            )
+            continue
+        scored_anchor_sha = str(
+            anchor.get("scored_archive_sha256") or anchor.get("archive_sha256") or ""
+        ).lower()
+        if scored_anchor_sha != sha_candidate:
+            out.append(
+                (
+                    c,
+                    float(c.predicted_score_delta),
+                    f"[predicted, master-gradient-anchor-rejected, {axis_tag}] "
+                    f"anchor scored_archive_sha256={scored_anchor_sha[:12] or '<missing>'} "
+                    f"does not match candidate archive={sha_candidate[:12]}",
+                )
+            )
+            continue
+        n_pairs_used = anchor.get("n_pairs_used")
+        n_pairs_total = anchor.get("n_pairs_total")
+        if (
+            isinstance(n_pairs_used, int)
+            and isinstance(n_pairs_total, int)
+            and n_pairs_used != n_pairs_total
+        ):
+            out.append(
+                (
+                    c,
+                    float(c.predicted_score_delta),
+                    f"[predicted, master-gradient-anchor-diagnostic-only, {axis_tag}] "
+                    f"subset anchor n_pairs_used={n_pairs_used} n_pairs_total={n_pairs_total}",
+                )
+            )
+            continue
+        # Anchor present; for the canonical wire-in we surface the operating-point
+        # score itself + measurement_utc so the operator can audit when the gradient
+        # was last refreshed. Per-byte ΔS projection requires the candidate to
+        # express a packet-valid CandidateModificationSpec, which the autopilot
+        # ranker does not currently carry; that wire-in is the Phase-7 lens
+        # follow-on.
+        op_score = float(anchor.get("operating_point", {}).get("score", 0.0))
+        measurement_utc = anchor.get("measurement_utc", "?")
+        gradient_domain = anchor.get("gradient_byte_domain", "unknown")
+        explanation = (
+            f"[predicted, master-gradient-anchor-present, {axis_tag}] "
+            f"anchor archive={sha_candidate[:12]} op_score={op_score:.5f} "
+            f"domain={gradient_domain} measured_at={measurement_utc} "
+            f"(ΔS projection requires CandidateModificationSpec/grammar_aware_operator "
+            "packet proofs; Phase-7 lens follow-on)"
+        )
+        # Keep predicted_score_delta unchanged for now (no spec → no projection);
+        # the explanation surfaces anchor presence so operator can interpret.
+        out.append((c, float(c.predicted_score_delta), explanation))
+    out.sort(key=lambda t: t[1])
+    return out
+
+
 def diagnose_compressive_sensing_lattice_undersampling(
     candidates: list[CandidateRow],
     *,
