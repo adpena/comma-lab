@@ -62,10 +62,11 @@ retiring the L5/L5-v2 staircase:
   has `ready_cell_count=10`, execution bundle has
   `ready_dry_run_cell_count=10`, dry-run verifier has `10/10` passing cells,
   route packet has `artifact_blocker_count=0`, and required doctor plan is
-  `ready_for_operator_doctor=true`. Non-dry-run provider execution still
-  requires Lightning identity/quota, per-cell source manifests, active lane
-  claims, exact harvest, terminal claim rows, and architecture-lock packet
-  refresh after harvest.
+  `ready_for_operator_doctor=true`. This chain was refreshed against `main`
+  commit `9b926ab6e099585d64a76726db91c8af6be0f181`; `source_relevant_paths_match`
+  remains `true`. Non-dry-run provider execution still requires Lightning
+  identity/quota, per-cell source manifests, active lane claims, exact harvest,
+  terminal claim rows, and architecture-lock packet refresh after harvest.
 - Lightning required-doctor plan exists at
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`;
   it is planning-only and confers no dispatch or score authority. The route
@@ -151,6 +152,8 @@ Detailed scan ledger:
 `.omx/research/l5_v2_omx_parent_markdown_scope_refresh_20260517_codex.md`.
 No-ignore follow-up ledger:
 `.omx/research/l5_v2_omx_parent_markdown_no_ignore_refresh_20260517_codex.md`.
+Latest TT5L custody refresh uses `main`
+`9b926ab6e099585d64a76726db91c8af6be0f181`.
 
 ## Required Refresh Cadence
 

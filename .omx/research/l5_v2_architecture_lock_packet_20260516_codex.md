@@ -38,7 +38,7 @@
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
 - artifact_valid: `True`
-- source_commit: `730b52ee3118b3ec6331a600d760f4fe44897d4e`
+- source_commit: `9b926ab6e099585d64a76726db91c8af6be0f181`
 - source_relevant_paths_match: `True`
 - source_relevant_diff_paths: `[]`
 - source_custody_current_for_execution: `True`

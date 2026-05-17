@@ -13,9 +13,9 @@ This memo is the post-harvest bridge from the Lightning paired-axis plan to the 
 ## Sources
 
 - Lightning paired-axis plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
-- Lightning plan SHA-256: `afaea41dd7247a758422f467d345e12f30396ecedd7ca2642f76c5984065de81`
+- Lightning plan SHA-256: `acc247e499a9f3a855d97623099bbb95d59807eb5371a0d31f6ade3f8b145414`
 - Variant manifest: `.omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json`
-- Variant manifest SHA-256: `80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459`
+- Variant manifest SHA-256: `53520df3292bcf9a1f4dce23f4da0ea65f7e54de5d07b42ee80aee4b2a9966ec`
 
 ## Cell Status
 

@@ -55,7 +55,7 @@ rg -n -i 'l5|staircase|time[-_ ]?traveler|tt5l|cargo[-_ ]cult|class-shift|score[
   bolt-on, TT5L side-info effect curve, SCORER-AWARENESS probe wave, and Z6
   per-frame-renderer-axis replacement.
 - Refreshed the TT5L side-info Lightning paired-axis plan chain against
-  current `main` commit `4b6ff1a6110fd78a0a79e6817a2d64369780f322`.
+  current `main` commit `9b926ab6e099585d64a76726db91c8af6be0f181`.
 
 ## TT5L Artifact Refresh Result
 
@@ -75,7 +75,7 @@ Commands run:
 Observed state after refresh:
 
 - Paired-axis source commit:
-  `4b6ff1a6110fd78a0a79e6817a2d64369780f322`.
+  `9b926ab6e099585d64a76726db91c8af6be0f181`.
 - `source_relevant_paths_match=true`.
 - Execution preflight: `10/10` cells ready for operator claiming.
 - Execution bundle dry-run verification: `10/10` cells passed.
@@ -103,3 +103,21 @@ against current `main`, then re-run focused tests. If the stale fields are only
 historical and the architecture-lock packet still fails closed for the right
 reasons, leave spend blocked and move to the first Rule #6 byte-closed
 prototype.
+
+## Current-Main Addendum
+
+The operator specifically re-raised the possibility that OMX/Claude signal may
+sit outside `.omx/research`. I rechecked the parent-scope Markdown surface:
+top-level `.omx` Markdown is only `.omx/notepad.md` and
+`.omx/release_manifest_v0.2.0-rc1.md`; active non-research authority remains
+concentrated in `.omx/state/current_focus.md`,
+`.omx/state/next_experiments.md`, and `.omx/state/active_lane_dispatch_claims.md`.
+The ignored `.omx/auto_memory_snapshot_20260504T230223Z` and `.omx/tmp`
+Markdown remain forensic inputs only per the no-ignore follow-up ledger.
+
+The L5/TT5L route artifacts were then regenerated against `main` commit
+`9b926ab6e099585d64a76726db91c8af6be0f181`. This was a custody refresh, not a
+dispatch or score claim: the route packet still has zero artifact blockers, the
+doctor plan remains `ready_for_operator_doctor=true`, dry-run verification
+remains `10/10`, harvest remains `0/10` exact-eval artifacts, and architecture
+lock remains forbidden until paired CPU/CUDA side-info evidence exists.

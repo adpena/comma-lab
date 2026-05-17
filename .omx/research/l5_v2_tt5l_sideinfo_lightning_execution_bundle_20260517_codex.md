@@ -1,6 +1,6 @@
 # L5 v2 TT5L side-info Lightning execution bundle
 
-Generated: 2026-05-17T15:19:37Z
+Generated: 2026-05-17T15:39:48Z
 
 This bundle is dry-run/default and fail-closed. It converts the TT5L side-info paired-axis plan plus execution preflight into concrete Lightning launch-script commands while keeping the source plan command SHA as the authoritative runtime payload. It does not submit provider work and does not claim score movement.
 

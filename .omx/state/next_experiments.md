@@ -97,7 +97,9 @@ architecture-lock/TT5L custody artifacts.
   paired-axis plan `10/10`, execution preflight `ready_cell_count=10`,
   execution bundle `ready_dry_run_cell_count=10`, dry-run verification
   `10/10`, route packet `artifact_blocker_count=0`, and required doctor plan
-  `ready_for_operator_doctor=true`. Ledger:
+  `ready_for_operator_doctor=true`; current source commit is
+  `9b926ab6e099585d64a76726db91c8af6be0f181` with
+  `source_relevant_paths_match=true`. Ledger:
   `.omx/research/l5_v2_tt5l_dispatch_custody_materialization_20260517_codex.md`.
 - Next concrete action: run the required Lightning doctor from
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`,

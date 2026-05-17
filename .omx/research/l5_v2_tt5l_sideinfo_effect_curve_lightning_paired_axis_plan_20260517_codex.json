@@ -30,10 +30,10 @@
       "dry_run_stdout": {
         "bytes": 22660,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/dry_run.stdout",
-        "sha256": "bb5a3bca347f4086581fde44cfd4516439b9df4f552d97de10f61249ed9fb438"
+        "sha256": "a852b09c8634840cb50649a9a2a5f7d715c730b0a19da5612794a26353586dfd"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/dry_run.stdout",
-      "dry_run_stdout_sha256": "bb5a3bca347f4086581fde44cfd4516439b9df4f552d97de10f61249ed9fb438",
+      "dry_run_stdout_sha256": "a852b09c8634840cb50649a9a2a5f7d715c730b0a19da5612794a26353586dfd",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -92,7 +92,7 @@
           "variant": "zero"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu",
         "reuse_snapshot": false,
         "role": "exact_cpu_eval",
@@ -163,10 +163,10 @@
       "state": {
         "bytes": 22876,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/state.json",
-        "sha256": "d3967a4e102fdf719d631c15c0c75ac5e562f07ec3816ac710d0337186a3f6d5"
+        "sha256": "34be724e0daa488b99e223aa6169f0a63db901e7bedc201065be6265b34c9c22"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/state.json",
-      "state_sha256": "d3967a4e102fdf719d631c15c0c75ac5e562f07ec3816ac710d0337186a3f6d5",
+      "state_sha256": "34be724e0daa488b99e223aa6169f0a63db901e7bedc201065be6265b34c9c22",
       "variant": "zero"
     },
     {
@@ -187,10 +187,10 @@
       "dry_run_stdout": {
         "bytes": 41628,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/dry_run.stdout",
-        "sha256": "233a7e9d7049511e9ad2544476a06bbaa86008d95a309380e618c88c8dfc8d4c"
+        "sha256": "235b2f24baa811ba383a7b52ea85fcc809ed344e6e71a354642ed242688e46e9"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/dry_run.stdout",
-      "dry_run_stdout_sha256": "233a7e9d7049511e9ad2544476a06bbaa86008d95a309380e618c88c8dfc8d4c",
+      "dry_run_stdout_sha256": "235b2f24baa811ba383a7b52ea85fcc809ed344e6e71a354642ed242688e46e9",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -249,7 +249,7 @@
           "variant": "zero"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda",
         "reuse_snapshot": false,
         "role": "exact_cuda_eval",
@@ -320,10 +320,10 @@
       "state": {
         "bytes": 41844,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/state.json",
-        "sha256": "6b2eab45f9c20e1a0e2329ed53e18a489d0cb58cf91627af12aa12fa7f63c9d4"
+        "sha256": "e5e561e31d925abdcc9fc697d199c7f8fe10be1206ff6324c996442ef671b61b"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/state.json",
-      "state_sha256": "6b2eab45f9c20e1a0e2329ed53e18a489d0cb58cf91627af12aa12fa7f63c9d4",
+      "state_sha256": "e5e561e31d925abdcc9fc697d199c7f8fe10be1206ff6324c996442ef671b61b",
       "variant": "zero"
     },
     {
@@ -344,10 +344,10 @@
       "dry_run_stdout": {
         "bytes": 23074,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/dry_run.stdout",
-        "sha256": "181010f0b4af23b83eeccb0833d9e42592717b51ba45de76d82e8219f4307cfe"
+        "sha256": "e3bf395c76b410724ff2fb81e8cd65683ecab6217a96f9ed5d4b62e8abfe0d33"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/dry_run.stdout",
-      "dry_run_stdout_sha256": "181010f0b4af23b83eeccb0833d9e42592717b51ba45de76d82e8219f4307cfe",
+      "dry_run_stdout_sha256": "e3bf395c76b410724ff2fb81e8cd65683ecab6217a96f9ed5d4b62e8abfe0d33",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -406,7 +406,7 @@
           "variant": "random_lsb"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu",
         "reuse_snapshot": false,
         "role": "exact_cpu_eval",
@@ -477,10 +477,10 @@
       "state": {
         "bytes": 23290,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/state.json",
-        "sha256": "97911300cca57438ccc3788fe9d51677ad500347c4238da13c7930373822d4af"
+        "sha256": "14d554e2cdc973b49f2109ae7fa85e362af15204c9f1bb64e8d06715eeba527a"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/state.json",
-      "state_sha256": "97911300cca57438ccc3788fe9d51677ad500347c4238da13c7930373822d4af",
+      "state_sha256": "14d554e2cdc973b49f2109ae7fa85e362af15204c9f1bb64e8d06715eeba527a",
       "variant": "random_lsb"
     },
     {
@@ -501,10 +501,10 @@
       "dry_run_stdout": {
         "bytes": 42054,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/dry_run.stdout",
-        "sha256": "b49311676730e546ec4a75b08b612e7eb785433ae06987a55cde49f0f4ea419d"
+        "sha256": "c8b9a6ad0292b16e7eb1627f054bf17bcbb35b3bf022a502f8fec667acff3d24"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/dry_run.stdout",
-      "dry_run_stdout_sha256": "b49311676730e546ec4a75b08b612e7eb785433ae06987a55cde49f0f4ea419d",
+      "dry_run_stdout_sha256": "c8b9a6ad0292b16e7eb1627f054bf17bcbb35b3bf022a502f8fec667acff3d24",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -563,7 +563,7 @@
           "variant": "random_lsb"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda",
         "reuse_snapshot": false,
         "role": "exact_cuda_eval",
@@ -634,10 +634,10 @@
       "state": {
         "bytes": 42270,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/state.json",
-        "sha256": "35a83b6c00d8c557b67fccbc7ad9853344759514d38f3b5df52a02f46af3c016"
+        "sha256": "dbb3cd071d65c472923a42d990ee17c956f399d8860ab5531a7ce15592496040"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/state.json",
-      "state_sha256": "35a83b6c00d8c557b67fccbc7ad9853344759514d38f3b5df52a02f46af3c016",
+      "state_sha256": "dbb3cd071d65c472923a42d990ee17c956f399d8860ab5531a7ce15592496040",
       "variant": "random_lsb"
     },
     {
@@ -658,10 +658,10 @@
       "dry_run_stdout": {
         "bytes": 22936,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/dry_run.stdout",
-        "sha256": "800284d6a50388e69a9bdbb8452d34c341169a4ef3a08015aef5bbc13ca08c37"
+        "sha256": "f8111488522a0e39458c7caafe12ca2440432dcd40afdd5df517591e5a12e28f"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/dry_run.stdout",
-      "dry_run_stdout_sha256": "800284d6a50388e69a9bdbb8452d34c341169a4ef3a08015aef5bbc13ca08c37",
+      "dry_run_stdout_sha256": "f8111488522a0e39458c7caafe12ca2440432dcd40afdd5df517591e5a12e28f",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -720,7 +720,7 @@
           "variant": "shuffled"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu",
         "reuse_snapshot": false,
         "role": "exact_cpu_eval",
@@ -791,10 +791,10 @@
       "state": {
         "bytes": 23152,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/state.json",
-        "sha256": "cfe0f465611cc147837e7fbb1817df65e10c91503a730205042bff8456867182"
+        "sha256": "f1996adeeec803f656f14d566f8f6ae57789b921f98f0ab6676f7df51a64f660"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/state.json",
-      "state_sha256": "cfe0f465611cc147837e7fbb1817df65e10c91503a730205042bff8456867182",
+      "state_sha256": "f1996adeeec803f656f14d566f8f6ae57789b921f98f0ab6676f7df51a64f660",
       "variant": "shuffled"
     },
     {
@@ -815,10 +815,10 @@
       "dry_run_stdout": {
         "bytes": 41912,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/dry_run.stdout",
-        "sha256": "5ebbe3d1de492781c26e894276b0a1f4bab83752874ca7d20ef8a001825edb5d"
+        "sha256": "79d2ec5a2b2bf185c960600505920fb2655d1cfb214197e8600db3153d0034c7"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/dry_run.stdout",
-      "dry_run_stdout_sha256": "5ebbe3d1de492781c26e894276b0a1f4bab83752874ca7d20ef8a001825edb5d",
+      "dry_run_stdout_sha256": "79d2ec5a2b2bf185c960600505920fb2655d1cfb214197e8600db3153d0034c7",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -877,7 +877,7 @@
           "variant": "shuffled"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda",
         "reuse_snapshot": false,
         "role": "exact_cuda_eval",
@@ -948,10 +948,10 @@
       "state": {
         "bytes": 42128,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/state.json",
-        "sha256": "967326523323536f7c9192ee05f2fe3d5e013a3100c9bd6c42c8149998196433"
+        "sha256": "bab8523a5bd4f18fa9404c94411bbec478fe8eef80c264e3ad60758de0194fa9"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/state.json",
-      "state_sha256": "967326523323536f7c9192ee05f2fe3d5e013a3100c9bd6c42c8149998196433",
+      "state_sha256": "bab8523a5bd4f18fa9404c94411bbec478fe8eef80c264e3ad60758de0194fa9",
       "variant": "shuffled"
     },
     {
@@ -972,10 +972,10 @@
       "dry_run_stdout": {
         "bytes": 22867,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/dry_run.stdout",
-        "sha256": "ea9f252fdff46c04af0247161a15e20b8ae5fd77e7fffc8f08064f840b001d4d"
+        "sha256": "4aa7a00e2ff5431795b7c97ee3749e11ebd41e66c7ff12743afd289c7fb60355"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/dry_run.stdout",
-      "dry_run_stdout_sha256": "ea9f252fdff46c04af0247161a15e20b8ae5fd77e7fffc8f08064f840b001d4d",
+      "dry_run_stdout_sha256": "4aa7a00e2ff5431795b7c97ee3749e11ebd41e66c7ff12743afd289c7fb60355",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -1034,7 +1034,7 @@
           "variant": "trained"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu",
         "reuse_snapshot": false,
         "role": "exact_cpu_eval",
@@ -1105,10 +1105,10 @@
       "state": {
         "bytes": 23083,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/state.json",
-        "sha256": "cf10bace8e1fe7499a2669f9a05f88d5bc3302fab8c6785c7f5a7c37cd712f45"
+        "sha256": "ec4671977e7987fcacd72c17dec1f6ee23932e6007d3058d06b374ce400497f3"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/state.json",
-      "state_sha256": "cf10bace8e1fe7499a2669f9a05f88d5bc3302fab8c6785c7f5a7c37cd712f45",
+      "state_sha256": "ec4671977e7987fcacd72c17dec1f6ee23932e6007d3058d06b374ce400497f3",
       "variant": "trained"
     },
     {
@@ -1129,10 +1129,10 @@
       "dry_run_stdout": {
         "bytes": 41841,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/dry_run.stdout",
-        "sha256": "6ad3d89af7637e003f7481bc5d83b1840300442aed536afac09ca83dfa06c481"
+        "sha256": "a8dfd68ee3f3ed119a6dcbb55bf9fe3a6d26f794ee2ad30296cb4213dc7c9e16"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/dry_run.stdout",
-      "dry_run_stdout_sha256": "6ad3d89af7637e003f7481bc5d83b1840300442aed536afac09ca83dfa06c481",
+      "dry_run_stdout_sha256": "a8dfd68ee3f3ed119a6dcbb55bf9fe3a6d26f794ee2ad30296cb4213dc7c9e16",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -1191,7 +1191,7 @@
           "variant": "trained"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda",
         "reuse_snapshot": false,
         "role": "exact_cuda_eval",
@@ -1262,10 +1262,10 @@
       "state": {
         "bytes": 42057,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/state.json",
-        "sha256": "7c2d8c01aa3aeaea58e4213ba1eac95dd8d2c28a9b1d064e0dfd40aed95eb24f"
+        "sha256": "9b237e6d6a7718dc338fee9eb085470cc0a54ab65360d7aa1d2cc74a0bc11604"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/state.json",
-      "state_sha256": "7c2d8c01aa3aeaea58e4213ba1eac95dd8d2c28a9b1d064e0dfd40aed95eb24f",
+      "state_sha256": "9b237e6d6a7718dc338fee9eb085470cc0a54ab65360d7aa1d2cc74a0bc11604",
       "variant": "trained"
     },
     {
@@ -1286,10 +1286,10 @@
       "dry_run_stdout": {
         "bytes": 22867,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/dry_run.stdout",
-        "sha256": "a1ca137bc230ee5a0a709c689054804f80d3141b492cba6431bce98b5bdc0444"
+        "sha256": "0cbe698f3a9a0d9334ad98003e60c78b0f32ff71747a8cd38e92aab25ae6d653"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/dry_run.stdout",
-      "dry_run_stdout_sha256": "a1ca137bc230ee5a0a709c689054804f80d3141b492cba6431bce98b5bdc0444",
+      "dry_run_stdout_sha256": "0cbe698f3a9a0d9334ad98003e60c78b0f32ff71747a8cd38e92aab25ae6d653",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -1348,7 +1348,7 @@
           "variant": "ablated"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu",
         "reuse_snapshot": false,
         "role": "exact_cpu_eval",
@@ -1419,10 +1419,10 @@
       "state": {
         "bytes": 23083,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/state.json",
-        "sha256": "17d08a6ad3024cf7dbc0306493488f146cdcf8ec66a82613e510c0f22d2e3cd4"
+        "sha256": "517679ae6f781e11efd2083fcd7f7399a4ee716783304c1b90881415f8d8ac10"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/state.json",
-      "state_sha256": "17d08a6ad3024cf7dbc0306493488f146cdcf8ec66a82613e510c0f22d2e3cd4",
+      "state_sha256": "517679ae6f781e11efd2083fcd7f7399a4ee716783304c1b90881415f8d8ac10",
       "variant": "ablated"
     },
     {
@@ -1443,10 +1443,10 @@
       "dry_run_stdout": {
         "bytes": 41841,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/dry_run.stdout",
-        "sha256": "c0d9345ed6f18e59a0eb988dbb120d7b65347521e2c23f5822cec698b18d27ce"
+        "sha256": "824ff426eb205a5023fc60cd8dc575da3c0ccb2702c856402a42a36dd2c3f68a"
       },
       "dry_run_stdout_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/dry_run.stdout",
-      "dry_run_stdout_sha256": "c0d9345ed6f18e59a0eb988dbb120d7b65347521e2c23f5822cec698b18d27ce",
+      "dry_run_stdout_sha256": "824ff426eb205a5023fc60cd8dc575da3c0ccb2702c856402a42a36dd2c3f68a",
       "invariants": {
         "adjudication_required_device_matches_axis": true,
         "command_contains_expected_device": true,
@@ -1505,7 +1505,7 @@
           "variant": "ablated"
         },
         "queue_name": "official_lightning_batch_jobs",
-        "queued_at_utc": "2026-05-17T15:19:12Z",
+        "queued_at_utc": "2026-05-17T15:39:42Z",
         "remote_output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda",
         "reuse_snapshot": false,
         "role": "exact_cuda_eval",
@@ -1576,15 +1576,15 @@
       "state": {
         "bytes": 42057,
         "path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/state.json",
-        "sha256": "58cfa4dfcbc988936c8e2f028e362a87fa609f84b97b3a37c8e250211b505589"
+        "sha256": "79fc28cdd3c8024ea867c02bb4677a77d812ea72fa9a93bd377ad6128f4e0c53"
       },
       "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/state.json",
-      "state_sha256": "58cfa4dfcbc988936c8e2f028e362a87fa609f84b97b3a37c8e250211b505589",
+      "state_sha256": "79fc28cdd3c8024ea867c02bb4677a77d812ea72fa9a93bd377ad6128f4e0c53",
       "variant": "ablated"
     }
   ],
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T15:19:12Z",
+  "generated_at_utc": "2026-05-17T15:39:42Z",
   "modal_billing_blocker": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_modal_billing_blocker_20260517_codex.json",
   "planning_only": true,
   "promotion_eligible": false,
@@ -1607,7 +1607,7 @@
   "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
   "score_claim": false,
   "score_claim_valid": false,
-  "source_commit": "730b52ee3118b3ec6331a600d760f4fe44897d4e",
+  "source_commit": "9b926ab6e099585d64a76726db91c8af6be0f181",
   "source_dispatch_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json",
   "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
   "source_variant_manifest_sha256": "53520df3292bcf9a1f4dce23f4da0ea65f7e54de5d07b42ee80aee4b2a9966ec",
