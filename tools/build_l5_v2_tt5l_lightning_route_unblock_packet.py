@@ -17,7 +17,6 @@ from tac.optimization.l5_v2_measurement_schedule import (  # noqa: E402
     L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
 )
 from tac.optimization.l5_v2_tt5l_lightning_route_unblock_packet import (  # noqa: E402
-    L5V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
     L5V2_PROVIDER_READINESS_REFRESH_ARTIFACT_PATH,
     L5V2_TT5L_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH,
     L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH,
@@ -182,11 +181,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=Path(L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH),
     )
     parser.add_argument(
-        "--architecture-lock-json",
-        type=Path,
-        default=Path(L5V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH),
-    )
-    parser.add_argument(
         "--legacy-alt-provider-plan-json",
         type=Path,
         default=Path(L5V2_TT5L_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH),
@@ -235,7 +229,6 @@ def main(argv: list[str] | None = None) -> int:
             paired_axis_plan_path=str(args.paired_axis_plan_json),
             harvest_cells_path=str(args.harvest_cells_json),
             sideinfo_effect_curve_path=str(args.sideinfo_effect_curve_json),
-            architecture_lock_path=str(args.architecture_lock_json),
             legacy_alt_provider_plan_path=str(args.legacy_alt_provider_plan_json),
         )
         _write(args.output_json, l5_v2_tt5l_lightning_route_unblock_packet_json(payload))

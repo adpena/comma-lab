@@ -10,7 +10,7 @@
     "score_claim": false
   },
   "blockers": [],
-  "current_head_commit": "4b6ff1a6110fd78a0a79e6817a2d64369780f322",
+  "current_head_commit": "730b52ee3118b3ec6331a600d760f4fe44897d4e",
   "current_route_verdict": {
     "dispatch_attempted": false,
     "execution_ready": false,
@@ -27,9 +27,10 @@
     "status": "blocked_on_operator_route_configuration"
   },
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T14:00:34Z",
+  "generated_at_utc": "2026-05-17T15:26:34Z",
   "no_signal_loss_notes": [
     "This packet is generated from live artifact SHA-256s, not hand-edited.",
+    "Architecture lock is deliberately downstream of this packet; do not hash it here.",
     "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
     "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
     "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required."
@@ -108,15 +109,6 @@
   "schema": "l5_v2_tt5l_lightning_route_unblock_packet_v1",
   "score_claim": false,
   "source_artifacts": {
-    "architecture_lock_packet": {
-      "architecture_lock_allowed": false,
-      "blockers": [],
-      "exists": true,
-      "expected_schema": "l5_v2_architecture_lock_packet_v1",
-      "path": ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
-      "schema": "l5_v2_architecture_lock_packet_v1",
-      "sha256": "a91d0b745f979b882ce1930771b966ee62771c3b7ae0bdc43521d0c04cb0bf22"
-    },
     "legacy_cuda_only_alt_provider_plan": {
       "blockers": [],
       "exists": true,
@@ -148,7 +140,7 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
-      "sha256": "261dedd76a052fe375529e959ba08361fdf1218061856d43aefcd68151f99d75"
+      "sha256": "3d5a493a59b5707b803e98fe5dcfa0cf67fc3a15e531533a7c495662e24fcde8"
     },
     "sideinfo_execution_bundle_dry_run_verification": {
       "all_dry_runs_passed": true,
@@ -159,7 +151,7 @@
       "passed_cell_count": 10,
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_v1",
-      "sha256": "fdd0392cdd9a908c8f0effed01f549a7cb67a1e153994f64b5557a5e731324db"
+      "sha256": "91c2d3000c67799a564bfb63ea71db0a0fe3eab95b8d76746cfe70cda7ce2ed4"
     },
     "sideinfo_execution_preflight": {
       "blockers": [],
@@ -167,7 +159,7 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_lightning_execution_preflight_v1",
-      "sha256": "b96034f17bd0a529e2184acafcf8d103300847c7400dacddd45b0b65b181b553"
+      "sha256": "d99e2c57d14c98946206ed55f36d7f6f8afcff85d7a6a29a13a95e2244462153"
     },
     "sideinfo_harvest_cells": {
       "blockers": [],
@@ -185,8 +177,8 @@
       "expected_schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
       "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
-      "sha256": "afaea41dd7247a758422f467d345e12f30396ecedd7ca2642f76c5984065de81",
-      "source_commit": "4b6ff1a6110fd78a0a79e6817a2d64369780f322",
+      "sha256": "935c465917a3791d15140c591e7a82814f83c2b6fbb773d67ee5fc3e0ce7d616",
+      "source_commit": "730b52ee3118b3ec6331a600d760f4fe44897d4e",
       "source_commit_matches_current_head": true,
       "source_relevant_diff_paths": [],
       "source_relevant_paths_match_current_head": true

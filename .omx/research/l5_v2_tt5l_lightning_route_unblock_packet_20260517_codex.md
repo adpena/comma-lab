@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning route unblock packet
 
-**Generated:** 2026-05-17T14:00:34Z
-**Commit:** `4b6ff1a6110fd78a0a79e6817a2d64369780f322`
+**Generated:** 2026-05-17T15:26:34Z
+**Commit:** `730b52ee3118b3ec6331a600d760f4fe44897d4e`
 
 This packet is generated from live artifact hashes. It turns the current TT5L Lightning blocker into an executable operator checklist. It is not a dispatch, score claim, or promotion artifact.
 
@@ -25,19 +25,19 @@ The TT5L method path is not blocked here. The route is blocked on provider confi
   - SHA-256: `9ae5433a2c769c1f39a9c9996c86cabe970225b5070c2ad3e620ee45a7459d65`
 - 10-cell sideinfo execution preflight: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_preflight_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `b96034f17bd0a529e2184acafcf8d103300847c7400dacddd45b0b65b181b553`
+  - SHA-256: `d99e2c57d14c98946206ed55f36d7f6f8afcff85d7a6a29a13a95e2244462153`
 - 10-cell sideinfo execution bundle: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `261dedd76a052fe375529e959ba08361fdf1218061856d43aefcd68151f99d75`
+  - SHA-256: `3d5a493a59b5707b803e98fe5dcfa0cf67fc3a15e531533a7c495662e24fcde8`
 - 10-cell dry-run verification: `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `fdd0392cdd9a908c8f0effed01f549a7cb67a1e153994f64b5557a5e731324db`
+  - SHA-256: `91c2d3000c67799a564bfb63ea71db0a0fe3eab95b8d76746cfe70cda7ce2ed4`
   - all dry-runs passed: `True`
   - cells passed: `10`/`10`
 - 10-cell paired-axis plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
   - exists: `True`
-  - SHA-256: `afaea41dd7247a758422f467d345e12f30396ecedd7ca2642f76c5984065de81`
-  - source commit: `4b6ff1a6110fd78a0a79e6817a2d64369780f322`
+  - SHA-256: `935c465917a3791d15140c591e7a82814f83c2b6fbb773d67ee5fc3e0ce7d616`
+  - source commit: `730b52ee3118b3ec6331a600d760f4fe44897d4e`
   - source-relevant paths match current HEAD: `True`
 - Sideinfo harvest cells: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json`
   - exists: `True`
@@ -48,10 +48,6 @@ The TT5L method path is not blocked here. The route is blocked on provider confi
   - exists: `True`
   - SHA-256: `d0e38af5388a625381c1d9eba4949ca85a64ea3ed0c3601f481d2f4fb5f6216e`
   - predicate passed: `False`
-- Architecture lock packet: `.omx/research/l5_v2_architecture_lock_packet_20260516_codex.json`
-  - exists: `True`
-  - SHA-256: `a91d0b745f979b882ce1930771b966ee62771c3b7ae0bdc43521d0c04cb0bf22`
-  - architecture lock allowed: `False`
 
 The refreshed bundle embeds the T4/g4dn exact-eval runtime pins required by `scripts/launch_lightning_batch_job.py`: `INFLATE_TORCH_SPEC=torch==2.5.1+cu124`, `INFLATE_TORCHVISION_SPEC=torchvision==0.20.1+cu124`, `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124`, `UV_INDEX_STRATEGY=unsafe-best-match`.
 

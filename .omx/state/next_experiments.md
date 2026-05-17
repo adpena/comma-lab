@@ -83,18 +83,22 @@ architecture-lock/TT5L custody artifacts.
 ### 4. TT5L Side-Info Effect Curve
 
 - Lane class: L5-v2 asymptotic evidence.
-- Current artifact state: 10-cell Lightning paired-axis dry-run plan exists,
-  and the Modal paired dispatch plan now routes each variant through shared
-  exact-dispatch authority. The live Modal plan is blocked at
-  `ready_work_unit_count=0` because the runtime is missing `report.txt` and the
-  variants are missing exact archive manifests. Ledger:
-  `.omx/research/l5_v2_tt5l_exact_dispatch_authority_hardening_20260517_codex.md`.
-- Next concrete action: materialize the missing `report.txt` and per-variant
-  `archive_manifest.json` custody, rebuild the dispatch plan to
-  `ready_work_unit_count=5`, then run the required Lightning doctor from
+- Current artifact state: Modal paired dispatch plan is custody-green at
+  `ready_work_unit_count=5`; all per-variant `dispatch_blockers=[]`; the
+  submission runtime has `report.txt`; all five variant archives have adjacent
+  `archive_manifest.json` custody. The Lightning path is also refreshed:
+  paired-axis plan `10/10`, execution preflight `ready_cell_count=10`,
+  execution bundle `ready_dry_run_cell_count=10`, dry-run verification
+  `10/10`, route packet `artifact_blocker_count=0`, and required doctor plan
+  `ready_for_operator_doctor=true`. Ledger:
+  `.omx/research/l5_v2_tt5l_dispatch_custody_materialization_20260517_codex.md`.
+- Next concrete action: run the required Lightning doctor from
   `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.md`,
-  stage per-cell source manifests, and claim each lane before non-dry-run
-  submission.
+  stage per-cell source manifests, claim each lane, and submit the 10 paired
+  CPU/CUDA cells only after doctor/source-manifest custody is green. The
+  refreshed route packet deliberately excludes architecture-lock as an upstream
+  source artifact; architecture lock is regenerated downstream after route and
+  doctor status to avoid circular SHA drift.
 - Dispatch policy: no non-dry-run cell without exact-dispatch authority green,
   doctor `status=OK`, active claim, source manifest, and terminal-claim plan.
 

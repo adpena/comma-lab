@@ -2,9 +2,11 @@
 """Generated TT5L Lightning route-unblock packet.
 
 This packet sits above the paired-axis plan, execution bundle, dry-run
-verification, harvest cells, effect curve, and architecture lock packet. Its job
-is to preserve the current route blocker as executable operator evidence without
-turning dry-run/parser custody into score or dispatch authority.
+verification, harvest cells, and effect curve. Its job is to preserve the
+current route blocker as executable operator evidence without turning
+dry-run/parser custody into score or dispatch authority. Architecture lock is a
+downstream refresh target, not an input artifact, because hashing it here creates
+a circular custody dependency with the architecture-lock packet's route status.
 """
 
 from __future__ import annotations
@@ -53,9 +55,6 @@ L5V2_TT5L_SIDEINFO_LIGHTNING_EXECUTION_PREFLIGHT_ARTIFACT_PATH = (
 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH = (
     ".omx/research/"
     "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json"
-)
-L5V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH = (
-    ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json"
 )
 L5V2_TT5L_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH = (
     ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json"
@@ -229,7 +228,6 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
     paired_axis_plan_path: str = L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
     harvest_cells_path: str = L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
     sideinfo_effect_curve_path: str = L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
-    architecture_lock_path: str = L5V2_ARCHITECTURE_LOCK_PACKET_ARTIFACT_PATH,
     legacy_alt_provider_plan_path: str = L5V2_TT5L_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH,
 ) -> dict[str, Any]:
     """Return a generated false-authority-safe TT5L Lightning route packet."""
@@ -257,11 +255,6 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
         "sideinfo_execution_bundle_dry_run_verification": (
             dry_run_verification_path,
             "l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_v1",
-            True,
-        ),
-        "architecture_lock_packet": (
-            architecture_lock_path,
-            "l5_v2_architecture_lock_packet_v1",
             True,
         ),
         "sideinfo_lightning_paired_axis_plan": (
@@ -303,7 +296,6 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
     plan = payloads["sideinfo_lightning_paired_axis_plan"]
     harvest = payloads["sideinfo_harvest_cells"]
     effect_curve = payloads["sideinfo_effect_curve"]
-    architecture = payloads["architecture_lock_packet"]
 
     source_commit = str(plan.get("source_commit") or "")
     source_relevant_diff_path_list = [str(path) for path in source_relevant_diff_paths]
@@ -340,9 +332,6 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
     )
     artifacts["sideinfo_effect_curve"].update(
         {"predicate_passed": effect_curve.get("predicate_passed") is True}
-    )
-    artifacts["architecture_lock_packet"].update(
-        {"architecture_lock_allowed": architecture.get("architecture_lock_allowed") is True}
     )
     artifacts["legacy_cuda_only_alt_provider_plan"].update(
         {
@@ -509,6 +498,7 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
         "blockers": _dedupe(all_blockers),
         "no_signal_loss_notes": [
             "This packet is generated from live artifact SHA-256s, not hand-edited.",
+            "Architecture lock is deliberately downstream of this packet; do not hash it here.",
             "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
             "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
             "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required.",
@@ -577,7 +567,6 @@ def render_l5_v2_tt5l_lightning_route_unblock_packet_markdown(
         ("sideinfo_lightning_paired_axis_plan", "10-cell paired-axis plan"),
         ("sideinfo_harvest_cells", "Sideinfo harvest cells"),
         ("sideinfo_effect_curve", "Sideinfo effect curve"),
-        ("architecture_lock_packet", "Architecture lock packet"),
     ]
     for key, label in evidence_order:
         record = artifacts.get(key) if isinstance(artifacts.get(key), Mapping) else {}
@@ -610,11 +599,6 @@ def render_l5_v2_tt5l_lightning_route_unblock_packet_markdown(
             )
         if key == "sideinfo_effect_curve":
             lines.append(f"  - predicate passed: `{record.get('predicate_passed')}`")
-        if key == "architecture_lock_packet":
-            lines.append(
-                "  - architecture lock allowed: "
-                f"`{record.get('architecture_lock_allowed')}`"
-            )
     lines.extend(
         [
             "",

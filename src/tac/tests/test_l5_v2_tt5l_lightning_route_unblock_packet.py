@@ -186,7 +186,6 @@ def _build(tmp_path: Path, **kwargs: object) -> dict[str, object]:
         paired_axis_plan_path=str(paths["plan"]),
         harvest_cells_path=str(paths["harvest"]),
         sideinfo_effect_curve_path=str(paths["effect"]),
-        architecture_lock_path=str(paths["architecture"]),
         legacy_alt_provider_plan_path=str(paths["legacy"]),
     )
 
@@ -205,7 +204,6 @@ def test_tt5l_route_unblock_packet_preserves_false_authority_and_evidence(
         paired_axis_plan_path=str(paths["plan"]),
         harvest_cells_path=str(paths["harvest"]),
         sideinfo_effect_curve_path=str(paths["effect"]),
-        architecture_lock_path=str(paths["architecture"]),
         legacy_alt_provider_plan_path=str(paths["legacy"]),
     )
 
@@ -221,6 +219,7 @@ def test_tt5l_route_unblock_packet_preserves_false_authority_and_evidence(
     assert packet["source_artifacts"]["provider_readiness"]["sha256"] == _sha(
         paths["provider"]
     )
+    assert "architecture_lock_packet" not in packet["source_artifacts"]
     dry = packet["source_artifacts"][
         "sideinfo_execution_bundle_dry_run_verification"
     ]
@@ -288,7 +287,6 @@ def test_tt5l_route_unblock_packet_records_missing_artifact_without_authority(
         paired_axis_plan_path=str(paths["plan"]),
         harvest_cells_path=str(paths["harvest"]),
         sideinfo_effect_curve_path=str(paths["effect"]),
-        architecture_lock_path=str(paths["architecture"]),
         legacy_alt_provider_plan_path=str(paths["legacy"]),
     )
 
@@ -349,8 +347,6 @@ def test_tt5l_route_unblock_packet_cli_writes_json_and_markdown(
             str(paths["harvest"]),
             "--sideinfo-effect-curve-json",
             str(paths["effect"]),
-            "--architecture-lock-json",
-            str(paths["architecture"]),
             "--legacy-alt-provider-plan-json",
             str(paths["legacy"]),
             "--output-json",
@@ -371,6 +367,8 @@ def test_tt5l_route_unblock_packet_cli_writes_json_and_markdown(
         "source_commit_matches_current_head"
     ] is True
     assert payload["score_claim"] is False
+    assert "architecture_lock_packet" not in payload["source_artifacts"]
     assert "score_claim=false" in proc.stdout
     assert "remaining_route_blocker_count=" in proc.stdout
     assert output_md.is_file()
+    assert "Architecture lock packet" not in output_md.read_text(encoding="utf-8")
