@@ -1,15 +1,15 @@
 # L5 v2 TT5L side-info Lightning execution preflight
 
-Generated: 2026-05-17T12:13:29Z
+Generated: 2026-05-17T12:25:05Z
 
 This memo is an execution preflight, not a provider submission. It maps the byte-closed Lightning paired-axis dry-run plan into per-cell lane claims, terminal claim templates, and harvest checks for five variants times `[contest-CPU]` and `[contest-CUDA]`.
 
 ## Status
 
 - Source plan: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
-- Source plan SHA-256: `8010d81abbcbca3df55b3681d6b7e455231283c08f16f2a6e669f24fab8ac9c1`
-- Source plan commit: `24a6898e7b8b99cf319a5b962deefab6effa24e0`
-- Current head commit: `24a6898e7b8b99cf319a5b962deefab6effa24e0`
+- Source plan SHA-256: `924e7b5979a9c106299c0697fabc185d9490d9637fd85eac058050b248f3b754`
+- Source plan commit: `d53ad33ed3cc34b8fea5ff0817e45743a692f593`
+- Current head commit: `d53ad33ed3cc34b8fea5ff0817e45743a692f593`
 - Cells ready for operator claiming: `10`/`10`
 - ready_for_operator_claiming: `True`
 - ready_for_provider_dispatch: `false`
