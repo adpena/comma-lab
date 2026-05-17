@@ -40,6 +40,7 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_required_gates,
     l5_v2_research_basis_ids,
     l5_v2_staircase_steps,
+    l5_v2_tt5l_campaign_readiness,
     render_l5_v2_architecture_lock_packet_markdown,
     render_l5_v2_asymptotic_candidate_surface_markdown,
 )
@@ -1161,6 +1162,72 @@ def _write_tt5l_partial_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
                         },
                     }
                 ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
+def _write_tt5l_sideinfo_effect_curve_dispatch_plan(repo_root: Path) -> Path:
+    artifact_path = (
+        repo_root / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    work_units = []
+    for idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        archive_sha = _sha(80_000 + idx)
+        work_units.append(
+            {
+                "variant": variant,
+                "work_unit_id": f"measure_tt5l_sideinfo_effect_curve__{variant}",
+                "lane_id": f"lane_l5_v2_tt5l_sideinfo_effect_curve_{variant}",
+                "pair_group_id": (
+                    f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}_{archive_sha[:12]}"
+                ),
+                "archive": {
+                    "path": f"experiments/results/{variant}/archive.zip",
+                    "sha256": archive_sha,
+                    "bytes": 34_000 + idx,
+                },
+                "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+                "required_cells": [
+                    {"axis": axis, "variant": variant}
+                    for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+                ],
+                "ready_for_operator_dispatch": True,
+                "ready_for_provider_dispatch": False,
+                "dispatch_blockers": [],
+                "score_claim_blockers": [
+                    "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "dispatch_attempted": False,
+            }
+        )
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA,
+                "plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_test",
+                "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+                "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
+                "required_variants": list(
+                    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ),
+                "work_unit_count": len(work_units),
+                "ready_work_unit_count": len(work_units),
+                "work_units": work_units,
+                "ready_for_operator_dispatch": True,
+                "ready_for_provider_dispatch": False,
+                "dispatch_attempted": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
             },
             sort_keys=True,
         )
@@ -4020,6 +4087,44 @@ def test_l5_v2_architecture_lock_packet_renders_partial_sideinfo_evidence(
     assert "sideinfo_nonzero_fraction=`0.0`" in report
     assert "sideinfo_nonzero_values=`0`/`27000`" in report
     assert "contest_cpu/trained" in report
+
+
+def test_l5_v2_tt5l_sideinfo_dispatch_plan_status_surfaces_work_queue(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_sideinfo_effect_curve_dispatch_plan(tmp_path)
+
+    tt5l = l5_v2_tt5l_campaign_readiness(repo_root=tmp_path)
+    status = tt5l["sideinfo_effect_curve_dispatch_plan_status"]
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is True
+    assert status["work_unit_count"] == 5
+    assert status["ready_work_unit_count"] == 5
+    assert status["ready_for_operator_dispatch"] is True
+    assert status["ready_for_provider_dispatch"] is False
+    assert status["score_claim"] is False
+    assert status["promotion_eligible"] is False
+    assert [unit["variant"] for unit in status["work_units"]] == list(
+        L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    )
+    assert all(unit["archive_sha256"] for unit in status["work_units"])
+    assert all(unit["pair_group_id"] for unit in status["work_units"])
+
+
+def test_l5_v2_architecture_lock_packet_renders_sideinfo_dispatch_plan(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_sideinfo_effect_curve_dispatch_plan(tmp_path)
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert "## TT5L Sideinfo Dispatch Plan" in report
+    assert "- work_units: `5`/`5`" in report
+    assert "- ready_for_provider_dispatch: `false`" in report
+    assert "work_unit `random_lsb`" in report
+    assert "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb" in report
 
 
 def test_l5_v2_tt5l_first_anchor_timing_requires_probe_and_paired_axis_plan(

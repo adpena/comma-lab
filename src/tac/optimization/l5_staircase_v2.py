@@ -125,6 +125,13 @@ TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH = (
 TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA = (
     "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1"
 )
+TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json"
+)
+TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA = (
+    "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_v1"
+)
 TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID = (
     "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
 )
@@ -3418,6 +3425,147 @@ def tt5l_sideinfo_effect_curve_status(
     return _tt5l_sideinfo_effect_curve_status(repo_root=resolved_repo_root)
 
 
+def _tt5l_sideinfo_effect_curve_dispatch_plan_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_missing")
+    else:
+        try:
+            loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_json_invalid")
+        else:
+            if isinstance(loaded, Mapping):
+                payload = loaded
+            else:
+                blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_not_object")
+
+    if payload and payload.get("schema") != TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA:
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_schema_mismatch")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_provider_dispatch",
+        "dispatch_attempted",
+    ):
+        if payload and payload.get(field) is not False:
+            blockers.append(f"tt5l_sideinfo_effect_curve_dispatch_plan_{field}_not_false")
+    required_axes = list(payload.get("required_axes") or [])
+    required_variants = list(payload.get("required_variants") or [])
+    if payload and required_axes != list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_required_axes_mismatch")
+    if payload and required_variants != list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        blockers.append(
+            "tt5l_sideinfo_effect_curve_dispatch_plan_required_variants_mismatch"
+        )
+
+    raw_work_units = payload.get("work_units")
+    work_units: list[dict[str, Any]] = []
+    if payload and not isinstance(raw_work_units, list):
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_work_units_missing")
+        raw_work_units = []
+    if isinstance(raw_work_units, list):
+        seen_variants: set[str] = set()
+        for raw_unit in raw_work_units:
+            if not isinstance(raw_unit, Mapping):
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_dispatch_plan_work_unit_not_object"
+                )
+                continue
+            variant = str(raw_unit.get("variant") or "").strip()
+            if not variant:
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_dispatch_plan_work_unit_variant_missing"
+                )
+            elif variant in seen_variants:
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_dispatch_plan_duplicate_variant:"
+                    + variant
+                )
+            else:
+                seen_variants.add(variant)
+            archive = raw_unit.get("archive")
+            if not isinstance(archive, Mapping):
+                archive = {}
+            dispatch_blockers = raw_unit.get("dispatch_blockers")
+            score_claim_blockers = raw_unit.get("score_claim_blockers")
+            work_units.append(
+                {
+                    "variant": variant,
+                    "work_unit_id": str(raw_unit.get("work_unit_id") or ""),
+                    "lane_id": str(raw_unit.get("lane_id") or ""),
+                    "pair_group_id": str(raw_unit.get("pair_group_id") or ""),
+                    "archive_sha256": str(archive.get("sha256") or ""),
+                    "archive_bytes": archive.get("bytes"),
+                    "ready_for_operator_dispatch": raw_unit.get(
+                        "ready_for_operator_dispatch"
+                    )
+                    is True,
+                    "ready_for_provider_dispatch": raw_unit.get(
+                        "ready_for_provider_dispatch"
+                    )
+                    is True,
+                    "dispatch_blockers": (
+                        list(dispatch_blockers)
+                        if isinstance(dispatch_blockers, list)
+                        else []
+                    ),
+                    "score_claim_blockers": (
+                        list(score_claim_blockers)
+                        if isinstance(score_claim_blockers, list)
+                        else []
+                    ),
+                }
+            )
+        missing_variants = [
+            variant
+            for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+            if variant not in seen_variants
+        ]
+        if missing_variants:
+            blockers.append(
+                "tt5l_sideinfo_effect_curve_dispatch_plan_missing_variants:"
+                + ",".join(missing_variants)
+            )
+    ready_count = sum(
+        1 for unit in work_units if unit["ready_for_operator_dispatch"] is True
+    )
+    declared_ready_count = payload.get("ready_work_unit_count")
+    declared_work_unit_count = payload.get("work_unit_count")
+    if payload and declared_work_unit_count != len(work_units):
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_work_unit_count_mismatch")
+    if payload and declared_ready_count != ready_count:
+        blockers.append("tt5l_sideinfo_effect_curve_dispatch_plan_ready_count_mismatch")
+
+    blockers = list(dict.fromkeys(blockers))
+    return {
+        "schema": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_status_v1",
+        "artifact_path": TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not blockers,
+        "plan_id": str(payload.get("plan_id") or ""),
+        "measurement_id": str(payload.get("measurement_id") or ""),
+        "required_axes": required_axes,
+        "required_variants": required_variants,
+        "work_unit_count": len(work_units),
+        "ready_work_unit_count": ready_count,
+        "work_units": work_units,
+        "ready_for_operator_dispatch": payload.get("ready_for_operator_dispatch") is True,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": blockers,
+    }
+
+
 def _tt5l_probe_observation_intake_status(*, repo_root: Path) -> dict[str, Any]:
     artifact_path = repo_root / TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
     blockers: list[str] = []
@@ -4536,6 +4684,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             repo_root=repo_root
         )
     )
+    sideinfo_effect_curve_dispatch_plan_status = (
+        _tt5l_sideinfo_effect_curve_dispatch_plan_status(repo_root=repo_root)
+    )
     sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
         repo_root=repo_root
     )
@@ -4604,6 +4755,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.extend(
             str(blocker)
             for blocker in lightning_paired_axis_plan_status["blockers"]
+        )
+    if (
+        sideinfo_effect_curve_dispatch_plan_status["artifact_exists"] is True
+        and sideinfo_effect_curve_dispatch_plan_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker)
+            for blocker in sideinfo_effect_curve_dispatch_plan_status["blockers"]
         )
 
     if not dykstra_valid:
@@ -5089,6 +5248,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "materialized_tt5l_paired_work_unit_status": materialized_work_unit_status,
         "sideinfo_effect_curve_lightning_paired_axis_plan_status": (
             lightning_paired_axis_plan_status
+        ),
+        "sideinfo_effect_curve_dispatch_plan_status": (
+            sideinfo_effect_curve_dispatch_plan_status
         ),
         "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
         "measurement_schedule_artifact_path": L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
@@ -6763,6 +6925,11 @@ def render_l5_v2_architecture_lock_packet_markdown(
     sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
     if not isinstance(sideinfo_effect_curve_status, Mapping):
         sideinfo_effect_curve_status = {}
+    sideinfo_effect_curve_dispatch_plan_status = tt5l.get(
+        "sideinfo_effect_curve_dispatch_plan_status"
+    )
+    if not isinstance(sideinfo_effect_curve_dispatch_plan_status, Mapping):
+        sideinfo_effect_curve_dispatch_plan_status = {}
     materialized_work_unit_status = next_action.get("materialized_work_unit_status")
     if not isinstance(materialized_work_unit_status, Mapping):
         materialized_work_unit_status = {}
@@ -6962,6 +7129,64 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 f"archive_sha256=`{cell.get('archive_sha256')}`, "
                 f"runtime_content_tree_sha256="
                 f"`{cell.get('runtime_content_tree_sha256')}`"
+            )
+        lines.extend(
+            [
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if sideinfo_effect_curve_dispatch_plan_status:
+        work_units = sideinfo_effect_curve_dispatch_plan_status.get("work_units")
+        if not isinstance(work_units, list):
+            work_units = []
+        lines.extend(
+            [
+                "",
+                "## TT5L Sideinfo Dispatch Plan",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- plan_id: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('plan_id', '')}`"
+                ),
+                (
+                    "- work_units: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('ready_work_unit_count')}`/"
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('work_unit_count')}`"
+                ),
+                (
+                    "- required_variants: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('required_variants', [])}`"
+                ),
+                (
+                    "- ready_for_operator_dispatch: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('ready_for_operator_dispatch')}`"
+                ),
+                "- ready_for_provider_dispatch: `false`",
+                "- dispatch_attempted: `false`",
+                (
+                    "- blockers: "
+                    f"`{sideinfo_effect_curve_dispatch_plan_status.get('blockers', [])}`"
+                ),
+            ]
+        )
+        for unit in work_units:
+            if not isinstance(unit, Mapping):
+                continue
+            lines.append(
+                f"- work_unit `{unit.get('variant')}`: "
+                f"ready=`{unit.get('ready_for_operator_dispatch')}`, "
+                f"archive_sha256=`{unit.get('archive_sha256')}`, "
+                f"archive_bytes=`{unit.get('archive_bytes')}`, "
+                f"pair_group_id=`{unit.get('pair_group_id')}`"
             )
         lines.extend(
             [

@@ -64,6 +64,25 @@
 - score_claim: `false`
 - promotion_eligible: `false`
 
+## TT5L Sideinfo Dispatch Plan
+
+- artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json`
+- artifact_valid: `True`
+- plan_id: `l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972`
+- work_units: `5`/`5`
+- required_variants: `['zero', 'random_lsb', 'shuffled', 'trained', 'ablated']`
+- ready_for_operator_dispatch: `True`
+- ready_for_provider_dispatch: `false`
+- dispatch_attempted: `false`
+- blockers: `[]`
+- work_unit `zero`: ready=`True`, archive_sha256=`b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3`, archive_bytes=`34373`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102`
+- work_unit `random_lsb`: ready=`True`, archive_sha256=`ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1`, archive_bytes=`38681`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190`
+- work_unit `shuffled`: ready=`True`, archive_sha256=`c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3`, archive_bytes=`43284`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4`
+- work_unit `trained`: ready=`True`, archive_sha256=`f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a`, archive_bytes=`43323`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779`
+- work_unit `ablated`: ready=`True`, archive_sha256=`ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39`, archive_bytes=`42419`, pair_group_id=`pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Probe Gate Artifact
 
 - artifact_path: `.omx/research/l5_v2_probe_gate_artifact_20260516_codex.json`
