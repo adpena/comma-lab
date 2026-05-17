@@ -32652,6 +32652,129 @@
       "id": "lane_scorer_response_surface_analysis_20260517",
       "name": "Scorer response surface analysis (T4 Decision 3 execution)",
       "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/scorer_response_surface_analysis_20260517.md (commit de5ccade7; 5500-word analysis memo; 11 PVs; 29 empirical anchors; closed-form derivations match canonical tac.sensitivity_map.axis_weights)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/scorer_response_surface_analysis_20260517.md (commit de5ccade7)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_orthogonal_optimization_methods_audit_20260517",
+      "name": "Orthogonal Optimization Methods Audit",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/orthogonal_optimization_methods_audit_20260517.md (audit memo + tools/audit_orthogonal_optimization_exploits.py inventory CLI; commit 2114baf77)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/orthogonal_optimization_methods_audit_20260517.md (canonical audit memo; 6000 words; 11 sections)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_freezing_exploits_wave_20260517",
+      "name": "Freezing Exploits Wave (T4 BOLT-ON infrastructure)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/freezing/ package with 8 helpers + 84/84 tests passing"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/freezing_exploits_design_and_implementation_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "package + tests + demo wirings ARE the runbook; substrate trainers consume helpers directly"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pausing_exploits_wave_20260517",
+      "name": "Pausing/Curriculum Exploits Wave (Karpathy + Apple MLX + HF + Kaggle + ggerganov + Chinchilla + academic + A1 anchor pattern generalization)",
+      "phase": 3.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -32690,9 +32813,50 @@
       "notes": ""
     },
     {
-      "id": "lane_orthogonal_optimization_methods_audit_20260517",
-      "name": "Orthogonal Optimization Methods Audit",
-      "phase": 3.0,
+      "id": "lane_hardware_exploits_wave_20260517",
+      "name": "HARDWARE-EXPLOITS-WAVE: FP4/FP8/INT4/GGUF/Ball\u00e9/VQ-codebook quantization wave + A1 BOLT-ON variants per T4 SYMPOSIUM Priority 1",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/quantization_wave/ 12-helper package + 47 tests pass; all encode/decode round-trips verified; Catalog #272 byte-mutation discipline honored for FP4 (test_byte_mutation_smoke_detects_single_byte_flip)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_problem_space_exploits_wave_20260517",
+      "name": "PROBLEM-SPACE EXPLOITS WAVE: Kaggle-winner + amateur + TTA + Karpathy/MLX/HF + hyperscale contest exploits",
+      "phase": 4.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -32728,7 +32892,7 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=false target_modes=contest_one_video_replay lane_class=substrate_engineering distinguishing_feature_name=per_pair_pair_index_lookup_table_for_600_pair_fixed_overfit; design_memo=.omx/research/problem_space_exploits_design_and_implementation_landed_20260517.md; horizon_class=plateau_adjacent; sister_subagents=FREEZING,PAUSING,HARDWARE,ORTHOGONAL_OPTIMIZATION_AUDIT,SCORER_RESPONSE_SURFACE; owns=src/tac/contest_exploits/"
     }
   ],
   "level_rules": {
@@ -32738,5 +32902,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T12:23:44Z"
+  "updated_at": "2026-05-17T12:45:31Z"
 }
