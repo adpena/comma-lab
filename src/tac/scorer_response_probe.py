@@ -16,6 +16,8 @@ from typing import Any, Mapping
 from tac.exact_eval_custody import (
     ExactEvalEvidenceValidation,
     contest_score,
+    extract_archive_sha256,
+    extract_observed_runtime_tree_sha256,
     validate_exact_eval_evidence,
 )
 
@@ -29,6 +31,15 @@ VERDICT_BLOCKED_CUSTODY = "BLOCKED_CUSTODY"
 VERDICT_BLOCKED_CONTROL_MISMATCH = "BLOCKED_CONTROL_MISMATCH"
 
 VALID_PROBE_MODES = frozenset({"ablation", "candidate"})
+
+_COMMON_AXIS_ALIASES = {
+    "cpu_advisory": "macos_cpu_advisory",
+    "macos_cpu": "macos_cpu_advisory",
+    "macos-cpu-advisory": "macos_cpu_advisory",
+    "macOS-CPU advisory": "macos_cpu_advisory",
+    "contest-CUDA": "contest_cuda",
+    "contest-CPU": "contest_cpu",
+}
 
 
 @dataclass(frozen=True)
@@ -119,6 +130,118 @@ def _finite_threshold(value: float, *, name: str) -> float:
     return out
 
 
+def _first_value(mapping: Mapping[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in mapping and mapping.get(key) is not None:
+            return mapping.get(key)
+    return None
+
+
+def _nested_mapping(mapping: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = mapping.get(key)
+    return value if isinstance(value, Mapping) else {}
+
+
+def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize common contest-auth-eval schemas into flat custody fields.
+
+    The repo has several historical score artifacts. Newer exact-dispatch
+    rows already use ``axis``/``score``/``seg_dist``/``pose_dist``. Older
+    ``experiments/contest_auth_eval.py`` artifacts use ``score_axis``,
+    ``canonical_score``, ``avg_segnet_dist``, ``avg_posenet_dist`` and nested
+    ``provenance`` fields. This helper preserves any explicit flat field while
+    filling gaps from the canonical richer schema.
+    """
+
+    out = dict(mapping)
+    provenance = _nested_mapping(mapping, "provenance")
+    runtime_manifest = _nested_mapping(provenance, "inflate_runtime_manifest")
+    inflated_manifest = _nested_mapping(provenance, "inflated_output_manifest")
+
+    axis = str(_first_value(out, "axis", "score_axis", "evidence_axis") or "").strip()
+    out["axis"] = _COMMON_AXIS_ALIASES.get(axis, axis)
+    out["archive_sha256"] = _first_value(
+        out,
+        "archive_sha256",
+        "candidate_archive_sha256",
+        "exact_archive_sha256",
+    ) or extract_archive_sha256(provenance)
+    out["runtime_tree_sha256"] = _first_value(
+        out,
+        "runtime_tree_sha256",
+        "observed_runtime_tree_sha256",
+        "inflate_runtime_tree_sha256",
+    ) or extract_observed_runtime_tree_sha256(provenance)
+    out["n_samples"] = _first_value(out, "n_samples", "sample_count")
+    out["archive_bytes"] = _first_value(
+        out,
+        "archive_bytes",
+        "archive_size_bytes",
+    ) or provenance.get("archive_size_bytes")
+    out["seg_dist"] = _first_value(
+        out,
+        "seg_dist",
+        "avg_segnet_dist",
+        "segmentation_distortion",
+    )
+    out["pose_dist"] = _first_value(
+        out,
+        "pose_dist",
+        "avg_posenet_dist",
+        "pose_distortion",
+    )
+    out["score"] = _first_value(
+        out,
+        "score",
+        "canonical_score",
+        "score_recomputed_from_components",
+        "score_recomputed",
+        "recomputed_score",
+    )
+    out["hardware"] = _first_value(out, "hardware", "hardware_summary") or " ".join(
+        str(part)
+        for part in (
+            provenance.get("platform_system"),
+            provenance.get("platform_machine"),
+            provenance.get("gpu_model"),
+            provenance.get("device"),
+        )
+        if part
+    )
+    out["inflate_device"] = _first_value(
+        out,
+        "inflate_device",
+        "inflate_device_policy",
+    ) or provenance.get("inflate_device_policy") or provenance.get("device")
+    out["eval_device"] = _first_value(out, "eval_device", "device") or provenance.get("device")
+    out["auth_eval_command"] = _first_value(
+        out,
+        "auth_eval_command",
+        "command",
+    ) or provenance.get("sys_argv")
+    out["log_path"] = _first_value(out, "log_path", "report_path") or out.get("report_path")
+    if isinstance(inflated_manifest, Mapping):
+        out["inflated_outputs_manifest_path"] = _first_value(
+            out,
+            "inflated_outputs_manifest_path",
+            "inflated_output_manifest_path",
+        ) or inflated_manifest.get("path")
+        out["inflated_outputs_manifest_sha256"] = _first_value(
+            out,
+            "inflated_outputs_manifest_sha256",
+            "inflated_output_manifest_sha256",
+        ) or inflated_manifest.get("sha256")
+        payload = _nested_mapping(inflated_manifest, "payload")
+        out["raw_output_aggregate_sha256"] = _first_value(
+            out,
+            "raw_output_aggregate_sha256",
+            "inflated_output_aggregate_sha256",
+        ) or payload.get("aggregate_sha256")
+    if isinstance(runtime_manifest, Mapping) and not out.get("runtime_tree_sha256"):
+        out["runtime_tree_sha256"] = runtime_manifest.get("runtime_tree_sha256")
+    return out
+
+
 def _evidence_from_validation(
     *,
     label: str,
@@ -159,8 +282,9 @@ def validate_score_response_evidence(
 ) -> tuple[ScoreResponseEvidence | None, tuple[str, ...], tuple[str, ...]]:
     """Validate and normalize one exact-eval evidence mapping."""
 
+    normalized = normalize_score_response_mapping(mapping)
     validation = validate_exact_eval_evidence(
-        mapping,
+        normalized,
         expected_axis=expected_axis,
         require_hardware=strict_exact_custody,
         require_auth_eval_command=strict_exact_custody,
@@ -173,7 +297,7 @@ def validate_score_response_evidence(
     if validation.blockers:
         blockers = tuple(f"{label}:{blocker}" for blocker in validation.blockers)
         return None, blockers, validation.annotations
-    evidence = _evidence_from_validation(label=label, mapping=mapping, validation=validation)
+    evidence = _evidence_from_validation(label=label, mapping=normalized, validation=validation)
     recomputed = contest_score(
         seg_dist=evidence.seg_dist,
         pose_dist=evidence.pose_dist,
@@ -317,5 +441,6 @@ __all__ = [
     "VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE",
     "VERDICT_SCORE_REGRESSION",
     "compare_score_response",
+    "normalize_score_response_mapping",
     "validate_score_response_evidence",
 ]

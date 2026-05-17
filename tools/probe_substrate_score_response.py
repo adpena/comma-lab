@@ -43,6 +43,9 @@ def _render_markdown(report: dict[str, Any], *, title: str) -> str:
         f"Verdict: `{report['verdict']}`",
         f"Mode: `{report['mode']}`",
         "",
+        "Axis note: exact contest axes and advisory axes are kept distinct. "
+        "A `macos_cpu_advisory` report is not a `[contest-CPU]` promotion claim.",
+        "",
         "## Thresholds",
         "",
         f"- min_total_improvement: `{thresholds.get('min_total_improvement')}`",

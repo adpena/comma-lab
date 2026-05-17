@@ -17,6 +17,7 @@ from tac.scorer_response_probe import (
     VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE,
     VERDICT_SCORE_REGRESSION,
     compare_score_response,
+    normalize_score_response_mapping,
 )
 
 
@@ -167,6 +168,63 @@ def test_json_report_is_stable_shape() -> None:
     assert payload["schema"] == "substrate_score_response_probe_v1"
     assert payload["deltas"]["total_delta"] == report.total_delta
     assert payload["baseline"]["axis"] == "contest_cpu"
+
+
+def test_normalizes_contest_auth_eval_schema() -> None:
+    payload = {
+        "score_axis": "cpu_advisory",
+        "canonical_score": contest_score(0.00056, 0.000032, 178_262),
+        "avg_segnet_dist": 0.00056,
+        "avg_posenet_dist": 0.000032,
+        "archive_size_bytes": 178_262,
+        "n_samples": 600,
+        "provenance": {
+            "archive_sha256": SHA_B,
+            "device": "cpu",
+            "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cpu"],
+            "inflate_runtime_manifest": {"runtime_tree_sha256": SHA_A},
+        },
+    }
+    normalized = normalize_score_response_mapping(payload)
+    assert normalized["axis"] == "macos_cpu_advisory"
+    assert normalized["archive_sha256"] == SHA_B
+    assert normalized["runtime_tree_sha256"] == SHA_A
+    assert normalized["archive_bytes"] == 178_262
+    assert normalized["seg_dist"] == 0.00056
+    assert normalized["pose_dist"] == 0.000032
+
+
+def test_relaxed_probe_accepts_contest_auth_eval_schema() -> None:
+    baseline = {
+        "score_axis": "cpu_advisory",
+        "canonical_score": contest_score(0.00056, 0.000032, 178_262),
+        "avg_segnet_dist": 0.00056,
+        "avg_posenet_dist": 0.000032,
+        "archive_size_bytes": 178_262,
+        "n_samples": 600,
+        "provenance": {
+            "archive_sha256": SHA_B,
+            "device": "cpu",
+            "sys_argv": ["experiments/contest_auth_eval.py", "--device", "cpu"],
+            "inflate_runtime_manifest": {"runtime_tree_sha256": SHA_A},
+        },
+    }
+    candidate = {
+        **baseline,
+        "canonical_score": contest_score(0.00056, 0.000032, 178_258),
+        "archive_size_bytes": 178_258,
+    }
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="ablation",
+        strict_exact_custody=False,
+        min_total_improvement=0.000001,
+        min_scorer_term_improvement=0.000001,
+    )
+    assert report.verdict == VERDICT_RATE_ONLY_IMPROVEMENT
+    assert report.baseline is not None
+    assert report.baseline.axis == "macos_cpu_advisory"
 
 
 def _load_cli_module():
