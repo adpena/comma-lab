@@ -41,6 +41,54 @@ The older full-scope ledger reported `2399` total and `1763` research files.
 The delta is expected: new `.omx/research/*_20260517*.md` ledgers have landed
 since that scan. The non-research count remains `636`.
 
+## Operator parent-dir refresh
+
+After the operator clarified that the relevant documents might sit outside the
+`.omx/research` folder itself, I reran the parent-dir scan with the exact
+research exclusion:
+
+```bash
+rg --files --hidden --no-ignore .omx -g '*.md' -g '!.omx/research/**'
+rg --hidden --no-ignore -n -i \
+  'l5|staircase|cargo|assumption|time[-_ ]?traveler|tt5l|quantizr|rule #6|rule6|fec6|pr101|pr106|film[-_ ]?grain|selector|water bucket|roi|half[-_ ]?frame|arithmetic|entropy|posenet|segnet|frontier|signal loss|source of truth' \
+  .omx -g '*.md' -g '!.omx/research/**'
+```
+
+Result: `636` Markdown files outside `.omx/research` were included. The
+high-signal files read in this refresh were:
+
+- `.omx/notepad.md`
+- `.omx/plans/prd-smarter-segmentation-main-roi.md`
+- `.omx/context/track-b-smart-roi-prototype-20260404T150000Z.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/feedback_half_frame_breaks_posenet.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/project_codec_stacking_composition_canonical_orders_20260429.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/feedback_arithmetic_qint_codec_pr106_latents_unviable_brotli_already_below_entropy_20260504.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/project_quantizr_intelligence.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/project_quantizr_full_intel_20260421.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/project_auth_score_291.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/feedback_proxy_must_simulate_resize.md`
+- `.omx/auto_memory_snapshot_20260504T230223Z/project_jacobian_nonlinearity.md`
+- `.omx/tmp/lane_g_v3_fork_clone/submissions/jas0xf_adversarial_neural_representation/training/README.md`
+
+The refresh confirmed the earlier authority result, but sharpened the
+score-lowering implications:
+
+1. Film grain, colorspace/range, resize simulation, and ROI handling are
+   scorer contracts, not cosmetic transforms. L5-v2 and Rule #6 packets that
+   touch them need train/inflate parity or direct component-response proof.
+2. Half-frame and Quantizr-style contracts are joint architecture/training/
+   inflate contracts. A transplanted half-frame runtime trick without matching
+   training distribution is cargo cult.
+3. Arithmetic coding remains terminal and stream-aware. Zero-order arithmetic
+   on already-Brotli-shaped streams is a known no-retread trap.
+4. PoseNet proxy, Jacobian, and resize notes reinforce that closed-form local
+   pixel/byte gradients are unsafe outside a tiny trust radius; valid
+   master-gradient work must operate on packet-valid grammar operators and
+   harvested component rows.
+5. The detached ANR/HPAC README under `.omx/tmp` is a real non-HNeRV donor
+   pattern, but only as forensic intake. It must not become source of truth
+   until reverse-engineered into clean `tac`/`reverse_engineering` surfaces.
+
 ## Authority result
 
 No non-research `.omx` Markdown supersedes the active May 17 authority chain:
