@@ -3457,8 +3457,31 @@ def test_l5_v2_canonical_probe_gate_evidence_skips_blocked_artifact(
     )
 
     evidence = l5_v2.l5_v2_canonical_probe_gate_evidence(repo_root=tmp_path)
+    status = l5_v2.l5_v2_probe_gate_artifact_status(repo_root=tmp_path)
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(
+        l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    )
 
     assert evidence is None
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is False
+    assert status["architecture_lock_allowed"] is False
+    assert "l5_v2_probe_observations_missing" in status["verdict_blockers"]
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:architecture_lock_allowed"
+        in status["blockers"]
+    )
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:architecture_lock_allowed"
+        in readiness["tt5l_campaign_readiness"]["blockers"]
+    )
+    assert "## Probe Gate Artifact" in report
+    assert "- artifact_exists: `True`" in report
+    assert "- artifact_valid: `False`" in report
+    assert "l5_v2_probe_observations_missing" in report
 
 
 def test_l5_v2_canonical_sideinfo_discovers_contest_full_frame_artifact(
@@ -3580,7 +3603,9 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert status["current_head_commit"] == _sha(1)
     assert status["source_commit_matches_head"] is True
     assert status["source_relevant_paths_match"] is True
+    assert status["source_custody_valid"] is True
     assert status["source_custody_current_for_execution"] is True
+    assert status["all_cells_dry_run_structurally_valid"] is True
     assert status["all_cells_dry_run_ready"] is True
     assert status["execution_ready"] is False
     assert status["score_claim"] is False
@@ -3613,6 +3638,7 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert "- source_relevant_paths_match: `True`" in report
     assert "- source_custody_current_for_execution: `True`" in report
     assert "- all_cells_dry_run_ready: `True`" in report
+    assert "- all_cells_dry_run_structurally_valid: `True`" in report
     assert "- execution_ready: `False`" in report
     assert "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only" in report
 
@@ -3640,6 +3666,7 @@ def test_l5_v2_tt5l_lightning_paired_axis_plan_status_allows_head_only_drift(
     ]
 
     assert status["artifact_valid"] is True
+    assert status["all_cells_dry_run_structurally_valid"] is True
     assert status["all_cells_dry_run_ready"] is True
     assert status["source_commit"] == _sha(1)
     assert status["current_head_commit"] == _sha(2)
@@ -3647,6 +3674,7 @@ def test_l5_v2_tt5l_lightning_paired_axis_plan_status_allows_head_only_drift(
     assert status["source_commit_is_ancestor"] is True
     assert status["source_relevant_diff_paths"] == []
     assert status["source_relevant_paths_match"] is True
+    assert status["source_custody_valid"] is True
     assert status["source_custody_current_for_execution"] is True
     assert (
         "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
@@ -3678,12 +3706,14 @@ def test_l5_v2_tt5l_lightning_paired_axis_plan_status_blocks_relevant_source_dri
     ]
 
     assert status["artifact_valid"] is True
-    assert status["all_cells_dry_run_ready"] is True
+    assert status["all_cells_dry_run_structurally_valid"] is True
+    assert status["all_cells_dry_run_ready"] is False
     assert status["source_commit"] == _sha(1)
     assert status["current_head_commit"] == _sha(2)
     assert status["source_commit_matches_head"] is False
     assert status["source_relevant_diff_paths"] == [changed_path]
     assert status["source_relevant_paths_match"] is False
+    assert status["source_custody_valid"] is False
     assert status["source_custody_current_for_execution"] is False
     assert (
         "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"

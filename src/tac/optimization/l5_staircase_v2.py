@@ -2239,34 +2239,113 @@ def l5_v2_canonical_probe_gate_evidence(
 ) -> L5V2GateEvidence | None:
     """Return the discoverable L5 v2 probe-disambiguator gate artifact."""
 
+    status = l5_v2_probe_gate_artifact_status(repo_root=repo_root)
+    if status["artifact_valid"] is not True:
+        return None
+    return L5V2GateEvidence(
+        gate_id="c1_z5_tt5l_probe_disambiguator",
+        artifact_path=str(status["artifact_path"]),
+        artifact_sha256=str(status["artifact_sha256"]),
+        predicate_id="l5_v2_probe_disambiguator_architecture_lock_v1",
+        predicate_passed=True,
+        evidence_grade="l5_v2_probe_gate_artifact",
+    )
+
+
+def l5_v2_probe_gate_artifact_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return visible status for the probe gate, including invalid blockers."""
+
     resolved_repo_root = (
         Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
     )
     artifact_path = TT5L_PROBE_GATE_ARTIFACT_PATH
     proof_path = resolved_repo_root / artifact_path
     if not proof_path.is_file():
-        return None
+        return {
+            "schema": "l5_v2_probe_gate_artifact_status_v1",
+            "artifact_path": artifact_path,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "artifact_sha256": "",
+            "architecture_lock_allowed": False,
+            "selected_candidate_id": None,
+            "verdict_blockers": [],
+            "candidate_status": [],
+            "blockers": [],
+        }
     artifact_sha = _sha256_file(proof_path)
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
     try:
-        payload = json.loads(proof_path.read_text(encoding="utf-8"))
+        loaded = json.loads(proof_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(payload, Mapping):
-        return None
-    if _gate_semantic_blockers(
-        "c1_z5_tt5l_probe_disambiguator",
-        payload,
-        repo_root=resolved_repo_root,
-    ):
-        return None
-    return L5V2GateEvidence(
-        gate_id="c1_z5_tt5l_probe_disambiguator",
-        artifact_path=artifact_path,
-        artifact_sha256=artifact_sha,
-        predicate_id="l5_v2_probe_disambiguator_architecture_lock_v1",
-        predicate_passed=True,
-        evidence_grade="l5_v2_probe_gate_artifact",
+        validation_blockers.append("l5_v2_probe_gate_artifact_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append("l5_v2_probe_gate_artifact_not_object")
+    semantic_blockers = (
+        _gate_semantic_blockers(
+            "c1_z5_tt5l_probe_disambiguator",
+            payload,
+            repo_root=resolved_repo_root,
+        )
+        if payload
+        else []
     )
+    probe = payload.get("probe_disambiguator") if payload else None
+    verdict = probe.get("verdict") if isinstance(probe, Mapping) else None
+    verdict_map = verdict if isinstance(verdict, Mapping) else {}
+    candidate_status: list[dict[str, Any]] = []
+    for row in verdict_map.get("evaluated_observations") or []:
+        if not isinstance(row, Mapping):
+            continue
+        candidate_status.append(
+            {
+                "candidate_id": str(row.get("candidate_id") or ""),
+                "eligible_for_architecture_lock": (
+                    row.get("eligible_for_architecture_lock") is True
+                ),
+                "exact_axes": [
+                    str(axis)
+                    for axis in row.get("exact_axes", [])
+                    if str(axis).strip()
+                ]
+                if isinstance(row.get("exact_axes"), list)
+                else [],
+                "blockers": [
+                    str(blocker)
+                    for blocker in row.get("blockers", [])
+                    if str(blocker).strip()
+                ]
+                if isinstance(row.get("blockers"), list)
+                else [],
+            }
+        )
+    return {
+        "schema": "l5_v2_probe_gate_artifact_status_v1",
+        "artifact_path": artifact_path,
+        "artifact_exists": proof_path.is_file(),
+        "artifact_valid": bool(payload) and not validation_blockers and not semantic_blockers,
+        "artifact_sha256": artifact_sha,
+        "architecture_lock_allowed": (
+            verdict_map.get("architecture_lock_allowed") is True
+        ),
+        "selected_candidate_id": verdict_map.get("selected_candidate_id"),
+        "verdict_blockers": [
+            str(blocker)
+            for blocker in verdict_map.get("blockers", [])
+            if str(blocker).strip()
+        ]
+        if isinstance(verdict_map.get("blockers"), list)
+        else [],
+        "candidate_status": candidate_status,
+        "blockers": list(dict.fromkeys(validation_blockers + semantic_blockers)),
+    }
 
 
 def l5_v2_canonical_paired_axis_plan_gate_evidence(
@@ -3748,6 +3827,7 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             ),
             "covered_axes": [],
             "covered_variants": [],
+            "all_cells_dry_run_structurally_valid": False,
             "all_cells_dry_run_ready": False,
             "execution_ready": False,
             "source_commit": "",
@@ -3757,6 +3837,7 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             "source_relevant_paths": [],
             "source_relevant_diff_paths": [],
             "source_relevant_paths_match": False,
+            "source_custody_valid": False,
             "source_custody_current_for_execution": False,
             "blockers": [],
         }
@@ -3955,11 +4036,12 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         and not validation_blockers
         and source_relevant_paths_match
     )
-    dry_run_ready = (
+    dry_run_structurally_valid = (
         bool(payload)
         and not validation_blockers
         and payload.get("all_cells_dry_run_ready") is True
     )
+    dry_run_ready = dry_run_structurally_valid and source_custody_current_for_execution
     execution_blockers = [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
         *(
@@ -3998,6 +4080,7 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         "expected_cell_count": expected_cell_count,
         "covered_axes": covered_axes,
         "covered_variants": covered_variants,
+        "all_cells_dry_run_structurally_valid": dry_run_structurally_valid,
         "all_cells_dry_run_ready": dry_run_ready,
         "execution_ready": False,
         "source_commit": source_commit,
@@ -4007,6 +4090,7 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         "source_relevant_paths": source_relevant_paths,
         "source_relevant_diff_paths": source_relevant_diff_paths,
         "source_relevant_paths_match": source_relevant_paths_match,
+        "source_custody_valid": source_custody_current_for_execution,
         "source_custody_current_for_execution": source_custody_current_for_execution,
         "score_claim": False,
         "promotion_eligible": False,
@@ -4127,6 +4211,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     move_level_valid = move_level_status["artifact_valid"] is True
     timing_smoke_status = _tt5l_first_anchor_timing_smoke_status(repo_root=repo_root)
     timing_smoke_valid = timing_smoke_status["artifact_valid"] is True
+    probe_gate_artifact_status = l5_v2_probe_gate_artifact_status(repo_root=repo_root)
     probe_intake_status = _tt5l_probe_observation_intake_status(repo_root=repo_root)
     materialized_work_unit_status = _tt5l_materialized_paired_work_unit_status(
         repo_root=repo_root
@@ -4169,6 +4254,11 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.append("tt5l_modal_a100_dispatch_recipe_missing")
     if not probe_tool_exists:
         blockers.append("l5_v2_probe_disambiguator_tool_missing")
+    if (
+        probe_gate_artifact_status["artifact_exists"] is True
+        and probe_gate_artifact_status["artifact_valid"] is not True
+    ):
+        blockers.extend(str(blocker) for blocker in probe_gate_artifact_status["blockers"])
     blockers.extend(str(blocker) for blocker in dykstra_status["blockers"])
     if dykstra_valid:
         blockers.extend(str(blocker) for blocker in move_level_status["blockers"])
@@ -4679,6 +4769,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "proof_tool_exists": proof_tool_exists,
         "probe_tool_path": L5V2_PROBE_TOOL_PATH,
         "probe_tool_exists": probe_tool_exists,
+        "probe_gate_artifact_status": probe_gate_artifact_status,
         "probe_observation_intake_status": probe_intake_status,
         "materialized_tt5l_paired_work_unit_status": materialized_work_unit_status,
         "sideinfo_effect_curve_lightning_paired_axis_plan_status": (
@@ -6327,6 +6418,9 @@ def render_l5_v2_architecture_lock_packet_markdown(
         next_action = {}
     if not isinstance(tt5l, Mapping):
         tt5l = {}
+    probe_gate_artifact_status = tt5l.get("probe_gate_artifact_status")
+    if not isinstance(probe_gate_artifact_status, Mapping):
+        probe_gate_artifact_status = {}
     paired_axis_plan_status = tt5l.get(
         "sideinfo_effect_curve_lightning_paired_axis_plan_status"
     )
@@ -6413,6 +6507,10 @@ def render_l5_v2_architecture_lock_packet_markdown(
                     f"`{paired_axis_plan_status.get('all_cells_dry_run_ready')}`"
                 ),
                 (
+                    "- all_cells_dry_run_structurally_valid: "
+                    f"`{paired_axis_plan_status.get('all_cells_dry_run_structurally_valid')}`"
+                ),
+                (
                     "- execution_ready: "
                     f"`{paired_axis_plan_status.get('execution_ready')}`"
                 ),
@@ -6424,6 +6522,48 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 "- promotion_eligible: `false`",
             ]
         )
+    if probe_gate_artifact_status:
+        lines.extend(
+            [
+                "",
+                "## Probe Gate Artifact",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{probe_gate_artifact_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_exists: "
+                    f"`{probe_gate_artifact_status.get('artifact_exists')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{probe_gate_artifact_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- architecture_lock_allowed: "
+                    f"`{probe_gate_artifact_status.get('architecture_lock_allowed')}`"
+                ),
+                (
+                    "- selected_candidate_id: "
+                    f"`{probe_gate_artifact_status.get('selected_candidate_id')}`"
+                ),
+                (
+                    "- verdict_blockers: "
+                    f"`{probe_gate_artifact_status.get('verdict_blockers', [])}`"
+                ),
+            ]
+        )
+        for candidate in probe_gate_artifact_status.get("candidate_status", []) or []:
+            if not isinstance(candidate, Mapping):
+                continue
+            lines.append(
+                "- candidate "
+                f"`{candidate.get('candidate_id')}`: "
+                f"eligible=`{candidate.get('eligible_for_architecture_lock')}`, "
+                f"axes=`{candidate.get('exact_axes', [])}`, "
+                f"blockers=`{candidate.get('blockers', [])}`"
+            )
     if materialized_work_unit_status or provider_blocker_status or alternate_provider_plan_status:
         lines.extend(
             [
@@ -6579,6 +6719,7 @@ __all__ = [
     "l5_v2_pr106_stack_cell_candidates",
     "l5_v2_prediction_band_payload",
     "l5_v2_prediction_band_verdict",
+    "l5_v2_probe_gate_artifact_status",
     "l5_v2_required_gates",
     "l5_v2_research_basis_ids",
     "l5_v2_staircase_steps",
