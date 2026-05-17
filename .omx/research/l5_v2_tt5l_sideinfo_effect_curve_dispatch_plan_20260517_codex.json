@@ -1,0 +1,1507 @@
+{
+  "adjudication_required": true,
+  "blockers": [
+    "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+    "requires_dispatch_lane_claim_before_auth_eval",
+    "score_claim_forbidden_until_effect_curve_artifact_passes",
+    "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+  ],
+  "classification": "byte_closed_dispatch_plan_no_score_claim; paired CPU/CUDA exact-eval cells still required before TT5L side-info usefulness claims",
+  "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-17T05:45:55Z",
+  "manifest_blockers": [],
+  "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+  "operator_execute_required": true,
+  "plan_id": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_0902d4c91d23e972",
+  "planning_only": true,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_operator_dispatch": true,
+  "ready_for_provider_dispatch": false,
+  "ready_work_unit_count": 5,
+  "required_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "required_variants": [
+    "zero",
+    "random_lsb",
+    "shuffled",
+    "trained",
+    "ablated"
+  ],
+  "schema": "l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "source_manifest_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+  "source_manifest_schema": "tt5l_sideinfo_variant_packets_v1",
+  "source_manifest_sha256": "80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459",
+  "source_variant_report_path": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.md",
+  "tool": "tools/build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+  "work_unit_count": 5,
+  "work_units": [
+    {
+      "adjudication_required": true,
+      "archive": {
+        "bytes": 34373,
+        "declared_bytes": 34373,
+        "expected_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "expected_sha256_match": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+        "sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3"
+      },
+      "axis_output_dirs": {
+        "contest_cpu": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102_cpu",
+        "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102_cuda"
+      },
+      "blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_command": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_zero",
+        "--expected-archive-sha256",
+        "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_zero",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=zero;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102;archive_sha=b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists"
+      ],
+      "dispatch_command_executable": false,
+      "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_zero --expected-archive-sha256 b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3 --run-id l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_zero --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=zero;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102;archive_sha=b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "harvest_commands": {
+        "contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102_cpu",
+        "contest_cuda": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102_cuda"
+      },
+      "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero",
+      "lanes": {
+        "contest_cpu": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cpu",
+        "contest_cuda": "lane_l5_v2_tt5l_sideinfo_effect_curve_zero_contest_cuda"
+      },
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "operator_execute_command_after_review": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_zero",
+        "--expected-archive-sha256",
+        "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_zero",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=zero;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102;archive_sha=b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
+        "--execute"
+      ],
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_zero --expected-archive-sha256 b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3 --run-id l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_zero --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/zero --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=zero;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102;archive_sha=b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_execute_required": true,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+      "planning_only": true,
+      "preclaim_forbidden": true,
+      "promotion_eligible": false,
+      "provider": "modal",
+      "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "requires_operator_review_and_execute_flag",
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": true,
+      "ready_for_provider_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_cells": [
+        {
+          "axis": "contest_cpu",
+          "variant": "zero"
+        },
+        {
+          "axis": "contest_cuda",
+          "variant": "zero"
+        }
+      ],
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "runtime": {
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+        "runtime_file_count": 10,
+        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
+      },
+      "score_claim": false,
+      "score_claim_blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "score_claim_valid": false,
+      "sideinfo_variant": "zero",
+      "variant": "zero",
+      "variant_manifest_row": {
+        "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
+        "archive_bytes": 34373,
+        "archive_member": "0.bin",
+        "archive_member_bytes": 34250,
+        "archive_member_sha256": "8d3c56b5ee34e20680618c4277c6d3dddd7ce41eda2e929eb172e2f268fb41ce",
+        "archive_member_sha_changed_from_source": true,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/zero/archive.zip",
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "archive_sha_changed_from_source": true,
+        "blockers": [
+          "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "generation_rule": "np.zeros_like(source_sideinfo)",
+        "mutated_byte_ranges": [
+          {
+            "length": 34,
+            "offset": 0,
+            "reason": "side-info compressed length may update header length fields",
+            "section": "tt5l_header"
+          },
+          {
+            "length": 13,
+            "offset": 33985,
+            "reason": "variant-specific compressed side-info payload",
+            "section": "per_pair_side_info_blob"
+          }
+        ],
+        "mutated_sections": [
+          "tt5l_header",
+          "per_pair_side_info_blob"
+        ],
+        "non_target_sections_identical_to_source": {
+          "ac_state_blob": true,
+          "meta_blob": true,
+          "world_model_blob": true
+        },
+        "parsed_sections": {
+          "ac_state_blob": {
+            "length": 0,
+            "offset": 33998,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "meta_blob": {
+            "length": 252,
+            "offset": 33998,
+            "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
+          },
+          "per_pair_side_info_blob": {
+            "length": 13,
+            "offset": 33985,
+            "sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d"
+          },
+          "tt5l_header": {
+            "length": 34,
+            "offset": 0,
+            "sha256": "6b0c355933f9a419453343e0aa9b27e587ef7b39189237e6fa1eb6019ba291b8"
+          },
+          "world_model_blob": {
+            "length": 33951,
+            "offset": 34,
+            "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
+          }
+        },
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "semantics": "all per-pair side-info bytes set to zero",
+        "sideinfo_changed_from_source": true,
+        "sideinfo_equal_source": false,
+        "sideinfo_equal_zero": true,
+        "sideinfo_liveness": {
+          "all_zero_pair_count": 600,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [
+            "tt5l_side_info_some_pairs_all_zero"
+          ],
+          "max": 0,
+          "max_nonzero_values_per_pair": 0,
+          "mean_nonzero_values_per_pair": 0.0,
+          "min": 0,
+          "min_nonzero_values_per_pair": 0,
+          "nonzero_fraction": 0.0,
+          "nonzero_pair_count": 0,
+          "nonzero_pair_fraction": 0.0,
+          "nonzero_values": 0,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        },
+        "sideinfo_section_sha_changed_from_source": true,
+        "sideinfo_sha256": "d4902002bff1daf21917e31d6360b1094d1c29c4054cea41930449787caa6f71",
+        "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+        "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
+        "variant": "zero",
+        "variant_seed": 20260517,
+        "variant_source": "source_trained_sideinfo",
+        "zip_compress_type": "deflated"
+      },
+      "work_unit_id": "measure_tt5l_sideinfo_effect_curve__zero"
+    },
+    {
+      "adjudication_required": true,
+      "archive": {
+        "bytes": 38681,
+        "declared_bytes": 38681,
+        "expected_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "expected_sha256_match": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+        "sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1"
+      },
+      "axis_output_dirs": {
+        "contest_cpu": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190_cpu",
+        "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190_cuda"
+      },
+      "blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_command": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+        "--expected-archive-sha256",
+        "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=random_lsb;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190;archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists"
+      ],
+      "dispatch_command_executable": false,
+      "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_random_lsb --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=random_lsb;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190;archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "harvest_commands": {
+        "contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190_cpu",
+        "contest_cuda": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190_cuda"
+      },
+      "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+      "lanes": {
+        "contest_cpu": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cpu",
+        "contest_cuda": "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_contest_cuda"
+      },
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "operator_execute_command_after_review": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+        "--expected-archive-sha256",
+        "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=random_lsb;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190;archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
+        "--execute"
+      ],
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_random_lsb --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_random_lsb --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/random_lsb --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=random_lsb;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190;archive_sha=ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_execute_required": true,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+      "planning_only": true,
+      "preclaim_forbidden": true,
+      "promotion_eligible": false,
+      "provider": "modal",
+      "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "requires_operator_review_and_execute_flag",
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": true,
+      "ready_for_provider_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_cells": [
+        {
+          "axis": "contest_cpu",
+          "variant": "random_lsb"
+        },
+        {
+          "axis": "contest_cuda",
+          "variant": "random_lsb"
+        }
+      ],
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "runtime": {
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+        "runtime_file_count": 10,
+        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
+      },
+      "score_claim": false,
+      "score_claim_blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "score_claim_valid": false,
+      "sideinfo_variant": "random_lsb",
+      "variant": "random_lsb",
+      "variant_manifest_row": {
+        "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
+        "archive_bytes": 38681,
+        "archive_member": "0.bin",
+        "archive_member_bytes": 38558,
+        "archive_member_sha256": "968c693ebe0bd93e9cda200181e54f487ed2483803a96563ab20bec94c8b3d63",
+        "archive_member_sha_changed_from_source": true,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "archive_sha_changed_from_source": true,
+        "blockers": [
+          "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "generation_rule": "default_rng(20260517).choice([-1, 1], size=source_shape)",
+        "mutated_byte_ranges": [
+          {
+            "length": 34,
+            "offset": 0,
+            "reason": "side-info compressed length may update header length fields",
+            "section": "tt5l_header"
+          },
+          {
+            "length": 4321,
+            "offset": 33985,
+            "reason": "variant-specific compressed side-info payload",
+            "section": "per_pair_side_info_blob"
+          }
+        ],
+        "mutated_sections": [
+          "tt5l_header",
+          "per_pair_side_info_blob"
+        ],
+        "non_target_sections_identical_to_source": {
+          "ac_state_blob": true,
+          "meta_blob": true,
+          "world_model_blob": true
+        },
+        "parsed_sections": {
+          "ac_state_blob": {
+            "length": 0,
+            "offset": 38306,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "meta_blob": {
+            "length": 252,
+            "offset": 38306,
+            "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
+          },
+          "per_pair_side_info_blob": {
+            "length": 4321,
+            "offset": 33985,
+            "sha256": "c8c6ee3c65e9cf52bcf0fef25c44974f31959903adffab1cb5419579c9a98ab9"
+          },
+          "tt5l_header": {
+            "length": 34,
+            "offset": 0,
+            "sha256": "3d338739351d72b5558a2243a9e9e33819faaa371ea37eb721d5a4f40dff7c6c"
+          },
+          "world_model_blob": {
+            "length": 33951,
+            "offset": 34,
+            "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
+          }
+        },
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "semantics": "deterministic +/-1 int8 side-info control",
+        "sideinfo_changed_from_source": true,
+        "sideinfo_equal_source": false,
+        "sideinfo_equal_zero": false,
+        "sideinfo_liveness": {
+          "all_zero_pair_count": 0,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [],
+          "max": 1,
+          "max_nonzero_values_per_pair": 45,
+          "mean_nonzero_values_per_pair": 45.0,
+          "min": -1,
+          "min_nonzero_values_per_pair": 45,
+          "nonzero_fraction": 1.0,
+          "nonzero_pair_count": 600,
+          "nonzero_pair_fraction": 1.0,
+          "nonzero_values": 27000,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 1.0,
+                "nonzero_values": 3600,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 1.0,
+                "nonzero_values": 5400,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 1.0,
+                "nonzero_values": 7200,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 1.0,
+                "nonzero_values": 10800,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        },
+        "sideinfo_section_sha_changed_from_source": true,
+        "sideinfo_sha256": "1cf4e9ee2321eb3ed11c454e3363de2e906c8e444fa0f9db2a09efea74b91d29",
+        "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+        "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
+        "variant": "random_lsb",
+        "variant_seed": 20260517,
+        "variant_source": "source_trained_sideinfo",
+        "zip_compress_type": "deflated"
+      },
+      "work_unit_id": "measure_tt5l_sideinfo_effect_curve__random_lsb"
+    },
+    {
+      "adjudication_required": true,
+      "archive": {
+        "bytes": 43284,
+        "declared_bytes": 43284,
+        "expected_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "expected_sha256_match": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+        "sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3"
+      },
+      "axis_output_dirs": {
+        "contest_cpu": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4_cpu",
+        "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4_cuda"
+      },
+      "blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_command": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+        "--expected-archive-sha256",
+        "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=shuffled;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4;archive_sha=c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists"
+      ],
+      "dispatch_command_executable": false,
+      "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_shuffled --expected-archive-sha256 c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3 --run-id l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=shuffled;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4;archive_sha=c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "harvest_commands": {
+        "contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4_cpu",
+        "contest_cuda": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4_cuda"
+      },
+      "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+      "lanes": {
+        "contest_cpu": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cpu",
+        "contest_cuda": "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled_contest_cuda"
+      },
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "operator_execute_command_after_review": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+        "--expected-archive-sha256",
+        "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=shuffled;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4;archive_sha=c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
+        "--execute"
+      ],
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_shuffled --expected-archive-sha256 c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3 --run-id l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_shuffled --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/shuffled --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=shuffled;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4;archive_sha=c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_execute_required": true,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+      "planning_only": true,
+      "preclaim_forbidden": true,
+      "promotion_eligible": false,
+      "provider": "modal",
+      "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "requires_operator_review_and_execute_flag",
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": true,
+      "ready_for_provider_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_cells": [
+        {
+          "axis": "contest_cpu",
+          "variant": "shuffled"
+        },
+        {
+          "axis": "contest_cuda",
+          "variant": "shuffled"
+        }
+      ],
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "runtime": {
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+        "runtime_file_count": 10,
+        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
+      },
+      "score_claim": false,
+      "score_claim_blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "score_claim_valid": false,
+      "sideinfo_variant": "shuffled",
+      "variant": "shuffled",
+      "variant_manifest_row": {
+        "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
+        "archive_bytes": 43284,
+        "archive_member": "0.bin",
+        "archive_member_bytes": 43161,
+        "archive_member_sha256": "49bdccce2a49d7d9a34d252a6ea4fe2c2d83b26c4d0315e0da8b103bd6d24f00",
+        "archive_member_sha_changed_from_source": true,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/shuffled/archive.zip",
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "archive_sha_changed_from_source": true,
+        "blockers": [
+          "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "generation_rule": "default_rng(20260517).permutation(source_rows)",
+        "mutated_byte_ranges": [
+          {
+            "length": 34,
+            "offset": 0,
+            "reason": "side-info compressed length may update header length fields",
+            "section": "tt5l_header"
+          },
+          {
+            "length": 8924,
+            "offset": 33985,
+            "reason": "variant-specific compressed side-info payload",
+            "section": "per_pair_side_info_blob"
+          }
+        ],
+        "mutated_sections": [
+          "tt5l_header",
+          "per_pair_side_info_blob"
+        ],
+        "non_target_sections_identical_to_source": {
+          "ac_state_blob": true,
+          "meta_blob": true,
+          "world_model_blob": true
+        },
+        "parsed_sections": {
+          "ac_state_blob": {
+            "length": 0,
+            "offset": 42909,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "meta_blob": {
+            "length": 252,
+            "offset": 42909,
+            "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
+          },
+          "per_pair_side_info_blob": {
+            "length": 8924,
+            "offset": 33985,
+            "sha256": "1ce2905fd41330dec9b21784519934f4b8236a147aa0b4c2633004acf249d528"
+          },
+          "tt5l_header": {
+            "length": 34,
+            "offset": 0,
+            "sha256": "ef466b4145342461726a2c4625eb9b816711c7ed4c352aa7628ae7810b090b64"
+          },
+          "world_model_blob": {
+            "length": 33951,
+            "offset": 34,
+            "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
+          }
+        },
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "semantics": "trained side-info row order deterministically permuted",
+        "sideinfo_changed_from_source": true,
+        "sideinfo_equal_source": false,
+        "sideinfo_equal_zero": false,
+        "sideinfo_liveness": {
+          "all_zero_pair_count": 0,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [],
+          "max": 4,
+          "max_nonzero_values_per_pair": 38,
+          "mean_nonzero_values_per_pair": 27.711666666666666,
+          "min": -4,
+          "min_nonzero_values_per_pair": 18,
+          "nonzero_fraction": 0.6158148148148148,
+          "nonzero_pair_count": 600,
+          "nonzero_pair_fraction": 1.0,
+          "nonzero_values": 16627,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 0.6205555555555555,
+                "nonzero_values": 2234,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 0.615,
+                "nonzero_values": 3321,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 0.6161111111111112,
+                "nonzero_values": 4436,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 0.6144444444444445,
+                "nonzero_values": 6636,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        },
+        "sideinfo_section_sha_changed_from_source": true,
+        "sideinfo_sha256": "48d867ccf7b6fc299858ad759894eeabbc3c75767cd2bdc55f932308f832d567",
+        "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+        "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
+        "variant": "shuffled",
+        "variant_seed": 20260517,
+        "variant_source": "source_trained_sideinfo",
+        "zip_compress_type": "deflated"
+      },
+      "work_unit_id": "measure_tt5l_sideinfo_effect_curve__shuffled"
+    },
+    {
+      "adjudication_required": true,
+      "archive": {
+        "bytes": 43323,
+        "declared_bytes": 43323,
+        "expected_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "expected_sha256_match": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+        "sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a"
+      },
+      "axis_output_dirs": {
+        "contest_cpu": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779_cpu",
+        "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779_cuda"
+      },
+      "blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_command": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_trained",
+        "--expected-archive-sha256",
+        "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_trained",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=trained;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779;archive_sha=f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists"
+      ],
+      "dispatch_command_executable": false,
+      "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_trained --expected-archive-sha256 f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a --run-id l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_trained --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=trained;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779;archive_sha=f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "harvest_commands": {
+        "contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779_cpu",
+        "contest_cuda": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779_cuda"
+      },
+      "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained",
+      "lanes": {
+        "contest_cpu": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cpu",
+        "contest_cuda": "lane_l5_v2_tt5l_sideinfo_effect_curve_trained_contest_cuda"
+      },
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "operator_execute_command_after_review": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_trained",
+        "--expected-archive-sha256",
+        "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_trained",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=trained;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779;archive_sha=f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
+        "--execute"
+      ],
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_trained --expected-archive-sha256 f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a --run-id l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_trained --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/trained --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=trained;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779;archive_sha=f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_execute_required": true,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+      "planning_only": true,
+      "preclaim_forbidden": true,
+      "promotion_eligible": false,
+      "provider": "modal",
+      "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "requires_operator_review_and_execute_flag",
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": true,
+      "ready_for_provider_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_cells": [
+        {
+          "axis": "contest_cpu",
+          "variant": "trained"
+        },
+        {
+          "axis": "contest_cuda",
+          "variant": "trained"
+        }
+      ],
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "runtime": {
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+        "runtime_file_count": 10,
+        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
+      },
+      "score_claim": false,
+      "score_claim_blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "score_claim_valid": false,
+      "sideinfo_variant": "trained",
+      "variant": "trained",
+      "variant_manifest_row": {
+        "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
+        "archive_bytes": 43323,
+        "archive_member": "0.bin",
+        "archive_member_bytes": 43200,
+        "archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "archive_member_sha_changed_from_source": false,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/trained/archive.zip",
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "archive_sha_changed_from_source": true,
+        "blockers": [
+          "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "generation_rule": "source_sideinfo.copy()",
+        "mutated_byte_ranges": [
+          {
+            "length": 34,
+            "offset": 0,
+            "reason": "side-info compressed length may update header length fields",
+            "section": "tt5l_header"
+          },
+          {
+            "length": 8963,
+            "offset": 33985,
+            "reason": "variant-specific compressed side-info payload",
+            "section": "per_pair_side_info_blob"
+          }
+        ],
+        "mutated_sections": [
+          "tt5l_header",
+          "per_pair_side_info_blob"
+        ],
+        "non_target_sections_identical_to_source": {
+          "ac_state_blob": true,
+          "meta_blob": true,
+          "world_model_blob": true
+        },
+        "parsed_sections": {
+          "ac_state_blob": {
+            "length": 0,
+            "offset": 42948,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "meta_blob": {
+            "length": 252,
+            "offset": 42948,
+            "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
+          },
+          "per_pair_side_info_blob": {
+            "length": 8963,
+            "offset": 33985,
+            "sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e"
+          },
+          "tt5l_header": {
+            "length": 34,
+            "offset": 0,
+            "sha256": "18253820f0f118ed6647e36fccd652b3679d6e858a4db14287e746861243306d"
+          },
+          "world_model_blob": {
+            "length": 33951,
+            "offset": 34,
+            "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
+          }
+        },
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "semantics": "trained side-info from the source TT5L packet",
+        "sideinfo_changed_from_source": false,
+        "sideinfo_equal_source": true,
+        "sideinfo_equal_zero": false,
+        "sideinfo_liveness": {
+          "all_zero_pair_count": 0,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [],
+          "max": 4,
+          "max_nonzero_values_per_pair": 38,
+          "mean_nonzero_values_per_pair": 27.711666666666666,
+          "min": -4,
+          "min_nonzero_values_per_pair": 18,
+          "nonzero_fraction": 0.6158148148148148,
+          "nonzero_pair_count": 600,
+          "nonzero_pair_fraction": 1.0,
+          "nonzero_values": 16627,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 0.6205555555555555,
+                "nonzero_values": 2234,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 0.615,
+                "nonzero_values": 3321,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 0.6161111111111112,
+                "nonzero_values": 4436,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 0.6144444444444445,
+                "nonzero_values": 6636,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        },
+        "sideinfo_section_sha_changed_from_source": false,
+        "sideinfo_sha256": "feeb94ea82a84a009ffa0ee2053939e398181114601670365c8769262db7105d",
+        "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+        "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
+        "variant": "trained",
+        "variant_seed": 20260517,
+        "variant_source": "source_trained_sideinfo",
+        "zip_compress_type": "deflated"
+      },
+      "work_unit_id": "measure_tt5l_sideinfo_effect_curve__trained"
+    },
+    {
+      "adjudication_required": true,
+      "archive": {
+        "bytes": 42419,
+        "declared_bytes": 42419,
+        "expected_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "expected_sha256_match": true,
+        "path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+        "sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39"
+      },
+      "axis_output_dirs": {
+        "contest_cpu": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998_cpu",
+        "contest_cuda": "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998_cuda"
+      },
+      "blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "claim_lifecycle_owner": "tools/dispatch_modal_paired_auth_eval.py via per-axis Modal auth-eval wrappers",
+      "dispatch_attempted": false,
+      "dispatch_blockers": [],
+      "dispatch_command": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_ablated",
+        "--expected-archive-sha256",
+        "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=ablated;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998;archive_sha=ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists"
+      ],
+      "dispatch_command_executable": false,
+      "dispatch_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_ablated --expected-archive-sha256 ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39 --run-id l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_ablated --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=ablated;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998;archive_sha=ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists",
+      "harvest_commands": {
+        "contest_cpu": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated/modal_auth_eval_cpu/l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998_cpu",
+        "contest_cuda": ".venv/bin/python tools/recover_modal_auth_eval.py --output-dir experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated/modal_auth_eval/l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998_cuda"
+      },
+      "lane_id": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated",
+      "lanes": {
+        "contest_cpu": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cpu",
+        "contest_cuda": "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated_contest_cuda"
+      },
+      "measurement_id": "measure_tt5l_sideinfo_effect_curve",
+      "operator_execute_command_after_review": [
+        ".venv/bin/python",
+        "tools/dispatch_modal_paired_auth_eval.py",
+        "--archive",
+        "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+        "--submission-dir",
+        "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir",
+        "--inflate-sh",
+        "inflate.sh",
+        "--label",
+        "l5_v2_tt5l_sideinfo_effect_curve_ablated",
+        "--expected-archive-sha256",
+        "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "--run-id",
+        "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "--pair-group-id",
+        "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "--lane-id-base",
+        "lane_l5_v2_tt5l_sideinfo_effect_curve_ablated",
+        "--output-root",
+        "experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated",
+        "--modal-bin",
+        ".venv/bin/modal",
+        "--gpu",
+        "T4",
+        "--claim-agent",
+        "codex:l5_v2_tt5l_sideinfo_effect_curve",
+        "--claim-notes",
+        "l5_v2_tt5l_sideinfo_effect_curve;variant=ablated;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998;archive_sha=ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "--expected-runtime-tree-sha256",
+        "auto",
+        "--skip-axis-if-promotable-anchor-exists",
+        "--execute"
+      ],
+      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_tt5l_sideinfo_effect_curve_ablated --expected-archive-sha256 ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39 --run-id l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --pair-group-id pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998 --lane-id-base lane_l5_v2_tt5l_sideinfo_effect_curve_ablated --output-root experiments/results/l5_v2_probe/tt5l_sideinfo_effect_curve/ablated --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_tt5l_sideinfo_effect_curve --claim-notes 'l5_v2_tt5l_sideinfo_effect_curve;variant=ablated;pair_group_id=pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998;archive_sha=ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39' --expected-runtime-tree-sha256 auto --skip-axis-if-promotable-anchor-exists --execute",
+      "operator_execute_required": true,
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "paired_dispatch_tool": "tools/dispatch_modal_paired_auth_eval.py",
+      "planning_only": true,
+      "preclaim_forbidden": true,
+      "promotion_eligible": false,
+      "provider": "modal",
+      "rank_or_kill_eligible": false,
+      "readiness_blockers": [
+        "requires_operator_review_and_execute_flag",
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "ready_for_operator_dispatch": true,
+      "ready_for_provider_dispatch": false,
+      "required_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "required_cells": [
+        {
+          "axis": "contest_cpu",
+          "variant": "ablated"
+        },
+        {
+          "axis": "contest_cuda",
+          "variant": "ablated"
+        }
+      ],
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "runtime": {
+        "runtime_content_tree_sha256": "bf857cb79055e914b64e5cd5788a5a15a37824e01b32c871b84715c153c0ab32",
+        "runtime_file_count": 10,
+        "runtime_tree_sha256": "708cf594cb8dfb31e6a4c86e40f4b904919a486c9fb35d7049f322d07805511d",
+        "submission_dir": "experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir"
+      },
+      "score_claim": false,
+      "score_claim_blockers": [
+        "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+        "requires_dispatch_lane_claim_before_auth_eval",
+        "score_claim_forbidden_until_effect_curve_artifact_passes",
+        "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+      ],
+      "score_claim_valid": false,
+      "sideinfo_variant": "ablated",
+      "variant": "ablated",
+      "variant_manifest_row": {
+        "allowed_header_delta": "WORLD_MODEL_LEN/AC_STATE_LEN/META_LEN preserved; PER_PAIR_SIDE_INFO_LEN may differ by variant",
+        "archive_bytes": 42419,
+        "archive_member": "0.bin",
+        "archive_member_bytes": 42296,
+        "archive_member_sha256": "283291f32b8c617d765300bd13e943283962e70266b2c23beeee852066ab6fea",
+        "archive_member_sha_changed_from_source": true,
+        "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/ablated/archive.zip",
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "archive_sha_changed_from_source": true,
+        "blockers": [
+          "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+        ],
+        "dispatch_attempted": false,
+        "generation_rule": "source_sideinfo with predict_residual slice zeroed",
+        "mutated_byte_ranges": [
+          {
+            "length": 34,
+            "offset": 0,
+            "reason": "side-info compressed length may update header length fields",
+            "section": "tt5l_header"
+          },
+          {
+            "length": 8059,
+            "offset": 33985,
+            "reason": "variant-specific compressed side-info payload",
+            "section": "per_pair_side_info_blob"
+          }
+        ],
+        "mutated_sections": [
+          "tt5l_header",
+          "per_pair_side_info_blob"
+        ],
+        "non_target_sections_identical_to_source": {
+          "ac_state_blob": true,
+          "meta_blob": true,
+          "world_model_blob": true
+        },
+        "parsed_sections": {
+          "ac_state_blob": {
+            "length": 0,
+            "offset": 42044,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "meta_blob": {
+            "length": 252,
+            "offset": 42044,
+            "sha256": "67615883e5b82cdd201aef5780da6fe7f81c2247aac80c118994f561ed2a62b5"
+          },
+          "per_pair_side_info_blob": {
+            "length": 8059,
+            "offset": 33985,
+            "sha256": "148e78bfb15f67070f769a16d13ac70160cd8cf1a23882ee14fa1e64b9962f0b"
+          },
+          "tt5l_header": {
+            "length": 34,
+            "offset": 0,
+            "sha256": "fe60dc472165ccca734209399b02d61271fdc0ebe69da1cf824602a38643a269"
+          },
+          "world_model_blob": {
+            "length": 33951,
+            "offset": 34,
+            "sha256": "091595b5827e4e3734bb7d11dcd2151b214ca1fe729ea1331bb4e1ddb448f178"
+          }
+        },
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "score_claim": false,
+        "semantics": "trained side-info with predict_residual section zeroed",
+        "sideinfo_changed_from_source": true,
+        "sideinfo_equal_source": false,
+        "sideinfo_equal_zero": false,
+        "sideinfo_liveness": {
+          "all_zero_pair_count": 0,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [],
+          "max": 4,
+          "max_nonzero_values_per_pair": 32,
+          "mean_nonzero_values_per_pair": 22.176666666666666,
+          "min": -4,
+          "min_nonzero_values_per_pair": 14,
+          "nonzero_fraction": 0.4928148148148148,
+          "nonzero_pair_count": 600,
+          "nonzero_pair_fraction": 1.0,
+          "nonzero_values": 13306,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 0.6205555555555555,
+                "nonzero_values": 2234,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 0.6161111111111112,
+                "nonzero_values": 4436,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 0.6144444444444445,
+                "nonzero_values": 6636,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        },
+        "sideinfo_section_sha_changed_from_source": true,
+        "sideinfo_sha256": "2a51920df738ced7f87aafa7c2ac284eeb47bd73f01385f3152e3fbbce521a74",
+        "source_archive_member_sha256": "f5b878bf6b2ff67f685088ddafd0c31885163c0a3b28c6a158df71b5361817a3",
+        "source_archive_sha256": "2a8cf3389aaeb217a96058bf7b47b43e4fc364193795d66fe7ab75479102d11f",
+        "source_sideinfo_section_sha256": "d54a435bfb5a4f7355c3a7b2b020bcee817d99a799b62ab217caef3bca93954e",
+        "variant": "ablated",
+        "variant_seed": 20260517,
+        "variant_source": "source_trained_sideinfo",
+        "zip_compress_type": "deflated"
+      },
+      "work_unit_id": "measure_tt5l_sideinfo_effect_curve__ablated"
+    }
+  ]
+}

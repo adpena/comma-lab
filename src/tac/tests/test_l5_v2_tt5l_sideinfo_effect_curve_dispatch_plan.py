@@ -1,0 +1,235 @@
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+from tac.optimization.l5_v2_measurement_schedule import (
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA,
+)
+from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA,
+    build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan,
+    l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_json,
+    render_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_markdown,
+)
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_runtime(root: Path) -> Path:
+    runtime = root / "experiments/results/tt5l/runtime"
+    runtime.mkdir(parents=True, exist_ok=True)
+    (runtime / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    return runtime
+
+
+def _write_manifest(root: Path) -> Path:
+    runtime = _write_runtime(root)
+    variants = []
+    for index, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
+        archive = root / f"experiments/results/tt5l/{variant}/archive.zip"
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_bytes(f"archive:{variant}:{index}".encode())
+        variants.append(
+            {
+                "variant": variant,
+                "archive_path": archive.relative_to(root).as_posix(),
+                "archive_sha256": _sha256(archive),
+                "archive_bytes": archive.stat().st_size,
+                "sideinfo_liveness": {
+                    "checked": True,
+                    "nonzero_values": 0 if variant == "zero" else 8,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "dispatch_attempted": False,
+                "blockers": ["requires_paired_cpu_cuda_exact_eval_before_score_claim"],
+            }
+        )
+    manifest = root / ".omx/research/variant_manifest.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "rank_or_kill_eligible": False,
+                "dispatch_attempted": False,
+                "runtime": {
+                    "available": True,
+                    "submission_dir": runtime.relative_to(root).as_posix(),
+                    "runtime_tree_sha256": "a" * 64,
+                    "runtime_content_tree_sha256": "b" * 64,
+                    "runtime_file_count": 1,
+                    "blockers": [],
+                },
+                "required_effect_curve_variants": list(
+                    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+                ),
+                "variants": variants,
+                "blockers": [
+                    "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve"
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def test_tt5l_sideinfo_dispatch_plan_materializes_five_byte_closed_work_units(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+
+    plan = build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
+        manifest=payload,
+        manifest_path=manifest,
+        repo_root=tmp_path,
+    )
+
+    assert plan["schema"] == L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA
+    assert plan["score_claim"] is False
+    assert plan["promotion_eligible"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert plan["dispatch_attempted"] is False
+    assert plan["work_unit_count"] == len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    assert plan["ready_work_unit_count"] == len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+    assert plan["ready_for_operator_dispatch"] is True
+    assert plan["ready_for_provider_dispatch"] is False
+    assert {row["variant"] for row in plan["work_units"]} == set(
+        L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    )
+    for row in plan["work_units"]:
+        command = row["dispatch_command_template"]
+        execute_command = row["operator_execute_command_template_after_review"]
+        assert row["dispatch_command_executable"] is False
+        assert row["operator_execute_required"] is True
+        assert row["ready_for_operator_dispatch"] is True
+        assert row["required_axes"] == ["contest_cpu", "contest_cuda"]
+        assert row["required_cells"] == [
+            {"axis": "contest_cpu", "variant": row["variant"]},
+            {"axis": "contest_cuda", "variant": row["variant"]},
+        ]
+        assert row["archive"]["expected_sha256_match"] is True
+        assert row["archive"]["path"] in command
+        assert row["archive"]["sha256"] in command
+        assert "tools/dispatch_modal_paired_auth_eval.py" in command
+        assert "experiments/modal_auth_eval.py" not in command
+        assert "experiments/modal_auth_eval_cpu.py" not in command
+        assert "--expected-runtime-tree-sha256 auto" in command
+        assert "--skip-axis-if-promotable-anchor-exists" in command
+        assert "--execute" not in row["dispatch_command"]
+        assert execute_command.endswith(" --execute")
+        assert row["pair_group_id"] in command
+        assert row["pair_group_id"] in execute_command
+        assert row["dispatch_blockers"] == []
+        assert "requires_paired_cpu_cuda_exact_eval_before_score_claim" in row[
+            "score_claim_blockers"
+        ]
+
+
+def test_tt5l_sideinfo_dispatch_plan_fails_closed_on_archive_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["variants"][0]["archive_sha256"] = "0" * 64
+
+    plan = build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
+        manifest=payload,
+        manifest_path=manifest,
+        repo_root=tmp_path,
+    )
+
+    first = plan["work_units"][0]
+    assert first["ready_for_operator_dispatch"] is False
+    assert "variant_archive_sha_mismatch:zero" in first["dispatch_blockers"]
+    assert "paired_dispatch_command_not_materialized" in first["dispatch_blockers"]
+    assert plan["ready_for_operator_dispatch"] is False
+    assert "variant_archive_sha_mismatch:zero" in plan["blockers"]
+
+
+def test_tt5l_sideinfo_dispatch_plan_json_and_markdown_are_durable(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    plan = build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
+        manifest=payload,
+        manifest_path=manifest,
+        repo_root=tmp_path,
+    )
+
+    decoded = json.loads(l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_json(plan))
+    report = render_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_markdown(plan)
+
+    assert decoded["schema"] == L5V2_TT5L_SIDEINFO_EFFECT_CURVE_DISPATCH_PLAN_SCHEMA
+    assert "L5 v2 TT5L side-info effect-curve dispatch plan" in report
+    assert "planning_only: `true`" in report
+    assert "score_claim: `false`" in report
+    assert "ready_for_provider_dispatch: `false`" in report
+    assert "operator_execute_command_after_review" in report
+    assert "[contest-CPU]" in report
+    assert "[contest-CUDA]" in report
+
+
+def test_tt5l_sideinfo_dispatch_plan_cli_writes_json_and_markdown(
+    tmp_path: Path,
+) -> None:
+    root = Path.cwd()
+    artifact_root = root / "experiments/results/time_traveler_l5_v2" / (
+        f"test_sideinfo_dispatch_{tmp_path.name}"
+    )
+    manifest = artifact_root / ".omx/research/variant_manifest.json"
+    output_json = artifact_root / "dispatch_plan.json"
+    output_md = artifact_root / "dispatch_plan.md"
+    try:
+        manifest_source = _write_manifest(artifact_root)
+        manifest = manifest_source
+
+        proc = subprocess.run(
+            [
+                str(root / "tools" / "build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py"),
+                "--variant-manifest",
+                str(manifest),
+                "--output-json",
+                str(output_json.relative_to(root)),
+                "--output-md",
+                str(output_md.relative_to(root)),
+                "--repo-root",
+                str(artifact_root),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        payload = json.loads(output_json.read_text(encoding="utf-8"))
+        assert payload["work_unit_count"] == len(
+            L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        )
+        assert payload["ready_work_unit_count"] == len(
+            L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        )
+        assert "score_claim=false dispatch_attempted=false" in proc.stdout
+        assert output_md.is_file()
+    finally:
+        if artifact_root.exists():
+            import shutil
+
+            shutil.rmtree(artifact_root)
