@@ -31672,7 +31672,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "ATW v2 trainer _full_main implemented (lifts V1 NotImplementedError per design memo section 4); ATW2 archive grammar with 9 sections; Variant A/B; G1 + B3 productionized; Catalog #270 overall_pass=true at src/tac/substrates/atw_codec_v2/tests/test_atw_codec_v2.py"
+          "evidence": "ATW v2 trainer _full_main IMPLEMENTED at HEAD commit b1f1913e5 'Add ATW v2 trainer and research recipe' (verified 2026-05-17 phase_1b_atw_v2_lift_20260516 subagent via Catalog #229 premise verification: AST scan confirms 215-LOC _full_main body NO NotImplementedError; 28/28 tests pass in src/tac/substrates/atw_codec_v2/tests/test_atw_codec_v2.py; 4/4 tests pass in src/tac/tests/test_run_atw_v2_d4_probe_from_a1.py). RESEARCH-ONLY lane: dispatch_enabled=false per recipe + D4 probe INDEPENDENT verdict (MI=0.006385 bits/symbol vs 0.5 threshold; .omx/state/h_latent_given_scorer_class_atw_codec_v2.json + .omx/research/atw_codec_v2_d4_probe_verdict_20260516_codex.md). Per design memo section 19: D4 INDEPENDENT triggers DEFER-pending-research with G2-PARTIAL alternative-hypothesis per CLAUDE.md 'Forbidden premature KILL'. research_only=true; lane_class=substrate_engineering"
         },
         "real_archive_empirical": {
           "status": false,
@@ -31696,7 +31696,7 @@
         },
         "memory_entry": {
           "status": true,
-          "evidence": ".omx/research/atw_codec_v2_cooperative_receiver_full_stack_design_20260516.md"
+          "evidence": ".omx/research/atw_codec_v2_cooperative_receiver_full_stack_design_20260516.md (V2 design memo commit fcdcc1112) + .omx/research/atw_d4_probe_recipe_disambiguation_20260516.md (disambiguation memo per phase_1b_atw_v2_lift subagent) + .omx/research/atw_codec_v2_d4_probe_verdict_20260516_codex.md (D4 INDEPENDENT verdict; defer measured A1-latent class-conditioning surface; ATW v2 paradigm NOT killed per CLAUDE.md 'Forbidden premature KILL')"
         },
         "deploy_runbook": {
           "status": true,
@@ -32073,6 +32073,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_phase_1b_z6_lift_20260516",
+      "name": "Phase 1b Z6 _full_main lift",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wave_3_phase_1a_fire_dispatchable_20260516",
+      "name": "Wave 3 Phase 1a fire dispatchable (STC v2 + NSCS06 v8)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Wave 3 Phase 1a 2-of-2 dispatchable fired via canonical operator_authorize.py: STC v2 fc-01KRSVKF9VEESQY2FS33FF4WDM job substrate_stc_v2_modal_t4_dispatch_20260517T021720Z + NSCS06 v8 fc-01KRSVGE57MT5XSAWCGNQFQPBP job substrate_nscs06_v8_path_b_wavelet_modal_t4_dispatch_20260517T021548Z (both Modal T4, both registered Catalog #245); Catalog #202 paired-env bypass active (sentinel sets verified clean; 10 dirty files LIFT-Z6/codex-sister owned per Catalog #230); HARVEST per CLAUDE.md non-negotiable 6-24h"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/wave_3_phase_1a_fire_dispatchable_landed_20260516.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -32082,5 +32164,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T01:16:05Z"
+  "updated_at": "2026-05-17T02:20:18Z"
 }
