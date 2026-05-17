@@ -259,6 +259,110 @@ def _write_standard_tt5l_materialized_work_unit_plan(
     )
 
 
+def _write_tt5l_lightning_route_unblock_packet(
+    repo_root: Path,
+    *,
+    artifact_blockers: list[str] | None = None,
+) -> dict[str, object]:
+    path = repo_root / l5_v2.L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, object] = {
+        "schema": l5_v2.L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_SCHEMA,
+        "tool": l5_v2.L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_TOOL_PATH,
+        "generated_at_utc": "2026-05-17T00:00:00Z",
+        "current_head_commit": _sha(51),
+        "planning_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "provider_spend_attempted": False,
+        "current_route_verdict": {
+            "provider": "lightning",
+            "provider_blocker": True,
+            "ready_for_operator_dispatch": False,
+            "ready_for_provider_dispatch": False,
+        },
+        "source_artifacts": {
+            "sideinfo_lightning_paired_axis_plan": {
+                "source_relevant_paths_match_current_head": True,
+            },
+        },
+        "remaining_blockers": [
+            "LIGHTNING_TEAMSPACE missing",
+            "LIGHTNING_SSH_TARGET missing",
+        ],
+        "blockers": artifact_blockers or [],
+    }
+    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    return payload
+
+
+def _write_tt5l_lightning_doctor_plan(
+    repo_root: Path,
+    *,
+    source_route_sha256: str | None = None,
+) -> dict[str, object]:
+    route_path = repo_root / l5_v2.L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+    route_sha = source_route_sha256 if source_route_sha256 is not None else (
+        _file_sha256(route_path) if route_path.is_file() else ""
+    )
+    path = repo_root / l5_v2.L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_ARTIFACT_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, object] = {
+        "schema": l5_v2.L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_SCHEMA,
+        "tool": l5_v2.L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_TOOL_PATH,
+        "generated_at_utc": "2026-05-17T00:00:00Z",
+        "current_head_commit": _sha(52),
+        "source_route_packet": (
+            l5_v2.L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+        ),
+        "source_route_packet_sha256": route_sha,
+        "planning_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "provider_spend_attempted": False,
+        "ready_for_operator_doctor": True,
+        "ready_for_non_dry_run_submit": False,
+        "doctor_output_path": (
+            l5_v2.L5V2_TT5L_LIGHTNING_REQUIRED_DOCTOR_OUTPUT_PATH
+        ),
+        "identity_modes": [
+            {
+                "mode": "user",
+                "doctor_command_template": (
+                    "scripts/launch_lightning_batch_job.py doctor --user "
+                    '"$LIGHTNING_SDK_USER"'
+                ),
+            },
+            {
+                "mode": "org",
+                "doctor_command_template": (
+                    "scripts/launch_lightning_batch_job.py doctor --org "
+                    '"$LIGHTNING_ORG"'
+                ),
+            },
+        ],
+        "doctor_required_checks": {
+            "required_checks": [
+                "local_supply_chain",
+                "ssh_auth",
+                "remote_supply_chain",
+                "machine_inventory",
+            ],
+        },
+        "blockers": [],
+    }
+    path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+    return payload
+
+
 def _canonical_json_sha256(payload: object) -> str:
     encoded = json.dumps(
         payload,
@@ -4549,6 +4653,57 @@ def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
     ]
 
 
+def test_l5_v2_tt5l_readiness_surfaces_lightning_route_and_doctor(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_lightning_route_unblock_packet(tmp_path)
+    _write_tt5l_lightning_doctor_plan(tmp_path)
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    tt5l = packet["tt5l_campaign_readiness"]
+    route_status = tt5l["lightning_route_unblock_packet_status"]
+    doctor_status = tt5l["lightning_doctor_plan_status"]
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert route_status["artifact_exists"] is True
+    assert route_status["artifact_valid"] is True
+    assert route_status["ready_for_operator_route_configuration"] is True
+    assert route_status["ready_for_provider_dispatch"] is False
+    assert route_status["score_claim"] is False
+    assert route_status["remaining_blocker_count"] == 2
+    assert doctor_status["artifact_exists"] is True
+    assert doctor_status["artifact_valid"] is True
+    assert doctor_status["source_route_packet_sha256_matches"] is True
+    assert doctor_status["ready_for_operator_doctor"] is True
+    assert doctor_status["ready_for_non_dry_run_submit"] is False
+    assert doctor_status["ready_for_provider_dispatch"] is False
+    assert doctor_status["score_claim"] is False
+    assert "Lightning Route-Unblock Packet" in report
+    assert "Lightning Required Doctor Plan" in report
+    assert "ready_for_provider_dispatch: `false`" in report
+
+
+def test_l5_v2_tt5l_doctor_plan_rejects_stale_route_packet_sha(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_lightning_route_unblock_packet(tmp_path)
+    _write_tt5l_lightning_doctor_plan(tmp_path, source_route_sha256=_sha(53))
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    tt5l = readiness["tt5l_campaign_readiness"]
+    doctor_status = tt5l["lightning_doctor_plan_status"]
+
+    assert doctor_status["artifact_exists"] is True
+    assert doctor_status["artifact_valid"] is False
+    assert doctor_status["source_route_packet_sha256_matches"] is False
+    assert "tt5l_lightning_doctor_plan_source_route_sha_mismatch" in doctor_status[
+        "blockers"
+    ]
+    assert "tt5l_lightning_doctor_plan_source_route_sha_mismatch" in tt5l[
+        "blockers"
+    ]
+
+
 def test_l5_v2_tt5l_sideinfo_effect_curve_status_preserves_partial_negative_evidence(
     tmp_path: Path,
 ) -> None:
@@ -4931,6 +5086,8 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "sideinfo_effect_curve_status",
         "sideinfo_effect_curve_harvest_cells_status",
         "materialized_tt5l_paired_work_unit_status",
+        "lightning_route_unblock_packet_status",
+        "lightning_doctor_plan_status",
         "blockers",
     ):
         assert artifact_tt5l[field] == live_tt5l[field]

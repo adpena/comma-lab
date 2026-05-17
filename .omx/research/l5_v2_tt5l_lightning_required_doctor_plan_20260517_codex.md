@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning required doctor plan
 
-Generated: 2026-05-17T11:31:47Z
-Commit: `528d5f777d25de4a38d69c9b18b7fbd7b7f2938e`
+Generated: 2026-05-17T11:42:42Z
+Commit: `6e4340edbea377242efeda4c2815597053f3714c`
 
 This generated plan converts the TT5L route blockers into the exact Lightning doctor commands and JSON pass predicates. It does not run Lightning, submit jobs, claim score movement, or create dispatch claims.
 
@@ -19,7 +19,7 @@ This generated plan converts the TT5L route blockers into the exact Lightning do
 ## Source
 
 - Route packet: `.omx/research/l5_v2_tt5l_lightning_route_unblock_packet_20260517_codex.json`
-- Route packet SHA-256: `e3392005ece3e00e679db43e5e5abf7f2eb00dd06bf4e39d6ac7aa27fd57403b`
+- Route packet SHA-256: `08475b86970234389d01826deb3883b4555aedf407ffcea721be8128a1baf64e`
 - ready_for_operator_doctor: `True`
 - blockers: `[]`
 

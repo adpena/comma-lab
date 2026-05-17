@@ -37,7 +37,7 @@
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
 - artifact_valid: `True`
-- source_commit: `614191c7b62c699dcc0af7394001088cc87c805c`
+- source_commit: `6e4340edbea377242efeda4c2815597053f3714c`
 - source_relevant_paths_match: `True`
 - source_relevant_diff_paths: `[]`
 - source_custody_current_for_execution: `True`
@@ -86,6 +86,32 @@
 - source_bundle_sha256_matches: `True`
 - cells: `10`/`10`
 - all_dry_runs_passed: `True`
+- ready_for_non_dry_run_submit: `false`
+- ready_for_provider_dispatch: `false`
+- blockers: `[]`
+- score_claim: `false`
+- promotion_eligible: `false`
+
+## Lightning Route-Unblock Packet
+
+- artifact_path: `.omx/research/l5_v2_tt5l_lightning_route_unblock_packet_20260517_codex.json`
+- artifact_valid: `True`
+- tool_path: `tools/build_l5_v2_tt5l_lightning_route_unblock_packet.py`
+- remaining_blockers: `['Lightning credits or quota not checked', 'LIGHTNING_SDK_USER or LIGHTNING_ORG missing', 'LIGHTNING_SSH_TARGET missing', 'LIGHTNING_TEAMSPACE missing', 'active dispatch claims not created for non-dry-run cells', 'Lightning machine inventory not checked', 'source manifest not staged to remote Lightning workspace', 'remote CUDA runtime not probed']`
+- ready_for_operator_route_configuration: `True`
+- ready_for_provider_dispatch: `false`
+- blockers: `[]`
+- score_claim: `false`
+- promotion_eligible: `false`
+
+## Lightning Required Doctor Plan
+
+- artifact_path: `.omx/research/l5_v2_tt5l_lightning_required_doctor_plan_20260517_codex.json`
+- artifact_valid: `True`
+- tool_path: `tools/build_l5_v2_tt5l_lightning_doctor_plan.py`
+- doctor_output_path: `.omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json`
+- source_route_packet_sha256_matches: `True`
+- ready_for_operator_doctor: `True`
 - ready_for_non_dry_run_submit: `false`
 - ready_for_provider_dispatch: `false`
 - blockers: `[]`

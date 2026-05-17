@@ -53,6 +53,19 @@ from tac.optimization.l5_v2_probe_intake import (
     L5V2_PROBE_OBSERVATION_INTAKE_SCHEMA,
     L5V2_PROBE_OBSERVATION_INTAKE_TOOL_PATH,
 )
+from tac.optimization.l5_v2_tt5l_lightning_doctor_plan import (
+    L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_ARTIFACT_PATH,
+    L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_REPORT_PATH,
+    L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_SCHEMA,
+    L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_TOOL_PATH,
+    L5V2_TT5L_LIGHTNING_REQUIRED_DOCTOR_OUTPUT_PATH,
+)
+from tac.optimization.l5_v2_tt5l_lightning_route_unblock_packet import (
+    L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH,
+    L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_REPORT_PATH,
+    L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_SCHEMA,
+    L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_TOOL_PATH,
+)
 from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_harvest import (
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA,
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH,
@@ -4426,6 +4439,281 @@ def _tt5l_materialized_lightning_alt_provider_plan_status(
     }
 
 
+def _tt5l_lightning_route_unblock_packet_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = repo_root / L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_tt5l_lightning_route_unblock_packet_status_v1",
+            "artifact_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH,
+            "report_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_REPORT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "tool_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_TOOL_PATH,
+            "artifact_sha256": "",
+            "ready_for_operator_route_configuration": False,
+            "remaining_blockers": [],
+            "remaining_blocker_count": 0,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ready_for_provider_dispatch": False,
+            "dispatch_attempted": False,
+            "provider_spend_attempted": False,
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append("tt5l_lightning_route_unblock_packet_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append("tt5l_lightning_route_unblock_packet_not_object")
+
+    if payload and payload.get("schema") != L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_SCHEMA:
+        validation_blockers.append("tt5l_lightning_route_unblock_packet_schema_mismatch")
+    if payload and payload.get("planning_only") is not True:
+        validation_blockers.append("tt5l_lightning_route_unblock_packet_not_planning_only")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_provider_dispatch",
+        "dispatch_attempted",
+        "provider_spend_attempted",
+    ):
+        if payload and payload.get(field) is not False:
+            validation_blockers.append(
+                f"tt5l_lightning_route_unblock_packet_{field}_not_false"
+            )
+    artifact_blockers = [
+        str(blocker)
+        for blocker in (payload.get("blockers") if payload else []) or []
+        if str(blocker)
+    ]
+    validation_blockers.extend(
+        "tt5l_lightning_route_unblock_packet_blocked:" + blocker
+        for blocker in artifact_blockers
+    )
+    remaining_blockers = [
+        str(blocker)
+        for blocker in (payload.get("remaining_blockers") if payload else []) or []
+        if str(blocker)
+    ]
+    route_verdict = payload.get("current_route_verdict") if payload else None
+    if payload and not isinstance(route_verdict, Mapping):
+        validation_blockers.append("tt5l_lightning_route_unblock_packet_verdict_missing")
+    elif isinstance(route_verdict, Mapping):
+        if route_verdict.get("ready_for_operator_dispatch") is not False:
+            validation_blockers.append(
+                "tt5l_lightning_route_unblock_packet_verdict_operator_dispatch_not_false"
+            )
+        if route_verdict.get("ready_for_provider_dispatch") is not False:
+            validation_blockers.append(
+                "tt5l_lightning_route_unblock_packet_verdict_provider_dispatch_not_false"
+            )
+        if route_verdict.get("provider_blocker") is not True:
+            validation_blockers.append(
+                "tt5l_lightning_route_unblock_packet_verdict_provider_blocker_not_true"
+            )
+    source_artifacts = payload.get("source_artifacts") if payload else None
+    paired_axis_source_current = False
+    if payload and not isinstance(source_artifacts, Mapping):
+        validation_blockers.append("tt5l_lightning_route_unblock_packet_source_artifacts_missing")
+    elif isinstance(source_artifacts, Mapping):
+        paired_axis_plan = source_artifacts.get("sideinfo_lightning_paired_axis_plan")
+        if isinstance(paired_axis_plan, Mapping):
+            paired_axis_source_current = (
+                paired_axis_plan.get("source_relevant_paths_match_current_head") is True
+            )
+        else:
+            validation_blockers.append(
+                "tt5l_lightning_route_unblock_packet_paired_axis_source_status_missing"
+            )
+
+    artifact_valid = bool(payload) and not validation_blockers
+    return {
+        "schema": "l5_v2_tt5l_lightning_route_unblock_packet_status_v1",
+        "artifact_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH,
+        "report_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_REPORT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": artifact_valid,
+        "tool_path": L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_TOOL_PATH,
+        "artifact_sha256": _sha256_file(artifact_path) if artifact_path.is_file() else "",
+        "current_head_commit": str(payload.get("current_head_commit") or "")
+        if payload
+        else "",
+        "paired_axis_source_current": paired_axis_source_current,
+        "ready_for_operator_route_configuration": artifact_valid and bool(remaining_blockers),
+        "remaining_blockers": remaining_blockers,
+        "remaining_blocker_count": len(remaining_blockers),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "provider_spend_attempted": False,
+        "blockers": list(dict.fromkeys(validation_blockers)),
+    }
+
+
+def _tt5l_lightning_doctor_plan_status(
+    *,
+    repo_root: Path,
+    route_unblock_packet_status: Mapping[str, Any],
+) -> dict[str, Any]:
+    artifact_path = repo_root / L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_ARTIFACT_PATH
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_tt5l_lightning_doctor_plan_status_v1",
+            "artifact_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_ARTIFACT_PATH,
+            "report_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_REPORT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "tool_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_TOOL_PATH,
+            "doctor_output_path": L5V2_TT5L_LIGHTNING_REQUIRED_DOCTOR_OUTPUT_PATH,
+            "artifact_sha256": "",
+            "source_route_packet_sha256_matches": False,
+            "ready_for_operator_doctor": False,
+            "ready_for_non_dry_run_submit": False,
+            "required_identity_modes": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "ready_for_provider_dispatch": False,
+            "dispatch_attempted": False,
+            "provider_spend_attempted": False,
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append("tt5l_lightning_doctor_plan_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append("tt5l_lightning_doctor_plan_not_object")
+
+    if payload and payload.get("schema") != L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_SCHEMA:
+        validation_blockers.append("tt5l_lightning_doctor_plan_schema_mismatch")
+    if payload and payload.get("planning_only") is not True:
+        validation_blockers.append("tt5l_lightning_doctor_plan_not_planning_only")
+    for field in (
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_provider_dispatch",
+        "dispatch_attempted",
+        "provider_spend_attempted",
+        "ready_for_non_dry_run_submit",
+    ):
+        if payload and payload.get(field) is not False:
+            validation_blockers.append(f"tt5l_lightning_doctor_plan_{field}_not_false")
+    route_artifact_path = (
+        repo_root / L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+    )
+    expected_route_sha = (
+        _sha256_file(route_artifact_path) if route_artifact_path.is_file() else ""
+    )
+    observed_route_sha = (
+        str(payload.get("source_route_packet_sha256") or "").strip() if payload else ""
+    )
+    source_route_sha_matches = bool(
+        observed_route_sha and expected_route_sha and observed_route_sha == expected_route_sha
+    )
+    if payload and not source_route_sha_matches:
+        validation_blockers.append("tt5l_lightning_doctor_plan_source_route_sha_mismatch")
+    if payload and payload.get("source_route_packet") != (
+        L5V2_TT5L_LIGHTNING_ROUTE_UNBLOCK_PACKET_ARTIFACT_PATH
+    ):
+        validation_blockers.append("tt5l_lightning_doctor_plan_source_route_path_mismatch")
+    identity_modes = _mapping_items(payload.get("identity_modes") if payload else None)
+    mode_names = sorted(str(mode.get("mode") or "") for mode in identity_modes)
+    if mode_names != ["org", "user"]:
+        validation_blockers.append("tt5l_lightning_doctor_plan_identity_modes_missing")
+    for mode in identity_modes:
+        command = str(mode.get("doctor_command_template") or "")
+        name = str(mode.get("mode") or "")
+        if "<--user-or---org>" in command:
+            validation_blockers.append(
+                "tt5l_lightning_doctor_plan_placeholder_identity_flag_unresolved:"
+                + name
+            )
+        if name == "user" and "--user" not in command:
+            validation_blockers.append("tt5l_lightning_doctor_plan_user_command_missing")
+        if name == "org" and "--org" not in command:
+            validation_blockers.append("tt5l_lightning_doctor_plan_org_command_missing")
+    required_checks = (
+        payload.get("doctor_required_checks") if payload else None
+    )
+    if not isinstance(required_checks, Mapping):
+        validation_blockers.append("tt5l_lightning_doctor_plan_required_checks_missing")
+    else:
+        checks = set(_string_items(required_checks.get("required_checks")))
+        for check in (
+            "local_supply_chain",
+            "ssh_auth",
+            "remote_supply_chain",
+            "machine_inventory",
+        ):
+            if check not in checks:
+                validation_blockers.append(
+                    "tt5l_lightning_doctor_plan_required_check_missing:" + check
+                )
+    payload_blockers = [
+        str(blocker)
+        for blocker in (payload.get("blockers") if payload else []) or []
+        if str(blocker)
+    ]
+    validation_blockers.extend(
+        "tt5l_lightning_doctor_plan_blocked:" + blocker
+        for blocker in payload_blockers
+    )
+    if (
+        route_unblock_packet_status.get("artifact_exists") is True
+        and route_unblock_packet_status.get("artifact_valid") is not True
+    ):
+        validation_blockers.append("tt5l_lightning_doctor_plan_source_route_invalid")
+
+    artifact_valid = bool(payload) and not validation_blockers
+    return {
+        "schema": "l5_v2_tt5l_lightning_doctor_plan_status_v1",
+        "artifact_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_ARTIFACT_PATH,
+        "report_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_REPORT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": artifact_valid,
+        "tool_path": L5V2_TT5L_LIGHTNING_DOCTOR_PLAN_TOOL_PATH,
+        "doctor_output_path": L5V2_TT5L_LIGHTNING_REQUIRED_DOCTOR_OUTPUT_PATH,
+        "artifact_sha256": _sha256_file(artifact_path) if artifact_path.is_file() else "",
+        "source_route_packet_sha256": observed_route_sha,
+        "source_route_packet_actual_sha256": expected_route_sha,
+        "source_route_packet_sha256_matches": source_route_sha_matches,
+        "ready_for_operator_doctor": (
+            artifact_valid and payload.get("ready_for_operator_doctor") is True
+        ),
+        "ready_for_non_dry_run_submit": False,
+        "required_identity_modes": mode_names,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "provider_spend_attempted": False,
+        "blockers": list(dict.fromkeys(validation_blockers)),
+    }
+
+
 def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
     *,
     repo_root: Path,
@@ -5563,6 +5851,13 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     lightning_execution_bundle_dry_run_status = (
         _tt5l_sideinfo_lightning_execution_bundle_dry_run_status(repo_root=repo_root)
     )
+    lightning_route_unblock_packet_status = (
+        _tt5l_lightning_route_unblock_packet_status(repo_root=repo_root)
+    )
+    lightning_doctor_plan_status = _tt5l_lightning_doctor_plan_status(
+        repo_root=repo_root,
+        route_unblock_packet_status=lightning_route_unblock_packet_status,
+    )
     sideinfo_effect_curve_dispatch_plan_status = (
         _tt5l_sideinfo_effect_curve_dispatch_plan_status(repo_root=repo_root)
     )
@@ -5617,6 +5912,20 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         blockers.extend(
             str(blocker)
             for blocker in lightning_execution_bundle_dry_run_status["blockers"]
+        )
+    if (
+        lightning_route_unblock_packet_status["artifact_exists"] is True
+        and lightning_route_unblock_packet_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker) for blocker in lightning_route_unblock_packet_status["blockers"]
+        )
+    if (
+        lightning_doctor_plan_status["artifact_exists"] is True
+        and lightning_doctor_plan_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker) for blocker in lightning_doctor_plan_status["blockers"]
         )
     if sideinfo_effect_curve_allowed and probe_valid and paired_axis_plan_valid:
         blockers.extend(
@@ -6225,6 +6534,10 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "sideinfo_lightning_execution_bundle_dry_run_status": (
             lightning_execution_bundle_dry_run_status
         ),
+        "lightning_route_unblock_packet_status": (
+            lightning_route_unblock_packet_status
+        ),
+        "lightning_doctor_plan_status": lightning_doctor_plan_status,
         "sideinfo_effect_curve_dispatch_plan_status": (
             sideinfo_effect_curve_dispatch_plan_status
         ),
@@ -7913,6 +8226,14 @@ def render_l5_v2_architecture_lock_packet_markdown(
     )
     if not isinstance(lightning_execution_bundle_dry_run_status, Mapping):
         lightning_execution_bundle_dry_run_status = {}
+    lightning_route_unblock_packet_status = tt5l.get(
+        "lightning_route_unblock_packet_status"
+    )
+    if not isinstance(lightning_route_unblock_packet_status, Mapping):
+        lightning_route_unblock_packet_status = {}
+    lightning_doctor_plan_status = tt5l.get("lightning_doctor_plan_status")
+    if not isinstance(lightning_doctor_plan_status, Mapping):
+        lightning_doctor_plan_status = {}
     sideinfo_effect_curve_status = tt5l.get("sideinfo_effect_curve_status")
     if not isinstance(sideinfo_effect_curve_status, Mapping):
         sideinfo_effect_curve_status = {}
@@ -8187,6 +8508,81 @@ def render_l5_v2_architecture_lock_packet_markdown(
                 (
                     "- blockers: "
                     f"`{lightning_execution_bundle_dry_run_status.get('blockers', [])}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if lightning_route_unblock_packet_status:
+        lines.extend(
+            [
+                "",
+                "## Lightning Route-Unblock Packet",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{lightning_route_unblock_packet_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{lightning_route_unblock_packet_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- tool_path: "
+                    f"`{lightning_route_unblock_packet_status.get('tool_path')}`"
+                ),
+                (
+                    "- remaining_blockers: "
+                    f"`{lightning_route_unblock_packet_status.get('remaining_blockers', [])}`"
+                ),
+                (
+                    "- ready_for_operator_route_configuration: "
+                    f"`{lightning_route_unblock_packet_status.get('ready_for_operator_route_configuration')}`"
+                ),
+                "- ready_for_provider_dispatch: `false`",
+                (
+                    "- blockers: "
+                    f"`{lightning_route_unblock_packet_status.get('blockers', [])}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
+    if lightning_doctor_plan_status:
+        lines.extend(
+            [
+                "",
+                "## Lightning Required Doctor Plan",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{lightning_doctor_plan_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{lightning_doctor_plan_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- tool_path: "
+                    f"`{lightning_doctor_plan_status.get('tool_path')}`"
+                ),
+                (
+                    "- doctor_output_path: "
+                    f"`{lightning_doctor_plan_status.get('doctor_output_path')}`"
+                ),
+                (
+                    "- source_route_packet_sha256_matches: "
+                    f"`{lightning_doctor_plan_status.get('source_route_packet_sha256_matches')}`"
+                ),
+                (
+                    "- ready_for_operator_doctor: "
+                    f"`{lightning_doctor_plan_status.get('ready_for_operator_doctor')}`"
+                ),
+                "- ready_for_non_dry_run_submit: `false`",
+                "- ready_for_provider_dispatch: `false`",
+                (
+                    "- blockers: "
+                    f"`{lightning_doctor_plan_status.get('blockers', [])}`"
                 ),
                 "- score_claim: `false`",
                 "- promotion_eligible: `false`",
