@@ -1,0 +1,88 @@
+{
+  "blockers": [
+    "current_z6_smoke_uses_zero_ego_motion_buffer",
+    "current_z6_smoke_uses_synthetic_targets_without_real_temporal_pose_signal",
+    "no_scorer_load",
+    "no_contest_cpu_cuda_pair",
+    "not_score_or_paradigm_authority"
+  ],
+  "evidence_grade": "synthetic_liveness_probe_no_scorer",
+  "findings": [
+    "full FiLM predictor receives nonzero gradients in the smoke graph",
+    "current zero-ego smoke does not exercise FiLM conditioning",
+    "ramp ego-motion control changes predictor output and confirms the conditioning path is live",
+    "identity-vs-full smoke result is not a fair falsification of ego-motion predictive coding"
+  ],
+  "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+  "paradigm_claim_allowed": false,
+  "probe_id": "z6_predictor_liveness_and_ego_motion_cargo_cult_probe",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "recommended_next_actions": [
+    "populate ego_motion_buffer from real-video PoseNet/proxy features before rerunning identity disambiguator",
+    "rerun Z6 identity disambiguator on real-video paired smoke after ego-motion population",
+    "keep full_main council-gated until predictor-vs-identity wins on a real signal axis"
+  ],
+  "rows": [
+    {
+      "ego_motion_mode": "zero",
+      "ego_motion_nonzero_fraction": 0.0,
+      "ego_motion_requires_grad": false,
+      "film_conditioning_exercised": false,
+      "identity_predictor": false,
+      "latent_init_gradient_l2": 1.4071797168248339e-06,
+      "loss_proxy": 0.10396765172481537,
+      "mode": "full_film_zero_ego",
+      "predictor_gradient_l2": 6.337604718334034e-06,
+      "predictor_gradient_live": true,
+      "predictor_output_delta_vs_zero_ego_l2": 0.0,
+      "predictor_param_count": 1632,
+      "recon_loss_proxy": 0.1035197526216507,
+      "residual_gradient_l2": 0.0066923473920612615,
+      "residual_loss_proxy": 0.0004479026538319886,
+      "verdict": "predictor_gradient_live_but_film_conditioning_unexercised"
+    },
+    {
+      "ego_motion_mode": "ramp",
+      "ego_motion_nonzero_fraction": 1.0,
+      "ego_motion_requires_grad": false,
+      "film_conditioning_exercised": true,
+      "identity_predictor": false,
+      "latent_init_gradient_l2": 1.4037390979894427e-06,
+      "loss_proxy": 0.10396741330623627,
+      "mode": "full_film_ramp_ego",
+      "predictor_gradient_l2": 6.656936262657043e-06,
+      "predictor_gradient_live": true,
+      "predictor_output_delta_vs_zero_ego_l2": 0.09052672982215881,
+      "predictor_param_count": 1632,
+      "recon_loss_proxy": 0.1035195142030716,
+      "residual_gradient_l2": 0.006692355274297276,
+      "residual_loss_proxy": 0.0004479026538319886,
+      "verdict": "predictor_and_film_conditioning_live_proxy_only"
+    },
+    {
+      "ego_motion_mode": "zero",
+      "ego_motion_nonzero_fraction": 0.0,
+      "ego_motion_requires_grad": false,
+      "film_conditioning_exercised": false,
+      "identity_predictor": true,
+      "latent_init_gradient_l2": 6.155579780160027e-06,
+      "loss_proxy": 0.1039067804813385,
+      "mode": "identity_predictor_control",
+      "predictor_gradient_l2": 0.0,
+      "predictor_gradient_live": false,
+      "predictor_output_delta_vs_zero_ego_l2": null,
+      "predictor_param_count": 0,
+      "recon_loss_proxy": 0.10352018475532532,
+      "residual_gradient_l2": 0.006216675971691725,
+      "residual_loss_proxy": 0.00038659939309582114,
+      "verdict": "identity_control_no_predictor_params"
+    }
+  ],
+  "schema": "z6_predictor_liveness_probe_v1",
+  "score_claim": false,
+  "seed": 0,
+  "verdict": "z6_predictor_live_smoke_film_conditioning_cargo_cult"
+}
