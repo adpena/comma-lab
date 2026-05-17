@@ -990,13 +990,16 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
 
 
 _VENN_CLASSIFICATION_SIDECAR_ROOT = REPO_ROOT / ".omx" / "state" / "master_gradient_consumers"
+_WYNER_ZIV_DELIVERABILITY_PROOF_ROOT = (
+    REPO_ROOT / ".omx" / "state" / "wyner_ziv_deliverability"
+)
 _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD = 0.80
-# Delta is negative-good: more-negative = better predicted improvement.
-# HIGH PAIR_INVARIANT reward → multiply by 1.15 (delta MORE negative).
-_VENN_REWEIGHT_HIGH_PAIR_INVARIANT_DELTA_FACTOR = 1.15
 _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_THRESHOLD = 0.30
 # HIGH PAIR_SPECIFIC penalty → multiply by 0.85 (delta LESS negative).
 _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_DELTA_FACTOR = 0.85
+_VENN_REWEIGHT_TIER_1_DELIVERABILITY_DELTA_FACTOR = 1.20
+_VENN_REWEIGHT_TIER_2_DELIVERABILITY_DELTA_FACTOR = 1.10
+_VENN_REWEIGHT_TIER_3_DELIVERABILITY_DELTA_FACTOR = 1.05
 
 
 def _latest_venn_sidecar_for_archive(archive_sha256: str) -> Path | None:
@@ -1036,6 +1039,59 @@ def _read_venn_class_counts(sidecar_path: Path) -> dict[str, int] | None:
     return {k: int(v) for k, v in counts.items() if k in {"PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"}}
 
 
+def _venn_deliverability_reward_factor_for_archive(archive_sha256: str) -> float:
+    """Return proof-backed Wyner-Ziv reward factor for a Venn-positive archive.
+
+    Catalog #319 makes the positive HIGH_PAIR_INVARIANT reward fail closed:
+    Venn classification alone can say "this byte region is pair-shared", but
+    only a DeliverabilityProof can say the contest decoder can reconstruct it
+    without scorer access, network fetches, or runtime-budget violations.
+    """
+    if not archive_sha256:
+        return 1.0
+    try:
+        from tac.wyner_ziv_deliverability.proof_builder import (
+            load_deliverability_proof_for_archive,
+            verify_deliverability_proof_contest_compliance,
+        )
+    except (ImportError, ModuleNotFoundError):
+        return 1.0
+    try:
+        proof = load_deliverability_proof_for_archive(
+            archive_sha256,
+            proofs_dir=_WYNER_ZIV_DELIVERABILITY_PROOF_ROOT,
+        )
+    except (OSError, TypeError, ValueError):
+        return 1.0
+    if proof is None:
+        return 1.0
+    ok, _blockers = verify_deliverability_proof_contest_compliance(proof)
+    if not ok:
+        return 1.0
+
+    total = int(proof.candidate_shared_prior_byte_count)
+    if total <= 0:
+        return 1.0
+    tier_1 = max(0, int(proof.tier_1_byte_count))
+    tier_2 = max(0, int(proof.tier_2_byte_count))
+    tier_3 = (
+        max(0, int(proof.tier_3_byte_count))
+        if proof.operator_review_status_for_tier_3 == "approved"
+        else 0
+    )
+    rewarded = min(total, tier_1 + tier_2 + tier_3)
+    if rewarded <= 0:
+        return 1.0
+    neutral = max(0, total - rewarded)
+    weighted = (
+        tier_1 * _VENN_REWEIGHT_TIER_1_DELIVERABILITY_DELTA_FACTOR
+        + tier_2 * _VENN_REWEIGHT_TIER_2_DELIVERABILITY_DELTA_FACTOR
+        + tier_3 * _VENN_REWEIGHT_TIER_3_DELIVERABILITY_DELTA_FACTOR
+        + neutral
+    )
+    return max(1.0, min(weighted / float(total), _VENN_REWEIGHT_TIER_1_DELIVERABILITY_DELTA_FACTOR))
+
+
 def adjust_predicted_delta_for_venn_classification(
     predicted_delta: float, archive_sha256: str
 ) -> float:
@@ -1045,10 +1101,12 @@ def adjust_predicted_delta_for_venn_classification(
     sidecar (written by
     ``tac.master_gradient_consumers.classify_bytes_by_pair_variance``):
 
-      - HIGH PAIR_INVARIANT % (>= 80%): substrate is structurally Wyner-Ziv-
-        hoistable — its decoder bytes carry pair-shared signal that can be
-        moved to side-info (zero archive cost). Multiply delta by 1.15
-        (delta is negative-good; more negative = better predicted score).
+      - HIGH PAIR_INVARIANT % (>= 80%): positive reward is gated by the
+        newest per-archive DeliverabilityProof. No proof or non-compliant
+        proof means no reward. Compliant proofs apply a byte-weighted factor
+        over deliverable tiers: Tier 1 = 1.20, Tier 2 = 1.10, approved Tier 3
+        = 1.05. Delta is negative-good; factors > 1 make the predicted score
+        delta more negative.
       - HIGH PAIR_SPECIFIC % (>= 30%): substrate is structurally pair-specific-
         trap — bytes can NOT be hoisted. Multiply delta by 0.85 (less negative
         = worse predicted score).
@@ -1077,7 +1135,9 @@ def adjust_predicted_delta_for_venn_classification(
     pair_invariant_frac = counts["PAIR_INVARIANT"] / total
     pair_specific_frac = counts["PAIR_SPECIFIC"] / total
     if pair_invariant_frac >= _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD:
-        return predicted_delta * _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_DELTA_FACTOR
+        return predicted_delta * _venn_deliverability_reward_factor_for_archive(
+            archive_sha256
+        )
     if pair_specific_frac >= _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_THRESHOLD:
         return predicted_delta * _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_DELTA_FACTOR
     return predicted_delta

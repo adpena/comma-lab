@@ -2514,6 +2514,21 @@ def preflight_all(
         check_master_gradient_raw_byte_authority_not_landed(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #319 — WYNER-ZIV REWEIGHT REQUIRES
+        # DELIVERABILITY PROOF. The autopilot may demote high pair-specific
+        # candidates from Venn classification alone, but any positive
+        # HIGH_PAIR_INVARIANT reward must consult the per-archive
+        # DeliverabilityProof and contest-compliance verifier.
+        # STRICT-FLIPPED 2026-05-17 by Q2+Q3 BATCHED subagent
+        # (lane_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_20260517).
+        # Live count at flip: 0 per CLAUDE.md "Strict-flip atomicity rule".
+        # The gate's signal map is the positive-reward helper path:
+        # load_deliverability_proof_for_archive +
+        # verify_deliverability_proof_contest_compliance +
+        # _venn_deliverability_reward_factor_for_archive.
+        check_substrate_wyner_ziv_reweight_has_deliverability_proof(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -70163,6 +70178,117 @@ def check_master_gradient_raw_byte_authority_not_landed(
             f"{len(violations)} raw-byte master-gradient authority issue(s) "
             "per Catalog #318.\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #319 — check_substrate_wyner_ziv_reweight_has_deliverability_proof
+# 2026-05-17 lane_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_20260517.
+# Refuse any autopilot HIGH_PAIR_INVARIANT reward path that does not consult
+# the per-archive DeliverabilityProof artifact emitted by
+# ``tac.wyner_ziv_deliverability.proof_builder``. Venn classification alone
+# is a planning signal; it is not contest deliverability proof.
+
+
+_VENN_REWEIGHT_DELIVERABILITY_WAIVER = "VENN_REWEIGHT_DELIVERABILITY_OK:"
+
+
+def _line_has_valid_venn_deliverability_waiver(line: str) -> bool:
+    if _VENN_REWEIGHT_DELIVERABILITY_WAIVER not in line:
+        return False
+    reason = line.split(_VENN_REWEIGHT_DELIVERABILITY_WAIVER, 1)[1].strip()
+    if not reason:
+        return False
+    lowered = reason.lower()
+    return "<rationale>" not in lowered and "<reason>" not in lowered
+
+
+def check_substrate_wyner_ziv_reweight_has_deliverability_proof(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Catalog #319 — positive Wyner-Ziv rewards require deliverability proof.
+
+    Args:
+        repo_root: Optional override; defaults to ``REPO_ROOT``.
+        strict: If True, raise :class:`PreflightError` on any violation.
+        verbose: If True, print per-source diagnostic.
+
+    Returns:
+        List of violation messages (one per dispatch wrapper that applies
+        the HIGH_PAIR_INVARIANT reward branch without consulting a proof).
+    """
+    root = Path(repo_root) if repo_root is not None else REPO_ROOT
+    target = root / "tools" / "cathedral_autopilot_autonomous_loop.py"
+    if not target.exists():
+        return []
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        violations = [f"{target}: could not read autopilot source for Catalog #319: {exc}"]
+        if strict:
+            raise PreflightError(
+                "check_substrate_wyner_ziv_reweight_has_deliverability_proof found "
+                f"{len(violations)} violation(s):\n" + "\n".join(violations)
+            )
+        return violations
+
+    lines = text.splitlines()
+    has_valid_waiver = any(
+        _line_has_valid_venn_deliverability_waiver(line) for line in lines
+    )
+    has_placeholder_waiver = any(
+        _VENN_REWEIGHT_DELIVERABILITY_WAIVER in line
+        and not _line_has_valid_venn_deliverability_waiver(line)
+        for line in lines
+    )
+    violations: list[str] = []
+    if has_placeholder_waiver:
+        violations.append(
+            f"{target}: Catalog #319 waiver uses empty/placeholder rationale; "
+            f"use `{_VENN_REWEIGHT_DELIVERABILITY_WAIVER}<specific reason>`."
+        )
+
+    high_invariant_branch = (
+        "pair_invariant_frac >= _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD"
+        in text
+    )
+    if high_invariant_branch and not has_valid_waiver:
+        required_tokens = (
+            "load_deliverability_proof_for_archive",
+            "verify_deliverability_proof_contest_compliance",
+            "_venn_deliverability_reward_factor_for_archive",
+        )
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            violations.append(
+                f"{target}: Catalog #319 violation: HIGH_PAIR_INVARIANT reward "
+                f"branch does not consult DeliverabilityProof surface; missing "
+                f"{', '.join(missing)}."
+            )
+    for lineno, line in enumerate(lines, start=1):
+        if "_VENN_REWEIGHT_HIGH_PAIR_INVARIANT_DELTA_FACTOR" in line and not (
+            _line_has_valid_venn_deliverability_waiver(line)
+        ):
+            violations.append(
+                f"{target}:{lineno}: Catalog #319 violation: blanket "
+                "HIGH_PAIR_INVARIANT delta factor is forbidden; use a "
+                "DeliverabilityProof-weighted factor instead."
+            )
+
+    if verbose:
+        if violations:
+            print("  [check_substrate_wyner_ziv_reweight_has_deliverability_proof]")
+            for v in violations:
+                print(f"    - {v}")
+        else:
+            print("  [check_substrate_wyner_ziv_reweight_has_deliverability_proof] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_substrate_wyner_ziv_reweight_has_deliverability_proof found "
+            f"{len(violations)} violation(s):\n" + "\n".join(violations)
         )
     return violations
 
