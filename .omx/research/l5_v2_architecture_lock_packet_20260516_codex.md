@@ -5,7 +5,7 @@
 - lane_id: `lane_time_traveler_l5_autonomy_substrate_20260513`
 - architecture_lock_allowed: `False`
 - readiness_architecture_lock_allowed: `False`
-- next_action: `refresh_or_retire_l5_v2_tt5l_modal_provider_blocker`
+- next_action: `resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider`
 - score_claim: `false`
 - promotion_eligible: `false`
 - ready_for_exact_eval_dispatch: `false`

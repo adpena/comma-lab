@@ -4286,9 +4286,7 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "operator_plan_command_template": materialized_work_unit_status[
                 "operator_plan_command_template"
             ],
-            "operator_execute_command_template_after_review": materialized_work_unit_status[
-                "operator_execute_command_template_after_review"
-            ],
+            "modal_execute_command_suppressed_until_provider_blocker_resolved": True,
             "execution_order": [
                 "resolve_modal_workspace_billing_cycle_spend_limit_or_select_alternate_provider",
                 "execute_canonical_paired_auth_eval_against_same_archive_and_runtime",

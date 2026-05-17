@@ -2609,6 +2609,8 @@ def test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker(
     assert action["ready_for_operator_dispatch"] is False
     assert action["ready_for_alternate_provider_planning"] is True
     assert action["dispatch_attempted"] is True
+    assert action["modal_execute_command_suppressed_until_provider_blocker_resolved"] is True
+    assert "operator_execute_command_template_after_review" not in action
     assert (
         "l5_v2_tt5l_modal_provider_blocker_active:"
         "modal_workspace_billing_cycle_spend_limit_reached"

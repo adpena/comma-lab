@@ -1,17 +1,31 @@
 {
-  "archive_bytes": 38911,
-  "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
-  "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+  "archive_bytes": 38681,
+  "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip",
+  "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
   "attempted_at_utc": "2026-05-17T04:57:21Z",
   "attempted_command_tool": "tools/dispatch_modal_paired_auth_eval.py",
   "command_returncode": 1,
+  "current_status_basis": "fail_closed_carry_forward_from_modal_workspace_billing_limit_attempt; no current archive job was spawned",
   "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+  "live_refresh_attempted": false,
   "pair_group_id": "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda",
   "promotion_eligible": false,
   "provider": "modal",
   "provider_error": "App creation failed: workspace billing cycle spend limit reached",
+  "refresh_class": "provider_level_blocker_carried_forward_to_current_work_unit",
+  "refreshed_at_utc": "2026-05-17T07:21:24Z",
   "resolved": false,
-  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8",
+  "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190",
   "schema": "l5_v2_tt5l_materialized_provider_blocker_v1",
-  "score_claim": false
+  "score_claim": false,
+  "source_attempt": {
+    "archive_bytes": 38911,
+    "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
+    "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+    "attempted_at_utc": "2026-05-17T04:57:21Z",
+    "attempted_command_tool": "tools/dispatch_modal_paired_auth_eval.py",
+    "command_returncode": 1,
+    "provider_error": "App creation failed: workspace billing cycle spend limit reached",
+    "run_id": "l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_b6a5b63c0ea8"
+  }
 }
