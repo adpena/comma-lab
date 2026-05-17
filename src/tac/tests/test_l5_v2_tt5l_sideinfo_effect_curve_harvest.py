@@ -422,3 +422,6 @@ def test_harvest_cells_cli_writes_builder_ready_json(tmp_path: Path) -> None:
     assert payload["cell_count"] == 10
     assert payload["harvested_exact_eval_artifact_count"] == 1
     assert payload["cells"][0]["score_claim"] is False
+    report = output.with_suffix(".md")
+    assert report.exists()
+    assert "test_tt5l_paired_axes" in report.read_text(encoding="utf-8")

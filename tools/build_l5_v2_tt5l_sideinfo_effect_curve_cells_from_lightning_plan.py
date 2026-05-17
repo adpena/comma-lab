@@ -60,8 +60,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--output-md",
         type=Path,
-        default=DEFAULT_OUTPUT_MD,
-        help="Output Markdown status report for the `.omx` control plane.",
+        default=None,
+        help=(
+            "Output Markdown status report for the `.omx` control plane. "
+            "Defaults to the canonical report path when --output-json is canonical, "
+            "otherwise to a sibling .md beside --output-json."
+        ),
     )
     parser.add_argument(
         "--repo-root",
@@ -75,6 +79,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        output_md = args.output_md
+        if output_md is None:
+            output_md = (
+                DEFAULT_OUTPUT_MD
+                if args.output_json == DEFAULT_OUTPUT_JSON
+                else args.output_json.with_suffix(".md")
+            )
         plan = _read_json_object(args.lightning_plan_json)
         payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
             plan=plan,
@@ -82,14 +93,14 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=args.repo_root,
         )
         _refuse_tmp(args.output_json)
-        _refuse_tmp(args.output_md)
+        _refuse_tmp(output_md)
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
-        args.output_md.parent.mkdir(parents=True, exist_ok=True)
+        output_md.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(
             l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_json(payload),
             encoding="utf-8",
         )
-        args.output_md.write_text(
+        output_md.write_text(
             render_l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_markdown(payload),
             encoding="utf-8",
         )
@@ -105,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         f"ready_for_effect_curve_build={str(payload['ready_for_effect_curve_build']).lower()} "
         f"blockers={len(payload['blockers'])} "
         f"output={args.output_json} "
+        f"report={output_md} "
         "score_claim=false promotion_eligible=false"
     )
     return 0
