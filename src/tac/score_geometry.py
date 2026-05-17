@@ -137,6 +137,43 @@ class TargetByteBudget:
 
 
 @dataclass(frozen=True)
+class RateOnlyDeltaAudit:
+    """Closed-form audit of a claimed score gain from byte savings alone.
+
+    This is a false-authority guard for claims like "compress section X from
+    A bytes to B bytes, therefore score improves by Y." Since the contest rate
+    term is linear, byte-only claims have a hard upper bound independent of
+    model quality: ``score_saving = saved_bytes * 25 / N_REF``.
+    """
+
+    original_bytes: int
+    candidate_bytes: int
+    claimed_score_saving: float
+    saved_bytes: int
+    rate_only_score_saving: float
+    required_saved_bytes_for_claim: int
+    max_possible_score_saving_if_section_removed: float
+    feasible_from_candidate_savings: bool
+    feasible_even_if_section_removed: bool
+    overclaim_factor_vs_candidate: float
+    missing_score_saving_after_candidate: float
+    missing_saved_bytes_after_candidate: int
+    evidence_grade: str = "[prediction; closed-form rate-only delta audit]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    @property
+    def blocker(self) -> str | None:
+        if self.feasible_from_candidate_savings:
+            return None
+        if self.feasible_even_if_section_removed:
+            return "candidate_byte_savings_below_claim"
+        return "claim_exceeds_rate_only_section_capacity"
+
+
+@dataclass(frozen=True)
 class PlannerAxisMarginals:
     """Marginals expressed in the candidate-builder coordinate system.
 
@@ -394,6 +431,98 @@ def information_floor(
     return RATE_COEFFICIENT * archive_bytes / reference_bytes
 
 
+def score_saving_from_byte_savings(
+    saved_bytes: int | float,
+    *,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> float:
+    """Return the exact score improvement from deleting charged bytes only."""
+    if saved_bytes < 0:
+        raise ValueError("saved_bytes must be non-negative")
+    return RATE_COEFFICIENT * float(saved_bytes) / reference_bytes
+
+
+def required_byte_savings_for_score_delta(
+    score_delta: float,
+    *,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+) -> int:
+    """Return charged bytes required for a byte-only score improvement.
+
+    ``score_delta`` is a positive improvement magnitude. The result is rounded
+    up because fractional bytes cannot be removed from an archive.
+    """
+    if score_delta < 0.0:
+        raise ValueError("score_delta must be non-negative")
+    return math.ceil(score_delta * reference_bytes / RATE_COEFFICIENT)
+
+
+def audit_rate_only_delta_claim(
+    *,
+    original_bytes: int,
+    candidate_bytes: int,
+    claimed_score_saving: float,
+    reference_bytes: int = CONTEST_REFERENCE_BYTES,
+    tolerance: float = 1e-12,
+) -> RateOnlyDeltaAudit:
+    """Audit whether a claimed improvement can come from rate savings alone.
+
+    The audit is intentionally axis-independent because the byte term is the
+    same on CPU and CUDA. If this fails, a candidate can still be valuable, but
+    the missing score delta must come from SegNet/PoseNet component movement or
+    from a different archive section, not from the named rate-only shrink.
+    """
+    if original_bytes < 0 or candidate_bytes < 0:
+        raise ValueError("byte counts must be non-negative")
+    if claimed_score_saving < 0.0:
+        raise ValueError("claimed_score_saving must be non-negative")
+    if tolerance < 0.0:
+        raise ValueError("tolerance must be non-negative")
+
+    saved_bytes = original_bytes - candidate_bytes
+    effective_saved_bytes = max(0, saved_bytes)
+    rate_saving = score_saving_from_byte_savings(
+        effective_saved_bytes,
+        reference_bytes=reference_bytes,
+    )
+    required = required_byte_savings_for_score_delta(
+        claimed_score_saving,
+        reference_bytes=reference_bytes,
+    )
+    max_possible = score_saving_from_byte_savings(
+        original_bytes,
+        reference_bytes=reference_bytes,
+    )
+    feasible_candidate = rate_saving + tolerance >= claimed_score_saving
+    feasible_section = max_possible + tolerance >= claimed_score_saving
+    missing_score = max(0.0, claimed_score_saving - rate_saving)
+    missing_bytes = required_byte_savings_for_score_delta(
+        missing_score,
+        reference_bytes=reference_bytes,
+    )
+    overclaim = (
+        math.inf
+        if rate_saving == 0.0 and claimed_score_saving > 0.0
+        else claimed_score_saving / rate_saving
+        if rate_saving > 0.0
+        else 1.0
+    )
+    return RateOnlyDeltaAudit(
+        original_bytes=original_bytes,
+        candidate_bytes=candidate_bytes,
+        claimed_score_saving=claimed_score_saving,
+        saved_bytes=saved_bytes,
+        rate_only_score_saving=rate_saving,
+        required_saved_bytes_for_claim=required,
+        max_possible_score_saving_if_section_removed=max_possible,
+        feasible_from_candidate_savings=feasible_candidate,
+        feasible_even_if_section_removed=feasible_section,
+        overclaim_factor_vs_candidate=overclaim,
+        missing_score_saving_after_candidate=missing_score,
+        missing_saved_bytes_after_candidate=missing_bytes,
+    )
+
+
 def project_onto_pareto_envelope(
     d_seg: float,
     d_pose: float,
@@ -519,7 +648,7 @@ def target_byte_budget_for_score(
     rate_term_budget = target_score - distortion_floor_score
     feasible = rate_term_budget >= 0.0
     max_bytes = (
-        int(math.floor(rate_term_budget * reference_bytes / RATE_COEFFICIENT))
+        math.floor(rate_term_budget * reference_bytes / RATE_COEFFICIENT)
         if feasible
         else None
     )
@@ -897,9 +1026,11 @@ __all__ = [
     "DualAxisDispatchRecommendation",
     "OperatingRegime",
     "PlannerAxisMarginals",
+    "RateOnlyDeltaAudit",
     "ScoreDecomposition",
     "ScoreGradient",
     "TargetByteBudget",
+    "audit_rate_only_delta_claim",
     "contest_score",
     "equal_score_curve_archive_bytes",
     "equal_score_curve_d_pose",
@@ -907,11 +1038,13 @@ __all__ = [
     "information_floor",
     "marginal_value_per_byte",
     "operating_regime",
-    "predict_cpu_axis_marginals",
     "planner_axis_marginals",
+    "predict_cpu_axis_marginals",
     "project_onto_pareto_envelope",
     "recommend_dispatch_axis_dual",
+    "required_byte_savings_for_score_delta",
     "score_decomposition",
     "score_gradient",
+    "score_saving_from_byte_savings",
     "target_byte_budget_for_score",
 ]

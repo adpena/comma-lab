@@ -98,6 +98,14 @@ architecture-lock/TT5L custody artifacts.
 ### 4. TT5L Side-Info Effect Curve
 
 - Lane class: L5-v2 asymptotic evidence.
+- 2026-05-17 rate-only bound:
+  `.omx/research/l5_wyner_ziv_rate_only_bound_adversarial_review_20260517_codex.md`
+  audits the L5 Wyner-Ziv pose-stream premise. A `4800 -> 2000` byte
+  pose-stream shrink gives only `0.0018644050687420797` score savings,
+  projecting FEC6 CPU to about `0.19019`; full removal of the `4800` byte
+  section gives at most `0.0031961229749864224`, projecting about `0.18886`.
+  This is still score-lowering and sub-`0.192`, but it is not the `-0.008` to
+  `-0.015` band unless decoded-pose/frame component movement is proven.
 - Current artifact state: Modal paired dispatch plan is custody-green at
   `ready_work_unit_count=5`; all per-variant `dispatch_blockers=[]`; the
   submission runtime has `report.txt`; all five variant archives have adjacent
@@ -116,6 +124,11 @@ architecture-lock/TT5L custody artifacts.
   refreshed route packet deliberately excludes architecture-lock as an upstream
   source artifact; architecture lock is regenerated downstream after route and
   doctor status to avoid circular SHA drift.
+- Dispatch expectation: rate-only L5 packets should be judged against the
+  `-0.0019` to `-0.0032` closed-form band and the `<0.192` crossing threshold,
+  not against the stale `-0.008` to `-0.015` band. If a packet claims the
+  larger band, it must include component deltas and raw-output custody proving
+  PoseNet/SegNet movement.
 - Dispatch policy: no non-dry-run cell without exact-dispatch authority green,
   doctor `status=OK`, active claim, source manifest, and terminal-claim plan.
 

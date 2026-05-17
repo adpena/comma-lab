@@ -11,6 +11,8 @@ from tac.score_geometry import (
     CONTEST_REFERENCE_BYTES,
     DualAxisDispatchRecommendation,
     PlannerAxisMarginals,
+    RateOnlyDeltaAudit,
+    audit_rate_only_delta_claim,
     contest_score,
     equal_score_curve_archive_bytes,
     equal_score_curve_d_pose,
@@ -18,12 +20,14 @@ from tac.score_geometry import (
     information_floor,
     marginal_value_per_byte,
     operating_regime,
-    predict_cpu_axis_marginals,
     planner_axis_marginals,
+    predict_cpu_axis_marginals,
     project_onto_pareto_envelope,
     recommend_dispatch_axis_dual,
+    required_byte_savings_for_score_delta,
     score_decomposition,
     score_gradient,
+    score_saving_from_byte_savings,
     target_byte_budget_for_score,
 )
 
@@ -246,6 +250,46 @@ def test_target_byte_budget_rejects_infeasible_distortion_floors() -> None:
     assert budget.max_archive_bytes is None
     assert budget.required_savings_bytes is None
     assert budget.blocker == "distortion_floors_exceed_target_before_rate"
+
+
+def test_rate_only_delta_audit_bounds_l5_pose_stream_claim() -> None:
+    """L5 rate-only shrink cannot claim -0.008 from a 4.8KB pose stream."""
+    audit = audit_rate_only_delta_claim(
+        original_bytes=4_800,
+        candidate_bytes=2_000,
+        claimed_score_saving=0.008,
+    )
+
+    assert isinstance(audit, RateOnlyDeltaAudit)
+    assert audit.saved_bytes == 2_800
+    assert audit.rate_only_score_saving == pytest.approx(
+        25.0 * 2_800 / CONTEST_REFERENCE_BYTES,
+        rel=1e-12,
+    )
+    assert audit.required_saved_bytes_for_claim == 12_015
+    assert audit.feasible_from_candidate_savings is False
+    assert audit.feasible_even_if_section_removed is False
+    assert audit.blocker == "claim_exceeds_rate_only_section_capacity"
+    assert audit.score_claim is False
+    assert audit.ready_for_exact_eval_dispatch is False
+
+
+def test_rate_only_delta_audit_accepts_claim_with_enough_byte_savings() -> None:
+    audit = audit_rate_only_delta_claim(
+        original_bytes=4_800,
+        candidate_bytes=2_000,
+        claimed_score_saving=0.001,
+    )
+
+    assert audit.feasible_from_candidate_savings is True
+    assert audit.blocker is None
+
+
+def test_score_delta_byte_conversion_round_trips() -> None:
+    required = required_byte_savings_for_score_delta(0.008)
+    assert required == 12_015
+    assert score_saving_from_byte_savings(required) >= 0.008
+    assert score_saving_from_byte_savings(required - 1) < 0.008
 
 
 # ---------------------------------------------------------------------------

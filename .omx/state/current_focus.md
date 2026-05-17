@@ -109,6 +109,10 @@ retiring the L5/L5-v2 staircase:
   summary reinforces the paired CPU/CUDA hardware-axis split and scorer
   decomposition, but it is not a current score, dispatch, or promotion
   authority until landed and reviewed.
+- `.omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md`
+  is untracked partner WIP and was left unmodified. Its L5 row inherits the
+  stale `-0.008` to `-0.015` rate-only expectation; current routing should use
+  the L5 rate-only bound review instead.
 - Reviewed disposition:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - FEC6 CPU frontier submission-surface adversarial review:
@@ -126,6 +130,12 @@ retiring the L5/L5-v2 staircase:
   Key tripwires: architecture-lock false authority, TT5L custody refresh
   loops without harvested cells, non-causal side-info controls, no-op Rule #6
   hyperprior/entropy work, axis drift, and optimizer/probe overfitting.
+- L5 Wyner-Ziv rate-only bound review:
+  `.omx/research/l5_wyner_ziv_rate_only_bound_adversarial_review_20260517_codex.md`.
+  Corrected decision: L5 remains P0 because `4800 -> 2000` pose-stream shrink
+  would lower FEC6 CPU to about `0.19019`, but a rate-only pose-stream shrink
+  cannot justify `-0.008` to `-0.015` or `0.17-0.18` claims. Larger L5 claims
+  now require component-moving proof or a larger charged-byte section.
 - Key action change: harvest format0D's two-pass additive grammar as a donor
   primitive for Rule #6 A1/FEC6 byte-closed bolt-ons, but do not route the P0
   queue back into PR106-only local-basin polish. Any direct PR106 revisit must
