@@ -227,6 +227,88 @@ def test_relaxed_probe_accepts_contest_auth_eval_schema() -> None:
     assert report.baseline.axis == "macos_cpu_advisory"
 
 
+def test_normalizes_exact_cuda_result_review_schema() -> None:
+    payload = {
+        "score_axis": "contest_cuda",
+        "canonical_score": contest_score(0.0006426, 0.00003236, 187_209),
+        "score_recomputation": {
+            "archive_bytes": 187_209,
+            "avg_segnet_dist": 0.0006426,
+            "avg_posenet_dist": 0.00003236,
+            "recomputed_score": contest_score(0.0006426, 0.00003236, 187_209),
+        },
+        "custody": {
+            "archive_sha256": SHA_B,
+            "command": [
+                "/workspace/pact/experiments/contest_auth_eval.py",
+                "--device",
+                "cuda",
+                "--inflate-device",
+                "auto",
+            ],
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "n_samples": 600,
+        },
+        "runtime_custody": {
+            "runtime_tree_sha256": SHA_A,
+            "inflated_output_aggregate_sha256": SHA_C,
+            "inflated_output_manifest_sha256": "d" * 64,
+        },
+    }
+    normalized = normalize_score_response_mapping(payload)
+    assert normalized["axis"] == "contest_cuda"
+    assert normalized["archive_sha256"] == SHA_B
+    assert normalized["runtime_tree_sha256"] == SHA_A
+    assert normalized["archive_bytes"] == 187_209
+    assert normalized["seg_dist"] == 0.0006426
+    assert normalized["pose_dist"] == 0.00003236
+    assert normalized["hardware"] == "Tesla T4 cuda"
+    assert normalized["inflate_device"] == "auto"
+    assert normalized["eval_device"] == "cuda"
+    assert normalized["raw_output_aggregate_sha256"] == SHA_C
+
+
+def test_relaxed_probe_accepts_exact_cuda_result_review_schema() -> None:
+    baseline = {
+        "score_axis": "contest_cuda",
+        "score_recomputation": {
+            "archive_bytes": 187_209,
+            "avg_segnet_dist": 0.0006426,
+            "avg_posenet_dist": 0.00003236,
+            "recomputed_score": contest_score(0.0006426, 0.00003236, 187_209),
+        },
+        "custody": {
+            "archive_sha256": SHA_B,
+            "command": ["experiments/contest_auth_eval.py", "--device", "cuda"],
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "n_samples": 600,
+        },
+        "runtime_custody": {"runtime_tree_sha256": SHA_A},
+    }
+    candidate = {
+        **baseline,
+        "score_recomputation": {
+            "archive_bytes": 186_380,
+            "avg_segnet_dist": 0.0006426,
+            "avg_posenet_dist": 0.00003236,
+            "recomputed_score": contest_score(0.0006426, 0.00003236, 186_380),
+        },
+    }
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="candidate",
+        strict_exact_custody=False,
+        min_total_improvement=0.000001,
+        min_scorer_term_improvement=0.000001,
+    )
+    assert report.verdict == VERDICT_RATE_ONLY_IMPROVEMENT
+    assert report.baseline is not None
+    assert report.baseline.axis == "contest_cuda"
+
+
 def _load_cli_module():
     repo_root = pathlib.Path(__file__).resolve().parents[3]
     path = repo_root / "tools" / "probe_substrate_score_response.py"

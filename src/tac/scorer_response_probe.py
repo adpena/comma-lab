@@ -142,6 +142,22 @@ def _nested_mapping(mapping: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _command_flag_value(command: object, flag: str) -> str:
+    parts = (
+        [str(part) for part in command]
+        if isinstance(command, list)
+        else str(command).split()
+    )
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return parts[idx + 1].strip()
+    prefix = f"{flag}="
+    for part in parts:
+        if part.startswith(prefix):
+            return part[len(prefix) :].strip()
+    return ""
+
+
 def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
     """Normalize common contest-auth-eval schemas into flat custody fields.
 
@@ -155,8 +171,12 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
 
     out = dict(mapping)
     provenance = _nested_mapping(mapping, "provenance")
+    custody = _nested_mapping(mapping, "custody")
+    runtime_custody = _nested_mapping(mapping, "runtime_custody")
+    score_recomputation = _nested_mapping(mapping, "score_recomputation")
     runtime_manifest = _nested_mapping(provenance, "inflate_runtime_manifest")
     inflated_manifest = _nested_mapping(provenance, "inflated_output_manifest")
+    command = _first_value(out, "auth_eval_command", "command") or custody.get("command")
 
     axis = str(_first_value(out, "axis", "score_axis", "evidence_axis") or "").strip()
     out["axis"] = _COMMON_AXIS_ALIASES.get(axis, axis)
@@ -165,31 +185,35 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
         "archive_sha256",
         "candidate_archive_sha256",
         "exact_archive_sha256",
-    ) or extract_archive_sha256(provenance)
+    ) or extract_archive_sha256(custody) or extract_archive_sha256(provenance)
     out["runtime_tree_sha256"] = _first_value(
         out,
         "runtime_tree_sha256",
         "observed_runtime_tree_sha256",
         "inflate_runtime_tree_sha256",
-    ) or extract_observed_runtime_tree_sha256(provenance)
-    out["n_samples"] = _first_value(out, "n_samples", "sample_count")
+    ) or extract_observed_runtime_tree_sha256(runtime_custody) or extract_observed_runtime_tree_sha256(
+        provenance
+    )
+    out["n_samples"] = _first_value(out, "n_samples", "sample_count") or custody.get("n_samples")
     out["archive_bytes"] = _first_value(
         out,
         "archive_bytes",
         "archive_size_bytes",
-    ) or provenance.get("archive_size_bytes")
+    ) or score_recomputation.get("archive_bytes") or custody.get("archive_bytes") or provenance.get(
+        "archive_size_bytes"
+    )
     out["seg_dist"] = _first_value(
         out,
         "seg_dist",
         "avg_segnet_dist",
         "segmentation_distortion",
-    )
+    ) or score_recomputation.get("avg_segnet_dist")
     out["pose_dist"] = _first_value(
         out,
         "pose_dist",
         "avg_posenet_dist",
         "pose_distortion",
-    )
+    ) or score_recomputation.get("avg_posenet_dist")
     out["score"] = _first_value(
         out,
         "score",
@@ -197,10 +221,14 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
         "score_recomputed_from_components",
         "score_recomputed",
         "recomputed_score",
+    ) or score_recomputation.get("recomputed_score") or score_recomputation.get(
+        "reported_score"
     )
     out["hardware"] = _first_value(out, "hardware", "hardware_summary") or " ".join(
         str(part)
         for part in (
+            custody.get("gpu_model"),
+            custody.get("device"),
             provenance.get("platform_system"),
             provenance.get("platform_machine"),
             provenance.get("gpu_model"),
@@ -212,14 +240,25 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
         out,
         "inflate_device",
         "inflate_device_policy",
-    ) or provenance.get("inflate_device_policy") or provenance.get("device")
-    out["eval_device"] = _first_value(out, "eval_device", "device") or provenance.get("device")
-    out["auth_eval_command"] = _first_value(
-        out,
-        "auth_eval_command",
-        "command",
-    ) or provenance.get("sys_argv")
+    ) or _command_flag_value(command, "--inflate-device") or provenance.get(
+        "inflate_device_policy"
+    ) or provenance.get("device") or custody.get("device")
+    out["eval_device"] = _first_value(out, "eval_device", "device") or provenance.get(
+        "device"
+    ) or custody.get("device")
+    out["auth_eval_command"] = command or provenance.get("sys_argv")
     out["log_path"] = _first_value(out, "log_path", "report_path") or out.get("report_path")
+    if isinstance(runtime_custody, Mapping):
+        out["inflated_outputs_manifest_sha256"] = _first_value(
+            out,
+            "inflated_outputs_manifest_sha256",
+            "inflated_output_manifest_sha256",
+        ) or runtime_custody.get("inflated_output_manifest_sha256")
+        out["raw_output_aggregate_sha256"] = _first_value(
+            out,
+            "raw_output_aggregate_sha256",
+            "inflated_output_aggregate_sha256",
+        ) or runtime_custody.get("inflated_output_aggregate_sha256")
     if isinstance(inflated_manifest, Mapping):
         out["inflated_outputs_manifest_path"] = _first_value(
             out,
