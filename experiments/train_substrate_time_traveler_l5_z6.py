@@ -29,18 +29,17 @@ Council-binding contract (CLAUDE.md non-negotiables) honored end-to-end:
   (Catalog #197).
 - SubstrateContract via canonical ``@register_substrate`` per Catalog #241/#242
   (META layer auto-wire one-way data flow).
-- Catalog #240 substrate-engineering opt-out: ``_full_main`` raises
-  ``NotImplementedError("Phase 2 council approval required")``; the recipe's
-  ``dispatch_enabled: false`` + ``research_only: true`` prevents Modal
-  dispatch from firing before council adjudication.
+- Catalog #240 substrate-engineering discipline: ``_full_main`` is implemented
+  by the Phase 1b lift, while score-bearing dispatch remains gated on paired
+  CPU/CUDA evidence, lane claim custody, and exact-eval artifacts.
 
-V1 SCOPE (this L1 SCAFFOLD landing per op-routable #2):
+Phase 1b scope:
 - ``_smoke_main`` builds a tiny config, trains for ≤3 epochs on synthetic
   data, runs archive pack + parse + inflate roundtrip + autoregression
   test, and emits a contest-compliant runtime tree (no scorer load).
-- ``_full_main`` is currently a NotImplementedError stub awaiting Phase 2
-  council approval per Catalog #240 + Z6 memo Section 19 reactivation
-  criteria. Operator-routable decision pending.
+- ``_full_main`` decodes real pairs, derives PoseNet-conditioned ego-motion,
+  trains the Z6 predictive-coding substrate, emits a Z6PCWM1 archive/runtime,
+  and routes auth eval through the canonical gate when not explicitly skipped.
 
 Usage (smoke; macOS CPU or Linux CPU, tiny config, ~3 epochs)::
 
@@ -58,10 +57,19 @@ Usage (smoke; macOS CPU or Linux CPU, tiny config, ~3 epochs)::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
+import os
+import random
+import shutil
+import subprocess
 import sys
+import tempfile
+import time
+import zipfile
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -75,7 +83,24 @@ from tac.substrate_registry import SubstrateContract, register_substrate
 # Catalog #205 canonical inflate device-fork — token visible to Catalog #270
 # Tier 3 substrate-correctness verifier.
 from tac.substrates._shared.inflate_runtime import select_inflate_device  # noqa: F401
-from tac.substrates._shared.trainer_skeleton import decode_real_pairs as _decode_real_pairs
+
+# Catalog #226 canonical auth-eval gate (NEVER hand-roll subprocess to
+# contest_auth_eval.py per Catalog #226 self-protect).
+from tac.substrates._shared.smoke_auth_eval_gate import (
+    gate_auth_eval_call as _canon_gate_auth_eval_call,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    decode_real_pairs as _decode_real_pairs,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    detect_hardware_substrate as _canon_detect_hardware_substrate,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    device_or_die as _canon_device_or_die,
+)
+from tac.substrates._shared.trainer_skeleton import (
+    require_contest_cuda_auth_eval_claim as _canon_require_contest_cuda_auth_eval_claim,
+)
 
 # Catalog #164 canonical scorer-loss helper routing — token visible to
 # Catalog #270 Tier 1 dispatch-optimization-protocol verifier.
@@ -92,9 +117,14 @@ from tac.substrates.time_traveler_l5_z6 import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VIDEO_PATH = REPO_ROOT / "upstream" / "videos" / "0.mkv"
 DEFAULT_UPSTREAM_DIR = REPO_ROOT / "upstream"
+CONTEST_AUTH_EVAL_SCRIPT = REPO_ROOT / "experiments" / "contest_auth_eval.py"
 SUBSTRATE_TAG = "time_traveler_l5_z6"
 SUBSTRATE_LANE_ID = "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
 PAIRED_CONTROL_INITIALIZATION = "shared_modules_seed_order_matched_v2"
+
+# Contest invariants
+N_PAIRS_FULL = 600
+CONTEST_NORMALIZER = 37_545_489.0
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +378,36 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--grad-clip", type=float, default=1.0)
     p.add_argument("--ema-decay", type=float, default=0.997)
     p.add_argument("--noise-std", type=float, default=0.5)
+    p.add_argument(
+        "--val-pair-count", type=int, default=64,
+        help="Pairs held out for val loop (clamped to n_pairs // 8 minimum 1)",
+    )
+    p.add_argument(
+        "--val-every-epochs", type=int, default=10,
+        help="Run val + checkpoint best EMA every N epochs",
+    )
+    p.add_argument(
+        "--ego-motion-chunk-size", type=int, default=16,
+        help=(
+            "PoseNet forward chunk size when deriving the ego-motion sidecar "
+            "(Catalog #218 OOM discipline; T4-safe default)"
+        ),
+    )
+    p.add_argument(
+        "--max-pairs", type=int, default=None,
+        help=(
+            "If set, cap real-pair decoding to N (research-only; pair-capped "
+            "training emits non-promotable archive)"
+        ),
+    )
+    p.add_argument(
+        "--skip-archive-build", action="store_true",
+        help="Skip archive pack + runtime emission (training-only smoke)",
+    )
+    p.add_argument(
+        "--skip-auth-eval", action="store_true",
+        help="Skip canonical gate_auth_eval_call (training-only smoke)",
+    )
 
     # Mode flags
     p.add_argument(
@@ -677,64 +737,952 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Full entry path — NotImplementedError stub awaiting Phase 2 council approval.
-# Catalog #240 substrate-engineering pre-build opt-out: the trainer's full
-# path is council-gated so no $1+ Modal dispatch can fire until the design
-# verdicts are adjudicated per the Z6 memo Section 19 reactivation criteria.
+# Full entry path — UNLOCKED 2026-05-16 per UNIQUE-AND-COMPLETE-PER-METHOD
+# operating mode + Phase 1b Z6 lift directive.
 # ---------------------------------------------------------------------------
+# Per the standing directive
+# (`feedback_consolidate_everything_into_meta_layer_or_canonical_helpers_standing_directive_20260515.md`):
+# substrate trainers bind ALL ingredients into ONE coherent packet per the
+# PR 95 paradigm. The UNIQUE elements of Z6 (per Catalogs #310/#311/#312 +
+# the Z6/Z7/Z8 design memo §4.1):
+#
+# 1. UNIQUE primary class-shift substrate (Catalog #310 — Z6 is the
+#    architectural core, NOT a bolt-on objective on top of Z3/A1; the FiLM
+#    predictor + autoregressive latent dynamics + archived residuals form
+#    a primary substrate per the Atick-Redlich cooperative-receiver +
+#    Rao-Ballard predictive-coding paradigm).
+# 2. UNIQUE ego-motion-conditioned next-frame predictor (Catalog #311 —
+#    pose-conditioned prediction with a focus-of-expansion (FOE) prior
+#    derived from per-pair PoseNet output following Gibson 1950 + Ballard
+#    embodied-vision lineage; the canonical autoregressive next-frame
+#    predictor `predictor(z_{t-1}, ego_motion[t]) -> z_t_pred` rolls latent
+#    state forward at training time and inflate time).
+# 3. UNIQUE residual-entropy Lagrangian (Rao-Ballard residual term + canonical
+#    score-aware seg+pose+rate Lagrangian; the bit budget structurally shrinks
+#    from H(latent) toward H(residual) per the cooperative-receiver theorem).
+# 4. UNIQUE archive grammar (Z6PCWM1 = predictor weights + per-pair residuals +
+#    ego-motion sidecar + decoder + latent_init; per Catalog #124 8-field
+#    archive grammar already declared in
+#    `src/tac/substrates/time_traveler_l5_z6/__init__.py`).
+#
+# Canonical-vs-unique decisions per layer (design memo §7 alignment):
+#   1. pyav decode               -> ADOPT canonical (decode_real_pairs helper)
+#   2. seed pinning              -> ADOPT canonical (pin via _pin_seeds skeleton)
+#   3. device gate               -> ADOPT canonical (device_or_die)
+#   4. YUV6 patch                -> ADOPT canonical (patch_upstream_yuv6_globally)
+#   5. scorer load               -> ADOPT canonical (load_differentiable_scorers)
+#   6. EMA shadow                -> ADOPT canonical (tac.training.EMA, 0.997)
+#   7. score-aware loss          -> FORK (Z6PredictiveCodingScoreAwareLoss; the
+#                                   canonical score_pair_components_dispatch
+#                                   homogenizes the scorer-preprocess path; the
+#                                   FORK is the Rao-Ballard residual term + the
+#                                   ego-motion sidecar requirement)
+#   8. ego-motion conditioning   -> FORK (substrate-specific PoseNet-projected
+#                                   ego-motion proxy with FOE-prior derivation;
+#                                   no canonical helper exists for this — the
+#                                   predictor's ego-motion sidecar IS the
+#                                   distinguishing substrate primitive per
+#                                   Catalog #311 NON-NEGOTIABLE)
+#   9. mini-batch reconstruct    -> ADOPT canonical (reconstruct_pair indexed
+#                                   per Catalog #218)
+#  10. archive pack/runtime      -> FORK (Z6PCWM1 grammar; per-pair residuals)
+#  11. auth-eval gate            -> ADOPT canonical (gate_auth_eval_call)
+#  12. posterior update          -> ADOPT canonical (posterior_update_locked_*)
+#  13. provenance + manifest     -> ADOPT canonical pattern (sister substrates)
+#  14. hardware detect           -> ADOPT canonical (detect_hardware_substrate)
+
+
+def _pin_seeds(seed: int) -> None:
+    """Pin all RNG sources for reproducibility (Catalog #6)."""
+    random.seed(int(seed))
+    try:
+        import numpy as np
+
+        np.random.seed(int(seed))
+    except Exception:
+        pass
+    torch.manual_seed(int(seed))
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(int(seed))
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _git_head_sha() -> str:
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        return r.stdout.strip() if r.returncode == 0 else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _sha256_bytes(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def _path_is_under(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _resolve_auth_eval_json_paths(
+    output_dir: Path,
+    *,
+    durable_root: Path | None = None,
+) -> tuple[Path, Path]:
+    """Return ``(gate_json, local_copy_json)`` for score-grade auth eval.
+
+    Modal trainers run from a writable ``/tmp/pact`` copy. The canonical
+    ``contest_auth_eval.py`` scorer refuses score-grade evidence paths under
+    temp storage, so the gate writes to a non-temp path and then the trainer
+    copies that JSON back into ``output_dir`` for artifact harvest. Sister of
+    NSCS01 pattern.
+    """
+    local_copy_json = output_dir / "contest_auth_eval.json"
+    temp_root = Path(tempfile.gettempdir())
+    if not _path_is_under(local_copy_json, temp_root):
+        return local_copy_json, local_copy_json
+    root = durable_root
+    if root is None:
+        root = Path(
+            os.environ.get(
+                "Z6_AUTH_EVAL_ROOT",
+                "/root/time_traveler_l5_z6_auth_eval",
+            )
+        )
+    return root / output_dir.name / "contest_auth_eval.json", local_copy_json
+
+
+def _derive_ego_motion_from_posenet(
+    posenet: torch.nn.Module,
+    gt_pair_tensor: torch.Tensor,
+    *,
+    ego_motion_dim: int,
+    chunk_size: int = 16,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """Derive per-pair ego-motion-conditioning vectors from PoseNet output.
+
+    Per Catalog #311 NON-NEGOTIABLE the Z6 substrate's predictor MUST be
+    ego-motion-conditioned (pose-conditioned next-frame prediction); the
+    ego_motion sidecar IS the cooperative-receiver side-information per
+    Atick-Redlich 1990. The canonical signal is the PoseNet head output
+    (12-dim; first 6 dims are the contest pose) per CLAUDE.md "Exact scorer
+    architectures" — this captures the FOE (focus-of-expansion) prior +
+    rotation/translation parameters per Gibson 1950 + Ballard embodied-
+    vision lineage.
+
+    Pipeline:
+        1. PoseNet.preprocess_input(pair) -> 12-channel YUV6 input
+        2. PoseNet.forward(...) -> dict with 'pose' key (B, 12) or tensor
+        3. Project first ego_motion_dim coordinates (canonical PoseNet head
+           order = pose params first)
+
+    Args:
+        posenet: frozen PoseNet (eval mode); inference_mode forward.
+        gt_pair_tensor: ``(N, 2, 3, H, W)`` in [0, 255] from
+            ``decode_real_pairs``.
+        ego_motion_dim: target ego-motion vector dimension (Catalog #124
+            field; default 8 per design memo Section 4.1).
+        chunk_size: pair-batch size for PoseNet forward to avoid OOM
+            (Catalog #218 mini-batch discipline).
+        device: optional torch.device for compute.
+
+    Returns:
+        ``(N, ego_motion_dim)`` float32 tensor on CPU (so it can be copied
+        to the substrate's ego_motion_buffer regardless of substrate device).
+        Standardized per-column (mean 0, std 1) so FiLM modulation is
+        well-conditioned.
+    """
+    if ego_motion_dim <= 0:
+        raise ValueError(f"ego_motion_dim must be > 0; got {ego_motion_dim}")
+    if gt_pair_tensor.dim() != 5 or gt_pair_tensor.shape[1] != 2:
+        raise ValueError(
+            f"gt_pair_tensor must be (N, 2, 3, H, W); got {tuple(gt_pair_tensor.shape)}"
+        )
+    n_pairs = int(gt_pair_tensor.shape[0])
+    compute_device = device if device is not None else gt_pair_tensor.device
+    posenet.eval()
+
+    pose_features: list[torch.Tensor] = []
+    with torch.inference_mode():
+        for start in range(0, n_pairs, chunk_size):
+            chunk = gt_pair_tensor[start : start + chunk_size].to(compute_device)
+            # PoseNet expects (B, T=2, C=3, H, W) per upstream/modules.py
+            pose_in = posenet.preprocess_input(chunk)
+            pose_out = posenet(pose_in)
+            if isinstance(pose_out, dict):
+                if "pose" not in pose_out:
+                    raise RuntimeError(
+                        f"PoseNet forward returned dict without 'pose' key; "
+                        f"keys={list(pose_out.keys())}"
+                    )
+                pose_tensor = pose_out["pose"]
+            else:
+                pose_tensor = pose_out
+            # Take first ego_motion_dim coords; canonical Hydra head order
+            # has pose params first per CLAUDE.md "Exact scorer architectures".
+            features = pose_tensor[:, :ego_motion_dim].to(
+                device="cpu", dtype=torch.float32
+            )
+            pose_features.append(features)
+    stacked = torch.cat(pose_features, dim=0)
+    if stacked.shape[0] != n_pairs:
+        raise RuntimeError(
+            f"derived {stacked.shape[0]} ego-motion vectors from {n_pairs} pairs"
+        )
+    # Standardize per-column so FiLM modulation is well-conditioned (Gibson
+    # 1950 FOE prior is a relative-velocity field; zero-mean unit-variance
+    # capture the relative-motion structure).
+    if stacked.shape[1] < ego_motion_dim:
+        # Pad with zeros if PoseNet head has fewer than ego_motion_dim coords
+        pad = torch.zeros(
+            n_pairs, ego_motion_dim - stacked.shape[1], dtype=stacked.dtype
+        )
+        stacked = torch.cat([stacked, pad], dim=1)
+    mean = stacked.mean(dim=0, keepdim=True)
+    std = stacked.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
+    return ((stacked - mean) / std).contiguous()
+
+
+def _write_runtime(submission_dir: Path) -> None:
+    """Emit contest-compliant inflate.sh + inflate.py + vendored Z6 substrate.
+
+    Per Catalog #146 the inflate.sh signature is 3-positional-arg
+    ``inflate.sh <archive_dir> <output_dir> <file_list>``.
+    Per Catalog #163 the script uses ``set -euo pipefail``.
+    Per CLAUDE.md "Strict scorer rule": no scorer at inflate time.
+    """
+    submission_dir.mkdir(parents=True, exist_ok=True)
+    runtime_pkg = (
+        submission_dir / "src" / "tac" / "substrates" / "time_traveler_l5_z6"
+    )
+    runtime_pkg.mkdir(parents=True, exist_ok=True)
+    for pkg_init in (
+        submission_dir / "src" / "tac" / "__init__.py",
+        submission_dir / "src" / "tac" / "substrates" / "__init__.py",
+    ):
+        pkg_init.write_text("", encoding="utf-8")
+    substrate_src = REPO_ROOT / "src" / "tac" / "substrates" / "time_traveler_l5_z6"
+    for name in ("architecture.py", "archive.py", "inflate.py"):
+        shutil.copy2(substrate_src / name, runtime_pkg / name)
+
+    # Runtime __init__.py is MINIMAL — no score_aware_loss import (forbidden
+    # per "Strict scorer rule"; pulls in scorer code at inflate time).
+    (runtime_pkg / "__init__.py").write_text(
+        "\"\"\"Z6 runtime package (inflate-time only — no scorer imports).\"\"\"\n"
+        "from tac.substrates.time_traveler_l5_z6.architecture import (\n"
+        "    EVAL_HW, NUM_PAIRS,\n"
+        "    FilmConditionedNextFramePredictor,\n"
+        "    Z6PredictiveCodingConfig, Z6PredictiveCodingSubstrate,\n"
+        ")\n"
+        "from tac.substrates.time_traveler_l5_z6.archive import (\n"
+        "    Z6PCWM1_HEADER_FMT, Z6PCWM1_HEADER_SIZE, Z6PCWM1_MAGIC,\n"
+        "    Z6PCWM1_SCHEMA_VERSION, Z6PCWM1_SECTION_ROLES,\n"
+        "    Z6PredictiveCodingArchive,\n"
+        "    pack_archive, parse_archive, parse_z6pcwm1_archive_bytes,\n"
+        ")\n"
+        "__all__ = [\n"
+        "    'EVAL_HW', 'NUM_PAIRS',\n"
+        "    'Z6PCWM1_HEADER_FMT', 'Z6PCWM1_HEADER_SIZE', 'Z6PCWM1_MAGIC',\n"
+        "    'Z6PCWM1_SCHEMA_VERSION', 'Z6PCWM1_SECTION_ROLES',\n"
+        "    'FilmConditionedNextFramePredictor',\n"
+        "    'Z6PredictiveCodingArchive', 'Z6PredictiveCodingConfig',\n"
+        "    'Z6PredictiveCodingSubstrate',\n"
+        "    'pack_archive', 'parse_archive', 'parse_z6pcwm1_archive_bytes',\n"
+        "]\n",
+        encoding="utf-8",
+    )
+
+    # Vendor the canonical _shared/inflate_runtime.py (Catalog #205).
+    shared_dir = submission_dir / "src" / "tac" / "substrates" / "_shared"
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    (shared_dir / "__init__.py").write_text("", encoding="utf-8")
+    shutil.copy2(
+        REPO_ROOT / "src" / "tac" / "substrates" / "_shared" / "inflate_runtime.py",
+        shared_dir / "inflate_runtime.py",
+    )
+
+    inflate_sh = (
+        "#!/usr/bin/env bash\n"
+        "# Z6 Time-Traveler L5 FiLM-conditioned predictive-coding inflate runtime.\n"
+        "# Per Catalog #146: 3-positional-arg signature.\n"
+        "# Per Catalog #163: set -euo pipefail.\n"
+        "# Per CLAUDE.md \"Strict scorer rule\": no scorer at inflate time.\n"
+        "set -euo pipefail\n"
+        "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
+        "DATA_DIR=\"$1\"\n"
+        "OUTPUT_DIR=\"$2\"\n"
+        "FILE_LIST=\"$3\"\n"
+        "mkdir -p \"$OUTPUT_DIR\"\n"
+        "exec \"${PYTHON:-python3}\" \"$HERE/inflate.py\" "
+        "\"$DATA_DIR\" \"$OUTPUT_DIR\" \"$FILE_LIST\"\n"
+    )
+    (submission_dir / "inflate.sh").write_text(inflate_sh, encoding="utf-8")
+    (submission_dir / "inflate.sh").chmod(0o755)
+
+    inflate_py = (
+        "#!/usr/bin/env python\n"
+        '"""Z6 contest-compliant inflate runtime.\n'
+        "\n"
+        "Delegates to the vendored substrate CLI. No scorer imports.\n"
+        '"""\n'
+        "import sys\n"
+        "from pathlib import Path\n"
+        "\n"
+        "HERE = Path(__file__).resolve().parent\n"
+        "sys.path.insert(0, str(HERE / 'src'))  "
+        "# SUBMISSION_PYTHONPATH_SHIM_OK:vendored-tac-package-self-contained-per-Catalog-295\n"
+        "from tac.substrates.time_traveler_l5_z6.inflate import main_cli\n"
+        "\n"
+        "def main() -> int:\n"
+        "    return main_cli()\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    sys.exit(main())\n"
+    )
+    (submission_dir / "inflate.py").write_text(inflate_py, encoding="utf-8")
+
+
+def _build_archive_zip(archive_zip_path: Path, *, bin_bytes: bytes) -> None:
+    """Deterministic archive.zip containing ONLY the data payload (0.bin)."""
+    archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
+    fixed_ts = (2026, 1, 1, 0, 0, 0)
+    with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
+        zi.compress_type = zipfile.ZIP_DEFLATED
+        zf.writestr(zi, bin_bytes)
+
+
+def _run_val_loop(
+    substrate: Z6PredictiveCodingSubstrate,
+    loss_fn,
+    gt_pair_tensor: torch.Tensor,
+    val_pair_indices: list[int],
+    archive_bytes_proxy: torch.Tensor,
+    device,
+    *,
+    chunk_size: int = 8,
+) -> float:
+    """Validation pass with EMA shadow + torch.inference_mode (Catalog #180).
+
+    Mini-batches val pairs per Catalog #218 OOM discipline: full 600-pair
+    autoregressive unroll at 384x512 exceeds T4 (14.56 GB).
+    """
+    substrate.eval()
+    losses: list[float] = []
+    with torch.inference_mode():
+        for start in range(0, len(val_pair_indices), chunk_size):
+            chunk = val_pair_indices[start : start + chunk_size]
+            if not chunk:
+                continue
+            idx_tensor = torch.tensor(chunk, device=device, dtype=torch.long)
+            rgb_0, rgb_1, _z_t = substrate.reconstruct_pair(idx_tensor)
+            # Substrate decoder is sigmoid -> [0, 1]; scale to [0, 255] for scorer.
+            rgb_0_255 = rgb_0 * 255.0
+            rgb_1_255 = rgb_1 * 255.0
+            gt_0 = gt_pair_tensor[idx_tensor, 0]
+            gt_1 = gt_pair_tensor[idx_tensor, 1]
+            try:
+                loss, _ = loss_fn(
+                    reconstructed_rgb_0=rgb_0_255,
+                    reconstructed_rgb_1=rgb_1_255,
+                    gt_rgb_0=gt_0,
+                    gt_rgb_1=gt_1,
+                    archive_bytes_proxy=archive_bytes_proxy,
+                    residuals=substrate.residuals,
+                    apply_eval_roundtrip=True,
+                    noise_std=0.0,
+                )
+            except Exception as exc:
+                print(
+                    f"[{SUBSTRATE_TAG}-val] WARN val batch start={start} "
+                    f"skipped: {exc!r}"
+                )
+                continue
+            if torch.isfinite(loss):
+                losses.append(float(loss.detach().cpu()))
+    return float(sum(losses) / len(losses)) if losses else math.inf
+
 
 def _full_main(args: argparse.Namespace) -> int:
-    """Phase 2 council approval required.
+    """Full Z6 training entry: pyav decode + score-aware predictive-coding + EMA + auth eval.
 
-    The full Z6 training path needs (per design memo Sections 5-9):
+    Binds all PR 95 paradigm ingredients into ONE coherent packet (Catalogs
+    #310 PRIMARY class-shift + #311 ego-motion-conditioned next-frame
+    predictor + #312 hierarchical predictive coding):
 
-    1. pyav decode of upstream/videos/0.mkv into per-pair frames (Catalog #114)
-    2. patch_upstream_yuv6_globally + load_differentiable_scorers (Catalog #187)
-    3. Z6PredictiveCodingScoreAwareLoss with eval-roundtrip + EMA(0.997)
-       routed through canonical score_pair_components (Catalog #164)
-    4. AdamW + grad clip 1.0 + NaN watchdog
-    5. Autoregressive FiLM predictor unroll across 600 pairs (mini-batched per
-       Catalog #218 reconstruct_pair pattern; D4 sister substrate's lesson)
-    6. Ego-motion buffer populated from PoseNet output projection (or
-       held at zeros for identity-predictor ablation regime)
-    7. CUDA auth eval on best EMA checkpoint via canonical
-       gate_auth_eval_call (Catalog #226)
-    8. posterior_update_locked (Catalog #128)
-    9. Contest-compliant runtime emission with select_inflate_device per
-       Catalog #205 + 3-positional-arg inflate.sh per Catalog #146 + #163
+      * pyav-decoded real contest pairs (NO synthetic data; Catalog #114)
+      * patched upstream YUV6 BEFORE scorer construction (Catalog #187)
+      * load_differentiable_scorers (frozen; eval mode; no scorer at inflate)
+      * **UNIQUE**: ego-motion-conditioned next-frame predictor via
+        PoseNet-projected per-pair pose features (Catalog #311 — FOE prior
+        derived from PoseNet head output; Gibson 1950 + Atick-Redlich 1990
+        + Ballard embodied-vision; the FiLM predictor ROLLS LATENT STATE
+        FORWARD via autoregressive next-frame prediction)
+      * **UNIQUE**: Z6PredictiveCodingScoreAwareLoss with Rao-Ballard 1999
+        residual-entropy Lagrangian routed through canonical
+        score_pair_components (Catalog #164)
+      * EMA(decay=0.997) update post optimizer.step; inference = EMA shadow
+      * eval_roundtrip=True throughout (Catalog #5 non-negotiable)
+      * AdamW + cosine annealing; gradient clip 1.0; NaN watchdog
+      * Mini-batched reconstruct_pair (Catalog #218 OOM discipline) with
+        autoregressive predictor unroll across selected pairs
+      * Z6PCWM1 archive pack + contest-compliant runtime tree emission
+      * Canonical gate_auth_eval_call (Catalog #226) on best EMA checkpoint
+      * Canonical require_contest_cuda_auth_eval_claim (Catalog #127 custody)
+      * Continual-learning posterior_update_locked (Catalog #128 atomic fcntl)
+      * Hardware substrate detection (Catalog #190)
+      * Catalog #220 operational-mechanism declaration via auth-eval claim
 
-    The architecture, archive, inflate, and score_aware_loss modules are
-    landed and tested (≥10 dedicated tests pass; autoregression recurrence
-    test confirms inflate-time correctness). The trainer body is
-    deliberately stubbed pending council approval per CLAUDE.md "Design
-    decisions — non-negotiable" + Catalog #240 (recipe-vs-trainer-state
-    consistency): world-model predictive-coding is a council-grade tradeoff
-    because (a) the autoregressive unroll cost multiplies training
-    wall-clock, (b) the identity-predictor ablation needs to fire BEFORE the
-    full predictor to anchor the probe, and (c) the predicted [0.13, 0.16]
-    band requires sextet-pact council consensus per design memo Section 19
-    reactivation criteria.
-
-    Operator-routable: see Z6 memo Section 19 for the 5 reactivation criteria
-    + Section 22 op-routables for the next-step decision path. Phase 2
-    dispatch approval lifts this NotImplementedError after sextet-pact
-    council CONSENSUS.
+    The Z6 predictor IS the substrate-distinguishing primitive (Catalog #272):
+    every byte in the ``predictor_blob`` is structurally consumed by the
+    autoregressive next-frame predictor at inflate time. The
+    ``residuals_blob`` carries the per-pair Rao-Ballard residuals; the
+    ``ego_motion_blob`` is the cooperative-receiver side-information per
+    Atick-Redlich 1990 (Wyner-Ziv-style side-info channel).
     """
-    raise NotImplementedError(
-        "Phase 2 council approval required to lift this NotImplementedError. "
-        "Per Catalog #240 + Z6 memo Section 19 reactivation criteria: "
-        "(1) operator decision Z6 selected as FIRST Z-variant; (2) Dykstra-"
-        "feasibility polytope confirms Z6 predicted band FEASIBLE; (3) sister "
-        "L1 SCAFFOLD lands trainer + archive + inflate + tests; (4) Phase 2 "
-        "sextet-pact council CONSENSUS (Shannon + Dykstra + Rao + Ballard + "
-        "Tishby + Contrarian + Assumption-Adversary); (5) Catalog #167 "
-        "smoke-before-full pattern confirms Z6 smoke at $1 Modal T4 lands "
-        "rc=0 + archive bytes within [80, 120] KB + identity-predictor "
-        "disambiguator probe ready. See `.omx/research/"
-        "time_traveler_l5_z6_z7_z8_predictive_coding_world_models_"
-        "asymptotic_pursuit_scoping_design_20260516.md` §19 for the "
-        "dispatch-gating thresholds."
+    from tac.differentiable_eval_roundtrip import (
+        patch_upstream_yuv6_globally,
+        unpatch_upstream_yuv6,
     )
+    from tac.scorer import load_differentiable_scorers
+    from tac.substrates.time_traveler_l5_z6.score_aware_loss import (
+        Z6PredictiveCodingLossWeights,
+        Z6PredictiveCodingScoreAwareLoss,
+    )
+    from tac.training import EMA
+
+    _pin_seeds(args.seed)
+    device = _canon_device_or_die(
+        args.device,
+        smoke=False,
+        substrate_tag=SUBSTRATE_TAG,
+        allow_full_cpu=bool(args.full_cpu),
+    )
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    stage_log: list[dict[str, str]] = []
+
+    def _stage(name: str) -> None:
+        msg = {"stage": name, "at": _utc_now_iso()}
+        stage_log.append(msg)
+        print(f"[{SUBSTRATE_TAG}-full] {name} @ {msg['at']}")
+
+    _stage("seed_pinned")
+
+    # 1. Patch upstream rgb_to_yuv6 BEFORE scorer construction (Catalog #187).
+    yuv6_token = patch_upstream_yuv6_globally()
+    _stage("upstream_yuv6_patched")
+
+    auth_eval_gate_json_path, auth_eval_json_path = _resolve_auth_eval_json_paths(
+        args.output_dir
+    )
+    archive_zip_path = args.output_dir / "archive.zip"
+    archive_zip_sha = ""
+    archive_zip_size = 0
+    bin_sha = ""
+    bin_size = 0
+    n_params_total = 0
+    best_val_lag = math.inf
+    best_epoch = -1
+    auth_eval_result: dict[str, object] | None = None
+
+    try:
+        # 2. Load differentiable scorers (frozen; eval; no grad).
+        # Canonical contract: (posenet, segnet) order per
+        # tac.scorer.load_differentiable_scorers signature; see Catalog #222
+        # which refuses reversed assignment.
+        posenet, segnet = load_differentiable_scorers(
+            args.upstream_dir, device=device
+        )
+        for p in list(posenet.parameters()) + list(segnet.parameters()):
+            p.requires_grad_(False)
+        posenet.eval()
+        segnet.eval()
+        _stage("scorers_loaded")
+
+        # 3. Decode real contest pairs via canonical pyav helper.
+        print(f"[{SUBSTRATE_TAG}-full] decoding pairs from {args.video_path}")
+        gt_pair_tensor = _decode_real_pairs(
+            args.video_path,
+            n_pairs=N_PAIRS_FULL,
+            substrate_tag=SUBSTRATE_TAG,
+            max_pairs=args.max_pairs,
+            repo_root=REPO_ROOT,
+        ).to(device)
+        n_pairs = int(gt_pair_tensor.shape[0])
+        _stage(f"pairs_decoded_{n_pairs}")
+
+        # 4. **UNIQUE Z6 STEP**: derive ego-motion-conditioning vectors from
+        # PoseNet output (Catalog #311 NON-NEGOTIABLE ego-motion conditioning
+        # with FOE prior). Per Catalog #311 + design memo §11: the cooperative
+        # receiver's side-information channel IS the ego-motion sidecar; we
+        # project per-pair PoseNet head output into ego_motion_dim coordinates
+        # to capture the focus-of-expansion + relative-motion structure.
+        if args.identity_predictor:
+            print(
+                f"[{SUBSTRATE_TAG}-full] identity_predictor=True; using zero "
+                "ego-motion (disambiguator-probe regime per Catalog #125 hook #6)"
+            )
+            ego_motion_vectors = torch.zeros(
+                n_pairs, args.predictor_ego_motion_dim, dtype=torch.float32
+            )
+        else:
+            ego_motion_vectors = _derive_ego_motion_from_posenet(
+                posenet,
+                gt_pair_tensor,
+                ego_motion_dim=args.predictor_ego_motion_dim,
+                chunk_size=args.ego_motion_chunk_size,
+                device=device,
+            )
+        _stage(
+            f"ego_motion_derived_from_posenet_dim_{args.predictor_ego_motion_dim}_"
+            f"l2_{float(ego_motion_vectors.pow(2).sum().sqrt()):.3f}"
+        )
+
+        # 5. Validation split: hold out the last N pairs for val loop.
+        val_count = max(1, min(args.val_pair_count, max(1, n_pairs // 8)))
+        val_idx_start = n_pairs - val_count
+        train_indices_pool = list(range(val_idx_start))
+        val_indices_pool = list(range(val_idx_start, n_pairs))
+
+        # 6. Build Z6 substrate at the requested num_pairs + ego-motion-dim.
+        cfg = Z6PredictiveCodingConfig(
+            latent_dim=args.latent_dim,
+            encoder_input_channels=3,
+            encoder_hidden_dim=64,
+            decoder_embed_dim=args.decoder_embed_dim,
+            decoder_initial_grid_h=3,
+            decoder_initial_grid_w=4,
+            decoder_channels=(24, 20, 16, 12, 8, 6),
+            decoder_num_upsample_blocks=args.decoder_num_upsample_blocks,
+            num_pairs=n_pairs,
+            output_height=384,
+            output_width=512,
+            predictor_hidden_dim=args.predictor_hidden_dim,
+            predictor_film_mlp_hidden_dim=args.predictor_film_mlp_hidden_dim,
+            predictor_ego_motion_dim=args.predictor_ego_motion_dim,
+            predictor_kernel_size=args.predictor_kernel_size,
+            identity_predictor=args.identity_predictor,
+            lambda_residual_entropy=args.lambda_residual_entropy,
+        )
+        substrate = Z6PredictiveCodingSubstrate(cfg).to(device)
+        # Copy derived ego-motion into the substrate's buffer.
+        with torch.no_grad():
+            substrate.ego_motion_buffer.copy_(
+                ego_motion_vectors.to(
+                    device=device, dtype=substrate.ego_motion_buffer.dtype
+                )
+            )
+        breakdown = substrate.num_parameters_breakdown()
+        n_params_total = int(breakdown["total"])
+        n_params_predictor = int(breakdown["predictor"])
+        n_params_encoder = int(breakdown["encoder"])
+        n_params_decoder = int(breakdown["decoder"])
+        print(
+            f"[{SUBSTRATE_TAG}-full] params: total={n_params_total:,} "
+            f"predictor={n_params_predictor:,} encoder={n_params_encoder:,} "
+            f"decoder={n_params_decoder:,}"
+        )
+        _stage(
+            f"substrate_built_total_{n_params_total}_predictor_"
+            f"{n_params_predictor}_decoder_{n_params_decoder}"
+        )
+
+        # 7. EMA shadow (CLAUDE.md non-negotiable, decay=0.997).
+        ema = EMA(substrate, decay=args.ema_decay)
+        _stage(f"ema_wired_decay_{args.ema_decay}")
+
+        # 8. Score-aware predictive-coding Lagrangian (FORK per design memo §7).
+        weights = Z6PredictiveCodingLossWeights(
+            alpha_rate=args.alpha_rate,
+            beta_seg=args.beta_seg,
+            gamma_pose=args.gamma_pose,
+            lambda_residual_entropy=args.lambda_residual_entropy,
+            contest_normalizer=CONTEST_NORMALIZER,
+        )
+        loss_fn = Z6PredictiveCodingScoreAwareLoss(
+            seg_scorer=segnet,
+            pose_scorer=posenet,
+            weights=weights,
+        )
+        _stage("lagrangian_built_predictive_coding")
+
+        # 9. Optimizer (AdamW + cosine annealing).
+        optimizer = torch.optim.AdamW(
+            substrate.parameters(),
+            lr=args.lr,
+            weight_decay=args.weight_decay,
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(1, args.epochs)
+        )
+
+        # Archive byte proxy estimate (~97 KB target per design memo §10).
+        # int8 residuals + fp16 brotli predictor weights dominate.
+        residuals_bytes_proxy = n_pairs * args.latent_dim  # int8 per coordinate
+        ego_motion_bytes_proxy = n_pairs * args.predictor_ego_motion_dim
+        latent_init_bytes_proxy = args.latent_dim
+        # fp16 + brotli ~0.6x ratio for predictor + encoder + decoder weights
+        weights_bytes_proxy = max(
+            5_000,
+            int((n_params_predictor + n_params_encoder + n_params_decoder) * 2 * 0.6),
+        )
+        meta_bytes_proxy = 1_500
+        total_proxy_bytes = (
+            residuals_bytes_proxy
+            + ego_motion_bytes_proxy
+            + latent_init_bytes_proxy
+            + weights_bytes_proxy
+            + meta_bytes_proxy
+        )
+        archive_bytes_proxy = torch.tensor(float(total_proxy_bytes), device=device)
+        print(
+            f"[{SUBSTRATE_TAG}-full] archive_bytes_proxy: residuals="
+            f"{residuals_bytes_proxy}B ego={ego_motion_bytes_proxy}B "
+            f"weights={weights_bytes_proxy}B meta={meta_bytes_proxy}B "
+            f"total={total_proxy_bytes}B"
+        )
+
+        # 10. Train loop with autoregressive predictor unroll.
+        train_started_at = time.time()
+        ckpt_best_path = args.output_dir / "best.pt"
+        nan_strike = 0
+        max_nan_strikes = 3
+
+        for epoch in range(args.epochs):
+            substrate.train()
+            random.shuffle(train_indices_pool)
+            epoch_losses: list[float] = []
+
+            for batch_start in range(0, len(train_indices_pool), args.batch_size):
+                batch_indices = train_indices_pool[
+                    batch_start : batch_start + args.batch_size
+                ]
+                if not batch_indices:
+                    continue
+                batch_idx_tensor = torch.tensor(
+                    batch_indices, device=device, dtype=torch.long
+                )
+                # Mini-batched reconstruct_pair (Catalog #218 discipline).
+                # The substrate rolls forward autoregressively from pair 0
+                # to max(batch_indices), then selects + decodes — this IS
+                # the ego-motion-conditioned next-frame predictor consuming
+                # the PoseNet-derived side information per Catalog #311.
+                rgb_0, rgb_1, _z_t = substrate.reconstruct_pair(batch_idx_tensor)
+                rgb_0_255 = rgb_0 * 255.0  # decoder is sigmoid -> [0, 1]
+                rgb_1_255 = rgb_1 * 255.0
+                gt_0 = gt_pair_tensor[batch_idx_tensor, 0]
+                gt_1 = gt_pair_tensor[batch_idx_tensor, 1]
+
+                loss, _parts = loss_fn(
+                    reconstructed_rgb_0=rgb_0_255,
+                    reconstructed_rgb_1=rgb_1_255,
+                    gt_rgb_0=gt_0,
+                    gt_rgb_1=gt_1,
+                    archive_bytes_proxy=archive_bytes_proxy,
+                    residuals=substrate.residuals,
+                    apply_eval_roundtrip=True,
+                    noise_std=args.noise_std,
+                )
+
+                if not torch.isfinite(loss):
+                    nan_strike += 1
+                    print(
+                        f"[{SUBSTRATE_TAG}-full] NaN strike "
+                        f"{nan_strike}/{max_nan_strikes}"
+                    )
+                    if nan_strike >= max_nan_strikes:
+                        raise RuntimeError("NaN watchdog tripped")
+                    continue
+                nan_strike = 0
+
+                optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    substrate.parameters(), args.grad_clip
+                )
+                optimizer.step()
+                ema.update(substrate)
+                epoch_losses.append(float(loss.detach().cpu()))
+
+            scheduler.step()
+
+            if (
+                epoch % max(1, args.val_every_epochs) == 0
+                or epoch == args.epochs - 1
+            ):
+                live_state = {
+                    k: v.detach().clone() for k, v in substrate.state_dict().items()
+                }
+                ema.apply(substrate)
+                ema_state_for_ckpt: dict[str, torch.Tensor] | None = None
+                try:
+                    val_lag = _run_val_loop(
+                        substrate, loss_fn, gt_pair_tensor, val_indices_pool,
+                        archive_bytes_proxy, device,
+                    )
+                    ema_state_for_ckpt = {
+                        k: v.detach().cpu().clone()
+                        for k, v in substrate.state_dict().items()
+                    }
+                finally:
+                    substrate.load_state_dict(live_state)
+                    substrate.train()
+
+                avg_train = (
+                    sum(epoch_losses) / len(epoch_losses)
+                    if epoch_losses else math.nan
+                )
+                print(
+                    f"[{SUBSTRATE_TAG}-full] epoch {epoch:4d}: "
+                    f"train={avg_train:.5f} val={val_lag:.5f} "
+                    f"(best={best_val_lag:.5f})"
+                )
+                if val_lag < best_val_lag and ema_state_for_ckpt is not None:
+                    best_val_lag = val_lag
+                    best_epoch = epoch
+                    torch.save(
+                        {
+                            "state_dict": ema_state_for_ckpt,
+                            "config": asdict(cfg),
+                            "epoch": epoch,
+                            "val_lag": val_lag,
+                            "ego_motion_buffer": substrate.ego_motion_buffer.detach()
+                            .cpu()
+                            .clone(),
+                        },
+                        ckpt_best_path,
+                    )
+
+        train_elapsed = time.time() - train_started_at
+        _stage(
+            f"trained_best_epoch_{best_epoch}_val_lag_{best_val_lag:.5f}_"
+            f"elapsed_{train_elapsed:.1f}s"
+        )
+
+        # 11. Load best EMA checkpoint + emit Z6PCWM1 archive.
+        if not args.skip_archive_build:
+            if ckpt_best_path.exists():
+                # WEIGHTS_ONLY_FALSE_OK:trusted-local-checkpoint-from-this-process
+                best_ckpt = torch.load(
+                    ckpt_best_path, weights_only=False, map_location=device
+                )
+                substrate.load_state_dict(best_ckpt["state_dict"])
+                if "ego_motion_buffer" in best_ckpt:
+                    with torch.no_grad():
+                        substrate.ego_motion_buffer.copy_(
+                            best_ckpt["ego_motion_buffer"].to(
+                                device=device,
+                                dtype=substrate.ego_motion_buffer.dtype,
+                            )
+                        )
+            substrate.eval()
+
+            bin_bytes = pack_archive(
+                substrate.encoder.state_dict(),
+                substrate.decoder.state_dict(),
+                substrate.predictor.state_dict(),
+                substrate.latent_init.detach().cpu(),
+                substrate.residuals.detach().cpu(),
+                substrate.ego_motion_buffer.detach().cpu(),
+                {
+                    "lane_id": SUBSTRATE_LANE_ID,
+                    "encoder_input_channels": cfg.encoder_input_channels,
+                    "encoder_hidden_dim": cfg.encoder_hidden_dim,
+                    "decoder_embed_dim": cfg.decoder_embed_dim,
+                    "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
+                    "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
+                    "decoder_channels": list(cfg.decoder_channels),
+                    "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
+                    "output_height": cfg.output_height,
+                    "output_width": cfg.output_width,
+                    "predictor_hidden_dim": cfg.predictor_hidden_dim,
+                    "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
+                    "latent_init_std": cfg.latent_init_std,
+                    "smoke": False,
+                    "best_val_lag": float(best_val_lag) if math.isfinite(best_val_lag) else None,
+                    "best_epoch": int(best_epoch),
+                    "git_head": _git_head_sha(),
+                    "trained_at_utc": _utc_now_iso(),
+                    "n_params_total": int(n_params_total),
+                    "n_params_predictor": int(n_params_predictor),
+                    "n_params_encoder": int(n_params_encoder),
+                    "n_params_decoder": int(n_params_decoder),
+                    "ego_motion_source": (
+                        "posenet_pose_head_first_k_coords_standardized"
+                        if not args.identity_predictor
+                        else "zero_identity_disambiguator_regime"
+                    ),
+                },
+                lambda_residual_entropy=args.lambda_residual_entropy,
+                predictor_kernel_size=args.predictor_kernel_size,
+                identity_predictor=args.identity_predictor,
+            )
+            bin_sha = _sha256_bytes(bin_bytes)
+            bin_size = len(bin_bytes)
+            print(
+                f"[{SUBSTRATE_TAG}-full] Z6PCWM1 archive: {bin_size} B "
+                f"sha256={bin_sha[:16]}..."
+            )
+            _stage(f"archive_built_{bin_size}_B_sha{bin_sha[:8]}")
+
+            # 12. Emit contest-compliant runtime tree + archive.zip.
+            submission_dir = args.output_dir / "submission_dir"
+            _write_runtime(submission_dir)
+            (submission_dir / "0.bin").write_bytes(bin_bytes)
+            (args.output_dir / "0.bin").write_bytes(bin_bytes)
+            _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes)
+            archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
+            archive_zip_size = archive_zip_path.stat().st_size
+            shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
+            _stage("archive_emitted")
+
+            # 13. Auth eval ([contest-CUDA] inline) through the canonical gate
+            # per Catalog #226 (no hand-rolled subprocess to contest_auth_eval.py).
+            if not args.skip_auth_eval:
+                auth_eval_result = _canon_gate_auth_eval_call(
+                    args=args,
+                    archive_zip=archive_zip_path,
+                    inflate_sh=submission_dir / "inflate.sh",
+                    upstream_dir=args.upstream_dir,
+                    output_json=auth_eval_gate_json_path,
+                    contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                    substrate_tag=SUBSTRATE_TAG,
+                    device=device,
+                    full_cpu_active=bool(args.full_cpu),
+                )
+                if auth_eval_result is not None:
+                    if auth_eval_gate_json_path != auth_eval_json_path:
+                        auth_eval_json_path.parent.mkdir(
+                            parents=True, exist_ok=True
+                        )
+                        shutil.copy2(auth_eval_gate_json_path, auth_eval_json_path)
+                    _canon_require_contest_cuda_auth_eval_claim(
+                        auth_eval_json_path,
+                        archive_sha256=archive_zip_sha,
+                        substrate_tag=SUBSTRATE_TAG,
+                    )
+                    _stage("auth_eval_cuda_done_valid_claim")
+                else:
+                    _stage("auth_eval_skipped_gate_refused")
+    finally:
+        unpatch_upstream_yuv6(yuv6_token)
+        _stage("upstream_yuv6_unpatched")
+
+    # 14. Posterior update (Catalog #128 atomic fcntl).
+    if (not args.skip_auth_eval) and auth_eval_json_path.exists():
+        try:
+            from tac.continual_learning import (
+                posterior_update_locked_from_auth_eval_json,
+            )
+
+            update = posterior_update_locked_from_auth_eval_json(
+                auth_eval_json_path
+            )
+            print(
+                f"[{SUBSTRATE_TAG}-full] posterior_update accepted="
+                f"{getattr(update, 'accepted', '?')}"
+            )
+            _stage("posterior_updated")
+        except Exception as exc:
+            print(
+                f"[{SUBSTRATE_TAG}-full] WARN posterior_update failed: {exc!r}"
+            )
+
+    # 15. Provenance + manifest (canonical schema; sister-substrate pattern).
+    hardware_substrate_cuda = _canon_detect_hardware_substrate(
+        axis="cuda",
+        substrate_tag=SUBSTRATE_TAG,
+        env_var_candidates=("Z6_GPU", "MODAL_GPU"),
+    )
+    pair_capped = (
+        getattr(args, "max_pairs", None) is not None
+        and args.max_pairs < N_PAIRS_FULL
+    )
+    provenance = {
+        "lane_id": SUBSTRATE_LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "started_at_utc": stage_log[0]["at"] if stage_log else _utc_now_iso(),
+        "completed_at_utc": _utc_now_iso(),
+        "git_head": _git_head_sha(),
+        "bin_sha256": bin_sha,
+        "bin_bytes": bin_size,
+        "archive_zip_sha256": archive_zip_sha,
+        "archive_zip_bytes": archive_zip_size,
+        "n_params": n_params_total,
+        "best_val_lag": float(best_val_lag) if math.isfinite(best_val_lag) else None,
+        "best_epoch": best_epoch,
+        "epochs": args.epochs,
+        "device": str(device),
+        "lambda_residual_entropy": args.lambda_residual_entropy,
+        "predictor_kernel_size": args.predictor_kernel_size,
+        "predictor_ego_motion_dim": args.predictor_ego_motion_dim,
+        "identity_predictor": args.identity_predictor,
+        "design_memo": (
+            ".omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_"
+            "world_models_asymptotic_pursuit_scoping_design_20260516.md"
+        ),
+        "council_phase_2_consensus_seal": False,  # L1 lift; council sign-off pending
+        "stage_log": stage_log,
+        "auth_eval_gate_json_path": str(auth_eval_gate_json_path),
+        "auth_eval_json_path": str(auth_eval_json_path),
+        "hardware_substrate_cuda": hardware_substrate_cuda,
+    }
+    (args.output_dir / "provenance.json").write_text(
+        json.dumps(provenance, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+    manifest = {
+        "schema": "time_traveler_l5_z6_training_artifact_manifest_v1",
+        "lane_id": SUBSTRATE_LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "training_mode": "pair_capped_smoke" if pair_capped else "full",
+        "research_only": pair_capped,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "archive_bytes": bin_size,
+        "archive_sha256": bin_sha,
+        "archive_zip_bytes": archive_zip_size,
+        "archive_zip_sha256": archive_zip_sha,
+        "max_pairs": args.max_pairs,
+        "n_pairs_full_required_for_auth_eval": N_PAIRS_FULL,
+        "auth_eval_skipped": bool(args.skip_auth_eval),
+        "auth_eval_skipped_reason": (
+            "pair_capped_smoke_emits_truncated_raw_stream"
+            if pair_capped and args.skip_auth_eval
+            else ""
+        ),
+        "result": {
+            "training_mode": "pair_capped_smoke" if pair_capped else "full",
+            "archive_bytes": bin_size,
+            "archive_sha256": bin_sha,
+            "archive_zip_bytes": archive_zip_size,
+            "archive_zip_sha256": archive_zip_sha,
+        },
+    }
+    (args.output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    print(
+        f"[{SUBSTRATE_TAG}-full] wrote {args.output_dir / 'provenance.json'}"
+    )
+    return 0
 
 
 @register_substrate(TIME_TRAVELER_L5_Z6_SUBSTRATE_CONTRACT)

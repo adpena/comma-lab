@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""tac.substrates.time_traveler_l5_z6 — Time-Traveler L5 F-asymptote node Z6 L1 SCAFFOLD.
+"""tac.substrates.time_traveler_l5_z6 — Time-Traveler L5 F-asymptote node Z6.
 
 Per the Time-Traveler L5 Z6/Z7/Z8 predictive-coding world-model scoping design memo
 (``.omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md``,
@@ -72,9 +72,10 @@ Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes th
 target_modes: ``contest_one_video_replay``, ``contest_generalized``,
 ``research_substrate``
 lane_class: ``substrate_engineering``
-research_only: true (Phase 2 council approval required to lift _full_main
-NotImplementedError before score-bearing dispatch authority per Catalog #240
-+ Z6 memo Section 19 reactivation criteria)
+research_only: true (Phase 1b lift implements trainer _full_main, but
+score-bearing dispatch authority remains blocked until paired CPU/CUDA evidence,
+lane claim custody, and exact-eval artifacts satisfy Catalog #240 + the Z6 memo
+Section 19 reactivation criteria)
 
 Probe-disambiguator (Catalog #125 hook #6)
 ------------------------------------------

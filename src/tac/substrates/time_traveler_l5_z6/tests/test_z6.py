@@ -12,9 +12,10 @@ Test groups (≥10 per op-routable #2 spec):
 - (E) Inflate: 3 tests — contest 3-arg contract, no scorer load, end-to-end roundtrip
 - (F) Score-aware loss: 3 tests — eval_roundtrip mandatory, RGB-255 validation,
        residual-norm scaling
-- (G) SubstrateContract / SCAFFOLD discipline: 4 tests — META layer
-       decoration succeeds; substrate IS research_only; full_main raises
-       NotImplementedError; Catalog #240 opt-out tokens present
+- (G) SubstrateContract / Phase-1b lift discipline: 4 tests — META layer
+       decoration succeeds; substrate remains research_only until paired
+       evidence; full_main has no legacy NotImplementedError stub; Catalog
+       #240/#310/#311/#312 tokens present
 
 Per CLAUDE.md "Subagent commits MUST use serializer" and Catalog #117/#157/#174.
 """
@@ -53,16 +54,17 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 # ===========================================================================
-# (G) SubstrateContract / SCAFFOLD discipline
+# (G) SubstrateContract / Phase-1b lift discipline
 # ===========================================================================
 
 
-def test_z6_module_declares_research_only_until_full_main_lands() -> None:
+def test_z6_module_declares_research_only_until_paired_evidence_lands() -> None:
     """The substrate-level status must match the operator recipe gate."""
     doc = z6_module.__doc__ or ""
     assert "research_only: true" in doc
     assert "lane_class: ``substrate_engineering``" in doc
-    assert "NotImplementedError" in doc
+    assert "Phase 1b lift implements trainer _full_main" in doc
+    assert "NotImplementedError" not in doc
 
 
 def test_z6_module_declares_archive_grammar_8_fields() -> None:
@@ -156,17 +158,48 @@ def test_remote_driver_verifies_active_claim_and_preserves_full_epoch_default() 
     assert "trap cleanup EXIT" in src
 
 
-def test_full_main_raises_not_implemented_phase_2_gate() -> None:
-    """Catalog #240: _full_main must fail-loud pending Phase 2 council approval."""
-    import argparse
+def test_full_main_is_lifted_phase_1b_pr95_paradigm() -> None:
+    """Phase 1b Z6 lift 2026-05-16: _full_main NO LONGER raises NotImplementedError.
+
+    The lift binds all PR 95 paradigm ingredients into ONE coherent packet per
+    `feedback_phase_1b_z6_lift_pr95_paradigm_landed_20260516.md`. After the lift,
+    `_full_main` is callable and exits non-trivially (it depends on real
+    upstream/videos/0.mkv + CUDA scorers, which most CI sandboxes lack, but the
+    function body itself must NOT short-circuit with the legacy NotImplementedError
+    stub — the architectural binding IS the canonical contract per Catalogs
+    #310/#311/#312 + the Z6/Z7/Z8 design memo §4.1).
+    """
+    import inspect
 
     import experiments.train_substrate_time_traveler_l5_z6 as z6_trainer
 
-    args = argparse.Namespace(
-        full_cpu=False, advisory_cpu_explicitly_waived=False, smoke=False,
+    source = inspect.getsource(z6_trainer._full_main)
+    assert "raise NotImplementedError" not in source, (
+        "Z6 _full_main must NOT carry the legacy NotImplementedError stub "
+        "after the Phase 1b PR95-paradigm lift; the function body must bind "
+        "ALL PR 95 ingredients (pyav decode + patched YUV6 + differentiable "
+        "scorers + EMA + eval_roundtrip + canonical score_pair_components + "
+        "ego-motion-conditioned predictor + Z6PCWM1 archive + canonical "
+        "gate_auth_eval_call + posterior_update_locked + hardware detect)."
     )
-    with pytest.raises(NotImplementedError, match="Phase 2 council approval"):
-        z6_trainer._full_main(args)
+    # Catalog #311 ego-motion-conditioning token requirements MUST appear in
+    # _full_main source (NOT just docstring) so the implementation actually
+    # routes the FOE prior / PoseNet-projected ego-motion into the predictor.
+    assert "_derive_ego_motion_from_posenet" in source
+    assert "ego_motion_buffer" in source
+    # Catalog #310 PRIMARY class-shift verification: substrate IS the
+    # architectural core; predictor + autoregressive next-frame unroll.
+    assert "Z6PredictiveCodingSubstrate" in source
+    assert "reconstruct_pair" in source
+    # PR95 paradigm binding tokens (per Catalog #187 + #5 + #88 + #164 + #226):
+    assert "patch_upstream_yuv6_globally" in source
+    assert "load_differentiable_scorers" in source
+    assert "apply_eval_roundtrip" in source
+    assert "EMA" in source
+    assert "_canon_gate_auth_eval_call" in source
+    assert "_canon_require_contest_cuda_auth_eval_claim" in source
+    assert "posterior_update_locked" in source
+    assert "_canon_detect_hardware_substrate" in source
 
 
 # ===========================================================================

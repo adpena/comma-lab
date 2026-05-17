@@ -32078,11 +32078,11 @@
       "id": "lane_phase_1b_z6_lift_20260516",
       "name": "Phase 1b Z6 _full_main lift",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "_full_main lifted from NotImplementedError to PR95-paradigm binding in experiments/train_substrate_time_traveler_l5_z6.py; 24 dedicated lift tests pass (src/tac/tests/test_train_time_traveler_l5_z6_full_main_lift.py); 35 scaffold tests still pass; 74 total Z6 tests green; Catalog #310/#311/#312 evidence verified; local pre-deploy 9/9 PASS; Catalog #270 Tier 1/2/3 all complete"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32097,8 +32097,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "local_pre_deploy_check passes 9/9 INCLUDING Catalog #270 dispatch_optimization_protocol (Tier 1=5/5 + Tier 2=8/8 + Tier 3=5/5)"
         },
         "three_clean_review": {
           "status": false,
@@ -32109,8 +32109,8 @@
           "evidence": ""
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_time_traveler_l5_z6.sh (pre-existing scaffold; canonical NVML env block per Catalog #244)"
         }
       },
       "notes": ""
@@ -32155,6 +32155,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_phase_1b_rudin_lift_20260516",
+      "name": "Phase 1b Rudin floor _full_main lift (L1 SCAFFOLD \u2192 L2 INTEGRATION)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "_full_main implementation 2026-05-16 binds PR95-paradigm ingredients per design memo \u00a715 canonical-vs-unique decision per layer; 45 tests pass; Catalog #270 PASS Tier 1/2/3 all complete; local pre-deploy 9/9 STRICT PASS"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #240 + Catalog #270 + Catalog #205 + Catalog #226 + Catalog #167 + Catalog #197 all PASS 2026-05-16 (substrate-specific)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_phase_1b_rudin_lift_landed_20260516.md (pending)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -32164,5 +32205,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T02:20:18Z"
+  "updated_at": "2026-05-17T02:28:51Z"
 }

@@ -96,13 +96,13 @@ def test_rdif_magic_and_version_pinned() -> None:
     assert RDIF_HEADER_SIZE == 34, "RDIF v1 header size must be 34 bytes"
 
 
-def test_research_only_flag_set_at_l1_scaffold() -> None:
-    """RESEARCH_ONLY=True at L1 SCAFFOLD per Catalog #240 cascade."""
-    assert RESEARCH_ONLY is True, (
-        "Rudin floor L1 SCAFFOLD MUST be research_only=true at landing "
-        "per CLAUDE.md 'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY'"
+def test_phase_1b_dispatchable_flag_set_after_l2_lift() -> None:
+    """Rudin is no longer research-only after the Phase 1b L2 trainer lift."""
+    assert RESEARCH_ONLY is False, (
+        "Rudin floor recipe and package must agree after the Phase 1b L2 lift: "
+        "dispatch may run, while score promotion still requires paired evidence"
     )
-    assert "research_only" in IMPLEMENTATION_STATUS or "scaffold" in IMPLEMENTATION_STATUS
+    assert "dispatch_enabled" in IMPLEMENTATION_STATUS
 
 
 # ---------------------------------------------------------------------------
@@ -355,22 +355,30 @@ def test_trainer_exists_and_imports_substrate_package() -> None:
     assert "from tac.substrates.rudin_floor_interpretable_ml" in body, (
         "trainer must import from substrate package"
     )
-    assert "NotImplementedError" in body, (
-        "trainer _full_main MUST raise NotImplementedError per Catalog #220 cascade"
+    assert "raise NotImplementedError" not in body, (
+        "trainer _full_main must not carry the legacy Catalog #240 stub after "
+        "the Phase 1b L2 integration lift"
+    )
+    assert "_compile_rashomon_rule_list" in body
+    assert "_compute_per_pair_scorer_features" in body
+    assert "_canon_gate_auth_eval_call" in body
+    assert "posterior_update_locked_from_auth_eval_json" in body, (
+        "trainer must preserve posterior-update custody after auth eval"
     )
     assert "TIER_1_OPERATOR_REQUIRED_FLAGS" in body, (
         "trainer must declare TIER_1_OPERATOR_REQUIRED_FLAGS per Catalog #151"
     )
 
 
-def test_recipe_exists_and_declares_research_only_dispatch_disabled() -> None:
-    """Recipe exists + research_only=true + dispatch_enabled=false per Catalog #240."""
+def test_recipe_exists_and_declares_phase_1b_dispatch_enabled() -> None:
+    """Recipe exists + Phase 1b dispatch_enabled=true after the L2 lift."""
     assert RECIPE_PATH.is_file(), f"recipe missing at {RECIPE_PATH}"
     body = RECIPE_PATH.read_text(encoding="utf-8")
-    assert "research_only: true" in body, "recipe MUST declare research_only: true"
-    assert "dispatch_enabled: false" in body, (
-        "recipe MUST declare dispatch_enabled: false at landing per Catalog #240"
+    assert "research_only: false" in body, "recipe must match RESEARCH_ONLY=False"
+    assert "dispatch_enabled: true" in body, (
+        "recipe must declare dispatch_enabled: true after the Phase 1b L2 lift"
     )
+    assert "active_dispatch_contract: rudin_floor_substrate_phase_1b_l2_integration" in body
     assert "min_smoke_gpu" in body, "recipe MUST declare min_smoke_gpu per Catalog #215"
     assert "min_vram_gb" in body, "recipe MUST declare min_vram_gb per Catalog #170"
 
@@ -474,9 +482,17 @@ def test_trainer_smoke_runs_to_completion_writes_archive(tmp_path: Path) -> None
     assert stats["promotion_eligible"] is False
 
 
-def test_trainer_full_main_raises_not_implemented_error() -> None:
-    """trainer _full_main MUST raise NotImplementedError per Catalog #240."""
-    # Run in non-smoke mode and assert non-zero exit + NotImplementedError
+def test_trainer_full_main_is_lifted_phase_1b_and_cpu_guarded() -> None:
+    """Phase 1b Rudin lift replaces the old Catalog #240 NotImplementedError stub."""
+    source = TRAINER_PATH.read_text(encoding="utf-8")
+    assert "def _full_main" in source
+    assert "raise NotImplementedError" not in source
+    assert "_compile_rashomon_rule_list" in source
+    assert "_compute_per_pair_scorer_features" in source
+    assert "_canon_gate_auth_eval_call" in source
+
+    # Default non-smoke CPU still fails closed unless explicitly waived; this
+    # preserves axis discipline now that _full_main is real.
     result = subprocess.run(
         [
             sys.executable,
@@ -489,10 +505,10 @@ def test_trainer_full_main_raises_not_implemented_error() -> None:
         timeout=30,
     )
     assert result.returncode != 0, (
-        "trainer _full_main must NOT exit cleanly at L1 SCAFFOLD landing"
+        "trainer _full_main must not run CPU non-smoke without an explicit axis waiver"
     )
-    assert "NotImplementedError" in result.stderr or "council-gated" in result.stderr, (
-        f"trainer _full_main must raise NotImplementedError citing Catalog #220; "
+    assert "--device cpu is permitted only with --smoke" in result.stderr, (
+        "trainer _full_main must fail closed on unwaived CPU non-smoke; "
         f"got stderr={result.stderr[:500]}"
     )
 

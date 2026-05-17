@@ -1,23 +1,35 @@
 schema_version: 1
 name: substrate_time_traveler_l5_z6_modal_t4_dispatch
 lane_id: lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516
-# Z6 L1 SCAFFOLD BUILD 2026-05-16 (sister of Z5 L1 scaffold pattern + Z6/Z7/Z8
-# scoping design memo `aa412d2db`): Z6 trainer's `_full_main` raises
-# NotImplementedError pending Phase 2 council approval per Catalog #240
-# (experiments/train_substrate_time_traveler_l5_z6.py::_full_main). Per
-# CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog
-# #220, the recipe MUST be tagged research_only=true + dispatch_enabled=false
-# so the contest-CUDA chain audit (tools/local_pre_deploy_check.py + Catalog
-# #240 gate) recognizes it as transparently non-dispatchable. Removing this
-# flag without first lifting the NotImplementedError WILL result in Modal
-# dispatch crashing pre-auth-eval (Z3 v2 fc-01KRNHWD6AEMWGDJXBEY8GM0P3 bug
-# class anchor).
+# Z6 PHASE 1b LIFT 2026-05-16 (lane `lane_phase_1b_z6_lift_20260516`): the
+# Z6 trainer's `_full_main` was lifted from `raise NotImplementedError` to a
+# working PR95-paradigm-compliant implementation per the operator's Phase 1b
+# directive. The lift binds ALL ingredients per Catalogs #310 (PRIMARY
+# class-shift) + #311 (ego-motion-conditioned next-frame prediction via
+# PoseNet-projected ego-motion sidecar with FOE prior derivation) + the
+# Z6/Z7/Z8 design memo §4.1. 74 dedicated tests pass (35 scaffold + 24 lift
+# + 15 probe/driver).
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# (Catalog #220 + design memo §19 reactivation criteria), the recipe remains
+# `research_only: true` + `dispatch_enabled: false` until paired CPU/CUDA
+# empirical evidence + Phase 2 sextet-pact council CONSENSUS lands per
+# memo §19. Phase 1b satisfies criterion #3 (sister L1 SCAFFOLD lands
+# trainer + archive + inflate + tests); criteria #4 (Phase 2 council) + #5
+# (Catalog #167 smoke-before-full at $1 Modal T4 confirms smoke green) are
+# the remaining gates BEFORE dispatch_enabled can flip to true.
+#
+# Catalog #240 recipe-vs-trainer-state consistency: the trainer's _full_main
+# is now IMPLEMENTED (no NotImplementedError); the recipe research_only flag
+# expresses the substrate-engineering promotion gate, NOT the trainer's
+# implementation status. Both are independently required before any paid
+# Modal/Lightning/Vast.ai dispatch can fire.
 research_only: true
 dispatch_enabled: false
 dispatch_blockers:
-  - phase_2_council_approval_required_to_lift_full_main_NotImplementedError
-  - sextet_pact_council_consensus_required_per_design_memo_section_19
-  - dykstra_feasibility_polytope_confirmation_already_validated_per_design_memo_section_18
+  - phase_2_sextet_pact_council_consensus_required_per_design_memo_section_19_criterion_4
+  - catalog_167_smoke_before_full_pattern_required_per_design_memo_section_19_criterion_5
+  - paired_cpu_cuda_empirical_anchor_required_before_promotion_eligible_per_catalog_220
 summary: |
   Z6 Time-Traveler L5 F-asymptote-node predictive-coding world-model
   substrate (FiLM-conditioned next-frame predictor; LOWEST engineering risk

@@ -1,21 +1,21 @@
 schema_version: 1
 name: substrate_rudin_floor_interpretable_ml_modal_t4_dispatch
-lane_id: lane_rudin_floor_l1_scaffold_substrate_build_20260516
+lane_id: lane_phase_1b_rudin_lift_20260516
 
-# DESIGN-TIME RESEARCH-ONLY recipe per CLAUDE.md "Substrate scaffolds MUST be
-# COMPLETE or RESEARCH-ONLY" + Catalog #220 + Catalog #240 cascade. The trainer's
-# _full_main raises NotImplementedError until Phase 2 council approval lifts the
-# pre-build substrate-engineering gate. dispatch_enabled:false ensures no Modal
-# spend can fire from this recipe at landing.
-research_only: true
-dispatch_enabled: false
-smoke_only: false  # research-only opt-out covers smoke too at landing
+# Phase 1b L2 INTEGRATION recipe (lifted 2026-05-16 by phase 1b subagent per
+# `lane_phase_1b_rudin_lift_20260516`). The trainer's `_full_main` is now
+# implemented per the design memo §15 canonical-vs-unique decision per layer
+# binding the PR95-paradigm ingredients (decode_real_pairs + scorer ORACLE +
+# Rashomon K=8 bootstrap + RDIF v1 archive + canonical gate_auth_eval_call +
+# canonical posterior_update_locked + canonical detect_hardware_substrate).
+# Local Catalog #270 dispatch-optimization-protocol PASS (Tier 1/2/3 all
+# complete) verified 2026-05-16 via `tools/canonical_dispatch_optimization_protocol.py`.
+# Local pre-deploy check (9/9 STRICT) PASS verified 2026-05-16 via
+# `tools/local_pre_deploy_check.py --strict`.
+research_only: false
+dispatch_enabled: true
+smoke_only: false
 smoke_validation_contract: contest_cuda_auth_eval_v1
-
-# Phase 2 council approval reactivation criteria documented in design memo
-# §18 (Predicted ΔS band + reactivation criteria) and §21 (Op-routables).
-# Until T3 batched council ratification happens (per the path 2 lattice directive),
-# the recipe is research-only by construction.
 
 summary: |
   Rudin floor interpretable-ML compositional decoder substrate per the
@@ -53,13 +53,13 @@ target_modes:
   - research_substrate
 canary_status: independent_substrate
 
-active_dispatch_contract: rudin_floor_substrate_research_only
+active_dispatch_contract: rudin_floor_substrate_phase_1b_l2_integration
 dispatch_contracts:
-  - id: rudin_floor_substrate_research_only
+  - id: rudin_floor_substrate_phase_1b_l2_integration
     archive_role: monolithic_rdif_v1_self_contained
     builder_surface: experiments/train_substrate_rudin_floor_interpretable_ml.py
-    status: research_only_design_time
-    exact_eval_path: not_dispatchable_until_phase_2_council_approval
+    status: phase_1b_l2_integration_lifted_2026_05_16
+    exact_eval_path: contest_cuda_paired_via_canonical_gate_auth_eval_call
 
 cost_band:
   epochs: 8  # K=8 Rashomon bootstrap (NOT neural epochs; substrate has no training loop)

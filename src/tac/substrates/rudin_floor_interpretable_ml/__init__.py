@@ -70,9 +70,10 @@ Catalog #124 archive-grammar 8 fields (declared inline so AST walker observes th
 
 target_modes: ``research_substrate``
 lane_class: ``substrate_engineering``
-research_only: true (Phase 2 council approval required to lift _full_main
-NotImplementedError per CLAUDE.md "Substrate scaffolds MUST be COMPLETE
-or RESEARCH-ONLY" + Catalog #240 cascade)
+research_only: false (Phase 1b L2 integration implements trainer _full_main
+and the operator recipe is dispatch-enabled for claimed smoke/exact-eval runs;
+promotion still requires paired CPU/CUDA evidence, lane claim custody, and
+exact-eval artifacts per Catalog #240 discipline)
 horizon_class: ``asymptotic_pursuit`` (per T4 SYMPOSIUM 4×4 floor matrix)
 
 6-hook wire-in (Catalog #125 NON-NEGOTIABLE)
@@ -156,14 +157,13 @@ from tac.substrates.rudin_floor_interpretable_ml.rule_list import (
     RudinRuleList,
 )
 
-# L1 SCAFFOLD: archive grammar + inflate runtime + rule_list IMPLEMENTED;
-# _full_main of the trainer remains NotImplementedError (Phase 2 council gate
-# per Catalog #240 + CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
-# RESEARCH-ONLY").
+# Phase 1b L2 integration: archive grammar + inflate runtime + rule_list +
+# trainer _full_main IMPLEMENTED and recipe dispatch-enabled. Score promotion
+# still requires paired exact-eval evidence.
 IMPLEMENTATION_STATUS = (
-    "l1_research_only_archive_inflate_rule_list_scaffold"
+    "phase_1b_l2_dispatch_enabled_full_main_integrated_archive_inflate_rule_list"
 )
-RESEARCH_ONLY = True
+RESEARCH_ONLY = False
 
 PLANNED_PUBLIC_API = (
     "RDIFv1Archive",
