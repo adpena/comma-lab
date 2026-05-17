@@ -953,15 +953,134 @@ def apply_z1_empirical_revision_to_candidate_delta(c: CandidateRow) -> float:
     d = adjust_predicted_delta_for_composition_alpha(d, c.composition_alpha)
     # OP-3 predicted_dispatch_risk wire-in (codex chunk 6 finding,
     # 2026-05-15): demote candidates whose RUDIN-DAUBECHIES preflight SLIM
-    # risk score crosses the canonical refusal threshold. Applied LAST in
-    # the chain so it can floor a candidate whose score-axis adjustments
+    # risk score crosses the canonical refusal threshold. Applied after the
+    # score-axis chain so it can floor a candidate whose score-axis adjustments
     # (Tier A / Tier C / class-shift / composition-alpha) would otherwise
-    # promote it past safer peers — preflight risk is a STRUCTURAL refusal,
-    # not a score-axis penalty, so it overrides the score-axis stack.
+    # promote it past safer peers. Venn reweighting below is allowed to compose
+    # with the already-risk-adjusted delta, but it must not replace this
+    # structural refusal hook.
     d = adjust_predicted_delta_for_predicted_dispatch_risk(
         d, c.predicted_dispatch_risk
     )
+    # Catalog #125 hook #4 wire-in (2026-05-17): the per-pair master gradient
+    # Venn classification (consumer 1 in `tac.master_gradient_consumers`)
+    # produces a per-archive byte-class breakdown {PAIR_SPECIFIC,
+    # PAIR_INVARIANT, PAIR_NEUTRAL, DEAD}. Candidates whose substrate target
+    # archive carries a HIGH PAIR_INVARIANT % (>= 80%) are reweighted as
+    # higher-EV (the Wyner-Ziv-hoistable region is structurally larger);
+    # candidates with HIGH PAIR_SPECIFIC % (>= 30%) carry the pair-specific
+    # trap and are reweighted as lower-EV. Reweighting reuses the existing
+    # predicted_dispatch_risk knob (factor < 1 = lower risk = higher rank;
+    # factor > 1 = higher risk = lower rank) so no new scoring axis is added.
+    # The reweighting is applied AFTER the SLIM dispatch_risk because Venn
+    # classification is structural-orthogonal to preflight risk: a high-Venn
+    # candidate may still have high SLIM risk for unrelated reasons.
+    d = adjust_predicted_delta_for_venn_classification(d, c.archive_sha256)
     return d
+
+
+# ── Catalog #125 hook #4 wire-in: per-pair master gradient Venn classification ───
+#
+# Wire-in #1 of the per-pair master gradient consumer integration plan landed
+# 2026-05-17. Reads the most-recent `venn_classification_<sha[:12]>_*.json`
+# sidecar emitted by
+# ``tac.master_gradient_consumers.classify_bytes_by_pair_variance`` and
+# reweights the candidate's effective predicted_score_delta based on its
+# substrate archive's Venn class breakdown.
+
+
+_VENN_CLASSIFICATION_SIDECAR_ROOT = REPO_ROOT / ".omx" / "state" / "master_gradient_consumers"
+_VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD = 0.80
+# Delta is negative-good: more-negative = better predicted improvement.
+# HIGH PAIR_INVARIANT reward → multiply by 1.15 (delta MORE negative).
+_VENN_REWEIGHT_HIGH_PAIR_INVARIANT_DELTA_FACTOR = 1.15
+_VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_THRESHOLD = 0.30
+# HIGH PAIR_SPECIFIC penalty → multiply by 0.85 (delta LESS negative).
+_VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_DELTA_FACTOR = 0.85
+
+
+def _latest_venn_sidecar_for_archive(archive_sha256: str) -> Path | None:
+    """Find the most-recent Venn classification sidecar for the given archive sha.
+
+    Per `tac.master_gradient_consumers.consumer_output_path` the canonical
+    filename pattern is ``venn_classification_<sha[:12]>_<utc>.json``. Return
+    the most-recent matching file (lexicographic max on filename, which is
+    chronological because the UTC suffix is YYYYMMDDTHHMMSS).
+    """
+    if not archive_sha256 or len(archive_sha256) < 12:
+        return None
+    if not _VENN_CLASSIFICATION_SIDECAR_ROOT.is_dir():
+        return None
+    sha_short = archive_sha256[:12]
+    candidates = sorted(_VENN_CLASSIFICATION_SIDECAR_ROOT.glob(f"venn_classification_{sha_short}_*.json"))
+    return candidates[-1] if candidates else None
+
+
+def _read_venn_class_counts(sidecar_path: Path) -> dict[str, int] | None:
+    """Read and validate the class_counts payload from a Venn sidecar.
+
+    Returns None on any parse error (the caller treats missing/invalid as
+    "no Venn signal available", same as no sidecar at all).
+    """
+    try:
+        payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    counts = payload.get("class_counts")
+    if not isinstance(counts, dict):
+        return None
+    # Validate the 4 canonical class names per PerByteVennClass.ALL
+    for required in ("PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"):
+        if required not in counts:
+            return None
+    return {k: int(v) for k, v in counts.items() if k in {"PAIR_SPECIFIC", "PAIR_INVARIANT", "PAIR_NEUTRAL", "DEAD"}}
+
+
+def adjust_predicted_delta_for_venn_classification(
+    predicted_delta: float, archive_sha256: str
+) -> float:
+    """Reweight predicted_score_delta from the per-pair master gradient Venn classification.
+
+    If the candidate's substrate archive has a fresh Venn classification
+    sidecar (written by
+    ``tac.master_gradient_consumers.classify_bytes_by_pair_variance``):
+
+      - HIGH PAIR_INVARIANT % (>= 80%): substrate is structurally Wyner-Ziv-
+        hoistable — its decoder bytes carry pair-shared signal that can be
+        moved to side-info (zero archive cost). Multiply delta by 1.15
+        (delta is negative-good; more negative = better predicted score).
+      - HIGH PAIR_SPECIFIC % (>= 30%): substrate is structurally pair-specific-
+        trap — bytes can NOT be hoisted. Multiply delta by 0.85 (less negative
+        = worse predicted score).
+      - Otherwise: no adjustment (factor 1.0).
+
+    The two thresholds are non-overlapping: a substrate cannot be BOTH
+    high-PAIR_INVARIANT AND high-PAIR_SPECIFIC by construction (the four
+    Venn classes sum to 1.0; PAIR_INVARIANT + PAIR_SPECIFIC <= 1.0). When
+    both are below their respective thresholds, the candidate is neutral.
+
+    Per CLAUDE.md "Apples-to-apples evidence discipline": this is a
+    PLANNING-ONLY reweighting; it never creates a score claim or dispatch
+    authority. It only changes the autopilot's ranking ordering.
+    """
+    if not archive_sha256:
+        return predicted_delta
+    sidecar = _latest_venn_sidecar_for_archive(archive_sha256)
+    if sidecar is None:
+        return predicted_delta
+    counts = _read_venn_class_counts(sidecar)
+    if counts is None:
+        return predicted_delta
+    total = sum(counts.values())
+    if total <= 0:
+        return predicted_delta
+    pair_invariant_frac = counts["PAIR_INVARIANT"] / total
+    pair_specific_frac = counts["PAIR_SPECIFIC"] / total
+    if pair_invariant_frac >= _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD:
+        return predicted_delta * _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_DELTA_FACTOR
+    if pair_specific_frac >= _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_THRESHOLD:
+        return predicted_delta * _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_DELTA_FACTOR
+    return predicted_delta
 
 
 # ── Tier C substrate-class density (Catalog #227 wire-in, 2026-05-14) ─────
