@@ -40,9 +40,18 @@ def _write_manifest(root: Path) -> Path:
         variants.append(
             {
                 "variant": variant,
+                "generation_rule": f"test-generation-rule:{variant}",
+                "variant_seed": 20260517,
                 "archive_path": archive.relative_to(root).as_posix(),
                 "archive_sha256": _sha256(archive),
                 "archive_bytes": archive.stat().st_size,
+                "source_archive_sha256": "1" * 64,
+                "source_archive_member_sha256": "2" * 64,
+                "source_sideinfo_section_sha256": "3" * 64,
+                "sideinfo_changed_from_source": variant != "trained",
+                "archive_sha_changed_from_source": True,
+                "archive_member_sha_changed_from_source": variant != "trained",
+                "sideinfo_section_sha_changed_from_source": variant != "trained",
                 "sideinfo_liveness": {
                     "checked": True,
                     "nonzero_values": 0 if variant == "zero" else 8,
@@ -161,6 +170,37 @@ def test_tt5l_sideinfo_dispatch_plan_fails_closed_on_archive_sha_mismatch(
     assert "paired_dispatch_command_not_materialized" in first["dispatch_blockers"]
     assert plan["ready_for_operator_dispatch"] is False
     assert "variant_archive_sha_mismatch:zero" in plan["blockers"]
+
+
+def test_tt5l_sideinfo_dispatch_plan_fails_closed_on_missing_noop_custody(
+    tmp_path: Path,
+) -> None:
+    manifest = _write_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["variants"][1].pop("source_sideinfo_section_sha256")
+    payload["variants"][1].pop("sideinfo_section_sha_changed_from_source")
+
+    plan = build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
+        manifest=payload,
+        manifest_path=manifest,
+        repo_root=tmp_path,
+    )
+
+    row = next(item for item in plan["work_units"] if item["variant"] == "random_lsb")
+    assert row["ready_for_operator_dispatch"] is False
+    assert (
+        "variant_custody_field_missing:random_lsb:source_sideinfo_section_sha256"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        "variant_custody_field_missing:random_lsb:"
+        "sideinfo_section_sha_changed_from_source"
+    ) in row["dispatch_blockers"]
+    assert plan["ready_for_operator_dispatch"] is False
+    assert (
+        "variant_custody_field_missing:random_lsb:source_sideinfo_section_sha256"
+        in plan["blockers"]
+    )
 
 
 def test_tt5l_sideinfo_dispatch_plan_json_and_markdown_are_durable(

@@ -64,6 +64,29 @@ _FALSE_AUTHORITY_FLAGS = {
     "dispatch_attempted": False,
     "adjudication_required": True,
 }
+_REQUIRED_VARIANT_ROW_CUSTODY_FIELDS = (
+    "generation_rule",
+    "variant_seed",
+    "source_archive_sha256",
+    "source_archive_member_sha256",
+    "source_sideinfo_section_sha256",
+    "sideinfo_changed_from_source",
+    "archive_sha_changed_from_source",
+    "archive_member_sha_changed_from_source",
+    "sideinfo_section_sha_changed_from_source",
+)
+_REQUIRED_VARIANT_ROW_BOOL_FIELDS = (
+    "sideinfo_changed_from_source",
+    "archive_sha_changed_from_source",
+    "archive_member_sha_changed_from_source",
+    "sideinfo_section_sha_changed_from_source",
+)
+_REQUIRED_VARIANT_ROW_SHA_FIELDS = (
+    "source_archive_sha256",
+    "source_archive_member_sha256",
+    "source_sideinfo_section_sha256",
+)
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
@@ -225,6 +248,22 @@ def _variant_archive_status(
     return archive, blockers
 
 
+def _variant_custody_blockers(row: Mapping[str, Any]) -> list[str]:
+    variant = str(row.get("variant") or "unknown").strip() or "unknown"
+    blockers: list[str] = []
+    for field in _REQUIRED_VARIANT_ROW_CUSTODY_FIELDS:
+        if field not in row:
+            blockers.append(f"variant_custody_field_missing:{variant}:{field}")
+    for field in _REQUIRED_VARIANT_ROW_BOOL_FIELDS:
+        if field in row and not isinstance(row.get(field), bool):
+            blockers.append(f"variant_custody_bool_field_invalid:{variant}:{field}")
+    for field in _REQUIRED_VARIANT_ROW_SHA_FIELDS:
+        value = str(row.get(field) or "").strip().lower()
+        if field in row and not _SHA256_RE.fullmatch(value):
+            blockers.append(f"variant_custody_sha_field_invalid:{variant}:{field}")
+    return blockers
+
+
 def _variant_lane_id_base(variant: str) -> str:
     return f"lane_l5_v2_tt5l_sideinfo_effect_curve_{_slug(variant)}"
 
@@ -342,6 +381,7 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
     for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
         row = variants_by_name.get(variant, {})
         archive, archive_blockers = _variant_archive_status(row=row, repo_root=root)
+        custody_blockers = _variant_custody_blockers(row)
         archive_sha = str(archive.get("sha256") or "")
         command: list[str] = []
         command_blockers: list[str] = []
@@ -358,7 +398,10 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan(
         else:
             command_blockers.append("paired_dispatch_command_not_materialized")
         dispatch_blockers = _dedupe(
-            list(manifest_blockers) + archive_blockers + command_blockers
+            list(manifest_blockers)
+            + archive_blockers
+            + custody_blockers
+            + command_blockers
         )
         score_claim_blockers = _dedupe(
             _as_text_list(manifest.get("blockers")) + _as_text_list(row.get("blockers"))

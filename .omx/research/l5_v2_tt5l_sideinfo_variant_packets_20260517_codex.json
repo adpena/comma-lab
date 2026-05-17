@@ -6,9 +6,22 @@
     "tt5l_source_trained_sideinfo_all_zero"
   ],
   "command_argv": [
-    "tools/build_tt5l_sideinfo_variant_packets.py"
+    "tools/build_tt5l_sideinfo_variant_packets.py",
+    "--source-archive",
+    "experiments/results/lane_substrate_time_traveler_l5_autonomy_modal_a100_dispatch_20260514T100758Z__smoke__25ep_modal/lane_substrate_time_traveler_l5_autonomy_results/output/archive.zip",
+    "--output-root",
+    "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex",
+    "--output-json",
+    ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
+    "--output-md",
+    ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.md",
+    "--submission-dir",
+    "experiments/results/time_traveler_recovered_exact_eval_20260514_codex/runtime",
+    "--seed",
+    "20260517"
   ],
   "dispatch_attempted": false,
+  "generated_at_utc": "2026-05-17T06:00:22Z",
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "ready_for_exact_eval_dispatch": false,
@@ -469,14 +482,17 @@
       "archive_member": "0.bin",
       "archive_member_bytes": 34480,
       "archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "archive_member_sha_changed_from_source": false,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/zero/archive.zip",
       "archive_sha256": "71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409",
+      "archive_sha_changed_from_source": true,
       "blockers": [
         "requires_paired_cpu_cuda_exact_eval_before_score_claim",
         "source_trained_sideinfo_all_zero",
         "zero_matches_trained_control"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "np.zeros_like(source_sideinfo)",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -532,6 +548,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "all per-pair side-info bytes set to zero",
+      "sideinfo_changed_from_source": false,
       "sideinfo_equal_source": true,
       "sideinfo_equal_zero": true,
       "sideinfo_liveness": {
@@ -591,8 +608,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": false,
       "sideinfo_sha256": "d4902002bff1daf21917e31d6360b1094d1c29c4054cea41930449787caa6f71",
+      "source_archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "source_sideinfo_section_sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d",
       "variant": "zero",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     },
     {
@@ -601,13 +624,16 @@
       "archive_member": "0.bin",
       "archive_member_bytes": 38788,
       "archive_member_sha256": "6c9c3b627b8b30b0958e3a9e13d2c1b99f93f52af6d6b35204514beccc4ff449",
+      "archive_member_sha_changed_from_source": true,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/random_lsb/archive.zip",
       "archive_sha256": "b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7",
+      "archive_sha_changed_from_source": true,
       "blockers": [
         "requires_paired_cpu_cuda_exact_eval_before_score_claim",
         "source_trained_sideinfo_all_zero"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "default_rng(20260517).choice([-1, 1], size=source_shape)",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -663,6 +689,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "deterministic +/-1 int8 side-info control",
+      "sideinfo_changed_from_source": true,
       "sideinfo_equal_source": false,
       "sideinfo_equal_zero": false,
       "sideinfo_liveness": {
@@ -720,8 +747,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": true,
       "sideinfo_sha256": "1cf4e9ee2321eb3ed11c454e3363de2e906c8e444fa0f9db2a09efea74b91d29",
+      "source_archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "source_sideinfo_section_sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d",
       "variant": "random_lsb",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     },
     {
@@ -730,17 +763,21 @@
       "archive_member": "0.bin",
       "archive_member_bytes": 34480,
       "archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "archive_member_sha_changed_from_source": false,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/shuffled/archive.zip",
       "archive_sha256": "71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409",
+      "archive_sha_changed_from_source": true,
       "blockers": [
         "requires_paired_cpu_cuda_exact_eval_before_score_claim",
         "source_trained_sideinfo_all_zero",
         "shuffled_variant_degenerate_from_zero_source",
         "shuffled_sideinfo_nonzero_missing",
         "shuffled_matches_zero_control",
-        "shuffled_matches_trained_control"
+        "shuffled_matches_trained_control",
+        "shuffled_expected_sideinfo_change_missing"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "default_rng(20260517).permutation(source_rows)",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -796,6 +833,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "trained side-info row order deterministically permuted",
+      "sideinfo_changed_from_source": false,
       "sideinfo_equal_source": true,
       "sideinfo_equal_zero": true,
       "sideinfo_liveness": {
@@ -855,8 +893,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": false,
       "sideinfo_sha256": "d4902002bff1daf21917e31d6360b1094d1c29c4054cea41930449787caa6f71",
+      "source_archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "source_sideinfo_section_sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d",
       "variant": "shuffled",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     },
     {
@@ -865,8 +909,10 @@
       "archive_member": "0.bin",
       "archive_member_bytes": 34480,
       "archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "archive_member_sha_changed_from_source": false,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/trained/archive.zip",
       "archive_sha256": "71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409",
+      "archive_sha_changed_from_source": true,
       "blockers": [
         "requires_paired_cpu_cuda_exact_eval_before_score_claim",
         "source_trained_sideinfo_all_zero",
@@ -874,6 +920,7 @@
         "trained_sideinfo_nonzero_missing"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "source_sideinfo.copy()",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -929,6 +976,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "trained side-info from the source TT5L packet",
+      "sideinfo_changed_from_source": false,
       "sideinfo_equal_source": true,
       "sideinfo_equal_zero": true,
       "sideinfo_liveness": {
@@ -988,8 +1036,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": false,
       "sideinfo_sha256": "d4902002bff1daf21917e31d6360b1094d1c29c4054cea41930449787caa6f71",
+      "source_archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "source_sideinfo_section_sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d",
       "variant": "trained",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     },
     {
@@ -998,16 +1052,20 @@
       "archive_member": "0.bin",
       "archive_member_bytes": 34480,
       "archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "archive_member_sha_changed_from_source": false,
       "archive_path": "experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_20260517_codex/ablated/archive.zip",
       "archive_sha256": "71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409",
+      "archive_sha_changed_from_source": true,
       "blockers": [
         "requires_paired_cpu_cuda_exact_eval_before_score_claim",
         "source_trained_sideinfo_all_zero",
         "ablated_variant_degenerate_from_zero_source",
         "ablated_matches_zero_control",
-        "ablated_matches_trained_control"
+        "ablated_matches_trained_control",
+        "ablated_expected_sideinfo_change_missing"
       ],
       "dispatch_attempted": false,
+      "generation_rule": "source_sideinfo with predict_residual slice zeroed",
       "mutated_byte_ranges": [
         {
           "length": 34,
@@ -1063,6 +1121,7 @@
       "ready_for_exact_eval_dispatch": false,
       "score_claim": false,
       "semantics": "trained side-info with predict_residual section zeroed",
+      "sideinfo_changed_from_source": false,
       "sideinfo_equal_source": true,
       "sideinfo_equal_zero": true,
       "sideinfo_liveness": {
@@ -1122,8 +1181,14 @@
         "total_pairs": 600,
         "total_values": 27000
       },
+      "sideinfo_section_sha_changed_from_source": false,
       "sideinfo_sha256": "d4902002bff1daf21917e31d6360b1094d1c29c4054cea41930449787caa6f71",
+      "source_archive_member_sha256": "f113598c4afd7fba4e75bb414bd0c1a331d07f8db6fdeb8e545ca85392f6733b",
+      "source_archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "source_sideinfo_section_sha256": "6ad94b1bfbdd3db2cd2f493f31e3f24c84ab5528243a9ad0f16d78c0f041b37d",
       "variant": "ablated",
+      "variant_seed": 20260517,
+      "variant_source": "source_trained_sideinfo",
       "zip_compress_type": "deflated"
     }
   ]

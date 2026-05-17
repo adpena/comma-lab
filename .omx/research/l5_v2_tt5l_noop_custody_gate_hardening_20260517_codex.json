@@ -1,0 +1,62 @@
+{
+  "schema": "l5_v2_tt5l_noop_custody_gate_hardening_v1",
+  "recorded_at_utc": "2026-05-17T06:01:30Z",
+  "recorded_by": "codex",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "classification": "engineering_hardening_no_score_claim",
+  "trigger": "Volta read-only review found that tracked TT5L custody artifacts could lag current no-op hardening and that the side-info effect-curve dispatch planner did not require the new no-op proof fields.",
+  "changes": [
+    {
+      "path": "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+      "summary": "Dispatch planner now fails closed when variant rows omit generation_rule, variant_seed, source archive/member/side-section SHA-256 fields, or the source-change booleans needed to prove no-op/non-no-op behavior."
+    },
+    {
+      "path": "src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+      "summary": "Added fixture custody fields and a regression test that removes side-section custody fields from random_lsb and expects ready_for_operator_dispatch=false."
+    },
+    {
+      "path": ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
+      "summary": "Regenerated the legacy all-zero source variant manifest with the current builder so historical random_lsb/all-zero controls carry the same source-change/no-op custody fields."
+    },
+    {
+      "path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json",
+      "summary": "Rebuilt the current five-variant effect-curve dispatch plan under the stricter custody-field validator."
+    }
+  ],
+  "artifact_checks": {
+    "legacy_variant_manifest_missing_required_custody_fields": {},
+    "current_fullshape_variant_manifest_missing_required_custody_fields": {},
+    "current_effect_curve_dispatch_plan_variant_rows_missing_required_custody_fields": {},
+    "current_effect_curve_ready_work_unit_count": 5,
+    "current_effect_curve_blockers": [
+      "requires_paired_cpu_cuda_exact_eval_for_sideinfo_effect_curve",
+      "requires_dispatch_lane_claim_before_auth_eval",
+      "score_claim_forbidden_until_effect_curve_artifact_passes",
+      "requires_paired_cpu_cuda_exact_eval_before_score_claim"
+    ]
+  },
+  "validation": [
+    {
+      "command": ".venv/bin/python -m pytest -q src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py src/tac/tests/test_tt5l_sideinfo_variant_packets.py",
+      "result": "11 passed"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q src/tac/tests/test_l5_v2_measurement_schedule.py src/tac/tests/test_l5_v2_sideinfo_effect_curve.py",
+      "result": "24 passed"
+    },
+    {
+      "command": ".venv/bin/python -m ruff check src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py src/tac/optimization/tt5l_sideinfo_variant_packets.py src/tac/tests/test_tt5l_sideinfo_variant_packets.py",
+      "result": "passed"
+    },
+    {
+      "command": ".venv/bin/python -m py_compile src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py src/tac/tests/test_l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+      "result": "passed"
+    }
+  ],
+  "remaining_blockers": [
+    "No full 600-pair trained TT5L archive with proven useful nonzero side-info has been exact-evaluated.",
+    "TT5L side-info effect claims still require paired contest-CPU and contest-CUDA cells for all five current archive SHA-256 values.",
+    "Modal remains blocked by workspace billing limits; Lightning current plan is CUDA dry-run only and needs identity/teamspace/source-staging/remote-CUDA preflights before non-dry-run."
+  ]
+}

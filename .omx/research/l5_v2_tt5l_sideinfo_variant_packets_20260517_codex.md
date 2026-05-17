@@ -14,13 +14,21 @@
 
 ## Variant archives
 
-| Variant | Archive bytes | Nonzero side-info values | SHA-256 | Blockers |
-| --- | ---: | ---: | --- | --- |
-| `zero` | 34603 | 0 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'zero_matches_trained_control']` |
-| `random_lsb` | 38911 | 27000 | `b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero']` |
-| `shuffled` | 34603 | 0 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'shuffled_variant_degenerate_from_zero_source', 'shuffled_sideinfo_nonzero_missing', 'shuffled_matches_zero_control', 'shuffled_matches_trained_control']` |
-| `trained` | 34603 | 0 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'trained_variant_degenerate_from_zero_source', 'trained_sideinfo_nonzero_missing']` |
-| `ablated` | 34603 | 0 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'ablated_variant_degenerate_from_zero_source', 'ablated_matches_zero_control', 'ablated_matches_trained_control']` |
+| Variant | Archive bytes | Nonzero side-info values | Member changed | Side-section changed | Seed | SHA-256 | Blockers |
+| --- | ---: | ---: | --- | --- | ---: | --- | --- |
+| `zero` | 34603 | 0 | False | False | 20260517 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'zero_matches_trained_control']` |
+| `random_lsb` | 38911 | 27000 | True | True | 20260517 | `b6a5b63c0ea8acd582d8f273a1ee9e00f74becc9d1993a2f3085f2f89d64b1c7` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero']` |
+| `shuffled` | 34603 | 0 | False | False | 20260517 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'shuffled_variant_degenerate_from_zero_source', 'shuffled_sideinfo_nonzero_missing', 'shuffled_matches_zero_control', 'shuffled_matches_trained_control', 'shuffled_expected_sideinfo_change_missing']` |
+| `trained` | 34603 | 0 | False | False | 20260517 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'trained_variant_degenerate_from_zero_source', 'trained_sideinfo_nonzero_missing']` |
+| `ablated` | 34603 | 0 | False | False | 20260517 | `71eef9bc7314dba145d2014ab4908216caf34bee4d388321ac1bd992cb1c6409` | `['requires_paired_cpu_cuda_exact_eval_before_score_claim', 'source_trained_sideinfo_all_zero', 'ablated_variant_degenerate_from_zero_source', 'ablated_matches_zero_control', 'ablated_matches_trained_control', 'ablated_expected_sideinfo_change_missing']` |
+
+## Variant generation rules
+
+- `zero`: seed=`20260517`; rule=`np.zeros_like(source_sideinfo)`
+- `random_lsb`: seed=`20260517`; rule=`default_rng(20260517).choice([-1, 1], size=source_shape)`
+- `shuffled`: seed=`20260517`; rule=`default_rng(20260517).permutation(source_rows)`
+- `trained`: seed=`20260517`; rule=`source_sideinfo.copy()`
+- `ablated`: seed=`20260517`; rule=`source_sideinfo with predict_residual slice zeroed`
 
 ## Classification
 

@@ -8,7 +8,7 @@
   ],
   "classification": "byte_closed_dispatch_plan_no_score_claim; paired CPU/CUDA exact-eval cells still required before TT5L side-info usefulness claims",
   "dispatch_attempted": false,
-  "generated_at_utc": "2026-05-17T05:45:55Z",
+  "generated_at_utc": "2026-05-17T06:00:31Z",
   "manifest_blockers": [],
   "measurement_id": "measure_tt5l_sideinfo_effect_curve",
   "operator_execute_required": true,
