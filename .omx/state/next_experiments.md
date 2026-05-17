@@ -112,6 +112,17 @@ architecture-lock/TT5L custody artifacts.
   parser-proven `tac_frontier_archive_layout_v1` manifest or archive path and
   emits grammar-aware operator rows only; raw archive-byte rows emitted must
   remain `0`.
+- First executable row class:
+  `tac.master_gradient_brotli_operator_candidate` plus
+  `tools/build_master_gradient_brotli_operator_candidate.py`. Current proven
+  local candidate on public PR106 reduces `decoder_packed_brotli` by `151`
+  archive bytes via lossless Brotli recompression, with packet closure proven
+  and runtime/exact-eval gates still closed. This is a template, not the P0
+  score target.
+- Next score-relevant operator class: FEC6 `FP11`/`FEC6` selector-grammar
+  mutation on the current `[contest-CPU]` frontier archive. Do not apply raw
+  byte flips; parse the selector, mutate a grammar-level choice, rebuild the
+  wrapper/ZIP, and prove runtime consumption before dispatch.
 - Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
   operator-row manifest may proceed after
   `tools/audit_master_gradient_feasibility.py` reports

@@ -127,6 +127,15 @@ retiring the L5/L5-v2 staircase:
   campaign notes without editing partner WIP: the only valid next object is a
   grammar-aware operator-row manifest, still `score_claim=false` and
   dispatch-ineligible until packet closure proofs exist.
+- First executable master-gradient operator row is now materialized for
+  PR106-format Brotli sections:
+  `tac.master_gradient_brotli_operator_candidate` and
+  `tools/build_master_gradient_brotli_operator_candidate.py`. Ledger:
+  `.omx/research/master_gradient_brotli_operator_candidate_landed_20260517_codex.md`.
+  Local candidate signal: `decoder_packed_brotli` recompression on public PR106
+  reduced archive bytes by `151` with CRC/header/parser/Brotli closure proven,
+  but runtime inflate proof and byte-consumption proof are still missing, so
+  the row remains non-dispatchable and non-promotional.
 - Reviewed disposition:
   `.omx/research/pr106_format0d_wip_adversarial_review_20260517_codex.md`.
 - FEC6 CPU frontier submission-surface adversarial review:
