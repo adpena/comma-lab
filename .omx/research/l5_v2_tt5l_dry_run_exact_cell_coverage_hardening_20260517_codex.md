@@ -10,15 +10,16 @@ Authority: implementation hardening; `score_claim=false`;
 
 The TT5L side-info Lightning dry-run verifier already checked required cells,
 paired-axis identity, local archive custody, runtime markers, queue metadata,
-and state/stdout agreement. One exact-coverage edge remained: a bundle with
+and state/stdout agreement. Two exact-coverage edges remained: a bundle with
 duplicate or extra `(variant, axis)` cells would fail only indirectly through
-cell-count or missing-cell symptoms, and in some layouts the first matching
-cell could mask later duplicate rows in the internal key map.
+cell-count or missing-cell symptoms, and the verifier did not reload the source
+paired-axis plan to prove the bundle cell identities still matched the plan on
+disk.
 
 For the L5 v2 side-info effect curve, the required surface is exactly five
 variants by two axes. Any duplicate, extra, or keyless cell is a custody bug:
 the downstream effect curve must not infer ten clean paired cells from a bundle
-that contains ambiguous rows.
+that contains ambiguous rows or a stale source plan join.
 
 ## Patch
 
@@ -41,12 +42,20 @@ and become global fail-closed blockers:
 This turns the audit requirement "all ten cells present, no duplicates/extras"
 into executable verifier behavior rather than a reader-side inference.
 
+The verifier also now reloads `bundle["source_plan"]`, verifies its SHA-256,
+schema, exact 5x2 coverage, and per-cell identity fields, then emits
+`source_plan` and per-cell `source_plan_cell` summaries in the dry-run
+verification artifact. Mismatches fail closed before any dry-run command result
+can imply custody.
+
 ## Test
 
 Added a focused regression in
 `src/tac/tests/test_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py`
 that appends both a duplicate required cell and an unexpected extra cell. The
-verifier now marks the artifact not ready and records both exact blockers.
+verifier now marks the artifact not ready and records both exact blockers. The
+fake bundle fixture now writes a source paired-axis plan so source-plan custody
+is exercised in the normal positive path too.
 
 ## Verification
 
@@ -58,7 +67,8 @@ git diff --check -- src/tac/optimization/l5_v2_tt5l_sideinfo_lightning_execution
 
 Result:
 
-- `9 passed`
+- `10 passed`
+- combined Catalog #315 + dry-run custody + execution-bundle sweep: `76 passed`
 - `py_compile` clean
 - `git diff --check` clean for the touched verifier files
 
