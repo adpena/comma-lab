@@ -95,13 +95,13 @@ literature_anchor: |
     src/tac/autopilot_rudin_daubechies/ (Catalogs #273-#278; commit 42665ce95).
 
 risk: |
-  Rudin floor interpretable-ML substrate is an L1 SCAFFOLD per CLAUDE.md
-  "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" + Catalog #220
-  cascade. The trainer's _full_main raises NotImplementedError pending
-  Phase 2 council approval.
+  Rudin floor interpretable-ML substrate is Phase 1b L2-integrated: the
+  trainer's _full_main is implemented and this recipe is dispatch_enabled=true.
+  This is pre-score dispatch authority only; no score, rank, or promotion claim
+  exists until paired CPU/CUDA exact-eval artifacts are harvested and reviewed.
 
-  When Phase 2 lifts the gate, the predicted Mid band [0.150, 0.180] is
-  verifiable in $3-15 of Modal T4 spend per the design memo §18 cost band:
+  The predicted Mid band [0.150, 0.180] is verifiable in $3-15 of Modal T4
+  spend per the design memo §18 cost band:
 
   - $0 pre-smoke: design-memo K=6 canonical rule_list + RDIF v1 archive
     roundtrip + 1-frame inflate sanity (this trainer's --smoke mode; CPU only)
@@ -131,7 +131,7 @@ risk: |
   CPU+CUDA auth eval per "Submission auth eval — BOTH CPU AND CUDA"
   non-negotiable.
 
-envelope_status: "research_only_design_time_at_landing; $3-15 envelope upon Phase 2 council approval"
+envelope_status: "phase_1b_l2_dispatch_enabled; $3-15 Rudin smoke/full envelope; promotion requires paired CPU/CUDA harvest"
 
 remote_driver: scripts/remote_lane_substrate_rudin_floor_interpretable_ml.sh
 timeout_hours: 2.0
@@ -167,9 +167,8 @@ env_overrides:
   RUDIN_FLOOR_DEVICE: "cpu"
   LOCAL_CUDA_WORKER: "1"
   SMOKE_ONLY: "0"
-  # Dispatch CANNOT fire because dispatch_enabled:false at top-level
-  # AND _full_main raises NotImplementedError. These env overrides are
-  # design-time placeholders for Phase 2 lift activation.
+  # Dispatch is enabled at recipe level. The trainer still gates score
+  # promotion through canonical auth-eval custody and paired axis evidence.
 
 dependencies:
   - upstream/videos/0.mkv
@@ -177,12 +176,11 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  Rudin floor interpretable-ML substrate L1 SCAFFOLD design-time research-only
-  recipe — Phase 2 council approval REQUIRED to lift research_only:true +
-  dispatch_enabled:false flags.
-
-  research_only=true per CLAUDE.md HNeRV parity discipline lesson 2 (export-
-  first design opt-out) + Catalog #240 (recipe-vs-trainer-state consistency).
+  Rudin floor interpretable-ML substrate Phase 1b L2 integration recipe. The
+  trainer _full_main is implemented, the recipe is research_only=false, and
+  dispatch_enabled=true is intentional. This authorizes claimed provider runs;
+  it does NOT authorize score promotion without harvested paired CPU/CUDA
+  evidence and result-review classification.
 
   lane_class=substrate_engineering per HNeRV parity discipline lesson 7
   (substrate engineering happens ONCE per architecture class; Rudin floor is
@@ -220,14 +218,14 @@ notes: |
   --skip-axis-if-promotable-anchor-exists per Catalog #246.
 
   Per CLAUDE.md "Production-hardened dispatch optimization protocol": Tier 1
-  engineering primitives waived per substrate type (no neural codec; no
-  autocast/TF32/torch.compile/no_grad needed); Tier 2 hardware correctness
-  declared (min_vram_gb=16; min_smoke_gpu=T4; video_input_strategy +
-  pyav_decode_strategy + target_modes + canary_status all set); Tier 3
-  substrate correctness (gate_auth_eval_call routing planned; inflate
-  device-fork canonical per Catalog #205; scorer-loader N/A; recipe-vs-
-  trainer-state consistent via dispatch_enabled:false + _full_main
-  NotImplementedError); Catalog #270 protocol expected PASS post Phase 2 lift.
+  engineering primitives are waived where mathematically N/A for this no-neural
+  substrate; Tier 2 hardware correctness is declared (min_vram_gb=16;
+  min_smoke_gpu=T4; video_input_strategy + pyav_decode_strategy + target_modes
+  + canary_status all set); Tier 3 substrate correctness is active via
+  gate_auth_eval_call routing, canonical inflate device-fork, and live
+  recipe-vs-trainer consistency. Catalog #270 and local_pre_deploy strict checks
+  passed at commit f2f81383f / 6cae1cf6d lineage and must be replayed before
+  any new dispatch if the trainer or recipe changes.
 
   Cross-ref:
     .omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md (design memo)

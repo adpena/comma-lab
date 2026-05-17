@@ -143,7 +143,10 @@ decode_complexity_evidence: |
   30 min contest inflate wall-clock budget.
 
 risk: |
-  Z6 first-anchor dispatch L1 SCAFFOLD. The substrate is the FIRST F-asymptote
+  Z6 Phase 1b trainer _full_main is implemented, but this recipe is still
+  intentionally non-dispatchable (`research_only: true`,
+  `dispatch_enabled: false`) pending Phase 2 council consensus and the
+  smoke-before-full gate. The substrate is the FIRST F-asymptote
   predictive-coding world-model trajectory variant. Predicted [0.13, 0.16] band
   is a Dykstra-feasibility-validated planning prior; NOT measurement.
 
@@ -216,13 +219,15 @@ dependencies:
   - tools/validate_dispatch_required_inputs.py
 
 notes: |
-  Z6 L1 SCAFFOLD first-anchor recipe — REQUIRES PHASE 2 COUNCIL APPROVAL
-  before lifting `_full_main NotImplementedError`.
+  Z6 Phase 1b first-anchor recipe — the trainer _full_main is implemented, but
+  the recipe remains non-dispatchable until Phase 2 council consensus and the
+  Catalog #167 smoke-before-full pattern clear the declared dispatch blockers.
 
-  Per Catalog #240 substrate-engineering pre-build opt-out: the trainer's
-  `_full_main` raises `NotImplementedError("Phase 2 council approval
-  required")`; the recipe's `research_only: true` + `dispatch_enabled: false`
-  prevents Modal dispatch from firing before council adjudication.
+  Per Catalog #240 recipe-vs-trainer-state consistency, this is no longer a
+  NotImplementedError protection path. The protection now lives in recipe
+  dispatchability: `research_only: true`, `dispatch_enabled: false`, and the
+  explicit `dispatch_blockers` list. `operator_authorize.py` correctly refuses
+  this recipe before claim/provider setup.
 
   Stage 0B smoke ($1 Modal T4) is the gating empirical test (post-Phase-2):
   - Archive bytes in [80_000, 250_000] AND smoke roundtrip passes AND

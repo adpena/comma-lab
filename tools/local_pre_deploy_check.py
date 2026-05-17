@@ -477,15 +477,40 @@ def check_full_main_implemented(trainer: Path) -> tuple[bool, str]:
     return True, f"PASS: {trainer.name} _full_main appears implemented"
 
 
-def check_recipe_status_consistent_with_trainer_state(trainer: Path, recipe: str | None) -> tuple[bool, str]:
+def _recipe_list_has_entries(recipe_text: str, key: str) -> bool:
+    """Return true when a simple YAML list key has at least one entry."""
+    lines = recipe_text.splitlines()
+    for idx, line in enumerate(lines):
+        match = re.match(rf"^{re.escape(key)}:\s*(.*)$", line)
+        if not match:
+            continue
+        tail = match.group(1).strip()
+        if tail and tail not in {"[]", "null", "None"}:
+            return True
+        for child in lines[idx + 1 :]:
+            if child and not child.startswith((" ", "\t", "-")):
+                break
+            if re.match(r"^\s*-\s+\S", child):
+                return True
+        return False
+    return False
+
+
+def check_recipe_status_consistent_with_trainer_state(
+    trainer: Path, recipe: str | None
+) -> tuple[bool, str]:
     """7th check (operator-routed 2026-05-15 Phase 7).
 
     Surfaces the Z3 v2 / Z4 / Z5 bug class at the 30s harness BEFORE Modal
     dispatch fires. Refuses recipe-vs-trainer-state divergence:
 
-    - Trainer's _full_main raises NotImplementedError BUT recipe lacks
-      research_only: true / smoke_only: true / dispatch_enabled: false → Modal
-      will reach trainer and crash pre-auth-eval ($2-15 per smoke).
+    - Trainer's _full_main raises NotImplementedError BUT recipe lacks a
+      non-dispatchable flag → Modal will reach trainer and crash pre-auth-eval
+      ($2-15 per smoke).
+    - Trainer's _full_main is implemented BUT recipe still declares
+      research_only/smoke_only/dispatch_enabled=false/blockers → this harness
+      must not print "Safe to dispatch"; ``operator_authorize.py`` will refuse
+      the same recipe before claim/provider setup.
 
     Mirrors the canonical Catalog #240 STRICT preflight gate per CLAUDE.md
     "Bugs must be permanently fixed AND self-protected against": one
@@ -524,14 +549,34 @@ def check_recipe_status_consistent_with_trainer_state(trainer: Path, recipe: str
     body = trainer_text[body_start : body_start + 3000]
     raises_not_impl = bool(re.search(r"\braise\s+NotImplementedError\b", body))
 
-    # Check recipe research-only flags
+    # Check recipe dispatchability flags. Keep this intentionally aligned with
+    # ``tools.operator_authorize._recipe_dispatch_refusal`` so the pre-deploy
+    # harness cannot claim "Safe to dispatch" for a recipe the actuator refuses.
+    smoke_only = bool(re.search(r"^\s*smoke_only:\s*true\b", recipe_text, re.M))
     research_only = bool(
-        re.search(r"^\s*smoke_only:\s*true\b", recipe_text, re.M)
-        or re.search(r"^\s*research_only:\s*true\b", recipe_text, re.M)
-        or re.search(r"^\s*dispatch_enabled:\s*false\b", recipe_text, re.M)
+        re.search(r"^\s*research_only:\s*true\b", recipe_text, re.M)
     )
+    dispatch_disabled = bool(
+        re.search(r"^\s*dispatch_enabled:\s*false\b", recipe_text, re.M)
+    )
+    dispatch_blocked = _recipe_list_has_entries(recipe_text, "dispatch_blockers")
+    pre_promotion_blocked = _recipe_list_has_entries(
+        recipe_text, "pre_promotion_blockers"
+    )
+    non_dispatchable_reasons = [
+        reason
+        for reason, active in (
+            ("smoke_only=true", smoke_only),
+            ("research_only=true", research_only),
+            ("dispatch_enabled=false", dispatch_disabled),
+            ("dispatch_blockers", dispatch_blocked),
+            ("pre_promotion_blockers", pre_promotion_blocked),
+        )
+        if active
+    ]
+    recipe_non_dispatchable = bool(non_dispatchable_reasons)
 
-    if raises_not_impl and not research_only:
+    if raises_not_impl and not recipe_non_dispatchable:
         return (
             False,
             f"FAIL: recipe-vs-trainer-state divergence — "
@@ -545,10 +590,21 @@ def check_recipe_status_consistent_with_trainer_state(trainer: Path, recipe: str
             f"'Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY'.",
         )
 
-    if raises_not_impl and research_only:
+    if raises_not_impl and recipe_non_dispatchable:
         return True, (
             "PASS: trainer `_full_main` is NotImplementedError-stubbed AND "
             "recipe is research-only tagged (transparent non-dispatchable)"
+        )
+
+    if recipe_non_dispatchable:
+        return (
+            False,
+            "FAIL: trainer `_full_main` is implemented but recipe is still "
+            "non-dispatchable "
+            f"({', '.join(non_dispatchable_reasons)}). "
+            "operator_authorize.py would refuse before claim/provider setup; "
+            "clear these recipe blockers or do not use local_pre_deploy_check "
+            "as dispatch proof.",
         )
 
     return True, (

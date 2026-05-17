@@ -4,7 +4,10 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 SCRIPT = REPO / "tools/local_pre_deploy_check.py"
@@ -355,3 +358,100 @@ def test_archive_grammar_accepts_x_with_same_line_waiver(tmp_path: Path) -> None
 
     assert passed is True
     assert "archive ZIP member" in message
+
+
+def _write_recipe(tmp_path: Path, name: str, text: str) -> None:
+    recipes = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes.mkdir(parents=True)
+    (recipes / f"{name}.yaml").write_text(text, encoding="utf-8")
+
+
+def test_recipe_state_rejects_implemented_trainer_with_dispatch_disabled(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pre-deploy must match operator_authorize refusal for disabled recipes."""
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "trainer.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "disabled_recipe",
+        "schema_version: 1\n"
+        "name: disabled_recipe\n"
+        "dispatch_enabled: false\n"
+        "dispatch_blockers:\n"
+        "  - phase_2_gate\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "disabled_recipe"
+    )
+
+    assert passed is False
+    assert "non-dispatchable" in message
+    assert "dispatch_enabled=false" in message
+    assert "dispatch_blockers" in message
+    assert "operator_authorize.py would refuse" in message
+
+
+def test_recipe_state_accepts_implemented_dispatchable_recipe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "trainer.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    return 0\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "enabled_recipe",
+        "schema_version: 1\n"
+        "name: enabled_recipe\n"
+        "research_only: false\n"
+        "dispatch_enabled: true\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "enabled_recipe"
+    )
+
+    assert passed is True
+    assert "contest-CUDA dispatchable" in message
+
+
+def test_recipe_state_accepts_notimplemented_when_recipe_non_dispatchable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    trainer = tmp_path / "trainer.py"
+    trainer.write_text(
+        "def _full_main(args):\n"
+        "    raise NotImplementedError('phase gate')\n",
+        encoding="utf-8",
+    )
+    _write_recipe(
+        tmp_path,
+        "research_recipe",
+        "schema_version: 1\n"
+        "name: research_recipe\n"
+        "research_only: true\n",
+    )
+
+    passed, message = module.check_recipe_status_consistent_with_trainer_state(
+        trainer, "research_recipe"
+    )
+
+    assert passed is True
+    assert "transparent non-dispatchable" in message

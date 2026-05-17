@@ -32082,7 +32082,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "_full_main lifted from NotImplementedError to PR95-paradigm binding in experiments/train_substrate_time_traveler_l5_z6.py; 24 dedicated lift tests pass (src/tac/tests/test_train_time_traveler_l5_z6_full_main_lift.py); 35 scaffold tests still pass; 74 total Z6 tests green; Catalog #310/#311/#312 evidence verified; local pre-deploy 9/9 PASS; Catalog #270 Tier 1/2/3 all complete"
+          "evidence": "_full_main lifted from NotImplementedError to PR95-paradigm binding in experiments/train_substrate_time_traveler_l5_z6.py; 24 dedicated lift tests pass; 35 scaffold tests still pass; 74 total Z6 tests green; Catalog #310/#311/#312 evidence verified; Catalog #270 Tier 1/2/3 all complete; 2026-05-17 correction: local_predeploy dispatchability proof intentionally fails until recipe blockers clear; see .omx/research/l5_phase1b_predeploy_claim_verification_20260517_codex.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -32097,8 +32097,8 @@
           "evidence": ""
         },
         "strict_preflight": {
-          "status": true,
-          "evidence": "local_pre_deploy_check passes 9/9 INCLUDING Catalog #270 dispatch_optimization_protocol (Tier 1=5/5 + Tier 2=8/8 + Tier 3=5/5)"
+          "status": false,
+          "evidence": ""
         },
         "three_clean_review": {
           "status": false,
@@ -32205,5 +32205,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T02:30:08Z"
+  "updated_at": "2026-05-17T02:38:39Z"
 }

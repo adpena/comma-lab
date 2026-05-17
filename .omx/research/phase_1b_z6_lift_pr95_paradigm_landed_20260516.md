@@ -1,7 +1,7 @@
 # Phase 1b Z6 _full_main lift landed 2026-05-16
 
 **Lane:** `lane_phase_1b_z6_lift_20260516`
-**Status:** L1 (impl_complete=true / strict_preflight=true / deploy_runbook=true)
+**Status:** L1 (impl_complete=true / strict_preflight=false after 2026-05-17 dispatchability correction / deploy_runbook=true)
 **Subagent:** `z6_lift_subagent_20260516`
 **Predecessor:** none
 **Parent directive:** Phase 1b Z6 implementation-lift per the operator's PR95-paradigm directive (Phase 1a sister owns dispatch on STC v2 + NSCS06 v8; LIFT-Rudin sister owns Rudin trainer lift; LIFT-ATW-v2 sister owns ATW v2 lift; this lane owns ONLY Z6).
@@ -30,7 +30,7 @@ ingredients per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
 | **(1) Uniqueness** | Catalog #310 PRIMARY class-shift — Z6 is the architectural CORE substrate; NOT a bolt-on. The FiLM-conditioned next-frame predictor + autoregressive latent unroll + archived residuals form the primary architecture (`Z6PredictiveCodingSubstrate(cfg)` constructed inside `_full_main`; `substrate.reconstruct_pair(...)` IS the per-step forward; `substrate.parameters()` IS the trained surface). |
 | **(2) Beauty / elegance** | ~600 LOC `_full_main` body; ~250 LOC helpers (ego-motion derivation + runtime emit + val loop). Single canonical insertion point per layer. Canonical-vs-unique decisions per layer documented inline. PR95-style reviewable in 30 sec. |
 | **(3) Distinctness** | UNIQUE-AND-COMPLETE-PER-METHOD: Z6 score-aware loss FORKS canonical via Z6PredictiveCodingScoreAwareLoss + Rao-Ballard residual-entropy term; ego-motion-conditioning is substrate-distinguishing surface (no canonical helper exists for FOE-prior derivation — that IS the substrate engineering). |
-| **(4) Rigor** | 6 premise verifications BEFORE edit (Catalog #229); 74 dedicated tests pass (35 scaffold + 24 lift + 15 probe/driver); local pre-deploy 9/9 PASS; Catalog #270 Tier 1/2/3 all complete; checkpoint discipline every milestone per Catalog #206; commit-serializer + --expected-content-sha256 per Catalog #117/#157/#174. |
+| **(4) Rigor** | 6 premise verifications BEFORE edit (Catalog #229); 74 dedicated tests pass (35 scaffold + 24 lift + 15 probe/driver); Catalog #270 Tier 1/2/3 all complete; 2026-05-17 correction: local pre-deploy now correctly fails closed while the recipe remains `research_only=true` / `dispatch_enabled=false`; checkpoint discipline every milestone per Catalog #206; commit-serializer + --expected-content-sha256 per Catalog #117/#157/#174. |
 | **(5) Optimization per technique** | Tier 1: autocast_fp16/TF32/torch.compile/no_grad/canonical scorer-loss helper ALL declared (5/5). Tier 2: NVML env block + min_vram_gb + min_smoke_gpu + video_input_strategy + pyav_decode_strategy + target_modes ALL declared (8/8). Tier 3: canonical auth_eval helper + inflate device + scorer loader order + recipe consistency + no phantom filename (5/5). |
 | **(6) Stack-of-stacks composability** | Z6 is the FIRST Z-variant of the F-asymptote staircase; sister Z7/Z8 expand to multi-step + hierarchical (canonical quadruple per Catalog #312) on the SAME substrate basis. Composition orthogonality via the cooperative-receiver theorem ensures additive ΔS contributions. |
 | **(7) Deterministic reproducibility** | Seed-pinned via `_pin_seeds` (random + numpy + torch + torch.cuda); Z6PCWM1 archive byte-stable via sorted-keys JSON + fp16 cast on CPU + fixed brotli quality=9 + deterministic ZIP per Catalog #19. Round-trip stability proven by 35 scaffold tests + dedicated archive_roundtrip_stability_post_pack lift test. |
@@ -75,7 +75,7 @@ ingredients per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
 
 ```
 [local-pre-deploy] validating: train_substrate_time_traveler_l5_z6.py  recipe=substrate_time_traveler_l5_z6_modal_t4_dispatch
-[local-pre-deploy] mode: WARN-ONLY
+[local-pre-deploy] mode: STRICT (exit 1 on fail)
   ✓ [py_compile] PASS
   ✓ [trainer_importable] PASS
   ✓ [full_main_implemented] PASS — _full_main appears implemented
@@ -83,15 +83,23 @@ ingredients per CLAUDE.md "HNeRV / leaderboard-implementation parity discipline"
   ✓ [auth_eval_reachability] PASS — canonical helper
   ✓ [canonical_inflate_device] PASS — no inline torch.device cuda-fallback
   ✓ [deterministic_zip] PASS
-  ✓ [recipe_status_consistent_with_trainer_state] PASS
+  ✗ [recipe_status_consistent_with_trainer_state] FAIL — trainer _full_main is implemented but recipe is still non-dispatchable (research_only=true, dispatch_enabled=false, dispatch_blockers)
   ✓ [dispatch_optimization_protocol] PASS — Tier 1/2/3 all complete (tier1=5/5 / tier2=8/8 / tier3=5/5)
-[local-pre-deploy] ALL 9 CHECKS PASSED. Safe to dispatch.
+[local-pre-deploy] 1 CHECK(S) FAILED: recipe_status_consistent_with_trainer_state
 ```
+
+2026-05-17 correction: the earlier "ALL 9 CHECKS PASSED. Safe to dispatch"
+receipt was false authority. `operator_authorize.py --dry-run` correctly
+refuses this recipe with `dispatch_enabled=false` and the declared
+`dispatch_blockers`. `local_pre_deploy_check.py` has been corrected to match
+that operator-authorize decision. The Z6 implementation remains live, but the
+recipe is intentionally non-dispatchable until Phase 2 and smoke-before-full
+gates clear.
 
 ## Lane gates marked
 
 - `impl_complete=true` (`_full_main` lifted; 24 dedicated lift tests pass)
-- `strict_preflight=true` (local pre-deploy 9/9 + Catalog #270 all complete)
+- `strict_preflight=false` (Catalog #270 remains green, but local pre-deploy now fails closed until recipe dispatch blockers clear)
 - `deploy_runbook=true` (pre-existing `scripts/remote_lane_substrate_time_traveler_l5_z6.sh`)
 - `real_archive_empirical=false` — pending Phase 2 council CONSENSUS + smoke-before-full at $1 Modal T4
 - `contest_cuda=false` — pending paired CPU/CUDA empirical anchor
