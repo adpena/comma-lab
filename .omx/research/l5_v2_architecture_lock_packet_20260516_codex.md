@@ -21,6 +21,18 @@
 - `first_anchor_timing_smoke_artifact_valid`: `False`
 - `anchor_pair_evidence_valid`: `True`
 
+## Prediction Band
+
+- rank_reward_allowed: `False`
+- dispatch_planning_allowed: `True`
+- verdict_blockers: `['prediction_band_baseline_missing', 'prediction_band_baseline_custody_missing', 'prediction_band_baseline_artifact_missing', 'prediction_band_empirical_anchor_missing']`
+- diagnostic_anchor_pair_exists: `True`
+- diagnostic_anchor_pair_valid: `True`
+- diagnostic_anchor_classification: `paired_exact_measured_config_failure_non_promotional_anchor`
+- diagnostic_anchor_axes: `['contest_cpu', 'contest_cuda']`
+- diagnostic_anchor_scores: `{'contest_cpu': 3.8987840060549908, 'contest_cuda': 3.9007398365396795}`
+- diagnostic_anchor_preserved_but_not_rankable: `True`
+
 ## Lightning Paired-Axis Dry-Run Plan
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`

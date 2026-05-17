@@ -1462,9 +1462,181 @@ def _require_literal_json_bool(value: object, *, field_name: str) -> bool:
     raise ValueError(f"{field_name} must be a literal JSON boolean")
 
 
-def l5_v2_prediction_band_verdict() -> dict[str, Any]:
+def _l5_v2_prediction_band_diagnostic_anchor_pair_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = repo_root / TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH
+    blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": "l5_v2_prediction_band_diagnostic_anchor_pair_status_v1",
+            "artifact_path": TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH,
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "artifact_sha256": "",
+            "classification": "",
+            "paired_axes": [],
+            "per_axis_scores": {},
+            "archive_sha256": "",
+            "runtime_content_tree_sha256": "",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "diagnostic_only": True,
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_json_invalid")
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_not_object")
+
+    if payload:
+        if payload.get("schema") != "l5_v2_tt5l_paired_exact_anchor_pair_v1":
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_schema_mismatch")
+        if payload.get("gate_id") != "exact_anchor_or_diagnostic_pair":
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_gate_mismatch")
+        if payload.get("predicate_id") != TT5L_PAIRED_EXACT_ANCHOR_PAIR_PREDICATE_ID:
+            blockers.append(
+                "l5_v2_prediction_band_diagnostic_anchor_pair_predicate_mismatch"
+            )
+        if payload.get("score_claim") is not False:
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_score_claim")
+        if payload.get("promotion_eligible") is not False:
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_promotional")
+        if payload.get("rank_or_kill_eligible") is not False:
+            blockers.append("l5_v2_prediction_band_diagnostic_anchor_pair_rankable")
+        blockers.extend(
+            _gate_semantic_blockers(
+                "exact_anchor_or_diagnostic_pair",
+                payload,
+                repo_root=repo_root,
+            )
+        )
+
+    rows = payload.get("anchor_pair") if payload else []
+    axis_rows = [row for row in rows if isinstance(row, Mapping)]
+    per_axis_scores = {
+        str(row.get("axis") or ""): row.get("score")
+        for row in axis_rows
+        if str(row.get("axis") or "")
+    }
+    paired_axes = sorted(per_axis_scores)
+    archive_sha256 = str(payload.get("archive_sha256") or "").strip() if payload else ""
+    runtime_content_tree_sha256 = (
+        str(payload.get("runtime_content_tree_sha256") or "").strip()
+        if payload
+        else ""
+    )
+    if payload and not _SHA256_HEX_RE.fullmatch(archive_sha256):
+        blockers.append("l5_v2_prediction_band_diagnostic_anchor_archive_sha_invalid")
+    if payload and not _SHA256_HEX_RE.fullmatch(runtime_content_tree_sha256):
+        blockers.append(
+            "l5_v2_prediction_band_diagnostic_anchor_runtime_content_sha_invalid"
+        )
+
+    return {
+        "schema": "l5_v2_prediction_band_diagnostic_anchor_pair_status_v1",
+        "artifact_path": TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH,
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not blockers,
+        "artifact_sha256": _sha256_file(artifact_path) if artifact_path.is_file() else "",
+        "classification": str(payload.get("classification") or "") if payload else "",
+        "paired_axes": paired_axes,
+        "per_axis_scores": per_axis_scores,
+        "archive_sha256": archive_sha256,
+        "runtime_content_tree_sha256": runtime_content_tree_sha256,
+        "score_claim": payload.get("score_claim") is True if payload else False,
+        "promotion_eligible": (
+            payload.get("promotion_eligible") is True if payload else False
+        ),
+        "rank_or_kill_eligible": (
+            payload.get("rank_or_kill_eligible") is True if payload else False
+        ),
+        "diagnostic_only": True,
+        "blockers": list(dict.fromkeys(blockers)),
+    }
+
+
+def l5_v2_prediction_band_status(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Return the rank-blocked prediction band plus preserved diagnostic anchors."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    payload = l5_v2_prediction_band_payload()
+    verdict = l5_v2_prediction_band_verdict(repo_root=resolved_repo_root)
+    diagnostic_anchor_pair_status = (
+        _l5_v2_prediction_band_diagnostic_anchor_pair_status(
+            repo_root=resolved_repo_root,
+        )
+    )
+    baseline = payload["baseline"]
+    empirical_anchor = payload["empirical_anchor"]
+    blockers = [
+        str(blocker) for blocker in verdict.get("blockers", []) if str(blocker)
+    ]
+    return {
+        "schema": "l5_v2_prediction_band_status_v1",
+        "payload": payload,
+        "verdict": verdict,
+        "rank_reward_allowed": verdict.get("valid_for_rank_reward") is True,
+        "dispatch_planning_allowed": (
+            verdict.get("valid_for_dispatch_planning") is True
+        ),
+        "promotion_eligible": verdict.get("valid_for_promotion") is True,
+        "baseline_status": {
+            "label": baseline["label"],
+            "axis": baseline["axis"],
+            "score": baseline["score"],
+            "archive_sha256": baseline["archive_sha256"],
+            "runtime_tree_sha256": baseline["runtime_tree_sha256"],
+            "artifact_path": baseline["artifact_path"],
+            "complete": "prediction_band_baseline_missing" not in blockers,
+            "custody_complete": (
+                "prediction_band_baseline_custody_missing" not in blockers
+                and "prediction_band_baseline_artifact_missing" not in blockers
+            ),
+        },
+        "empirical_anchor_status": {
+            "status": empirical_anchor["status"],
+            "anchor_count": len(empirical_anchor["anchors"]),
+            "rankable_anchor_missing": (
+                "prediction_band_empirical_anchor_missing" in blockers
+            ),
+        },
+        "diagnostic_anchor_pair_status": diagnostic_anchor_pair_status,
+        "diagnostic_anchor_preserved_but_not_rankable": (
+            diagnostic_anchor_pair_status["artifact_valid"] is True
+            and verdict.get("valid_for_rank_reward") is not True
+        ),
+        "blockers": blockers,
+        "annotations": [
+            str(annotation)
+            for annotation in verdict.get("annotations", [])
+            if str(annotation)
+        ],
+    }
+
+
+def l5_v2_prediction_band_verdict(
+    *,
+    repo_root: str | Path | None = None,
+) -> dict[str, Any]:
     """Return the current validation verdict for the L5 v2 prediction band."""
 
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
     payload = l5_v2_prediction_band_payload()
     band = PredictionBand(
         band_id=str(payload["band_id"]),
@@ -1497,7 +1669,7 @@ def l5_v2_prediction_band_verdict() -> dict[str, Any]:
             expected_subject_id=SUBJECT_ID,
             expected_low=PREDICTED_DELTA_BAND[0],
             expected_high=PREDICTED_DELTA_BAND[1],
-            artifact_base_dir=_default_repo_root(),
+            artifact_base_dir=resolved_repo_root,
         )
     )
 
@@ -6214,7 +6386,10 @@ def l5_v2_dispatch_readiness(
         evidence_blockers.extend(gate_claim_blockers)
     all_gate_claims_satisfied = all(gate["evidence_valid"] for gate in gates)
     all_gate_evidence_valid = all(gate["evidence_valid"] for gate in gates)
-    prediction_band_verdict = l5_v2_prediction_band_verdict()
+    prediction_band_status = l5_v2_prediction_band_status(
+        repo_root=resolved_repo_root,
+    )
+    prediction_band_verdict = prediction_band_status["verdict"]
     prediction_band_rank_ready_raw = prediction_band_verdict.get(
         "valid_for_rank_reward"
     )
@@ -6261,6 +6436,7 @@ def l5_v2_dispatch_readiness(
             repo_root=resolved_repo_root,
         ),
         "prediction_band_verdict": prediction_band_verdict,
+        "prediction_band_status": prediction_band_status,
         "prediction_band_rank_ready": prediction_band_rank_ready,
         "packetir_stack_evidence": l5_v2_packetir_stack_evidence_payload(
             repo_root=resolved_repo_root,
@@ -6395,6 +6571,7 @@ def l5_v2_architecture_lock_packet(
         "required_checks": required_checks,
         "architecture_lock_blockers": architecture_lock_blockers,
         "next_non_pr106_l5_action": tt5l.get("next_non_pr106_l5_action", {}),
+        "prediction_band_status": readiness.get("prediction_band_status", {}),
         "tt5l_campaign_readiness": tt5l,
         "readiness_blockers": list(readiness.get("blockers", [])),
         "authority_semantics": (
@@ -6418,6 +6595,17 @@ def render_l5_v2_architecture_lock_packet_markdown(
         next_action = {}
     if not isinstance(tt5l, Mapping):
         tt5l = {}
+    prediction_band_status = packet.get("prediction_band_status")
+    if not isinstance(prediction_band_status, Mapping):
+        prediction_band_status = {}
+    prediction_band_verdict = prediction_band_status.get("verdict")
+    if not isinstance(prediction_band_verdict, Mapping):
+        prediction_band_verdict = {}
+    diagnostic_anchor_pair_status = prediction_band_status.get(
+        "diagnostic_anchor_pair_status"
+    )
+    if not isinstance(diagnostic_anchor_pair_status, Mapping):
+        diagnostic_anchor_pair_status = {}
     probe_gate_artifact_status = tt5l.get("probe_gate_artifact_status")
     if not isinstance(probe_gate_artifact_status, Mapping):
         probe_gate_artifact_status = {}
@@ -6463,6 +6651,50 @@ def render_l5_v2_architecture_lock_packet_markdown(
     ]
     for check_id, passed in checks.items():
         lines.append(f"- `{check_id}`: `{passed}`")
+    if prediction_band_status:
+        lines.extend(
+            [
+                "",
+                "## Prediction Band",
+                "",
+                (
+                    "- rank_reward_allowed: "
+                    f"`{prediction_band_status.get('rank_reward_allowed')}`"
+                ),
+                (
+                    "- dispatch_planning_allowed: "
+                    f"`{prediction_band_status.get('dispatch_planning_allowed')}`"
+                ),
+                (
+                    "- verdict_blockers: "
+                    f"`{prediction_band_verdict.get('blockers', [])}`"
+                ),
+                (
+                    "- diagnostic_anchor_pair_exists: "
+                    f"`{diagnostic_anchor_pair_status.get('artifact_exists')}`"
+                ),
+                (
+                    "- diagnostic_anchor_pair_valid: "
+                    f"`{diagnostic_anchor_pair_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- diagnostic_anchor_classification: "
+                    f"`{diagnostic_anchor_pair_status.get('classification', '')}`"
+                ),
+                (
+                    "- diagnostic_anchor_axes: "
+                    f"`{diagnostic_anchor_pair_status.get('paired_axes', [])}`"
+                ),
+                (
+                    "- diagnostic_anchor_scores: "
+                    f"`{diagnostic_anchor_pair_status.get('per_axis_scores', {})}`"
+                ),
+                (
+                    "- diagnostic_anchor_preserved_but_not_rankable: "
+                    f"`{prediction_band_status.get('diagnostic_anchor_preserved_but_not_rankable')}`"
+                ),
+            ]
+        )
     if paired_axis_plan_status:
         lines.extend(
             [
@@ -6718,6 +6950,7 @@ __all__ = [
     "l5_v2_packetir_stack_evidence_payload",
     "l5_v2_pr106_stack_cell_candidates",
     "l5_v2_prediction_band_payload",
+    "l5_v2_prediction_band_status",
     "l5_v2_prediction_band_verdict",
     "l5_v2_probe_gate_artifact_status",
     "l5_v2_required_gates",

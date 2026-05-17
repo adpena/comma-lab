@@ -199,6 +199,151 @@
     "score_lowering_unblocker": "TT5L has a byte-closed archive/runtime work unit, but the Modal provider path is currently blocked before job spawn by workspace billing limit. This is provider capacity, not a method result."
   },
   "planning_only": true,
+  "prediction_band_status": {
+    "annotations": [],
+    "baseline_status": {
+      "archive_sha256": "",
+      "artifact_path": "",
+      "axis": "mixed",
+      "complete": false,
+      "custody_complete": false,
+      "label": "axis_matched_frontier_baseline_pending",
+      "runtime_tree_sha256": "",
+      "score": null
+    },
+    "blockers": [
+      "prediction_band_baseline_missing",
+      "prediction_band_baseline_custody_missing",
+      "prediction_band_baseline_artifact_missing",
+      "prediction_band_empirical_anchor_missing"
+    ],
+    "diagnostic_anchor_pair_status": {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_tt5l_paired_exact_anchor_pair_20260516_codex.json",
+      "artifact_sha256": "a390882dadc6160e40f3745faf49c4002de4aa4e64e864ecb54dab4fa9d0dc85",
+      "artifact_valid": true,
+      "blockers": [],
+      "classification": "paired_exact_measured_config_failure_non_promotional_anchor",
+      "diagnostic_only": true,
+      "paired_axes": [
+        "contest_cpu",
+        "contest_cuda"
+      ],
+      "per_axis_scores": {
+        "contest_cpu": 3.8987840060549908,
+        "contest_cuda": 3.9007398365396795
+      },
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "runtime_content_tree_sha256": "630970e9dc78c6e2f8dc2ed8d1e22503ea7d0cab17b4da5615a8a1c5b83ac718",
+      "schema": "l5_v2_prediction_band_diagnostic_anchor_pair_status_v1",
+      "score_claim": false
+    },
+    "diagnostic_anchor_preserved_but_not_rankable": true,
+    "dispatch_planning_allowed": true,
+    "empirical_anchor_status": {
+      "anchor_count": 0,
+      "rankable_anchor_missing": true,
+      "status": "pending"
+    },
+    "payload": {
+      "axis": "mixed",
+      "band_id": "time_traveler_l5_v2_delta_prior_20260516",
+      "band_kind": "delta_score",
+      "band_source": {
+        "claim_scope": "planning prior for L5 v2 staircase only; not score evidence until byte-closed paired anchors exist",
+        "local_ledger_paths": [
+          "file:.omx/research/time_traveler_architecture_reverse_engineered_20260513.md",
+          "file:.omx/research/campaign_lane_c2_z7_mature_predictive_receiver_l5_20260514.md",
+          "file:.omx/research/l5_v2_paper_fidelity_research_basis_wire_in_20260516_codex.md",
+          "file:.omx/research/l5_v2_latest_source_basis_wirein_20260516_codex.md",
+          "file:.omx/research/l5_v2_latest_neural_video_codec_source_basis_20260516_codex.md",
+          "file:.omx/research/l5_v2_source_basis_sidecar_20260516_codex.md",
+          "file:.omx/research/tt5l_sideinfo_consumption_proof_20260516_codex.md"
+        ],
+        "research_basis_ids": [
+          "rao_ballard_1999",
+          "friston_free_energy_2010",
+          "dreamerv3_2023",
+          "ha_schmidhuber_world_models_2018",
+          "vjepa2_2025",
+          "vjepa2_1_dense_2026",
+          "teconerv_2026",
+          "neural_dsc_2021",
+          "dcvc_2021",
+          "fvc_2021",
+          "scale_space_flow_2020",
+          "video_interpolation_codec_2018",
+          "pnvc_2025",
+          "dcvc_rt_2025",
+          "unified_intra_inter_nvc_2025",
+          "glvc_2025",
+          "gnvc_vd_2025",
+          "snerv_spectra_2025",
+          "metanerv_2025",
+          "c3_neural_compression_2024",
+          "atick_redlich_1990",
+          "wyner_ziv_1976",
+          "slepian_wolf_1973",
+          "lu_dvc_2019",
+          "rissanen_mdl_1978",
+          "mackay_itila_2003",
+          "tishby_information_bottleneck_1999",
+          "tishby_zaslavsky_2015",
+          "balle_hyperprior_2018",
+          "elic_2022",
+          "checkerboard_context_2021",
+          "rdp_tradeoff_2019",
+          "coin_2021",
+          "hnerv_2023"
+        ]
+      },
+      "baseline": {
+        "archive_sha256": "",
+        "artifact_path": "",
+        "axis": "mixed",
+        "label": "axis_matched_frontier_baseline_pending",
+        "runtime_tree_sha256": "",
+        "score": null
+      },
+      "empirical_anchor": {
+        "anchors": [],
+        "status": "pending"
+      },
+      "high": -0.02,
+      "low": -0.05,
+      "planning_only": true,
+      "score_claim": false,
+      "subject_id": "time_traveler_l5_autonomy",
+      "supersession": {
+        "reason": "",
+        "status": "active",
+        "superseded_by": ""
+      },
+      "uncertainty": {
+        "confidence_tag": "pre_anchor",
+        "method": "source-backed-prior-with-no-l5-v2-anchor",
+        "n_empirical_anchors": 0,
+        "notes": "Band remains rank-blocked until L5 v2 empirical anchors land."
+      }
+    },
+    "promotion_eligible": false,
+    "rank_reward_allowed": false,
+    "schema": "l5_v2_prediction_band_status_v1",
+    "verdict": {
+      "annotations": [],
+      "blockers": [
+        "prediction_band_baseline_missing",
+        "prediction_band_baseline_custody_missing",
+        "prediction_band_baseline_artifact_missing",
+        "prediction_band_empirical_anchor_missing"
+      ],
+      "valid_for_dispatch_planning": true,
+      "valid_for_promotion": false,
+      "valid_for_rank_reward": false
+    }
+  },
   "promotion_eligible": false,
   "rank_or_kill_eligible": false,
   "readiness_architecture_lock_allowed": false,
@@ -841,7 +986,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "50e36f65c662eb5f4233156eb362d3a77bae811c",
+      "current_head_commit": "da5ce7f52b7be480e67378a69dc651e8736feb6b",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",

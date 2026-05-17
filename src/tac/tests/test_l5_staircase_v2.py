@@ -35,6 +35,7 @@ from tac.optimization.l5_staircase_v2 import (
     l5_v2_packetir_stack_evidence_payload,
     l5_v2_pr106_stack_cell_candidates,
     l5_v2_prediction_band_payload,
+    l5_v2_prediction_band_status,
     l5_v2_prediction_band_verdict,
     l5_v2_required_gates,
     l5_v2_research_basis_ids,
@@ -1717,6 +1718,74 @@ def test_l5_v2_prediction_band_is_source_backed_but_rank_blocked() -> None:
     assert "prediction_band_baseline_missing" in verdict["blockers"]
     assert "prediction_band_empirical_anchor_missing" in verdict["blockers"]
     assert "prediction_band_research_basis_missing" not in verdict["blockers"]
+
+
+def test_l5_v2_prediction_band_status_preserves_diagnostic_anchor_pair(
+    tmp_path: Path,
+) -> None:
+    payload = _gate_artifact_payload(
+        "exact_anchor_or_diagnostic_pair",
+        repo_root=tmp_path,
+    )
+    payload["schema"] = "l5_v2_tt5l_paired_exact_anchor_pair_v1"
+    payload["predicate_id"] = l5_v2.TT5L_PAIRED_EXACT_ANCHOR_PAIR_PREDICATE_ID
+    payload["pair_group_id"] = "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+    payload["classification"] = "paired_exact_measured_config_failure_non_promotional_anchor"
+    payload["archive_sha256"] = _sha(11)
+    payload["runtime_content_tree_sha256"] = _sha(13)
+    payload["score_claim"] = False
+    payload["promotion_eligible"] = False
+    payload["rank_or_kill_eligible"] = False
+    payload["ready_for_exact_eval_dispatch"] = False
+    rows = payload["anchor_pair"]
+    assert isinstance(rows, list)
+    for row in rows:
+        assert isinstance(row, dict)
+        row["promotion_eligible"] = False
+        row["rank_or_kill_eligible"] = False
+        row["ready_for_exact_eval_dispatch"] = False
+        for key in ("artifact_path", "log_path", "inflated_outputs_manifest_path"):
+            custody_path = tmp_path / str(row[key])
+            custody_path.parent.mkdir(parents=True, exist_ok=True)
+            if key == "inflated_outputs_manifest_path":
+                custody_path.write_text(
+                    json.dumps(
+                        {"aggregate_sha256": row["inflated_raw_output_aggregate_sha256"]},
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            else:
+                custody_path.write_text(
+                    f"prediction band diagnostic anchor {row['axis']} {key}\n",
+                    encoding="utf-8",
+                )
+
+    anchor_path = tmp_path / l5_v2.TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH
+    anchor_path.parent.mkdir(parents=True, exist_ok=True)
+    anchor_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    status = l5_v2_prediction_band_status(repo_root=tmp_path)
+    diagnostic = status["diagnostic_anchor_pair_status"]
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+
+    assert status["rank_reward_allowed"] is False
+    assert "prediction_band_baseline_missing" in status["blockers"]
+    assert "prediction_band_empirical_anchor_missing" in status["blockers"]
+    assert status["diagnostic_anchor_preserved_but_not_rankable"] is True
+    assert diagnostic["artifact_valid"] is True
+    assert diagnostic["paired_axes"] == ["contest_cpu", "contest_cuda"]
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["promotion_eligible"] is False
+    assert diagnostic["rank_or_kill_eligible"] is False
+    assert packet["prediction_band_status"]["diagnostic_anchor_pair_status"][
+        "artifact_valid"
+    ] is True
+    assert "## Prediction Band" in report
+    assert "- diagnostic_anchor_pair_valid: `True`" in report
+    assert "paired_exact_measured_config_failure_non_promotional_anchor" in report
 
 
 def test_l5_v2_packetir_stack_evidence_is_axis_labelled_and_nonpromotional() -> None:
