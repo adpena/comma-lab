@@ -1,0 +1,70 @@
+{
+  "schema": "l5_v2_subagent_risk_review_v1",
+  "recorded_at_utc": "2026-05-17T05:56:58Z",
+  "recorded_by": "codex",
+  "subagent_id": "019e3463-b4f4-7b13-b47b-d4f2fdb5bd72",
+  "subagent_nickname": "Volta the 3rd",
+  "mode": "read_only_review",
+  "edited_files": [],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "classification": "risk_review_signal_preserved_no_score_claim",
+  "findings": [
+    {
+      "severity": "high",
+      "summary": "TT5L side-info usefulness remains unproven at full trained shape.",
+      "details": "The full 600-pair recovered TT5L packet has 0/27000 nonzero side-info values. Current code can emit nonzero side-info in a 2-pair macOS-CPU advisory smoke, but no full 600-pair trained archive proves useful nonzero side-info yet.",
+      "affected_artifacts": [
+        ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",
+        ".omx/research/l5_v2_tt5l_current_code_nonzero_sideinfo_*"
+      ]
+    },
+    {
+      "severity": "high",
+      "summary": "Tracked custody artifacts lag current no-op hardening.",
+      "details": "Current tt5l_sideinfo_variant_packets.py records source-to-variant archive/member/side-section change booleans, but tracked variant packet JSONs lack those fields. Durable .omx/research artifacts should be regenerated before using them for dispatch or architecture-lock evidence.",
+      "affected_artifacts": [
+        "src/tac/optimization/tt5l_sideinfo_variant_packets.py",
+        ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
+        ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json"
+      ]
+    },
+    {
+      "severity": "medium",
+      "summary": "Provider and axis schemas are easy to misfeed.",
+      "details": "Result review packets use score_axis while effect-curve cells require axis plus variant. Seed-cell wrappers normalize one path, but direct reviewed-result ingestion can still produce missing-axis or missing-variant failures. Pair identity must remain validator-enforced rather than inferred.",
+      "affected_artifacts": [
+        "src/tac/optimization/l5_v2_sideinfo_effect_curve.py",
+        "src/tac/optimization/l5_v2_measurement_schedule.py"
+      ]
+    },
+    {
+      "severity": "medium",
+      "summary": "Architecture lock remains correctly blocked.",
+      "details": "The architecture-lock packet still has architecture_lock_allowed=false. Blockers include missing valid side-info effect curve, missing first-anchor timing smoke, missing paired-axis/probe evidence, Modal billing-limit blocker, and Lightning alternate-provider prerequisites.",
+      "affected_artifacts": [
+        ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json"
+      ]
+    }
+  ],
+  "inspected_artifacts": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".omx/state/dykstra_feasibility_time_traveler_l5.json",
+    ".omx/state/active_lane_dispatch_claims.md",
+    ".omx/state/lane_registry.json",
+    ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",
+    ".omx/research/l5_v2_tt5l_sideinfo_variant_packets_20260517_codex.json",
+    ".omx/research/l5_v2_tt5l_current_code_nonzero_sideinfo_*",
+    ".omx/research/l5_v2_architecture_lock_packet_20260516_codex.json",
+    "src/tac/optimization/l5_v2_sideinfo_effect_curve.py",
+    "src/tac/optimization/l5_v2_measurement_schedule.py",
+    "src/tac/optimization/tt5l_sideinfo_variant_packets.py"
+  ],
+  "recommended_next_actions": [
+    "Produce a full 600-pair current-code TT5L trained archive with nonzero side-info.",
+    "Rebuild zero, random_lsb, shuffled, trained, and ablated variants from that source.",
+    "Run claimed paired contest-CPU and contest-CUDA exact eval for all five cells.",
+    "Regenerate tracked variant, effect-curve, and materialized-work-unit artifacts from current code so .omx/research carries the hardened byte-change/no-op evidence before any new dispatch or architecture-lock refresh."
+  ]
+}
