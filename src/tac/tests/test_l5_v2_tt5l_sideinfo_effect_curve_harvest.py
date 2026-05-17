@@ -76,6 +76,10 @@ def _write_exact_eval_artifact(
     pair_group_id: str | None = None,
     run_id: str | None = None,
     runtime_content_tree_sha256: str | None = None,
+    inflate_device: str | None = None,
+    eval_device: str | None = None,
+    hardware: str | None = None,
+    gpu_model: str | None = None,
 ) -> Path:
     local_dir = root / str(cell["local_artifact_dir"])
     artifact = local_dir / filename
@@ -94,6 +98,10 @@ def _write_exact_eval_artifact(
     score = contest_score(seg_dist, pose_dist, archive_bytes)
     axis = str(cell["axis"])
     is_cuda = axis == "contest_cuda"
+    observed_inflate_device = inflate_device or ("cuda" if is_cuda else "cpu")
+    observed_eval_device = eval_device or ("cuda" if is_cuda else "cpu")
+    observed_hardware = hardware or ("Tesla T4" if is_cuda else "Linux x86_64")
+    observed_gpu_model = gpu_model if gpu_model is not None else ("Tesla T4" if is_cuda else "")
     pair = pair_group_id or str(cell["pair_group_id"])
     run = run_id or str(cell["run_id"])
     _write_json(
@@ -107,8 +115,8 @@ def _write_exact_eval_artifact(
             "provenance": {
                 "archive_sha256": archive_sha256 or cell["archive_sha256"],
                 "device": "cuda" if is_cuda else "cpu",
-                "gpu_model": "Tesla T4" if is_cuda else "",
-                "hardware": "Tesla T4" if is_cuda else "Linux x86_64",
+                "gpu_model": observed_gpu_model,
+                "hardware": observed_hardware,
                 "inflate_runtime_manifest": {"runtime_tree_sha256": _sha(seed + 1)},
                 "platform_machine": "x86_64",
                 "platform_system": "Linux",
@@ -125,8 +133,8 @@ def _write_exact_eval_artifact(
             "raw_output_aggregate_sha256": raw_sha,
             "runtime_content_tree_sha256": runtime_content_tree_sha256 or _sha(seed + 2),
             "score_axis": score_axis or axis,
-            "inflate_device": "cuda" if is_cuda else "cpu",
-            "eval_device": "cuda" if is_cuda else "cpu",
+            "inflate_device": observed_inflate_device,
+            "eval_device": observed_eval_device,
         },
     )
     return artifact
@@ -372,6 +380,51 @@ def test_harvest_cells_block_axis_pair_and_run_mismatch_before_metadata_fallback
     assert "harvested_exact_eval_run_id_mismatch:trained:contest_cuda" in trained_cuda[
         "blockers"
     ]
+
+
+def test_harvest_cells_block_device_and_hardware_axis_mismatch(
+    tmp_path: Path,
+) -> None:
+    plan_path, plan = _plan(tmp_path)
+    target = next(
+        cell
+        for cell in plan["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+    _write_exact_eval_artifact(
+        tmp_path,
+        target,
+        score_axis="contest_cuda",
+        inflate_device="cpu",
+        eval_device="cpu",
+        hardware="Linux x86_64",
+        gpu_model="",
+    )
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+    trained_cuda = next(
+        cell
+        for cell in payload["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+
+    assert (
+        "harvested_exact_eval_custody_hardware_not_cuda:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert (
+        "harvested_exact_eval_custody_inflate_device_not_cuda:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert (
+        "harvested_exact_eval_custody_eval_device_not_cuda:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert payload["ready_for_effect_curve_build"] is False
 
 
 def test_harvest_cells_block_wrong_plan_schema_and_extra_cells(tmp_path: Path) -> None:

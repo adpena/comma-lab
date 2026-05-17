@@ -72,6 +72,7 @@ def test_scorer_response_present_rate_negative_classifies_byte_overpay() -> None
     report = compare_score_response(
         baseline=baseline,
         candidate=candidate,
+        mode="candidate",
         min_total_improvement=0.001,
         min_scorer_term_improvement=0.0005,
     )
@@ -86,6 +87,7 @@ def test_rate_only_improvement_is_not_scorer_response() -> None:
     report = compare_score_response(
         baseline=baseline,
         candidate=candidate,
+        mode="candidate",
         min_total_improvement=0.001,
         min_scorer_term_improvement=0.0005,
     )
@@ -123,6 +125,32 @@ def test_ablation_mode_requires_runtime_match() -> None:
     )
     assert report.verdict == VERDICT_BLOCKED_CONTROL_MISMATCH
     assert "runtime_tree_mismatch" in report.blockers
+
+
+def test_ablation_mode_requires_byte_matched_control_by_default() -> None:
+    baseline = _evidence(bytes_=180_000)
+    candidate = _evidence(seg=0.00068, pose=0.000028, bytes_=220_000)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="ablation",
+    )
+    assert report.verdict == VERDICT_BLOCKED_CONTROL_MISMATCH
+    assert any(
+        blocker.startswith("archive_bytes_mismatch:") for blocker in report.blockers
+    )
+
+
+def test_ablation_mode_allows_explicit_archive_byte_tolerance() -> None:
+    baseline = _evidence(bytes_=180_000)
+    candidate = _evidence(seg=0.00068, pose=0.000028, bytes_=180_004)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="ablation",
+        max_ablation_archive_bytes_delta=4,
+    )
+    assert report.verdict == VERDICT_SCORER_RESPONSE_POSITIVE
 
 
 def test_candidate_mode_allows_runtime_mismatch() -> None:
@@ -190,6 +218,7 @@ def test_json_report_is_stable_shape() -> None:
     assert payload["schema"] == "substrate_score_response_probe_v1"
     assert payload["deltas"]["total_delta"] == report.total_delta
     assert payload["baseline"]["axis"] == "contest_cpu"
+    assert payload["thresholds"]["max_ablation_archive_bytes_delta"] == 0
 
 
 def test_normalizes_contest_auth_eval_schema() -> None:
@@ -241,6 +270,7 @@ def test_relaxed_probe_accepts_contest_auth_eval_schema() -> None:
         candidate=candidate,
         mode="ablation",
         strict_exact_custody=False,
+        max_ablation_archive_bytes_delta=4,
         min_total_improvement=0.000001,
         min_scorer_term_improvement=0.000001,
     )

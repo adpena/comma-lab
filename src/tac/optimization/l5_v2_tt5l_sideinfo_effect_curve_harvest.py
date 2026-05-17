@@ -18,6 +18,7 @@ from typing import Any
 
 from tac.exact_eval_custody import (
     extract_observed_runtime_content_tree_sha256,
+    validate_exact_eval_evidence,
 )
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
@@ -417,6 +418,24 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
                         "harvested_exact_eval_archive_bytes_mismatch:"
                         f"{variant}:{axis}"
                     )
+                validation = validate_exact_eval_evidence(
+                    evidence,
+                    expected_axis=axis,
+                    expected_archive_sha256=identity["archive_sha256"],
+                    require_artifact_path=True,
+                    require_hardware=True,
+                    require_auth_eval_command=True,
+                    require_log_path=True,
+                    require_devices=True,
+                    require_artifact_sha256=True,
+                    require_inflated_outputs_manifest=True,
+                    require_raw_output_aggregate_sha256=True,
+                    artifact_base_dir=root,
+                )
+                cell_blockers.extend(
+                    f"harvested_exact_eval_custody_{blocker}:{variant}:{axis}"
+                    for blocker in validation.blockers
+                )
         else:
             evidence = _missing_evidence(identity=identity, cell=cell)
 

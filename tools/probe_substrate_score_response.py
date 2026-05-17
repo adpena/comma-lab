@@ -50,6 +50,7 @@ def _render_markdown(report: dict[str, Any], *, title: str) -> str:
         "",
         f"- min_total_improvement: `{thresholds.get('min_total_improvement')}`",
         f"- min_scorer_term_improvement: `{thresholds.get('min_scorer_term_improvement')}`",
+        f"- max_ablation_archive_bytes_delta: `{thresholds.get('max_ablation_archive_bytes_delta')}`",
         "",
         "## Evidence",
         "",
@@ -116,6 +117,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-total-improvement", type=float, default=0.001)
     parser.add_argument("--min-scorer-term-improvement", type=float, default=0.0005)
     parser.add_argument(
+        "--max-ablation-archive-bytes-delta",
+        type=int,
+        default=0,
+        help=(
+            "Maximum archive byte-count delta allowed in ablation mode. "
+            "Default 0 keeps ablations byte-matched; use candidate mode for "
+            "byte-changing scouting comparisons."
+        ),
+    )
+    parser.add_argument(
         "--relaxed-custody",
         action="store_true",
         help="Only validate axis/formula fields; do not require hardware/device/log metadata.",
@@ -134,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         mode=args.mode,
         min_total_improvement=args.min_total_improvement,
         min_scorer_term_improvement=args.min_scorer_term_improvement,
+        max_ablation_archive_bytes_delta=args.max_ablation_archive_bytes_delta,
         strict_exact_custody=not args.relaxed_custody,
     )
     payload = report.to_json_dict()

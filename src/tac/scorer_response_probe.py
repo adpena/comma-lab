@@ -77,6 +77,7 @@ class ScoreResponseReport:
     scorer_term_delta: float | None
     min_total_improvement: float
     min_scorer_term_improvement: float
+    max_ablation_archive_bytes_delta: int
     mode: str
 
     def to_json_dict(self) -> dict[str, Any]:
@@ -109,6 +110,7 @@ class ScoreResponseReport:
             "thresholds": {
                 "min_total_improvement": self.min_total_improvement,
                 "min_scorer_term_improvement": self.min_scorer_term_improvement,
+                "max_ablation_archive_bytes_delta": self.max_ablation_archive_bytes_delta,
             },
             "baseline": evidence_to_dict(self.baseline),
             "candidate": evidence_to_dict(self.candidate),
@@ -129,6 +131,14 @@ def _finite_threshold(value: float, *, name: str) -> float:
     if out < 0.0 or out != out or out in (float("inf"), float("-inf")):
         raise ValueError(f"{name} must be a finite non-negative number")
     return out
+
+
+def _non_negative_int(value: int, *, name: str) -> int:
+    if not isinstance(value, int):
+        raise TypeError(f"{name} must be an integer")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return value
 
 
 def _first_value(mapping: Mapping[str, Any], *keys: str) -> Any:
@@ -375,6 +385,7 @@ def compare_score_response(
     mode: str = "ablation",
     min_total_improvement: float = 0.001,
     min_scorer_term_improvement: float = 0.0005,
+    max_ablation_archive_bytes_delta: int = 0,
     strict_exact_custody: bool = True,
 ) -> ScoreResponseReport:
     """Compare two evidence rows and classify scorer-visible response.
@@ -392,6 +403,10 @@ def compare_score_response(
     min_scorer = _finite_threshold(
         min_scorer_term_improvement,
         name="min_scorer_term_improvement",
+    )
+    max_ablation_bytes = _non_negative_int(
+        max_ablation_archive_bytes_delta,
+        name="max_ablation_archive_bytes_delta",
     )
 
     baseline_evidence, baseline_blockers, baseline_annotations = validate_score_response_evidence(
@@ -424,6 +439,7 @@ def compare_score_response(
             scorer_term_delta=None,
             min_total_improvement=min_total,
             min_scorer_term_improvement=min_scorer,
+            max_ablation_archive_bytes_delta=max_ablation_bytes,
             mode=mode,
         )
 
@@ -438,6 +454,15 @@ def compare_score_response(
         baseline_evidence.runtime_tree_sha256 != candidate_evidence.runtime_tree_sha256
     ):
         control_blockers.append("runtime_tree_mismatch")
+    if mode == "ablation":
+        archive_bytes_delta = abs(
+            candidate_evidence.archive_bytes - baseline_evidence.archive_bytes
+        )
+        if archive_bytes_delta > max_ablation_bytes:
+            control_blockers.append(
+                "archive_bytes_mismatch:"
+                f"{archive_bytes_delta}>{max_ablation_bytes}"
+            )
     if control_blockers:
         return ScoreResponseReport(
             verdict=VERDICT_BLOCKED_CONTROL_MISMATCH,
@@ -452,6 +477,7 @@ def compare_score_response(
             scorer_term_delta=None,
             min_total_improvement=min_total,
             min_scorer_term_improvement=min_scorer,
+            max_ablation_archive_bytes_delta=max_ablation_bytes,
             mode=mode,
         )
 
@@ -485,6 +511,7 @@ def compare_score_response(
         scorer_term_delta=scorer_delta,
         min_total_improvement=min_total,
         min_scorer_term_improvement=min_scorer,
+        max_ablation_archive_bytes_delta=max_ablation_bytes,
         mode=mode,
     )
 
