@@ -1100,7 +1100,7 @@
       ]
     },
     "sideinfo_effect_curve_lightning_paired_axis_plan_status": {
-      "all_cells_dry_run_ready": false,
+      "all_cells_dry_run_ready": true,
       "all_cells_dry_run_structurally_valid": true,
       "artifact_exists": true,
       "artifact_path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
@@ -1112,8 +1112,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "cell_count": 10,
       "covered_axes": [
@@ -1127,7 +1126,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "d6c49f9fbf4b4654b89260b15a4eaeed52b76c5b",
+      "current_head_commit": "5447f99ff56617946aaf711c365642163b05671a",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
@@ -1136,8 +1135,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "execution_ready": false,
       "expected_cell_count": 10,
@@ -1147,17 +1145,12 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1",
       "score_claim": false,
-      "source_commit": "a23606c9b1a81aacf154d6c2c12aca5408203d46",
+      "source_commit": "5447f99ff56617946aaf711c365642163b05671a",
       "source_commit_is_ancestor": true,
-      "source_commit_matches_head": false,
-      "source_custody_current_for_execution": false,
-      "source_custody_valid": false,
-      "source_relevant_diff_paths": [
-        "src/tac/exact_eval_custody.py",
-        "src/tac/optimization/l5_staircase_v2.py",
-        "src/tac/optimization/l5_v2_measurement_schedule.py",
-        "src/tac/optimization/l5_v2_sideinfo_effect_curve.py"
-      ],
+      "source_commit_matches_head": true,
+      "source_custody_current_for_execution": true,
+      "source_custody_valid": true,
+      "source_relevant_diff_paths": [],
       "source_relevant_paths": [
         "tools/build_l5_v2_architecture_lock_packet.py",
         "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py",
@@ -1176,7 +1169,7 @@
         ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
         ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json"
       ],
-      "source_relevant_paths_match": false
+      "source_relevant_paths_match": true
     },
     "sideinfo_effect_curve_status": {
       "artifact_exists": true,
