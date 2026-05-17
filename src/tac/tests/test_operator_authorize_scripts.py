@@ -180,6 +180,7 @@ def test_canonical_modal_dispatch_requires_clean_head_and_sentinels() -> None:
     assert "def _modal_sentinel_files(" in tool
     assert '"--require-clean-head"' in tool
     assert '"--sentinel-files"' in tool
+    assert '"--trainer-module-path"' in tool
     assert '"experiments/modal_train_lane.py"' in tool
     assert '"src/tac/deploy/modal/mount_manifest.py"' in tool
 
@@ -430,6 +431,7 @@ def test_phase1_cheap_config_wires_cost_band_metadata_to_modal_launcher():
     assert "cost_band_epochs: 3000" in body
     assert "cost_band_batch_size: 16" in body
     assert "--cost-band-all-flags-on" in body
+    assert "--trainer-module-path" in body
 
 
 def test_scpp_dispatch_carries_substrate_engineering_tag():

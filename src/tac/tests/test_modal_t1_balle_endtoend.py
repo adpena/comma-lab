@@ -1027,6 +1027,8 @@ def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -
 
     assert "MODAL_MOUNT_MANIFEST" in text
     assert "MOUNTED_CODE_PATHS = tuple(" in text
+    assert "_assert_static_mount_manifest_covers_t1_trainer_metadata()" in text
+    assert "validate_static_manifest_covers_trainer_metadata" in text
     assert "def _mounted_code_snapshot(" in text
     assert '"scripts/remote_lane_t1_balle_endtoend.sh"' in text
     assert '"tools/build_phase1_packet_compiler.py"' in text
@@ -1034,6 +1036,16 @@ def test_modal_t1_records_mounted_code_snapshot_for_score_bearing_dispatches() -
     assert "PR95_PARITY_PROFILE_LOCAL_PATH.is_file()" in text
     assert '"mounted_code_snapshot": code_snapshot' in text
     assert "mounted_code_worktree.patch" in text
+
+
+def test_modal_t1_static_manifest_covers_trainer_metadata() -> None:
+    module = _load_module()
+
+    assert module.validate_static_manifest_covers_trainer_metadata(
+        module.MODAL_MOUNT_MANIFEST,
+        trainer_path=module.T1_TRAINER_PATH,
+        repo_root=module.REPO_ROOT,
+    ) == []
 
 
 def test_modal_t1_plan_fails_closed_without_canonical_a1_payload(

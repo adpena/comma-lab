@@ -1549,6 +1549,12 @@ def _dispatch_modal(
     sentinel_files = _modal_sentinel_files(recipe)
     if sentinel_files:
         cmd.extend(["--sentinel-files", sentinel_files])
+    trainer_module_path = (
+        recipe.raw.get("required_input_files_trainer")
+        or modal_cfg.get("cost_band_trainer")
+    )
+    if trainer_module_path:
+        cmd.extend(["--trainer-module-path", str(trainer_module_path)])
     # Optional cost-band hooks for the modal_train_lane wrapper.
     if modal_cfg.get("cost_band_trainer"):
         cmd.extend(["--cost-band-trainer", str(modal_cfg["cost_band_trainer"])])

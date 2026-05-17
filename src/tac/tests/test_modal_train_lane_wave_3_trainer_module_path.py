@@ -91,6 +91,7 @@ def test_modal_train_lane_defines_derive_trainer_module_path_helper() -> None:
     # Honors the canonical substrate naming convention
     assert "remote_lane_substrate_" in text
     assert "train_substrate_" in text
+    assert "def _normalize_trainer_module_path(" in text
 
 
 def test_modal_train_lane_defines_collect_trainer_extra_mount_payload_helper() -> None:
@@ -145,11 +146,17 @@ def test_modal_train_lane_main_derives_and_spawns_with_payload() -> None:
     # WAVE-3 derivation
     assert "_derive_trainer_module_path(" in main_src
     assert "_collect_trainer_extra_mount_payload(" in main_src
+    assert "trainer_module_path: str = \"\"" in main_src
+    assert "_normalize_trainer_module_path(" in main_src
+    assert "explicit --trainer-module-path conflicts" in main_src
     # The spawn passes the payload as the trailing positional arg
     spawn_idx = main_src.index("fn.spawn(")
     spawn_block = main_src[spawn_idx : spawn_idx + 600]
     assert "trainer_extra_mount_payload" in spawn_block
     assert "fail_on_import_error=True" in main_src
+    assert "fail_on_missing_paths=True" in main_src
+    assert "trainer_module_path_resolved" in main_src
+    assert "trainer_extra_mount_payload_manifest" in main_src
 
 
 def test_modal_train_lane_main_fails_closed_for_missing_substrate_trainer() -> None:
@@ -252,6 +259,31 @@ def test_derive_trainer_module_path_returns_none_for_non_sh_suffix(
         "scripts/remote_lane_substrate_stc_v2.txt", REPO_ROOT
     )
     assert result is None
+
+
+def test_normalize_trainer_module_path_resolves_explicit_recipe_trainer(
+    modal_train_lane_module,
+) -> None:
+    """Recipe-supplied trainer metadata path is accepted even when the lane
+    script is non-substrate."""
+    result = modal_train_lane_module._normalize_trainer_module_path(
+        "experiments/train_substrate_stc_v2.py",
+        REPO_ROOT,
+    )
+    assert result == (
+        REPO_ROOT / "experiments" / "train_substrate_stc_v2.py"
+    ).resolve()
+
+
+def test_normalize_trainer_module_path_fails_closed_when_missing(
+    modal_train_lane_module,
+) -> None:
+    """Explicit recipe trainer paths are fail-closed before provider spend."""
+    with pytest.raises(RuntimeError, match="explicit trainer module path"):
+        modal_train_lane_module._normalize_trainer_module_path(
+            "experiments/train_substrate_missing_recipe_path.py",
+            REPO_ROOT,
+        )
 
 
 def test_collect_trainer_extra_mount_payload_none_trainer_returns_empty(
@@ -422,6 +454,56 @@ def test_collect_trainer_extra_mount_payload_handles_missing_file_with_warn(
     captured = capsys.readouterr()
     assert "WARN" in captured.err
     assert "nonexistent.zip" in captured.err
+
+
+def test_collect_trainer_extra_mount_payload_can_fail_closed_on_missing_extra_path(
+    modal_train_lane_module, tmp_path
+) -> None:
+    """Strict substrate dispatch refuses missing extra-mount declarations before
+    provider spend."""
+    fake_repo = tmp_path / "fake_repo_missing_strict_extra"
+    fake_repo.mkdir()
+    (fake_repo / "experiments").mkdir()
+    trainer_content = (
+        "TIER_1_EXTRA_MOUNT_PATHS = ('experiments/results/nonexistent.zip',)\n"
+    )
+    trainer_path = fake_repo / "experiments" / "train_substrate_test_xyz3.py"
+    trainer_path.write_text(trainer_content)
+
+    with pytest.raises(RuntimeError, match="missing TIER_1_EXTRA_MOUNT_PATHS"):
+        modal_train_lane_module._collect_trainer_extra_mount_payload(
+            trainer_path,
+            fake_repo,
+            fail_on_missing_paths=True,
+        )
+
+
+def test_collect_trainer_extra_mount_payload_can_fail_closed_on_missing_required_input(
+    modal_train_lane_module, tmp_path
+) -> None:
+    """Strict substrate dispatch validates required_input_file defaults even when
+    their top-level directory would otherwise be structurally mounted."""
+    fake_repo = tmp_path / "fake_repo_missing_strict_required"
+    fake_repo.mkdir()
+    (fake_repo / "experiments").mkdir()
+    (fake_repo / "upstream" / "videos").mkdir(parents=True)
+    trainer_content = (
+        "TIER_1_OPERATOR_REQUIRED_FLAGS = {\n"
+        "    '--video-path': {\n"
+        "        'default': 'upstream/videos/missing.mkv',\n"
+        "        'required_input_file': True,\n"
+        "    },\n"
+        "}\n"
+    )
+    trainer_path = fake_repo / "experiments" / "train_substrate_test_xyz4.py"
+    trainer_path.write_text(trainer_content)
+
+    with pytest.raises(RuntimeError, match="missing required_input_file defaults"):
+        modal_train_lane_module._collect_trainer_extra_mount_payload(
+            trainer_path,
+            fake_repo,
+            fail_on_missing_paths=True,
+        )
 
 
 def test_collect_trainer_extra_mount_payload_handles_import_error_with_warn(

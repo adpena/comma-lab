@@ -222,11 +222,31 @@ def _derive_trainer_module_path(lane_script: str, repo_root: Path) -> Path | Non
     return candidate
 
 
+def _normalize_trainer_module_path(
+    trainer_module_path: str,
+    repo_root: Path,
+) -> Path | None:
+    """Resolve an explicit trainer module path from an operator recipe."""
+
+    text = trainer_module_path.strip()
+    if not text:
+        return None
+    candidate = Path(text)
+    if not candidate.is_absolute():
+        candidate = repo_root / candidate
+    if not candidate.is_file():
+        raise RuntimeError(
+            f"explicit trainer module path does not exist: {trainer_module_path}"
+        )
+    return candidate.resolve()
+
+
 def _collect_trainer_extra_mount_payload(
     trainer_module_path: Path | None,
     repo_root: Path,
     *,
     fail_on_import_error: bool = False,
+    fail_on_missing_paths: bool = False,
 ) -> dict:
     """Read trainer-declared TIER_1_EXTRA_MOUNT_PATHS (+ MODAL_EXTRA_MOUNT_PATHS)
     into a ``{rel_path: bytes}`` dict suitable for serialization to the Modal
@@ -236,6 +256,7 @@ def _collect_trainer_extra_mount_payload(
     - ``trainer_module_path`` is None (legacy dispatchers / unmapped lane scripts)
     - the trainer module has no extra-mount declarations
     - the trainer module cannot be imported AND ``fail_on_import_error=False``
+    - a trainer-declared path is missing AND ``fail_on_missing_paths=False``
 
     Skips paths under STRUCTURAL_MINIMUM_DIRS (already mounted) so we do not
     double-mount common files. Only reads files under
@@ -315,7 +336,33 @@ def _collect_trainer_extra_mount_payload(
     # ``experiments/results/**`` (the Modal-IGNORED subtree) — exactly the
     # bug class the STC v2 anchor archive triggered.
     required_inputs = collect_tier_required_input_files(trainer_module)
-    extras_paths = list(extras) + [path for _flag, path in required_inputs]
+    missing_required: list[tuple[str, Path]] = []
+    missing_extras: list[Path] = []
+    for flag, default_path in required_inputs:
+        local = default_path if default_path.is_absolute() else repo_root / default_path
+        if not local.is_file():
+            missing_required.append((flag, local))
+    for extra_path in extras:
+        local = extra_path if extra_path.is_absolute() else repo_root / extra_path
+        if not local.exists():
+            missing_extras.append(local)
+
+    if fail_on_missing_paths and (missing_required or missing_extras):
+        pieces: list[str] = []
+        if missing_required:
+            pieces.append(
+                "missing required_input_file defaults: "
+                + "; ".join(f"{flag} default={path}" for flag, path in missing_required)
+            )
+        if missing_extras:
+            pieces.append(
+                "missing TIER_1_EXTRA_MOUNT_PATHS / MODAL_EXTRA_MOUNT_PATHS entries: "
+                + "; ".join(str(path) for path in missing_extras)
+            )
+        raise RuntimeError(
+            "trainer extra-mount discovery found missing path(s) for "
+            f"{trainer_module_path}: " + " | ".join(pieces)
+        )
 
     # Paths that are already in the structural minimum mount set are skipped
     # (they get mounted via STRUCTURAL_MINIMUM_DIRS without `results/**`
@@ -327,7 +374,12 @@ def _collect_trainer_extra_mount_payload(
     # `experiments/` is mounted WITH `results/**` ignored — so files under
     # `experiments/results/` MUST be staged via payload bytes; files under
     # other `experiments/` subdirs are already covered.
-    for entry in extras_paths:
+    entries: list[tuple[str, str | None, Path]] = [
+        ("extra_mount", None, path) for path in extras
+    ] + [
+        ("required_input_file", flag, path) for flag, path in required_inputs
+    ]
+    for kind, flag, entry in entries:
         rel_text = str(entry).strip()
         if not rel_text:
             continue
@@ -343,10 +395,46 @@ def _collect_trainer_extra_mount_payload(
         # results/** subtree.
         top = rel.split("/", 1)[0] if "/" in rel else rel
         if top in structural_top_dirs:
+            if kind == "required_input_file" and not local.is_file():
+                print(
+                    f"[modal-train-lane][WAVE-3] WARN: trainer-declared "
+                    f"required_input_file {flag} default {rel} not found at "
+                    f"{local} — skipping.",
+                    file=_sys.stderr,
+                )
+            elif kind == "extra_mount" and not local.exists():
+                print(
+                    f"[modal-train-lane][WAVE-3] WARN: trainer-declared extra mount "
+                    f"{rel} not found at {local} — skipping (declare on disk or "
+                    "remove from TIER_1_EXTRA_MOUNT_PATHS).",
+                    file=_sys.stderr,
+                )
             continue
         if top == "experiments" and not rel.startswith("experiments/results/"):
             # experiments/ is structurally mounted with results/** ignored;
             # experiments/<non-results> is already covered.
+            if kind == "required_input_file" and not local.is_file():
+                print(
+                    f"[modal-train-lane][WAVE-3] WARN: trainer-declared "
+                    f"required_input_file {flag} default {rel} not found at "
+                    f"{local} — skipping.",
+                    file=_sys.stderr,
+                )
+            elif kind == "extra_mount" and not local.exists():
+                print(
+                    f"[modal-train-lane][WAVE-3] WARN: trainer-declared extra mount "
+                    f"{rel} not found at {local} — skipping (declare on disk or "
+                    "remove from TIER_1_EXTRA_MOUNT_PATHS).",
+                    file=_sys.stderr,
+                )
+            continue
+        if kind == "required_input_file" and not local.is_file():
+            print(
+                f"[modal-train-lane][WAVE-3] WARN: trainer-declared "
+                f"required_input_file {flag} default {rel} not found at "
+                f"{local} — skipping.",
+                file=_sys.stderr,
+            )
             continue
         if local.is_dir():
             staged_any = False
@@ -1434,6 +1522,7 @@ def main(
     timeout_hours: float = 10.0,
     env_overrides: str = "",
     lane_id: str = "",
+    trainer_module_path: str = "",
     cost_band_trainer: str = "",
     cost_band_epochs: int = 0,
     cost_band_batch_size: int = 0,
@@ -1449,6 +1538,7 @@ def main(
         gpu: 'T4', 'A10G', 'A100', or 'H100'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
+        trainer_module_path: explicit trainer metadata module from recipe
         cost_band_trainer: trainer path for cost posterior anchoring
         cost_band_epochs: epoch count for the cost posterior bucket
         cost_band_batch_size: batch size for the cost posterior bucket
@@ -1599,9 +1689,40 @@ def main(
     # STRUCTURALLY EFFECTIVE for the generic Modal dispatcher (previously
     # `trainer_module_path=None` made them inert).
     substrate_id_from_lane = _substrate_id_from_lane_script(lane_script)
-    trainer_module_path_resolved = _derive_trainer_module_path(
-        lane_script, repo_root
+    explicit_trainer_module_path = None
+    try:
+        explicit_trainer_module_path = _normalize_trainer_module_path(
+            trainer_module_path,
+            repo_root,
+        )
+    except RuntimeError as exc:
+        print(f"FATAL: {exc}", file=sys.stderr)
+        sys.exit(2)
+    derived_trainer_module_path = _derive_trainer_module_path(lane_script, repo_root)
+    if (
+        explicit_trainer_module_path is not None
+        and derived_trainer_module_path is not None
+        and explicit_trainer_module_path != derived_trainer_module_path.resolve()
+    ):
+        print(
+            "FATAL: explicit --trainer-module-path conflicts with lane_script "
+            "derived trainer module: "
+            f"explicit={explicit_trainer_module_path.relative_to(repo_root)} "
+            f"derived={derived_trainer_module_path.relative_to(repo_root)}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    trainer_module_path_resolved = (
+        explicit_trainer_module_path or derived_trainer_module_path
     )
+    if trainer_module_path_resolved is not None:
+        trainer_metadata_source = (
+            "explicit_recipe"
+            if explicit_trainer_module_path is not None
+            else "lane_script_derived"
+        )
+    else:
+        trainer_metadata_source = "none"
     if substrate_id_from_lane is not None and trainer_module_path_resolved is None:
         print(
             f"FATAL: substrate lane_script {lane_script!r} implies canonical "
@@ -1616,13 +1737,15 @@ def main(
     if trainer_module_path_resolved is not None:
         print(
             f"[modal-train-lane][WAVE-3] derived trainer module from "
-            f"lane_script: {trainer_module_path_resolved.relative_to(repo_root)}"
+            f"{trainer_metadata_source}: "
+            f"{trainer_module_path_resolved.relative_to(repo_root)}"
         )
         try:
             trainer_extra_mount_payload = _collect_trainer_extra_mount_payload(
                 trainer_module_path_resolved,
                 repo_root,
                 fail_on_import_error=True,
+                fail_on_missing_paths=True,
             )
         except RuntimeError as exc:
             print(
@@ -1655,6 +1778,16 @@ def main(
             "(scripts/remote_lane_substrate_<id>.sh) — relying on lane "
             "script self-bootstrap for any required inputs."
         )
+    import hashlib as _hashlib
+
+    trainer_extra_mount_payload_manifest = [
+        {
+            "rel_path": rel,
+            "bytes": len(data),
+            "sha256": _hashlib.sha256(data).hexdigest(),
+        }
+        for rel, data in sorted(trainer_extra_mount_payload.items())
+    ]
 
     # CRITICAL: use .spawn() not .remote() for detached runs.
     # `.remote()` is cancelled when the local CLI disconnects, even with
@@ -1724,6 +1857,19 @@ def main(
         "working_tree_dirty_summary": dirty_tree["summary"],
         "require_clean_head": bool(require_clean_head),
         "sentinel_files_local_sha256": sentinel_sha256_local,
+        "trainer_module_path_resolved": (
+            str(trainer_module_path_resolved.relative_to(repo_root))
+            if trainer_module_path_resolved is not None
+            else None
+        ),
+        "trainer_metadata_source": trainer_metadata_source,
+        "trainer_extra_mount_payload_file_count": len(
+            trainer_extra_mount_payload_manifest
+        ),
+        "trainer_extra_mount_payload_total_bytes": sum(
+            item["bytes"] for item in trainer_extra_mount_payload_manifest
+        ),
+        "trainer_extra_mount_payload_manifest": trainer_extra_mount_payload_manifest,
         # Schema marker so consumers (recovery / harvest / cost-band anchor)
         # can detect Catalog #166 metadata version.
         "metadata_schema": "modal_train_lane_dispatch_metadata_v2_catalog166",

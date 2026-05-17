@@ -46,6 +46,9 @@ from typing import Any
 import modal
 
 from tac.deploy.claims import DispatchClaimSpec, dispatch_claim_command
+from tac.deploy.modal.static_manifest import (
+    validate_static_manifest_covers_trainer_metadata,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REMOTE_REPO = Path("/workspace/pact")
@@ -120,6 +123,9 @@ PR95_PARITY_PROFILE_LOCAL_PATH = (
 PR95_PARITY_PROFILE_REMOTE_PATH = (
     REMOTE_REPO / ".omx/research/pr95_hnerv_muon_trainer_parity_profile_20260510.json"
 )
+T1_TRAINER_PATH = (
+    REPO_ROOT / "experiments/train_paradigm_delta_epsilon_zeta_track1_balle_endtoend.py"
+)
 
 
 def _ensure_repo_import_paths() -> None:
@@ -137,6 +143,25 @@ def _ensure_repo_import_paths() -> None:
 
 
 _ensure_repo_import_paths()
+
+
+def _assert_static_mount_manifest_covers_t1_trainer_metadata() -> None:
+    """Fail closed if the static Modal manifest drifts from trainer metadata."""
+
+    violations = validate_static_manifest_covers_trainer_metadata(
+        MODAL_MOUNT_MANIFEST,
+        trainer_path=T1_TRAINER_PATH,
+        repo_root=REPO_ROOT,
+    )
+    if violations:
+        raise RuntimeError(
+            "modal_t1_balle_endtoend static mount manifest no longer covers "
+            "trainer-declared required inputs / extra mounts:\n  "
+            + "\n  ".join(violations[:8])
+        )
+
+
+_assert_static_mount_manifest_covers_t1_trainer_metadata()
 
 from tac.deploy.modal.runtime import (  # noqa: E402
     CONTEST_SCORER_IMPORT_PROBE_MODULES,
