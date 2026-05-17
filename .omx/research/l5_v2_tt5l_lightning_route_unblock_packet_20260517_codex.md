@@ -1,7 +1,7 @@
 # L5 v2 TT5L Lightning route unblock packet
 
-**Generated:** 2026-05-17T11:05:40Z
-**Commit:** `ef620b0d67077a588ac9d62b97f863f13d498368`
+**Generated:** 2026-05-17T11:08:18Z
+**Commit:** `d369f6b6e2f86b602749ffd44f55c01f118efda3`
 
 This packet turns the current TT5L Lightning blocker into an executable
 operator checklist. It is not a dispatch, score claim, or promotion artifact.
@@ -28,16 +28,34 @@ configuration:
 - 10-cell sideinfo execution bundle:
   `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json`
   - SHA-256:
-    `55179519703d56008ae8168c8d3b3209c0a90d00cd155a3dd84099e6df9564d1`
+    `d80166e34b8b60e015fb3f9d50edede5592c81133e622d6dd8dea7138ab4ee52`
 - 10-cell dry-run verification:
   `.omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification_20260517_codex.json`
   - SHA-256:
-    `79745d8e7edb3a545a2563f01287b2dafdcbfe42ddad6303e1830ab71c59652a`
+    `9316f0a8de767ab862efa40c491bd1e211759fd304b8c501a7a9ddf2e069ca4c`
   - all dry-runs passed: `true`
   - cells passed: `10/10`
   - every cell's launcher stdout record matches the latest persisted
     `--state-path` record across `dry_run`, `queue`, and `spec`
   - every cell's local `--inflate-sh` runtime exists and is executable
+- 10-cell paired-axis plan:
+  `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
+  - SHA-256:
+    `f2dd83cd43b5ef8904f0e4a693782cdec4b3c1500509652747485c3b151bd9ab`
+  - source commit:
+    `d369f6b6e2f86b602749ffd44f55c01f118efda3`
+  - source-relevant paths match current HEAD: `true`
+- Sideinfo harvest cells:
+  `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json`
+  - SHA-256:
+    `3483e1e4f71147eeefaf001f219f9f312b1457d9c56823db4b02149c5b74276f`
+  - harvested exact-eval artifacts: `0`
+  - missing exact-eval artifacts: `10`
+- Sideinfo effect curve:
+  `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json`
+  - SHA-256:
+    `6b3284be6d5c24cf69d604b7c58324fc4669b0dc3f8190f633c767d2b2aad1b4`
+  - predicate passed: `false`
 
 The refreshed bundle embeds the T4/g4dn exact-eval runtime pins required by
 `scripts/launch_lightning_batch_job.py`: `INFLATE_TORCH_SPEC=torch==2.5.1+cu124`,

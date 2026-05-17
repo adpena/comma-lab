@@ -156,7 +156,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23688,
-      "stdout_sha256": "9903850c8258ad63e0d6c647277992673c2f377952f426647ec8cb141c310c17",
+      "stdout_sha256": "848dccbd10ff993b17730ccd172a7637398cdab519e2153b48a579aa7ee043fc",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -309,7 +309,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42659,
-      "stdout_sha256": "a62dbec554204189535adde3d4f34317883a5c188cf93f846be8f394c0153318",
+      "stdout_sha256": "3fde60416f1f43d383ae22b4ed9aba8decea00d3e7185a631e8d7b45718d4323",
       "timed_out": false,
       "variant": "zero",
       "verified": true
@@ -462,7 +462,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 24120,
-      "stdout_sha256": "b82101d24f31595e1f6e5b6fef8676b92ec2b072243e1085471bf5b6908a0766",
+      "stdout_sha256": "0bdb2d25d85de80856dda2fa60d63b94b7598eb96a713c516d3010d724a04d65",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -615,7 +615,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 43103,
-      "stdout_sha256": "0b5c5b64bed585a8d9d2c64116ad41bed6ad3d922f62eb9176a54a8e71fb3e38",
+      "stdout_sha256": "0363a4f925cea44b12f420c56be5c57bc64f5db12c008663ee96f3fb7db99542",
       "timed_out": false,
       "variant": "random_lsb",
       "verified": true
@@ -768,7 +768,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23976,
-      "stdout_sha256": "9f54deb03124d32bce1a8ac4f2be0bb9914082583b1567986676aef6f0ed391b",
+      "stdout_sha256": "cfda5aa28b5670f4c0e894f1c5108c9eef6807e7ff40410ca946a35c95da4a66",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -921,7 +921,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42955,
-      "stdout_sha256": "78dea2066dd37c9a546b5b3bb17b5c4bed697d2db2847c4e13fe41ff23cf7269",
+      "stdout_sha256": "3016838152f9dd95af47dae6f75d71186168f6594adf5d6bd0ba1e88dedae6e4",
       "timed_out": false,
       "variant": "shuffled",
       "verified": true
@@ -1074,7 +1074,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "da42e6c3bd982364826749c3b35af414cc47c61639d010d58e4d5c78c8bfc64c",
+      "stdout_sha256": "482edbc86b739498d1159cb7a01f35606f17f1da2321d61d1066914a43e712e3",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1227,7 +1227,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "8db84b33e4482885447e78f7246113ddc9076fdeba62c2c25fd42721f36621f4",
+      "stdout_sha256": "be63ca720506c5add4d91eb9b33aeb52c1d0d06f0055aab48b780b1b5b526a34",
       "timed_out": false,
       "variant": "trained",
       "verified": true
@@ -1380,7 +1380,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 23904,
-      "stdout_sha256": "8fe1bac66ddd001843f2a7a36db4bc941a8a1d65822daccfb3d339fe5830c69c",
+      "stdout_sha256": "7c70ac49564303248a752d5843396f46a588a9123e40ddf5ea97d646c977eb9c",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1533,7 +1533,7 @@
       "stderr_sha256": "",
       "stderr_tail": "",
       "stdout_bytes": 42881,
-      "stdout_sha256": "af428e6633c4c3275142d7cab4f3a8f2e9e1d823c092c4c123decd039dc56339",
+      "stdout_sha256": "629fdd739ae9157e0f300f76c5062d4de68808f82f192b1beca2fd0785991997",
       "timed_out": false,
       "variant": "ablated",
       "verified": true
@@ -1564,13 +1564,13 @@
       "ablated"
     ]
   },
-  "current_head_commit": "ef620b0d67077a588ac9d62b97f863f13d498368",
+  "current_head_commit": "d369f6b6e2f86b602749ffd44f55c01f118efda3",
   "dispatch_attempted": false,
   "dry_run_cells_exercised": 10,
   "dry_run_cells_total": 10,
   "expected_cell_count": 10,
   "failed_cell_count": 0,
-  "generated_at_utc": "2026-05-17T11:05:31Z",
+  "generated_at_utc": "2026-05-17T11:07:58Z",
   "passed_cell_count": 10,
   "planning_only": true,
   "promotion_eligible": false,
@@ -1585,7 +1585,7 @@
   "score_claim_valid": false,
   "source_bundle": ".omx/research/l5_v2_tt5l_sideinfo_lightning_execution_bundle_20260517_codex.json",
   "source_bundle_schema": "l5_v2_tt5l_sideinfo_lightning_execution_bundle_v1",
-  "source_bundle_sha256": "55179519703d56008ae8168c8d3b3209c0a90d00cd155a3dd84099e6df9564d1",
+  "source_bundle_sha256": "d80166e34b8b60e015fb3f9d50edede5592c81133e622d6dd8dea7138ab4ee52",
   "source_bundle_tool": "tools/build_l5_v2_tt5l_sideinfo_lightning_execution_bundle.py",
   "tool": "tools/verify_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run.py"
 }
