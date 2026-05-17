@@ -392,6 +392,7 @@ def test_append_manifest_row_writes_non_promoted_row(tmp_path: Path) -> None:
     assert parsed["promotion_eligible"] is False
     assert parsed["ready_for_exact_eval_dispatch"] is False
     assert parsed["ranking_only"] is True
+    assert out.with_name(f"{out.name}.lock").is_file()
 
 
 # ----------------------------------------------------------------------------

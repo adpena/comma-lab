@@ -35,6 +35,7 @@ with ``score_claim=true``, ``promotion_eligible=true``, or
 
 from __future__ import annotations
 
+import fcntl
 import json
 import math
 import platform
@@ -511,8 +512,15 @@ def append_manifest_row_to_jsonl(
         )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(serializable, sort_keys=True, allow_nan=False)
-    with output_path.open("a", encoding="utf-8") as f:
-        f.write(line + "\n")
+    lock_path = output_path.with_name(f"{output_path.name}.lock")
+    with lock_path.open("a", encoding="utf-8") as lock_fh:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+        try:
+            with output_path.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
+                f.flush()
+        finally:
+            fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
 
 
 __all__ = [

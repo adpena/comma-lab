@@ -257,6 +257,13 @@ Latest TT5L route/doctor custody refresh is source-relevant-path clean but must
 be regenerated immediately before provider execution; the generated packet's
 recorded commit is a reproducibility input, not self-referential dispatch
 authority.
+Current-main full parent Markdown scan:
+`.omx/research/omx_parent_markdown_current_main_full_scan_20260517_codex.md`
+records `2410` total `.omx/**/*.md` files, `636` non-research Markdown files,
+and `379` keyword-matching non-research files. It found no new authority beyond
+`current_focus`, `next_experiments`, and `active_lane_dispatch_claims`, but it
+did expose the proxy/advisory JSONL append-lock mismatch now fixed in the MPS
+and macOS-CPU advisory helpers.
 
 ## Required Refresh Cadence
 

@@ -11,6 +11,7 @@ import pytest
 from tac.optimization.meta_lagrangian_allocator import build_atom_ledger, expected_atom_score_delta
 from tac.optimization.mps_research_signal import (
     MPSResearchSignalError,
+    append_manifest_row_to_jsonl,
     build_mps_research_signal_manifest,
 )
 
@@ -177,3 +178,42 @@ def test_mps_research_signal_cli_writes_manifest_and_fail_closed_ledger(tmp_path
     assert manifest["score_claim"] is False
     assert ledger["score_evidence_rankable_count"] == 0
     assert ledger["pareto_eligible_count"] == 0
+
+
+def test_mps_append_manifest_row_refuses_tmp_paths() -> None:
+    row = {"family": "x", "variant_id": "v1", "evidence_grade": "MPS-research-signal"}
+    with pytest.raises(ValueError, match="/tmp"):
+        append_manifest_row_to_jsonl(row, output_path=Path("/tmp/x.jsonl"))
+
+
+def test_mps_append_manifest_row_refuses_authority_flags(tmp_path: Path) -> None:
+    row = {
+        "family": "x",
+        "variant_id": "v1",
+        "score_claim": True,
+        "evidence_grade": "MPS-research-signal",
+    }
+    with pytest.raises(MPSResearchSignalError):
+        append_manifest_row_to_jsonl(row, output_path=tmp_path / "out.jsonl")
+
+
+def test_mps_append_manifest_row_writes_locked_fail_closed_row(tmp_path: Path) -> None:
+    row = {
+        "family": "x",
+        "variant_id": "v1",
+        "archive_bytes": 1234,
+        "d_seg_proxy": 0.1,
+        "d_pose_proxy": 0.2,
+    }
+    out = tmp_path / "subdir" / "out.jsonl"
+
+    append_manifest_row_to_jsonl(row, output_path=out)
+
+    parsed = json.loads(out.read_text(encoding="utf-8").strip())
+    assert parsed["score_claim"] is False
+    assert parsed["promotion_eligible"] is False
+    assert parsed["rank_or_kill_eligible"] is False
+    assert parsed["ready_for_exact_eval_dispatch"] is False
+    assert parsed["dispatch_attempted"] is True
+    assert parsed["evidence_grade"] == "MPS-research-signal"
+    assert out.with_name(f"{out.name}.lock").is_file()

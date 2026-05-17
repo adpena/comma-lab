@@ -9,6 +9,7 @@ remaining fail-closed for promotion, ranking, and exact-eval dispatch.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import math
 from collections import defaultdict
@@ -399,10 +400,79 @@ def json_text(payload: Any) -> str:
     return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
 
 
+def append_manifest_row_to_jsonl(
+    row: Mapping[str, Any],
+    *,
+    output_path: Path,
+) -> None:
+    """Append a single MPS-research-signal manifest row to a JSONL aggregator.
+
+    Sister of :func:`tac.optimization.macos_cpu_advisory_signal.append_manifest_row_to_jsonl`.
+    Used by the canonical one-arg local-MPS dispatch path
+    (``tools/operator_authorize.py::_dispatch_local_mps``) so every dispatch
+    appends a single row to the canonical MPS-research-signal posterior at
+    ``.omx/state/mps_research_signal_manifest.jsonl`` (sister of the macOS-CPU
+    advisory posterior).
+
+    Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact": refuses
+    ``/tmp``, ``/var/tmp``, ``/private/tmp`` prefixes.
+
+    Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable: rejects any row
+    that carries ``score_claim=True``, ``promotion_eligible=True``, or
+    ``ready_for_exact_eval_dispatch=True`` so the canonical posterior cannot be
+    polluted with non-authoritative MPS results even via a malformed caller.
+    """
+    output_str = str(output_path)
+    if (
+        output_str.startswith("/tmp/")
+        or "/private/tmp/" in output_str
+        or "/var/tmp/" in output_str
+    ):
+        raise ValueError(
+            f"refusing to write MPS research-signal manifest to forbidden /tmp path: {output_str!r}"
+        )
+    serializable = dict(row)
+    # Auto-stamp the canonical fail-closed flags so malformed callers cannot
+    # silently bypass the non-authoritative contract.
+    serializable.setdefault("score_claim", False)
+    serializable.setdefault("promotion_eligible", False)
+    serializable.setdefault("rank_or_kill_eligible", False)
+    serializable.setdefault("ready_for_exact_eval_dispatch", False)
+    serializable.setdefault("dispatch_attempted", True)
+    serializable.setdefault("evidence_grade", EVIDENCE_GRADE)
+    serializable.setdefault("evidence_semantics", EVIDENCE_SEMANTICS)
+    if (
+        serializable["score_claim"]
+        or serializable["promotion_eligible"]
+        or serializable["ready_for_exact_eval_dispatch"]
+        or serializable["rank_or_kill_eligible"]
+    ):
+        raise MPSResearchSignalError(
+            "MPS research-signal manifest rows cannot carry score_claim=True, "
+            "promotion_eligible=True, rank_or_kill_eligible=True, or "
+            "ready_for_exact_eval_dispatch=True. Per CLAUDE.md 'MPS auth eval "
+            "is NOISE' non-negotiable + Catalog #1 sister discipline, MPS "
+            "results are permanently non-authoritative. Use the contest-CUDA "
+            "or contest-CPU paths for score claims."
+        )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(serializable, sort_keys=True, allow_nan=False)
+    lock_path = output_path.with_name(f"{output_path.name}.lock")
+    with lock_path.open("a", encoding="utf-8") as lock_fh:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+        try:
+            with output_path.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
+                f.flush()
+        finally:
+            fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+
+
 __all__ = [
     "EVIDENCE_GRADE",
     "EVIDENCE_SEMANTICS",
     "MPSResearchSignalError",
+    "append_manifest_row_to_jsonl",
     "build_mps_research_signal_manifest",
     "json_text",
     "load_observations",
