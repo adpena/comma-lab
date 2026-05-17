@@ -623,6 +623,37 @@ def _axis_evidence_from_payload(
     }
 
 
+def exact_eval_evidence_from_auth_eval_artifact(
+    path: str | Path,
+    *,
+    axis: str,
+    repo_root: str | Path,
+    source_metadata: Mapping[str, str] | None = None,
+) -> dict[str, Any] | None:
+    """Return normalized exact-eval evidence from a contest auth-eval artifact.
+
+    This is the public reuse surface for L5/L5-v2 tooling that needs the same
+    custody extraction semantics as probe intake without copying its parser.
+    ``axis`` is the expected evidence axis from the caller's dispatch plan; the
+    downstream exact-eval validator remains responsible for rejecting payloads
+    whose command/device/hardware do not satisfy that axis.
+    """
+
+    root = Path(repo_root).resolve()
+    candidate = Path(path)
+    resolved = candidate if candidate.is_absolute() else root / candidate
+    payload = _read_json_object(resolved)
+    if payload is None:
+        return None
+    return _axis_evidence_from_payload(
+        resolved,
+        payload,
+        axis=axis,
+        repo_root=root,
+        source_metadata=source_metadata,
+    )
+
+
 def _axis_evidence_quality(evidence: Mapping[str, Any]) -> int:
     """Return a small completeness score for choosing one row per axis."""
 
@@ -988,6 +1019,7 @@ __all__ = [
     "L5V2_TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_PATH",
     "build_l5_v2_probe_observation_intake",
     "default_l5_v2_probe_source_paths",
+    "exact_eval_evidence_from_auth_eval_artifact",
     "materialized_tt5l_probe_source_metadata",
     "materialized_tt5l_probe_source_paths",
     "render_l5_v2_probe_observation_intake_markdown",

@@ -1,0 +1,1712 @@
+{
+  "blockers": [
+    "harvested_exact_eval_artifact_missing:zero:contest_cpu",
+    "harvested_exact_eval_artifact_missing:zero:contest_cuda",
+    "harvested_exact_eval_artifact_missing:random_lsb:contest_cpu",
+    "harvested_exact_eval_artifact_missing:random_lsb:contest_cuda",
+    "harvested_exact_eval_artifact_missing:shuffled:contest_cpu",
+    "harvested_exact_eval_artifact_missing:shuffled:contest_cuda",
+    "harvested_exact_eval_artifact_missing:trained:contest_cpu",
+    "harvested_exact_eval_artifact_missing:trained:contest_cuda",
+    "harvested_exact_eval_artifact_missing:ablated:contest_cpu",
+    "harvested_exact_eval_artifact_missing:ablated:contest_cuda"
+  ],
+  "cell_count": 10,
+  "cells": [
+    {
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:zero:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 600,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "60b76e129ee3c866d761579d03e42bb0f67503c0d10995c79aca217c7fde4efd",
+        "job_name": "l5-v2-tt5l-sideinfo-zero-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "zero"
+    },
+    {
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:zero:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 600,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "62e734227ea8f14e9924a2a92a03933af83bdb10d7f719c0d24c76b087764619",
+        "job_name": "l5-v2-tt5l-sideinfo-zero-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "zero"
+    },
+    {
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:random_lsb:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 1,
+        "max_nonzero_values_per_pair": 45,
+        "mean_nonzero_values_per_pair": 45.0,
+        "min": -1,
+        "min_nonzero_values_per_pair": 45,
+        "nonzero_fraction": 1.0,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 27000,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 3600,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 5400,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 7200,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 10800,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "b7ec13b3419b64a7d25f7eb30f771d6accd1da7e46f62b8f8e9d1bc7bc7d140a",
+        "job_name": "l5-v2-tt5l-sideinfo-random-lsb-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "random_lsb"
+    },
+    {
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:random_lsb:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 1,
+        "max_nonzero_values_per_pair": 45,
+        "mean_nonzero_values_per_pair": 45.0,
+        "min": -1,
+        "min_nonzero_values_per_pair": 45,
+        "nonzero_fraction": 1.0,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 27000,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 3600,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 5400,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 7200,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 10800,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "292effd1a921bde6cc3b20097b84bec95e829a25d6814fec17e8b03ecec28890",
+        "job_name": "l5-v2-tt5l-sideinfo-random-lsb-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "random_lsb"
+    },
+    {
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:shuffled:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "8e5940c356ca6b9be2907b76b9cc0803b61d5bf0f7f111dc250aa1cd116cd7f8",
+        "job_name": "l5-v2-tt5l-sideinfo-shuffled-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "shuffled"
+    },
+    {
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:shuffled:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "0d2f821b914d86286ebbe9728373aed67bffa2069b9a583e971a856554b5d4e7",
+        "job_name": "l5-v2-tt5l-sideinfo-shuffled-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "shuffled"
+    },
+    {
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:trained:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "d0598c86f2bf9479629137b813ceed8bf02721b12dd3b61ed9d9d050d42c6a29",
+        "job_name": "l5-v2-tt5l-sideinfo-trained-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "trained"
+    },
+    {
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:trained:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "42fddc0a2a8070752d444777e880066eb7f09b6a1350ee24c7c8c751c949bada",
+        "job_name": "l5-v2-tt5l-sideinfo-trained-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "trained"
+    },
+    {
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:ablated:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 32,
+        "mean_nonzero_values_per_pair": 22.176666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 14,
+        "nonzero_fraction": 0.4928148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 13306,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "abc81b15cc4166a51388e826ff9e5c9f8e6bc0aa19f8f000b706b73fa7a958fa",
+        "job_name": "l5-v2-tt5l-sideinfo-ablated-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "ablated"
+    },
+    {
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:ablated:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 32,
+        "mean_nonzero_values_per_pair": 22.176666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 14,
+        "nonzero_fraction": 0.4928148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 13306,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "c487d87e0138db5e2d9fa658a0b3e330fb653fc103b44d0b4fc86e3c2ffdad15",
+        "job_name": "l5-v2-tt5l-sideinfo-ablated-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "ablated"
+    }
+  ],
+  "harvested_exact_eval_artifact_count": 0,
+  "missing_exact_eval_artifact_count": 10,
+  "observed_cells": [
+    {
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:zero:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 600,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "60b76e129ee3c866d761579d03e42bb0f67503c0d10995c79aca217c7fde4efd",
+        "job_name": "l5-v2-tt5l-sideinfo-zero-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "zero"
+    },
+    {
+      "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:zero:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "b444cc91f102c9807a865ed59f182ca5c83f3239a49ec2aa400b497d7dea37a3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_zero_b444cc91f102",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 600,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [
+          "tt5l_side_info_some_pairs_all_zero"
+        ],
+        "max": 0,
+        "max_nonzero_values_per_pair": 0,
+        "mean_nonzero_values_per_pair": 0.0,
+        "min": 0,
+        "min_nonzero_values_per_pair": 0,
+        "nonzero_fraction": 0.0,
+        "nonzero_pair_count": 0,
+        "nonzero_pair_fraction": 0.0,
+        "nonzero_values": 0,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "62e734227ea8f14e9924a2a92a03933af83bdb10d7f719c0d24c76b087764619",
+        "job_name": "l5-v2-tt5l-sideinfo-zero-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/zero/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "zero"
+    },
+    {
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:random_lsb:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 1,
+        "max_nonzero_values_per_pair": 45,
+        "mean_nonzero_values_per_pair": 45.0,
+        "min": -1,
+        "min_nonzero_values_per_pair": 45,
+        "nonzero_fraction": 1.0,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 27000,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 3600,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 5400,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 7200,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 10800,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "b7ec13b3419b64a7d25f7eb30f771d6accd1da7e46f62b8f8e9d1bc7bc7d140a",
+        "job_name": "l5-v2-tt5l-sideinfo-random-lsb-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "random_lsb"
+    },
+    {
+      "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:random_lsb:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_random_lsb_ccce77aaf190",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 1,
+        "max_nonzero_values_per_pair": 45,
+        "mean_nonzero_values_per_pair": 45.0,
+        "min": -1,
+        "min_nonzero_values_per_pair": 45,
+        "nonzero_fraction": 1.0,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 27000,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 3600,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 5400,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 7200,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 1.0,
+              "nonzero_values": 10800,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "292effd1a921bde6cc3b20097b84bec95e829a25d6814fec17e8b03ecec28890",
+        "job_name": "l5-v2-tt5l-sideinfo-random-lsb-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/random_lsb/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "random_lsb"
+    },
+    {
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:shuffled:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "8e5940c356ca6b9be2907b76b9cc0803b61d5bf0f7f111dc250aa1cd116cd7f8",
+        "job_name": "l5-v2-tt5l-sideinfo-shuffled-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "shuffled"
+    },
+    {
+      "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:shuffled:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "c235e5cb91f4122c3bb642354b424dd21f8b37cc0d2ac7b3e03c0b84dcc49bc3",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_shuffled_c235e5cb91f4",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "0d2f821b914d86286ebbe9728373aed67bffa2069b9a583e971a856554b5d4e7",
+        "job_name": "l5-v2-tt5l-sideinfo-shuffled-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/shuffled/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "shuffled"
+    },
+    {
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:trained:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "d0598c86f2bf9479629137b813ceed8bf02721b12dd3b61ed9d9d050d42c6a29",
+        "job_name": "l5-v2-tt5l-sideinfo-trained-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "trained"
+    },
+    {
+      "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:trained:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "f08299c5e77908eeeb82cc9948e530fd5a790894902a726ebd8a258596b4bf1a",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_trained_f08299c5e779",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 38,
+        "mean_nonzero_values_per_pair": 27.711666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 18,
+        "nonzero_fraction": 0.6158148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 16627,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.615,
+              "nonzero_values": 3321,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "42fddc0a2a8070752d444777e880066eb7f09b6a1350ee24c7c8c751c949bada",
+        "job_name": "l5-v2-tt5l-sideinfo-trained-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/trained/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "trained"
+    },
+    {
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "axis": "contest_cpu",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:ablated:contest_cpu"
+      ],
+      "evidence": {
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/contest_auth_eval.json",
+        "axis": "contest_cpu",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 32,
+        "mean_nonzero_values_per_pair": 22.176666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 14,
+        "nonzero_fraction": 0.4928148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 13306,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "abc81b15cc4166a51388e826ff9e5c9f8e6bc0aa19f8f000b706b73fa7a958fa",
+        "job_name": "l5-v2-tt5l-sideinfo-ablated-cpu-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cpu/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "ablated"
+    },
+    {
+      "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+      "axis": "contest_cuda",
+      "blockers": [
+        "harvested_exact_eval_artifact_missing:ablated:contest_cuda"
+      ],
+      "evidence": {
+        "archive_sha256": "ec343265899859495fca1d2874c1b85d211210ea13a2de5bb7e52c9816ba6b39",
+        "artifact_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/contest_auth_eval.json",
+        "axis": "contest_cuda",
+        "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+        "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998"
+      },
+      "pair_group_id": "pair_l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "run_id": "l5_v2_tt5l_sideinfo_effect_curve_ablated_ec3432658998",
+      "score_claim": false,
+      "sideinfo_liveness": {
+        "all_zero_pair_count": 0,
+        "checked": true,
+        "dtype": "int8",
+        "liveness_warnings": [],
+        "max": 4,
+        "max_nonzero_values_per_pair": 32,
+        "mean_nonzero_values_per_pair": 22.176666666666666,
+        "min": -4,
+        "min_nonzero_values_per_pair": 14,
+        "nonzero_fraction": 0.4928148148148148,
+        "nonzero_pair_count": 600,
+        "nonzero_pair_fraction": 1.0,
+        "nonzero_values": 13306,
+        "section_liveness": {
+          "checked": true,
+          "per_pair_bytes": 45,
+          "sections": {
+            "hf_residual": {
+              "nonzero_fraction": 0.6205555555555555,
+              "nonzero_values": 2234,
+              "offset": 30,
+              "total_values": 3600,
+              "width": 6
+            },
+            "predict_residual": {
+              "nonzero_fraction": 0.0,
+              "nonzero_values": 0,
+              "offset": 36,
+              "total_values": 5400,
+              "width": 9
+            },
+            "se3_lie": {
+              "nonzero_fraction": 0.6161111111111112,
+              "nonzero_values": 4436,
+              "offset": 0,
+              "total_values": 7200,
+              "width": 12
+            },
+            "seg_boundary": {
+              "nonzero_fraction": 0.6144444444444445,
+              "nonzero_values": 6636,
+              "offset": 12,
+              "total_values": 10800,
+              "width": 18
+            }
+          }
+        },
+        "shape": [
+          600,
+          45
+        ],
+        "total_pairs": 600,
+        "total_values": 27000
+      },
+      "source_plan_cell": {
+        "command_sha256": "c487d87e0138db5e2d9fa658a0b3e330fb653fc103b44d0b4fc86e3c2ffdad15",
+        "job_name": "l5-v2-tt5l-sideinfo-ablated-cuda-20260517",
+        "local_artifact_dir": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda",
+        "state_path": "experiments/results/lightning_batch/l5_v2_tt5l_sideinfo_effect_curve_paired_axes/ablated/contest_cuda/state.json"
+      },
+      "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+      "variant": "ablated"
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "required_axes": [
+    "contest_cpu",
+    "contest_cuda"
+  ],
+  "required_variants": [
+    "zero",
+    "random_lsb",
+    "shuffled",
+    "trained",
+    "ablated"
+  ],
+  "schema": "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_v1",
+  "score_claim": false,
+  "sideinfo_effect_curve_builder_tool": "tools/build_l5_v2_sideinfo_effect_curve.py",
+  "source_plan": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json",
+  "source_plan_schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1",
+  "source_plan_sha256": "8138264796d58f53df6687346c7e8e8408a70cf9515b548c4959976b03376caf",
+  "source_variant_manifest": ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+  "source_variant_manifest_sha256": "80962a29c5abc8c8de2dbae742e228c396e5f3ce3423397cfe7d79bae1f06459",
+  "tool": "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
+}
