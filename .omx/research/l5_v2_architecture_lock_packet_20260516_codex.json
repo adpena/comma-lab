@@ -13,13 +13,12 @@
   "campaign_id": "campaign_time_traveler_l5_v2_staircase_20260516",
   "lane_id": "lane_time_traveler_l5_autonomy_substrate_20260513",
   "next_non_pr106_l5_action": {
-    "action_id": "review_and_execute_l5_v2_tt5l_materialized_paired_measurement",
+    "action_id": "refresh_or_retire_l5_v2_tt5l_modal_provider_blocker",
     "dispatch_attempted": false,
     "execution_order": [
-      "review_materialized_tt5l_archive_runtime_custody",
-      "execute_canonical_paired_modal_auth_eval_command",
-      "harvest_both_axes_through_recover_modal_auth_eval",
-      "convert_returned_results_into_l5_v2_probe_observations"
+      "inspect_provider_blocker_archive_and_pair_group_against_current_work_unit",
+      "regenerate_provider_blocker_for_current_archive_or_mark_historical",
+      "rerun_l5_v2_architecture_lock_packet_before_any_execute_command"
     ],
     "materialized_work_unit_status": {
       "alternate_provider_plan_status": {
@@ -147,16 +146,29 @@
         "valid": true
       }
     },
-    "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto --execute",
-    "operator_plan_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto",
     "phase": "probe_disambiguator_paired_measurements",
-    "probe_status": "tt5l_work_unit_materialized_fail_closed",
+    "probe_status": "tt5l_work_unit_provider_blocker_artifact_stale",
     "promotion_eligible": false,
+    "provider_blocker_status": {
+      "active": false,
+      "artifact_exists": true,
+      "artifact_path": ".omx/research/l5_v2_tt5l_materialized_modal_provider_blocker_20260517_codex.json",
+      "artifact_valid": false,
+      "blocker": "",
+      "blockers": [
+        "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
+      ],
+      "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+      "provider": "modal",
+      "resolved": false,
+      "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1"
+    },
+    "ready_for_alternate_provider_planning": false,
     "ready_for_exact_eval_dispatch": false,
-    "ready_for_operator_dispatch": true,
+    "ready_for_operator_dispatch": false,
     "ready_for_provider_dispatch": false,
     "score_claim": false,
-    "score_lowering_unblocker": "TT5L has a byte-closed archive/runtime work unit; the next material L5 v2 evidence is paired CPU/CUDA execution under one runtime contract"
+    "score_lowering_unblocker": "TT5L has a byte-closed work unit, but a stale or invalid provider-blocker artifact is present. Refusing to surface an execute command until provider state is refreshed or retired."
   },
   "planning_only": true,
   "promotion_eligible": false,
@@ -206,7 +218,8 @@
       "prediction_band:prediction_band_baseline_missing",
       "prediction_band:prediction_band_baseline_custody_missing",
       "prediction_band:prediction_band_baseline_artifact_missing",
-      "prediction_band:prediction_band_empirical_anchor_missing"
+      "prediction_band:prediction_band_empirical_anchor_missing",
+      "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
     ],
     "campaign_id": "campaign_time_traveler_l5_v2_staircase_20260516",
     "dispatch_recipe_exists": true,
@@ -477,13 +490,12 @@
       "tool_sha256": "eb6fcfa8979c6752bec50eae6fc9c2cba3b1872de4cf8039cf03cf06c0e84f55"
     },
     "next_non_pr106_l5_action": {
-      "action_id": "review_and_execute_l5_v2_tt5l_materialized_paired_measurement",
+      "action_id": "refresh_or_retire_l5_v2_tt5l_modal_provider_blocker",
       "dispatch_attempted": false,
       "execution_order": [
-        "review_materialized_tt5l_archive_runtime_custody",
-        "execute_canonical_paired_modal_auth_eval_command",
-        "harvest_both_axes_through_recover_modal_auth_eval",
-        "convert_returned_results_into_l5_v2_probe_observations"
+        "inspect_provider_blocker_archive_and_pair_group_against_current_work_unit",
+        "regenerate_provider_blocker_for_current_archive_or_mark_historical",
+        "rerun_l5_v2_architecture_lock_packet_before_any_execute_command"
       ],
       "materialized_work_unit_status": {
         "alternate_provider_plan_status": {
@@ -611,16 +623,29 @@
           "valid": true
         }
       },
-      "operator_execute_command_template_after_review": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto --execute",
-      "operator_plan_command_template": ".venv/bin/python tools/dispatch_modal_paired_auth_eval.py --archive experiments/results/time_traveler_l5_v2/tt5l_sideinfo_variant_packets_current_code_fullshape_advisory_20260517T052719Z/random_lsb/archive.zip --submission-dir experiments/results/time_traveler_l5_v2/tt5l_current_code_fullshape_sideinfo_cpu_advisory_20260517T052719Z/submission_dir --inflate-sh inflate.sh --label l5_v2_time_traveler_l5_autonomy --expected-archive-sha256 ccce77aaf1907d6e70d8cba498261708b241ac7d78a9bf22978aa459cb6b7fd1 --run-id l5_v2_measure_tt5l_autonomy_paired_exact_paired_measurement_random_lsb_ccce77aaf190 --pair-group-id pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --lane-id-base lane_l5_v2_measure_tt5l_autonomy_paired_exact --output-root experiments/results/l5_v2_probe/measure_tt5l_autonomy_paired_exact --modal-bin .venv/bin/modal --gpu T4 --claim-agent codex:l5_v2_paired_measurement_dispatch --claim-notes l5_v2_paired_measurement:pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda --expected-runtime-tree-sha256 auto",
       "phase": "probe_disambiguator_paired_measurements",
-      "probe_status": "tt5l_work_unit_materialized_fail_closed",
+      "probe_status": "tt5l_work_unit_provider_blocker_artifact_stale",
       "promotion_eligible": false,
+      "provider_blocker_status": {
+        "active": false,
+        "artifact_exists": true,
+        "artifact_path": ".omx/research/l5_v2_tt5l_materialized_modal_provider_blocker_20260517_codex.json",
+        "artifact_valid": false,
+        "blocker": "",
+        "blockers": [
+          "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
+        ],
+        "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+        "provider": "modal",
+        "resolved": false,
+        "schema": "l5_v2_tt5l_materialized_modal_provider_blocker_status_v1"
+      },
+      "ready_for_alternate_provider_planning": false,
       "ready_for_exact_eval_dispatch": false,
-      "ready_for_operator_dispatch": true,
+      "ready_for_operator_dispatch": false,
       "ready_for_provider_dispatch": false,
       "score_claim": false,
-      "score_lowering_unblocker": "TT5L has a byte-closed archive/runtime work unit; the next material L5 v2 evidence is paired CPU/CUDA execution under one runtime contract"
+      "score_lowering_unblocker": "TT5L has a byte-closed work unit, but a stale or invalid provider-blocker artifact is present. Refusing to surface an execute command until provider state is refreshed or retired."
     },
     "non_pr106_staircase_priority": true,
     "packetir_is_optional_stack_evidence": true,
@@ -668,8 +693,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "cell_count": 10,
       "covered_axes": [
@@ -683,7 +707,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "c7aa814161dcb3c5ba2cf53f7029e3861cdd0e7d",
+      "current_head_commit": "a23606c9b1a81aacf154d6c2c12aca5408203d46",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
@@ -692,8 +716,7 @@
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit",
         "l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim",
-        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes",
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes"
       ],
       "execution_ready": false,
       "expected_cell_count": 10,
@@ -703,8 +726,26 @@
       "ready_for_provider_dispatch": false,
       "schema": "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1",
       "score_claim": false,
-      "source_commit": "649f44f7179216cc372fd18ad64f8a55b3d0aad0",
-      "source_commit_matches_head": false
+      "source_commit": "a23606c9b1a81aacf154d6c2c12aca5408203d46",
+      "source_commit_is_ancestor": true,
+      "source_commit_matches_head": true,
+      "source_custody_current_for_execution": true,
+      "source_relevant_diff_paths": [],
+      "source_relevant_paths": [
+        "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py",
+        "tools/build_tt5l_sideinfo_variant_packets.py",
+        "src/tac/optimization/l5_v2_measurement_schedule.py",
+        "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+        "src/tac/optimization/tt5l_sideinfo_variant_packets.py",
+        "src/tac/deploy/lightning/batch_jobs.py",
+        "scripts/launch_lightning_batch_job.py",
+        "scripts/adjudicate_contest_auth_eval.py",
+        "src/tac/substrates/time_traveler_l5_autonomy",
+        "submissions/robust_current",
+        ".omx/research/l5_v2_tt5l_current_code_fullshape_sideinfo_variant_packets_20260517_codex.json",
+        ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan_20260517_codex.json"
+      ],
+      "source_relevant_paths_match": true
     },
     "sideinfo_effect_curve_status": {
       "artifact_path": ".omx/research/l5_v2_tt5l_sideinfo_effect_curve_20260516_codex.json",

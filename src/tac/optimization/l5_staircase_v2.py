@@ -279,6 +279,18 @@ _TT5L_CONTEST_FULL_FRAME_PROOF_SCOPES = frozenset({
 _TT5L_CONTEST_N_PAIRS = 600
 _TT5L_CONTEST_TOTAL_FRAMES = 1200
 _TT5L_CONTEST_RAW_OUTPUT_FRAME_NBYTES = 874 * 1164 * 3
+_TT5L_LIGHTNING_PAIRED_AXIS_STATIC_SOURCE_PATHS = (
+    "tools/build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan.py",
+    "tools/build_tt5l_sideinfo_variant_packets.py",
+    "src/tac/optimization/l5_v2_measurement_schedule.py",
+    "src/tac/optimization/l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan.py",
+    "src/tac/optimization/tt5l_sideinfo_variant_packets.py",
+    "src/tac/deploy/lightning/batch_jobs.py",
+    "scripts/launch_lightning_batch_job.py",
+    "scripts/adjudicate_contest_auth_eval.py",
+    "src/tac/substrates/time_traveler_l5_autonomy",
+    "submissions/robust_current",
+)
 
 
 @dataclass(frozen=True)
@@ -3213,6 +3225,16 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
                     "l5_v2_tt5l_materialized_paired_work_unit_runtime_content_missing:"
                     + axis
                 )
+        runtime_content_values = [
+            str(runtime_content_by_axis.get(axis) or "")
+            for axis in ("contest_cpu", "contest_cuda")
+        ]
+        if all(_SHA256_HEX_RE.fullmatch(value) for value in runtime_content_values) and (
+            len(set(runtime_content_values)) != 1
+        ):
+            blockers.append(
+                "l5_v2_tt5l_materialized_paired_work_unit_runtime_content_axis_mismatch"
+            )
 
     required_axes = payload.get("required_axes") if payload else None
     if isinstance(required_axes, list):
@@ -3592,6 +3614,11 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             "source_commit": "",
             "current_head_commit": "",
             "source_commit_matches_head": False,
+            "source_commit_is_ancestor": False,
+            "source_relevant_paths": [],
+            "source_relevant_diff_paths": [],
+            "source_relevant_paths_match": False,
+            "source_custody_current_for_execution": False,
             "blockers": [],
         }
     try:
@@ -3750,6 +3777,45 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         and current_head_commit
         and source_commit == current_head_commit
     )
+    source_relevant_paths = [
+        path
+        for path in dict.fromkeys(
+            [
+                *_TT5L_LIGHTNING_PAIRED_AXIS_STATIC_SOURCE_PATHS,
+                str(payload.get("source_variant_manifest") or "").strip(),
+                str(payload.get("source_dispatch_plan") or "").strip(),
+            ]
+        )
+        if path
+    ]
+    source_commit_is_ancestor = source_commit_matches_head or (
+        _git_is_ancestor(repo_root, source_commit, current_head_commit)
+        if payload and _GIT_COMMIT_HEX_RE.fullmatch(source_commit)
+        else False
+    )
+    source_relevant_diff_paths = (
+        list(
+            _git_diff_name_only(
+                repo_root,
+                source_commit,
+                current_head_commit,
+                source_relevant_paths,
+            )
+        )
+        if payload and source_commit_is_ancestor
+        else []
+    )
+    source_relevant_paths_match = (
+        bool(payload)
+        and bool(current_head_commit)
+        and source_commit_is_ancestor
+        and not source_relevant_diff_paths
+    )
+    source_custody_current_for_execution = (
+        bool(payload)
+        and not validation_blockers
+        and source_relevant_paths_match
+    )
     dry_run_ready = (
         bool(payload)
         and not validation_blockers
@@ -3771,9 +3837,14 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
             "l5_v2_tt5l_lightning_paired_axis_plan_current_head_unknown"
         )
     elif payload and source_commit != current_head_commit:
-        execution_blockers.append(
-            "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
-        )
+        if not source_commit_is_ancestor:
+            execution_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_head_ancestor"
+            )
+        elif source_relevant_diff_paths:
+            execution_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+            )
     return {
         "schema": (
             "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1"
@@ -3793,6 +3864,11 @@ def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
         "source_commit": source_commit,
         "current_head_commit": current_head_commit,
         "source_commit_matches_head": source_commit_matches_head,
+        "source_commit_is_ancestor": source_commit_is_ancestor,
+        "source_relevant_paths": source_relevant_paths,
+        "source_relevant_diff_paths": source_relevant_diff_paths,
+        "source_relevant_paths_match": source_relevant_paths_match,
+        "source_custody_current_for_execution": source_custody_current_for_execution,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -3964,6 +4040,12 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         if sideinfo_effect_curve_valid:
             blockers.extend(str(blocker) for blocker in timing_smoke_status["blockers"])
     provider_blocker_status = materialized_work_unit_status["provider_blocker_status"]
+    provider_blocker_invalid = (
+        provider_blocker_status["artifact_exists"] is True
+        and provider_blocker_status["artifact_valid"] is not True
+    )
+    if provider_blocker_invalid:
+        blockers.extend(str(blocker) for blocker in provider_blocker_status["blockers"])
     if provider_blocker_status["active"] is True:
         blockers.extend(str(blocker) for blocker in provider_blocker_status["blockers"])
         alternate_plan = materialized_work_unit_status[
@@ -4108,6 +4190,35 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
+        }
+    elif (
+        not probe_valid
+        and materialized_work_unit_status["artifact_valid"] is True
+        and provider_blocker_invalid
+    ):
+        next_action = {
+            "action_id": "refresh_or_retire_l5_v2_tt5l_modal_provider_blocker",
+            "phase": "probe_disambiguator_paired_measurements",
+            "probe_status": "tt5l_work_unit_provider_blocker_artifact_stale",
+            "materialized_work_unit_status": materialized_work_unit_status,
+            "provider_blocker_status": provider_blocker_status,
+            "execution_order": [
+                "inspect_provider_blocker_archive_and_pair_group_against_current_work_unit",
+                "regenerate_provider_blocker_for_current_archive_or_mark_historical",
+                "rerun_l5_v2_architecture_lock_packet_before_any_execute_command",
+            ],
+            "score_lowering_unblocker": (
+                "TT5L has a byte-closed work unit, but a stale or invalid "
+                "provider-blocker artifact is present. Refusing to surface an "
+                "execute command until provider state is refreshed or retired."
+            ),
+            "ready_for_operator_dispatch": False,
+            "ready_for_provider_dispatch": False,
+            "ready_for_alternate_provider_planning": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "dispatch_attempted": False,
         }
     elif (
         not probe_valid
@@ -4497,6 +4608,55 @@ def _git_head_commit(repo_root: Path) -> str:
     if proc.returncode != 0:
         return ""
     return proc.stdout.strip()
+
+
+def _git_is_ancestor(repo_root: Path, ancestor: str, descendant: str) -> bool:
+    if not ancestor or not descendant:
+        return False
+    try:
+        proc = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0
+
+
+def _git_diff_name_only(
+    repo_root: Path,
+    base_commit: str,
+    head_commit: str,
+    paths: Iterable[str],
+) -> tuple[str, ...]:
+    clean_paths = tuple(path for path in paths if path)
+    if not base_commit or not head_commit or not clean_paths:
+        return ()
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "diff",
+                "--name-only",
+                f"{base_commit}..{head_commit}",
+                "--",
+                *clean_paths,
+            ],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ()
+    if proc.returncode != 0:
+        return ()
+    return tuple(line.strip() for line in proc.stdout.splitlines() if line.strip())
 
 
 def _resolve_artifact_path(path: str, repo_root: Path) -> tuple[Path | None, str | None]:
@@ -6060,12 +6220,16 @@ def render_l5_v2_architecture_lock_packet_markdown(
                     f"`{paired_axis_plan_status.get('source_commit')}`"
                 ),
                 (
-                    "- current_head_commit: "
-                    f"`{paired_axis_plan_status.get('current_head_commit')}`"
+                    "- source_relevant_paths_match: "
+                    f"`{paired_axis_plan_status.get('source_relevant_paths_match')}`"
                 ),
                 (
-                    "- source_commit_matches_head: "
-                    f"`{paired_axis_plan_status.get('source_commit_matches_head')}`"
+                    "- source_relevant_diff_paths: "
+                    f"`{paired_axis_plan_status.get('source_relevant_diff_paths', [])}`"
+                ),
+                (
+                    "- source_custody_current_for_execution: "
+                    f"`{paired_axis_plan_status.get('source_custody_current_for_execution')}`"
                 ),
                 (
                     "- cells: "

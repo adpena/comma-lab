@@ -2616,6 +2616,176 @@ def test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker(
     )
 
 
+def test_l5_v2_tt5l_materialized_work_unit_rejects_runtime_content_axis_mismatch(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    _write_tt5l_archive_zip(archive_path, nonzero_side_info=True)
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
+    )
+    payload = json.loads(work_unit_path.read_text(encoding="utf-8"))
+    payload["runtime"]["expected_runtime_content_tree_sha256_by_axis"][
+        "contest_cuda"
+    ] = "e" * 64
+    work_unit_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+    materialized = tt5l["materialized_tt5l_paired_work_unit_status"]
+
+    assert materialized["artifact_valid"] is False
+    assert (
+        "l5_v2_tt5l_materialized_paired_work_unit_runtime_content_axis_mismatch"
+        in materialized["blockers"]
+    )
+    assert tt5l["next_non_pr106_l5_action"]["action_id"] == (
+        "materialize_l5_v2_paired_probe_measurements"
+    )
+
+
+def test_l5_v2_tt5l_stale_modal_blocker_blocks_execute_command(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_dykstra_artifact(tmp_path)
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("c1_z5_tt5l_probe_disambiguator")
+    template = tmp_path / l5_v2.TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH
+    template.parent.mkdir(parents=True, exist_ok=True)
+    template.write_text("{}\n", encoding="utf-8")
+    intake_path = tmp_path / l5_v2.TT5L_PROBE_OBSERVATION_INTAKE_ARTIFACT_PATH
+    intake_path.parent.mkdir(parents=True, exist_ok=True)
+    intake_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_probe_observation_intake_v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "verdict": {
+                    "evaluated_observations": [
+                        {"candidate_id": candidate_id}
+                        for candidate_id in L5V2_CANDIDATES
+                    ]
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    work_unit_path = (
+        tmp_path / l5_v2.TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH
+    )
+    work_unit_path.parent.mkdir(parents=True, exist_ok=True)
+    archive_rel = "experiments/results/tt5l/archive.zip"
+    archive_path = tmp_path / archive_rel
+    _write_tt5l_archive_zip(archive_path, nonzero_side_info=True)
+    archive_sha = _file_sha256(archive_path)
+    runtime_rel = "experiments/results/tt5l/runtime"
+    runtime_dir = tmp_path / runtime_rel
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    (runtime_dir / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    _write_standard_tt5l_materialized_work_unit_plan(
+        work_unit_path,
+        archive_rel=archive_rel,
+        archive_sha=archive_sha,
+        archive_bytes=archive_path.stat().st_size,
+        runtime_rel=runtime_rel,
+    )
+    blocker_path = tmp_path / l5_v2.TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH
+    blocker_path.parent.mkdir(parents=True, exist_ok=True)
+    blocker_path.write_text(
+        json.dumps(
+            {
+                "schema": "l5_v2_tt5l_materialized_provider_blocker_v1",
+                "provider": "modal",
+                "failure_class": "modal_workspace_billing_cycle_spend_limit_reached",
+                "archive_sha256": "0" * 64,
+                "pair_group_id": (
+                    "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
+                ),
+                "resolved": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    readiness = l5_v2_dispatch_readiness(
+        gate_evidence=evidence,
+        repo_root=tmp_path,
+    )
+    tt5l = readiness["tt5l_campaign_readiness"]
+    action = tt5l["next_non_pr106_l5_action"]
+    provider_blocker = action["provider_blocker_status"]
+
+    assert action["action_id"] == (
+        "refresh_or_retire_l5_v2_tt5l_modal_provider_blocker"
+    )
+    assert provider_blocker["artifact_exists"] is True
+    assert provider_blocker["artifact_valid"] is False
+    assert provider_blocker["active"] is False
+    assert action["ready_for_operator_dispatch"] is False
+    assert action["ready_for_provider_dispatch"] is False
+    assert "operator_execute_command_template_after_review" not in action
+    assert (
+        "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
+        in provider_blocker["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
+        in tt5l["blockers"]
+    )
+
+
 def test_l5_v2_tt5l_modal_blocker_surfaces_lightning_alternate_plan(
     tmp_path: Path,
 ) -> None:
@@ -3210,6 +3380,8 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert status["source_commit"] == _sha(1)
     assert status["current_head_commit"] == _sha(1)
     assert status["source_commit_matches_head"] is True
+    assert status["source_relevant_paths_match"] is True
+    assert status["source_custody_current_for_execution"] is True
     assert status["all_cells_dry_run_ready"] is True
     assert status["execution_ready"] is False
     assert status["score_claim"] is False
@@ -3239,17 +3411,28 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     )
     assert "- cells: `10`/`10`" in report
     assert f"- source_commit: `{_sha(1)}`" in report
-    assert "- source_commit_matches_head: `True`" in report
+    assert "- source_relevant_paths_match: `True`" in report
+    assert "- source_custody_current_for_execution: `True`" in report
     assert "- all_cells_dry_run_ready: `True`" in report
     assert "- execution_ready: `False`" in report
     assert "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only" in report
 
 
-def test_l5_v2_tt5l_lightning_paired_axis_plan_status_surfaces_stale_source_commit(
+def test_l5_v2_tt5l_lightning_paired_axis_plan_status_allows_head_only_drift(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(2))
+    monkeypatch.setattr(
+        l5_v2,
+        "_git_is_ancestor",
+        lambda repo_root, ancestor, descendant: True,
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "_git_diff_name_only",
+        lambda repo_root, base_commit, head_commit, paths: (),
+    )
     _write_tt5l_lightning_paired_axis_plan_artifact(tmp_path)
 
     readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
@@ -3262,12 +3445,53 @@ def test_l5_v2_tt5l_lightning_paired_axis_plan_status_surfaces_stale_source_comm
     assert status["source_commit"] == _sha(1)
     assert status["current_head_commit"] == _sha(2)
     assert status["source_commit_matches_head"] is False
+    assert status["source_commit_is_ancestor"] is True
+    assert status["source_relevant_diff_paths"] == []
+    assert status["source_relevant_paths_match"] is True
+    assert status["source_custody_current_for_execution"] is True
     assert (
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
+        not in status["execution_blockers"]
+    )
+
+
+def test_l5_v2_tt5l_lightning_paired_axis_plan_status_blocks_relevant_source_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    changed_path = "src/tac/deploy/lightning/batch_jobs.py"
+    monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(2))
+    monkeypatch.setattr(
+        l5_v2,
+        "_git_is_ancestor",
+        lambda repo_root, ancestor, descendant: True,
+    )
+    monkeypatch.setattr(
+        l5_v2,
+        "_git_diff_name_only",
+        lambda repo_root, base_commit, head_commit, paths: (changed_path,),
+    )
+    _write_tt5l_lightning_paired_axis_plan_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ]
+
+    assert status["artifact_valid"] is True
+    assert status["all_cells_dry_run_ready"] is True
+    assert status["source_commit"] == _sha(1)
+    assert status["current_head_commit"] == _sha(2)
+    assert status["source_commit_matches_head"] is False
+    assert status["source_relevant_diff_paths"] == [changed_path]
+    assert status["source_relevant_paths_match"] is False
+    assert status["source_custody_current_for_execution"] is False
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
         in status["execution_blockers"]
     )
     assert (
-        "l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head"
+        "l5_v2_tt5l_lightning_paired_axis_plan_source_relevant_paths_changed"
         in status["blockers"]
     )
 
@@ -3520,10 +3744,23 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "sideinfo_effect_curve_artifact_valid",
         "sideinfo_effect_curve_status",
         "materialized_tt5l_paired_work_unit_status",
-        "sideinfo_effect_curve_lightning_paired_axis_plan_status",
         "blockers",
     ):
         assert artifact_tt5l[field] == live_tt5l[field]
+    volatile_source_fields = {
+        "current_head_commit",
+        "source_commit_matches_head",
+    }
+    artifact_plan_status = artifact_tt5l[
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ].copy()
+    live_plan_status = live_tt5l[
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ].copy()
+    for field in volatile_source_fields:
+        artifact_plan_status.pop(field, None)
+        live_plan_status.pop(field, None)
+    assert artifact_plan_status == live_plan_status
 
 
 def test_l5_v2_architecture_lock_packet_cli_writes_no_lock_packet(

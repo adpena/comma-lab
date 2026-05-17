@@ -5,7 +5,7 @@
 - lane_id: `lane_time_traveler_l5_autonomy_substrate_20260513`
 - architecture_lock_allowed: `False`
 - readiness_architecture_lock_allowed: `False`
-- next_action: `review_and_execute_l5_v2_tt5l_materialized_paired_measurement`
+- next_action: `refresh_or_retire_l5_v2_tt5l_modal_provider_blocker`
 - score_claim: `false`
 - promotion_eligible: `false`
 - ready_for_exact_eval_dispatch: `false`
@@ -25,14 +25,15 @@
 
 - artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
 - artifact_valid: `True`
-- source_commit: `649f44f7179216cc372fd18ad64f8a55b3d0aad0`
-- current_head_commit: `c7aa814161dcb3c5ba2cf53f7029e3861cdd0e7d`
-- source_commit_matches_head: `False`
+- source_commit: `a23606c9b1a81aacf154d6c2c12aca5408203d46`
+- source_relevant_paths_match: `True`
+- source_relevant_diff_paths: `[]`
+- source_custody_current_for_execution: `True`
 - cells: `10`/`10`
 - axes: `['contest_cpu', 'contest_cuda']`
 - all_cells_dry_run_ready: `True`
 - execution_ready: `False`
-- execution_blockers: `['l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_lightning_identity_and_workspace_preflight_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes', 'l5_v2_tt5l_lightning_paired_axis_plan_source_commit_not_current_head']`
+- execution_blockers: `['l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:dry_run_only_no_provider_job_launched', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_lightning_identity_and_workspace_preflight_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_source_manifest_staged_to_lightning_workspace_before_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_per_axis_lane_claim_before_non_dry_run_submit', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:requires_harvested_contest_cpu_and_contest_cuda_cells_before_sideinfo_effect_claim', 'l5_v2_tt5l_lightning_paired_axis_plan_blocked:score_claim_forbidden_until_effect_curve_artifact_passes']`
 - score_claim: `false`
 - promotion_eligible: `false`
 
