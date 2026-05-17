@@ -1043,6 +1043,14 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert z6["post_l1_proxy_evidence"]["full_film_proxy_found"] is True
     assert z6["post_l1_proxy_evidence"]["posenet_proxy_tested"] is True
     assert z6["post_l1_proxy_evidence"]["semantic_ego_proxy_supported"] is False
+    scorer_smoke = z6["post_l1_proxy_evidence"]["scorer_bearing_paired_smoke"]
+    assert scorer_smoke["artifact_present"] is True
+    assert scorer_smoke["schema"] == l5_v2.Z6_SCORER_BEARING_PAIRED_SMOKE_SCHEMA
+    assert scorer_smoke["best_proxy_id"] == "random_control"
+    assert scorer_smoke["semantic_scorer_proxy_supported"] is False
+    assert scorer_smoke["score_claim"] is False
+    assert scorer_smoke["promotion_eligible"] is False
+    assert scorer_smoke["ready_for_paid_dispatch"] is False
     assert z6["post_l1_proxy_evidence"]["score_claim"] is False
     assert z6["post_l1_proxy_evidence"]["ready_for_paid_dispatch"] is False
     assert (
@@ -1050,15 +1058,15 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
         is False
     )
     assert z6["post_l1_recommended_next_action_status"] == (
-        "proxy_capacity_found_requires_semantic_ego_probe"
+        "scorer_bearing_probe_blocks_z6_v1_paid_dispatch"
     )
     assert z6["post_l1_recommended_next_action_id"] == (
-        "z6_proxy_capacity_found_require_semantic_ego_probe"
+        "z6_scorer_bearing_probe_blocks_full_film_paid_dispatch"
     )
     assert z6_status["post_l1_proxy_evidence"] == z6["post_l1_proxy_evidence"]
     assert z6_status["next_prerequisite_status"][
         "post_l1_recommended_next_action_status"
-    ] == "proxy_capacity_found_requires_semantic_ego_probe"
+    ] == "scorer_bearing_probe_blocks_z6_v1_paid_dispatch"
     assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
@@ -1079,6 +1087,14 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     )
     assert (
         "z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best"
+        in z6["blockers"]
+    )
+    assert (
+        "z6_full_film_paid_dispatch_blocked_scorer_bearing_semantics_not_hard_earned"
+        in z6["blockers"]
+    )
+    assert (
+        "z6_full_film_paid_dispatch_blocked_posenet_pose_scorer_proxy_not_best"
         in z6["blockers"]
     )
 
@@ -1203,7 +1219,7 @@ def test_l5_v2_asymptotic_candidate_surface_markdown_reports_current_status() ->
     assert "recommended_next_action_status: `completed_or_superseded`" in report
     assert (
         "post_l1_recommended_next_action_status: "
-        "`proxy_capacity_found_requires_semantic_ego_probe`"
+        "`scorer_bearing_probe_blocks_z6_v1_paid_dispatch`"
     ) in report
     assert "full_film_proxy_found_real_video_smoke" in report
     assert "MEANINGFUL_INTERPRETABILITY" in report

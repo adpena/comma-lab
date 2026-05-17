@@ -222,6 +222,13 @@ Z6_REAL_VIDEO_EGO_PROXY_SWEEP_IDENTITY_DOMINATES_VERDICT = (
 Z6_REAL_VIDEO_EGO_PROXY_SWEEP_FULL_FILM_VERDICT = (
     "full_film_proxy_found_real_video_smoke"
 )
+Z6_SCORER_BEARING_PAIRED_SMOKE_TOOL_PATH = (
+    "tools/probe_z6_scorer_bearing_paired_smoke.py"
+)
+Z6_SCORER_BEARING_PAIRED_SMOKE_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_z6_scorer_bearing_paired_smoke_20260517_codex.json"
+)
+Z6_SCORER_BEARING_PAIRED_SMOKE_SCHEMA = "z6_scorer_bearing_paired_smoke_v1"
 Z6_POST_L1_PROXY_EVIDENCE_STATUS_SCHEMA = "z6_post_l1_proxy_evidence_status_v1"
 TISHBY_D4_PROBE_ARTIFACT_PATH = (
     ".omx/research/tishby_ib_pure_d4_probe_20260516_codex.json"
@@ -735,10 +742,16 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
     """Return fail-closed Z6 post-L1 proxy evidence for dispatch routing."""
 
     artifact_path = repo_root / Z6_REAL_VIDEO_EGO_PROXY_SWEEP_ARTIFACT_PATH
+    scorer_artifact_path = (
+        repo_root / Z6_SCORER_BEARING_PAIRED_SMOKE_ARTIFACT_PATH
+    )
     blockers: list[str] = []
     artifact_present = artifact_path.is_file()
     artifact_sha256 = ""
     payload: Mapping[str, Any] = {}
+    scorer_artifact_present = scorer_artifact_path.is_file()
+    scorer_artifact_sha256 = ""
+    scorer_payload: Mapping[str, Any] = {}
     if not artifact_present:
         blockers.append("z6_real_video_ego_proxy_sweep_missing")
     else:
@@ -752,6 +765,19 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
                 payload = loaded
             else:
                 blockers.append("z6_real_video_ego_proxy_sweep_not_object")
+    if scorer_artifact_present:
+        scorer_artifact_sha256 = _sha256_file(scorer_artifact_path)
+        try:
+            loaded_scorer = json.loads(
+                scorer_artifact_path.read_text(encoding="utf-8")
+            )
+        except json.JSONDecodeError:
+            blockers.append("z6_scorer_bearing_paired_smoke_json_invalid")
+        else:
+            if isinstance(loaded_scorer, Mapping):
+                scorer_payload = loaded_scorer
+            else:
+                blockers.append("z6_scorer_bearing_paired_smoke_not_object")
 
     for field_name in (
         "score_claim",
@@ -769,6 +795,31 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         blockers.append("z6_real_video_ego_proxy_sweep_evidence_grade_mismatch")
     if payload and not isinstance(payload.get("rows"), list):
         blockers.append("z6_real_video_ego_proxy_sweep_rows_missing")
+    for field_name in (
+        "score_claim",
+        "promotion_eligible",
+        "rank_or_kill_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_paid_dispatch",
+        "paradigm_claim_allowed",
+    ):
+        if scorer_payload and scorer_payload.get(field_name) is not False:
+            blockers.append(
+                f"z6_scorer_bearing_paired_smoke_{field_name}_not_false"
+            )
+    if (
+        scorer_payload
+        and scorer_payload.get("schema") != Z6_SCORER_BEARING_PAIRED_SMOKE_SCHEMA
+    ):
+        blockers.append("z6_scorer_bearing_paired_smoke_schema_mismatch")
+    if (
+        scorer_payload
+        and scorer_payload.get("evidence_grade")
+        != "tiny_cpu_scorer_bearing_proxy_no_archive_eval"
+    ):
+        blockers.append("z6_scorer_bearing_paired_smoke_evidence_grade_mismatch")
+    if scorer_payload and not isinstance(scorer_payload.get("rows"), list):
+        blockers.append("z6_scorer_bearing_paired_smoke_rows_missing")
 
     verdict = str(payload.get("verdict") or "")
     identity_dominates = (
@@ -779,6 +830,17 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
     )
     semantic_ego_proxy_supported = payload.get("semantic_ego_proxy_supported") is True
     posenet_proxy_tested = payload.get("posenet_proxy_tested") is True
+    scorer_semantic_supported = (
+        scorer_payload.get("semantic_scorer_proxy_supported") is True
+    )
+    if scorer_payload and not scorer_semantic_supported:
+        blockers.append(
+            "z6_full_film_paid_dispatch_blocked_scorer_bearing_semantics_not_hard_earned"
+        )
+        if scorer_payload.get("best_proxy_id") != "posenet_pose":
+            blockers.append(
+                "z6_full_film_paid_dispatch_blocked_posenet_pose_scorer_proxy_not_best"
+            )
     if identity_dominates:
         blockers.append(
             "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep"
@@ -810,6 +872,19 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         recommended_next_action_status = (
             "proxy_capacity_found_requires_semantic_ego_probe"
         )
+        if scorer_payload and not scorer_semantic_supported:
+            recommended_next_action_id = (
+                "z6_scorer_bearing_probe_blocks_full_film_paid_dispatch"
+            )
+            recommended_next_action = (
+                "The tiny scorer-bearing paired probe found random_control, "
+                "not PoseNet-derived ego, as the best proxy. Do not paid-"
+                "dispatch Z6-v1 full-FiLM; redesign ego-conditioning or "
+                "advance Z7/Z8 as new measured configurations."
+            )
+            recommended_next_action_status = (
+                "scorer_bearing_probe_blocks_z6_v1_paid_dispatch"
+            )
     elif payload and not blockers:
         recommended_next_action_id = "z6_proxy_sweep_found_full_film_candidate"
         recommended_next_action = (
@@ -839,6 +914,8 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
                 "z6_full_film_paid_dispatch_blocked_identity_dominates_real_video_proxy_sweep",
                 "z6_full_film_paid_dispatch_blocked_ego_proxy_semantics_not_hard_earned",
                 "z6_full_film_paid_dispatch_blocked_posenet_pose_proxy_not_best",
+                "z6_full_film_paid_dispatch_blocked_scorer_bearing_semantics_not_hard_earned",
+                "z6_full_film_paid_dispatch_blocked_posenet_pose_scorer_proxy_not_best",
             }
         ],
         "verdict": verdict,
@@ -849,6 +926,26 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
         "best_identity_minus_full_loss_proxy": payload.get(
             "best_identity_minus_full_loss_proxy"
         ),
+        "scorer_bearing_paired_smoke": {
+            "tool_path": Z6_SCORER_BEARING_PAIRED_SMOKE_TOOL_PATH,
+            "artifact_path": Z6_SCORER_BEARING_PAIRED_SMOKE_ARTIFACT_PATH,
+            "artifact_present": scorer_artifact_present,
+            "artifact_sha256": scorer_artifact_sha256,
+            "schema": scorer_payload.get("schema"),
+            "verdict": scorer_payload.get("verdict"),
+            "evidence_grade": scorer_payload.get("evidence_grade"),
+            "hardware_axis": scorer_payload.get("hardware_axis"),
+            "best_proxy_id": scorer_payload.get("best_proxy_id"),
+            "best_identity_minus_full_score_proxy": scorer_payload.get(
+                "best_identity_minus_full_score_proxy"
+            ),
+            "semantic_scorer_proxy_supported": scorer_payload.get(
+                "semantic_scorer_proxy_supported"
+            ),
+            "score_claim": scorer_payload.get("score_claim"),
+            "promotion_eligible": scorer_payload.get("promotion_eligible"),
+            "ready_for_paid_dispatch": scorer_payload.get("ready_for_paid_dispatch"),
+        },
         "identity_dominates_all_tested_real_video_proxies": identity_dominates,
         "full_film_proxy_found": full_film_proxy_found,
         "allowed_to_spend": False,
@@ -858,7 +955,10 @@ def _z6_post_l1_proxy_evidence_status(*, repo_root: Path) -> dict[str, Any]:
             f"identity_minus_full_loss_proxy="
             f"{payload.get('best_identity_minus_full_loss_proxy')} "
             f"posenet_proxy_tested={payload.get('posenet_proxy_tested')} "
-            f"semantic_ego_proxy_supported={payload.get('semantic_ego_proxy_supported')}"
+            f"semantic_ego_proxy_supported={payload.get('semantic_ego_proxy_supported')} "
+            f"scorer_bearing_best_proxy={scorer_payload.get('best_proxy_id')} "
+            f"scorer_bearing_semantic_supported="
+            f"{scorer_payload.get('semantic_scorer_proxy_supported')}"
         ),
         "score_claim": False,
         "promotion_eligible": False,

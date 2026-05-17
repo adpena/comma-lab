@@ -1,0 +1,282 @@
+{
+  "best_identity_minus_full_score_proxy": 11.057492763797967,
+  "best_proxy_id": "random_control",
+  "blockers": [
+    "tiny_cpu_scorer_bearing_proxy_not_contest_cpu_or_cuda",
+    "no_byte_closed_archive_eval",
+    "no_contest_cpu_cuda_pair",
+    "not_paradigm_claim_authority",
+    "scorer_bearing_semantics_not_hard_earned",
+    "posenet_pose_scorer_proxy_not_best"
+  ],
+  "candidate_count": 3,
+  "candidate_ids": [
+    "posenet_pose",
+    "random_control",
+    "zero"
+  ],
+  "device": "cpu",
+  "epochs": 1,
+  "evidence_grade": "tiny_cpu_scorer_bearing_proxy_no_archive_eval",
+  "hardware_axis": "local_cpu_proxy_not_contest_cpu",
+  "lane_id": "lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516",
+  "num_pairs": 2,
+  "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+  "paradigm_claim_allowed": false,
+  "probe_id": "z6_scorer_bearing_paired_smoke",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "ready_for_paid_dispatch": false,
+  "recommended_next_actions": [
+    "do not paid-dispatch Z6-v1 full-FiLM from this tiny scorer-bearing probe",
+    "redesign ego-conditioning or advance Z7/Z8 as new measured configurations",
+    "preserve this as a Z6 trust-region update, not a lane kill"
+  ],
+  "rows": [
+    {
+      "candidate_index": 0,
+      "full_film": {
+        "archive_bytes": 43112,
+        "epochs": 1,
+        "final_loss_total": 76.95089721679688,
+        "final_pc_term": 0.0027144120540469885,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 39.482940673828125,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 5.019209384918213,
+            "rate_term": 0.028482116758823395,
+            "seg_term": 0.32367080450057983
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 16,
+          "total": 22530
+        },
+        "pose_contribution": 25.358424593731698,
+        "pose_term": 64.30496978759766,
+        "proxy_id": "posenet_pose",
+        "rate": 0.001148260447480122,
+        "rate_contribution": 0.028706511187003052,
+        "score_proxy": 76.94818271205065,
+        "seg_contribution": 51.56105160713196,
+        "seg_term": 0.5156105160713196
+      },
+      "full_film_scorer_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3518,
+      "identity": {
+        "archive_bytes": 39594,
+        "epochs": 1,
+        "final_loss_total": 67.89874267578125,
+        "final_pc_term": 0.0027181964833289385,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 46.37674331665039,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 6.247980117797852,
+            "rate_term": 0.02639065496623516,
+            "seg_term": 0.38443195819854736
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 16,
+          "total": 20898
+        },
+        "pose_contribution": 15.76062234801897,
+        "pose_term": 24.8397216796875,
+        "proxy_id": "posenet_pose",
+        "rate": 0.0010545607755967701,
+        "rate_contribution": 0.026364019389919252,
+        "score_proxy": 67.89603115767683,
+        "seg_contribution": 52.109044790267944,
+        "seg_term": 0.5210904479026794
+      },
+      "identity_minus_full_pose_term": -39.465248107910156,
+      "identity_minus_full_score_proxy": -9.052151554373822,
+      "identity_minus_full_seg_term": 0.005479931831359863,
+      "proxy_id": "posenet_pose"
+    },
+    {
+      "candidate_index": 1,
+      "full_film": {
+        "archive_bytes": 43123,
+        "epochs": 1,
+        "final_loss_total": 66.4893569946289,
+        "final_pc_term": 0.0027252701111137867,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 42.57638168334961,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 5.300484657287598,
+            "rate_term": 0.028492771089076996,
+            "seg_term": 0.352647066116333
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 16,
+          "total": 22530
+        },
+        "pose_contribution": 13.551955945498438,
+        "pose_term": 18.365550994873047,
+        "proxy_id": "random_control",
+        "rate": 0.0011485534254194957,
+        "rate_contribution": 0.028713835635487392,
+        "score_proxy": 66.48662867204884,
+        "seg_contribution": 52.90595889091492,
+        "seg_term": 0.5290595889091492
+      },
+      "full_film_scorer_proxy_wins": true,
+      "full_minus_identity_archive_bytes": 3513,
+      "identity": {
+        "archive_bytes": 39610,
+        "epochs": 1,
+        "final_loss_total": 77.54683685302734,
+        "final_pc_term": 0.0027181964833289385,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 46.37675476074219,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 6.247980117797852,
+            "rate_term": 0.026401307433843613,
+            "seg_term": 0.38443195819854736
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 16,
+          "total": 20898
+        },
+        "pose_contribution": 6.949018315753193,
+        "pose_term": 4.828885555267334,
+        "proxy_id": "random_control",
+        "rate": 0.0010549869253267683,
+        "rate_contribution": 0.026374673133169206,
+        "score_proxy": 77.5441214358468,
+        "seg_contribution": 70.56872844696045,
+        "seg_term": 0.7056872844696045
+      },
+      "identity_minus_full_pose_term": -13.536665439605713,
+      "identity_minus_full_score_proxy": 11.057492763797967,
+      "identity_minus_full_seg_term": 0.17662769556045532,
+      "proxy_id": "random_control"
+    },
+    {
+      "candidate_index": 2,
+      "full_film": {
+        "archive_bytes": 42741,
+        "epochs": 1,
+        "final_loss_total": 77.45442199707031,
+        "final_pc_term": 0.002700390759855509,
+        "identity_predictor": false,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 41.039424896240234,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 5.455026626586914,
+            "rate_term": 0.028470797464251518,
+            "seg_term": 0.3362239897251129
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 1632,
+          "residuals": 16,
+          "total": 22530
+        },
+        "pose_contribution": 19.240079627239073,
+        "pose_term": 37.01806640625,
+        "proxy_id": "zero",
+        "rate": 0.001138379100615789,
+        "rate_contribution": 0.028459477515394727,
+        "score_proxy": 77.4517263510771,
+        "seg_contribution": 58.18318724632263,
+        "seg_term": 0.5818318724632263
+      },
+      "full_film_scorer_proxy_wins": false,
+      "full_minus_identity_archive_bytes": 3164,
+      "identity": {
+        "archive_bytes": 39577,
+        "epochs": 1,
+        "final_loss_total": 61.48609161376953,
+        "final_pc_term": 0.0027181964833289385,
+        "identity_predictor": true,
+        "losses": [
+          {
+            "epoch": 0.0,
+            "loss_total": 46.376731872558594,
+            "pc_term": 0.0027419414836913347,
+            "pose_term": 6.247980117797852,
+            "rate_term": 0.026379335671663284,
+            "seg_term": 0.38443195819854736
+          }
+        ],
+        "paired_control_initialization": "shared_modules_seed_order_matched_v2",
+        "param_breakdown": {
+          "decoder": 18042,
+          "encoder": 2832,
+          "latent_init": 8,
+          "predictor": 0,
+          "residuals": 16,
+          "total": 20898
+        },
+        "pose_contribution": 6.161617011517736,
+        "pose_term": 3.7965524196624756,
+        "proxy_id": "zero",
+        "rate": 0.001054107991508647,
+        "rate_contribution": 0.026352699787716174,
+        "score_proxy": 61.48337152290518,
+        "seg_contribution": 55.29540181159973,
+        "seg_term": 0.5529540181159973
+      },
+      "identity_minus_full_pose_term": -33.221513986587524,
+      "identity_minus_full_score_proxy": -15.968354828171918,
+      "identity_minus_full_seg_term": -0.028877854347229004,
+      "proxy_id": "zero"
+    }
+  ],
+  "schema": "z6_scorer_bearing_paired_smoke_v1",
+  "score_claim": false,
+  "seed": 0,
+  "semantic_ego_proxy_ids": [
+    "frame_delta",
+    "moment_proxy",
+    "posenet_pose",
+    "quadrant_delta"
+  ],
+  "semantic_scorer_proxy_supported": false,
+  "upstream_dir": "/Users/adpena/Projects/pact/upstream",
+  "verdict": "semantic_full_film_scorer_proxy_not_found",
+  "video_path": "upstream/videos/0.mkv"
+}
