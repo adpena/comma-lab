@@ -16,14 +16,15 @@ from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (  #
     L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH,
 )
 from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_harvest import (  # noqa: E402
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_REPORT_PATH,
     build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan,
     l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_json,
+    render_l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_markdown,
 )
 
-DEFAULT_OUTPUT_JSON = Path(
-    ".omx/research/"
-    "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json"
-)
+DEFAULT_OUTPUT_JSON = Path(L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH)
+DEFAULT_OUTPUT_MD = Path(L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_REPORT_PATH)
 
 
 def _refuse_tmp(path: Path) -> None:
@@ -57,6 +58,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Output builder-ready harvest cell JSON.",
     )
     parser.add_argument(
+        "--output-md",
+        type=Path,
+        default=DEFAULT_OUTPUT_MD,
+        help="Output Markdown status report for the `.omx` control plane.",
+    )
+    parser.add_argument(
         "--repo-root",
         type=Path,
         default=REPO_ROOT,
@@ -75,9 +82,15 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=args.repo_root,
         )
         _refuse_tmp(args.output_json)
+        _refuse_tmp(args.output_md)
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
+        args.output_md.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(
             l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_json(payload),
+            encoding="utf-8",
+        )
+        args.output_md.write_text(
+            render_l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_markdown(payload),
             encoding="utf-8",
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
@@ -89,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         f"cell_count={payload['cell_count']} "
         f"harvested_exact_eval_artifact_count={payload['harvested_exact_eval_artifact_count']} "
         f"missing_exact_eval_artifact_count={payload['missing_exact_eval_artifact_count']} "
+        f"ready_for_effect_curve_build={str(payload['ready_for_effect_curve_build']).lower()} "
         f"blockers={len(payload['blockers'])} "
         f"output={args.output_json} "
         "score_claim=false promotion_eligible=false"

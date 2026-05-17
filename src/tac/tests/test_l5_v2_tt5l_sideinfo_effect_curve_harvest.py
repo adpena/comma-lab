@@ -37,6 +37,20 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
 def _plan(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     manifest_path = _write_manifest(tmp_path)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for row in manifest["variants"]:
+        variant = row["variant"]
+        nonzero = 0 if variant in {"zero", "ablated"} else 8
+        row["sideinfo_liveness"] = {
+            "checked": True,
+            "shape": [600, 45],
+            "total_values": 27_000,
+            "nonzero_values": nonzero,
+            "nonzero_fraction": nonzero / 27_000,
+        }
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     plan = build_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan(
         manifest=manifest,
         manifest_path=manifest_path,
@@ -56,9 +70,15 @@ def _write_exact_eval_artifact(
     seed: int = 10,
     archive_sha256: str | None = None,
     archive_size_bytes: int | None = None,
+    filename: str = "contest_auth_eval.json",
+    seg_dist: float = 0.001,
+    score_axis: str | None = None,
+    pair_group_id: str | None = None,
+    run_id: str | None = None,
+    runtime_content_tree_sha256: str | None = None,
 ) -> Path:
     local_dir = root / str(cell["local_artifact_dir"])
-    artifact = local_dir / "contest_auth_eval.json"
+    artifact = local_dir / filename
     log = local_dir / "contest_auth_eval.stdout.log"
     manifest = local_dir / "inflated_outputs_manifest.json"
     raw_sha = _sha(seed + 1000)
@@ -71,10 +91,11 @@ def _write_exact_eval_artifact(
         else archive_size_bytes
     )
     pose_dist = 0.0
-    seg_dist = 0.001
     score = contest_score(seg_dist, pose_dist, archive_bytes)
     axis = str(cell["axis"])
     is_cuda = axis == "contest_cuda"
+    pair = pair_group_id or str(cell["pair_group_id"])
+    run = run_id or str(cell["run_id"])
     _write_json(
         artifact,
         {
@@ -95,14 +116,40 @@ def _write_exact_eval_artifact(
                     "experiments/contest_auth_eval.py",
                     "--device",
                     "cuda" if is_cuda else "cpu",
+                    "--pair-group-id",
+                    pair,
+                    "--run-id",
+                    run,
                 ],
             },
             "raw_output_aggregate_sha256": raw_sha,
-            "runtime_content_tree_sha256": _sha(seed + 2),
-            "score_axis": axis,
+            "runtime_content_tree_sha256": runtime_content_tree_sha256 or _sha(seed + 2),
+            "score_axis": score_axis or axis,
+            "inflate_device": "cuda" if is_cuda else "cpu",
+            "eval_device": "cuda" if is_cuda else "cpu",
         },
     )
     return artifact
+
+
+def _write_complete_exact_eval_harvest(root: Path, plan: dict[str, object]) -> None:
+    runtime_content_by_variant = {
+        str(cell["variant"]): _sha(20_000 + idx)
+        for idx, cell in enumerate(
+            {str(row["variant"]): row for row in plan["cells"]}.values()
+        )
+    }
+    for cell in plan["cells"]:
+        assert isinstance(cell, dict)
+        variant = str(cell["variant"])
+        seg = 0.001 if variant == "trained" else 0.002
+        _write_exact_eval_artifact(
+            root,
+            cell,
+            seed=len(variant) * 10 + (1 if cell["axis"] == "contest_cuda" else 0),
+            seg_dist=seg,
+            runtime_content_tree_sha256=runtime_content_by_variant[variant],
+        )
 
 
 def test_harvest_cells_preserve_plan_identity_when_artifacts_missing(
@@ -230,6 +277,118 @@ def test_harvest_cells_block_archive_sha_and_byte_mismatches(
         "harvested_exact_eval_archive_sha_mismatch:trained:contest_cuda"
         in curve["contract_blockers"]
     )
+
+
+def test_harvest_cells_complete_harvest_feeds_effect_curve_builder(
+    tmp_path: Path,
+) -> None:
+    plan_path, plan = _plan(tmp_path)
+    _write_complete_exact_eval_harvest(tmp_path, plan)
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+
+    assert payload["ready_for_effect_curve_build"] is True
+    assert payload["ready_cell_count"] == 10
+    assert payload["harvested_exact_eval_artifact_count"] == 10
+    assert payload["blockers"] == []
+    curve = build_l5_v2_sideinfo_effect_curve(payload["cells"], repo_root=tmp_path)
+    assert curve["predicate_passed"] is True
+    assert curve["contract_blockers"] == []
+    for effect in curve["axis_effects"].values():
+        assert effect["trained_beats_or_ties_best_control"] is True
+
+
+def test_harvest_cells_prefers_adjudicated_artifact(tmp_path: Path) -> None:
+    plan_path, plan = _plan(tmp_path)
+    _write_complete_exact_eval_harvest(tmp_path, plan)
+    target = next(
+        cell
+        for cell in plan["cells"]
+        if cell["axis"] == "contest_cpu" and cell["variant"] == "zero"
+    )
+    _write_exact_eval_artifact(
+        tmp_path,
+        target,
+        filename="contest_auth_eval.adjudicated.json",
+        seg_dist=0.0015,
+    )
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+    zero_cpu = next(
+        cell
+        for cell in payload["cells"]
+        if cell["axis"] == "contest_cpu" and cell["variant"] == "zero"
+    )
+
+    assert zero_cpu["evidence"]["artifact_path"].endswith(
+        "contest_auth_eval.adjudicated.json"
+    )
+    assert zero_cpu["ready_for_effect_curve_build"] is True
+
+
+def test_harvest_cells_block_axis_pair_and_run_mismatch_before_metadata_fallback(
+    tmp_path: Path,
+) -> None:
+    plan_path, plan = _plan(tmp_path)
+    target = next(
+        cell
+        for cell in plan["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+    _write_exact_eval_artifact(
+        tmp_path,
+        target,
+        score_axis="contest_cpu",
+        pair_group_id="pair_wrong",
+        run_id="run_wrong",
+    )
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+    trained_cuda = next(
+        cell
+        for cell in payload["cells"]
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained"
+    )
+
+    assert "harvested_exact_eval_axis_mismatch:trained:contest_cuda" in trained_cuda[
+        "blockers"
+    ]
+    assert (
+        "harvested_exact_eval_pair_group_id_mismatch:trained:contest_cuda"
+        in trained_cuda["blockers"]
+    )
+    assert "harvested_exact_eval_run_id_mismatch:trained:contest_cuda" in trained_cuda[
+        "blockers"
+    ]
+
+
+def test_harvest_cells_block_wrong_plan_schema_and_extra_cells(tmp_path: Path) -> None:
+    plan_path, plan = _plan(tmp_path)
+    plan["schema"] = "wrong_schema"
+    extra = dict(plan["cells"][0])
+    extra["variant"] = "unsupported"
+    plan["cells"].append(extra)
+
+    payload = build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
+        plan=plan,
+        plan_path=plan_path,
+        repo_root=tmp_path,
+    )
+
+    assert "lightning_paired_axis_plan_schema_mismatch" in payload["blockers"]
+    assert "planned_cell_extra:contest_cpu:unsupported" in payload["blockers"]
 
 
 def test_harvest_cells_cli_writes_builder_ready_json(tmp_path: Path) -> None:

@@ -11,16 +11,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import (
+    extract_observed_runtime_content_tree_sha256,
+)
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
 )
 from tac.optimization.l5_v2_probe_intake import (
     exact_eval_evidence_from_auth_eval_artifact,
+)
+from tac.optimization.l5_v2_tt5l_sideinfo_effect_curve_dispatch_plan import (
+    L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA,
 )
 
 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA = (
@@ -29,12 +36,24 @@ L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA = (
 L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH = (
     "tools/build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan.py"
 )
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json"
+)
+L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_REPORT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.md"
+)
 
 _FALSE_AUTHORITY_FLAGS = {
+    "planning_only": True,
     "score_claim": False,
+    "score_claim_valid": False,
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
+    "ready_for_provider_dispatch": False,
     "rank_or_kill_eligible": False,
+    "dispatch_attempted": False,
 }
 _AUTH_EVAL_FILENAMES = (
     "contest_auth_eval.adjudicated.json",
@@ -67,6 +86,85 @@ def _read_json_mapping(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON artifact must be an object: {path}")
     return payload
+
+
+def _read_json_mapping_or_none(path: Path) -> dict[str, Any] | None:
+    try:
+        return _read_json_mapping(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:
+    value: Any = mapping
+    for key in keys:
+        if not isinstance(value, Mapping):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _command_text(value: object) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value)
+    return str(value or "")
+
+
+def _command_flag_value(command: str, flag: str) -> str:
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        parts = command.split()
+    for idx, part in enumerate(parts[:-1]):
+        if part == flag:
+            return str(parts[idx + 1]).strip()
+    prefix = f"{flag}="
+    for part in parts:
+        if part.startswith(prefix):
+            return part[len(prefix) :].strip()
+    return ""
+
+
+def _payload_command(payload: Mapping[str, Any]) -> str:
+    return _command_text(
+        _nested(payload, "custody", "command")
+        or _nested(payload, "provenance", "sys_argv")
+        or payload.get("sys_argv")
+        or _nested(payload, "provenance", "command")
+        or payload.get("auth_eval_command")
+    )
+
+
+def _payload_pair_group_id(payload: Mapping[str, Any]) -> str:
+    command = _payload_command(payload)
+    return str(
+        payload.get("pair_group_id")
+        or _nested(payload, "custody", "pair_group_id")
+        or _nested(payload, "provenance", "pair_group_id")
+        or _command_flag_value(command, "--pair-group-id")
+        or ""
+    ).strip()
+
+
+def _payload_run_id(payload: Mapping[str, Any]) -> str:
+    command = _payload_command(payload)
+    return str(
+        payload.get("run_id")
+        or _nested(payload, "custody", "run_id")
+        or _nested(payload, "provenance", "run_id")
+        or _command_flag_value(command, "--run-id")
+        or ""
+    ).strip()
+
+
+def _payload_axis(payload: Mapping[str, Any]) -> str:
+    return str(
+        payload.get("score_axis")
+        or payload.get("axis")
+        or _nested(payload, "custody", "axis")
+        or _nested(payload, "provenance", "axis")
+        or ""
+    ).strip()
 
 
 def _mapping_rows(value: object) -> list[Mapping[str, Any]]:
@@ -116,13 +214,7 @@ def _source_variant_manifest(
 
 
 def _planned_cells(plan: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    cells = _mapping_rows(plan.get("cells"))
-    return [
-        cell
-        for cell in cells
-        if str(cell.get("axis") or "") in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
-        and str(cell.get("variant") or "") in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
-    ]
+    return _mapping_rows(plan.get("cells"))
 
 
 def _auth_eval_artifact_path(cell: Mapping[str, Any], *, repo_root: Path) -> Path | None:
@@ -234,6 +326,17 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
     cells: list[dict[str, Any]] = []
     blockers: list[str] = []
     artifact_count = 0
+    if plan.get("schema") != L5V2_TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA:
+        blockers.append("lightning_paired_axis_plan_schema_mismatch")
+    for flag in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_provider_dispatch",
+        "dispatch_attempted",
+    ):
+        if plan.get(flag) is True:
+            blockers.append(f"lightning_paired_axis_plan_{flag}_true")
 
     for cell in _planned_cells(plan):
         identity = _plan_cell_identity(cell)
@@ -249,6 +352,28 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
             manifest_blocker=manifest_blocker,
         )
         if artifact_path is not None:
+            raw_payload = _read_json_mapping_or_none(artifact_path)
+            if raw_payload is None:
+                cell_blockers.append(
+                    f"harvested_exact_eval_artifact_unreadable:{variant}:{axis}"
+                )
+            else:
+                raw_axis = _payload_axis(raw_payload)
+                if raw_axis and raw_axis != axis:
+                    cell_blockers.append(
+                        f"harvested_exact_eval_axis_mismatch:{variant}:{axis}"
+                    )
+                raw_pair_group_id = _payload_pair_group_id(raw_payload)
+                if raw_pair_group_id and raw_pair_group_id != identity["pair_group_id"]:
+                    cell_blockers.append(
+                        "harvested_exact_eval_pair_group_id_mismatch:"
+                        f"{variant}:{axis}"
+                    )
+                raw_run_id = _payload_run_id(raw_payload)
+                if raw_run_id and raw_run_id != identity["run_id"]:
+                    cell_blockers.append(
+                        f"harvested_exact_eval_run_id_mismatch:{variant}:{axis}"
+                    )
             evidence = exact_eval_evidence_from_auth_eval_artifact(
                 artifact_path,
                 axis=axis,
@@ -265,10 +390,17 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
             artifact_count += 1
             if evidence is None:
                 evidence = _missing_evidence(identity=identity, cell=cell)
-                cell_blockers.append(
-                    f"harvested_exact_eval_artifact_unreadable:{variant}:{axis}"
-                )
+                if raw_payload is not None:
+                    cell_blockers.append(
+                        f"harvested_exact_eval_artifact_unreadable:{variant}:{axis}"
+                    )
             else:
+                if raw_payload is not None:
+                    runtime_content_sha = extract_observed_runtime_content_tree_sha256(
+                        raw_payload
+                    )
+                    if runtime_content_sha:
+                        evidence["runtime_content_tree_sha256"] = runtime_content_sha
                 observed_archive_sha = str(evidence.get("archive_sha256") or "").strip()
                 if observed_archive_sha != identity["archive_sha256"]:
                     cell_blockers.append(
@@ -294,8 +426,12 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
                 "axis": axis,
                 "variant": variant,
                 "archive_sha256": identity["archive_sha256"],
+                "archive_size_bytes": cell.get("archive_size_bytes"),
                 "pair_group_id": identity["pair_group_id"],
                 "run_id": identity["run_id"],
+                "source_lightning_plan": _repo_relative(resolved_plan, root),
+                "source_lightning_plan_sha256": plan_sha,
+                "source_lightning_job_name": str(cell.get("job_name") or ""),
                 "source_plan_cell": {
                     "local_artifact_dir": str(cell.get("local_artifact_dir") or ""),
                     "state_path": str(cell.get("state_path") or ""),
@@ -303,22 +439,30 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
                     "command_sha256": str(cell.get("command_sha256") or ""),
                 },
                 "source_variant_manifest": variant_manifest_path,
+                "source_variant_manifest_sha256": variant_manifest_sha,
                 "sideinfo_liveness": dict(liveness or {}),
                 "evidence": evidence,
+                "ready_for_effect_curve_build": not cell_blockers,
                 "blockers": list(dict.fromkeys(cell_blockers)),
             }
         )
         blockers.extend(cell_blockers)
 
-    missing_expected = sorted(
-        {
-            f"{axis}:{variant}"
-            for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
-            for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
-        }
-        - {f"{row['axis']}:{row['variant']}" for row in cells}
+    expected_cells = {
+        f"{axis}:{variant}"
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    }
+    observed_cells = [f"{row['axis']}:{row['variant']}" for row in cells]
+    observed_cell_set = set(observed_cells)
+    duplicate_cells = sorted(
+        cell for cell in observed_cell_set if observed_cells.count(cell) > 1
     )
+    extra_cells = sorted(observed_cell_set - expected_cells)
+    missing_expected = sorted(expected_cells - observed_cell_set)
     blockers.extend(f"planned_cell_missing:{cell}" for cell in missing_expected)
+    blockers.extend(f"planned_cell_extra:{cell}" for cell in extra_cells)
+    blockers.extend(f"planned_cell_duplicate:{cell}" for cell in duplicate_cells)
 
     return {
         **_FALSE_AUTHORITY_FLAGS,
@@ -332,11 +476,26 @@ def build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan(
         "required_axes": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES),
         "required_variants": list(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS),
         "cell_count": len(cells),
+        "ready_cell_count": sum(
+            1 for cell in cells if cell.get("ready_for_effect_curve_build") is True
+        ),
         "harvested_exact_eval_artifact_count": artifact_count,
         "missing_exact_eval_artifact_count": max(0, len(cells) - artifact_count),
         "cells": cells,
         "observed_cells": cells,
         "sideinfo_effect_curve_builder_tool": "tools/build_l5_v2_sideinfo_effect_curve.py",
+        "ready_for_effect_curve_build": (
+            len(cells)
+            == len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+            * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+            and not blockers
+        ),
+        "effect_curve_builder_command": (
+            ".venv/bin/python tools/build_l5_v2_sideinfo_effect_curve.py "
+            "--cell-json "
+            ".omx/research/"
+            "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_20260517_codex.json"
+        ),
         "blockers": list(dict.fromkeys(blockers)),
     }
 
@@ -349,9 +508,78 @@ def l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_json(
     return json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
 
 
+def render_l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_markdown(
+    payload: Mapping[str, Any],
+) -> str:
+    """Render the TT5L harvest-cell bridge status for `.omx` ledgers."""
+
+    lines = [
+        "# L5 v2 TT5L side-info effect curve harvest cells",
+        "",
+        "This memo is the post-harvest bridge from the Lightning paired-axis "
+        "plan to the TT5L side-info effect-curve builder. It does not launch "
+        "provider work and does not claim score movement.",
+        "",
+        "## Authority",
+        "",
+        "- Score claim: `false`",
+        "- Promotion eligible: `false`",
+        "- Ready for exact eval dispatch: `false`",
+        "- Ready for provider dispatch: `false`",
+        "- Dispatch attempted: `false`",
+        "",
+        "## Sources",
+        "",
+        f"- Lightning paired-axis plan: `{payload.get('source_plan')}`",
+        f"- Lightning plan SHA-256: `{payload.get('source_plan_sha256')}`",
+        f"- Variant manifest: `{payload.get('source_variant_manifest')}`",
+        f"- Variant manifest SHA-256: `{payload.get('source_variant_manifest_sha256')}`",
+        "",
+        "## Cell Status",
+        "",
+        "| variant | axis | expected artifact | ready | blockers |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for cell in _mapping_rows(payload.get("cells")):
+        evidence = cell.get("evidence") if isinstance(cell.get("evidence"), Mapping) else {}
+        blockers = cell.get("blockers")
+        blocker_text = (
+            ", ".join(str(item) for item in blockers)
+            if isinstance(blockers, list)
+            else ""
+        )
+        lines.append(
+            f"| `{cell.get('variant')}` | `{cell.get('axis')}` | "
+            f"`{evidence.get('artifact_path')}` | "
+            f"`{str(cell.get('ready_for_effect_curve_build')).lower()}` | "
+            f"{blocker_text or '-'} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Next Gate",
+            "",
+            f"- Ready for effect-curve build: `{str(payload.get('ready_for_effect_curve_build')).lower()}`",
+            f"- Ready cells: `{payload.get('ready_cell_count')}/{payload.get('cell_count')}`",
+            f"- Harvested exact-eval artifacts: `{payload.get('harvested_exact_eval_artifact_count')}`",
+            f"- Missing exact-eval artifacts: `{payload.get('missing_exact_eval_artifact_count')}`",
+            f"- Effect-curve command: `{payload.get('effect_curve_builder_command')}`",
+            "",
+            "The downstream effect-curve artifact remains the only surface that "
+            "can satisfy the side-info predicate. This bridge is custody plumbing, "
+            "not a promotion artifact.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 __all__ = [
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_ARTIFACT_PATH",
+    "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_REPORT_PATH",
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_SCHEMA",
     "L5V2_TT5L_SIDEINFO_EFFECT_CURVE_HARVEST_CELLS_TOOL_PATH",
     "build_l5_v2_tt5l_sideinfo_effect_curve_cells_from_lightning_plan",
     "l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_json",
+    "render_l5_v2_tt5l_sideinfo_effect_curve_harvest_cells_markdown",
 ]
