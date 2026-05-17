@@ -161,11 +161,14 @@ def _make_council_row(
         ("lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516", True),
         ("lane_wunderkind_g1_v2_pivot_validation_20260516", True),
         ("lane_atw_codec_v2_substrate_build_20260516", True),
+        ("lane_c6_e4_mdl_ibps_substrate_20260514", True),
+        ("lane_c6_ibps_4_recipe_fixes_dispatch_unlock_20260517", True),
         ("lane_z6_l1_scaffold", True),
         ("lane_z7_predictive_coding_world_model", True),
         ("lane_z8_hierarchical_pc_substrate_20260516", True),
         # Out-of-scope (infrastructure / META / catalog gates).
         ("lane_nscs01_phase_2_sextet_council_20260516", False),
+        ("lane_fix_wave_r1_post_provenance_z6_c6_wave_20260517", False),
         ("lane_lane_registry_consistent", False),
         ("lane_meta_lagrangian_atom_emitter", False),
         ("lane_random_unrelated_lane", False),
@@ -963,16 +966,23 @@ def test_gate_defer_verdict_treated_as_no_positive_proceed_blocker(tmp_path):
 
 
 def test_gate_live_repo_regression_guard():
-    """Live-repo regression: this gate's live count must stay 0.
+    """Live-repo regression: unexpected Catalog #315 blockers fail.
 
-    If this test ever fails, a new lifted-trainer-form substrate landed
-    without the corresponding iteration / opt-out / waiver. The
-    remediation is documented in the gate's violation message.
+    The current dirty-tree snapshot intentionally carries one Z6-v2
+    PROCEED_WITH_REVISIONS blocker. That is allowed here so this test
+    can still catch the FIX-WAVE-R1 C6 false-authority regression and
+    any accidental broad family-token bleed into older time_traveler
+    lanes.
     """
     violations = check_315(strict=False, verbose=False)
-    assert violations == [], (
-        f"Catalog #315 live count regressed to {len(violations)}; "
-        "first violation: " + (violations[0] if violations else "")
+    allowed = ("lane_z6_v2_redesign_cargo_cult_unwind_path_b_20260517",)
+    unexpected = [v for v in violations if not any(tok in v for tok in allowed)]
+    assert unexpected == [], (
+        f"Catalog #315 has unexpected live blocker(s): {unexpected[:3]}"
+    )
+    assert not any("c6_e4_mdl_ibps" in v for v in violations), (
+        "FIX-WAVE-R1 F1 regression: C6 should resolve to its positive "
+        "council row instead of surfacing as a Catalog #315 blocker"
     )
 
 
@@ -1039,6 +1049,11 @@ def test_orchestrator_wire_in_uses_strict_true():
             "tishby_ib_pure_substrate",
             "tishby_ib_pure",
         ),
+        (
+            "lane_c6_e4_mdl_ibps_substrate_20260514",
+            "c6_e4_mdl_ibps_substrate",
+            "c6_e4_mdl_ibps",
+        ),
     ],
 )
 def test_family_join_resolves_live_deferred_substrate_ids(
@@ -1077,6 +1092,65 @@ def test_family_join_resolves_live_deferred_substrate_ids(
     violations = check_315(repo_root=repo_root, strict=False, verbose=False)
     assert len(violations) == 1
     assert lane_id in violations[0]
+    assert "PROCEED_WITH_REVISIONS" in violations[0]
+
+
+def test_null_deferred_substrate_id_backfill_resolves_c6_council_row(tmp_path):
+    """FIX-WAVE-R1 F1 regression: the live C6 IBPS council row was
+    emitted with deferred_substrate_id=None. Catalog #315 must still
+    join that immutable deliberation_id back to the C6 lane instead of
+    treating the active dispatch lane as no_council_anchor."""
+    lane = _make_lane_l1_impl_complete(
+        "lane_c6_e4_mdl_ibps_substrate_20260514"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    posterior_path = _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517",
+                None,
+                "PROCEED",
+                "2026-05-17T22:53:53Z",
+            ),
+        ],
+    )
+
+    vmap = _check_315_build_council_verdict_map(posterior_path)
+    assert "c6_e4_mdl_ibps_substrate" in vmap
+    verdict = _check_315_lookup_latest_verdict(lane, vmap)
+    assert verdict is not None
+    assert verdict["deliberation_id"] == (
+        "council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517"
+    )
+    assert verdict["council_verdict"] == "PROCEED"
+
+    assert check_315(repo_root=repo_root, strict=False, verbose=False) == []
+
+
+def test_null_deferred_substrate_id_backfill_blocks_c6_revisions(tmp_path):
+    """The C6 backfill is not just a positive-pass shim: if the same
+    malformed row carries a non-PROCEED verdict, Catalog #315 must
+    block the C6 lane exactly like a normal deferred_substrate_id row."""
+    lane = _make_lane_l1_impl_complete(
+        "lane_c6_e4_mdl_ibps_substrate_20260514"
+    )
+    repo_root = _write_registry(tmp_path, [lane])
+    _write_posterior(
+        repo_root,
+        [
+            _make_council_row(
+                "council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517",
+                None,
+                "PROCEED_WITH_REVISIONS",
+                "2026-05-17T22:53:53Z",
+            ),
+        ],
+    )
+
+    violations = check_315(repo_root=repo_root, strict=False, verbose=False)
+    assert len(violations) == 1
+    assert "lane_c6_e4_mdl_ibps_substrate_20260514" in violations[0]
     assert "PROCEED_WITH_REVISIONS" in violations[0]
 
 

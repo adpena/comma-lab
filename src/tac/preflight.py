@@ -65151,7 +65151,26 @@ _CHECK_315_IN_SCOPE_ID_SUBSTRINGS: tuple[str, ...] = (
     "z6_",
     "z7_",
     "z8_",
+    # FIX-WAVE-R1 F1 closure 2026-05-17: keep C6 IBPS + MDL-IBPS
+    # dispatch lanes in Catalog #315 scope. The join fallback below
+    # handles the malformed historical C6 council row whose
+    # deferred_substrate_id was null.
+    "c6_",
+    "_c6_",
+    "mdl_ibps",
+    "_mdl_ibps",
 )
+
+_CHECK_315_NULL_DEFERRED_SUBSTRATE_ID_BACKFILLS: dict[str, str] = {
+    # FIX-WAVE-R1 F1 closure 2026-05-17. The C6 IBPS sextet row was
+    # emitted with deferred_substrate_id=null while its prose claimed
+    # Catalog #315 satisfaction. Rewriting live append-only state would
+    # risk trampling concurrent operator writes, so the guard carries a
+    # narrow historical backfill keyed by immutable deliberation_id.
+    "council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517": (
+        "c6_e4_mdl_ibps_substrate"
+    ),
+}
 
 _CHECK_315_OPT_OUT_RESEARCH_TOKENS: tuple[str, ...] = (
     "research_only=true",
@@ -65189,6 +65208,7 @@ def _check_315_lane_in_scope(lane_id: str) -> bool:
             "sextet_council",
             "grand_council",
             "phase_2_sextet_council",
+            "fix_wave",
         )
     ):
         return False
@@ -65288,6 +65308,14 @@ def _check_315_build_council_verdict_map(
                 continue
             substrate_id = row.get("deferred_substrate_id")
             if not isinstance(substrate_id, str) or not substrate_id:
+                deliberation_id = row.get("deliberation_id")
+                if isinstance(deliberation_id, str):
+                    substrate_id = (
+                        _CHECK_315_NULL_DEFERRED_SUBSTRATE_ID_BACKFILLS.get(
+                            deliberation_id
+                        )
+                    )
+            if not isinstance(substrate_id, str) or not substrate_id:
                 continue
             ts_str = row.get("written_at_utc", "")
             ts = _check_315_parse_iso_utc(ts_str) or 0.0
@@ -65309,6 +65337,10 @@ def _check_315_build_council_verdict_map(
 _CHECK_315_SUBSTRATE_FAMILY_TOKENS: tuple[str, ...] = (
     "nscs01", "nscs02", "nscs03", "nscs04", "nscs05", "nscs06",
     "z3_g1", "z3_balle", "z4", "z5", "z6", "z7", "z8",
+    "c6",
+    "c6_e4",
+    "c6_e4_mdl_ibps",
+    "mdl_ibps",
     "atw_codec",
     "wunderkind_g1",
     "tishby_ib_pure",

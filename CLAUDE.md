@@ -422,6 +422,19 @@ cadence so the iteration loop itself does not silently drift.
   registry so the v1-surface name used by the sextet can be matched
   back to the canonical lane id (e.g.
   `lane_substrate_z6` ↔ `z6_v1_ego_conditioning_surface`).
+- Codex FIX-WAVE-R1 addendum (2026-05-17): the live C6 IBPS sextet
+  row `council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517`
+  was emitted with `deferred_substrate_id=null` while claiming Catalog
+  #315 satisfaction. `check_substrate_at_optimal_form_before_paid_dispatch`
+  now carries a narrow historical backfill keyed by immutable
+  `deliberation_id` plus C6/MDL family tokens so active C6 dispatch
+  lanes cannot be misreported as `no_council_anchor`. Generic
+  time-traveler tokens are deliberately not used because the Z6 council
+  row must not bind to older non-Z6 time-traveler lanes. FIX-WAVE /
+  review lanes are explicitly out of Catalog #315 scope even when their
+  names mention substrate families. Live count after this closure
+  remains 1, correctly flagging the Z6-v2 PROCEED_WITH_REVISIONS
+  blocker rather than C6 or review infrastructure.
 
 ### Cross-references
 
