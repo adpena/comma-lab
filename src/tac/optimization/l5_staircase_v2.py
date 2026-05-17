@@ -3469,7 +3469,11 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         pair_group_id=TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID,
     )
 
-    return {
+    suppress_execute_template = provider_blocker_status["active"] is True or (
+        provider_blocker_status["artifact_exists"] is True
+        and provider_blocker_status["artifact_valid"] is not True
+    )
+    status: dict[str, Any] = {
         "schema": "l5_v2_tt5l_materialized_paired_work_unit_status_v1",
         "artifact_path": TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PLAN_ARTIFACT_PATH,
         "artifact_exists": artifact_path.is_file(),
@@ -3488,8 +3492,6 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         },
         "tt5l_sideinfo_stats": sideinfo_stats,
         "operator_plan_command_template": operator_plan_command,
-        "operator_execute_command_template_after_review": operator_plan_command
-        + " --execute",
         "provider_blocker_status": provider_blocker_status,
         "alternate_provider_plan_status": alternate_provider_plan_status,
         "score_claim": False,
@@ -3498,6 +3500,11 @@ def _tt5l_materialized_paired_work_unit_status(*, repo_root: Path) -> dict[str, 
         "dispatch_attempted": False,
         "blockers": list(dict.fromkeys(blockers)),
     }
+    if not suppress_execute_template:
+        status["operator_execute_command_template_after_review"] = (
+            operator_plan_command + " --execute"
+        )
+    return status
 
 
 def _tt5l_materialized_lightning_alt_provider_plan_status(

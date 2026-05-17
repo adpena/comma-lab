@@ -53,6 +53,24 @@ The byte-closed TT5L work unit remains valid; only the Modal provider path is
 blocked until the billing limit is resolved or an alternate contest-compliant
 provider path is selected.
 
+## Execute Leak Hardening
+
+2026-05-17 follow-up: the provider-blocked next action no longer carries any
+recursive `--execute` string, including inside the embedded materialized work
+unit status. Earlier hardening removed the top-level execute command from the
+provider-blocked action; this pass also suppresses
+`operator_execute_command_template_after_review` at the work-unit-status layer
+whenever the Modal blocker artifact is active or invalid.
+
+Verification receipt:
+
+- focused regressions:
+  `.venv/bin/pytest -q src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_stale_modal_blocker_blocks_execute_command src/tac/tests/test_l5_staircase_v2.py::test_l5_v2_tt5l_modal_blocker_surfaces_lightning_alternate_plan`
+- result: `3 passed`
+- live recursive scan:
+  `next_action=resolve_l5_v2_tt5l_modal_provider_blocker_or_dispatch_alternate_provider`,
+  `recursive_execute_present=False`, `nested_keys=[]`
+
 The paired Lightning alternate-provider plan has also been refreshed onto the
 same current archive/runtime metadata. It is artifact-valid, but dispatch is
 still blocked on real Lightning environment prerequisites:

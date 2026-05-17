@@ -70,6 +70,16 @@ def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _recursive_string_contains(value: object, needle: str) -> bool:
+    if isinstance(value, str):
+        return needle in value
+    if isinstance(value, dict):
+        return any(_recursive_string_contains(v, needle) for v in value.values())
+    if isinstance(value, list):
+        return any(_recursive_string_contains(v, needle) for v in value)
+    return False
+
+
 def _write_aggregate_manifest(path: Path, *, aggregate_sha: str) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -2612,6 +2622,11 @@ def test_l5_v2_tt5l_materialized_work_unit_surfaces_modal_billing_blocker(
     assert action["modal_execute_command_suppressed_until_provider_blocker_resolved"] is True
     assert "operator_execute_command_template_after_review" not in action
     assert (
+        "operator_execute_command_template_after_review"
+        not in action["materialized_work_unit_status"]
+    )
+    assert not _recursive_string_contains(action, "--execute")
+    assert (
         "l5_v2_tt5l_modal_provider_blocker_active:"
         "modal_workspace_billing_cycle_spend_limit_reached"
         in tt5l["blockers"]
@@ -2778,6 +2793,11 @@ def test_l5_v2_tt5l_stale_modal_blocker_blocks_execute_command(
     assert action["ready_for_operator_dispatch"] is False
     assert action["ready_for_provider_dispatch"] is False
     assert "operator_execute_command_template_after_review" not in action
+    assert (
+        "operator_execute_command_template_after_review"
+        not in action["materialized_work_unit_status"]
+    )
+    assert not _recursive_string_contains(action, "--execute")
     assert (
         "l5_v2_tt5l_modal_provider_blocker_archive_sha_mismatch"
         in provider_blocker["blockers"]
