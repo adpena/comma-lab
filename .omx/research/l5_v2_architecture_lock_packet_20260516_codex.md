@@ -16,7 +16,7 @@
 - `move_level_feasibility_artifact_valid`: `True`
 - `sideinfo_gate_evidence_valid`: `True`
 - `probe_gate_evidence_valid`: `False`
-- `paired_axis_plan_evidence_valid`: `False`
+- `paired_axis_plan_evidence_valid`: `True`
 - `sideinfo_effect_curve_artifact_valid`: `False`
 - `first_anchor_timing_smoke_artifact_valid`: `False`
 - `anchor_pair_evidence_valid`: `True`
@@ -53,7 +53,6 @@
 ## Blockers
 - `requires_all_l5_v2_gate_evidence_valid`
 - `requires_c1_z5_tt5l_probe_gate_evidence`
-- `requires_paired_cpu_cuda_axis_plan`
 - `requires_paired_cpu_cuda_sideinfo_effect_curve`
 - `requires_tt5l_first_anchor_timing_smoke_artifact`
 

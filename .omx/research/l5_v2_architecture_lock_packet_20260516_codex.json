@@ -3,7 +3,6 @@
   "architecture_lock_blockers": [
     "requires_all_l5_v2_gate_evidence_valid",
     "requires_c1_z5_tt5l_probe_gate_evidence",
-    "requires_paired_cpu_cuda_axis_plan",
     "requires_paired_cpu_cuda_sideinfo_effect_curve",
     "requires_tt5l_first_anchor_timing_smoke_artifact"
   ],
@@ -205,9 +204,7 @@
   "readiness_architecture_lock_allowed": false,
   "readiness_blockers": [
     "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
-    "requires_paired_cpu_cuda_axis_plan_before_promotion",
     "l5_v2_gate_evidence_missing:c1_z5_tt5l_probe_disambiguator",
-    "l5_v2_gate_evidence_missing:paired_cpu_cuda_axis_plan",
     "prediction_band_not_dispatch_ready",
     "prediction_band:prediction_band_baseline_missing",
     "prediction_band:prediction_band_baseline_custody_missing",
@@ -222,7 +219,7 @@
     "dykstra_score_axis_sanity_valid": true,
     "first_anchor_timing_smoke_artifact_valid": false,
     "move_level_feasibility_artifact_valid": true,
-    "paired_axis_plan_evidence_valid": false,
+    "paired_axis_plan_evidence_valid": true,
     "probe_gate_evidence_valid": false,
     "sideinfo_effect_curve_artifact_valid": false,
     "sideinfo_gate_evidence_valid": true
@@ -236,9 +233,7 @@
     "architecture_lock_allowed": false,
     "blockers": [
       "requires_c1_z5_tt5l_probe_disambiguator_before_architecture_lock",
-      "requires_paired_cpu_cuda_axis_plan_before_promotion",
       "l5_v2_gate_evidence_missing:c1_z5_tt5l_probe_disambiguator",
-      "l5_v2_gate_evidence_missing:paired_cpu_cuda_axis_plan",
       "prediction_band_not_dispatch_ready",
       "prediction_band:prediction_band_baseline_missing",
       "prediction_band:prediction_band_baseline_custody_missing",
@@ -708,7 +703,7 @@
     },
     "non_pr106_staircase_priority": true,
     "packetir_is_optional_stack_evidence": true,
-    "paired_axis_plan_evidence_valid": false,
+    "paired_axis_plan_evidence_valid": true,
     "priority": "tt5l_first_non_pr106_l5_v2_staircase",
     "probe_gate_evidence_valid": false,
     "probe_observation_intake_status": {
@@ -766,7 +761,7 @@
         "trained",
         "zero"
       ],
-      "current_head_commit": "00c124c3abfd4611a3be3d34f6ded62a7d18c636",
+      "current_head_commit": "86e95cf37f97d2e8c43560a2d30b4e1688d5c747",
       "dispatch_attempted": false,
       "execution_blockers": [
         "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",

@@ -138,6 +138,12 @@ TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH = (
 TT5L_PAIRED_EXACT_ANCHOR_PAIR_PREDICATE_ID = (
     "l5_v2_tt5l_paired_exact_anchor_pair_v1"
 )
+TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_ARTIFACT_PATH = (
+    ".omx/research/l5_v2_tt5l_paired_cpu_cuda_axis_plan_from_anchor_20260517_codex.json"
+)
+TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_PREDICATE_ID = (
+    "l5_v2_tt5l_paired_cpu_cuda_axis_plan_from_anchor_v1"
+)
 TT5L_DYKSTRA_FEASIBILITY_TOOL_PATH = "tools/check_substrate_dykstra_feasibility.py"
 TT5L_DYKSTRA_FEASIBILITY_ARTIFACT_PATH = (
     ".omx/state/dykstra_feasibility_time_traveler_l5.json"
@@ -2260,6 +2266,45 @@ def l5_v2_canonical_probe_gate_evidence(
         predicate_id="l5_v2_probe_disambiguator_architecture_lock_v1",
         predicate_passed=True,
         evidence_grade="l5_v2_probe_gate_artifact",
+    )
+
+
+def l5_v2_canonical_paired_axis_plan_gate_evidence(
+    *,
+    repo_root: str | Path | None = None,
+) -> L5V2GateEvidence | None:
+    """Return the discoverable non-promotional paired CPU/CUDA plan artifact."""
+
+    resolved_repo_root = (
+        Path(repo_root).resolve() if repo_root is not None else _default_repo_root()
+    )
+    artifact_path = TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_ARTIFACT_PATH
+    proof_path = resolved_repo_root / artifact_path
+    if not proof_path.is_file():
+        return None
+    artifact_sha = _sha256_file(proof_path)
+    try:
+        payload = json.loads(proof_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if _gate_semantic_blockers(
+        "paired_cpu_cuda_axis_plan",
+        payload,
+        repo_root=resolved_repo_root,
+    ):
+        return None
+    predicate_id = str(
+        payload.get("predicate_id") or TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_PREDICATE_ID
+    ).strip()
+    return L5V2GateEvidence(
+        gate_id="paired_cpu_cuda_axis_plan",
+        artifact_path=artifact_path,
+        artifact_sha256=artifact_sha,
+        predicate_id=predicate_id,
+        predicate_passed=True,
+        evidence_grade="tt5l_paired_cpu_cuda_axis_plan_from_anchor_artifact",
     )
 
 
@@ -6021,6 +6066,14 @@ def l5_v2_dispatch_readiness(
         )
         if canonical_probe is not None:
             evidence_by_gate[canonical_probe.gate_id] = canonical_probe
+    if "paired_cpu_cuda_axis_plan" not in evidence_by_gate:
+        canonical_paired_axis_plan = l5_v2_canonical_paired_axis_plan_gate_evidence(
+            repo_root=resolved_repo_root,
+        )
+        if canonical_paired_axis_plan is not None:
+            evidence_by_gate[canonical_paired_axis_plan.gate_id] = (
+                canonical_paired_axis_plan
+            )
     if "exact_anchor_or_diagnostic_pair" not in evidence_by_gate:
         canonical_anchor_pair = l5_v2_canonical_anchor_pair_gate_evidence(
             repo_root=resolved_repo_root,
@@ -6491,6 +6544,8 @@ __all__ = [
     "TT5L_MOVE_LEVEL_FEASIBILITY_PREDICATE_ID",
     "TT5L_MOVE_LEVEL_FEASIBILITY_SCHEMA",
     "TT5L_MOVE_LEVEL_FEASIBILITY_TOOL_PATH",
+    "TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_ARTIFACT_PATH",
+    "TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_PREDICATE_ID",
     "TT5L_PAIRED_EXACT_ANCHOR_PAIR_ARTIFACT_PATH",
     "TT5L_PAIRED_EXACT_ANCHOR_PAIR_PREDICATE_ID",
     "TT5L_PROBE_DISAMBIGUATOR_TEMPLATE_PATH",
@@ -6515,6 +6570,7 @@ __all__ = [
     "l5_v2_architecture_lock_packet",
     "l5_v2_asymptotic_pursuit_candidates",
     "l5_v2_canonical_anchor_pair_gate_evidence",
+    "l5_v2_canonical_paired_axis_plan_gate_evidence",
     "l5_v2_canonical_probe_gate_evidence",
     "l5_v2_canonical_sideinfo_gate_evidence",
     "l5_v2_dispatch_readiness",

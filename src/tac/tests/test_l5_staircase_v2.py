@@ -4359,6 +4359,44 @@ def test_l5_v2_dispatch_readiness_requires_artifact_evidence_not_booleans(
     assert blocked["pr106_stack_cell_candidates"]["promotion_eligible"] is False
 
 
+def test_l5_v2_dispatch_readiness_auto_consumes_paired_axis_plan_from_anchor_artifact(
+    tmp_path: Path,
+) -> None:
+    evidence = _valid_gate_evidence(tmp_path)
+    evidence.pop("paired_cpu_cuda_axis_plan")
+    artifact_path = (
+        tmp_path / l5_v2.TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _gate_artifact_payload("paired_cpu_cuda_axis_plan", repo_root=tmp_path)
+    payload.update(
+        {
+            "schema": "l5_v2_tt5l_paired_cpu_cuda_axis_plan_from_anchor_v1",
+            "gate_id": "paired_cpu_cuda_axis_plan",
+            "predicate_id": l5_v2.TT5L_PAIRED_AXIS_PLAN_FROM_ANCHOR_PREDICATE_ID,
+            "passed": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    )
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    canonical = l5_v2.l5_v2_canonical_paired_axis_plan_gate_evidence(
+        repo_root=tmp_path
+    )
+    readiness = l5_v2_dispatch_readiness(gate_evidence=evidence, repo_root=tmp_path)
+
+    assert canonical is not None
+    assert canonical.gate_id == "paired_cpu_cuda_axis_plan"
+    assert canonical.artifact_sha256 == _file_sha256(artifact_path)
+    assert readiness["tt5l_campaign_readiness"]["paired_axis_plan_evidence_valid"] is True
+    assert (
+        "l5_v2_gate_evidence_missing:paired_cpu_cuda_axis_plan"
+        not in readiness["blockers"]
+    )
+
+
 def test_l5_v2_dispatch_readiness_accepts_valid_gate_evidence(tmp_path: Path) -> None:
     ready = l5_v2_dispatch_readiness(
         gate_evidence=_valid_gate_evidence(tmp_path),
