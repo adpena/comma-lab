@@ -145,6 +145,28 @@ def test_strict_custody_blocks_missing_hardware() -> None:
     assert "candidate:hardware_missing" in report.blockers
 
 
+def test_missing_axis_blocks_even_without_expected_axis() -> None:
+    baseline = _evidence()
+    candidate = _evidence(seg=0.00068, pose=0.000028)
+    baseline.pop("axis")
+    candidate.pop("axis")
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        strict_exact_custody=False,
+    )
+    assert report.verdict == VERDICT_BLOCKED_CUSTODY
+    assert "baseline:axis_missing" in report.blockers
+    assert "candidate:axis_missing" in report.blockers
+
+
+def test_normalizes_bracketed_axis_labels_without_promoting_advisory() -> None:
+    contest = normalize_score_response_mapping({"axis": "[contest-CPU]"})
+    advisory = normalize_score_response_mapping({"axis": "[macOS-CPU advisory]"})
+    assert contest["axis"] == "contest_cpu"
+    assert advisory["axis"] == "macos_cpu_advisory"
+
+
 def test_relaxed_custody_allows_score_field_only_probe() -> None:
     baseline = _evidence()
     candidate = _evidence(seg=0.00068, pose=0.000028)

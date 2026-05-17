@@ -33,12 +33,13 @@ VERDICT_BLOCKED_CONTROL_MISMATCH = "BLOCKED_CONTROL_MISMATCH"
 VALID_PROBE_MODES = frozenset({"ablation", "candidate"})
 
 _COMMON_AXIS_ALIASES = {
+    "contest_cpu": "contest_cpu",
+    "contest_cuda": "contest_cuda",
     "cpu_advisory": "macos_cpu_advisory",
     "macos_cpu": "macos_cpu_advisory",
-    "macos-cpu-advisory": "macos_cpu_advisory",
-    "macOS-CPU advisory": "macos_cpu_advisory",
-    "contest-CUDA": "contest_cuda",
-    "contest-CPU": "contest_cpu",
+    "macos_cpu_advisory": "macos_cpu_advisory",
+    "mps": "mps_advisory",
+    "mps_advisory": "mps_advisory",
 }
 
 
@@ -142,6 +143,22 @@ def _nested_mapping(mapping: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _normalize_axis_label(value: object) -> str:
+    """Normalize common exact-eval axis spellings without promoting advisories."""
+
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    unbracketed = raw.strip("[]").strip()
+    lowered = (
+        unbracketed.lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+        .replace("__", "_")
+    )
+    return _COMMON_AXIS_ALIASES.get(lowered, unbracketed)
+
+
 def _command_flag_value(command: object, flag: str) -> str:
     parts = (
         [str(part) for part in command]
@@ -178,8 +195,9 @@ def normalize_score_response_mapping(mapping: Mapping[str, Any]) -> dict[str, An
     inflated_manifest = _nested_mapping(provenance, "inflated_output_manifest")
     command = _first_value(out, "auth_eval_command", "command") or custody.get("command")
 
-    axis = str(_first_value(out, "axis", "score_axis", "evidence_axis") or "").strip()
-    out["axis"] = _COMMON_AXIS_ALIASES.get(axis, axis)
+    out["axis"] = _normalize_axis_label(
+        _first_value(out, "axis", "score_axis", "evidence_axis")
+    )
     out["archive_sha256"] = _first_value(
         out,
         "archive_sha256",
@@ -322,6 +340,8 @@ def validate_score_response_evidence(
     """Validate and normalize one exact-eval evidence mapping."""
 
     normalized = normalize_score_response_mapping(mapping)
+    if not str(normalized.get("axis") or "").strip():
+        return None, (f"{label}:axis_missing",), (f"{label}_axis_missing",)
     validation = validate_exact_eval_evidence(
         normalized,
         expected_axis=expected_axis,

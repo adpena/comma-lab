@@ -80,6 +80,16 @@ per-pair-conditioning cluster. It is especially relevant for:
 - PR101-style bolt-ons: separate rate-only wins from genuine scorer response
   so byte wins are celebrated for the correct reason.
 
+## 2026-05-17 adversarial follow-up: axis missing fail-closed
+
+The first post-landing bug hunt found a false-authority edge: if both evidence
+rows omitted an axis and the caller did not pass `--axis`, the comparator could
+classify a baseline/candidate delta under an empty axis. That violates the
+axis-labelled evidence discipline. The comparator now fail-closes with
+`BLOCKED_CUSTODY` on missing axis even when `expected_axis=None`, and normalizes
+common bracketed labels such as `[contest-CPU]` and `[macOS-CPU advisory]`
+without promoting advisory axes to contest axes.
+
 ## Verification
 
 Focused verification run in this landing:
