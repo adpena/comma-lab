@@ -496,6 +496,34 @@ def test_tt5l_lightning_bundle_dry_run_verifier_rejects_metadata_axis_drift(
     assert any("dry_run_queue_metadata_axis_mismatch" in blocker for blocker in payload["blockers"])
 
 
+def test_tt5l_lightning_bundle_dry_run_verifier_rejects_unpaired_axis_cells(
+    tmp_path: Path,
+) -> None:
+    bundle = _fake_bundle(tmp_path)
+    first_variant = L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS[0]
+    for cell in bundle["cells"]:
+        assert isinstance(cell, dict)
+        if cell["variant"] == first_variant and cell["axis"] == "contest_cuda":
+            cell["pair_group_id"] = "pair_wrong_unpaired_cuda"
+            break
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle, sort_keys=True) + "\n", encoding="utf-8")
+
+    payload = build_l5_v2_tt5l_sideinfo_lightning_execution_bundle_dry_run_verification(
+        bundle=bundle,
+        bundle_path=bundle_path,
+        repo_root=tmp_path,
+        runner=_fake_runner,
+    )
+
+    assert payload["all_dry_runs_passed"] is False
+    assert payload["ready_for_dry_run_submit"] is False
+    assert any(
+        f"paired_axis_pair_group_id_mismatch:{first_variant}" in blocker
+        for blocker in payload["blockers"]
+    )
+
+
 def test_tt5l_lightning_bundle_dry_run_json_and_markdown_keep_false_authority(
     tmp_path: Path,
 ) -> None:

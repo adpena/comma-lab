@@ -1,6 +1,6 @@
 {
   "blockers": [],
-  "current_head_commit": "6e4340edbea377242efeda4c2815597053f3714c",
+  "current_head_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
   "dispatch_attempted": false,
   "doctor_output_path": ".omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json",
   "doctor_required_checks": {
@@ -26,7 +26,7 @@
       "failed_checks"
     ]
   },
-  "generated_at_utc": "2026-05-17T11:42:42Z",
+  "generated_at_utc": "2026-05-17T11:46:50Z",
   "identity_modes": [
     {
       "doctor_command_template": ".venv/bin/python scripts/launch_lightning_batch_job.py doctor --json-out .omx/research/l5_v2_tt5l_lightning_required_doctor_20260517_codex.json --run-id l5_v2_tt5l_lightning_required_doctor_20260517 --strict --ssh-target \"$LIGHTNING_SSH_TARGET\" --require-ssh --remote-supply-chain --require-remote-supply-chain --repo-dir /teamspace/studios/this_studio/pact --python-bin .venv/bin/python --teamspace \"$LIGHTNING_TEAMSPACE\" --user \"$LIGHTNING_SDK_USER\" --machine-inventory --require-machine-inventory --machine T4 --gpu-only",
@@ -121,8 +121,8 @@
   "schema": "l5_v2_tt5l_lightning_required_doctor_plan_v1",
   "score_claim": false,
   "source_route_packet": ".omx/research/l5_v2_tt5l_lightning_route_unblock_packet_20260517_codex.json",
-  "source_route_packet_commit": "6e4340edbea377242efeda4c2815597053f3714c",
-  "source_route_packet_sha256": "08475b86970234389d01826deb3883b4555aedf407ffcea721be8128a1baf64e",
+  "source_route_packet_commit": "8bd68c2d99a7c4bdca23bed22a99950be273506d",
+  "source_route_packet_sha256": "d1d6b0193bab42486392041302e8701202837228243d2b05264c4d10f9b198a6",
   "source_route_remaining_blockers": [
     "Lightning credits or quota not checked",
     "LIGHTNING_SDK_USER or LIGHTNING_ORG missing",
