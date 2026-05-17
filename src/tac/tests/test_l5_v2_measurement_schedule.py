@@ -11,6 +11,11 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_ARTIFACT_PATH,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_OUTPUT_ROOT,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SOURCE_ARCHIVE_PATH,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR,
+    L5V2_TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH,
     build_l5_v2_lattice_measurement_schedule,
     render_l5_v2_lattice_measurement_schedule_markdown,
     schedule_json,
@@ -131,6 +136,26 @@ def test_l5_v2_schedule_routes_to_sideinfo_curve_after_probe_eligibility() -> No
     assert sideinfo["required_axes"] == ["contest_cpu", "contest_cuda"]
     assert sideinfo["sideinfo_effect_curve_dispatch_variants"] == list(
         L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    )
+    assert (
+        sideinfo["sideinfo_variant_packet_builder_tool"]
+        == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH
+    )
+    assert (
+        sideinfo["sideinfo_variant_packet_manifest_artifact"]
+        == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_ARTIFACT_PATH
+    )
+    assert (
+        sideinfo["sideinfo_variant_packet_output_root"]
+        == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_OUTPUT_ROOT
+    )
+    assert (
+        sideinfo["sideinfo_variant_packet_source_archive"]
+        == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SOURCE_ARCHIVE_PATH
+    )
+    assert (
+        sideinfo["sideinfo_variant_packet_submission_dir"]
+        == L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR
     )
     assert len(sideinfo["sideinfo_effect_curve_required_cells"]) == (
         len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
