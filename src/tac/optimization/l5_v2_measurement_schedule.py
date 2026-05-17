@@ -134,6 +134,10 @@ def _sha_field(row: Mapping[str, Any], key: str) -> str:
     return str(value).strip().lower() if _looks_sha256(value) else ""
 
 
+def _text_field(row: Mapping[str, Any], key: str) -> str:
+    return str(row.get(key) or "").strip()
+
+
 def _sideinfo_variant_pair_identity_blockers(
     rows: list[Mapping[str, Any]],
 ) -> list[str]:
@@ -158,6 +162,22 @@ def _sideinfo_variant_pair_identity_blockers(
         axis_rows = by_variant_axis.get(variant, {})
         if any(axis not in axis_rows for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
             continue
+        for identity_key in ("pair_group_id", "run_id"):
+            identities = {
+                axis: _text_field(axis_rows[axis], identity_key)
+                for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+            }
+            if any(not value for value in identities.values()):
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_variant_"
+                    f"{identity_key}_missing:{variant}"
+                )
+            elif len(set(identities.values())) != 1:
+                blockers.append(
+                    "tt5l_sideinfo_effect_curve_variant_"
+                    f"{identity_key}_mismatch:{variant}"
+                )
+
         archive_shas = {
             axis: _sha_field(axis_rows[axis], "archive_sha256")
             for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES

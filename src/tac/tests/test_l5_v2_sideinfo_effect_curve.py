@@ -52,6 +52,8 @@ def _cell(
     variant: str,
     seg_dist: float,
     seed: int,
+    pair_group_id: str = "",
+    run_id: str = "",
     hardware: str | None = None,
     archive_sha256: str | None = None,
     runtime_tree_sha256: str | None = None,
@@ -73,6 +75,8 @@ def _cell(
     return {
         "axis": axis,
         "variant": variant,
+        "pair_group_id": pair_group_id,
+        "run_id": run_id,
         "evidence": {
             "axis": axis,
             "archive_sha256": archive_sha256 or _sha(seed),
@@ -110,6 +114,8 @@ def _complete_cells(repo_root: Path, *, trained_seg: float = 0.001) -> list[dict
     for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
         archive_sha = _sha(10_000 + variant_idx)
         runtime_content_sha = _sha(20_000 + variant_idx)
+        pair_group_id = f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
+        run_id = f"run_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
         for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
             seg = trained_seg if variant == "trained" else 0.002
             cells.append(
@@ -119,6 +125,8 @@ def _complete_cells(repo_root: Path, *, trained_seg: float = 0.001) -> list[dict
                     variant=variant,
                     seg_dist=seg,
                     seed=seed,
+                    pair_group_id=pair_group_id,
+                    run_id=run_id,
                     archive_sha256=archive_sha,
                     runtime_content_tree_sha256=runtime_content_sha,
                 )
@@ -150,6 +158,8 @@ def test_sideinfo_effect_curve_builder_passes_only_with_paired_trained_win(
     ]
     assert len({row["runtime_tree_sha256"] for row in trained_rows}) == 2
     assert len({row["runtime_content_tree_sha256"] for row in trained_rows}) == 1
+    assert len({row["pair_group_id"] for row in trained_rows}) == 1
+    assert len({row["run_id"] for row in trained_rows}) == 1
 
 
 def test_sideinfo_effect_curve_builder_fails_when_trained_loses(tmp_path: Path) -> None:
@@ -253,6 +263,52 @@ def test_sideinfo_effect_curve_rejects_unpaired_variant_runtime_contract(
     assert payload["predicate_passed"] is False
     assert (
         "tt5l_sideinfo_effect_curve_variant_runtime_content_tree_mismatch:trained"
+        in payload["contract_blockers"]
+    )
+
+
+def test_sideinfo_effect_curve_rejects_missing_pair_identity(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    for cell in cells:
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained":
+            cell["pair_group_id"] = ""
+            cell["run_id"] = ""
+            break
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_pair_group_id_missing:trained"
+        in payload["contract_blockers"]
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_run_id_missing:trained"
+        in payload["contract_blockers"]
+    )
+
+
+def test_sideinfo_effect_curve_rejects_mismatched_pair_identity(
+    tmp_path: Path,
+) -> None:
+    cells = _complete_cells(tmp_path)
+    for cell in cells:
+        if cell["axis"] == "contest_cuda" and cell["variant"] == "trained":
+            cell["pair_group_id"] = "pair_l5_v2_wrong_variant"
+            cell["run_id"] = "run_l5_v2_wrong_variant"
+            break
+
+    payload = build_l5_v2_sideinfo_effect_curve(cells, repo_root=tmp_path)
+
+    assert payload["predicate_passed"] is False
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_pair_group_id_mismatch:trained"
+        in payload["contract_blockers"]
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_variant_run_id_mismatch:trained"
         in payload["contract_blockers"]
     )
 

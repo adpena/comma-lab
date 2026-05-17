@@ -109,6 +109,31 @@ def _sideinfo_liveness_for_cell(
     return {}
 
 
+def _identity_text_for_cell(
+    cell: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    key: str,
+) -> str:
+    for source in (cell, evidence):
+        value = str(source.get(key) or "").strip()
+        if value:
+            return value
+    for outer_key in (
+        "source_metadata",
+        "custody",
+        "provenance",
+        "runtime_custody",
+        "archive_custody",
+    ):
+        nested = evidence.get(outer_key)
+        if not isinstance(nested, Mapping):
+            continue
+        value = str(nested.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
 def _normalize_cell(
     cell: Mapping[str, Any],
     *,
@@ -148,6 +173,8 @@ def _normalize_cell(
     return {
         "axis": axis,
         "variant": variant,
+        "pair_group_id": _identity_text_for_cell(cell, evidence, "pair_group_id"),
+        "run_id": _identity_text_for_cell(cell, evidence, "run_id"),
         "score": _score_from_validation(validation.score, evidence),
         "seg_dist": validation.seg_dist,
         "pose_dist": validation.pose_dist,

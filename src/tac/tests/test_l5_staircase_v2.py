@@ -992,6 +992,8 @@ def _tt5l_sideinfo_effect_curve_cells(repo_root: Path) -> list[dict[str, object]
     for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
         archive_sha = _sha(50_000 + variant_idx)
         runtime_content_sha = _sha(60_000 + variant_idx)
+        pair_group_id = f"pair_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
+        run_id = f"run_l5_v2_tt5l_sideinfo_effect_curve_{variant}"
         for axis_idx, axis in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
             seg_dist, pose_dist, archive_bytes, score = _tt5l_sideinfo_cell_score(
                 variant,
@@ -1002,6 +1004,8 @@ def _tt5l_sideinfo_effect_curve_cells(repo_root: Path) -> list[dict[str, object]
                 {
                     "axis": axis,
                     "variant": variant,
+                    "pair_group_id": pair_group_id,
+                    "run_id": run_id,
                     "archive_sha256": archive_sha,
                     "archive_bytes": archive_bytes,
                     "runtime_tree_sha256": _sha(70_000 + variant_idx * 10 + axis_idx),
