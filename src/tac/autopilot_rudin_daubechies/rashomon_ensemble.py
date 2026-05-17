@@ -208,6 +208,150 @@ class RashomonEnsembleRanker:
             self._anchors.append(record)
             self._refit_all()
 
+    def update_all_from_master_gradient(
+        self,
+        per_pair_gradient,  # np.ndarray of shape (N_bytes, N_pairs, 3)
+        *,
+        archive_sha256: str,
+        measurement_axis: str = "macos_cpu_advisory",
+        measurement_hardware: str = "linux_x86_64_cpu",
+        k_members: int | None = None,
+        pair_subsample_fraction: float = 0.8,
+        random_seed: int = 42,
+        top_k: int = 100,
+        write_sidecar: bool = False,
+    ):
+        """Ingest a per-pair master gradient tensor and refit the Rashomon ensemble.
+
+        Sister of :meth:`update_all` at the master-gradient surface: where
+        ``update_all`` consumes ONE (observed_score, panel) anchor from a paid
+        empirical dispatch + refits via historical-anchor bootstrap, this
+        method consumes the per-pair gradient tensor from a Catalog #245
+        master-gradient anchor + refits via PAIR-AXIS bootstrap (K subsamples
+        of pair indices). Both are legitimate Semenova-Rudin-Parr 2020 Rashomon
+        constructions; they capture complementary uncertainty surfaces.
+
+        The pair-axis bootstrap fits in the existing canonical persistence
+        contract:
+
+        - Each Rashomon member k samples a pair subset S_k ⊂ {0, ..., N_pairs-1}.
+        - The per-member per-byte averaged gradient ``np.mean(per_pair[:, S_k, :], axis=1)``
+          reduces to a per-member per-byte importance scalar via the canonical
+          L1-sum-of-abs metric.
+        - Per-byte stddev across K members IS the operator-facing
+          next-experiment queue signal per Rudin's Rashomon discipline.
+
+        Per Catalog #252 sister: the per-pair-bootstrap disagreement queue is
+        persisted to a sister JSONL store at
+        ``<store_path>.per_byte_disagreement.jsonl`` (under the same fcntl lock
+        as the anchor store) so the continual-learning loop closes — the next
+        autopilot ranking pass reads this store via
+        :func:`tac.master_gradient_consumers.rashomon_disagreement_queue` and
+        weights candidates' ``predicted_dispatch_risk`` by their byte-overlap
+        with the top-K disagreement bytes.
+
+        Per CLAUDE.md "Apples-to-apples evidence discipline": the persisted
+        row carries ``score_claim=False`` and the canonical
+        ``measurement_axis`` + ``measurement_hardware`` labels.
+
+        Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192: the
+        ``measurement_hardware`` field is preserved as-is; promotion of the
+        disagreement signal to a contest-grade claim requires a paired
+        ``[contest-CPU]`` or ``[contest-CUDA]`` anchor on 1:1 contest-compliant
+        hardware.
+
+        Args:
+          per_pair_gradient: numpy ndarray of shape ``(N_bytes, N_pairs, 3)``
+            per the canonical ``PER_PAIR_GRADIENT_TENSOR_KIND`` contract.
+          archive_sha256: archive SHA-256 from the source master-gradient anchor.
+          measurement_axis: canonical axis label from the source anchor (e.g.
+            ``"contest_cpu"`` / ``"contest_cuda"`` / ``"macos_cpu_advisory"``).
+          measurement_hardware: hardware substrate label from the source anchor.
+          k_members: number of Rashomon members; defaults to
+            ``self.ensemble_size`` to keep the per-pair-bootstrap and the
+            historical-anchor-bootstrap dimensions consistent.
+          pair_subsample_fraction: fraction of pairs per member (default 0.8 =
+            80% of pairs sampled without replacement per member).
+          random_seed: deterministic seed for the K bootstrap samples.
+          top_k: number of top-disagreement bytes to surface in the persisted row.
+          write_sidecar: whether to also emit a sidecar JSON at the canonical
+            ``.omx/state/master_gradient_consumers/`` path (default False;
+            persistence to the per-byte disagreement JSONL is unconditional).
+
+        Returns:
+          ``RashomonDisagreementQueue`` from
+          :func:`tac.master_gradient_consumers.rashomon_disagreement_queue`.
+
+        Raises:
+          RuntimeError: if ``store_path`` is None (Catalog #252 forbids
+            non-persisted Rashomon ensembles; persisting the disagreement
+            signal is the entire point of this method).
+          ValueError: from the underlying consumer on shape / parameter
+            validation failures.
+        """
+        # Sister Catalog #252 enforcement: persistence is mandatory.
+        if self._store_path is None:
+            raise RuntimeError(
+                "update_all_from_master_gradient requires a persisted store_path "
+                "(Catalog #252 `check_rashomon_ensemble_continual_update_locked` "
+                "forbids non-persisted Rashomon ensembles); construct the "
+                "RashomonEnsembleRanker with store_path=<canonical JSONL path>"
+            )
+        # Defer the heavy import to call-time so the autopilot_rudin_daubechies
+        # package stays import-light when only SLIM / falling-rule paths are
+        # used.
+        from tac.master_gradient_consumers import rashomon_disagreement_queue
+
+        k_effective = int(k_members) if k_members is not None else int(self.ensemble_size)
+        queue = rashomon_disagreement_queue(
+            per_pair_gradient,
+            archive_sha256=archive_sha256,
+            measurement_axis=measurement_axis,
+            measurement_hardware=measurement_hardware,
+            k_members=k_effective,
+            pair_subsample_fraction=pair_subsample_fraction,
+            random_seed=random_seed,
+            top_k=top_k,
+            write_sidecar=write_sidecar,
+        )
+
+        # Persist per-byte disagreement row to sister JSONL store under the
+        # SAME fcntl lock as the anchor store per Catalog #128/#131. Path =
+        # ``<anchor_store>.per_byte_disagreement.jsonl`` so cleanup tools that
+        # treat the anchor store as a unit can find the sister file by glob.
+        disagreement_store_path = self._store_path.with_name(
+            self._store_path.name + ".per_byte_disagreement.jsonl"
+        )
+        row = {
+            "schema": "rashomon_per_pair_disagreement_v1",
+            "archive_sha256": archive_sha256,
+            "measurement_axis": measurement_axis,
+            "measurement_hardware": measurement_hardware,
+            "k_members": queue.k_members,
+            "pair_subsample_size": queue.pair_subsample_size,
+            "pair_subsample_fraction": queue.pair_subsample_fraction,
+            "random_seed": queue.random_seed,
+            "n_bytes": queue.n_bytes,
+            "n_pairs": queue.n_pairs,
+            "top_k_disagreement_indices": list(queue.top_k_disagreement_indices),
+            "aggregate_disagreement_score": queue.aggregate_disagreement_score,
+            "written_at_utc": _utc_now_iso(),
+            # Per CLAUDE.md "Apples-to-apples evidence discipline"
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "evidence_grade": "[diagnostic; rashomon per-pair disagreement]",
+        }
+        with _slim_anchor_store_lock(self._lock_path):
+            disagreement_store_path.parent.mkdir(parents=True, exist_ok=True)
+            with disagreement_store_path.open("a", encoding="utf-8") as fh:
+                import json as _json
+
+                fh.write(_json.dumps(row, separators=(",", ":")))
+                fh.write("\n")
+
+        return queue
+
     def disagreement_queue(
         self,
         candidates: Iterable[ProxyPanel],

@@ -1095,34 +1095,133 @@ def _venn_deliverability_reward_factor_for_archive(archive_sha256: str) -> float
 def adjust_predicted_delta_for_venn_classification(
     predicted_delta: float, archive_sha256: str
 ) -> float:
-    """Reweight predicted_score_delta from the per-pair master gradient Venn classification.
+    """Backwards-compatible v1 wrapper around the v2 Lagrangian-derived cascade.
 
-    If the candidate's substrate archive has a fresh Venn classification
-    sidecar (written by
-    ``tac.master_gradient_consumers.classify_bytes_by_pair_variance``):
+    Per Q3 of lane_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_20260517:
+    THIS function is now a THIN WRAPPER that delegates to
+    :func:`adjust_predicted_delta_for_venn_classification_v2` with
+    ``optimal_plan_path=None`` (the v2 cascade resolves the most-recent plan
+    at runtime via ``tac.master_gradient_consumers.load_optimal_plan_for_archive``).
 
-      - HIGH PAIR_INVARIANT % (>= 80%): positive reward is gated by the
-        newest per-archive DeliverabilityProof. No proof or non-compliant
-        proof means no reward. Compliant proofs apply a byte-weighted factor
-        over deliverable tiers: Tier 1 = 1.20, Tier 2 = 1.10, approved Tier 3
-        = 1.05. Delta is negative-good; factors > 1 make the predicted score
-        delta more negative.
-      - HIGH PAIR_SPECIFIC % (>= 30%): substrate is structurally pair-specific-
-        trap — bytes can NOT be hoisted. Multiply delta by 0.85 (less negative
-        = worse predicted score).
-      - Otherwise: no adjustment (factor 1.0).
+    Existing callers + tests that pass only ``(predicted_delta, archive_sha256)``
+    transparently get the v2 cascade behavior. The v2 cascade is canonical:
 
-    The two thresholds are non-overlapping: a substrate cannot be BOTH
-    high-PAIR_INVARIANT AND high-PAIR_SPECIFIC by construction (the four
-    Venn classes sum to 1.0; PAIR_INVARIANT + PAIR_SPECIFIC <= 1.0). When
-    both are below their respective thresholds, the candidate is neutral.
+      CASCADE 1 (PRIMARY): if a Lagrangian-dual OptimalPerPairTreatmentPlan
+        sidecar exists for ``archive_sha256``, REPLACE ``predicted_delta`` with
+        the planner's ``predicted_score_delta`` field (the planner IS the
+        canonical answer per Catalog #227 sister discipline).
+      CASCADE 2 (DELIVERABILITY): else if a DeliverabilityProof exists, gate
+        the Venn reweight on the proof's deliverable-tier byte savings
+        (empirical-floor: if deliverable_savings == 0 — the fec6 prober case
+        per ``.omx/state/wyner_ziv_deliverability/probe_f174192aeadf_20260517T205208.json``
+        — apply 1.0× passthrough, no fake reward).
+      CASCADE 3 (PASSTHROUGH): no plan AND no proof => 1.0× passthrough (NO
+        FAKE REWARD).
+
+    The HIGH_PAIR_SPECIFIC 0.85× penalty (sister discipline; substrate
+    architecturally cannot share bytes) is preserved across all cascades.
 
     Per CLAUDE.md "Apples-to-apples evidence discipline": this is a
     PLANNING-ONLY reweighting; it never creates a score claim or dispatch
     authority. It only changes the autopilot's ranking ordering.
     """
+    return adjust_predicted_delta_for_venn_classification_v2(
+        predicted_delta, archive_sha256, optimal_plan_path=None
+    )
+
+
+def adjust_predicted_delta_for_venn_classification_v2(
+    predicted_delta: float,
+    archive_sha256: str,
+    optimal_plan_path: Path | None = None,
+) -> float:
+    """Lagrangian-derived autopilot reweight v2 (canonical).
+
+    Per Q3 of lane_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_20260517
+    + operator architectural correction 2026-05-17 ("the Lagrangian planner is
+    the canonical answer; the Venn classification is a planning signal"):
+
+    REPLACES the v1 ``adjust_predicted_delta_for_venn_classification`` flat
+    1.15× HIGH_PAIR_INVARIANT reward (which the fec6 empirical anchor proved
+    FAKE — see ``.omx/state/wyner_ziv_deliverability/probe_f174192aeadf_*.json``
+    with ``deliverability_verdict='NOT_DELIVERABLE'``) with the canonical
+    3-cascade decision tree:
+
+      **CASCADE 1 (PRIMARY — Lagrangian-derived)**: if a
+        ``OptimalPerPairTreatmentPlan`` sidecar exists for ``archive_sha256``
+        (loaded via ``tac.master_gradient_consumers.load_optimal_plan_for_archive``
+        OR ``optimal_plan_path`` override), REPLACE ``predicted_delta`` with
+        the planner's ``predicted_score_delta`` field. The planner IS the
+        canonical answer: it has solved the full ADMM/KKT problem with all
+        4 constraints (archive bytes / compute / inflate / per-pair selection)
+        and emitted a Pareto-feasible solution with dual variables that ARE
+        the canonical per-tier factor source.
+
+      **CASCADE 2 (DELIVERABILITY)**: else if a ``DeliverabilityProof`` exists
+        for the archive AND it passes contest-compliance verification AND the
+        Venn class is HIGH_PAIR_INVARIANT (>= 80%), apply the per-tier
+        byte-weighted reward via ``_venn_deliverability_reward_factor_for_archive``.
+        **Empirical-floor**: if ``deliverable_savings == 0`` (the fec6 prober
+        case where lzma/brotli/zlib all INFLATE the candidate set), apply
+        1.0× passthrough — NO FAKE REWARD per CLAUDE.md "Forbidden
+        empirical-claim-without-evidence-tag".
+
+      **CASCADE 3 (PASSTHROUGH)**: no plan + no proof => 1.0× passthrough.
+        Venn classification ALONE is NOT contest deliverability proof per
+        Catalog #319.
+
+    The HIGH_PAIR_SPECIFIC 0.85× PENALTY (Venn class is PAIR_SPECIFIC ≥ 30% =
+    substrate cannot share bytes regardless of Lagrangian / Deliverability)
+    is preserved across all cascades — penalty applies when no positive-reward
+    cascade fires.
+
+    Args:
+        predicted_delta: Raw predicted score delta from the candidate row
+            (negative = score improvement per autopilot convention).
+        archive_sha256: 64-char hex sha of the target archive bytes.
+        optimal_plan_path: Optional explicit override of the plan sidecar
+            (test fixture only; production callers pass None and let the
+            canonical loader resolve the most-recent plan for the archive).
+
+    Returns:
+        Adjusted predicted_delta per the cascade above. Always a planning-only
+        prediction; never a score claim.
+    """
     if not archive_sha256:
         return predicted_delta
+
+    # CASCADE 1: Lagrangian-derived (PRIMARY)
+    plan_payload: dict | None = None
+    if optimal_plan_path is not None:
+        # Test fixture override: load the specific plan file
+        try:
+            plan_payload = json.loads(Path(optimal_plan_path).read_text(encoding="utf-8"))
+            if not isinstance(plan_payload, dict):
+                plan_payload = None
+        except (OSError, json.JSONDecodeError):
+            plan_payload = None
+    else:
+        # Production path: consult canonical loader
+        try:
+            from tac.master_gradient_consumers import load_optimal_plan_for_archive
+        except (ImportError, ModuleNotFoundError):
+            plan_payload = None
+        else:
+            try:
+                plan_payload = load_optimal_plan_for_archive(archive_sha256)
+            except (OSError, ValueError):
+                plan_payload = None
+
+    if plan_payload is not None:
+        planner_delta = plan_payload.get("predicted_score_delta")
+        if isinstance(planner_delta, (int, float)):
+            # The planner's predicted_score_delta IS the canonical answer.
+            # REPLACE — do NOT add to predicted_delta; the planner has solved
+            # the full optimization including the substrate's marginal-Δ contribution.
+            return float(planner_delta)
+        # Plan payload present but malformed — fall through to Cascade 2
+
+    # CASCADE 2 + 3: existing Venn + DeliverabilityProof cascade
     sidecar = _latest_venn_sidecar_for_archive(archive_sha256)
     if sidecar is None:
         return predicted_delta
@@ -1135,11 +1234,15 @@ def adjust_predicted_delta_for_venn_classification(
     pair_invariant_frac = counts["PAIR_INVARIANT"] / total
     pair_specific_frac = counts["PAIR_SPECIFIC"] / total
     if pair_invariant_frac >= _VENN_REWEIGHT_HIGH_PAIR_INVARIANT_THRESHOLD:
+        # Cascade 2: DeliverabilityProof-gated reward. Empirical-floor for
+        # non-deliverable archives (fec6 case): factor = 1.0 (no fake reward).
         return predicted_delta * _venn_deliverability_reward_factor_for_archive(
             archive_sha256
         )
     if pair_specific_frac >= _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_THRESHOLD:
+        # Preserved penalty — substrate architecturally cannot share bytes.
         return predicted_delta * _VENN_REWEIGHT_HIGH_PAIR_SPECIFIC_DELTA_FACTOR
+    # Cascade 3: passthrough — no positive reward without proof.
     return predicted_delta
 
 

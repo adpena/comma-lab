@@ -1,0 +1,683 @@
+# SPDX-License-Identifier: MIT
+"""Smoke tests for tac.master_gradient_consumers.
+
+Per audit gate lane `lane_post_landing_audit_gate_per_pair_master_gradient_namespace_wave_20260517`
+AXIS 4 deliverable. Covers >=15 tests across 5 consumers + loader helpers +
+sidecar JSON emit semantics.
+
+Test taxonomy (per brief):
+- 3 tests per consumer x 5 consumers = 15 (contract validation + happy path +
+  dtype handling + sidecar JSON emit + axis-tag preservation).
+- + loader and helper smoke tests.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from tac import master_gradient_consumers as mgc
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Fixtures                                                                      #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+@pytest.fixture
+def per_pair_grad():
+    """Synthetic per-pair gradient of shape (N_bytes=20, N_pairs=10, 3)."""
+    rng = np.random.default_rng(42)
+    return rng.normal(0.0, 1.0, size=(20, 10, 3)).astype(np.float64)
+
+
+@pytest.fixture
+def aggregate_grad():
+    """Synthetic aggregate gradient of shape (N_bytes=20, 3)."""
+    rng = np.random.default_rng(43)
+    return rng.normal(0.0, 1.0, size=(20, 3)).astype(np.float64)
+
+
+@pytest.fixture
+def archive_sha256():
+    return "a" * 64
+
+
+@pytest.fixture
+def axis_meta():
+    return {
+        "measurement_axis": "contest_cpu",
+        "measurement_hardware": "linux_x86_64_cpu",
+    }
+
+
+@pytest.fixture
+def tmp_root(tmp_path, monkeypatch):
+    """Redirect CONSUMER_OUTPUT_ROOT to tmp_path so sidecars do not pollute repo state."""
+    monkeypatch.setattr(mgc, "CONSUMER_OUTPUT_ROOT", tmp_path / "master_gradient_consumers")
+    return tmp_path
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 1 — Venn classification (3 tests)                                    #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_venn_classification_contract_rejects_2d(archive_sha256, axis_meta):
+    """Contract validation: per_pair_gradient with wrong shape rejected."""
+    bad = np.zeros((20, 3), dtype=np.float64)
+    with pytest.raises(ValueError, match="N_bytes, N_pairs, 3"):
+        mgc.classify_bytes_by_pair_variance(
+            bad, archive_sha256=archive_sha256, write_sidecar=False, **axis_meta
+        )
+
+
+def test_venn_classification_happy_path_returns_typed_result(
+    per_pair_grad, archive_sha256, axis_meta
+):
+    """Happy path: returns PerByteVennClassification with all required fields."""
+    result = mgc.classify_bytes_by_pair_variance(
+        per_pair_grad, archive_sha256=archive_sha256, write_sidecar=False, **axis_meta
+    )
+    assert isinstance(result, mgc.PerByteVennClassification)
+    assert result.n_bytes == 20
+    assert result.n_pairs == 10
+    assert result.classes.shape == (20,)
+    # All bytes assigned to one of the canonical classes
+    assert set(result.classes) <= set(mgc.PerByteVennClass.ALL)
+    # class_counts sums to n_bytes
+    assert sum(result.class_counts.values()) == 20
+
+
+def test_venn_classification_sidecar_carries_compliance_tags(
+    per_pair_grad, archive_sha256, axis_meta, tmp_root
+):
+    """Sidecar JSON: compliance tags injected per Apples-to-apples discipline."""
+    mgc.classify_bytes_by_pair_variance(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        write_sidecar=True,
+        **axis_meta,
+    )
+    sidecars = list((tmp_root / "master_gradient_consumers").glob("venn_classification_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text())
+    # Compliance tags injected by write_consumer_sidecar_json
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["evidence_grade"].startswith("[diagnostic")
+    # Axis tag preserved verbatim
+    assert payload["measurement_axis"] == "contest_cpu"
+    assert payload["measurement_hardware"] == "linux_x86_64_cpu"
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 2 — fec6 selector marginal matrix (3 tests)                          #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_fec6_marginal_matrix_contract_rejects_mismatched_modes(
+    per_pair_grad, archive_sha256, axis_meta
+):
+    """Contract validation: current_modes shape must match (n_pairs,)."""
+    bad_modes = np.zeros((5,), dtype=np.int64)
+    with pytest.raises(ValueError, match="current_modes"):
+        mgc.fec6_selector_marginal_matrix(
+            per_pair_grad,
+            archive_sha256=archive_sha256,
+            selector_byte_indices=list(range(10)),
+            current_modes=bad_modes,
+            n_modes=16,
+            write_sidecar=False,
+            **axis_meta,
+        )
+
+
+def test_fec6_marginal_matrix_happy_path(per_pair_grad, archive_sha256, axis_meta):
+    """Happy path: per (pair, candidate_mode) cell ΔS estimate populated."""
+    rng = np.random.default_rng(44)
+    n_pairs = per_pair_grad.shape[1]
+    current_modes = rng.integers(0, 16, size=n_pairs).astype(np.int64)
+    sel_idx = list(range(n_pairs))  # one selector byte per pair, all distinct
+    result = mgc.fec6_selector_marginal_matrix(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        selector_byte_indices=sel_idx,
+        current_modes=current_modes,
+        n_modes=16,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert isinstance(result, mgc.Fec6SelectorMarginalMatrix)
+    assert result.n_pairs == n_pairs
+    assert result.n_modes == 16
+    # cells = n_pairs * (n_modes - 1) (skip k == current_mode)
+    assert len(result.cells) == n_pairs * 15
+
+
+def test_fec6_marginal_matrix_sidecar_emits_top_100(
+    per_pair_grad, archive_sha256, axis_meta, tmp_root
+):
+    """Sidecar JSON: emits top 100 score-lowering candidates only."""
+    rng = np.random.default_rng(44)
+    n_pairs = per_pair_grad.shape[1]
+    current_modes = rng.integers(0, 16, size=n_pairs).astype(np.int64)
+    sel_idx = list(range(n_pairs))
+    mgc.fec6_selector_marginal_matrix(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        selector_byte_indices=sel_idx,
+        current_modes=current_modes,
+        n_modes=16,
+        write_sidecar=True,
+        **axis_meta,
+    )
+    sidecars = list((tmp_root / "master_gradient_consumers").glob("fec6_selector_marginal_matrix_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text())
+    assert payload["consumer_id"] == "fec6_selector_marginal_matrix"
+    assert len(payload["top_100_score_lowering_swaps"]) <= 100
+    # Sorted ascending by predicted_delta_s
+    deltas = [c["predicted_delta_s"] for c in payload["top_100_score_lowering_swaps"]]
+    assert deltas == sorted(deltas)
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 3 — NSCS01 nullspace audit (3 tests)                                 #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_nscs01_nullspace_audit_insufficient_data(per_pair_grad, archive_sha256, axis_meta):
+    """No frame_0 indices supplied → INSUFFICIENT_DATA verdict."""
+    result = mgc.nscs01_nullspace_empirical_audit(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        frame_0_only_byte_indices=[],
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert result.verdict == mgc.Nscs01NullspaceVerdict.INSUFFICIENT_DATA
+    assert result.n_frame_0_only_bytes == 0
+
+
+def test_nscs01_nullspace_audit_confirms_when_seg_zero():
+    """When seg axis (0) is exactly zero on all frame_0 bytes → CONFIRMED."""
+    # Construct gradient where bytes 0..4 have seg=0 always, pose/rate nonzero
+    n_bytes, n_pairs = 10, 5
+    grad = np.random.default_rng(0).normal(0.0, 1.0, size=(n_bytes, n_pairs, 3))
+    grad[0:5, :, 0] = 0.0  # frame_0 bytes have zero seg gradient
+    result = mgc.nscs01_nullspace_empirical_audit(
+        grad,
+        archive_sha256="b" * 64,
+        measurement_axis="contest_cpu",
+        measurement_hardware="linux_x86_64_cpu",
+        frame_0_only_byte_indices=[0, 1, 2, 3, 4],
+        write_sidecar=False,
+    )
+    assert result.verdict == mgc.Nscs01NullspaceVerdict.CONFIRMED
+    assert result.fraction_pairs_nonzero == 0.0
+    assert result.max_seg_gradient_magnitude_on_frame_0_bytes == 0.0
+
+
+def test_nscs01_nullspace_audit_falsifies_when_seg_nonzero():
+    """When seg axis NON-zero on frame_0 bytes → FALSIFIED."""
+    n_bytes, n_pairs = 10, 5
+    grad = np.ones((n_bytes, n_pairs, 3), dtype=np.float64)  # all 1s; seg is nonzero everywhere
+    result = mgc.nscs01_nullspace_empirical_audit(
+        grad,
+        archive_sha256="c" * 64,
+        measurement_axis="contest_cpu",
+        measurement_hardware="linux_x86_64_cpu",
+        frame_0_only_byte_indices=[0, 1, 2, 3, 4],
+        write_sidecar=False,
+    )
+    assert result.verdict == mgc.Nscs01NullspaceVerdict.FALSIFIED
+    assert result.fraction_pairs_nonzero == 1.0
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 4 — Wyner-Ziv side-info covariance (3 tests)                         #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_wyner_ziv_contract_rejects_bad_sample_axis(per_pair_grad, archive_sha256, axis_meta):
+    """Contract validation: sample_axis must be 0, 1, or 2."""
+    with pytest.raises(ValueError, match="sample_axis"):
+        mgc.wyner_ziv_side_info_covariance(
+            per_pair_grad,
+            archive_sha256=archive_sha256,
+            sample_axis=5,
+            write_sidecar=False,
+            **axis_meta,
+        )
+
+
+def test_wyner_ziv_happy_path_classifies_bytes(per_pair_grad, archive_sha256, axis_meta):
+    """Happy path: returns three disjoint byte index sets."""
+    result = mgc.wyner_ziv_side_info_covariance(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        sample_axis=1,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert isinstance(result, mgc.WynerZivSideInfoClassification)
+    # Three classes partition: shared_prior + pair_specific + mixed = n_bytes
+    total = (
+        len(result.candidate_shared_prior_byte_indices)
+        + len(result.pair_specific_byte_indices)
+        + len(result.mixed_byte_indices)
+    )
+    assert total == result.n_bytes
+    # No overlap
+    sp = set(result.candidate_shared_prior_byte_indices)
+    ps = set(result.pair_specific_byte_indices)
+    mx = set(result.mixed_byte_indices)
+    assert sp.isdisjoint(ps) and sp.isdisjoint(mx) and ps.isdisjoint(mx)
+
+
+def test_wyner_ziv_sidecar_preserves_axis(per_pair_grad, archive_sha256, axis_meta, tmp_root):
+    """Sidecar: axis_name field reflects sample_axis."""
+    mgc.wyner_ziv_side_info_covariance(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        sample_axis=0,  # seg
+        write_sidecar=True,
+        **axis_meta,
+    )
+    sidecars = list((tmp_root / "master_gradient_consumers").glob("wyner_ziv_side_info_covariance_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text())
+    assert payload["sample_axis"] == 0
+    assert payload["axis_name"] == "seg"
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 5 — Per-pair difficulty atlas (3 tests)                              #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_per_pair_difficulty_contract_rejects_wrong_shape(archive_sha256, axis_meta):
+    """Contract validation: shape (N_bytes, N_pairs, 3) required."""
+    bad = np.zeros((20, 10), dtype=np.float64)
+    with pytest.raises(ValueError, match="N_bytes, N_pairs, 3"):
+        mgc.per_pair_difficulty_atlas(
+            bad, archive_sha256=archive_sha256, write_sidecar=False, **axis_meta
+        )
+
+
+def test_per_pair_difficulty_atlas_ranks_pairs(per_pair_grad, archive_sha256, axis_meta):
+    """Happy path: all pairs ranked; top-K hardest + bottom-K easiest emitted."""
+    result = mgc.per_pair_difficulty_atlas(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        top_k=3,
+        bottom_k=3,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert isinstance(result, mgc.PerPairDifficultyAtlas)
+    assert result.n_pairs == 10
+    assert len(result.entries) == 10
+    assert len(result.top_k_hardest_pair_indices) == 3
+    assert len(result.bottom_k_easiest_pair_indices) == 3
+    # Ranks are consecutive 0..n_pairs-1
+    ranks = sorted(e.difficulty_rank for e in result.entries)
+    assert ranks == list(range(10))
+    # Top-K is harder than bottom-K
+    top_norms = [
+        e.gradient_norm_l2
+        for e in result.entries
+        if e.pair_index in result.top_k_hardest_pair_indices
+    ]
+    bottom_norms = [
+        e.gradient_norm_l2
+        for e in result.entries
+        if e.pair_index in result.bottom_k_easiest_pair_indices
+    ]
+    assert min(top_norms) >= max(bottom_norms)
+
+
+def test_per_pair_difficulty_atlas_sidecar_emits_axis_breakdown(
+    per_pair_grad, archive_sha256, axis_meta, tmp_root
+):
+    """Sidecar: per-pair seg/pose/rate axis L1 contributions emitted for top-K."""
+    mgc.per_pair_difficulty_atlas(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        top_k=5,
+        bottom_k=5,
+        write_sidecar=True,
+        **axis_meta,
+    )
+    sidecars = list((tmp_root / "master_gradient_consumers").glob("per_pair_difficulty_atlas_*.json"))
+    assert len(sidecars) == 1
+    payload = json.loads(sidecars[0].read_text())
+    assert payload["consumer_id"] == "per_pair_difficulty_atlas"
+    assert len(payload["top_k_hardest_with_axis_breakdown"]) == 5
+    for entry in payload["top_k_hardest_with_axis_breakdown"]:
+        # Per-axis L1 contributions present
+        for key in ("seg_axis_l1", "pose_axis_l1", "rate_axis_l1"):
+            assert key in entry
+            assert isinstance(entry[key], (int, float))
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Loader + helper smoke tests                                                   #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_consumer_output_path_canonical_no_tmp(archive_sha256):
+    """consumer_output_path never produces /tmp paths."""
+    path = mgc.consumer_output_path("venn_classification", archive_sha256=archive_sha256)
+    s = str(path)
+    assert "/tmp/" not in s
+    assert not s.startswith("/tmp")
+    assert ".omx/state/master_gradient_consumers" in s
+    assert archive_sha256[:12] in s
+
+
+def test_consumer_output_path_includes_utc(archive_sha256):
+    """consumer_output_path filename includes a UTC timestamp segment."""
+    path = mgc.consumer_output_path(
+        "venn_classification", archive_sha256=archive_sha256, utc_iso="2026-05-17T20:00:00"
+    )
+    assert "20260517T200000" in str(path)
+
+
+def test_write_consumer_sidecar_json_injects_compliance_tags(tmp_path):
+    """write_consumer_sidecar_json injects the canonical compliance tags
+    (score_claim=False, promotion_eligible=False, ready_for_exact_eval_dispatch=False,
+    evidence_grade starts with [diagnostic)."""
+    target = tmp_path / "out" / "sidecar.json"
+    mgc.write_consumer_sidecar_json(target, {"foo": "bar"})
+    payload = json.loads(target.read_text())
+    assert payload["foo"] == "bar"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["evidence_grade"].startswith("[diagnostic")
+
+
+def test_load_per_pair_gradient_from_anchor_missing_raises():
+    """No matching anchor in ledger → FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="no per-pair master gradient anchor"):
+        mgc.load_per_pair_gradient_from_anchor(archive_sha256="z" * 64)
+
+
+def test_load_aggregate_gradient_from_anchor_missing_raises():
+    """No matching aggregate anchor in ledger → FileNotFoundError."""
+    with pytest.raises(FileNotFoundError, match="no aggregate master gradient anchor"):
+        mgc.load_aggregate_gradient_from_anchor(archive_sha256="z" * 64)
+
+
+def test_public_api_completeness():
+    """Verify all public symbols are exported via __all__ and importable.
+
+    The module implements 6 consumers in v1:
+      1. Venn classification
+      2. fec6 selector marginal matrix
+      3. NSCS01 nullspace empirical audit
+      4. Wyner-Ziv side-info covariance
+      5. Per-pair difficulty atlas
+      6. Rashomon disagreement queue
+    Plus loader + sidecar helpers.
+    """
+    expected = {
+        # Consumer 1
+        "PerByteVennClass",
+        "PerByteVennClassification",
+        "classify_bytes_by_pair_variance",
+        # Consumer 2
+        "Fec6SelectorMarginalCell",
+        "Fec6SelectorMarginalMatrix",
+        "fec6_selector_marginal_matrix",
+        # Consumer 3
+        "Nscs01NullspaceVerdict",
+        "Nscs01NullspaceAudit",
+        "nscs01_nullspace_empirical_audit",
+        # Consumer 4
+        "WynerZivSideInfoClassification",
+        "wyner_ziv_side_info_covariance",
+        # Consumer 5
+        "PerPairDifficultyEntry",
+        "PerPairDifficultyAtlas",
+        "per_pair_difficulty_atlas",
+        # Consumer 6
+        "RashomonDisagreementEntry",
+        "RashomonDisagreementQueue",
+        "rashomon_disagreement_queue",
+        # Consumer 15 — operator-binding Lagrangian-dual per-pair treatment planner
+        "Treatment",
+        "TreatmentCatalog",
+        "Budget",
+        "PairTreatmentAssignment",
+        "OptimalPerPairTreatmentPlan",
+        "OptimalPerPairTreatmentPlanError",
+        "DEFAULT_TREATMENT_CATALOG",
+        "DEFAULT_BUDGET",
+        "DEFAULT_ARCHIVE_BUDGET_BYTES",
+        "DEFAULT_COMPUTE_BUDGET_USD",
+        "DEFAULT_INFLATE_BUDGET_SECONDS",
+        "TREATMENT_NONE",
+        "TREATMENT_LORA_RANK_8",
+        "TREATMENT_LAMBDA_R_BUMP",
+        "TREATMENT_PER_PAIR_PARETO_ENVELOPE",
+        "TREATMENT_KKT_RESIDUAL_CORRECTION",
+        "TREATMENT_VOLTERRA_CROSS_TERM",
+        "TREATMENT_DECODER_PRUNING",
+        "TREATMENT_WYNER_ZIV_HOIST",
+        "build_default_treatment_catalog",
+        "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "optimal_plan_to_candidate_row",
+        # Loaders + helpers
+        "load_per_pair_gradient_from_anchor",
+        "load_aggregate_gradient_from_anchor",
+        "load_optimal_plan_for_archive",
+        "consumer_output_path",
+        "write_consumer_sidecar_json",
+    }
+    assert set(mgc.__all__) == expected
+    for name in expected:
+        assert hasattr(mgc, name), f"missing public symbol {name}"
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# load_optimal_plan_for_archive — Q3 v2 cascade canonical loader (5 tests)      #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_load_optimal_plan_for_archive_returns_none_when_missing(tmp_path):
+    """Missing root dir returns None (no plan available)."""
+    nonexistent = tmp_path / "nope"
+    sha = "a" * 64
+    result = mgc.load_optimal_plan_for_archive(sha, root=nonexistent)
+    assert result is None
+
+
+def test_load_optimal_plan_for_archive_returns_none_when_no_match(tmp_path):
+    """Existing root dir but no matching file => None."""
+    root = tmp_path / "consumers"
+    root.mkdir()
+    # Write a sister consumer's sidecar — not optimal_plan_*
+    (root / "venn_classification_aaa_2026.json").write_text("{}", encoding="utf-8")
+
+    sha = "a" * 64
+    result = mgc.load_optimal_plan_for_archive(sha, root=root)
+    assert result is None
+
+
+def test_load_optimal_plan_for_archive_short_sha_raises():
+    """archive_sha256 shorter than 12 chars raises ValueError."""
+    import pytest
+
+    with pytest.raises(ValueError, match="12\\+ char hex"):
+        mgc.load_optimal_plan_for_archive("short")
+
+
+def test_load_optimal_plan_for_archive_finds_most_recent(tmp_path):
+    """Multiple plan sidecars for same archive: most recent (lex-max) wins."""
+    root = tmp_path / "consumers"
+    root.mkdir()
+    sha = "b" * 64
+    base_payload = {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": mgc.OPTIMAL_PLAN_CONSUMER_ID,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "schema": "v1",
+    }
+    # Older
+    (root / f"optimal_plan_{sha[:12]}_20260517T100000.json").write_text(
+        json.dumps({**base_payload, "predicted_score_delta": -0.001}), encoding="utf-8"
+    )
+    # Newer
+    (root / f"optimal_plan_{sha[:12]}_20260517T200000.json").write_text(
+        json.dumps({**base_payload, "predicted_score_delta": -0.099}), encoding="utf-8"
+    )
+
+    payload = mgc.load_optimal_plan_for_archive(sha, root=root)
+    assert payload is not None
+    assert payload["predicted_score_delta"] == -0.099
+
+
+def test_load_optimal_plan_for_archive_skips_corrupt(tmp_path):
+    """Corrupt JSON file skipped; falls through to older valid file."""
+    root = tmp_path / "consumers"
+    root.mkdir()
+    sha = "c" * 64
+    valid_payload = {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": mgc.OPTIMAL_PLAN_CONSUMER_ID,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "predicted_score_delta": -0.042,
+        "schema": "v1",
+    }
+    # Older valid plan
+    (root / f"optimal_plan_{sha[:12]}_20260517T100000.json").write_text(
+        json.dumps(valid_payload), encoding="utf-8"
+    )
+    # Newer CORRUPT plan
+    (root / f"optimal_plan_{sha[:12]}_20260517T200000.json").write_text(
+        "NOT VALID JSON", encoding="utf-8"
+    )
+
+    payload = mgc.load_optimal_plan_for_archive(sha, root=root)
+    # Most-recent valid wins; corrupt skipped
+    assert payload is not None
+    assert payload["predicted_score_delta"] == -0.042
+
+
+def test_load_optimal_plan_for_archive_skips_payload_archive_mismatch(tmp_path):
+    """Filename prefix alone is not authority; payload archive_sha256 must match."""
+    root = tmp_path / "consumers"
+    root.mkdir()
+    sha = "d" * 64
+    wrong_sha = sha[:12] + ("e" * 52)
+    (root / f"optimal_plan_{sha[:12]}_20260517T100000.json").write_text(
+        json.dumps(
+            {
+                "archive_sha256": wrong_sha,
+                "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+                "catalog_consumer_id": mgc.OPTIMAL_PLAN_CONSUMER_ID,
+                "evidence_grade": "predicted",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "predicted_score_delta": -999.0,
+                "schema": "v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert mgc.load_optimal_plan_for_archive(sha, root=root) is None
+
+
+def test_load_optimal_plan_for_archive_skips_authority_bearing_payload(tmp_path):
+    """Predicted plans must not carry score or promotion authority into ranking."""
+    root = tmp_path / "consumers"
+    root.mkdir()
+    sha = "e" * 64
+    base_payload = {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": mgc.OPTIMAL_PLAN_CONSUMER_ID,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "predicted_score_delta": -0.042,
+        "schema": "v1",
+    }
+    (root / f"optimal_plan_{sha[:12]}_20260517T100000.json").write_text(
+        json.dumps({**base_payload, "score_claim": True}),
+        encoding="utf-8",
+    )
+    (root / f"optimal_plan_{sha[:12]}_20260517T200000.json").write_text(
+        json.dumps({**base_payload, "evidence_grade": "contest-CUDA"}),
+        encoding="utf-8",
+    )
+
+    assert mgc.load_optimal_plan_for_archive(sha, root=root) is None
+
+
+# ──────────────────────────────────────────────────────────────────────────── #
+# Consumer 6 — Rashomon disagreement queue (3 tests)                            #
+# ──────────────────────────────────────────────────────────────────────────── #
+
+
+def test_rashomon_disagreement_queue_smoke(per_pair_grad, archive_sha256, axis_meta):
+    """Happy path: queue computes per-byte disagreement across K members."""
+    result = mgc.rashomon_disagreement_queue(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert isinstance(result, mgc.RashomonDisagreementQueue)
+    # One entry per byte
+    assert len(result.entries_tuple) == per_pair_grad.shape[0]
+
+
+def test_rashomon_disagreement_queue_entries_have_required_fields(
+    per_pair_grad, archive_sha256, axis_meta
+):
+    """Every entry has the required fields per the contract."""
+    result = mgc.rashomon_disagreement_queue(
+        per_pair_grad,
+        archive_sha256=archive_sha256,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    for entry in result.entries_tuple:
+        assert isinstance(entry, mgc.RashomonDisagreementEntry)
+        assert entry.byte_index >= 0
+        assert entry.std_across_k_members >= 0.0
+        assert entry.k_members_count >= 1
+        # Axis tag preserved per Apples-to-apples discipline
+        assert entry.axis == "contest_cpu"
+
+
+def test_rashomon_disagreement_queue_dtype_handling(archive_sha256, axis_meta):
+    """Accepts float32 input without crashing (dtype handling)."""
+    rng = np.random.default_rng(99)
+    grad_f32 = rng.normal(0.0, 1.0, size=(15, 8, 3)).astype(np.float32)
+    result = mgc.rashomon_disagreement_queue(
+        grad_f32,
+        archive_sha256=archive_sha256,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    assert isinstance(result, mgc.RashomonDisagreementQueue)
+    assert len(result.entries_tuple) == 15

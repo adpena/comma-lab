@@ -953,3 +953,39 @@ __all__ += [
 # ``tac.sensitivity_map.axis_weights`` dotted access without explicit
 # import in the consumer.
 axis_weights = _axis_weights
+
+
+# Wire-in 2 — Wyner-Ziv side-info covariance (Catalog #125 hook #1).
+#
+# Re-export the canonical per-byte reweighting API from the sister
+# :mod:`tac.sensitivity_map.wyner_ziv_reweight` submodule so downstream
+# consumers can ``from tac.sensitivity_map import axis_level_reweight``.
+# The producer side is :func:`tac.master_gradient_consumers.wyner_ziv_side_info_covariance`
+# (consumer 4). Memory: feedback_wire_in_2_wyner_ziv_to_sensitivity_map_landed_20260517.md.
+# Lane: lane_wire_in_2_wyner_ziv_covariance_to_sensitivity_map_20260517.
+from tac.sensitivity_map import wyner_ziv_reweight as _wyner_ziv_reweight  # noqa: E402
+from tac.sensitivity_map.wyner_ziv_reweight import (  # noqa: E402
+    MIXED_SENSITIVITY_BASELINE,
+    PAIR_SPECIFIC_SENSITIVITY_UPWEIGHT,
+    SHARED_PRIOR_SENSITIVITY_DOWNWEIGHT,
+    WYNER_ZIV_REWEIGHT_OPERATING_POINT_TAG,
+    WynerZivAxisLevelReweightError,
+    axis_level_reweight,
+    update_sensitivity_map_from_master_gradient_anchor,
+)
+
+__all__ += [
+    "MIXED_SENSITIVITY_BASELINE",
+    "PAIR_SPECIFIC_SENSITIVITY_UPWEIGHT",
+    "SHARED_PRIOR_SENSITIVITY_DOWNWEIGHT",
+    "WYNER_ZIV_REWEIGHT_OPERATING_POINT_TAG",
+    "WynerZivAxisLevelReweightError",
+    "axis_level_reweight",
+    "update_sensitivity_map_from_master_gradient_anchor",
+    "wyner_ziv_reweight",
+]
+
+# Expose submodule under its package attribute name for
+# ``tac.sensitivity_map.wyner_ziv_reweight`` dotted access without explicit
+# import in the consumer.
+wyner_ziv_reweight = _wyner_ziv_reweight
