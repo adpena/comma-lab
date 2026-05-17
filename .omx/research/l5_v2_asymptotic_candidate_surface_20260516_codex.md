@@ -25,12 +25,13 @@ This is a planning and no-signal-loss surface. It records whether asymptotic L5-
 - effective_recommended_next_action_id: `completed_or_superseded:build_z6_l1_scaffold_first`
 - ready_for_l1_build: `False`
 - ready_for_l1_scaffold_dispatch: `False`
-- blockers: `['requires_z6_l1_scaffold_before_paid_dispatch', 'requires_identity_predictor_disambiguator_before_paradigm_claim', 'requires_paired_cpu_cuda_anchor_before_score_or_rank_authority']`
+- blockers: `['requires_z6_l1_scaffold_before_paid_dispatch', 'requires_identity_predictor_disambiguator_result_before_paradigm_claim', 'requires_paired_cpu_cuda_anchor_before_score_or_rank_authority']`
 - l1_build_blockers: `['l1_scaffold_present_next_action_completed_or_superseded']`
 
 Expected first artifacts:
 - `src/tac/substrates/time_traveler_l5_z6/` present=`True`
 - `experiments/train_substrate_time_traveler_l5_z6.py` present=`True`
+- `tools/probe_z6_predictive_coding_vs_identity_disambiguator.py` present=`True`
 - `.omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml` present=`True`
 
 ### rudin_floor_interpretable_ml_substrate

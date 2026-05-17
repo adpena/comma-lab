@@ -206,6 +206,9 @@ L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH = (
 L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH = (
     ".omx/research/l5_v2_asymptotic_candidate_surface_20260516_codex.md"
 )
+Z6_IDENTITY_PREDICTOR_DISAMBIGUATOR_TOOL_PATH = (
+    "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py"
+)
 
 GateStatus = Literal["required", "satisfied", "blocked"]
 _SHA256_HEX_RE = re.compile(r"^[0-9a-fA-F]{64}$")
@@ -303,6 +306,7 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
         expected_first_artifacts=(
             "src/tac/substrates/time_traveler_l5_z6/",
             "experiments/train_substrate_time_traveler_l5_z6.py",
+            Z6_IDENTITY_PREDICTOR_DISAMBIGUATOR_TOOL_PATH,
             (
                 ".omx/operator_authorize_recipes/"
                 "substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml"
@@ -310,7 +314,7 @@ _L5_V2_ASYMPTOTIC_PURSUIT_CANDIDATES: tuple[
         ),
         dependency_blockers=(
             "requires_z6_l1_scaffold_before_paid_dispatch",
-            "requires_identity_predictor_disambiguator_before_paradigm_claim",
+            "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
             "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
         ),
         cost_band_usd=(1.0, 12.5),

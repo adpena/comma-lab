@@ -1,7 +1,7 @@
 {
   "blockers": [
     "requires_z6_l1_scaffold_before_paid_dispatch",
-    "requires_identity_predictor_disambiguator_before_paradigm_claim",
+    "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
     "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority",
     "requires_t3_ratification_before_l1_scaffold_dispatch",
     "requires_dykstra_feasibility_intersection_before_paid_smoke",
@@ -21,7 +21,7 @@
     {
       "blockers": [
         "requires_z6_l1_scaffold_before_paid_dispatch",
-        "requires_identity_predictor_disambiguator_before_paradigm_claim",
+        "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
         "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
       ],
       "candidate_id": "z6_z7_z8_predictive_coding_world_models",
@@ -31,7 +31,7 @@
       ],
       "dependency_blockers": [
         "requires_z6_l1_scaffold_before_paid_dispatch",
-        "requires_identity_predictor_disambiguator_before_paradigm_claim",
+        "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
         "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
       ],
       "effective_recommended_next_action": "The originally recommended L1 action is complete or superseded; advance using l1_build_blockers/dependency_blockers rather than rebuilding the same scaffold.",
@@ -46,6 +46,10 @@
           "present": true
         },
         {
+          "path": "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py",
+          "present": true
+        },
+        {
           "path": ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml",
           "present": true
         }
@@ -53,6 +57,7 @@
       "expected_first_artifacts": [
         "src/tac/substrates/time_traveler_l5_z6/",
         "experiments/train_substrate_time_traveler_l5_z6.py",
+        "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py",
         ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml"
       ],
       "expected_first_artifacts_all_present": true,
@@ -75,6 +80,10 @@
             "present": true
           },
           {
+            "path": "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py",
+            "present": true
+          },
+          {
             "path": ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml",
             "present": true
           }
@@ -93,7 +102,7 @@
           ],
           "dependency_blockers": [
             "requires_z6_l1_scaffold_before_paid_dispatch",
-            "requires_identity_predictor_disambiguator_before_paradigm_claim",
+            "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
             "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
           ],
           "l1_scaffold_present": true,
@@ -358,6 +367,10 @@
           "present": true
         },
         {
+          "path": "tools/probe_z6_predictive_coding_vs_identity_disambiguator.py",
+          "present": true
+        },
+        {
           "path": ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml",
           "present": true
         }
@@ -376,7 +389,7 @@
         ],
         "dependency_blockers": [
           "requires_z6_l1_scaffold_before_paid_dispatch",
-          "requires_identity_predictor_disambiguator_before_paradigm_claim",
+          "requires_identity_predictor_disambiguator_result_before_paradigm_claim",
           "requires_paired_cpu_cuda_anchor_before_score_or_rank_authority"
         ],
         "l1_scaffold_present": true,

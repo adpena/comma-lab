@@ -1031,10 +1031,17 @@ def test_l5_v2_asymptotic_pursuit_candidates_are_source_backed() -> None:
     assert "time_traveler_l5_z6" in "\n".join(
         z6["expected_first_artifacts"]
     )
+    assert l5_v2.Z6_IDENTITY_PREDICTOR_DISAMBIGUATOR_TOOL_PATH in z6[
+        "expected_first_artifacts"
+    ]
     assert "l1_scaffold_present_next_action_completed_or_superseded" in z6[
         "l1_build_blockers"
     ]
     assert "requires_z6_l1_scaffold_before_paid_dispatch" in z6["blockers"]
+    assert (
+        "requires_identity_predictor_disambiguator_result_before_paradigm_claim"
+        in z6["blockers"]
+    )
 
     rudin = rows["rudin_floor_interpretable_ml_substrate"]
     assert rudin["ready_for_recommended_next_action"] is False
