@@ -3834,6 +3834,13 @@ def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
     assert status["source_commit"] == _sha(1)
     assert status["current_head_commit"] == _sha(1)
     assert status["source_commit_matches_head"] is True
+    assert "src/tac/optimization/l5_staircase_v2.py" in status[
+        "source_relevant_paths"
+    ]
+    assert "tools/build_l5_v2_architecture_lock_packet.py" in status[
+        "source_relevant_paths"
+    ]
+    assert "src/tac/exact_eval_custody.py" in status["source_relevant_paths"]
     assert status["source_relevant_paths_match"] is True
     assert status["source_custody_valid"] is True
     assert status["source_custody_current_for_execution"] is True
@@ -3918,7 +3925,7 @@ def test_l5_v2_tt5l_lightning_paired_axis_plan_status_blocks_relevant_source_dri
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    changed_path = "src/tac/deploy/lightning/batch_jobs.py"
+    changed_path = "src/tac/optimization/l5_staircase_v2.py"
     monkeypatch.setattr(l5_v2, "_git_head_commit", lambda repo_root: _sha(2))
     monkeypatch.setattr(
         l5_v2,
