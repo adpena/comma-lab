@@ -31,6 +31,7 @@ from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
     L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
     L5V2_SIDEINFO_EFFECT_CURVE_ARTIFACT_PATH,
+    L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
     L5V2_SIDEINFO_EFFECT_CURVE_TOOL_PATH,
     validate_l5_v2_sideinfo_effect_curve,
@@ -115,6 +116,13 @@ TT5L_MATERIALIZED_MODAL_PROVIDER_BLOCKER_ARTIFACT_PATH = (
 )
 TT5L_MATERIALIZED_LIGHTNING_ALT_PROVIDER_PLAN_ARTIFACT_PATH = (
     ".omx/research/l5_v2_tt5l_lightning_alt_provider_plan_20260517_codex.json"
+)
+TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH = (
+    ".omx/research/"
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json"
+)
+TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA = (
+    "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_v1"
 )
 TT5L_MATERIALIZED_PAIRED_WORK_UNIT_PAIR_GROUP_ID = (
     "pair_l5_v2_measure_tt5l_autonomy_paired_exact_cpu_cuda"
@@ -3550,6 +3558,224 @@ def _tt5l_materialized_lightning_alt_provider_plan_status(
     }
 
 
+def _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
+    *,
+    repo_root: Path,
+) -> dict[str, Any]:
+    artifact_path = (
+        repo_root / TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+    )
+    validation_blockers: list[str] = []
+    payload: Mapping[str, Any] = {}
+    if not artifact_path.is_file():
+        return {
+            "schema": (
+                "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1"
+            ),
+            "artifact_path": (
+                TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+            ),
+            "artifact_exists": False,
+            "artifact_valid": False,
+            "provider": "lightning",
+            "cell_count": 0,
+            "expected_cell_count": (
+                len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+                * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+            ),
+            "covered_axes": [],
+            "covered_variants": [],
+            "all_cells_dry_run_ready": False,
+            "execution_ready": False,
+            "blockers": [],
+        }
+    try:
+        loaded = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_json_invalid"
+        )
+    else:
+        if isinstance(loaded, Mapping):
+            payload = loaded
+        else:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_not_object"
+            )
+
+    if payload and payload.get("schema") != (
+        TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA
+    ):
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_schema_mismatch"
+        )
+    false_fields = (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "ready_for_provider_dispatch",
+        "dispatch_attempted",
+    )
+    for field in false_fields:
+        if payload and payload.get(field) is not False:
+            validation_blockers.append(
+                f"l5_v2_tt5l_lightning_paired_axis_plan_{field}_not_false"
+            )
+    if payload and payload.get("all_cells_dry_run_ready") is not True:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_cells_not_dry_run_ready"
+        )
+
+    cells = _mapping_items(payload.get("cells") if payload else None)
+    expected_cell_count = (
+        len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS)
+        * len(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES)
+    )
+    if payload and len(cells) != expected_cell_count:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_cell_count_mismatch"
+        )
+    cell_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    duplicate_keys: list[str] = []
+    for cell in cells:
+        variant = str(cell.get("variant") or "").strip()
+        axis = str(cell.get("axis") or "").strip()
+        key = (variant, axis)
+        if key in cell_by_key:
+            duplicate_keys.append(f"{variant}:{axis}")
+        elif variant and axis:
+            cell_by_key[key] = cell
+    if duplicate_keys:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_duplicate_cells:"
+            + ",".join(sorted(duplicate_keys))
+        )
+    missing_cells = [
+        f"{variant}:{axis}"
+        for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
+        if (variant, axis) not in cell_by_key
+    ]
+    if missing_cells:
+        validation_blockers.append(
+            "l5_v2_tt5l_lightning_paired_axis_plan_missing_cells:"
+            + ",".join(missing_cells)
+        )
+
+    for (variant, axis), cell in cell_by_key.items():
+        expected_device = "cpu" if axis == "contest_cpu" else "cuda"
+        expected_role = f"exact_{expected_device}_eval"
+        if cell.get("role") != expected_role:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_role_mismatch:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("required_device") != expected_device:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_device_mismatch:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("ready_for_operator_dispatch") is not True:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_cell_not_ready:"
+                f"{variant}:{axis}"
+            )
+        if cell.get("ready_for_provider_dispatch") is not False:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_cell_provider_ready:"
+                f"{variant}:{axis}"
+            )
+        for sha_field in (
+            "archive_sha256",
+            "command_sha256",
+            "state_sha256",
+            "dry_run_stdout_sha256",
+            "dry_run_stderr_sha256",
+        ):
+            sha_value = str(cell.get(sha_field) or "").strip().lower()
+            if not _SHA256_HEX_RE.fullmatch(sha_value):
+                validation_blockers.append(
+                    "l5_v2_tt5l_lightning_paired_axis_plan_cell_sha_invalid:"
+                    f"{variant}:{axis}:{sha_field}"
+                )
+        invariants = cell.get("invariants")
+        if not isinstance(invariants, Mapping) or not invariants:
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_invariants_missing:"
+                f"{variant}:{axis}"
+            )
+        elif any(value is not True for value in invariants.values()):
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_invariants_failed:"
+                f"{variant}:{axis}"
+            )
+        spec = cell.get("spec")
+        if not isinstance(spec, Mapping):
+            validation_blockers.append(
+                "l5_v2_tt5l_lightning_paired_axis_plan_spec_missing:"
+                f"{variant}:{axis}"
+            )
+        else:
+            if spec.get("role") != expected_role:
+                validation_blockers.append(
+                    "l5_v2_tt5l_lightning_paired_axis_plan_spec_role_mismatch:"
+                    f"{variant}:{axis}"
+                )
+            adjudication = spec.get("adjudication")
+            if (
+                not isinstance(adjudication, Mapping)
+                or adjudication.get("required_device") != expected_device
+            ):
+                validation_blockers.append(
+                    "l5_v2_tt5l_lightning_paired_axis_plan_spec_device_mismatch:"
+                    f"{variant}:{axis}"
+                )
+
+    covered_axes = sorted({axis for _, axis in cell_by_key})
+    covered_variants = sorted({variant for variant, _ in cell_by_key})
+    top_blockers = [
+        str(blocker)
+        for blocker in (payload.get("blockers") if payload else []) or []
+        if str(blocker)
+    ]
+    dry_run_ready = (
+        bool(payload)
+        and not validation_blockers
+        and payload.get("all_cells_dry_run_ready") is True
+    )
+    execution_blockers = [
+        "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched",
+        *(
+            "l5_v2_tt5l_lightning_paired_axis_plan_blocked:" + blocker
+            for blocker in top_blockers
+        ),
+    ]
+    return {
+        "schema": (
+            "l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status_v1"
+        ),
+        "artifact_path": (
+            TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+        ),
+        "artifact_exists": artifact_path.is_file(),
+        "artifact_valid": bool(payload) and not validation_blockers,
+        "provider": "lightning",
+        "cell_count": len(cells),
+        "expected_cell_count": expected_cell_count,
+        "covered_axes": covered_axes,
+        "covered_variants": covered_variants,
+        "all_cells_dry_run_ready": dry_run_ready,
+        "execution_ready": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "execution_blockers": list(dict.fromkeys(execution_blockers)),
+        "blockers": list(dict.fromkeys(validation_blockers + execution_blockers)),
+    }
+
+
 def _tt5l_materialized_modal_provider_blocker_status(
     *,
     repo_root: Path,
@@ -3663,6 +3889,11 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
     materialized_work_unit_status = _tt5l_materialized_paired_work_unit_status(
         repo_root=repo_root
     )
+    lightning_paired_axis_plan_status = (
+        _tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_status(
+            repo_root=repo_root
+        )
+    )
     sideinfo_effect_curve_status = _tt5l_sideinfo_effect_curve_status(
         repo_root=repo_root
     )
@@ -3713,6 +3944,14 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         ]
         if alternate_plan["artifact_valid"] is True:
             blockers.extend(str(blocker) for blocker in alternate_plan["blockers"])
+    if (
+        lightning_paired_axis_plan_status["artifact_exists"] is True
+        and lightning_paired_axis_plan_status["artifact_valid"] is not True
+    ):
+        blockers.extend(
+            str(blocker)
+            for blocker in lightning_paired_axis_plan_status["blockers"]
+        )
 
     if not dykstra_valid:
         next_action = {
@@ -4167,6 +4406,9 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "probe_tool_exists": probe_tool_exists,
         "probe_observation_intake_status": probe_intake_status,
         "materialized_tt5l_paired_work_unit_status": materialized_work_unit_status,
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status": (
+            lightning_paired_axis_plan_status
+        ),
         "measurement_schedule_tool_path": L5V2_MEASUREMENT_SCHEDULE_TOOL_PATH,
         "measurement_schedule_artifact_path": L5V2_MEASUREMENT_SCHEDULE_ARTIFACT_PATH,
         "measurement_schedule_report_path": L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH,
@@ -5723,10 +5965,18 @@ def render_l5_v2_architecture_lock_packet_markdown(
 
     checks = packet.get("required_checks")
     next_action = packet.get("next_non_pr106_l5_action")
+    tt5l = packet.get("tt5l_campaign_readiness")
     if not isinstance(checks, Mapping):
         checks = {}
     if not isinstance(next_action, Mapping):
         next_action = {}
+    if not isinstance(tt5l, Mapping):
+        tt5l = {}
+    paired_axis_plan_status = tt5l.get(
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    )
+    if not isinstance(paired_axis_plan_status, Mapping):
+        paired_axis_plan_status = {}
     lines = [
         "# L5 v2 architecture lock packet",
         "",
@@ -5747,6 +5997,41 @@ def render_l5_v2_architecture_lock_packet_markdown(
     ]
     for check_id, passed in checks.items():
         lines.append(f"- `{check_id}`: `{passed}`")
+    if paired_axis_plan_status:
+        lines.extend(
+            [
+                "",
+                "## Lightning Paired-Axis Dry-Run Plan",
+                "",
+                (
+                    "- artifact_path: "
+                    f"`{paired_axis_plan_status.get('artifact_path')}`"
+                ),
+                (
+                    "- artifact_valid: "
+                    f"`{paired_axis_plan_status.get('artifact_valid')}`"
+                ),
+                (
+                    "- cells: "
+                    f"`{paired_axis_plan_status.get('cell_count')}`/"
+                    f"`{paired_axis_plan_status.get('expected_cell_count')}`"
+                ),
+                (
+                    "- axes: "
+                    f"`{paired_axis_plan_status.get('covered_axes')}`"
+                ),
+                (
+                    "- all_cells_dry_run_ready: "
+                    f"`{paired_axis_plan_status.get('all_cells_dry_run_ready')}`"
+                ),
+                (
+                    "- execution_ready: "
+                    f"`{paired_axis_plan_status.get('execution_ready')}`"
+                ),
+                "- score_claim: `false`",
+                "- promotion_eligible: `false`",
+            ]
+        )
     blockers = packet.get("architecture_lock_blockers")
     lines.extend(["", "## Blockers"])
     if isinstance(blockers, list) and blockers:

@@ -21,6 +21,17 @@
 - `first_anchor_timing_smoke_artifact_valid`: `False`
 - `anchor_pair_evidence_valid`: `False`
 
+## Lightning Paired-Axis Dry-Run Plan
+
+- artifact_path: `.omx/research/l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_20260517_codex.json`
+- artifact_valid: `True`
+- cells: `10`/`10`
+- axes: `['contest_cpu', 'contest_cuda']`
+- all_cells_dry_run_ready: `True`
+- execution_ready: `False`
+- score_claim: `false`
+- promotion_eligible: `false`
+
 ## Blockers
 - `requires_all_l5_v2_gate_evidence_valid`
 - `requires_c1_z5_tt5l_probe_gate_evidence`

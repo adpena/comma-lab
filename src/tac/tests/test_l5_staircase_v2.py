@@ -1063,6 +1063,87 @@ def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
     return artifact_path
 
 
+def _tt5l_lightning_paired_axis_plan_cell(
+    *,
+    variant: str,
+    axis: str,
+    seed: int,
+) -> dict[str, object]:
+    required_device = "cpu" if axis == "contest_cpu" else "cuda"
+    role = f"exact_{required_device}_eval"
+    return {
+        "variant": variant,
+        "axis": axis,
+        "role": role,
+        "required_device": required_device,
+        "archive_sha256": _sha(100 + seed),
+        "command_sha256": _sha(200 + seed),
+        "state_sha256": _sha(300 + seed),
+        "dry_run_stdout_sha256": _sha(400 + seed),
+        "dry_run_stderr_sha256": hashlib.sha256(b"").hexdigest(),
+        "ready_for_operator_dispatch": True,
+        "ready_for_provider_dispatch": False,
+        "invariants": {
+            "status_dry_run": True,
+            "role_matches_axis": True,
+            "adjudication_required_device_matches_axis": True,
+            "command_contains_expected_device": True,
+            "command_omits_opposite_device": True,
+            "cuda_require_marker_matches_axis": True,
+            "queue_metadata_axis_matches_cell": True,
+            "stderr_empty": True,
+        },
+        "spec": {
+            "role": role,
+            "adjudication": {"required_device": required_device},
+        },
+    }
+
+
+def _tt5l_lightning_paired_axis_plan_payload() -> dict[str, object]:
+    cells: list[dict[str, object]] = []
+    seed = 0
+    for variant in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS:
+        for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES:
+            seed += 1
+            cells.append(
+                _tt5l_lightning_paired_axis_plan_cell(
+                    variant=variant,
+                    axis=axis,
+                    seed=seed,
+                )
+            )
+    return {
+        "schema": (
+            l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_SCHEMA
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ready_for_provider_dispatch": False,
+        "dispatch_attempted": False,
+        "all_cells_dry_run_ready": True,
+        "blockers": [
+            "dry_run_only_no_provider_job_launched",
+            "requires_lightning_identity_and_workspace_preflight_before_submit",
+        ],
+        "cells": cells,
+    }
+
+
+def _write_tt5l_lightning_paired_axis_plan_artifact(repo_root: Path) -> Path:
+    artifact_path = (
+        repo_root
+        / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(_tt5l_lightning_paired_axis_plan_payload(), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return artifact_path
+
+
 def _write_tt5l_dykstra_artifact(
     repo_root: Path,
     *,
@@ -3104,6 +3185,97 @@ def test_l5_v2_paired_axis_next_action_requires_terminal_claim_custody(
     assert "claim_lane_dispatch.py claim" not in action["command_template"]
 
 
+def test_l5_v2_tt5l_readiness_surfaces_current_lightning_paired_axis_plan(
+    tmp_path: Path,
+) -> None:
+    _write_tt5l_lightning_paired_axis_plan_artifact(tmp_path)
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ]
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is True
+    assert status["provider"] == "lightning"
+    assert status["cell_count"] == 10
+    assert status["expected_cell_count"] == 10
+    assert status["covered_axes"] == ["contest_cpu", "contest_cuda"]
+    assert status["covered_variants"] == sorted(
+        L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS
+    )
+    assert status["all_cells_dry_run_ready"] is True
+    assert status["execution_ready"] is False
+    assert status["score_claim"] is False
+    assert status["promotion_eligible"] is False
+    assert status["ready_for_exact_eval_dispatch"] is False
+    assert status["ready_for_provider_dispatch"] is False
+    assert status["dispatch_attempted"] is False
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_dry_run_only_no_provider_job_launched"
+        in status["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_blocked:"
+        "requires_lightning_identity_and_workspace_preflight_before_submit"
+        in status["blockers"]
+    )
+    assert readiness["tt5l_campaign_readiness"]["paired_axis_plan_evidence_valid"] is (
+        False
+    )
+
+    packet = l5_v2_architecture_lock_packet(repo_root=tmp_path)
+    report = render_l5_v2_architecture_lock_packet_markdown(packet)
+    assert "## Lightning Paired-Axis Dry-Run Plan" in report
+    assert (
+        l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+        in report
+    )
+    assert "- cells: `10`/`10`" in report
+    assert "- all_cells_dry_run_ready: `True`" in report
+    assert "- execution_ready: `False`" in report
+
+
+def test_l5_v2_tt5l_lightning_paired_axis_plan_status_rejects_missing_axis_cell(
+    tmp_path: Path,
+) -> None:
+    payload = _tt5l_lightning_paired_axis_plan_payload()
+    cells = payload["cells"]
+    assert isinstance(cells, list)
+    payload["cells"] = [
+        cell
+        for cell in cells
+        if not (cell["variant"] == "trained" and cell["axis"] == "contest_cuda")
+    ]
+    artifact_path = (
+        tmp_path
+        / l5_v2.TT5L_SIDEINFO_EFFECT_CURVE_LIGHTNING_PAIRED_AXIS_PLAN_ARTIFACT_PATH
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+
+    readiness = l5_v2_dispatch_readiness(repo_root=tmp_path)
+    status = readiness["tt5l_campaign_readiness"][
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status"
+    ]
+
+    assert status["artifact_exists"] is True
+    assert status["artifact_valid"] is False
+    assert status["all_cells_dry_run_ready"] is False
+    assert "l5_v2_tt5l_lightning_paired_axis_plan_cell_count_mismatch" in status[
+        "blockers"
+    ]
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_missing_cells:"
+        "trained:contest_cuda"
+        in status["blockers"]
+    )
+    assert (
+        "l5_v2_tt5l_lightning_paired_axis_plan_missing_cells:trained:contest_cuda"
+        in readiness["tt5l_campaign_readiness"]["blockers"]
+    )
+
+
 def test_l5_v2_tt5l_architecture_lock_requires_sideinfo_effect_curve(
     tmp_path: Path,
 ) -> None:
@@ -3312,6 +3484,7 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "sideinfo_effect_curve_artifact_valid",
         "sideinfo_effect_curve_status",
         "materialized_tt5l_paired_work_unit_status",
+        "sideinfo_effect_curve_lightning_paired_axis_plan_status",
         "blockers",
     ):
         assert artifact_tt5l[field] == live_tt5l[field]
