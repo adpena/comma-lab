@@ -38,6 +38,13 @@ architecture-lock/TT5L custody artifacts.
 - Required work: design memo, archive grammar, export contract, scorer-aware
   training, KL-on-logits `T=2.0` A1-teacher distillation, byte-mutation no-op
   proof, paired CPU/CUDA plan.
+- Quantizr staircase scaffold:
+  `.omx/research/omx_parent_markdown_cargo_cult_and_quantizr_staircase_review_20260517_codex.md`
+  reviewed the non-research `.omx` Quantizr/PoseNet/scorer/entropy notes and
+  fixed the helper surface. Use `tac.training_curriculum.QuantizrFiveStageStaircase`
+  only as a scaffold: it creates no score authority until a real trainer
+  adoption proves full-score difficulty, transition firing, consumed bytes, and
+  component movement.
 - 2026-05-17 unwind constraint: do not reuse the existing Z3HV2
   direct-residual export as the Ballé implementation. Existing Z3HV2 full is
   classified in

@@ -196,6 +196,15 @@ retiring the L5/L5-v2 staircase:
   primitive for Rule #6 A1/FEC6 byte-closed bolt-ons, but do not route the P0
   queue back into PR106-only local-basin polish. Any direct PR106 revisit must
   start with CPU/CUDA raw-output xray and extra-stream ablations.
+- Parent-scope cargo-cult / Quantizr staircase follow-up:
+  `.omx/research/omx_parent_markdown_cargo_cult_and_quantizr_staircase_review_20260517_codex.md`.
+  Non-research `.omx` Markdown added no new score authority, but did preserve
+  live no-retread signals: full-score curriculum difficulty, PoseNet
+  preprocessing sensitivity, scorer-input anatomy, zero-order arithmetic
+  failures versus Brotli, and stack-order discipline. The Quantizr staircase
+  helper now has package discoverability, ruff hygiene, and softened
+  score-authority wording; it remains a training scaffold, not a frontier
+  claim, until byte-closed trainer adoption proves component movement.
 
 ## Dispatch Discipline
 

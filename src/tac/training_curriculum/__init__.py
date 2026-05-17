@@ -27,7 +27,7 @@ the loop or the weights or the archive, (c) resume.
 
 Helper surface (see individual module docstrings):
 
-All nine primitives listed below are importable in this landing. Score claims
+All ten primitives listed below are importable in this landing. Score claims
 remain disabled until a concrete archive candidate produces matched
 scorer-response and exact-eval evidence.
 
@@ -39,6 +39,10 @@ scorer-response and exact-eval evidence.
   staged curriculum scheduler (e.g. L1 pixel loss → L2 + scorer loss → KL-T=2.0
   distillation per Hinton); stage transitions are explicit, declarative, and
   operator-routable.
+* :mod:`tac.training_curriculum.quantizr_5_stage_staircase` — Quantizr-specific
+  5-stage staircase helper with explicit BN/EMA/LSQ/FP4 transition records.
+  This is a training-practice scaffold, not current-frontier authority until a
+  byte-closed trainer adoption produces exact scorer evidence.
 * :mod:`tac.training_curriculum.model_soup_averaging` — Wortsman et al 2022
   "Model soups: averaging weights of multiple fine-tuned models" greedy and
   uniform soup variants on top of EMA snapshots; preserves SegNet/PoseNet
@@ -175,6 +179,19 @@ from tac.training_curriculum.pause_to_swap_loss import (
     LossSwapError,
     swap_loss_at_pause,
 )
+from tac.training_curriculum.quantizr_5_stage_staircase import (
+    QUANTIZR_CANONICAL_STAGES,
+    QUANTIZR_DEFAULT_EPOCHS,
+    QuantizrFiveStageStaircase,
+    QuantizrStaircaseError,
+    StaircaseStage,
+    apply_ema_shadow_to_inference,
+    freeze_bn_stats,
+    freeze_param_groups,
+)
+from tac.training_curriculum.quantizr_5_stage_staircase import (
+    StageTransitionRecord as QuantizrStageTransitionRecord,
+)
 from tac.training_curriculum.swa_polyak_averaging import (
     PolyakAverager,
     SWAScheduler,
@@ -190,6 +207,7 @@ IMPLEMENTED_MODULES: tuple[str, ...] = (
     "pause_distill_resume",
     "pause_quantize_finetune",
     "pause_to_swap_loss",
+    "quantizr_5_stage_staircase",
     "swa_polyak_averaging",
 )
 
@@ -202,49 +220,48 @@ DEFERRED_RATIONALE = (
 )
 
 __all__ = [
-    # pause-and-diagnose (A1 pattern generalization at the diagnostic surface)
-    "DiagnosticCheckpoint",
-    "DiagnosticMetric",
-    "PauseAndDiagnoseError",
-    "pause_and_capture",
-    # multi-stage curriculum (Karpathy + HF PEFT pattern)
-    "CurriculumStage",
-    "CurriculumStageBudgetError",
-    "StageScheduler",
-    "StageTransition",
-    # model soup (Wortsman 2022)
-    "GreedyModelSoup",
-    "ModelSoupError",
-    "ModelSoupResult",
-    "UniformModelSoup",
-    # SWA + Polyak (Izmailov 2018 + Polyak 1990)
-    "PolyakAverager",
-    "SWAScheduler",
-    "SWASchedulerError",
-    # pause-to-swap-loss (Karpathy + HF PEFT)
-    "LossSwap",
-    "LossSwapError",
-    "swap_loss_at_pause",
-    # A1 anchor pattern generalization (inflate-time bias correction)
-    "A1PatternBiasCorrectionPlan",
-    "GeneralizedInflateBiasCorrector",
-    "InflateBiasCorrectionError",
-    "InflateBiasCorrectionVerdict",
-    # pause-distill-resume (Hinton 2014 + Quantizr canonical)
-    "DistillationConfig",
-    "DistillationError",
-    "kl_on_logits_distillation",
-    "teacher_student_pair",
-    # pause-quantize-finetune (ggerganov / llama.cpp pattern)
-    "PauseQuantizeFinetuneError",
-    "PauseQuantizePlan",
-    "apply_pause_quantize_finetune_plan",
-    # early-stopping-with-resume (HF Trainer pattern)
-    "EarlyStoppingState",
-    "EarlyStoppingTracker",
-    "ResumeFromBestCheckpoint",
-    # package state
-    "IMPLEMENTED_MODULES",
     "DEFERRED_MODULES",
     "DEFERRED_RATIONALE",
+    "IMPLEMENTED_MODULES",
+    "QUANTIZR_CANONICAL_STAGES",
+    "QUANTIZR_DEFAULT_EPOCHS",
+    "A1PatternBiasCorrectionPlan",
+    "CurriculumStage",
+    "CurriculumStageBudgetError",
+    "DiagnosticCheckpoint",
+    "DiagnosticMetric",
+    "DistillationConfig",
+    "DistillationError",
+    "EarlyStoppingState",
+    "EarlyStoppingTracker",
+    "GeneralizedInflateBiasCorrector",
+    "GreedyModelSoup",
+    "InflateBiasCorrectionError",
+    "InflateBiasCorrectionVerdict",
+    "LossSwap",
+    "LossSwapError",
+    "ModelSoupError",
+    "ModelSoupResult",
+    "PauseAndDiagnoseError",
+    "PauseQuantizeFinetuneError",
+    "PauseQuantizePlan",
+    "PolyakAverager",
+    "QuantizrFiveStageStaircase",
+    "QuantizrStageTransitionRecord",
+    "QuantizrStaircaseError",
+    "ResumeFromBestCheckpoint",
+    "SWAScheduler",
+    "SWASchedulerError",
+    "StageScheduler",
+    "StageTransition",
+    "StaircaseStage",
+    "UniformModelSoup",
+    "apply_ema_shadow_to_inference",
+    "apply_pause_quantize_finetune_plan",
+    "freeze_bn_stats",
+    "freeze_param_groups",
+    "kl_on_logits_distillation",
+    "pause_and_capture",
+    "swap_loss_at_pause",
+    "teacher_student_pair",
 ]

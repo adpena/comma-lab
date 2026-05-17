@@ -29,11 +29,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tac.training_curriculum import (
+    DEFERRED_MODULES,
+    DEFERRED_RATIONALE,
+    IMPLEMENTED_MODULES,
     A1PatternBiasCorrectionPlan,
     CurriculumStage,
     CurriculumStageBudgetError,
-    DEFERRED_MODULES,
-    DEFERRED_RATIONALE,
     DiagnosticCheckpoint,
     DiagnosticMetric,
     DistillationConfig,
@@ -41,7 +42,6 @@ from tac.training_curriculum import (
     EarlyStoppingTracker,
     GeneralizedInflateBiasCorrector,
     GreedyModelSoup,
-    IMPLEMENTED_MODULES,
     InflateBiasCorrectionError,
     LossSwap,
     LossSwapError,
@@ -61,7 +61,6 @@ from tac.training_curriculum import (
     swap_loss_at_pause,
     teacher_student_pair,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -99,7 +98,8 @@ class TestPackageState:
     def test_implemented_modules_canonical(self) -> None:
         assert "a1_pattern_inflate_time_bias_correction" in IMPLEMENTED_MODULES
         assert "pause_distill_resume" in IMPLEMENTED_MODULES
-        assert len(IMPLEMENTED_MODULES) == 9
+        assert "quantizr_5_stage_staircase" in IMPLEMENTED_MODULES
+        assert len(IMPLEMENTED_MODULES) == 10
 
     def test_deferred_modules_empty(self) -> None:
         assert DEFERRED_MODULES == ()
@@ -756,7 +756,7 @@ class TestPauseQuantizeFinetune:
         assert p.mode == "ptq"
 
     def test_plan_ptq_rejects_nonzero_finetune_epochs(self) -> None:
-        with pytest.raises(PauseQuantizeFinetuneError, match="ptq.*== 0"):
+        with pytest.raises(PauseQuantizeFinetuneError, match=r"ptq.*== 0"):
             PauseQuantizePlan(
                 quantization_kind="int8_per_channel",
                 mode="ptq",
