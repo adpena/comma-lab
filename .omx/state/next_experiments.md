@@ -123,6 +123,16 @@ architecture-lock/TT5L custody artifacts.
   mutation on the current `[contest-CPU]` frontier archive. Do not apply raw
   byte flips; parse the selector, mutate a grammar-level choice, rebuild the
   wrapper/ZIP, and prove runtime consumption before dispatch.
+- Landed selector audit:
+  `tac.fec6_selector_operator_space` plus
+  `tools/audit_fec6_selector_operator_space.py`. The current FEC6 archive has
+  a selector payload entropy gap of only `8` bytes against `78` charged bytes
+  required to strictly cross `<0.192` with unchanged components. The available
+  proxy pair table produced `40` grammar-aware operator rows and
+  `0` proxy-improving/nonpositive-bit rows, with
+  `raw_archive_byte_rows_emitted=0`. This blocks same-runtime selector-polish
+  retreads from the current rows; proceed only with new paired component rows
+  or a byte-different component-moving packet operator with consumption proof.
 - Dispatch policy: no provider dispatch for raw byte/bit flip probes. A local
   operator-row manifest may proceed after
   `tools/audit_master_gradient_feasibility.py` reports

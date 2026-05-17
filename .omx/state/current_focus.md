@@ -155,6 +155,18 @@ retiring the L5/L5-v2 staircase:
   corrected to a net score regression unless `d_pose` drops by at least about
   `2.24e-6`. Future FEC6/Rule #6 byte-spending claims should use
   `tac.score_geometry.pose_byte_tradeoff`.
+- FEC6 selector operator-space audit:
+  `.omx/research/omx_parent_markdown_and_fec6_selector_operator_followup_20260517_codex.md`.
+  Reusable surface:
+  `tac.fec6_selector_operator_space` and
+  `tools/audit_fec6_selector_operator_space.py`. Local artifact:
+  `experiments/results/fec6_selector_operator_space_20260517_codex/operator_space_manifest.json`.
+  Result: `operator_row_count=40`, `raw_archive_byte_rows_emitted=0`,
+  `proxy_and_nonpositive_bit_rows=[]`, selector payload entropy gap `8` bytes
+  versus `78` required charged bytes to strictly cross `<0.192`. Same-runtime
+  FEC6 selector byte-only polish from the current pair table is blocked; next
+  FEC6 work must use new paired component rows or materialize a
+  component-moving packet operator with byte-consumption proof.
 - L5-v2 12-month foreseeable-failures sidecar:
   `.omx/research/l5_v2_next_12_months_foreseeable_failures_20260517_subagent.md`.
   Key tripwires: architecture-lock false authority, TT5L custody refresh
@@ -193,7 +205,9 @@ excluded. Relevant non-research control surfaces checked:
   conflict/terminal status.
 - `.omx/auto_memory_snapshot_20260504T230223Z/*.md` - ignored historical
   Claude/OMX memory snapshot; no current L5/TT5L authority, but it preserves
-  no-signal-loss, stack-order, entropy-coder, and remote-tarball lessons.
+  no-signal-loss, stack-order, entropy-coder, overfit-to-one-video,
+  PoseNet-sensitivity, FiLM-pose-plumbing, derive/sweep/learn, and
+  remote-tarball lessons.
 - `.omx/tmp/*.md` - ignored temporary appendices and detached clone READMEs;
   useful as forensic inputs only, not current score authority.
 - `.omx/notepad.md` - stale April AV1/Track-B notebook, not current L5
@@ -207,6 +221,8 @@ Detailed scan ledger:
 `.omx/research/l5_v2_omx_parent_markdown_scope_refresh_20260517_codex.md`.
 No-ignore follow-up ledger:
 `.omx/research/l5_v2_omx_parent_markdown_no_ignore_refresh_20260517_codex.md`.
+FEC6 selector operator follow-up:
+`.omx/research/omx_parent_markdown_and_fec6_selector_operator_followup_20260517_codex.md`.
 Latest TT5L custody refresh uses `main`
 `9b926ab6e099585d64a76726db91c8af6be0f181`.
 
