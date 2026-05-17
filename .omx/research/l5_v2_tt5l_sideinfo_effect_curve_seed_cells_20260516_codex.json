@@ -20,7 +20,66 @@
       "runtime_tree_sha256": "ed41e941b624b00412c680c56dc5b9b23db32c70ce1008d03f5bca939917b6cd",
       "runtime_content_tree_sha256": "105fc0834cfb8a54b8f46edb81a030d076369c3062f3066c1800602f9d6035f5",
       "score": 3.9007398365396795,
-      "seg_dist": 0.02515214
+      "seg_dist": 0.02515214,
+      "provenance": {
+        "per_pair_side_info_liveness": {
+          "all_zero_pair_count": 600,
+          "checked": true,
+          "dtype": "int8",
+          "liveness_warnings": [
+            "tt5l_side_info_some_pairs_all_zero"
+          ],
+          "max": 0,
+          "max_nonzero_values_per_pair": 0,
+          "mean_nonzero_values_per_pair": 0.0,
+          "min": 0,
+          "min_nonzero_values_per_pair": 0,
+          "nonzero_fraction": 0.0,
+          "nonzero_pair_count": 0,
+          "nonzero_pair_fraction": 0.0,
+          "nonzero_values": 0,
+          "section_liveness": {
+            "checked": true,
+            "per_pair_bytes": 45,
+            "sections": {
+              "hf_residual": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 30,
+                "total_values": 3600,
+                "width": 6
+              },
+              "predict_residual": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 36,
+                "total_values": 5400,
+                "width": 9
+              },
+              "se3_lie": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 0,
+                "total_values": 7200,
+                "width": 12
+              },
+              "seg_boundary": {
+                "nonzero_fraction": 0.0,
+                "nonzero_values": 0,
+                "offset": 12,
+                "total_values": 10800,
+                "width": 18
+              }
+            }
+          },
+          "shape": [
+            600,
+            45
+          ],
+          "total_pairs": 600,
+          "total_values": 27000
+        }
+      }
     }
   }
 ]

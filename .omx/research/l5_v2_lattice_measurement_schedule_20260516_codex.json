@@ -91,10 +91,6 @@
         "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
         "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
         "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_hardware_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_inflate_device_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_eval_device_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_auth_eval_command_missing:contest_cuda:trained",
         "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained",
         "consumption_proof_is_not_yet_usefulness_proof",
         "requires_paired_cpu_cuda_sideinfo_effect_curve_before_architecture_lock"
@@ -230,10 +226,6 @@
         "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
         "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
         "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_hardware_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_inflate_device_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_eval_device_missing:contest_cuda:trained",
-        "tt5l_sideinfo_effect_curve_cell_exact_eval_auth_eval_command_missing:contest_cuda:trained",
         "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
       ]
     },
@@ -257,10 +249,6 @@
     "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cpu",
     "tt5l_sideinfo_effect_curve_trained_not_best_or_tied:contest_cuda",
     "tt5l_sideinfo_effect_curve_cells_missing:contest_cpu/ablated,contest_cpu/random_lsb,contest_cpu/shuffled,contest_cpu/trained,contest_cpu/zero,contest_cuda/ablated,contest_cuda/random_lsb,contest_cuda/shuffled,contest_cuda/zero",
-    "tt5l_sideinfo_effect_curve_cell_exact_eval_hardware_missing:contest_cuda:trained",
-    "tt5l_sideinfo_effect_curve_cell_exact_eval_inflate_device_missing:contest_cuda:trained",
-    "tt5l_sideinfo_effect_curve_cell_exact_eval_eval_device_missing:contest_cuda:trained",
-    "tt5l_sideinfo_effect_curve_cell_exact_eval_auth_eval_command_missing:contest_cuda:trained",
     "tt5l_sideinfo_effect_curve_cell_sideinfo_nonzero_missing:contest_cuda:trained"
   ],
   "sideinfo_effect_curve_valid": false,
