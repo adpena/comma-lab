@@ -12,6 +12,7 @@ from tac.frontier_scan import (
     Anchor,
     build_frontier_scan_payload,
     render_frontier_scan_text,
+    scan_frontier_citation_surface,
 )
 from tac.preflight import (
     PreflightError,
@@ -87,6 +88,7 @@ def test_frontier_scan_payload_uses_qualifying_best_per_axis(tmp_path: Path) -> 
     text = render_frontier_scan_text(payload)
     assert "0.1920513169" in text
     assert "lane_cpu_frontier" in text
+    assert "reports/latest.md" in text
 
 
 def test_scan_best_anchor_cli_delegates_to_canonical_module(tmp_path: Path) -> None:
@@ -155,6 +157,41 @@ def test_preflight_frontier_scan_gate_honors_header_waiver(
     )
 
 
+def test_preflight_frontier_scan_gate_blocks_state_doc_drift(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / ".omx/state/continual_learning_posterior.json",
+        {
+            "anchors": [
+                {
+                    "score_value": 0.192051316881,
+                    "axis": "contest_cpu",
+                    "archive_sha256": "6" * 64,
+                    "hardware_substrate": "linux_x86_64_cpu",
+                }
+            ]
+        },
+    )
+    reports = tmp_path / "reports"
+    reports.mkdir(parents=True)
+    (reports / "latest.md").write_text("0.192051316881 [contest-CPU]\n")
+    state = tmp_path / ".omx/state"
+    (state / "current_focus.md").write_text(
+        "A1 stale control language:\n"
+        "`0.19284757743677347`\n"
+        "`[contest-CPU; GHA Linux x86_64]`\n",
+        encoding="utf-8",
+    )
+
+    violations = check_reports_latest_md_not_stale_vs_canonical_frontier(
+        repo_root=tmp_path
+    )
+
+    assert len(violations) == 1
+    assert ".omx/state/current_focus.md" in violations[0]
+
+
 def test_autopilot_frontier_threshold_uses_canonical_scan(monkeypatch) -> None:
     tools_path = Path(__file__).resolve().parents[3] / "tools"
     if str(tools_path) not in sys.path:
@@ -174,3 +211,24 @@ def test_autopilot_frontier_threshold_uses_canonical_scan(monkeypatch) -> None:
     monkeypatch.setattr(frontier_scan, "collect_all_anchors", lambda _root: anchors)
 
     assert loop._resolve_canonical_frontier_threshold_cpu(default=0.192) == 0.1915
+
+
+def test_frontier_citation_parser_reads_state_doc_split_axis(tmp_path: Path) -> None:
+    state = tmp_path / ".omx/state"
+    state.mkdir(parents=True)
+    (state / "current_focus.md").write_text(
+        "- Best local public-axis anchor:\n"
+        "  `0.1920513168811056`\n"
+        "  `[contest-CPU; GHA Linux x86_64]`.\n"
+        "- Best CUDA anchor: `0.20533002902019143` `[contest-CUDA T4]`.\n"
+        "- PR101: 0.193 [contest-CPU] -> we beat by 0.00095.\n",
+        encoding="utf-8",
+    )
+
+    cited = scan_frontier_citation_surface(
+        tmp_path,
+        ".omx/state/current_focus.md",
+    )
+
+    assert cited["contest_cpu"] == 0.1920513168811056
+    assert cited["contest_cuda"] == 0.20533002902019143

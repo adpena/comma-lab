@@ -69639,11 +69639,11 @@ def check_no_subagent_files_touched_absorption_in_bare_commits(
 # via tac.frontier_scan (canonical helper; Catalog #316 + autopilot + CLI
 # all import from the same module). It then refuses ANY repo state where:
 #
-#   (A) reports/latest.md CITES a CPU or CUDA score on the contest axis,
-#       AND the canonical state has a strictly BETTER score on that axis
+#   (A) a frontier citation surface CITES a CPU or CUDA score on the contest
+#       axis, AND the canonical state has a strictly BETTER score on that axis
 #       by > 1e-6, OR
-#   (B) reports/latest.md has NO recognizable contest-CPU / contest-CUDA
-#       citation at all (complete signal loss; worse than drift).
+#   (B) an existing frontier citation surface has NO recognizable contest-CPU /
+#       contest-CUDA citation at all (complete signal loss; worse than drift).
 #
 # Acceptance: same-line waiver
 #   <!-- FRONTIER_DRIFT_OK:<rationale> -->
@@ -69677,9 +69677,9 @@ def _check_316_load_frontier_scan_payload(repo_root: Path):
         return None
 
 
-def _check_316_waiver_present(repo_root: Path) -> bool:
+def _check_316_waiver_present(repo_root: Path, relative_path: str) -> bool:
     """Header-window FRONTIER_DRIFT_OK waiver with non-placeholder rationale."""
-    path = repo_root / "reports/latest.md"
+    path = repo_root / relative_path
     if not path.is_file():
         return False
     try:
@@ -69710,18 +69710,18 @@ def check_reports_latest_md_not_stale_vs_canonical_frontier(
     verbose: bool = False,
     repo_root: Path | str | None = None,
 ) -> list[str]:
-    """Refuse reports/latest.md citations that lag the canonical anchor state.
+    """Refuse frontier citation surfaces that lag the canonical anchor state.
 
     Per Catalog #316 — anti-frontier-signal-loss self-protection. Reads the
     canonical anchor surfaces via ``tac.frontier_scan.build_frontier_scan_payload``
     and refuses if either:
 
-      (A) reports/latest.md cites a CPU or CUDA contest score that is worse
-          by > 1e-6 than the best qualifying anchor in canonical state
-          (frontier drift); OR
-      (B) reports/latest.md has NO recognizable contest-CPU / contest-CUDA
-          citation while canonical state has at least one qualifying anchor
-          on each axis (complete signal loss; even worse than drift).
+      (A) a frontier citation surface cites a CPU or CUDA contest score that
+          is worse by > 1e-6 than the best qualifying anchor in canonical
+          state (frontier drift); OR
+      (B) an existing frontier citation surface has NO recognizable
+          contest-CPU / contest-CUDA citation while canonical state has at
+          least one qualifying anchor (complete signal loss).
 
     Same-line waiver ``<!-- FRONTIER_DRIFT_OK:<rationale> -->`` in the
     file's first-30-line header opts out for paper-frozen snapshots etc.;
@@ -69745,39 +69745,62 @@ def check_reports_latest_md_not_stale_vs_canonical_frontier(
             )
         return violations
 
-    if _check_316_waiver_present(root):
-        if verbose:
-            print(
-                "  [check_reports_latest_md_not_stale_vs_canonical_frontier] "
-                "OK (FRONTIER_DRIFT_OK waiver present in header)"
-            )
-        return violations
+    surface_citations = payload.get("frontier_citation_surfaces") or {}
+    surface_drift = payload.get("frontier_citation_surface_drift") or {}
+    if not isinstance(surface_citations, dict):
+        surface_citations = {"reports/latest.md": payload.get("reports_latest_md_cited") or {}}
+    if not isinstance(surface_drift, dict):
+        surface_drift = {"reports/latest.md": payload.get("drift") or []}
 
-    # Surface drift rows first (the canonical fix-path).
-    drift = payload.get("drift") or []
-    for row in drift:
-        if not isinstance(row, dict):
+    for rel_path, drift in surface_drift.items():
+        if _check_316_waiver_present(root, str(rel_path)):
             continue
-        axis = row.get("axis")
-        cited = row.get("cited_score")
-        best = row.get("best_score")
-        delta = row.get("delta_better")
-        best_anchor = row.get("best_anchor") or {}
-        sha = best_anchor.get("archive_sha256") or "<unknown>"
-        violations.append(
-            f"reports/latest.md cites {axis}={cited:.6f} but canonical state "
-            f"has a better anchor at {best:.6f} (Δ={delta:+.6f}; "
-            f"archive sha={sha[:12]}). Per CLAUDE.md \"Apples-to-apples "
-            "evidence discipline\" + Catalog #316: regenerate the FRONTIER "
-            "section via `.venv/bin/python tools/scan_best_anchor_per_axis.py` "
-            "OR add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` to the header."
-        )
+        for row in drift if isinstance(drift, list) else []:
+            if not isinstance(row, dict):
+                continue
+            axis = row.get("axis")
+            cited = row.get("cited_score")
+            best = row.get("best_score")
+            delta = row.get("delta_better")
+            best_anchor = row.get("best_anchor") or {}
+            sha = best_anchor.get("archive_sha256") or "<unknown>"
+            violations.append(
+                f"{rel_path} cites {axis}={cited:.6f} but canonical state "
+                f"has a better anchor at {best:.6f} (Δ={delta:+.6f}; "
+                f"archive sha={sha[:12]}). Per CLAUDE.md \"Apples-to-apples "
+                "evidence discipline\" + Catalog #316: regenerate the "
+                "FRONTIER/current-anchor section via "
+                "`.venv/bin/python tools/scan_best_anchor_per_axis.py` "
+                "OR add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` to the "
+                "file header."
+            )
 
-    # Surface complete-signal-loss case (no citations at all on either axis).
-    if not drift:
+    best_per_axis = payload.get("best_per_axis") or {}
+    if best_per_axis:
+        for rel_path, cited in surface_citations.items():
+            if _check_316_waiver_present(root, str(rel_path)):
+                continue
+            path = root / str(rel_path)
+            if not path.is_file():
+                continue
+            if not cited:
+                qualifying_axes = sorted(best_per_axis.keys())
+                violations.append(
+                    f"{rel_path} has NO recognizable [contest-CPU] / "
+                    "[contest-CUDA] score citation while canonical state has "
+                    f"qualifying anchors on axes {qualifying_axes!r}. Per "
+                    "Catalog #316: this is complete frontier signal loss. "
+                    "Regenerate the FRONTIER/current-anchor section via "
+                    "`.venv/bin/python tools/scan_best_anchor_per_axis.py` "
+                    "and paste the best-per-axis citations into the surface, "
+                    "OR add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` to the "
+                    "header for paper-frozen snapshots."
+                )
+
+    # Backward-compatible complete-signal-loss path for older payloads.
+    if not violations and not surface_citations:
         cited = payload.get("reports_latest_md_cited") or {}
-        best_per_axis = payload.get("best_per_axis") or {}
-        if best_per_axis and not cited:
+        if best_per_axis and not cited and (root / "reports/latest.md").is_file():
             qualifying_axes = sorted(best_per_axis.keys())
             violations.append(
                 "reports/latest.md has NO recognizable [contest-CPU] / "

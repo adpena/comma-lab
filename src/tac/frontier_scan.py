@@ -41,9 +41,11 @@ __all__ = [
     "QUALIFYING_HARDWARE",
     "QUALIFYING_AXES",
     "AXIS_LABELS",
+    "FRONTIER_CITATION_SURFACE_PATHS",
     "collect_all_anchors",
     "best_per_axis",
     "build_frontier_scan_payload",
+    "scan_frontier_citation_surface",
     "scan_reports_latest_md",
     "detect_drift",
     "render_frontier_scan_json",
@@ -71,6 +73,17 @@ AXIS_LABELS = {
     "contest_cpu": "[contest-CPU GHA Linux x86_64]",
     "contest_cuda": "[contest-CUDA T4]",
 }
+FRONTIER_CITATION_SURFACE_PATHS: tuple[str, ...] = (
+    "reports/latest.md",
+    ".omx/state/current_focus.md",
+    ".omx/state/next_experiments.md",
+)
+_AXIS_TOKENS: tuple[tuple[str, str], ...] = (
+    ("contest-cpu", "contest_cpu"),
+    ("contest_cpu", "contest_cpu"),
+    ("contest-cuda", "contest_cuda"),
+    ("contest_cuda", "contest_cuda"),
+)
 
 
 @dataclass
@@ -321,50 +334,31 @@ def best_per_axis(anchors: list[Anchor]) -> dict[str, list[Anchor]]:
     return by_axis
 
 
-def scan_reports_latest_md(repo_root: Path) -> dict[str, float]:
-    """Return the best CPU + CUDA scores currently cited in reports/latest.md.
+def _record_cited_score(cited: dict[str, float], axis_key: str, score: float) -> None:
+    prev = cited.get(axis_key)
+    if prev is None or score < prev:
+        cited[axis_key] = score
 
-    Output: ``{"contest_cpu": 0.197..., "contest_cuda": 0.231...}`` (only
-    keys for axes that have a recognised citation in the file). Used by
-    Catalog #316 to detect drift between citation surface and canonical
-    state.
-    """
-    path = repo_root / "reports/latest.md"
-    if not path.is_file():
-        return {}
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return {}
-    cited: dict[str, float] = {}
-    for axis_token, axis_key in (
-        ("contest-cpu", "contest_cpu"),
-        ("contest_cpu", "contest_cpu"),
-        ("contest-cuda", "contest_cuda"),
-        ("contest_cuda", "contest_cuda"),
-    ):
+
+def _score_before_axis_citations(text: str, cited: dict[str, float]) -> None:
+    for axis_token, axis_key in _AXIS_TOKENS:
         pattern = re.compile(
-            r"\b(0\.[0-9]+)\s*\[?\s*" + re.escape(axis_token),
+            r"\b(0\.[0-9]+)[\s`*_]*\[?\s*" + re.escape(axis_token),
             re.IGNORECASE,
         )
         for m in pattern.finditer(text):
             try:
-                score = float(m.group(1))
+                _record_cited_score(cited, axis_key, float(m.group(1)))
             except ValueError:
                 continue
-            prev = cited.get(axis_key)
-            if prev is None or score < prev:
-                cited[axis_key] = score
+
+
+def _markdown_table_citations(text: str, cited: dict[str, float]) -> None:
     for line in text.splitlines():
         if not line.lstrip().startswith("|"):
             continue
         line_lower = line.lower()
-        for axis_token, axis_key in (
-            ("contest-cpu", "contest_cpu"),
-            ("contest_cpu", "contest_cpu"),
-            ("contest-cuda", "contest_cuda"),
-            ("contest_cuda", "contest_cuda"),
-        ):
+        for axis_token, axis_key in _AXIS_TOKENS:
             if axis_token not in line_lower:
                 continue
             cells = [cell.strip() for cell in line.split("|") if cell.strip()]
@@ -379,13 +373,67 @@ def scan_reports_latest_md(repo_root: Path) -> dict[str, float]:
                 if not m:
                     continue
                 try:
-                    score = float(m.group(1))
+                    _record_cited_score(cited, axis_key, float(m.group(1)))
                 except ValueError:
                     continue
-                prev = cited.get(axis_key)
-                if prev is None or score < prev:
-                    cited[axis_key] = score
+
+
+def _previous_line_axis_citations(text: str, cited: dict[str, float]) -> None:
+    """Parse state-doc bullets where score line is followed by axis line.
+
+    This intentionally inspects only the immediately previous line when the
+    axis line itself has no decimal score. It catches:
+
+        - Best anchor: `0.192...`
+          `[contest-CPU; ...]`
+
+    without misreading comparison deltas such as "we beat by 0.00095" later in
+    a prose line that also names `[contest-CPU]`.
+    """
+
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        line_lower = line.lower()
+        if re.search(r"\b0\.[0-9]+\b", line):
+            continue
+        for axis_token, axis_key in _AXIS_TOKENS:
+            if axis_token not in line_lower or index == 0:
+                continue
+            scores = re.findall(r"\b0\.[0-9]+\b", lines[index - 1])
+            if len(scores) != 1:
+                continue
+            try:
+                _record_cited_score(cited, axis_key, float(scores[0]))
+            except ValueError:
+                continue
+
+
+def scan_frontier_citation_surface(repo_root: Path, relative_path: str) -> dict[str, float]:
+    """Return best CPU/CUDA scores cited in a Markdown control surface."""
+
+    path = repo_root / relative_path
+    if not path.is_file():
+        return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    cited: dict[str, float] = {}
+    _score_before_axis_citations(text, cited)
+    _markdown_table_citations(text, cited)
+    _previous_line_axis_citations(text, cited)
     return cited
+
+
+def scan_reports_latest_md(repo_root: Path) -> dict[str, float]:
+    """Return the best CPU + CUDA scores currently cited in reports/latest.md.
+
+    Output: ``{"contest_cpu": 0.197..., "contest_cuda": 0.231...}`` (only
+    keys for axes that have a recognised citation in the file). Used by
+    Catalog #316 to detect drift between citation surface and canonical
+    state.
+    """
+    return scan_frontier_citation_surface(repo_root, "reports/latest.md")
 
 
 @dataclass(frozen=True)
@@ -444,7 +492,24 @@ def build_frontier_scan_payload(repo_root: Path) -> dict[str, object]:
 
     all_anchors = collect_all_anchors(repo_root)
     best = best_per_axis(all_anchors)
-    cited = scan_reports_latest_md(repo_root)
+    citation_surfaces = {
+        path: scan_frontier_citation_surface(repo_root, path)
+        for path in FRONTIER_CITATION_SURFACE_PATHS
+    }
+    cited = citation_surfaces.get("reports/latest.md", {})
+    surface_drift = {
+        path: [
+            {
+                "axis": row.axis,
+                "cited_score": row.cited_score,
+                "best_score": row.best_score,
+                "delta_better": row.delta,
+                "best_anchor": _serialize_anchor(row.best_anchor),
+            }
+            for row in detect_drift(best, surface_cited)
+        ]
+        for path, surface_cited in citation_surfaces.items()
+    }
     drift = detect_drift(best, cited)
     return {
         "schema": "pact_frontier_scan_v1",
@@ -457,6 +522,8 @@ def build_frontier_scan_payload(repo_root: Path) -> dict[str, object]:
             axis: [_serialize_anchor(anchor) for anchor in anchors[:5]]
             for axis, anchors in best.items()
         },
+        "frontier_citation_surfaces": citation_surfaces,
+        "frontier_citation_surface_drift": surface_drift,
         "reports_latest_md_cited": cited,
         "drift": [
             {
@@ -489,7 +556,9 @@ def render_frontier_scan_text(payload: Mapping[str, object]) -> str:
     best = payload.get("best_per_axis")
     top5 = payload.get("top_5_per_axis")
     cited = payload.get("reports_latest_md_cited")
+    surfaces = payload.get("frontier_citation_surfaces")
     drift = payload.get("drift")
+    surface_drift = payload.get("frontier_citation_surface_drift")
     stats = payload.get("scan_stats")
     best_map = best if isinstance(best, dict) else {}
     top5_map = top5 if isinstance(top5, dict) else {}
@@ -525,6 +594,15 @@ def render_frontier_scan_text(payload: Mapping[str, object]) -> str:
         lines.extend(["", "=" * 72, "REPORTS/LATEST.MD CITED FRONTIER", "=" * 72])
         for axis, score in sorted(cited.items()):
             lines.append(f"  {axis}: {float(score):.6f}")
+    if isinstance(surfaces, dict) and surfaces:
+        lines.extend(["", "=" * 72, "FRONTIER CITATION SURFACES", "=" * 72])
+        for path, row in sorted(surfaces.items()):
+            if not isinstance(row, dict):
+                continue
+            rendered = ", ".join(
+                f"{axis}={float(score):.6f}" for axis, score in sorted(row.items())
+            )
+            lines.append(f"  {path}: {rendered or '<no recognized citations>'}")
     if isinstance(drift, list) and drift:
         lines.extend(["", "=" * 72, "FRONTIER DRIFT", "=" * 72])
         for row in drift:
@@ -545,6 +623,25 @@ def render_frontier_scan_text(payload: Mapping[str, object]) -> str:
                 f"actual={best_score:.6f}; delta={delta:+.6f} better in state"
             )
             lines.append(f"    promote: archive {anchor_sha}")
+    surface_drift_rows: list[dict[str, object]] = []
+    if isinstance(surface_drift, dict):
+        for path, rows in sorted(surface_drift.items()):
+            if isinstance(rows, list):
+                for row in rows:
+                    if isinstance(row, dict):
+                        surface_drift_rows.append({"path": path, **row})
+    if surface_drift_rows:
+        lines.extend(["", "=" * 72, "FRONTIER CITATION SURFACE DRIFT", "=" * 72])
+        for row in surface_drift_rows:
+            axis = str(row.get("axis") or "")
+            path = str(row.get("path") or "")
+            cited_score = float(row.get("cited_score") or 0.0)
+            best_score = float(row.get("best_score") or 0.0)
+            delta = float(row.get("delta_better") or 0.0)
+            lines.append(
+                f"  {path}: {axis} cited={cited_score:.6f}; "
+                f"actual={best_score:.6f}; delta={delta:+.6f}"
+            )
     if isinstance(stats, dict):
         lines.append("")
         lines.append(

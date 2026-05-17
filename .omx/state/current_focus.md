@@ -2,10 +2,19 @@
 
 ## Frontier
 
-- Best local public-axis anchor: A1 = `0.19284757743677347`
-  `[contest-CPU; GHA Linux x86_64 1:1]`.
-- Same A1 archive on Modal T4 CUDA: `0.2263520234784395`
-  `[contest-CUDA]`.
+- Canonical scanner-derived best CPU anchor:
+  `0.1920513168811056`
+  `[contest-CPU; GHA Linux x86_64 1:1]`, archive
+  `6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf`,
+  lane `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515`.
+- Canonical scanner-derived best CUDA anchor:
+  `0.20533002902019143`
+  `[contest-CUDA T4]`, archive
+  `9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4`,
+  lane `lane_pr106_format0d_latent_score_table_20260516_contest_cuda`.
+- A1 remains the Rule #6 control substrate, not the best current axis floor:
+  `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and
+  `0.2263520234784395` `[contest-CUDA T4]`.
 - A1 archive bytes/SHA-256:
   `178262` /
   `87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5`.
@@ -124,3 +133,7 @@ No-ignore follow-up ledger:
   the score target.
 - Refresh `.omx/state/next_experiments.md` whenever the active P0 work order
   changes.
+- Catalog #316 now checks this file, `reports/latest.md`, and
+  `.omx/state/next_experiments.md` against `tac.frontier_scan` so stale
+  frontier citations fail preflight instead of becoming hidden control-plane
+  signal loss.
