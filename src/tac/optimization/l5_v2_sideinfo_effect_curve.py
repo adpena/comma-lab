@@ -150,6 +150,10 @@ def _normalize_cell(
         "archive_sha256": validation.archive_sha256,
         "runtime_tree_sha256": validation.runtime_tree_sha256,
         "runtime_content_tree_sha256": _runtime_content_tree_sha256(evidence),
+        "hardware": str(evidence.get("hardware") or ""),
+        "inflate_device": str(evidence.get("inflate_device") or ""),
+        "eval_device": str(evidence.get("eval_device") or ""),
+        "auth_eval_command": str(evidence.get("auth_eval_command") or ""),
         "sideinfo_liveness": _sideinfo_liveness_for_cell(cell, evidence),
         "raw_output_aggregate_sha256": str(
             evidence.get("raw_output_aggregate_sha256")
@@ -260,7 +264,7 @@ def build_l5_v2_sideinfo_effect_curve(
         "axis_effects": axis_effects,
         "effect_blockers": effect_blockers,
     }
-    contract_blockers = validate_l5_v2_sideinfo_effect_curve(payload)
+    contract_blockers = validate_l5_v2_sideinfo_effect_curve(payload, repo_root=root)
     non_predicate_contract_blockers = [
         blocker
         for blocker in contract_blockers
@@ -271,7 +275,10 @@ def build_l5_v2_sideinfo_effect_curve(
         not non_predicate_contract_blockers and not effect_blockers
     )
     if payload["predicate_passed"]:
-        payload["contract_blockers"] = validate_l5_v2_sideinfo_effect_curve(payload)
+        payload["contract_blockers"] = validate_l5_v2_sideinfo_effect_curve(
+            payload,
+            repo_root=root,
+        )
         payload["predicate_passed"] = not payload["contract_blockers"]
     return payload
 

@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
+from tac.exact_eval_custody import validate_exact_eval_evidence
 from tac.optimization.l5_v2_probe_disambiguator import L5V2_CANDIDATES
 
 L5V2_MEASUREMENT_SCHEDULE_SCHEMA = "l5_v2_lattice_measurement_schedule_v1"
@@ -240,14 +242,45 @@ def _sideinfo_liveness_blockers(row: Mapping[str, Any]) -> list[str]:
     return blockers
 
 
+def _sideinfo_exact_eval_custody_blockers(
+    row: Mapping[str, Any],
+    *,
+    artifact_base_dir: Path,
+) -> list[str]:
+    axis = str(row.get("axis") or row.get("device_axis") or "").strip()
+    variant = str(row.get("variant") or row.get("sideinfo_variant") or "").strip()
+    cell = f"{axis or '?'}:{variant or '?'}"
+    validation = validate_exact_eval_evidence(
+        row,
+        expected_axis=(
+            axis if axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES else None
+        ),
+        require_artifact_path=True,
+        require_hardware=True,
+        require_auth_eval_command=True,
+        require_log_path=True,
+        require_devices=True,
+        require_inflated_outputs_manifest=True,
+        require_raw_output_aggregate_sha256=True,
+        artifact_base_dir=artifact_base_dir,
+    )
+    return [
+        f"tt5l_sideinfo_effect_curve_cell_exact_eval_{blocker}:{cell}"
+        for blocker in validation.blockers
+    ]
+
+
 def _sideinfo_effect_curve_blockers(
     curve: Mapping[str, Any] | None,
+    *,
+    artifact_base_dir: Path | None = None,
 ) -> list[str]:
     """Return blockers for the paired TT5L side-info effect-curve contract."""
 
     if not isinstance(curve, Mapping):
         return ["tt5l_sideinfo_effect_curve_missing"]
 
+    base_dir = artifact_base_dir or Path.cwd()
     blockers: list[str] = []
     if curve.get("schema") != L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA:
         blockers.append("tt5l_sideinfo_effect_curve_schema_mismatch")
@@ -391,6 +424,9 @@ def _sideinfo_effect_curve_blockers(
         row_blockers = row.get("blockers")
         if isinstance(row_blockers, list) and row_blockers:
             blockers.append(f"tt5l_sideinfo_effect_curve_cell_blocked:{cell}")
+        blockers.extend(
+            _sideinfo_exact_eval_custody_blockers(row, artifact_base_dir=base_dir)
+        )
         blockers.extend(_sideinfo_liveness_blockers(row))
     return list(dict.fromkeys(blockers))
 
@@ -405,10 +441,13 @@ def _sideinfo_effect_curve_required_cells() -> list[dict[str, str]]:
 
 def validate_l5_v2_sideinfo_effect_curve(
     curve: Mapping[str, Any] | None,
+    *,
+    repo_root: str | Path | None = None,
 ) -> list[str]:
     """Return blockers for the public TT5L side-info effect-curve contract."""
 
-    return _sideinfo_effect_curve_blockers(curve)
+    base_dir = Path(repo_root).resolve() if repo_root is not None else Path.cwd()
+    return _sideinfo_effect_curve_blockers(curve, artifact_base_dir=base_dir)
 
 
 def _measurement(
@@ -458,6 +497,7 @@ def build_l5_v2_lattice_measurement_schedule(
     *,
     probe_intake: Mapping[str, Any] | None = None,
     sideinfo_effect_curve: Mapping[str, Any] | None = None,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return the first-match L5 v2 measurement schedule.
 
@@ -470,7 +510,11 @@ def build_l5_v2_lattice_measurement_schedule(
     missing_or_blocked = [
         candidate_id for candidate_id in L5V2_CANDIDATES if candidate_id not in eligible
     ]
-    sideinfo_curve_blockers = _sideinfo_effect_curve_blockers(sideinfo_effect_curve)
+    base_dir = Path(repo_root).resolve() if repo_root is not None else Path.cwd()
+    sideinfo_curve_blockers = _sideinfo_effect_curve_blockers(
+        sideinfo_effect_curve,
+        artifact_base_dir=base_dir,
+    )
     sideinfo_curve_valid = not sideinfo_curve_blockers
     measurements = [
         _measurement(

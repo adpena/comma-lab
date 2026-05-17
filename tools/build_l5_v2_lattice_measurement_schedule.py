@@ -68,6 +68,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=Path(L5V2_MEASUREMENT_SCHEDULE_REPORT_PATH),
         help="Output markdown report path.",
     )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=REPO_ROOT,
+        help="Repository root for validating side-info effect-curve custody paths.",
+    )
     return parser.parse_args(argv)
 
 
@@ -82,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         schedule = build_l5_v2_lattice_measurement_schedule(
             probe_intake=intake,
             sideinfo_effect_curve=sideinfo_effect_curve,
+            repo_root=args.repo_root,
         )
         _write(args.output_json, schedule_json(schedule))
         _write(args.output_md, render_l5_v2_lattice_measurement_schedule_markdown(schedule))

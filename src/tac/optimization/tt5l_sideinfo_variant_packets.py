@@ -13,6 +13,7 @@ import json
 import struct
 import zipfile
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +62,9 @@ DEFAULT_TT5L_SIDEINFO_VARIANT_SUBMISSION_DIR = (
     L5V2_TT5L_SIDEINFO_VARIANT_PACKET_SUBMISSION_DIR
 )
 TT5L_SIDEINFO_VARIANT_SEED = 20260517
+TT5L_VARIANTS_EXPECTED_TO_TRANSFORM_SOURCE = frozenset(
+    {"random_lsb", "shuffled", "ablated"}
+)
 
 
 def _sha256_bytes(blob: bytes) -> str:
@@ -232,6 +236,16 @@ def _variant_semantics(variant: str) -> str:
     }[variant]
 
 
+def _variant_generation_rule(variant: str, *, seed: int) -> str:
+    return {
+        "zero": "np.zeros_like(source_sideinfo)",
+        "random_lsb": f"default_rng({seed}).choice([-1, 1], size=source_shape)",
+        "shuffled": f"default_rng({seed}).permutation(source_rows)",
+        "trained": "source_sideinfo.copy()",
+        "ablated": "source_sideinfo with predict_residual slice zeroed",
+    }[variant]
+
+
 def _variant_blockers(
     *,
     variant: str,
@@ -239,6 +253,10 @@ def _variant_blockers(
     variant_liveness: Mapping[str, Any],
     same_as_zero: bool,
     same_as_trained: bool,
+    sideinfo_changed_from_source: bool,
+    archive_sha_changed_from_source: bool,
+    archive_member_sha_changed_from_source: bool,
+    sideinfo_section_sha_changed_from_source: bool,
 ) -> list[str]:
     blockers = ["requires_paired_cpu_cuda_exact_eval_before_score_claim"]
     source_nonzero = int(source_liveness.get("nonzero_values") or 0)
@@ -253,6 +271,18 @@ def _variant_blockers(
         blockers.append(f"{variant}_matches_zero_control")
     if variant not in {"trained"} and same_as_trained:
         blockers.append(f"{variant}_matches_trained_control")
+    if (
+        variant in TT5L_VARIANTS_EXPECTED_TO_TRANSFORM_SOURCE
+        and not sideinfo_changed_from_source
+    ):
+        blockers.append(f"{variant}_expected_sideinfo_change_missing")
+    if sideinfo_changed_from_source:
+        if not archive_sha_changed_from_source:
+            blockers.append(f"{variant}_archive_sha_noop_against_source")
+        if not archive_member_sha_changed_from_source:
+            blockers.append(f"{variant}_archive_member_noop_against_source")
+        if not sideinfo_section_sha_changed_from_source:
+            blockers.append(f"{variant}_sideinfo_section_noop_against_source")
     return list(dict.fromkeys(blockers))
 
 
@@ -346,6 +376,10 @@ def build_tt5l_sideinfo_variant_packets(
     source_sideinfo = np.ascontiguousarray(parsed.per_pair_side_info, dtype=np.int8)
     source_liveness = side_info_liveness_stats(source_sideinfo)
     source_archive_sha = _sha256_file(source_path)
+    source_archive_member_sha = _sha256_bytes(member_bytes)
+    source_sideinfo_section_sha = str(
+        source_sections["per_pair_side_info_blob"]["sha256"]
+    )
     source_sideinfo_sha = _sha256_bytes(source_sideinfo.tobytes())
     variants = tt5l_sideinfo_variant_arrays(source_sideinfo, seed=seed)
     zero_sideinfo = variants["zero"]
@@ -369,18 +403,42 @@ def build_tt5l_sideinfo_variant_packets(
             compress_type=member_info.compress_type,
         )
         archive_bytes = archive_path.stat().st_size
+        archive_sha = _sha256_file(archive_path)
+        archive_member_sha = _sha256_bytes(variant_blob)
+        sideinfo_section_sha = str(side_section["sha256"])
         sideinfo_liveness = side_info_liveness_stats(sideinfo)
         same_as_zero = bool(np.array_equal(sideinfo, zero_sideinfo))
         same_as_trained = bool(np.array_equal(sideinfo, trained_sideinfo))
+        sideinfo_changed_from_source = not bool(np.array_equal(sideinfo, source_sideinfo))
+        archive_sha_changed_from_source = archive_sha != source_archive_sha
+        archive_member_sha_changed_from_source = (
+            archive_member_sha != source_archive_member_sha
+        )
+        sideinfo_section_sha_changed_from_source = (
+            sideinfo_section_sha != source_sideinfo_section_sha
+        )
         row = {
             "variant": variant,
             "semantics": _variant_semantics(variant),
+            "generation_rule": _variant_generation_rule(variant, seed=seed),
+            "variant_seed": int(seed),
+            "variant_source": "source_trained_sideinfo",
             "archive_path": _repo_relative(archive_path, root),
-            "archive_sha256": _sha256_file(archive_path),
+            "archive_sha256": archive_sha,
             "archive_bytes": archive_bytes,
             "archive_member": member_info.filename,
-            "archive_member_sha256": _sha256_bytes(variant_blob),
+            "archive_member_sha256": archive_member_sha,
             "archive_member_bytes": len(variant_blob),
+            "source_archive_sha256": source_archive_sha,
+            "source_archive_member_sha256": source_archive_member_sha,
+            "source_sideinfo_section_sha256": source_sideinfo_section_sha,
+            "archive_sha_changed_from_source": archive_sha_changed_from_source,
+            "archive_member_sha_changed_from_source": (
+                archive_member_sha_changed_from_source
+            ),
+            "sideinfo_section_sha_changed_from_source": (
+                sideinfo_section_sha_changed_from_source
+            ),
             "parsed_sections": variant_sections,
             "mutated_sections": ["tt5l_header", "per_pair_side_info_blob"],
             "mutated_byte_ranges": [
@@ -413,6 +471,7 @@ def build_tt5l_sideinfo_variant_packets(
             "sideinfo_liveness": sideinfo_liveness,
             "sideinfo_equal_source": same_as_trained,
             "sideinfo_equal_zero": same_as_zero,
+            "sideinfo_changed_from_source": sideinfo_changed_from_source,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -424,6 +483,14 @@ def build_tt5l_sideinfo_variant_packets(
                 variant_liveness=sideinfo_liveness,
                 same_as_zero=same_as_zero,
                 same_as_trained=same_as_trained,
+                sideinfo_changed_from_source=sideinfo_changed_from_source,
+                archive_sha_changed_from_source=archive_sha_changed_from_source,
+                archive_member_sha_changed_from_source=(
+                    archive_member_sha_changed_from_source
+                ),
+                sideinfo_section_sha_changed_from_source=(
+                    sideinfo_section_sha_changed_from_source
+                ),
             ),
         }
         variant_rows.append(row)
@@ -449,12 +516,15 @@ def build_tt5l_sideinfo_variant_packets(
     return {
         "schema": TT5L_SIDEINFO_VARIANT_PACKET_SCHEMA,
         "tool": TT5L_SIDEINFO_VARIANT_PACKET_TOOL_PATH,
+        "generated_at_utc": (
+            datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        ),
         "command_argv": command_argv or [],
         "source_archive_path": _repo_relative(source_path, root),
         "source_archive_sha256": source_archive_sha,
         "source_archive_bytes": source_path.stat().st_size,
         "source_archive_member": member_info.filename,
-        "source_archive_member_sha256": _sha256_bytes(member_bytes),
+        "source_archive_member_sha256": source_archive_member_sha,
         "source_archive_member_bytes": len(member_bytes),
         "source_parsed_sections": source_sections,
         "source_sideinfo_sha256": source_sideinfo_sha,
@@ -488,7 +558,7 @@ def build_tt5l_sideinfo_variant_packets(
 
 
 def tt5l_sideinfo_variant_packets_json(payload: Mapping[str, Any]) -> str:
-    """Return deterministic JSON for a TT5L side-info packet manifest."""
+    """Return sorted-key JSON for a TT5L side-info packet manifest."""
 
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
@@ -531,8 +601,11 @@ def render_tt5l_sideinfo_variant_packets_markdown(
         "",
         "## Variant archives",
         "",
-        "| Variant | Archive bytes | Nonzero side-info values | SHA-256 | Blockers |",
-        "| --- | ---: | ---: | --- | --- |",
+        (
+            "| Variant | Archive bytes | Nonzero side-info values | "
+            "Member changed | Side-section changed | Seed | SHA-256 | Blockers |"
+        ),
+        "| --- | ---: | ---: | --- | --- | ---: | --- | --- |",
     ]
     rows = payload.get("variants")
     if isinstance(rows, list):
@@ -550,9 +623,20 @@ def render_tt5l_sideinfo_variant_packets_markdown(
                 f"`{row.get('variant')}` | "
                 f"{row.get('archive_bytes')} | "
                 f"{nonzero} | "
+                f"{row.get('archive_member_sha_changed_from_source')} | "
+                f"{row.get('sideinfo_section_sha_changed_from_source')} | "
+                f"{row.get('variant_seed')} | "
                 f"`{row.get('archive_sha256')}` | "
                 f"`{row.get('blockers')}` |"
             )
+        generation_rows = [row for row in rows if isinstance(row, Mapping)]
+        if generation_rows:
+            lines.extend(["", "## Variant generation rules", ""])
+            for row in generation_rows:
+                lines.append(
+                    f"- `{row.get('variant')}`: seed=`{row.get('variant_seed')}`; "
+                    f"rule=`{row.get('generation_rule')}`"
+                )
     lines.extend(
         [
             "",

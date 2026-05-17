@@ -15,6 +15,7 @@ import pytest
 import torch
 
 import tac.optimization.l5_staircase_v2 as l5_v2
+from tac.exact_eval_custody import contest_score
 from tac.optimization.l5_staircase_v2 import (
     L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_ARTIFACT_PATH,
     L5_V2_ASYMPTOTIC_CANDIDATE_SURFACE_REPORT_PATH,
@@ -67,6 +68,15 @@ def _sha(seed: int) -> str:
 
 def _file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_aggregate_manifest(path: Path, *, aggregate_sha: str) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"aggregate_sha256": aggregate_sha}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return _file_sha256(path)
 
 
 def _write_tt5l_archive_zip(path: Path, *, nonzero_side_info: bool) -> None:
@@ -805,19 +815,88 @@ def _tt5l_sideinfo_liveness(variant: str) -> dict[str, object]:
     }
 
 
-def _tt5l_sideinfo_effect_curve_cells() -> list[dict[str, object]]:
+def _tt5l_sideinfo_cell_score(variant: str, variant_idx: int) -> tuple[float, float, int, float]:
+    seg_dist = 0.001 if variant == "trained" else 0.002
+    pose_dist = 0.0
+    archive_bytes = 1000 + variant_idx
+    return (
+        seg_dist,
+        pose_dist,
+        archive_bytes,
+        contest_score(seg_dist, pose_dist, archive_bytes),
+    )
+
+
+def _tt5l_sideinfo_cell_artifacts(
+    repo_root: Path,
+    *,
+    axis: str,
+    variant: str,
+    variant_idx: int,
+    axis_idx: int,
+) -> dict[str, str]:
+    base = repo_root / "experiments" / "results" / axis / variant
+    artifact = base / "contest_auth_eval.json"
+    log = base / "auth_eval.log"
+    manifest = base / "inflated_outputs_manifest.json"
+    raw_sha = _sha(90_000 + variant_idx * 10 + axis_idx)
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("{}\n", encoding="utf-8")
+    log.write_text("ok\n", encoding="utf-8")
+    return {
+        "artifact_path": str(artifact.relative_to(repo_root)),
+        "log_path": str(log.relative_to(repo_root)),
+        "inflated_outputs_manifest_path": str(manifest.relative_to(repo_root)),
+        "inflated_outputs_manifest_sha256": _write_aggregate_manifest(
+            manifest,
+            aggregate_sha=raw_sha,
+        ),
+        "raw_output_aggregate_sha256": raw_sha,
+    }
+
+
+def _tt5l_sideinfo_effect_curve_cells(repo_root: Path) -> list[dict[str, object]]:
     cells: list[dict[str, object]] = []
     for variant_idx, variant in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS):
         archive_sha = _sha(50_000 + variant_idx)
         runtime_content_sha = _sha(60_000 + variant_idx)
         for axis_idx, axis in enumerate(L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES):
+            seg_dist, pose_dist, archive_bytes, score = _tt5l_sideinfo_cell_score(
+                variant,
+                variant_idx,
+            )
+            is_cuda = axis == "contest_cuda"
             cells.append(
                 {
                     "axis": axis,
                     "variant": variant,
                     "archive_sha256": archive_sha,
+                    "archive_bytes": archive_bytes,
                     "runtime_tree_sha256": _sha(70_000 + variant_idx * 10 + axis_idx),
                     "runtime_content_tree_sha256": runtime_content_sha,
+                    "hardware": (
+                        "NVIDIA T4 CUDA GPU"
+                        if is_cuda
+                        else "Ubuntu x86_64 CPU"
+                    ),
+                    "inflate_device": "auto" if is_cuda else "cpu",
+                    "eval_device": "cuda" if is_cuda else "cpu",
+                    "auth_eval_command": (
+                        "contest_auth_eval --device cuda"
+                        if is_cuda
+                        else "contest_auth_eval --device cpu"
+                    ),
+                    **_tt5l_sideinfo_cell_artifacts(
+                        repo_root,
+                        axis=axis,
+                        variant=variant,
+                        variant_idx=variant_idx,
+                        axis_idx=axis_idx,
+                    ),
+                    "n_samples": 600,
+                    "seg_dist": seg_dist,
+                    "pose_dist": pose_dist,
+                    "score": score,
                     "score_claim": False,
                     "promotion_eligible": False,
                     "ready_for_exact_eval_dispatch": False,
@@ -856,7 +935,7 @@ def _write_tt5l_sideinfo_effect_curve_artifact(repo_root: Path) -> Path:
                     }
                     for axis in L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES
                 },
-                "observed_cells": _tt5l_sideinfo_effect_curve_cells(),
+                "observed_cells": _tt5l_sideinfo_effect_curve_cells(repo_root),
             },
             sort_keys=True,
         )

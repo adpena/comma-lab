@@ -142,7 +142,7 @@ def test_sideinfo_effect_curve_builder_passes_only_with_paired_trained_win(
     assert payload["contract_blockers"] == []
     assert payload["effect_blockers"] == []
     assert len(payload["observed_cells"]) == 10
-    assert validate_l5_v2_sideinfo_effect_curve(payload) == []
+    assert validate_l5_v2_sideinfo_effect_curve(payload, repo_root=tmp_path) == []
     for effect in payload["axis_effects"].values():
         assert effect["trained_beats_or_ties_best_control"] is True
     trained_rows = [
@@ -187,7 +187,7 @@ def test_sideinfo_effect_curve_builder_keeps_invalid_custody_blockers(
     assert "exact_eval_hardware_not_contest_cpu" in zero_cpu["blockers"]
     assert any(
         str(blocker).startswith("tt5l_sideinfo_effect_curve_cell_blocked")
-        for blocker in validate_l5_v2_sideinfo_effect_curve(payload)
+        for blocker in validate_l5_v2_sideinfo_effect_curve(payload, repo_root=tmp_path)
     )
 
 
@@ -320,7 +320,7 @@ def test_sideinfo_effect_curve_cli_writes_schedule_consumable_artifact(
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "predicate_passed=true" in proc.stdout
         payload = json.loads(output_path.read_text(encoding="utf-8"))
-        assert validate_l5_v2_sideinfo_effect_curve(payload) == []
+        assert validate_l5_v2_sideinfo_effect_curve(payload, repo_root=tmp_path) == []
     finally:
         if artifact_root.exists():
             import shutil

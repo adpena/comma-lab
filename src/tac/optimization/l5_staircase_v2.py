@@ -2876,7 +2876,9 @@ def _tt5l_sideinfo_effect_curve_status(*, repo_root: Path) -> dict[str, Any]:
         if loaded is not None and not isinstance(loaded, Mapping):
             blockers.append("tt5l_sideinfo_effect_curve_artifact_not_object")
         if isinstance(loaded, Mapping):
-            blockers.extend(validate_l5_v2_sideinfo_effect_curve(loaded))
+            blockers.extend(
+                validate_l5_v2_sideinfo_effect_curve(loaded, repo_root=repo_root)
+            )
 
     blockers = list(dict.fromkeys(blockers))
     return {

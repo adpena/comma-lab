@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+import tac.optimization.tt5l_sideinfo_variant_packets as packets
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
 )
@@ -23,6 +24,7 @@ from tac.optimization.tt5l_sideinfo_variant_packets import (
 from tac.substrates.time_traveler_l5_autonomy.archive import (
     pack_archive,
     parse_archive,
+    parse_tt5l_archive_bytes,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -104,6 +106,7 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
     )
 
     assert manifest["schema"] == "tt5l_sideinfo_variant_packets_v1"
+    assert manifest["generated_at_utc"].endswith("Z")
     assert manifest["score_claim"] is False
     assert manifest["promotion_eligible"] is False
     assert manifest["ready_for_exact_eval_dispatch"] is False
@@ -123,6 +126,17 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
         assert row["score_claim"] is False
         assert row["rank_or_kill_eligible"] is False
         assert row["dispatch_attempted"] is False
+        assert row["generation_rule"]
+        assert row["variant_seed"] == 99
+        assert row["source_archive_sha256"] == manifest["source_archive_sha256"]
+        assert (
+            row["source_archive_member_sha256"]
+            == manifest["source_archive_member_sha256"]
+        )
+        assert (
+            row["source_sideinfo_section_sha256"]
+            == manifest["source_parsed_sections"]["per_pair_side_info_blob"]["sha256"]
+        )
         assert row["parsed_sections"]["per_pair_side_info_blob"]["length"] > 0
         assert row["non_target_sections_identical_to_source"] == {
             "world_model_blob": True,
@@ -131,14 +145,82 @@ def test_build_tt5l_sideinfo_variant_packets_writes_byte_closed_archives(
         }
         member_info, member_bytes = read_tt5l_archive_zip(archive_path)
         assert member_info.filename == "0.bin"
+        parsed_sections = parse_tt5l_archive_bytes(member_bytes)
+        for section_name, (offset, length) in parsed_sections.items():
+            section = row["parsed_sections"][section_name]
+            assert section["offset"] == offset
+            assert section["length"] == length
+            assert (
+                section["sha256"]
+                == hashlib.sha256(member_bytes[offset : offset + length]).hexdigest()
+            )
+        sideinfo_range = next(
+            item
+            for item in row["mutated_byte_ranges"]
+            if item["section"] == "per_pair_side_info_blob"
+        )
+        sideinfo_section = row["parsed_sections"]["per_pair_side_info_blob"]
+        assert sideinfo_range["offset"] == sideinfo_section["offset"]
+        assert sideinfo_range["length"] == sideinfo_section["length"]
         parsed = parse_archive(member_bytes)
         expected = tt5l_sideinfo_variant_arrays(source_sideinfo, seed=99)[variant]
         assert np.array_equal(parsed.per_pair_side_info, expected)
 
     assert rows["random_lsb"]["sideinfo_liveness"]["nonzero_values"] == 3 * 45
     assert rows["trained"]["sideinfo_equal_source"] is True
+    assert rows["trained"]["sideinfo_changed_from_source"] is False
+    assert rows["trained"]["archive_member_sha_changed_from_source"] is False
+    assert rows["trained"]["sideinfo_section_sha_changed_from_source"] is False
     assert rows["zero"]["sideinfo_equal_zero"] is True
+    assert rows["zero"]["sideinfo_changed_from_source"] is True
+    assert rows["zero"]["archive_member_sha_changed_from_source"] is True
+    assert rows["zero"]["sideinfo_section_sha_changed_from_source"] is True
+    assert rows["random_lsb"]["sideinfo_changed_from_source"] is True
+    assert rows["random_lsb"]["archive_member_sha_changed_from_source"] is True
+    assert rows["random_lsb"]["sideinfo_section_sha_changed_from_source"] is True
     assert rows["ablated"]["sideinfo_liveness"]["nonzero_values"] == 2
+
+
+def test_build_tt5l_sideinfo_variant_packets_blocks_noop_variant_bytes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source_sideinfo = np.zeros((3, 45), dtype=np.int8)
+    source_sideinfo[0, 0] = 1
+    source_sideinfo[1, 12] = -2
+    source_sideinfo[2, 36] = 3
+    source_archive = tmp_path / "source" / "archive.zip"
+    _write_tt5l_archive_zip(source_archive, source_sideinfo)
+
+    def _noop_replace_sideinfo_blob(
+        source_member_bytes: bytes,
+        _parsed: object,
+        _side_info: np.ndarray,
+    ) -> bytes:
+        return source_member_bytes
+
+    monkeypatch.setattr(
+        packets,
+        "_replace_sideinfo_blob",
+        _noop_replace_sideinfo_blob,
+    )
+
+    manifest = packets.build_tt5l_sideinfo_variant_packets(
+        source_archive=source_archive,
+        output_root=tmp_path / "variants",
+        repo_root=tmp_path,
+        seed=99,
+    )
+
+    rows = {row["variant"]: row for row in manifest["variants"]}
+    for variant in ("zero", "random_lsb", "shuffled", "ablated"):
+        blockers = set(rows[variant]["blockers"])
+        assert rows[variant]["sideinfo_changed_from_source"] is True
+        assert rows[variant]["archive_member_sha_changed_from_source"] is False
+        assert rows[variant]["sideinfo_section_sha_changed_from_source"] is False
+        assert f"{variant}_archive_member_noop_against_source" in blockers
+        assert f"{variant}_sideinfo_section_noop_against_source" in blockers
+        assert f"{variant}_archive_sha_noop_against_source" in blockers
 
 
 def test_build_tt5l_sideinfo_variant_packets_fails_closed_on_all_zero_source(
@@ -233,6 +315,8 @@ def test_build_tt5l_sideinfo_variant_packets_cli_writes_json_and_markdown(
     )
     assert "submission_runtime_dir_missing" in payload["blockers"]
     assert payload["runtime"]["available"] is False
-    assert output_md.read_text(encoding="utf-8").startswith(
-        "# L5 v2 TT5L side-info variant packets"
-    )
+    report = output_md.read_text(encoding="utf-8")
+    assert report.startswith("# L5 v2 TT5L side-info variant packets")
+    assert "Member changed" in report
+    assert "Side-section changed" in report
+    assert "Variant generation rules" in report

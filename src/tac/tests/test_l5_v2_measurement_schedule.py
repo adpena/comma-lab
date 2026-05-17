@@ -6,6 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from tac.exact_eval_custody import contest_score
 from tac.optimization.l5_v2_measurement_schedule import (
     L5V2_MEASUREMENT_SCHEDULE_SCHEMA,
     L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_AXES,
@@ -46,6 +47,27 @@ def _sha(seed: str) -> str:
     return hashlib.sha256(seed.encode()).hexdigest()
 
 
+def _cell_score(variant: str) -> tuple[float, float, int, float]:
+    seg_dist = 0.001 if variant == "trained" else 0.002
+    pose_dist = 0.0
+    archive_bytes = 1000
+    return (
+        seg_dist,
+        pose_dist,
+        archive_bytes,
+        contest_score(seg_dist, pose_dist, archive_bytes),
+    )
+
+
+def _write_manifest(path: Path, *, aggregate_sha: str) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"aggregate_sha256": aggregate_sha}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _sideinfo_liveness(variant: str) -> dict[str, object]:
     nonzero = 0 if variant in {"zero", "ablated"} else 600
     return {
@@ -57,7 +79,28 @@ def _sideinfo_liveness(variant: str) -> dict[str, object]:
     }
 
 
-def _complete_sideinfo_effect_curve() -> dict[str, object]:
+def _cell_artifacts(repo_root: Path, *, axis: str, variant: str) -> dict[str, str]:
+    base = repo_root / "experiments" / "results" / axis / variant
+    artifact = base / "contest_auth_eval.json"
+    log = base / "auth_eval.log"
+    manifest = base / "inflated_outputs_manifest.json"
+    raw_sha = _sha(f"raw-output:{axis}:{variant}")
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("{}\n", encoding="utf-8")
+    log.write_text("ok\n", encoding="utf-8")
+    return {
+        "artifact_path": str(artifact.relative_to(repo_root)),
+        "log_path": str(log.relative_to(repo_root)),
+        "inflated_outputs_manifest_path": str(manifest.relative_to(repo_root)),
+        "inflated_outputs_manifest_sha256": _write_manifest(
+            manifest,
+            aggregate_sha=raw_sha,
+        ),
+        "raw_output_aggregate_sha256": raw_sha,
+    }
+
+
+def _complete_sideinfo_effect_curve(repo_root: Path) -> dict[str, object]:
     return {
         "schema": L5V2_SIDEINFO_EFFECT_CURVE_SCHEMA,
         "measurement_id": "measure_tt5l_sideinfo_effect_curve",
@@ -84,8 +127,26 @@ def _complete_sideinfo_effect_curve() -> dict[str, object]:
                 "axis": axis,
                 "variant": variant,
                 "archive_sha256": _sha(f"archive:{variant}"),
+                "archive_bytes": _cell_score(variant)[2],
                 "runtime_tree_sha256": _sha(f"runtime-tree:{axis}:{variant}"),
                 "runtime_content_tree_sha256": _sha(f"runtime-content:{variant}"),
+                "hardware": (
+                    "Ubuntu x86_64 CPU"
+                    if axis == "contest_cpu"
+                    else "NVIDIA T4 CUDA GPU"
+                ),
+                "inflate_device": "cpu" if axis == "contest_cpu" else "auto",
+                "eval_device": "cpu" if axis == "contest_cpu" else "cuda",
+                "auth_eval_command": (
+                    "python tools/contest_auth_eval.py --device cpu"
+                    if axis == "contest_cpu"
+                    else "python tools/contest_auth_eval.py --device cuda"
+                ),
+                **_cell_artifacts(repo_root, axis=axis, variant=variant),
+                "n_samples": 600,
+                "seg_dist": _cell_score(variant)[0],
+                "pose_dist": _cell_score(variant)[1],
+                "score": _cell_score(variant)[3],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -168,10 +229,13 @@ def test_l5_v2_schedule_routes_to_sideinfo_curve_after_probe_eligibility() -> No
     )
 
 
-def test_l5_v2_schedule_routes_to_paired_anchor_after_paired_sideinfo_curve() -> None:
+def test_l5_v2_schedule_routes_to_paired_anchor_after_paired_sideinfo_curve(
+    tmp_path: Path,
+) -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
-        sideinfo_effect_curve=_complete_sideinfo_effect_curve(),
+        sideinfo_effect_curve=_complete_sideinfo_effect_curve(tmp_path),
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is True
@@ -180,8 +244,65 @@ def test_l5_v2_schedule_routes_to_paired_anchor_after_paired_sideinfo_curve() ->
     assert schedule["active_measurement_ids"] == ["prepare_l5_v2_paired_anchor_packet"]
 
 
-def test_l5_v2_schedule_rejects_unpaired_sideinfo_curve() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_custody_light_sideinfo_curve(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
+    for row in curve["observed_cells"]:
+        if row["axis"] == "contest_cpu" and row["variant"] == "trained":
+            for key in (
+                "artifact_path",
+                "log_path",
+                "hardware",
+                "inflate_device",
+                "eval_device",
+                "auth_eval_command",
+                "n_samples",
+                "seg_dist",
+                "pose_dist",
+                "score",
+                "raw_output_aggregate_sha256",
+                "inflated_outputs_manifest_path",
+                "inflated_outputs_manifest_sha256",
+            ):
+                row.pop(key)
+            break
+
+    schedule = build_l5_v2_lattice_measurement_schedule(
+        probe_intake=_eligible_probe_intake(),
+        sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
+    )
+
+    assert schedule["sideinfo_effect_curve_valid"] is False
+    blockers = set(schedule["sideinfo_effect_curve_blockers"])
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_artifact_path_missing:"
+        "contest_cpu:trained"
+        in blockers
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_hardware_missing:"
+        "contest_cpu:trained"
+        in blockers
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_auth_eval_command_missing:"
+        "contest_cpu:trained"
+        in blockers
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_raw_output_aggregate_sha_invalid:"
+        "contest_cpu:trained"
+        in blockers
+    )
+    assert (
+        "tt5l_sideinfo_effect_curve_cell_exact_eval_inflated_outputs_manifest_path_missing:"
+        "contest_cpu:trained"
+        in blockers
+    )
+
+
+def test_l5_v2_schedule_rejects_unpaired_sideinfo_curve(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     curve["required_axes"] = ["contest_cpu"]
     curve["observed_cells"] = [
         row for row in curve["observed_cells"] if row["axis"] == "contest_cpu"
@@ -190,6 +311,7 @@ def test_l5_v2_schedule_rejects_unpaired_sideinfo_curve() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -200,8 +322,8 @@ def test_l5_v2_schedule_rejects_unpaired_sideinfo_curve() -> None:
     )
 
 
-def test_l5_v2_schedule_rejects_mixed_sideinfo_runtime_identity() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_mixed_sideinfo_runtime_identity(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     for row in curve["observed_cells"]:
         if row["axis"] == "contest_cuda" and row["variant"] == "trained":
             row["runtime_content_tree_sha256"] = _sha("runtime-content:wrong")
@@ -210,6 +332,7 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_runtime_identity() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -220,8 +343,8 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_runtime_identity() -> None:
     )
 
 
-def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     for row in curve["observed_cells"]:
         if row["axis"] == "contest_cpu" and row["variant"] == "zero":
             row["archive_sha256"] = _sha("archive:wrong")
@@ -230,6 +353,7 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -240,8 +364,8 @@ def test_l5_v2_schedule_rejects_mixed_sideinfo_archive_identity() -> None:
     )
 
 
-def test_l5_v2_schedule_rejects_sideinfo_curve_without_liveness() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_sideinfo_curve_without_liveness(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     for row in curve["observed_cells"]:
         if row["axis"] == "contest_cpu" and row["variant"] == "trained":
             row.pop("sideinfo_liveness")
@@ -250,6 +374,7 @@ def test_l5_v2_schedule_rejects_sideinfo_curve_without_liveness() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -260,8 +385,10 @@ def test_l5_v2_schedule_rejects_sideinfo_curve_without_liveness() -> None:
     )
 
 
-def test_l5_v2_schedule_rejects_active_sideinfo_curve_with_zero_liveness() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_active_sideinfo_curve_with_zero_liveness(
+    tmp_path: Path,
+) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     for row in curve["observed_cells"]:
         if row["axis"] == "contest_cuda" and row["variant"] == "random_lsb":
             liveness = row["sideinfo_liveness"]
@@ -273,6 +400,7 @@ def test_l5_v2_schedule_rejects_active_sideinfo_curve_with_zero_liveness() -> No
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -283,8 +411,8 @@ def test_l5_v2_schedule_rejects_active_sideinfo_curve_with_zero_liveness() -> No
     )
 
 
-def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants(tmp_path: Path) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     curve["required_variants"] = [
         *L5V2_SIDEINFO_EFFECT_CURVE_REQUIRED_VARIANTS,
         "oracle",
@@ -306,6 +434,7 @@ def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -324,8 +453,10 @@ def test_l5_v2_schedule_rejects_extra_sideinfo_axes_and_variants() -> None:
     )
 
 
-def test_l5_v2_schedule_rejects_duplicate_and_malformed_sideinfo_cells() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_duplicate_and_malformed_sideinfo_cells(
+    tmp_path: Path,
+) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     observed_cells = curve["observed_cells"]
     assert isinstance(observed_cells, list)
     observed_cells.append(dict(observed_cells[0]))
@@ -334,6 +465,7 @@ def test_l5_v2_schedule_rejects_duplicate_and_malformed_sideinfo_cells() -> None
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -347,8 +479,10 @@ def test_l5_v2_schedule_rejects_duplicate_and_malformed_sideinfo_cells() -> None
     )
 
 
-def test_l5_v2_schedule_rejects_predicate_true_with_effect_blockers() -> None:
-    curve = _complete_sideinfo_effect_curve()
+def test_l5_v2_schedule_rejects_predicate_true_with_effect_blockers(
+    tmp_path: Path,
+) -> None:
+    curve = _complete_sideinfo_effect_curve(tmp_path)
     curve["effect_blockers"] = ["trained_not_best_or_tied:contest_cuda"]
     axis_effects = curve["axis_effects"]
     assert isinstance(axis_effects, dict)
@@ -359,6 +493,7 @@ def test_l5_v2_schedule_rejects_predicate_true_with_effect_blockers() -> None:
     schedule = build_l5_v2_lattice_measurement_schedule(
         probe_intake=_eligible_probe_intake(),
         sideinfo_effect_curve=curve,
+        repo_root=tmp_path,
     )
 
     assert schedule["sideinfo_effect_curve_valid"] is False
@@ -440,7 +575,7 @@ def test_l5_v2_schedule_cli_consumes_sideinfo_curve_summary(tmp_path: Path) -> N
         artifact_root.mkdir(parents=True, exist_ok=True)
         intake_path.write_text(json.dumps(_eligible_probe_intake()), encoding="utf-8")
         curve_path.write_text(
-            json.dumps(_complete_sideinfo_effect_curve()),
+            json.dumps(_complete_sideinfo_effect_curve(tmp_path)),
             encoding="utf-8",
         )
 
@@ -455,6 +590,8 @@ def test_l5_v2_schedule_cli_consumes_sideinfo_curve_summary(tmp_path: Path) -> N
                 str(output_json.relative_to(root)),
                 "--output-md",
                 str(output_md.relative_to(root)),
+                "--repo-root",
+                str(tmp_path),
             ],
             capture_output=True,
             text=True,
