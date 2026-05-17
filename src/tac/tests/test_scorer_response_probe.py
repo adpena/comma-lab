@@ -1,0 +1,211 @@
+# SPDX-License-Identifier: MIT
+"""Tests for the Rule #6 substrate score-response probe."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import pathlib
+
+from tac.exact_eval_custody import contest_score
+from tac.scorer_response_probe import (
+    VERDICT_BLOCKED_CONTROL_MISMATCH,
+    VERDICT_BLOCKED_CUSTODY,
+    VERDICT_NO_MEASURABLE_RESPONSE,
+    VERDICT_RATE_ONLY_IMPROVEMENT,
+    VERDICT_SCORER_RESPONSE_POSITIVE,
+    VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE,
+    VERDICT_SCORE_REGRESSION,
+    compare_score_response,
+)
+
+
+SHA_A = "a" * 64
+SHA_B = "b" * 64
+SHA_C = "c" * 64
+
+
+def _evidence(
+    *,
+    seg: float = 0.00070,
+    pose: float = 0.00003,
+    bytes_: int = 180_000,
+    axis: str = "contest_cpu",
+    runtime_sha: str = SHA_A,
+    archive_sha: str = SHA_B,
+) -> dict[str, object]:
+    return {
+        "axis": axis,
+        "archive_sha256": archive_sha,
+        "runtime_tree_sha256": runtime_sha,
+        "n_samples": 600,
+        "archive_bytes": bytes_,
+        "seg_dist": seg,
+        "pose_dist": pose,
+        "score": contest_score(seg, pose, bytes_),
+        "hardware": "Ubuntu Linux x86_64 CPU",
+        "inflate_device": "cpu",
+        "eval_device": "cpu",
+        "auth_eval_command": "python upstream/evaluate.py --device cpu",
+        "log_path": "experiments/results/example/contest_auth_eval.log",
+    }
+
+
+def test_positive_scorer_response_requires_total_and_scorer_improvement() -> None:
+    baseline = _evidence()
+    candidate = _evidence(seg=0.00068, pose=0.000028, bytes_=180_000)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        min_total_improvement=0.001,
+        min_scorer_term_improvement=0.0005,
+    )
+    assert report.verdict == VERDICT_SCORER_RESPONSE_POSITIVE
+    assert report.total_delta is not None and report.total_delta < 0.0
+    assert report.scorer_term_delta is not None and report.scorer_term_delta < 0.0
+
+
+def test_scorer_response_present_rate_negative_classifies_byte_overpay() -> None:
+    baseline = _evidence(bytes_=180_000)
+    candidate = _evidence(seg=0.00068, pose=0.000028, bytes_=220_000)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        min_total_improvement=0.001,
+        min_scorer_term_improvement=0.0005,
+    )
+    assert report.verdict == VERDICT_SCORER_RESPONSE_PRESENT_RATE_NEGATIVE
+    assert report.scorer_term_delta is not None and report.scorer_term_delta < 0.0
+    assert report.rate_term_delta is not None and report.rate_term_delta > 0.0
+
+
+def test_rate_only_improvement_is_not_scorer_response() -> None:
+    baseline = _evidence(bytes_=190_000)
+    candidate = _evidence(bytes_=180_000)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        min_total_improvement=0.001,
+        min_scorer_term_improvement=0.0005,
+    )
+    assert report.verdict == VERDICT_RATE_ONLY_IMPROVEMENT
+    assert report.scorer_term_delta == 0.0
+
+
+def test_near_tie_is_no_measurable_response() -> None:
+    baseline = _evidence()
+    candidate = _evidence(seg=0.000699, pose=0.00003, bytes_=180_000)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        min_total_improvement=0.001,
+        min_scorer_term_improvement=0.0005,
+    )
+    assert report.verdict == VERDICT_NO_MEASURABLE_RESPONSE
+
+
+def test_regression_classifies_positive_total_delta() -> None:
+    baseline = _evidence()
+    candidate = _evidence(seg=0.00072, pose=0.000035, bytes_=180_000)
+    report = compare_score_response(baseline=baseline, candidate=candidate)
+    assert report.verdict == VERDICT_SCORE_REGRESSION
+    assert report.total_delta is not None and report.total_delta > 0.0
+
+
+def test_ablation_mode_requires_runtime_match() -> None:
+    baseline = _evidence(runtime_sha=SHA_A)
+    candidate = _evidence(runtime_sha=SHA_C)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="ablation",
+    )
+    assert report.verdict == VERDICT_BLOCKED_CONTROL_MISMATCH
+    assert "runtime_tree_mismatch" in report.blockers
+
+
+def test_candidate_mode_allows_runtime_mismatch() -> None:
+    baseline = _evidence(runtime_sha=SHA_A)
+    candidate = _evidence(seg=0.00068, pose=0.000028, runtime_sha=SHA_C)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        mode="candidate",
+    )
+    assert report.verdict == VERDICT_SCORER_RESPONSE_POSITIVE
+
+
+def test_strict_custody_blocks_missing_hardware() -> None:
+    baseline = _evidence()
+    candidate = _evidence()
+    candidate.pop("hardware")
+    report = compare_score_response(baseline=baseline, candidate=candidate)
+    assert report.verdict == VERDICT_BLOCKED_CUSTODY
+    assert "candidate:hardware_missing" in report.blockers
+
+
+def test_relaxed_custody_allows_score_field_only_probe() -> None:
+    baseline = _evidence()
+    candidate = _evidence(seg=0.00068, pose=0.000028)
+    for key in ("hardware", "inflate_device", "eval_device", "auth_eval_command", "log_path"):
+        baseline.pop(key)
+        candidate.pop(key)
+    report = compare_score_response(
+        baseline=baseline,
+        candidate=candidate,
+        strict_exact_custody=False,
+    )
+    assert report.verdict == VERDICT_SCORER_RESPONSE_POSITIVE
+
+
+def test_json_report_is_stable_shape() -> None:
+    report = compare_score_response(
+        baseline=_evidence(),
+        candidate=_evidence(seg=0.00068, pose=0.000028),
+    )
+    payload = report.to_json_dict()
+    assert payload["schema"] == "substrate_score_response_probe_v1"
+    assert payload["deltas"]["total_delta"] == report.total_delta
+    assert payload["baseline"]["axis"] == "contest_cpu"
+
+
+def _load_cli_module():
+    repo_root = pathlib.Path(__file__).resolve().parents[3]
+    path = repo_root / "tools" / "probe_substrate_score_response.py"
+    spec = importlib.util.spec_from_file_location("probe_substrate_score_response", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_cli_writes_json_and_markdown(tmp_path: pathlib.Path) -> None:
+    cli = _load_cli_module()
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    output_json = tmp_path / "out" / "probe.json"
+    output_md = tmp_path / "out" / "probe.md"
+    baseline_path.write_text(json.dumps(_evidence()), encoding="utf-8")
+    candidate_path.write_text(
+        json.dumps(_evidence(seg=0.00068, pose=0.000028)),
+        encoding="utf-8",
+    )
+    rc = cli.main(
+        [
+            "--baseline-json",
+            str(baseline_path),
+            "--candidate-json",
+            str(candidate_path),
+            "--output-json",
+            str(output_json),
+            "--output-md",
+            str(output_md),
+            "--axis",
+            "contest_cpu",
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert payload["verdict"] == VERDICT_SCORER_RESPONSE_POSITIVE
+    assert "SCORER_RESPONSE_POSITIVE" in output_md.read_text(encoding="utf-8")
