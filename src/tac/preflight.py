@@ -2484,6 +2484,21 @@ def preflight_all(
         check_reports_latest_md_not_stale_vs_canonical_frontier(
             strict=True, verbose=verbose,
         )
+        # 2026-05-17 Catalog #317 — LOCAL-RESEARCH-SIGNAL DISPATCHERS STAMP
+        # EVIDENCE GRADE. Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable
+        # + Catalog #1 + #192 + operator directive 2026-05-17 ("Deploying to
+        # local MPS versus modal should be super easy to configure, like one
+        # arg in a func"). Refuses any state of tools/operator_authorize.py
+        # where _dispatch_local_mps / _dispatch_local_cpu drops the canonical
+        # evidence-grade stamping + hardware availability check + loud
+        # NON-AUTHORITATIVE banner + canonical manifest write. Sister of
+        # Catalog #1 / #127 / #192 / #279 / #280 / #283. STRICT-from-byte-one
+        # per CLAUDE.md "Strict-flip atomicity rule" — live count at landing:
+        # 0 (the new functions carry every required token). Memory:
+        # feedback_one_arg_local_mps_vs_modal_dispatch_switch_landed_20260517.md.
+        check_local_research_signal_dispatches_stamp_evidence_grade(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-16 Catalog #299 - CATALOG QUOTA UNDER 400. Per CLAUDE.md
         # "Gate consolidation discipline" non-negotiable + premortem #5
         # (Category A). Refuses CLAUDE.md catalog table entries above
@@ -69831,6 +69846,178 @@ def check_reports_latest_md_not_stale_vs_canonical_frontier(
             "issue(s) per Catalog #316 PERMANENT-FIX-FRONTIER-SIGNAL-LOSS "
             "2026-05-17. Regenerate via tools/scan_best_anchor_per_axis.py "
             "or add `<!-- FRONTIER_DRIFT_OK:<rationale> -->` waiver.\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #317 - check_local_research_signal_dispatches_stamp_evidence_grade
+# 2026-05-17 lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517.
+# Sister of Catalog #1 (silent MPS-fallback detector at source) + Catalog
+# #127 (per-call-site custody routing) + Catalog #192 (per-artifact macOS-CPU
+# advisory promotion guard) + Catalog #279/#280/#283 (fail-closed source-
+# scan for dispatch guard helpers). Refuses any state of
+# ``tools/operator_authorize.py`` where ``_dispatch_local_mps`` or
+# ``_dispatch_local_cpu`` lacks the canonical evidence-grade stamping +
+# hardware availability check + loud non-authoritative banner + canonical
+# manifest write. The structural protection prevents a future refactor
+# from silently removing the contract enforcement.
+
+_CHECK_317_TARGET_FILE = "tools/operator_authorize.py"
+# Required tokens INSIDE the body of _dispatch_local_mps (substring match
+# anywhere within the function body).
+_CHECK_317_MPS_REQUIRED_TOKENS: tuple[str, ...] = (
+    # Layer 1: hardware availability (no silent fallback)
+    "torch.backends.mps.is_available",
+    # Layer 2: canonical helper import
+    "tac.optimization.mps_research_signal",
+    "append_manifest_row_to_jsonl",
+    # Layer 4: loud non-authoritative banner
+    "NON-AUTHORITATIVE",
+    # Layer 5: canonical evidence-grade reference (literal or constant alias)
+    "MPS-research-signal",
+    # Layer 6: manifest append is mandatory, not best-effort.
+    "refusing success to avoid",
+)
+# Required tokens INSIDE the body of _dispatch_local_cpu.
+_CHECK_317_CPU_REQUIRED_TOKENS: tuple[str, ...] = (
+    # Layer 1: canonical helper import
+    "tac.optimization.macos_cpu_advisory_signal",
+    "append_manifest_row_to_jsonl",
+    # Layer 2: loud non-authoritative banner
+    "NON-AUTHORITATIVE",
+    # Layer 3: canonical evidence-grade reference
+    "macOS-CPU-advisory",
+    # Layer 4: manifest append is mandatory, not best-effort.
+    "refusing success to avoid",
+)
+_CHECK_317_WAIVER_PATTERN = re.compile(
+    r"# LOCAL_RESEARCH_SIGNAL_STAMP_WAIVED:(.+?)(?:$|#)", re.MULTILINE
+)
+
+
+def _check_317_extract_function_body(source: str, func_name: str) -> str | None:
+    """Return the source-text of ``func_name`` (signature line through last
+    line before the next top-level def / class).
+
+    Returns ``None`` if the function is not defined.
+    """
+    pattern = re.compile(
+        rf"^def {re.escape(func_name)}\(.*?(?=^def \w|^class \w|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    m = pattern.search(source)
+    if m is None:
+        return None
+    return m.group(0)
+
+
+def _check_317_function_has_waiver(body: str) -> bool:
+    """Return True iff body's def-line carries a non-placeholder waiver."""
+    # Only the def signature line is honored as the waiver site.
+    first_line = body.splitlines()[0] if body else ""
+    m = _CHECK_317_WAIVER_PATTERN.search(first_line)
+    if not m:
+        return False
+    rationale = m.group(1).strip().rstrip(":").strip()
+    low = rationale.lower()
+    if low in ("<rationale>", "<reason>", ""):
+        return False
+    return True
+
+
+def check_local_research_signal_dispatches_stamp_evidence_grade(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #317 — refuse local-MPS/local-CPU dispatchers that drop
+    the canonical evidence-grade stamping contract.
+
+    Bug class: a future refactor silently removes
+    ``evidence_grade="MPS-research-signal"`` (or ``macOS-CPU-advisory``)
+    auto-stamp from ``_dispatch_local_mps`` / ``_dispatch_local_cpu``,
+    allowing local-MPS or local-CPU results to land in the canonical
+    posterior without their non-authoritative markers. The check is a
+    source-text scan of ``tools/operator_authorize.py``; required tokens
+    encode the 4-layer contract per the design memo.
+
+    Same-line waiver on the ``def _dispatch_local_*`` line:
+    ``# LOCAL_RESEARCH_SIGNAL_STAMP_WAIVED:<rationale>`` (placeholder
+    ``<rationale>`` / ``<reason>`` rejected).
+
+    Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #1 +
+    Catalog #192 + operator directive 2026-05-17 ("Deploying to local MPS
+    versus modal should be super easy to configure, like one arg in a func").
+    """
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    target = root / _CHECK_317_TARGET_FILE
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(
+                "  [check_local_research_signal_dispatches_stamp_evidence_grade] "
+                f"SKIP ({target} not found)"
+            )
+        return violations
+
+    try:
+        source = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        if verbose:
+            print(
+                "  [check_local_research_signal_dispatches_stamp_evidence_grade] "
+                f"SKIP (read failed: {exc})"
+            )
+        return violations
+
+    for func_name, required_tokens, evidence_label in (
+        ("_dispatch_local_mps", _CHECK_317_MPS_REQUIRED_TOKENS, "MPS-research-signal"),
+        ("_dispatch_local_cpu", _CHECK_317_CPU_REQUIRED_TOKENS, "macOS-CPU-advisory"),
+    ):
+        body = _check_317_extract_function_body(source, func_name)
+        if body is None:
+            violations.append(
+                f"{_CHECK_317_TARGET_FILE}: missing required function "
+                f"`{func_name}`. Per Catalog #317 (lane_one_arg_local_mps_"
+                f"vs_modal_dispatch_switch_20260517) the local-research-"
+                f"signal dispatch path MUST be implemented in "
+                f"`tools/operator_authorize.py`."
+            )
+            continue
+        if _check_317_function_has_waiver(body):
+            continue
+        missing = [tok for tok in required_tokens if tok not in body]
+        if missing:
+            violations.append(
+                f"{_CHECK_317_TARGET_FILE}::{func_name} missing required "
+                f"contract tokens for {evidence_label}: {missing}. Per "
+                "Catalog #317 (lane_one_arg_local_mps_vs_modal_dispatch_"
+                "switch_20260517) the local-research-signal dispatcher "
+                "MUST stamp the canonical evidence-grade + route results "
+                "through the canonical manifest helper + emit a loud "
+                "[NON-AUTHORITATIVE] banner. Restore the missing tokens "
+                "OR add a same-line `# LOCAL_RESEARCH_SIGNAL_STAMP_WAIVED:"
+                "<rationale>` waiver on the def line (placeholder "
+                "rationale rejected)."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_local_research_signal_dispatches_stamp_evidence_grade] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_local_research_signal_dispatches_stamp_evidence_grade] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_local_research_signal_dispatches_stamp_evidence_grade "
+            f"found {len(violations)} violation(s) per Catalog #317.\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations

@@ -93,6 +93,92 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+# Catalog #270 scope clarification (2026-05-17 per
+# ``lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517``).
+# The Tier 1/3 substrate-trainer-only signals below DO NOT apply to TOOL
+# dispatches (``tools/*.py``). Tool dispatches are categorically NOT subject
+# to substrate-training primitives (autocast / TF32 / torch.compile / canonical
+# scorer-loss / canonical auth-eval helper / canonical inflate device / scorer-
+# loader order). Detection follows two surfaces (either short-circuits):
+#   1. Explicit: ``dispatch_kind: tool`` field in the recipe YAML.
+#   2. Implicit: trainer path matches ``tools/*.py`` AND not
+#      ``experiments/train_substrate_*.py``.
+# Tool dispatches still get the GENUINE Tier 2 hardware-correctness fields
+# (min_vram_gb / video_input_strategy / pyav_decode_strategy / target_modes /
+# canary_status / Modal NVML env block) AND the Tier 3 ``no_grad_at_eval``
+# universal eval-memory-hygiene check. Sister of
+# ``src/tac/deploy/dispatch_protocol.py::is_tool_dispatch`` (same detection
+# rule applied at the operator-authorize layer).
+LEGAL_DISPATCH_KINDS = frozenset({"substrate", "tool", "local_research_signal"})
+TOOL_DISPATCH_LEGAL_GPU_TOKENS = frozenset({"cpu", "CPU", "Cpu"})
+LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
+
+
+def _is_tool_dispatch(trainer_path: Path, *, recipe_text: str = "") -> bool:
+    """Return True when the trainer is a TOOL dispatch, not a substrate trainer.
+
+    Detection mirrors ``tac.deploy.dispatch_protocol.is_tool_dispatch``:
+      1. Explicit ``dispatch_kind: tool`` in the recipe YAML.
+      2. Implicit ``tools/*.py`` trainer path that is NOT
+         ``experiments/train_substrate_*.py``.
+
+    Per CLAUDE.md "Production-hardened dispatch optimization protocol"
+    Catalog #270 scope clarification (2026-05-17).
+    """
+    if recipe_text:
+        m = re.search(r"^\s*dispatch_kind\s*:\s*['\"]?(\w+)", recipe_text, re.M)
+        if m:
+            value = m.group(1).strip().lower()
+            if value == "tool":
+                return True
+            if value == "substrate":
+                return False
+    try:
+        rel = trainer_path.resolve().relative_to(REPO_ROOT.resolve())
+    except (OSError, ValueError):
+        return False
+    posix = rel.as_posix()
+    if posix.startswith("experiments/train_substrate_") and posix.endswith(".py"):
+        return False
+    return posix.startswith("tools/") and posix.endswith(".py")
+
+
+def _is_local_research_signal_dispatch(*, recipe_text: str = "") -> bool:
+    """Return True when the recipe is a LOCAL RESEARCH-SIGNAL dispatch.
+
+    Two acceptance surfaces (either short-circuits to True):
+      1. Explicit: ``dispatch_kind: local_research_signal`` in the recipe YAML.
+      2. Implicit: ``platform: local_mps`` or ``platform: local_cpu`` in the
+         recipe YAML.
+
+    Local-research-signal dispatches are categorically NOT subject to
+    substrate-trainer-only Tier 1/2/3 fields (autocast / TF32 / torch.compile /
+    canonical scorer-loss / canonical auth-eval helper / inflate device /
+    scorer loader / min_vram_gb / NVML env block). Sister of the
+    Catalog #270 scope clarification for tool dispatches; same precedent
+    applied to a different dispatch_kind.
+
+    Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #1 +
+    Catalog #192 + operator directive 2026-05-17 ("Deploying to local MPS
+    versus modal should be super easy to configure, like one arg in a func").
+    """
+    if not recipe_text:
+        return False
+    m_kind = re.search(r"^\s*dispatch_kind\s*:\s*['\"]?(\w+)", recipe_text, re.M)
+    if m_kind:
+        value = m_kind.group(1).strip().lower()
+        if value == "local_research_signal":
+            return True
+        if value in {"substrate", "tool"}:
+            return False
+    m_platform = re.search(r"^\s*platform\s*:\s*['\"]?([\w_]+)", recipe_text, re.M)
+    if m_platform:
+        platform = m_platform.group(1).strip().lower()
+        if platform in LOCAL_RESEARCH_SIGNAL_PLATFORMS:
+            return True
+    return False
+
+
 # Tier 1 — engineering primitives the trainer MUST declare/use.
 # Detection uses presence of canonical token in the trainer source body OR
 # a sister opt-out marker in the trainer's first ~25 lines.
@@ -244,16 +330,38 @@ def _resolve_lane_driver_path(trainer: Path, repo_root: Path) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
-def _verify_tier1(trainer_text: str, trainer_path: Path) -> TierVerdict:
+def _verify_tier1(
+    trainer_text: str,
+    trainer_path: Path,
+    *,
+    is_tool: bool = False,
+) -> TierVerdict:
     """Tier 1 — engineering primitives.
 
     Detection: presence of canonical token in trainer body OR sister
     opt-out marker in the file header (~first 25 lines).
+
+    Catalog #270 scope fix (2026-05-17): tool dispatches (``tools/*.py`` or
+    ``dispatch_kind: tool``) are categorically NOT subject to substrate-
+    training primitives (autocast / TF32 / torch.compile / canonical scorer-
+    loss). They DO retain the universal ``no_grad_at_eval`` check because
+    eval-time memory hygiene applies to any torch-using tool.
     """
     verdict = TierVerdict(tier="tier1_engineering")
     header = "\n".join(trainer_text.splitlines()[:30])
     body = trainer_text
+    # Substrate-only Tier 1 signals (skipped for tool dispatches per Catalog #270 scope fix).
+    _TIER1_SUBSTRATE_ONLY = frozenset(
+        {"autocast_fp16", "tf32", "torch_compile", "canonical_scorer_loss"}
+    )
     for signal_name, tokens in _TIER1_TOKENS.items():
+        if is_tool and signal_name in _TIER1_SUBSTRATE_ONLY:
+            # Mark as N/A (vacuous pass) for tool dispatches; skipped per
+            # Catalog #270 scope clarification. Use True so the umbrella
+            # conjunction is not blocked, but record advisory note for the
+            # operator.
+            verdict.pass_signals[signal_name] = True
+            continue
         present = False
         for tok in tokens:
             if tok in header or tok in body:
@@ -278,6 +386,7 @@ def _verify_tier2(
     *,
     allow_no_recipe_advisory_mode: bool = False,
     no_recipe_rationale: str | None = None,
+    is_local_research_signal: bool = False,
 ) -> TierVerdict:
     """Tier 2 — hardware correctness.
 
@@ -296,6 +405,21 @@ def _verify_tier2(
     ``no_recipe_rationale`` (Catalog #199 paired-env discipline).
     """
     verdict = TierVerdict(tier="tier2_hardware")
+
+    # Sister 2026-05-17 (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517):
+    # Local research-signal dispatches (local_mps / local_cpu) run on the
+    # operator's machine; substrate-trainer-only hardware fields (min_vram_gb /
+    # video_input_strategy / pyav_decode_strategy / target_modes / canary /
+    # min_smoke_gpu / NVML env block) do NOT apply because the dispatch never
+    # touches a paid provider. Mark every recipe-side + lane-driver-side signal
+    # vacuous; return with empty blockers.
+    if is_local_research_signal:
+        for field_name in _TIER2_RECIPE_FIELDS:
+            verdict.pass_signals[f"recipe_declares_{field_name}"] = True
+        for tok in _TIER2_LANE_DRIVER_NVML_TOKENS:
+            verdict.pass_signals[f"driver_exports_{tok}"] = True
+        verdict.pass_signals["local_research_signal_dispatch_skipped"] = True
+        return verdict
 
     # Recipe-side fields
     if recipe_path is not None:
@@ -386,6 +510,7 @@ def _verify_tier3(
     *,
     allow_no_recipe_advisory_mode: bool = False,
     no_recipe_rationale: str | None = None,
+    is_tool: bool = False,
 ) -> TierVerdict:
     """Tier 3 — substrate correctness.
 
@@ -394,36 +519,58 @@ def _verify_tier3(
       - canonical auth-eval helper routing
       - canonical inflate device routing
       - scorer-loader assignment order (refuse reversed pattern)
+
+    Catalog #270 scope fix (2026-05-17): tool dispatches (``tools/*.py`` or
+    ``dispatch_kind: tool``) are categorically NOT subject to substrate-
+    canonical-helper routing (canonical auth-eval / canonical inflate device /
+    scorer-loader order / phantom-score directory class). These check
+    substrate training primitives that do not apply to one-shot tool
+    inference. Recipe-vs-trainer-state divergence (Z3/Z4/Z5 bug class) IS
+    also substrate-specific (the divergence anchor is ``_full_main raises
+    NotImplementedError`` which is a substrate-trainer scaffold pattern).
     """
     verdict = TierVerdict(tier="tier3_substrate")
 
-    # Trainer canonical-helper routing
-    for signal_name, tokens in _TIER3_TRAINER_TOKENS.items():
-        present = any(tok in trainer_text for tok in tokens)
-        verdict.pass_signals[signal_name] = present
-        if not present:
-            verdict.blockers.append(
-                f"tier3_substrate: trainer {trainer_path.name} missing "
-                f"`{signal_name}` canonical token (any of: {list(tokens)}); "
-                "wire through the canonical helper per "
-                "Catalog #205/#222/#226/#249."
-            )
+    # Trainer canonical-helper routing (substrate-only — skipped for tool dispatches per Catalog #270 scope fix).
+    if not is_tool:
+        for signal_name, tokens in _TIER3_TRAINER_TOKENS.items():
+            present = any(tok in trainer_text for tok in tokens)
+            verdict.pass_signals[signal_name] = present
+            if not present:
+                verdict.blockers.append(
+                    f"tier3_substrate: trainer {trainer_path.name} missing "
+                    f"`{signal_name}` canonical token (any of: {list(tokens)}); "
+                    "wire through the canonical helper per "
+                    "Catalog #205/#222/#226/#249."
+                )
 
-    # Reversed scorer-loader pattern is a hard violation regardless
-    for pat in _TIER3_REVERSED_LOADER_PATTERNS:
-        m = re.search(pat, trainer_text)
-        if m:
-            verdict.pass_signals["scorer_loader_order_correct"] = False
-            verdict.blockers.append(
-                f"tier3_substrate: trainer {trainer_path.name} contains "
-                f"REVERSED scorer-loader assignment matching pattern "
-                f"`{pat}` — canonical API returns (posenet, segnet); per "
-                "Catalog #222, reversed assignment crashes inside "
-                "`scorer_loss_terms_btchw` with `TypeError: new(): invalid "
-                "data type 'str'`. Swap the LHS tuple."
-            )
+        # Reversed scorer-loader pattern is a hard violation regardless
+        for pat in _TIER3_REVERSED_LOADER_PATTERNS:
+            m = re.search(pat, trainer_text)
+            if m:
+                verdict.pass_signals["scorer_loader_order_correct"] = False
+                verdict.blockers.append(
+                    f"tier3_substrate: trainer {trainer_path.name} contains "
+                    f"REVERSED scorer-loader assignment matching pattern "
+                    f"`{pat}` — canonical API returns (posenet, segnet); per "
+                    "Catalog #222, reversed assignment crashes inside "
+                    "`scorer_loss_terms_btchw` with `TypeError: new(): invalid "
+                    "data type 'str'`. Swap the LHS tuple."
+                )
+    else:
+        # Tool dispatch: mark substrate-only signals as vacuous-pass so the
+        # umbrella conjunction is not blocked. The actual operational
+        # correctness of tool dispatches is enforced by sister gates outside
+        # this protocol (Catalog #270 scope clarification 2026-05-17).
+        for signal_name in _TIER3_TRAINER_TOKENS:
+            verdict.pass_signals[signal_name] = True
 
-    # Recipe-vs-trainer-state divergence (Z3 v2 / Z4 / Z5)
+    # Recipe-vs-trainer-state divergence (Z3 v2 / Z4 / Z5) — substrate-only.
+    if is_tool:
+        verdict.pass_signals["recipe_vs_trainer_state_consistent"] = True
+        verdict.pass_signals["no_phantom_device_named_output"] = True
+        return verdict
+
     if recipe_path is not None:
         recipe_text = _read_text_safe(recipe_path)
         full_main_def = re.search(r"^def\s+_full_main\s*\([^)]*\)[^:]*:", trainer_text, re.M)
@@ -569,7 +716,21 @@ def verify_dispatch_protocol_complete(
     recipe_path = _resolve_recipe_path(recipe, root)
     lane_driver_path = _resolve_lane_driver_path(trainer_path, root)
 
-    tier1 = _verify_tier1(trainer_text, trainer_path)
+    # Catalog #270 scope clarification (2026-05-17): detect tool dispatch via
+    # recipe ``dispatch_kind: tool`` field OR ``tools/*.py`` trainer path.
+    # Tool dispatches skip substrate-only Tier 1/3 signals.
+    recipe_text_for_kind = _read_text_safe(recipe_path) if recipe_path else ""
+    is_tool = _is_tool_dispatch(trainer_path, recipe_text=recipe_text_for_kind)
+    # Sister 2026-05-17 (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517):
+    # local-research-signal dispatches (local_mps / local_cpu) get the SAME
+    # substrate-only-skip treatment as tool dispatches. Same precedent applied
+    # to a different dispatch_kind.
+    is_local_research_signal = _is_local_research_signal_dispatch(
+        recipe_text=recipe_text_for_kind
+    )
+    skip_substrate_only = is_tool or is_local_research_signal
+
+    tier1 = _verify_tier1(trainer_text, trainer_path, is_tool=skip_substrate_only)
     tier2 = _verify_tier2(
         trainer_text,
         trainer_path,
@@ -577,6 +738,7 @@ def verify_dispatch_protocol_complete(
         lane_driver_path,
         allow_no_recipe_advisory_mode=allow_no_recipe_advisory_mode,
         no_recipe_rationale=no_recipe_rationale,
+        is_local_research_signal=is_local_research_signal,
     )
     tier3 = _verify_tier3(
         trainer_text,
@@ -584,6 +746,7 @@ def verify_dispatch_protocol_complete(
         recipe_path,
         allow_no_recipe_advisory_mode=allow_no_recipe_advisory_mode,
         no_recipe_rationale=no_recipe_rationale,
+        is_tool=skip_substrate_only,
     )
 
     blockers = list(tier1.blockers) + list(tier2.blockers) + list(tier3.blockers)

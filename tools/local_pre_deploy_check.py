@@ -86,6 +86,108 @@ SUBPROCESS_AUTH_EVAL_CALLS = {
 }
 
 
+# Catalog #270 scope clarification (2026-05-17 per
+# ``lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517``).
+# Tool dispatches (``tools/*.py`` or ``dispatch_kind: tool``) are categorically
+# NOT subject to substrate-trainer-only harness checks (auth_eval_reachability
+# / archive_grammar / full_main_implemented / canonical_inflate_device /
+# deterministic_zip). Sister of ``tac.deploy.dispatch_protocol.is_tool_dispatch``
+# and ``tools/canonical_dispatch_optimization_protocol._is_tool_dispatch``.
+def _is_tool_dispatch_for_harness(
+    trainer: Path, recipe: str | None
+) -> bool:
+    """Detect tool dispatch for harness checks.
+
+    Recipe lookup mirrors ``check_recipe_status_consistent_with_trainer_state``:
+    accepts recipe NAME (without ``.yaml``) and resolves under
+    ``.omx/operator_authorize_recipes/``. If the recipe declares
+    ``dispatch_kind: tool``, return True. Otherwise fall through to the
+    implicit trainer-path check: ``tools/*.py`` (not
+    ``experiments/train_substrate_*.py``) → True.
+    """
+    if recipe is not None:
+        candidate_recipe_paths = [
+            REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}.yaml",
+            REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}",
+        ]
+        recipe_path = next(
+            (p for p in candidate_recipe_paths if p.is_file()), None
+        )
+        if recipe_path is not None:
+            try:
+                recipe_text = recipe_path.read_text(encoding="utf-8")
+            except OSError:
+                recipe_text = ""
+            m = re.search(
+                r"^\s*dispatch_kind\s*:\s*['\"]?(\w+)", recipe_text, re.M
+            )
+            if m:
+                kind = m.group(1).strip().lower()
+                if kind == "tool":
+                    return True
+                if kind == "substrate":
+                    return False
+    try:
+        rel = trainer.resolve().relative_to(REPO_ROOT.resolve())
+    except (OSError, ValueError):
+        return False
+    posix = rel.as_posix()
+    if posix.startswith("experiments/train_substrate_") and posix.endswith(".py"):
+        return False
+    return posix.startswith("tools/") and posix.endswith(".py")
+
+
+# Sister 2026-05-17 (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517):
+# Local research-signal dispatches (``platform: local_mps`` / ``local_cpu`` or
+# ``dispatch_kind: local_research_signal``) get the SAME skip-set as tool
+# dispatches per the Catalog #270 precedent. They run on the operator's
+# machine, route through canonical mps_research_signal /
+# macos_cpu_advisory_signal manifests, and forbid contest auth_eval emission
+# entirely.
+_LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
+
+
+def _is_local_research_signal_dispatch_for_harness(
+    trainer: Path, recipe: str | None
+) -> bool:
+    """Detect local research-signal dispatch for harness checks.
+
+    Recipe lookup mirrors :func:`_is_tool_dispatch_for_harness`. Returns True
+    when the recipe declares ``dispatch_kind: local_research_signal`` OR
+    ``platform: local_mps`` / ``platform: local_cpu``.
+    """
+    if recipe is None:
+        return False
+    candidate_recipe_paths = [
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}.yaml",
+        REPO_ROOT / ".omx" / "operator_authorize_recipes" / f"{recipe}",
+    ]
+    recipe_path = next((p for p in candidate_recipe_paths if p.is_file()), None)
+    if recipe_path is None:
+        return False
+    try:
+        recipe_text = recipe_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    m_kind = re.search(
+        r"^\s*dispatch_kind\s*:\s*['\"]?(\w+)", recipe_text, re.M
+    )
+    if m_kind:
+        value = m_kind.group(1).strip().lower()
+        if value == "local_research_signal":
+            return True
+        if value in {"substrate", "tool"}:
+            return False
+    m_platform = re.search(
+        r"^\s*platform\s*:\s*['\"]?([\w_]+)", recipe_text, re.M
+    )
+    if m_platform:
+        platform = m_platform.group(1).strip().lower()
+        if platform in _LOCAL_RESEARCH_SIGNAL_PLATFORMS:
+            return True
+    return False
+
+
 def _import_trainer_module(trainer: Path):
     digest = hashlib.sha256(str(trainer.resolve()).encode("utf-8")).hexdigest()[:12]
     module_name = f"_local_pre_deploy_{trainer.stem}_{digest}"
@@ -696,6 +798,30 @@ CHECKS = [
     ("dispatch_optimization_protocol", "USES_PROTOCOL"),
 ]
 
+# Catalog #270 scope fix (2026-05-17): these substrate-trainer-only checks
+# are skipped for tool dispatches (``tools/*.py`` or ``dispatch_kind: tool``).
+# Sister of ``tac.deploy.dispatch_protocol.is_tool_dispatch`` and
+# ``tools/canonical_dispatch_optimization_protocol._is_tool_dispatch``.
+_TOOL_DISPATCH_SKIPPED_CHECKS = frozenset({
+    "full_main_implemented",
+    "archive_grammar",
+    "auth_eval_reachability",
+    "deterministic_zip",
+})
+
+# Sister 2026-05-17 (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517):
+# Local research-signal dispatches skip the same substrate-only checks AS
+# tool dispatches PLUS the dispatch_optimization_protocol umbrella (which
+# the local-research-signal scope-fix in canonical_dispatch_optimization_protocol
+# also handles, but skipping at the harness level avoids the round-trip).
+_LOCAL_RESEARCH_SIGNAL_SKIPPED_CHECKS = frozenset({
+    "full_main_implemented",
+    "archive_grammar",
+    "auth_eval_reachability",
+    "canonical_inflate_device",
+    "deterministic_zip",
+})
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -728,11 +854,54 @@ def main() -> int:
         return 2
 
     label = args.recipe or trainer.name
-    print(f"[local-pre-deploy] validating: {trainer.name}  recipe={label}")
+    is_tool = _is_tool_dispatch_for_harness(trainer, args.recipe)
+    is_local_research_signal = _is_local_research_signal_dispatch_for_harness(
+        trainer, args.recipe
+    )
+    if is_local_research_signal:
+        kind_banner = "local_research_signal"
+    elif is_tool:
+        kind_banner = "tool"
+    else:
+        kind_banner = "substrate"
+    print(f"[local-pre-deploy] validating: {trainer.name}  recipe={label}  kind={kind_banner}")
     print(f"[local-pre-deploy] mode: {'STRICT (exit 1 on fail)' if args.strict else 'WARN-ONLY'}")
+    if is_local_research_signal:
+        print(
+            "[local-pre-deploy] local research-signal dispatch detected "
+            "(lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517 + "
+            "Catalog #270 sister scope clarification); substrate-only "
+            f"checks {sorted(_LOCAL_RESEARCH_SIGNAL_SKIPPED_CHECKS)} will "
+            "be skipped. The MPS / macOS-CPU contract is fail-closed: "
+            "results route through canonical mps_research_signal / "
+            "macos_cpu_advisory_signal manifests and are PERMANENTLY "
+            "non-authoritative per CLAUDE.md 'MPS auth eval is NOISE' + "
+            "Catalog #1 + #192 non-negotiables."
+        )
+    elif is_tool:
+        print(
+            "[local-pre-deploy] tool dispatch detected (Catalog #270 scope "
+            "clarification); substrate-only checks "
+            f"{sorted(_TOOL_DISPATCH_SKIPPED_CHECKS)} will be skipped."
+        )
 
     failed: list[str] = []
     for name, fn in CHECKS:
+        if is_local_research_signal and name in _LOCAL_RESEARCH_SIGNAL_SKIPPED_CHECKS:
+            print(
+                f"  ⊘ [{name}] SKIPPED-FOR-LOCAL-RESEARCH-SIGNAL: substrate-"
+                "only check; not applicable to local research-signal "
+                "dispatches per lane_one_arg_local_mps_vs_modal_dispatch_"
+                "switch_20260517 (2026-05-17)."
+            )
+            continue
+        if is_tool and name in _TOOL_DISPATCH_SKIPPED_CHECKS:
+            print(
+                f"  ⊘ [{name}] SKIPPED-FOR-TOOL-DISPATCH: substrate-only "
+                "check; not applicable to tool dispatches per Catalog #270 "
+                "scope clarification (2026-05-17)."
+            )
+            continue
         if fn == "USES_RECIPE":
             # 7th check needs both trainer + recipe.
             ok, msg = check_recipe_status_consistent_with_trainer_state(trainer, args.recipe)

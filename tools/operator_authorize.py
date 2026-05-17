@@ -1681,6 +1681,337 @@ def _dispatch_local(
     return subprocess.call(cmd, cwd=str(REPO_ROOT), env=env)
 
 
+# --- Local research-signal dispatchers ----------------------------------------
+#
+# Operator directive 2026-05-17 verbatim: *"Deploying to local MPS versus modal
+# should be super easy to configure, like one arg in a func"* + *"Do everything
+# possible you can to accelerate dev velocity and save money using local MPS"*.
+#
+# Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #1 + Catalog
+# #192: local MPS and local CPU dispatches are PERMANENTLY non-authoritative.
+# These dispatchers route results through the canonical
+# ``tac.optimization.mps_research_signal.append_manifest_row_to_jsonl`` (for
+# local_mps) or ``tac.optimization.macos_cpu_advisory_signal.append_manifest_
+# row_to_jsonl`` (for local_cpu) helpers so the canonical
+# ``[contest-CPU]``/``[contest-CUDA]`` posterior is structurally protected.
+#
+# The implementation auto-stamps ``evidence_grade="MPS-research-signal"`` /
+# ``"macOS-CPU-advisory"`` + ``score_claim=False`` + ``promotion_eligible=False`` +
+# ``ready_for_exact_eval_dispatch=False`` so a malformed caller cannot bypass
+# the contract. A loud banner notifies the operator that the dispatch is
+# NON-AUTHORITATIVE.
+
+# Canonical evidence grade tokens (mirrored from sister helpers; presence
+# verified at module import + by STRICT preflight gate Catalog #317).
+_LOCAL_MPS_EVIDENCE_GRADE = "MPS-research-signal"
+_LOCAL_CPU_EVIDENCE_GRADE = "macOS-CPU-advisory"
+_LOCAL_MPS_MANIFEST_JSONL = ".omx/state/mps_research_signal_manifest.jsonl"
+_LOCAL_CPU_MANIFEST_JSONL = ".omx/state/macos_cpu_advisory_signal_manifest.jsonl"
+_LOCAL_MPS_BANNER = (
+    "\n"
+    "[LOCAL-MPS RESEARCH-SIGNAL — NON-AUTHORITATIVE]\n"
+    "    Per CLAUDE.md 'MPS auth eval is NOISE' non-negotiable + Catalog #1.\n"
+    "    Results are PERMANENTLY non-authoritative; manifest writes to\n"
+    f"    {_LOCAL_MPS_MANIFEST_JSONL} with evidence_grade={_LOCAL_MPS_EVIDENCE_GRADE!r}.\n"
+    "    The canonical [contest-CPU] / [contest-CUDA] posterior is NEVER touched.\n"
+    "    Hardware: Apple Silicon Metal (MPS). Cost: $0 (operator machine time).\n"
+)
+_LOCAL_CPU_BANNER = (
+    "\n"
+    "[LOCAL-CPU ADVISORY — NON-AUTHORITATIVE]\n"
+    "    Per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA' non-negotiable + Catalog #192.\n"
+    "    macOS-CPU is NEVER 1:1 contest-compliant; promotion requires a paired\n"
+    "    [contest-CPU GHA Linux x86_64] anchor. Manifest writes to\n"
+    f"    {_LOCAL_CPU_MANIFEST_JSONL} with evidence_grade={_LOCAL_CPU_EVIDENCE_GRADE!r}.\n"
+    "    The canonical [contest-CPU] / [contest-CUDA] posterior is NEVER touched.\n"
+    "    Hardware: Apple Silicon CPU. Cost: $0 (operator machine time).\n"
+)
+
+
+def _build_local_research_signal_env(
+    recipe: Recipe, env_overrides: str, *, force_mps_no_fallback: bool
+) -> dict[str, str]:
+    """Build env dict for local_mps / local_cpu dispatch.
+
+    For local_mps: forces ``PYTORCH_ENABLE_MPS_FALLBACK=0`` so MPS-unavailable
+    ops raise rather than silently fall back to CPU (Catalog #1 sister rule).
+    For local_cpu: forces no CUDA (operator machine doesn't have it anyway,
+    but be explicit) + no MPS (so torch picks pure CPU).
+    """
+    env = dict(os.environ)
+    if env_overrides:
+        for pair in env_overrides.split(","):
+            if "=" in pair:
+                k, v = pair.split("=", 1)
+                env[k.strip()] = v.strip()
+    if force_mps_no_fallback:
+        env["PYTORCH_ENABLE_MPS_FALLBACK"] = "0"
+    return env
+
+
+def _dispatch_local_mps(
+    recipe: Recipe,
+    instance_job_id: str,
+    env_overrides: str,
+) -> int:
+    """Invoke a local Apple-silicon MPS dispatch (NON-AUTHORITATIVE).
+
+    Contract:
+      1. Requires ``torch.backends.mps.is_available()`` at runtime; FATAL
+         otherwise (no silent CPU fallback per CLAUDE.md Catalog #1).
+      2. Routes results through canonical
+         ``tac.optimization.mps_research_signal.append_manifest_row_to_jsonl``;
+         results MUST land at ``.omx/state/mps_research_signal_manifest.jsonl``
+         with ``evidence_grade="MPS-research-signal"`` + ``score_claim=False`` +
+         ``promotion_eligible=False`` + ``ready_for_exact_eval_dispatch=False``
+         (auto-stamped by the canonical helper; the canonical posterior is
+         NEVER touched).
+      3. Sets ``PYTORCH_ENABLE_MPS_FALLBACK=0`` so MPS-unavailable ops raise
+         rather than silently fall back to CPU (Catalog #1 sister rule).
+      4. Emits a loud ``[LOCAL-MPS RESEARCH-SIGNAL — NON-AUTHORITATIVE]``
+         banner BEFORE the trainer runs so the operator sees the contract.
+      5. Refuses if the recipe declares any of ``score_claim: true`` /
+         ``promotion_eligible: true`` / ``ready_for_exact_eval_dispatch: true``.
+    """
+    # Layer 1: hardware availability (no silent fallback).
+    try:
+        import torch
+    except ImportError as exc:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS dispatch requires torch; "
+            f"install via uv sync: {exc}"
+        ) from exc
+    if not (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()):
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS dispatch requested but "
+            "torch.backends.mps.is_available()==False on this host. Per "
+            "CLAUDE.md Catalog #1 sister rule, MPS-unavailable hosts cannot "
+            "fall back to CPU silently. Run on Apple Silicon, OR use "
+            "`--target local-cpu` for the macOS-CPU advisory path, OR "
+            "use `--target modal` / `vastai` / `lightning` for the paid "
+            "authoritative path."
+        )
+
+    # Layer 2: canonical helper imports successfully (defense-in-depth).
+    try:
+        from tac.optimization.mps_research_signal import (
+            EVIDENCE_GRADE as _CANONICAL_EVIDENCE_GRADE,
+        )
+        from tac.optimization.mps_research_signal import (
+            append_manifest_row_to_jsonl,
+        )
+    except ImportError as exc:
+        raise SystemExit(
+            "[operator-authorize] FATAL: cannot import canonical "
+            f"tac.optimization.mps_research_signal helper: {exc}"
+        ) from exc
+    assert _CANONICAL_EVIDENCE_GRADE == _LOCAL_MPS_EVIDENCE_GRADE, (
+        "evidence_grade drift between operator_authorize.py and canonical helper"
+    )
+
+    # Layer 3: recipe must not claim authority.
+    if recipe.raw.get("score_claim") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS recipe cannot declare "
+            "`score_claim: true` — local MPS is permanently non-authoritative "
+            "per CLAUDE.md 'MPS auth eval is NOISE'."
+        )
+    if recipe.raw.get("promotion_eligible") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS recipe cannot declare "
+            "`promotion_eligible: true` — promotion requires [contest-CUDA] "
+            "OR [contest-CPU GHA Linux x86_64] evidence."
+        )
+    if recipe.raw.get("ready_for_exact_eval_dispatch") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS recipe cannot declare "
+            "`ready_for_exact_eval_dispatch: true`."
+        )
+
+    # Layer 4: loud non-authoritative banner.
+    print(_LOCAL_MPS_BANNER, file=sys.stderr, flush=True)
+
+    # Layer 5: env injection + dispatch.
+    lane_script = recipe.remote_driver
+    if not lane_script:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-MPS recipe needs 'remote_driver'"
+        )
+    if not (REPO_ROOT / lane_script).exists():
+        raise SystemExit(
+            f"[operator-authorize] FATAL: remote_driver missing at {lane_script}"
+        )
+    env = _build_local_research_signal_env(
+        recipe, env_overrides, force_mps_no_fallback=True
+    )
+    env["PACT_LOCAL_RESEARCH_SIGNAL_KIND"] = "local_mps"
+    env["PACT_LOCAL_INSTANCE_JOB_ID"] = instance_job_id
+    cmd = ["bash", lane_script]
+    print(
+        f"[operator-authorize] dispatching local_mps: {' '.join(cmd)} "
+        f"(instance_job_id={instance_job_id})"
+    )
+    rc = subprocess.call(cmd, cwd=str(REPO_ROOT), env=env)
+
+    # Layer 6: write the dispatch row through the canonical helper. The
+    # dispatcher records the dispatch attempt + outcome; the trainer is
+    # responsible for writing its own per-sweep rows via the same helper.
+    manifest_row: dict[str, Any] = {
+        "schema": "mps_research_signal_dispatcher_row.v1",
+        "instance_job_id": instance_job_id,
+        "lane_id": recipe.lane_id,
+        "recipe_name": recipe.name,
+        "lane_script": lane_script,
+        "platform": "local_mps",
+        "subprocess_rc": rc,
+        "evidence_grade": _CANONICAL_EVIDENCE_GRADE,
+        # The canonical helper auto-stamps these but we also set them here for
+        # belt-and-suspenders; both surfaces enforce the same contract.
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    try:
+        append_manifest_row_to_jsonl(
+            manifest_row,
+            output_path=REPO_ROOT / _LOCAL_MPS_MANIFEST_JSONL,
+        )
+    except Exception as exc:
+        raise SystemExit(
+            "[operator-authorize] FATAL: failed to write MPS research-signal "
+            f"manifest row after subprocess_rc={rc}; refusing success to avoid "
+            f"signal loss: {exc}"
+        ) from exc
+    return rc
+
+
+def _dispatch_local_cpu(
+    recipe: Recipe,
+    instance_job_id: str,
+    env_overrides: str,
+) -> int:
+    """Invoke a local macOS-CPU dispatch (NON-AUTHORITATIVE advisory).
+
+    Contract (mirror of :func:`_dispatch_local_mps` for the macOS-CPU advisory
+    path per CLAUDE.md Catalog #192):
+      1. Routes results through canonical
+         ``tac.optimization.macos_cpu_advisory_signal.append_manifest_row_to_jsonl``;
+         results land at
+         ``.omx/state/macos_cpu_advisory_signal_manifest.jsonl`` with
+         ``evidence_grade="macOS-CPU-advisory"`` + ``score_claim=False`` +
+         ``promotion_eligible=False`` (the canonical posterior is NEVER touched).
+      2. Detects whether the host is macOS ARM64 (warns if not — the
+         calibration anchor PR107 is M5 Max specific).
+      3. Emits a loud ``[LOCAL-CPU ADVISORY — NON-AUTHORITATIVE]`` banner.
+      4. Refuses recipes that declare ``score_claim: true`` etc.
+    """
+    # Layer 1: canonical helper imports successfully.
+    try:
+        from tac.optimization.macos_cpu_advisory_signal import (
+            EVIDENCE_GRADE as _CANONICAL_EVIDENCE_GRADE,
+        )
+        from tac.optimization.macos_cpu_advisory_signal import (
+            append_manifest_row_to_jsonl,
+            is_running_on_macos_arm64,
+        )
+    except ImportError as exc:
+        raise SystemExit(
+            "[operator-authorize] FATAL: cannot import canonical "
+            f"tac.optimization.macos_cpu_advisory_signal helper: {exc}"
+        ) from exc
+    assert _CANONICAL_EVIDENCE_GRADE == _LOCAL_CPU_EVIDENCE_GRADE, (
+        "evidence_grade drift between operator_authorize.py and canonical helper"
+    )
+
+    # Layer 2: recipe must not claim authority.
+    if recipe.raw.get("score_claim") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-CPU recipe cannot declare "
+            "`score_claim: true` — local macOS-CPU is permanently advisory."
+        )
+    if recipe.raw.get("promotion_eligible") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-CPU recipe cannot declare "
+            "`promotion_eligible: true` — promotion requires [contest-CPU "
+            "GHA Linux x86_64] evidence."
+        )
+    if recipe.raw.get("ready_for_exact_eval_dispatch") is True:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-CPU recipe cannot declare "
+            "`ready_for_exact_eval_dispatch: true`."
+        )
+
+    # Layer 3: host warning (not fatal — operators may legitimately run
+    # local_cpu dispatch on Linux x86_64 too, but the evidence grade then
+    # warrants different downstream treatment).
+    if not is_running_on_macos_arm64():
+        print(
+            "[operator-authorize] WARN: local-CPU dispatch not on macOS "
+            "ARM64; the PR107 calibration anchor is M5 Max specific. "
+            "Results still routed through macos_cpu_advisory_signal "
+            "manifest (non-authoritative).",
+            file=sys.stderr,
+        )
+
+    # Layer 4: loud non-authoritative banner.
+    print(_LOCAL_CPU_BANNER, file=sys.stderr, flush=True)
+
+    # Layer 5: env injection + dispatch.
+    lane_script = recipe.remote_driver
+    if not lane_script:
+        raise SystemExit(
+            "[operator-authorize] FATAL: local-CPU recipe needs 'remote_driver'"
+        )
+    if not (REPO_ROOT / lane_script).exists():
+        raise SystemExit(
+            f"[operator-authorize] FATAL: remote_driver missing at {lane_script}"
+        )
+    env = _build_local_research_signal_env(
+        recipe, env_overrides, force_mps_no_fallback=False
+    )
+    env["PACT_LOCAL_RESEARCH_SIGNAL_KIND"] = "local_cpu"
+    env["PACT_LOCAL_INSTANCE_JOB_ID"] = instance_job_id
+    # Force CPU at the trainer surface — explicit per CLAUDE.md "Forbidden
+    # device-selection defaults" (no silent fallback).
+    env.setdefault("PACT_INFLATE_DEVICE", "cpu")
+    cmd = ["bash", lane_script]
+    print(
+        f"[operator-authorize] dispatching local_cpu: {' '.join(cmd)} "
+        f"(instance_job_id={instance_job_id})"
+    )
+    rc = subprocess.call(cmd, cwd=str(REPO_ROOT), env=env)
+
+    # Layer 6: write the dispatch row through the canonical helper.
+    manifest_row: dict[str, Any] = {
+        "schema": "macos_cpu_advisory_signal_dispatcher_row.v1",
+        "instance_job_id": instance_job_id,
+        "lane_id": recipe.lane_id,
+        "recipe_name": recipe.name,
+        "lane_script": lane_script,
+        "platform": "local_cpu",
+        "subprocess_rc": rc,
+        "evidence_grade": _CANONICAL_EVIDENCE_GRADE,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "ranking_only": True,
+    }
+    try:
+        append_manifest_row_to_jsonl(
+            manifest_row,
+            output_path=REPO_ROOT / _LOCAL_CPU_MANIFEST_JSONL,
+        )
+    except Exception as exc:
+        raise SystemExit(
+            "[operator-authorize] FATAL: failed to write macOS-CPU advisory "
+            f"manifest row after subprocess_rc={rc}; refusing success to avoid "
+            f"signal loss: {exc}"
+        ) from exc
+    return rc
+
+
 def _dispatch_noop(recipe: Recipe, instance_job_id: str, env_overrides: str) -> int:
     """No-op dispatcher for recipes that handle their own action (e.g. git push).
 
@@ -1744,6 +2075,18 @@ def _native_dispatch_preflight(recipe: Recipe) -> None:
             raise SystemExit(
                 "[operator-authorize] FATAL: local remote_driver missing before "
                 f"claim: {lane_script}"
+            )
+    elif platform in {"local_mps", "local_cpu"}:
+        # Local research-signal dispatches need a remote_driver shell script;
+        # the dispatcher functions handle hardware-availability + canonical-
+        # helper-import gating at dispatch time (not here). Sister 2026-05-17
+        # (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517).
+        lane_script = recipe.remote_driver
+        if not lane_script or not (REPO_ROOT / str(lane_script)).exists():
+            raise SystemExit(
+                "[operator-authorize] FATAL: local research-signal "
+                "remote_driver missing before claim: "
+                f"{lane_script} (platform={platform})"
             )
 
 
@@ -1869,6 +2212,10 @@ def _run_dispatch(
         return _dispatch_vastai(recipe, instance_job_id, env_overrides)
     if platform == "local":
         return _dispatch_local(recipe, instance_job_id, env_overrides)
+    if platform == "local_mps":
+        return _dispatch_local_mps(recipe, instance_job_id, env_overrides)
+    if platform == "local_cpu":
+        return _dispatch_local_cpu(recipe, instance_job_id, env_overrides)
     if platform in {"none", "kaggle", "gha", "lightning", "azure"}:
         # These platforms have bespoke dispatch flows (gh release create,
         # kaggle kernels push, etc.) - for now, the legacy .sh shim handles
@@ -1883,7 +2230,7 @@ def _run_dispatch(
 def _platform_has_native_dispatch(platform: str) -> bool:
     """Return True when this tool will actually start provider/local work."""
 
-    return platform in {"modal", "vastai", "vast", "local"}
+    return platform in {"modal", "vastai", "vast", "local", "local_mps", "local_cpu"}
 
 
 def _sanitize_terminal_status(status: str) -> str:
@@ -1959,6 +2306,38 @@ def main(argv: list[str] | None = None) -> int:
             "full-run recipe GPU."
         ),
     )
+    # The "one-arg toggle" the operator asked for 2026-05-17 verbatim:
+    # *"Deploying to local MPS versus modal should be super easy to configure,
+    # like one arg in a func"*. CLI > recipe precedence; CLI override is
+    # written into recipe.raw["platform"] BEFORE _maybe_apply_auto_routing
+    # consumes the recipe, and a sister `cli_target_override` field is
+    # recorded for forensic clarity.
+    parser.add_argument(
+        "--target",
+        choices=[
+            "auto",
+            "modal",
+            "vastai",
+            "lightning",
+            "local",
+            "local-mps",
+            "local-cpu",
+            "kaggle",
+            "gha",
+            "azure",
+            "none",
+        ],
+        default=None,
+        help=(
+            "One-arg platform override. Wins over recipe `platform:`. "
+            "`local-mps` and `local-cpu` route through the canonical "
+            "MPS-research-signal / macOS-CPU-advisory manifests "
+            "(NON-AUTHORITATIVE per CLAUDE.md 'MPS auth eval is NOISE'). "
+            "Per operator directive 2026-05-17: *'Deploying to local MPS "
+            "versus modal should be super easy to configure, like one arg "
+            "in a func'*."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.list:
@@ -1969,6 +2348,27 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     recipe = _load_recipe(args.recipe)
+    # Apply --target CLI override BEFORE downstream consumers read recipe.platform.
+    # CLI > recipe precedence per operator directive 2026-05-17.
+    if args.target is not None:
+        # Map dash-form CLI values to underscore-form platform tokens.
+        target_to_platform = {
+            "local-mps": "local_mps",
+            "local-cpu": "local_cpu",
+        }
+        new_platform = target_to_platform.get(args.target, args.target)
+        original_platform = recipe.raw.get("platform")
+        recipe.raw["platform"] = new_platform
+        recipe.raw["cli_target_override"] = {
+            "from": str(original_platform) if original_platform is not None else "<unset>",
+            "to": new_platform,
+            "via": "operator_authorize.py --target",
+        }
+        print(
+            f"[operator-authorize] --target {args.target}: overriding "
+            f"recipe.platform from {original_platform!r} to {new_platform!r}",
+            file=sys.stderr,
+        )
     dispatch_refusal = _recipe_dispatch_refusal(recipe)
     direct_smoke_refusal = _smoke_only_direct_dispatch_refusal(
         recipe,

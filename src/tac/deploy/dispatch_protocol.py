@@ -22,16 +22,58 @@ from pathlib import Path
 from typing import Any
 
 __all__ = [
+    "LEGAL_DISPATCH_KINDS",
+    "LEGAL_NATIVE_PLATFORMS",
+    "LOCAL_RESEARCH_SIGNAL_PLATFORMS",
+    "TOOL_DISPATCH_LEGAL_GPU_TOKENS",
     "DispatchProtocolError",
     "DispatchProtocolReport",
     "DispatchProtocolTierReport",
     "evaluate_dispatch_protocol_complete",
+    "is_local_research_signal_dispatch",
+    "is_tool_dispatch",
     "require_dispatch_protocol_complete",
 ]
 
 DISPATCH_PROTOCOL_SCHEMA = "pact.dispatch_protocol_complete.v1"
 
-LEGAL_NATIVE_PLATFORMS = frozenset({"modal", "vastai", "vast", "local"})
+# Catalog #270 scope clarification (2026-05-17 per lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517):
+# The dispatch protocol's Tier 2/3 fields below are SCOPED to substrate trainers
+# (``experiments/train_substrate_*.py``). Tool dispatches (``tools/*.py``) are
+# categorically NOT subject to:
+#   - Catalog #172 ``--enable-autocast-fp16`` (FP16 autocast is a substrate trainer
+#     primitive; tool one-shot inference does not benefit and may be CPU-only).
+#   - Catalog #178 TF32 (CUDA matmul-only; inapplicable to CPU tool dispatches).
+#   - Catalog #179 ``--enable-torch-compile`` (substrate training primitive; one-shot
+#     tool inference does not benefit from compile overhead).
+#   - Catalog #226 ``gate_auth_eval_call`` (substrate auth-eval routing; tools that
+#     are not contest_auth_eval invocations do not produce contest-CUDA score claims).
+#   - Catalog #215 ``min_smoke_gpu`` GPU class (tool dispatches can be CPU-only).
+# Tool dispatches DO still get the GENUINELY hardware-correctness Tier 1/2 fields:
+#   - lane_id / dispatch_enabled / cost_band / driver-and-trainer existence (T1)
+#   - min_vram_gb / video_input_strategy / pyav_decode_strategy / target_modes /
+#     canary_status / Modal NVML env block (T2 — env hygiene is universal)
+#   - no_grad / eval-roundtrip discipline (T3 — when applicable)
+# Detection is via two surfaces (either short-circuits ``_is_tool_dispatch``):
+#   1. Explicit: ``dispatch_kind: tool`` in the recipe frontmatter.
+#   2. Implicit: trainer_path matches ``tools/*.py`` (not ``experiments/train_substrate_*.py``).
+# Sister of the runtime scope-clarification CLAUDE.md row under "Production-hardened
+# dispatch optimization protocol".
+LEGAL_DISPATCH_KINDS = frozenset({"substrate", "tool", "local_research_signal"})
+TOOL_DISPATCH_LEGAL_GPU_TOKENS = frozenset({"cpu", "CPU", "Cpu"})
+# Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + operator directive
+# 2026-05-17 ("Deploying to local MPS versus modal should be super easy to
+# configure, like one arg in a func"): ``local_mps`` and ``local_cpu`` are
+# first-class dispatch targets for non-authoritative research-signal generation.
+# They route through ``mps_research_signal`` and ``macos_cpu_advisory_signal``
+# canonical manifests (Catalog #1 + #192 sister discipline). The
+# ``local_research_signal`` dispatch_kind tells the protocol gates to skip
+# substrate-only Tier 2/3 checks (sister of Catalog #270 scope clarification
+# for tool dispatches; same precedent applied to a different kind).
+LEGAL_NATIVE_PLATFORMS = frozenset(
+    {"modal", "vastai", "vast", "local", "local_mps", "local_cpu"}
+)
+LOCAL_RESEARCH_SIGNAL_PLATFORMS = frozenset({"local_mps", "local_cpu"})
 LEGAL_VIDEO_INPUT_STRATEGIES = frozenset(
     {"per_dispatch_local_copy", "readonly_mmap", "shared_volume_no_contention_expected"}
 )
@@ -219,6 +261,90 @@ def _tier(name: str, blockers: Sequence[str]) -> DispatchProtocolTierReport:
     )
 
 
+def _is_tool_dispatch(
+    raw_recipe: Mapping[str, Any],
+    *,
+    trainer_path: Path | None,
+    repo_root: Path,
+) -> bool:
+    """Return True when this dispatch is a TOOL invocation (not a substrate trainer).
+
+    Two acceptance surfaces (either short-circuits to True):
+      1. Explicit: ``dispatch_kind: tool`` in the recipe frontmatter.
+      2. Implicit: trainer path is under ``tools/`` AND not under
+         ``experiments/train_substrate_*.py``.
+
+    Tool dispatches are categorically NOT subject to substrate-trainer-only
+    Tier 2/3 fields (Catalogs #172/#178/#179/#226/#215-CPU). See the
+    ``LEGAL_DISPATCH_KINDS`` docstring above.
+
+    Per CLAUDE.md "Production-hardened dispatch optimization protocol"
+    Catalog #270 scope clarification (2026-05-17).
+    """
+
+    explicit_kind = str(raw_recipe.get("dispatch_kind") or "").strip().lower()
+    if explicit_kind == "tool":
+        return True
+    if explicit_kind == "substrate":
+        return False
+    # Implicit detection by trainer path.
+    if trainer_path is None:
+        return False
+    try:
+        rel = trainer_path.resolve().relative_to(repo_root.resolve())
+    except (OSError, ValueError):
+        return False
+    posix = rel.as_posix()
+    # Substrate trainer surface is canonical: ``experiments/train_substrate_*.py``.
+    if posix.startswith("experiments/train_substrate_") and posix.endswith(".py"):
+        return False
+    # Tool dispatch surface is canonical: ``tools/*.py``.
+    return posix.startswith("tools/") and posix.endswith(".py")
+
+
+# Public alias for ``_is_tool_dispatch`` per the module's ``__all__`` contract.
+# Test callers should use ``is_tool_dispatch`` directly; runtime callers in this
+# module use the private name to keep the call surface small and intentional.
+is_tool_dispatch = _is_tool_dispatch
+
+
+def _is_local_research_signal_dispatch(
+    raw_recipe: Mapping[str, Any],
+) -> bool:
+    """Return True when this dispatch is a LOCAL RESEARCH-SIGNAL invocation.
+
+    Two acceptance surfaces (either short-circuits to True):
+      1. Explicit: ``dispatch_kind: local_research_signal`` in the recipe.
+      2. Implicit: ``platform`` ∈ ``LOCAL_RESEARCH_SIGNAL_PLATFORMS``
+         (``local_mps`` or ``local_cpu``).
+
+    Local-research-signal dispatches are categorically NOT subject to
+    substrate-trainer-only Tier 2/3 fields (sister of Catalog #270 scope
+    clarification for tool dispatches; same precedent applied to a different
+    dispatch_kind). They route through the canonical
+    ``tac.optimization.mps_research_signal`` (for ``local_mps``) or
+    ``tac.optimization.macos_cpu_advisory_signal`` (for ``local_cpu``) helpers
+    so the canonical posterior is structurally protected from non-authoritative
+    results.
+
+    Per CLAUDE.md "MPS auth eval is NOISE" non-negotiable + Catalog #1 +
+    Catalog #192 + operator directive 2026-05-17 ("Deploying to local MPS
+    versus modal should be super easy to configure, like one arg in a func").
+    """
+
+    explicit_kind = str(raw_recipe.get("dispatch_kind") or "").strip().lower()
+    if explicit_kind == "local_research_signal":
+        return True
+    if explicit_kind in {"substrate", "tool"}:
+        return False
+    platform = str(raw_recipe.get("platform") or "").strip().lower()
+    return platform in LOCAL_RESEARCH_SIGNAL_PLATFORMS
+
+
+# Public alias mirroring ``is_tool_dispatch``.
+is_local_research_signal_dispatch = _is_local_research_signal_dispatch
+
+
 def _tier1_engineering(
     raw_recipe: Mapping[str, Any],
     *,
@@ -238,10 +364,17 @@ def _tier1_engineering(
         blockers.append("lane_id_missing_or_noncanonical")
     if platform not in LEGAL_NATIVE_PLATFORMS:
         blockers.append(f"native_platform_not_supported:{platform or '<missing>'}")
-    cost_band = raw_recipe.get("cost_band", {}) or {}
-    epochs = _as_int(cost_band.get("epochs") if isinstance(cost_band, Mapping) else None)
-    if epochs is None or epochs <= 0:
-        blockers.append("cost_band_epochs_missing_or_nonpositive")
+    # Local research-signal dispatches (local_mps / local_cpu) need NOT declare
+    # cost_band.epochs because they run on the operator's machine at $0. The
+    # remote_driver requirement is also relaxed because the dispatch is a
+    # direct shell-out, not a provider script. Sister exemption to Catalog
+    # #270's tool-dispatch scope-fix; same precedent applied here.
+    is_local_research_signal = platform in LOCAL_RESEARCH_SIGNAL_PLATFORMS
+    if not is_local_research_signal:
+        cost_band = raw_recipe.get("cost_band", {}) or {}
+        epochs = _as_int(cost_band.get("epochs") if isinstance(cost_band, Mapping) else None)
+        if epochs is None or epochs <= 0:
+            blockers.append("cost_band_epochs_missing_or_nonpositive")
     if remote_driver is None or not remote_driver.is_file():
         blockers.append("remote_driver_missing")
     if trainer is None or not trainer.is_file():
@@ -255,8 +388,18 @@ def _tier2_hardware_correctness(
     platform: str,
     repo_root: Path,
     remote_driver: Path | None,
+    is_tool: bool = False,
 ) -> DispatchProtocolTierReport:
     blockers: list[str] = []
+    # Local research-signal dispatches (local_mps / local_cpu) run on the
+    # operator's machine; the substrate-only hardware fields (min_vram_gb,
+    # video_input_strategy, pyav_decode_strategy, target_modes, canary_status,
+    # min_smoke_gpu, NVML env block) do not apply because the dispatch never
+    # touches a paid provider. Sister of the Catalog #270 scope clarification
+    # for tool dispatches.
+    is_local_research_signal = platform in LOCAL_RESEARCH_SIGNAL_PLATFORMS
+    if is_local_research_signal:
+        return _tier("tier2_hardware_correctness", ())
     min_vram = _as_int(raw_recipe.get("min_vram_gb"))
     if min_vram is None or min_vram < 1:
         blockers.append("catalog_170_min_vram_gb_missing")
@@ -277,8 +420,16 @@ def _tier2_hardware_correctness(
         blockers.append("catalog_173_canary_status_missing_or_illegal")
     if canary == "post_canary_dependent" and not raw_recipe.get("canary_dependency"):
         blockers.append("catalog_173_canary_dependency_missing")
-    min_smoke_gpu = str(raw_recipe.get("min_smoke_gpu") or "").strip()
-    if min_smoke_gpu not in LEGAL_GPU_ORDER or min_smoke_gpu == "cpu":
+    min_smoke_gpu_raw = str(raw_recipe.get("min_smoke_gpu") or "").strip()
+    # Catalog #270 scope fix (2026-05-17): tool dispatches MAY declare ``CPU``
+    # (case-insensitive) for ``min_smoke_gpu`` because they are not GPU-bound.
+    # Substrate trainers still get the GPU-class enforcement so a CPU smoke
+    # cannot stand in for a CUDA-required substrate dispatch.
+    min_smoke_gpu_is_cpu = min_smoke_gpu_raw in TOOL_DISPATCH_LEGAL_GPU_TOKENS
+    if is_tool and min_smoke_gpu_is_cpu:
+        # Tool CPU dispatch: accept; do not enforce GPU class.
+        pass
+    elif min_smoke_gpu_raw not in LEGAL_GPU_ORDER or min_smoke_gpu_raw == "cpu":
         blockers.append("catalog_215_min_smoke_gpu_missing_or_illegal")
     cost_band = raw_recipe.get("cost_band", {}) or {}
     full_gpu = ""
@@ -286,13 +437,17 @@ def _tier2_hardware_correctness(
         full_gpu = str(cost_band.get("gpu_key") or "").strip()
     if not full_gpu:
         full_gpu = _resolve_env_fallback(raw_recipe.get("gpu"))
+    # Tool CPU dispatch: also accept ``CPU`` as the full ``cost_band.gpu_key`` /
+    # ``gpu`` to short-circuit the substrate-only GPU-ordering check.
+    full_gpu_is_cpu = full_gpu in TOOL_DISPATCH_LEGAL_GPU_TOKENS
     if (
-        full_gpu in LEGAL_GPU_ORDER
-        and min_smoke_gpu in LEGAL_GPU_ORDER
-        and LEGAL_GPU_ORDER[full_gpu] < LEGAL_GPU_ORDER[min_smoke_gpu]
+        not (is_tool and (full_gpu_is_cpu or min_smoke_gpu_is_cpu))
+        and full_gpu in LEGAL_GPU_ORDER
+        and min_smoke_gpu_raw in LEGAL_GPU_ORDER
+        and LEGAL_GPU_ORDER[full_gpu] < LEGAL_GPU_ORDER[min_smoke_gpu_raw]
     ):
         blockers.append(
-            f"cost_band_gpu_below_min_smoke_gpu:{full_gpu}<{min_smoke_gpu}"
+            f"cost_band_gpu_below_min_smoke_gpu:{full_gpu}<{min_smoke_gpu_raw}"
         )
     if platform == "modal":
         text = _read_text(remote_driver)
@@ -315,49 +470,61 @@ def _tier3_substrate_correctness(
     raw_recipe: Mapping[str, Any],
     *,
     trainer: Path | None,
+    is_tool: bool = False,
 ) -> DispatchProtocolTierReport:
     blockers: list[str] = []
     text = _read_text(trainer)
     if not text:
         return _tier("tier3_substrate_correctness", ("trainer_unreadable",))
-    if "--enable-autocast-fp16" not in text and "AUTOCAST_FP16_WAIVED:" not in text:
-        blockers.append("catalog_172_autocast_fp16_missing_or_unwaived")
-    if (
-        "allow_tf32" not in text
-        and "--enable-tf32" not in text
-        and "TF32_WAIVED:" not in text
-    ):
-        blockers.append("catalog_178_tf32_missing_or_unwaived")
-    if (
-        "--enable-torch-compile" not in text
-        and "torch.compile" not in text
-        and "TORCH_COMPILE_WAIVED:" not in text
-    ):
-        blockers.append("catalog_179_torch_compile_missing_or_unwaived")
+    # Catalog #270 scope fix (2026-05-17): tool dispatches are categorically
+    # NOT subject to substrate-trainer Tier 3 fields (Catalogs #172/#178/#179/
+    # #226). These checks enforce substrate training primitives (autocast,
+    # TF32, torch.compile, canonical auth-eval routing) that do not apply to
+    # one-shot tool inference. Tool dispatches still get the no_grad/
+    # inference_mode check because eval-time memory hygiene IS universally
+    # applicable when torch is in use. If a tool doesn't use torch at all the
+    # no_grad check is also vacuous; we keep it advisory-only via the existing
+    # NO_GRAD_WAIVED token mechanism.
+    if not is_tool:
+        if "--enable-autocast-fp16" not in text and "AUTOCAST_FP16_WAIVED:" not in text:
+            blockers.append("catalog_172_autocast_fp16_missing_or_unwaived")
+        if (
+            "allow_tf32" not in text
+            and "--enable-tf32" not in text
+            and "TF32_WAIVED:" not in text
+        ):
+            blockers.append("catalog_178_tf32_missing_or_unwaived")
+        if (
+            "--enable-torch-compile" not in text
+            and "torch.compile" not in text
+            and "TORCH_COMPILE_WAIVED:" not in text
+        ):
+            blockers.append("catalog_179_torch_compile_missing_or_unwaived")
     if (
         "torch.no_grad" not in text
         and "torch.inference_mode" not in text
         and "NO_GRAD_WAIVED:" not in text
     ):
         blockers.append("catalog_180_no_grad_eval_missing_or_unwaived")
-    targets = {str(item) for item in _as_list(raw_recipe.get("target_modes"))}
-    research_only = _as_bool(raw_recipe.get("research_only"), default=False)
-    promotion_surface = bool(
-        targets
-        & {
-            "contest_one_video_replay",
-            "contest_generalized",
-            "production_generalized",
-            "production_edge_adaptive",
-        }
-    )
-    if (
-        promotion_surface
-        and not research_only
-        and "gate_auth_eval_call" not in text
-        and "auth_eval_renderer" not in text
-    ):
-        blockers.append("catalog_226_auth_eval_canonical_helper_missing")
+    if not is_tool:
+        targets = {str(item) for item in _as_list(raw_recipe.get("target_modes"))}
+        research_only = _as_bool(raw_recipe.get("research_only"), default=False)
+        promotion_surface = bool(
+            targets
+            & {
+                "contest_one_video_replay",
+                "contest_generalized",
+                "production_generalized",
+                "production_edge_adaptive",
+            }
+        )
+        if (
+            promotion_surface
+            and not research_only
+            and "gate_auth_eval_call" not in text
+            and "auth_eval_renderer" not in text
+        ):
+            blockers.append("catalog_226_auth_eval_canonical_helper_missing")
     return _tier("tier3_substrate_correctness", blockers)
 
 
@@ -394,6 +561,19 @@ def evaluate_dispatch_protocol_complete(
     platform = str(raw_recipe.get("platform") or "").strip().lower()
     driver = _remote_driver_path(raw_recipe, root, remote_driver_path)
     trainer = _trainer_path(raw_recipe, root, trainer_path)
+    # Catalog #270 scope clarification (2026-05-17): substrate-trainer Tier 2/3
+    # fields are skipped for ``dispatch_kind: tool`` recipes (or ``tools/*.py``
+    # trainer paths) per ``_is_tool_dispatch`` detection. See module docstring.
+    # Sister 2026-05-17 (lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517):
+    # ``dispatch_kind: local_research_signal`` (or ``platform: local_mps``/
+    # ``local_cpu``) gets the SAME skip-set per the same precedent — these are
+    # non-substrate-trainer dispatches that route through the canonical
+    # mps_research_signal / macos_cpu_advisory_signal manifests instead of
+    # contest auth_eval. The ``is_tool`` variable below carries the BROADER
+    # semantic "non-substrate dispatch — skip substrate-only checks".
+    is_tool = _is_tool_dispatch(raw_recipe, trainer_path=trainer, repo_root=root)
+    is_local_research_signal = _is_local_research_signal_dispatch(raw_recipe)
+    skip_substrate_only_checks = is_tool or is_local_research_signal
     tiers = (
         _tier1_engineering(
             raw_recipe,
@@ -406,8 +586,13 @@ def evaluate_dispatch_protocol_complete(
             platform=platform,
             repo_root=root,
             remote_driver=driver,
+            is_tool=skip_substrate_only_checks,
         ),
-        _tier3_substrate_correctness(raw_recipe, trainer=trainer),
+        _tier3_substrate_correctness(
+            raw_recipe,
+            trainer=trainer,
+            is_tool=skip_substrate_only_checks,
+        ),
     )
     return DispatchProtocolReport(
         recipe_name=name,
