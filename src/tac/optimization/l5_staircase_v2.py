@@ -362,6 +362,26 @@ _TT5L_LIGHTNING_PAIRED_AXIS_STATIC_SOURCE_PATHS = (
     "src/tac/substrates/time_traveler_l5_autonomy",
     "submissions/robust_current",
 )
+_L5_V2_ARCHITECTURE_LOCK_CHECK_BLOCKERS = (
+    ("all_gate_evidence_valid", "requires_all_l5_v2_gate_evidence_valid"),
+    ("dykstra_score_axis_sanity_valid", "requires_tt5l_dykstra_score_axis_sanity"),
+    (
+        "move_level_feasibility_artifact_valid",
+        "requires_tt5l_move_level_feasibility_artifact",
+    ),
+    ("sideinfo_gate_evidence_valid", "requires_tt5l_sideinfo_gate_evidence"),
+    ("probe_gate_evidence_valid", "requires_c1_z5_tt5l_probe_gate_evidence"),
+    ("paired_axis_plan_evidence_valid", "requires_paired_cpu_cuda_axis_plan"),
+    (
+        "sideinfo_effect_curve_artifact_valid",
+        "requires_paired_cpu_cuda_sideinfo_effect_curve",
+    ),
+    (
+        "first_anchor_timing_smoke_artifact_valid",
+        "requires_tt5l_first_anchor_timing_smoke_artifact",
+    ),
+    ("anchor_pair_evidence_valid", "requires_exact_or_diagnostic_anchor_pair"),
+)
 
 
 @dataclass(frozen=True)
@@ -2674,6 +2694,37 @@ def _gate_payload_by_id(readiness: Mapping[str, Any]) -> dict[str, Mapping[str, 
 def _gate_evidence_valid(readiness: Mapping[str, Any], gate_id: str) -> bool:
     gate = _gate_payload_by_id(readiness).get(gate_id)
     return bool(gate and gate.get("evidence_valid") is True)
+
+
+def _l5_v2_architecture_lock_authority(
+    required_checks: Mapping[str, object],
+) -> dict[str, Any]:
+    """Return the single TT5L architecture-lock predicate.
+
+    This is the only place that translates custody/probe/effect-curve checks
+    into the architecture-lock boolean. Operator-facing readiness surfaces and
+    the architecture-lock packet must consume this payload instead of
+    reconstructing the threshold independently.
+    """
+
+    checks = {
+        check_id: required_checks.get(check_id) is True
+        for check_id, _ in _L5_V2_ARCHITECTURE_LOCK_CHECK_BLOCKERS
+    }
+    blockers = [
+        blocker
+        for check_id, blocker in _L5_V2_ARCHITECTURE_LOCK_CHECK_BLOCKERS
+        if checks[check_id] is not True
+    ]
+    return {
+        "schema": "l5_v2_architecture_lock_authority_v1",
+        "required_checks": checks,
+        "architecture_lock_blockers": blockers,
+        "architecture_lock_allowed": not blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _tt5l_dykstra_feasibility_status(*, repo_root: Path) -> dict[str, Any]:
@@ -5883,13 +5934,21 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         and probe_valid
         and paired_axis_plan_valid
     )
+    architecture_lock_authority = _l5_v2_architecture_lock_authority(
+        {
+            "all_gate_evidence_valid": readiness.get("all_gate_evidence_valid") is True,
+            "dykstra_score_axis_sanity_valid": dykstra_valid,
+            "move_level_feasibility_artifact_valid": move_level_valid,
+            "sideinfo_gate_evidence_valid": sideinfo_valid,
+            "probe_gate_evidence_valid": probe_valid,
+            "paired_axis_plan_evidence_valid": paired_axis_plan_valid,
+            "sideinfo_effect_curve_artifact_valid": sideinfo_effect_curve_valid,
+            "first_anchor_timing_smoke_artifact_valid": timing_smoke_valid,
+            "anchor_pair_evidence_valid": anchor_pair_valid,
+        }
+    )
     architecture_lock_allowed = (
-        sideinfo_effect_curve_allowed
-        and sideinfo_effect_curve_valid
-        and probe_valid
-        and paired_axis_plan_valid
-        and timing_smoke_valid
-        and anchor_pair_valid
+        architecture_lock_authority["architecture_lock_allowed"] is True
     )
 
     blockers = [
@@ -6520,6 +6579,13 @@ def _l5_v2_tt5l_campaign_readiness_from_dispatch_readiness(
         "first_anchor_timing_smoke_artifact_valid": timing_smoke_valid,
         "first_anchor_timing_smoke_status": timing_smoke_status,
         "first_anchor_timing_smoke_allowed": first_anchor_timing_smoke_allowed,
+        "architecture_lock_authority": architecture_lock_authority,
+        "architecture_lock_required_checks": architecture_lock_authority[
+            "required_checks"
+        ],
+        "architecture_lock_blockers": architecture_lock_authority[
+            "architecture_lock_blockers"
+        ],
         "architecture_lock_allowed": architecture_lock_allowed,
         "proof_tool_path": TT5L_CONTEST_SIDEINFO_PROOF_TOOL_PATH,
         "proof_tool_exists": proof_tool_exists,
@@ -8105,52 +8171,46 @@ def l5_v2_architecture_lock_packet(
         repo_root=resolved_repo_root,
     )
     tt5l = readiness["tt5l_campaign_readiness"]
-    required_checks = {
-        "all_gate_evidence_valid": readiness.get("all_gate_evidence_valid") is True,
-        "dykstra_score_axis_sanity_valid": (
-            tt5l.get("dykstra_score_axis_sanity_valid") is True
-        ),
-        "move_level_feasibility_artifact_valid": (
-            tt5l.get("move_level_feasibility_artifact_valid") is True
-        ),
-        "sideinfo_gate_evidence_valid": (
-            tt5l.get("sideinfo_gate_evidence_valid") is True
-        ),
-        "probe_gate_evidence_valid": tt5l.get("probe_gate_evidence_valid") is True,
-        "paired_axis_plan_evidence_valid": (
-            tt5l.get("paired_axis_plan_evidence_valid") is True
-        ),
-        "sideinfo_effect_curve_artifact_valid": (
-            tt5l.get("sideinfo_effect_curve_artifact_valid") is True
-        ),
-        "first_anchor_timing_smoke_artifact_valid": (
-            tt5l.get("first_anchor_timing_smoke_artifact_valid") is True
-        ),
-        "anchor_pair_evidence_valid": tt5l.get("anchor_pair_evidence_valid") is True,
-    }
-    blocker_by_check = {
-        "all_gate_evidence_valid": "requires_all_l5_v2_gate_evidence_valid",
-        "dykstra_score_axis_sanity_valid": "requires_tt5l_dykstra_score_axis_sanity",
-        "move_level_feasibility_artifact_valid": (
-            "requires_tt5l_move_level_feasibility_artifact"
-        ),
-        "sideinfo_gate_evidence_valid": "requires_tt5l_sideinfo_gate_evidence",
-        "probe_gate_evidence_valid": "requires_c1_z5_tt5l_probe_gate_evidence",
-        "paired_axis_plan_evidence_valid": "requires_paired_cpu_cuda_axis_plan",
-        "sideinfo_effect_curve_artifact_valid": (
-            "requires_paired_cpu_cuda_sideinfo_effect_curve"
-        ),
-        "first_anchor_timing_smoke_artifact_valid": (
-            "requires_tt5l_first_anchor_timing_smoke_artifact"
-        ),
-        "anchor_pair_evidence_valid": "requires_exact_or_diagnostic_anchor_pair",
-    }
+    authority = tt5l.get("architecture_lock_authority")
+    if not isinstance(authority, Mapping):
+        authority = _l5_v2_architecture_lock_authority(
+            {
+                "all_gate_evidence_valid": (
+                    readiness.get("all_gate_evidence_valid") is True
+                ),
+                "dykstra_score_axis_sanity_valid": (
+                    tt5l.get("dykstra_score_axis_sanity_valid") is True
+                ),
+                "move_level_feasibility_artifact_valid": (
+                    tt5l.get("move_level_feasibility_artifact_valid") is True
+                ),
+                "sideinfo_gate_evidence_valid": (
+                    tt5l.get("sideinfo_gate_evidence_valid") is True
+                ),
+                "probe_gate_evidence_valid": (
+                    tt5l.get("probe_gate_evidence_valid") is True
+                ),
+                "paired_axis_plan_evidence_valid": (
+                    tt5l.get("paired_axis_plan_evidence_valid") is True
+                ),
+                "sideinfo_effect_curve_artifact_valid": (
+                    tt5l.get("sideinfo_effect_curve_artifact_valid") is True
+                ),
+                "first_anchor_timing_smoke_artifact_valid": (
+                    tt5l.get("first_anchor_timing_smoke_artifact_valid") is True
+                ),
+                "anchor_pair_evidence_valid": (
+                    tt5l.get("anchor_pair_evidence_valid") is True
+                ),
+            }
+        )
+    required_checks = dict(authority.get("required_checks", {}))
     architecture_lock_blockers = [
-        blocker_by_check[check_id]
-        for check_id, passed in required_checks.items()
-        if passed is not True
+        str(blocker)
+        for blocker in authority.get("architecture_lock_blockers", [])
+        if str(blocker)
     ]
-    architecture_lock_allowed = not architecture_lock_blockers
+    architecture_lock_allowed = authority.get("architecture_lock_allowed") is True
     return {
         "schema": L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA,
         "subject_id": SUBJECT_ID,
@@ -8168,6 +8228,7 @@ def l5_v2_architecture_lock_packet(
         "readiness_architecture_lock_allowed": (
             tt5l.get("architecture_lock_allowed") is True
         ),
+        "architecture_lock_authority": dict(authority),
         "required_checks": required_checks,
         "architecture_lock_blockers": architecture_lock_blockers,
         "next_non_pr106_l5_action": tt5l.get("next_non_pr106_l5_action", {}),
@@ -8195,6 +8256,9 @@ def render_l5_v2_architecture_lock_packet_markdown(
         next_action = {}
     if not isinstance(tt5l, Mapping):
         tt5l = {}
+    authority = packet.get("architecture_lock_authority")
+    if not isinstance(authority, Mapping):
+        authority = {}
     prediction_band_status = packet.get("prediction_band_status")
     if not isinstance(prediction_band_status, Mapping):
         prediction_band_status = {}
@@ -8281,6 +8345,7 @@ def render_l5_v2_architecture_lock_packet_markdown(
             "- readiness_architecture_lock_allowed: "
             f"`{packet.get('readiness_architecture_lock_allowed')}`"
         ),
+        f"- authority_schema: `{authority.get('schema', 'missing')}`",
         f"- next_action: `{next_action.get('action_id', 'missing')}`",
         "- score_claim: `false`",
         "- promotion_eligible: `false`",

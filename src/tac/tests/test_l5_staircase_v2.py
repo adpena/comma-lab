@@ -5039,6 +5039,15 @@ def test_l5_v2_architecture_lock_packet_requires_timing_and_anchor(
     assert packet["schema"] == l5_v2.L5_V2_ARCHITECTURE_LOCK_PACKET_SCHEMA
     assert packet["architecture_lock_allowed"] is False
     assert packet["readiness_architecture_lock_allowed"] is False
+    assert packet["architecture_lock_authority"] == packet[
+        "tt5l_campaign_readiness"
+    ]["architecture_lock_authority"]
+    assert packet["required_checks"] == packet["tt5l_campaign_readiness"][
+        "architecture_lock_required_checks"
+    ]
+    assert packet["architecture_lock_blockers"] == packet[
+        "tt5l_campaign_readiness"
+    ]["architecture_lock_blockers"]
     assert packet["required_checks"]["sideinfo_effect_curve_artifact_valid"] is True
     assert packet["required_checks"]["first_anchor_timing_smoke_artifact_valid"] is False
     assert packet["required_checks"]["anchor_pair_evidence_valid"] is False
@@ -5066,6 +5075,15 @@ def test_l5_v2_architecture_lock_packet_allows_only_after_full_custody(
     report = render_l5_v2_architecture_lock_packet_markdown(packet)
 
     assert packet["architecture_lock_allowed"] is True
+    assert packet["architecture_lock_allowed"] is packet[
+        "tt5l_campaign_readiness"
+    ]["architecture_lock_allowed"]
+    assert packet["architecture_lock_authority"] == packet[
+        "tt5l_campaign_readiness"
+    ]["architecture_lock_authority"]
+    assert packet["required_checks"] == packet["tt5l_campaign_readiness"][
+        "architecture_lock_required_checks"
+    ]
     assert all(packet["required_checks"].values())
     assert packet["architecture_lock_blockers"] == []
     assert "architecture_lock_allowed: `True`" in report
@@ -5087,6 +5105,7 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "campaign_id",
         "lane_id",
         "architecture_lock_allowed",
+        "architecture_lock_authority",
         "architecture_lock_blockers",
         "required_checks",
         "next_non_pr106_l5_action",
@@ -5111,6 +5130,10 @@ def test_l5_v2_architecture_lock_packet_artifact_tracks_live_payload() -> None:
         "materialized_tt5l_paired_work_unit_status",
         "lightning_route_unblock_packet_status",
         "lightning_doctor_plan_status",
+        "architecture_lock_authority",
+        "architecture_lock_required_checks",
+        "architecture_lock_blockers",
+        "architecture_lock_allowed",
         "blockers",
     ):
         assert artifact_tt5l[field] == live_tt5l[field]
