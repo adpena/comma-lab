@@ -36894,11 +36894,11 @@
       "id": "lane_tac_theoretical_floor_estimator_plateau_vs_saturation_design_20260518",
       "name": "tac.theoretical_floor_estimator design + plateau-vs-saturation disambiguator",
       "phase": 4.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/tac_theoretical_floor_estimator_design_memo_plateau_vs_saturation_disambiguator_20260518.md"
         },
         "real_archive_empirical": {
           "status": false,
@@ -36921,8 +36921,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/tac_theoretical_floor_estimator_design_memo_plateau_vs_saturation_disambiguator_20260518.md"
         },
         "deploy_runbook": {
           "status": false,
@@ -36971,6 +36971,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_codex_null_space_exploiter_20260518",
+      "name": "Master-gradient null-space exploiter canonical helper",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/null_space_exploiter/core.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -36980,5 +37021,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T16:37:35Z"
+  "updated_at": "2026-05-18T16:47:33Z"
 }
