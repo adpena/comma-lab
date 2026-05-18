@@ -32936,6 +32936,2642 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_canonical_helper_plus_autopilot_wirein_20260517",
+      "name": "Master gradient canonical 4-layer helper + cathedral autopilot Phase-7 lens wire-in",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op_routable_9_pr101_magic_codec_decoder_fec6_20260517",
+      "name": "Op-routable #9: PR101 + magic codec on decoder.bin + fec6 selector overlay (predicted -0.003 to -0.005 CPU)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "INDEPENDENT verdict in .omx/state/probe_outcomes.jsonl op_routable_9_pr101_magic_codec_decoder_fec6_byte_floor_probe_20260517; reactivation_criteria: new entropy primitive in tac.packet_compiler.* with empirical byte savings on uint8 weight distributions; lane_class=research_substrate; research_only=true; lane_state=archived"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_op_routable_9_pr101_magic_codec_decoder_fec6_landed_20260517 (DEFERRED-pending-new-primitive; empirical decoder.bin byte-floor probe falsified -0.003 to -0.005 prediction; 0 to +237 byte delta)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op_routable_1_master_gradient_extractor_20260517",
+      "name": "Op-routable #1: Autograd-based master-gradient extractor for fec6 archive",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/extract_master_gradient.py + src/tac/master_gradient.py canonical helper + 12/12 dedicated tests pass; verified end-to-end on real fec6 archive (sha=f174192ae...) producing 2.14MB (178417, 3) float32 sidecar in 11.5s on macOS CPU"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #152 WAVE-1 (Modal-IGNORED required-input) clean after TIER_1_EXTRA_MOUNT_PATHS added; Catalog #167/#220/#244/#270/#290/#294/#296/#305 all 0 violations for new files; 12/12 dedicated tests pass post-fix"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/operator_authorize_master_gradient_fec6_modal_cpu.sh + .omx/operator_authorize_recipes/master_gradient_fec6_modal_cpu_dispatch.yaml; bash -n syntax-clean; Catalog #244 NVML env block present; Catalog #167 smoke-before-full pattern declared; Catalog #152 required-input validation; ~$1 envelope p50"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_op_routable_5_quantizr_5_stage_staircase_canonical_20260517",
+      "name": "Op-routable #5: Quantizr 5-stage staircase canonical helper + similar-techniques audit",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/training_curriculum/quantizr_5_stage_staircase.py + src/tac/tests/test_quantizr_5_stage_staircase.py (43/43 pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_op_routable_5_quantizr_staircase_plus_similar_techniques_audit_landed_20260517.md + .omx/research/canonical_helper_pattern_audit_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ultimate_stacking_research_eureka_moments_20260517",
+      "name": "Ultimate stacking research + eureka moments + shower thoughts (/bin/zsh stacking-primitives audit; 15 existing + 12 NEW eureka primitives ranked)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_comprehensive_codebase_distillation_synthesis_20260517",
+      "name": "Comprehensive codebase audit + distillation + recursive refinement of CPU frontier campaign plan",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/comprehensive_codebase_distillation_synthesis_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_comprehensive_codebase_distillation_synthesis_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_grand_council_strategic_symposium_50_dollar_budget_20260517",
+      "name": "T3 Grand Council strategic symposium: SHARPEST 5-dispatch sequence under $50 Modal budget toward Blahut-Arimoto floor [0.10, 0.15]",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_grand_council_t3_strategic_symposium_50_dollar_budget_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517",
+      "name": "Catalog #270 scope fix: tool vs substrate dispatch",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "dispatch_protocol scope fix: _is_tool_dispatch helper + tier2/tier3 substrate-only skip + dispatch_kind:tool recipe field"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/deploy/dispatch_protocol.py tier scope; sister Catalog #270 strict gate already wired"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_catalog_270_scope_fix_tool_vs_substrate_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_dp1_plus_fec6_dual_stacking_build_20260517",
+      "name": "DP1+fec6 dual-path stacking build (composition + training-time prior)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "PATH 1 build tool tools/build_dp1_plus_fec6_composition_packet.py + 32 tests pass; PATH 2 scaffold experiments/train_substrate_pr101_with_dp1_prior_regularizer.py + 19 tests pass; composed archive sha256=507d2a000ecf5a220e9b1ab765f75e39015cfb7b2af00606be3cb0758b8eb855"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_dp1_plus_fec6_dual_stacking_build_landed_20260517.md + .omx/research/dp1_dual_stacking_design_20260517.md + .omx/tmp/dp1_dual_stacking_premise_verifier.txt"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_producer_to_cathedral_autopilot_wire_in_20260517",
+      "name": "Producer-to-cathedral-autopilot wire-in (orphan-signal-audit 5/15)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "5 wire-in functions added in tools/cathedral_autopilot_autonomous_loop.py + 45 tests in src/tac/tests/test_cathedral_autopilot_orphan_signal_wire_in.py [empirical:landed 2026-05-17]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_cathedral_autopilot_orphan_signal_wire_in_landed_20260517.md + .omx/research/orphan_signal_audit_20260517_postmortem.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_one_arg_local_mps_vs_modal_dispatch_switch_20260517",
+      "name": "One-arg local-MPS vs Modal dispatch switch",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/tests/test_one_arg_local_mps_vs_modal_dispatch_switch.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/preflight.py"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/one_arg_local_mps_vs_modal_dispatch_switch_design_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_fec6_stacking_wave_5_grammar_extensions_20260517",
+      "name": "fec6 stacking wave: 5 grammar extensions composing existing tac primitives",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Phase 1 scaffold: 3 canonical modules (tac.fec6_format0d_extra, tac.fec6_haar_residual, tac.fec6_selector_discovery_sensitivity_weighted) + 3 build tools + 2 dispatch-ready recipes. 52 dedicated tests pass. Ext 1 + Ext 2 DEFER-pending-research."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/fec6_plus_format0d_extra_design_20260517.md + sister design memos for Ext 3 + Ext 5 + 2 DEFER memos for Ext 1 + Ext 2 + landing memo at ~/.claude/.../feedback_fec6_stacking_wave_5_grammar_extensions_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_boosting_namespace_decorator_api_20260517",
+      "name": "tac.boosting namespace decorator-based composable API",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "12 files in src/tac/boosting/ + 1 test file in src/tac/tests/; ~2300 LOC namespace + 830 LOC tests; 83/83 tests passing in 0.32s"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_tac_boosting_namespace_landed_20260517.md + .omx/research/tac_boosting_namespace_design_20260517.md + .omx/tmp/tac_boosting_premise_verifier.txt"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_compress_time_optimization_namespace_decorator_api_20260517",
+      "name": "tac.compress_time_optimization namespace + decorator API + 5 techniques",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Module package tac.compress_time_optimization \u2014 12 files / ~2300 LOC / 5 \u00a7G compress-time technique builders / 103 tests pass; sister of tac.boosting same decorator+dataclass+composition pattern (see design memo for file inventory)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "tac.compress_time_optimization.CompressTimePassContract enforces deterministic+scorer-free+inflate-forbidden invariants at decoration time per Catalog #158 + CLAUDE.md 'Strict scorer rule'; spec mirrors tac.boosting Catalog #270 sister discipline. No new strict gate landed (live count = 0 at landing; the namespace's own invariants ARE the structural protection)."
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_tac_compress_time_optimization_namespace_landed_20260517.md (this landing memo); design memo at .omx/research/tac_compress_time_optimization_namespace_design_20260517.md (~17 sections mirroring sister); premise verifier at .omx/tmp/tac_compress_time_optimization_premise_verifier.txt (PV-1..PV-8)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_search_namespace_decorator_api_20260517",
+      "name": "tac.search namespace",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/search/ \u2014 12 files / 6 builders / canonical decorator + pipeline + persistence + 5 builder spec + RashomonEnsembleCommittee re-export; 126 tests pass in src/tac/tests/test_tac_search.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "no new STRICT preflight gates landed (sister namespaces tac.boosting + tac.compress_time_optimization followed the same pattern; design-memo gates #290/#294/#303/#305 cover the discipline surface; 126 tests pin behavior)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_tac_search_namespace_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_inflate_time_post_processing_namespace_decorator_api_20260517",
+      "name": "tac.inflate_time_post_processing namespace",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/inflate_time_post_processing/ \u2014 10 files: __init__.py + errors.py + contract.py + decorator.py + pipeline.py + persistence.py + 5 builders (bilateral_filter.py / nlm_denoising.py / learned_post_filter.py / super_resolution_upscaler.py / multi_pass_refinement.py) + examples/{example_passes,__init__}.py. ~2700 LOC total. Decorator + frozen contract + ComposableInflatePipeline + fcntl-locked JSONL persistence. 6-hook wire-in: Catalog #125 hooks 1+2+5 ACTIVE; 3+4+6 N/A_WITH_RATIONALE per the design memo \u00a76-hook wire-in declarations."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Design memo .omx/research/tac_inflate_time_post_processing_namespace_design_20260517.md satisfies Catalog #229 (premise verifier .omx/tmp/tac_inflate_time_post_processing_premise_verifier.txt 12 PVs) + #290 (canonical-vs-unique decision per layer, 9 layers documented) + #294 (9-dim checklist evidence section, all 9 dimensions documented) + #303 (cargo-cult audit, 10 assumptions classified HARD-EARNED vs CARGO-CULTED) + #305 (observability surface, all 6 facets documented) + #309 (horizon_class: plateau_adjacent declared). Contract __post_init__ enforces #220 invariants (archive_bytes_added=0 / scorer_free=True / deterministic=True / max_wallclock REQUIRED). Sister-namespace isolation tests verify no tac.boosting / tac.compress_time_optimization imports."
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "Landing memo at ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_tac_inflate_time_post_processing_namespace_landed_20260517.md with full 6-hook wire-in declarations + 156 dedicated tests passing (src/tac/tests/test_tac_inflate_time_post_processing.py)."
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tac_side_information_namespace_decorator_api_20260517",
+      "name": "tac.side_information namespace",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "11 files landed under tac.side_information/: contract+decorator+pipeline+persistence+errors+5 first-class builders+examples; 148 tests pass; 5-value side_info_source enum; Wyner-Ziv correlation validation; Catalog #213 Comma2k19 cache import-time check"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/tests/test_tac_side_information.py \u2014 148 tests covering contract validation (29) / decorator semantics (11) / pipeline composition (24) / persistence + 4-proc concurrency (11) / 5 per-builder smokes (40) / PipelineBakerRef (2) / examples integration (2) / structural independence (3) / Wyner-Ziv + Catalog #213 invariants (6); all pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/tac_side_information_namespace_design_20260517.md design memo + landing memo at feedback_tac_side_information_namespace_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_post_landing_audit_gate_per_pair_master_gradient_namespace_wave_20260517",
+      "name": "Post-landing audit gate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/tests/test_master_gradient_consumers.py (24/24 tests pass; audit harness landing)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/post_landing_audit_gate_per_pair_master_gradient_namespace_wave_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_consumer_6_rashomon_disagreement_queue_20260517",
+      "name": "Master gradient consumer 6: Rashomon disagreement queue (K=8 bootstrap-diverse)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_consumers.py +310 LOC consumer 6 + src/tac/autopilot_rudin_daubechies/rashomon_ensemble.py +110 LOC sister classmethod; 21/21 dedicated tests pass; 200/200 regression tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #252 (check_rashomon_ensemble_continual_update_locked) preserved at live count=0 post-landing; new classmethod refuses store_path=None with RuntimeError citing Catalog #252"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_master_gradient_consumer_6_rashomon_disagreement_queue_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wire_in_2_wyner_ziv_covariance_to_sensitivity_map_20260517",
+      "name": "Wire-in 2: Wyner-Ziv covariance -> sensitivity map axis-level reweight (hook #1)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/sensitivity_map/wyner_ziv_reweight.py + __init__.py re-exports + 29 dedicated tests pass [empirical:src/tac/tests/test_sensitivity_map_wyner_ziv_wire_in.py]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_wire_in_2_wyner_ziv_to_sensitivity_map_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_master_gradient_consumers_module_20260517",
+      "name": "tac.master_gradient_consumers canonical per-pair master gradient consumer module",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_consumers.py (~1350 LOC, 6 consumers + RashomonEnsembleRanker.update_all_from_master_gradient wire-in; consumer 1 Venn classification + 2 fec6 selector marginal matrix + 3 NSCS01 nullspace empirical audit + 4 Wyner-Ziv side-info covariance + 5 per-pair difficulty atlas + 6 Rashomon disagreement queue; all 5 with canonical sidecar JSON output per .omx/state/master_gradient_consumers/; PER_PAIR_GRADIENT_TENSOR_KIND='per_pair_per_byte_v1' producer contract honored)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "post-landing audit gate 2026-05-17 (lane_post_landing_audit_gate_per_pair_master_gradient_namespace_wave_20260517) confirmed 24 tests passing for the consumer module + 21 dedicated Rashomon disagreement queue tests + Catalogs #265 (SPDX) + canonical __all__ declaration + duplication scan PASSED"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_master_gradient_consumer_6_rashomon_disagreement_queue_landed_20260517.md (consumer 6 landing memo; sister landing memos for consumers 1-5 are inline in the module docstring + the in-context build is documented in feedback_per_pair_master_gradient_consumer_integration_design_20260517.md scope)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_grand_council_symposium_wyner_ziv_contest_compliance_optimal_design_20260517",
+      "name": "Grand council symposium Wyner-Ziv compliance + optimal design",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "T3 council deliberation v2 frontmatter complete (Catalog #300); 17 attendees; 6-of-6 sextet quorum; 4 verbatim dissents; 6 HARD-EARNED-vs-CARGO-CULTED classifications; 8 op-routables PROCEED_WITH_REVISIONS verdict; mission_contribution=frontier_protecting; anchor persisted to council_deliberation_posterior.jsonl"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_grand_council_symposium_wyner_ziv_contest_compliance_optimal_design_landed_20260517.md + .omx/research/grand_council_symposium_wyner_ziv_contest_compliance_optimal_design_20260517.md + .omx/research/wyner_ziv_optimal_implementation_queue_20260517.md + .omx/state/council_deliberation_posterior.jsonl anchor"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_pair_optimal_treatment_plan_via_lagrangian_dual_20260517",
+      "name": "Lagrangian-dual optimal per-pair treatment planner (operator spec)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/master_gradient_consumers.py (lines ~1352-2300) per_pair_optimal_treatment_plan_via_lagrangian_dual + optimal_plan_to_candidate_row + DEFAULT_TREATMENT_CATALOG (8 treatments, sha 8c4e76446fff1884); replaces heuristic Consumer 15 sketch; 100/100 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_per_pair_optimal_treatment_plan_via_lagrangian_dual_landed_20260517.md (to land in same commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wyner_ziv_deliverability_prober_20260517",
+      "name": "Wyner-Ziv deliverability prober",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/wyner_ziv_deliverability_prober.py + src/tac/tests/test_wyner_ziv_deliverability_prober.py (21/21 tests pass) + .omx/state/wyner_ziv_deliverability/probe_f174192aeadf_20260517T205208.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/state/wyner_ziv_deliverability/probe_f174192aeadf_20260517T205208.json] CSP=162123 bytes, lzma/brotli/zlib ALL inflate (100.04%/100.003%/100.03%), verdict NOT_DELIVERABLE, autopilot 1.15x reward OVERSTATED"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_wyner_ziv_deliverability_prober_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_deliverability_proof_builder_canonical_20260517",
+      "name": "Q1 deliverability_proof_builder canonical helper",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/wyner_ziv_deliverability/proof_builder.py (~720 LOC) + __init__.py (~75 LOC) + Catalog #319 stub in src/tac/preflight.py + canonical helper landed per T3 symposium Q1 spec"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #319 stub at src/tac/preflight.py::check_substrate_wyner_ziv_reweight_has_deliverability_proof (NotImplementedError until Q2 successor wires); CLAUDE.md row #319 landed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_q1_deliverability_proof_builder_canonical_landed_20260517.md (pending; lands in this commit batch)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pre_entropy_substrate_pivot_prober_20260517",
+      "name": "Pre-entropy substrate pivot prober",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/pre_entropy_substrate_pivot_prober.py (~700 LOC) + src/tac/tests/test_pre_entropy_substrate_pivot_prober.py (23 tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/state/wyner_ziv_deliverability/pre_entropy_candidate_substrates_corrected_20260517T215345.json] corrected Catalog #321 artifact; original pre_entropy_candidate_substrates_20260517T210723.json quarantined as PHANTOM_PRE_CATALOG_321 research-sidecar evidence"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_pre_entropy_substrate_pivot_prober_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_comprehensive_wiring_integration_pass_20260517",
+      "name": "Comprehensive wiring + integration pass",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/comprehensive_wire_in_coverage_matrix_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_comprehensive_wiring_integration_pass_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_20260517",
+      "name": "Q2+Q3 BATCHED: Catalog #319 STRICT gate body + autopilot reweight v2 Lagrangian-derived",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "v2 cascade landed in tools/cathedral_autopilot_autonomous_loop.py + Catalog #319 STRICT-flipped + load_optimal_plan_for_archive helper added [empirical: 83/83 tests pass]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #319 STRICT-flipped 2026-05-17 by Q2+Q3 BATCHED; live count 0 [src/tac/preflight.py:2525]"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_q2_q3_batched_catalog_319_gate_plus_autopilot_reweight_v2_landed_20260517.md (T2 council deliberation v2 frontmatter)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_wyner_ziv_pipeline_stage_codec_primitive_20260517",
+      "name": "WZ pipeline-stage codec primitive (tac.codec.wyner_ziv_layer)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/codec/wyner_ziv_layer.py (740 LOC) + src/tac/tests/test_wyner_ziv_layer.py (64 tests PASS) + tools/probe_wyner_ziv_composition_alpha_disambiguator.py (deferred stub) + src/tac/preflight.py::check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation Catalog #320 STUB raises NotImplementedError. 6-hook wire-in: hook #1 sensitivity-map (sister Wire-in #2 ACTIVE), hook #2 Pareto (constraint declarable; inflate_py_loc_added \u2264 100 default), hook #3 bit-allocator (main_compressed + side_compressed_baked reduce budget; ACTIVE), hook #4 cathedral autopilot (composition_alpha drives ranking; ACTIVE), hook #5 continual-learning (every encode appends to .omx/state/continual_learning_posterior.jsonl via callers; ACTIVE), hook #6 probe-disambiguator (tools/probe_wyner_ziv_composition_alpha_disambiguator.py DEFERRED-PENDING-EMPIRICAL)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #320 STUB (check_wyner_ziv_layer_config_no_scorer_side_info_without_attestation) at src/tac/preflight.py raises NotImplementedError; runtime guard ACTIVE in WynerZivLayerConfig.__post_init__ via ScorerSideInfoForbiddenError per CLAUDE.md strict-scorer-rule + Catalog #6 + #7. Sister AST-scan body deferred to follow-on subagent."
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_wyner_ziv_pipeline_stage_codec_primitive_landed_20260517.md (v2 frontmatter; 9-dim checklist; cargo-cult audit; observability surface; predicted \u0394S band with Dykstra feasibility cite; 6-hook wire-in declaration; 5 op-routables for sister follow-on)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_q6_preprobe_pairwise_composition_alpha_20260517",
+      "name": "Q6.preprobe pairwise composition_alpha probe (Stage 2 reactivation clause #2)",
+      "phase": 7.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/q6_preprobe_pairwise_composition_alpha.py + src/tac/tests/test_q6_preprobe_pairwise_composition_alpha.py (15/15 tests pass; CLI sweep landed empirical artifact)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Sister of Catalog #227 substrate_composition_matrix consumer; probe-disambiguator per Catalog #125 hook 6; outcome registered in Catalog #313 probe_outcomes_ledger"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "research/q6_preprobe_pairwise_composition_alpha_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #322 disposition 2026-05-17 REDO+PIVOT: research_only=true because the underlying pairwise_alpha probes used phantom-provenance candidates per Catalog #321 REJECTED_RESEARCH_SIDECAR. Quarantined to .omx/state/wyner_ziv_deliverability/quarantine_phantom_pre_catalog_322/. DEFERRED-pending-revalidation.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Q4 phantom-score class extincted by Option B + Catalog #321/#322; re-probe must use VALIDATED_CONTEST_MEMBER substrates only."
+      ]
+    },
+    {
+      "id": "lane_medium_gap_closure_3_optimization_modules_per_pair_consumption_20260517",
+      "name": "MEDIUM gap closure: 3 optimization modules per-pair consumption",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Gap 1+2+3 landed: bit_allocator_end_to_end.allocate_per_pair_bits (~280 LOC) + field_equation_planner.consume_per_pair_lagrangian_duals (~170 LOC) + jacobian_fisher_importance_allocator.allocate_per_pair_fisher_importance (~150 LOC); 38 NEW tests pass; sister regressions clean (1 pre-existing unrelated fail in bit_allocator_end_to_end::test_default_constructor)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_medium_gap_closure_3_optimization_modules_per_pair_consumption_landed_20260517.md (about to land)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_batched_815_consumer_15_amendment_plus_816_meta_meta_cleanup_plus_q6_op3_extended_20260517",
+      "name": "Batched 815+816+Q6OP3",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Batched #815 Consumer 15 real WZ jacobian + #816 META-meta drift reconciliation + Q6 OP-3 extended 45-pair sweep landed; artifact at .omx/state/wyner_ziv_deliverability/pairwise_alpha_extended_20260517T215739Z.json"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_batched_815_816_q6_op3_extended_landed_20260517.md (landing memo)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #322 disposition 2026-05-17 REDO+PIVOT: research_only=true because Q6 OP3 extended sweep inputs are phantom-provenance per Catalog #321; sister #823 SUPER_ADDITIVE \u03b1=4.74 self-flagged as FALSE_SIGNAL ARTIFACT. DEFERRED-pending-Catalog-321-revalidation.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Q6 OP3 extended sweep produced the FALSE_SIGNAL \u03b1=4.74 sister-#823 already documented; re-extend only after VALIDATED_CONTEST_MEMBER probe inputs are confirmed."
+      ]
+    },
+    {
+      "id": "lane_low_gap_closure_widened_8_modules_plus_autopilot_wire_in_20260517",
+      "name": "LOW gap closure widened: 8 modules + autopilot wire-in",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "BUCKET A: 5 \u00a77.6 namespace shims (boosting/compress_time_optimization/inflate_time_post_processing/side_information/search) + canonical shared helper tac.optimization.per_pair_namespace_wire_in.compose_namespace_per_pair_wire_in (~210 LOC); BUCKET B: 3 NEW LOW gap module extensions (bayesian_experimental_design.compute_expected_information_gain_per_pair + cooperative_receiver_integration.weight_z4_loss_by_per_pair_fisher + entropy_rate_decomposition.attribute_rate_distortion_per_byte ~400 LOC); BUCKET C: tools/cathedral_autopilot_autonomous_loop.py rank_candidates chain extension (~200 LOC); BUCKET D: src/tac/tests/test_bit_allocator_end_to_end.py::test_default_constructor forward-compat fix"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_low_gap_closure_widened_8_modules_plus_autopilot_wire_in_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #818; 5 \u00a77.6 namespace + 3 NEW LOW gap modules + autopilot consumption wire-in + sister regression fix; per .omx/research/comprehensive_wire_in_coverage_matrix_20260517.md; sister of lane_medium_gap_closure_3_optimization_modules_per_pair_consumption_20260517 (#817)"
+    },
+    {
+      "id": "lane_fix_pre_entropy_prober_phantom_score_plus_catalog_321_strict_gate_20260517",
+      "name": "Pre-entropy prober phantom-score fix + Catalog #321 STRICT gate",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/pre_entropy_substrate_pivot_prober.py + src/tac/preflight.py Catalog #321 + 64 dedicated tests pass; corrected artifact emitted; quarantine of phantom artifact complete"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #321 STRICT @ live count 0; META-meta gates #118 #159 #176 #185 all clean post-landing"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_fix_pre_entropy_prober_phantom_score_plus_catalog_321_strict_gate_landed_20260517.md (~/.claude/projects/-Users-adpena-Projects-pact/memory/)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_option_b_pre_entropy_prober_archive_member_validated_q4_target_20260517",
+      "name": "Option B archive-member pre-entropy prober sweep for VALIDATED Q4 retarget",
+      "phase": 4.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/option_b_archive_member_pre_entropy_sweep.py + 15 dedicated tests; CLI dry-run produces DEFER_Q4 verdict on 8 VALIDATED contest archives"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:.omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json] apples-to-apples top-aggregate-savings=0.000332 < 0.001 threshold; verdict=DEFER_Q4; all 8 archives AT_FLOOR"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_option_b_archive_member_pre_entropy_sweep_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_817_sidecar_emission_wire_in_bucket_c_loop_closure_20260517",
+      "name": "#817 sidecar emission wire-in: close BUCKET C producer-consumer loop",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/bit_allocator_end_to_end.py + src/tac/optimization/jacobian_fisher_importance_allocator.py + src/tac/optimization/field_equation_planner.py extended with persist_sidecar=True kwarg + fcntl-locked JSONL sidecar writers per Catalog #131/#245; 18/18 dedicated tests pass; 51/51 sister + 52/52 broader regressions pass; BUCKET C producer-consumer loop EMPIRICALLY CLOSED"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #131 (no bare writes to shared state) clean for the 3 extended modules; all 3 new sidecar writers route through fcntl.flock(LOCK_EX) + tmp.<uuid12> + os.replace canonical pattern per tac.deploy.modal.call_id_ledger sister discipline"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_817_sidecar_emission_wire_in_bucket_c_loop_closure_landed_20260517.md (Catalog #229 + #290 + #294 + #303 + #305 + #300 v2 frontmatter compliance)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_super_additive_lane_g_v3_siren_topology_integration_20260517",
+      "name": "SUPER_ADDITIVE topology integration: lane_g_v3+siren empirical \u03b1=4.74 -> autopilot v2 cascade + canonical posterior",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "v2 cascade lands in cathedral autopilot fn adjust_predicted_delta_for_composition_alpha_v2 plus mechanism investigation report at .omx/research/super_additive_lane_g_v3_siren_mechanism_20260517.md plus SUPER_ADDITIVE row in .omx/state/substrate_composition_matrix.json with FALSE_SIGNAL blockers plus 26 dedicated tests pass"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_super_additive_lane_g_v3_siren_topology_integration_landed_20260517.md (pending write)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Catalog #322 disposition 2026-05-17 REDO+PIVOT: research_only=true because the underlying pairwise_alpha probes (now quarantined to .omx/state/wyner_ziv_deliverability/quarantine_phantom_pre_catalog_322/) used phantom-provenance candidates (pr101_state_dict / pr106_state_dict / posenet_class_sensitivity) per Catalog #321 REJECTED_RESEARCH_SIDECAR. v2 cascade adjust_predicted_delta_for_composition_alpha_v2 remains structurally landed for FUTURE genuine SUPER_ADDITIVE discoveries (bounded reward [1.0, 2.0]) but no current \u03b1 values feed it. DEFERRED-pending-revalidation per CLAUDE.md 'Forbidden premature KILL'.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Re-run pairwise_alpha probe against VALIDATED_CONTEST_MEMBER substrates only (per Option B sweep landed 2026-05-17); confirm \u03b1 value derives from non-phantom-provenance candidate pair per Catalog #321/#322; verify byte-identical-renderer.bin false-signal artifact path cannot recur (per sister #823 mechanism investigation memo)."
+      ]
+    },
+    {
+      "id": "lane_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_20260517",
+      "name": "REDO+PIVOT comprehensive fix: phantom-score revert + Q4 budget redirect to substrate-class-shift + Catalog #322",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Catalog #322 STRICT preflight gate landed in src/tac/preflight.py; revert_phantom_source_rows helper in src/tac/optimization/substrate_composition_matrix.py; 25 dedicated tests pass; 3 DEFERRED lanes marked research_only=true; Q4 redirect stub at .omx/operator_authorize_recipes/q4_substrate_class_shift_redirect_z6_predictive_coding_20260517T222800Z.yaml; reports/latest.md FRONTIER Q4 STATUS+PIVOT subsection; state tracker ADDENDUM at .omx/research/comprehensive_state_tracker_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #322 STRICT-from-byte-one wired in preflight_all(strict=True); live count 0 (2 phantom pairwise_alpha files quarantined to .omx/state/wyner_ziv_deliverability/quarantine_phantom_pre_catalog_322/)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Sister #828 REDO per operator 2026-05-17. Audits canonical_inventory + autopilot v2 cascade for phantom-provenance composition_alpha. Marks Q4/Stage2/super_additive DEFERRED. Pivots Q4 $0.70 to substrate-class-shift. Lands Catalog #322 STRICT gate. $0 GPU."
+    },
+    {
+      "id": "lane_provenance_canonical_fix_meta_class_extinction_20260517",
+      "name": "Provenance Canonical Fix META Class Extinction",
+      "phase": 7.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tac.provenance package (5 modules) + tools/audit_provenance_compliance.py + Catalog #323 wired warn-only into preflight_all()"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #323 check_no_score_claim_without_canonical_provenance in src/tac/preflight.py; live count 543 baseline; wired warn-only"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_provenance_canonical_fix_meta_class_extinction_landed_20260517.md (memory dir per canonical pattern)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_asymptotic_pursuit_substrate_class_shift_q4_pivot_top_priority_20260517",
+      "name": "ASYMPTOTIC PURSUIT substrate-class-shift Q4 pivot top priority",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "tools/asymptotic_pursuit_candidate_readiness_assessment.py + tools/asymptotic_pursuit_dispatch_queue.py + 36 tests pass + .omx/state/asymptotic_pursuit/readiness_assessment_20260517T223741Z.json [prediction; provenance_kind=PREDICTED_FROM_MODEL]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Honors Catalog #313 + #315 + #270 + #240 + #316 + #127 + #192 + #167 + #220 + #226 + #229 + #292 + #294 + #303 + #305 [empirical:src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py]"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_asymptotic_pursuit_substrate_class_shift_top_priority_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_phase_2_sextet_council_proceed_unconditional_unlock_20260517",
+      "name": "Z6 Phase 2 sextet council PROCEED-unconditional unlock attempt 2026-05-17",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "12-of-12 sextet+grand council consensus on PROCEED_WITH_REVISIONS_v2 verdict; 3 dissents recorded verbatim; 6 assumption-adversary verdicts classified per Catalog #292"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/council_z6_phase_2_sextet_proceed_unconditional_unlock_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_c6_ibps_4_recipe_fixes_dispatch_unlock_20260517",
+      "name": "C6 IBPS 4 recipe-side fixes (Dykstra + composition_alpha + Tier-C + sextet) for dispatch unlock",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/state/dykstra_feasibility_c6_e4_mdl_ibps.json + .omx/state/composition_alpha_c6_e4_mdl_ibps_x_wyner_ziv.json + .omx/state/tier_c_density_reconciliation_c6_e4_mdl_ibps.json + .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md + recipe dispatch_enabled=true (4 fixes landed; Catalog #270 PASSES; 24 tests pass; DISPATCH_READY annotation)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #270 dispatch optimization protocol Tier 1/2/3 all PASS (signals_pass 5/5 + 8/8 + 5/5 blockers=0); Catalog #296 Dykstra-feasibility FEASIBLE; Catalog #227 Tier-C ACROSS_CLASS; Catalog #315 OPTIMAL FORM sextet PROCEED-unconditional 6-of-6"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Sextet pact 6-of-6 PROCEED-unconditional per .omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md; Contrarian + Assumption-Adversary dissent recorded verbatim per Catalog #292"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_c6_ibps_4_recipe_fixes_dispatch_unlock_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_20260517",
+      "name": "C6 IBPS First Asymptotic Empirical Anchor Dispatch (smoke-before-full + paired)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "first ASYMPTOTIC empirical anchor; smoke fc-01KRW353MJJ9A6QW8H99QWZEMH 2026-05-17T23:08:18Z Modal A10G 50ep returned final_score=3.04 [contest-CPU advisory; archive_sha=be06a4b0972e6c]; predicted_smoke_band [0.10,0.30] EXCEEDED 10x; SegNet collapse mechanism (seg_dist=0.026 vs PR101 ~0.001); pose OK (0.0081); rate OK (0.006); training converged 53.49->4.91; Catalog #313 probe-outcome DEFER registered; reactivation queue: beta sweep / latent widen / Phase 2 redesign"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_landed_20260517.md (this landing memo); cross-ref Catalog #313 probe outcome DEFER; sister #835 unlock contract intact; SegNet-collapse class identified"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #836; sister #835 landed PROCEED-unconditional; predicted band [0.113, 0.163]; target 0.138 beats 0.19205 frontier by 28%; operator 'All are approved be aggressive'"
+    },
+    {
+      "id": "lane_z6_v2_redesign_cargo_cult_unwind_path_b_20260517",
+      "name": "Z6-v2 Path B cargo-cult-unwind redesign (4-candidate menu per Council Revision #4)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md (Path B Wave 1 design-memo-only landing per Catalog #315; trainer build deferred to Phase 3 council approval of TOP-1 candidate)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z6_v2_redesign_cargo_cult_unwind_path_b_landed_20260517.md (landing memo with Council Revision #4 verbatim sourcing + 4-candidate matrix + TOP-1 Candidate 1 recommendation + Catalog #294 + #303 + #305 + #290 + #296 + #309 evidence + 9 PVs)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_recursive_adversarial_review_r1_post_redo_council_rotation_a_20260517",
+      "name": "Recursive adversarial review R1 (council rotation A) post-PROVENANCE/Z6/C6 wave",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/recursive_adversarial_review_r1_post_provenance_z6_c6_wave_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_recursive_adversarial_review_r1_post_provenance_z6_c6_wave_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_fix_wave_r1_post_provenance_z6_c6_wave_20260517",
+      "name": "FIX-WAVE-R1: Close 9 R1 findings post-PROVENANCE/Z6/C6 wave",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "FIX-WAVE-R1 closer: 9 R1 findings closed (8 structural + 1 by-design); src/tac/preflight.py Catalog #315 family-token list extended; tools/asymptotic_pursuit_candidate_readiness_assessment.py:704 BARE_WRITE_OK waiver; 2 canonical council posterior correcting rows; Z6 landing memo renamed; C6 IBPS landing memo prose corrected; 5 wave landing memos cite Catalog #316 frontier; 3 C6 sidecar JSONs Provenance-embedded; PROVENANCE+REDO+PIVOT frontmatter backfilled"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_fix_wave_r1_post_provenance_z6_c6_wave_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_phase_3_sextet_council_candidate_1_multi_layer_film_20260517",
+      "name": "Z6 Phase 3 sextet council on Candidate 1 (Multi-layer FiLM depth=3 ~300K params)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/council_z6_phase_3_sextet_candidate_1_multi_layer_film_20260517.md (council deliberation memo ~530 LOC PROCEED_WITH_REVISIONS 12-of-12 quorum)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "T2 sextet pact 6-of-6 quorum + grand council 6 supporting = 12-of-12 PROCEED_WITH_REVISIONS; 6 verbatim dissents + 6 Assumption-Adversary HARD-EARNED-vs-CARGO-CULTED classifications + R1 CARGO-CULTED CLASS-SHIFT-BEATS-0.193 hypothesis integrated; council deliberation IS the canonical adversarial-review surface per CLAUDE.md Council conduct"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "landing memo at ~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z6_phase_3_sextet_council_candidate_1_multi_layer_film_landed_20260517.md + canonical posterior anchor appended via tac.council_continual_learning.append_council_anchor per Catalog #300; deliberation_id council_z6_phase_3_sextet_candidate_1_multi_layer_film_20260517"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "T2 sextet council pre-cache verdict for Z6 Path B Wave 2 dispatch; conditional on C6 IBPS outcome (sister a3726c1814f832b14 in flight). Predicted band [0.13, 0.17]. NO commits, NO dispatches per operator NON-NEGOTIABLE. research_only=true (council deliberation only)."
+    },
+    {
+      "id": "lane_c6_ibps_harvest_and_auto_paired_full_20260517",
+      "name": "C6 IBPS smoke harvest + auto-paired-full dispatch + frontier update",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #840; harvest fc-01KRW353MJJ9A6QW8H99QWZEMH (smoke A10G); paired CPU+CUDA full on green; predicted band [0.113, 0.163]; target 0.138 beats 0.19205 CPU frontier by 28%; sister #836 dispatched smoke @18:08:18Z"
+    },
+    {
+      "id": "lane_recursive_adversarial_review_r1_re_fire_post_fix_wave_r1_20260517",
+      "name": "R1 RE-FIRE rotation A \u2014 post-FIX-WAVE-R1",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/recursive_adversarial_review_r1_re_fire_post_fix_wave_r1_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "R1 RE-FIRE clean-pass counter 0/3\u21921/3 [contest-CUDA n/a; review only]"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_recursive_adversarial_review_r1_re_fire_post_fix_wave_r1_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_c6_ibps_harvest_v2_synchronous_polling_20260517",
+      "name": "C6 IBPS harvest v2 synchronous polling DEFERRED-TO-SISTER",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Task #842 deferred-to-sister. Brief premise FALSIFIED: sister lane_c6_ibps_harvest_and_auto_paired_full_20260517 (pid 43690) IS actively polling Modal call fc-01KRW353MJJ9A6QW8H99QWZEMH (heartbeat 23:34:11Z; auth_eval started 23:28:10Z; 60-120 min ETA). Per Catalog #230 + #314 + CLAUDE.md Subagent coherence-by-default: DEFER. Sister scope: Modal harvest + paired dispatch + ledger + lane registry + Catalog #313 + #323 Provenance + reports/latest.md FRONTIER + landing memo. lane_class=substrate_engineering (no contest-CUDA dispatch by this lane; deferred-to-sister)"
+    },
+    {
+      "id": "lane_recursive_adversarial_review_r2_council_rotation_b_post_r1_clean_20260517",
+      "name": "R2 recursive adversarial review (council rotation B; post R1 RE-FIRE CLEAN; PROVENANCE/Z6/C6 wave + Z6 Phase 3 + C6 IBPS smoke ABORT scope)",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/recursive_adversarial_review_r2_council_rotation_b_20260517.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "R2 verdict CLEAN; counter 1/3 -> 2/3 per CLAUDE.md Recursive adversarial review protocol"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_recursive_adversarial_review_r2_council_rotation_b_post_r1_clean_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_candidate_1_wave_2_build_trainer_extension_and_recipe_20260517",
+      "name": "Z6-v2 Candidate 1 Wave 2 BUILD trainer extension + recipe (multi-layer FiLM depth=3 ~300K params; identity-predictor disambiguator at SAME archive bytes)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[empirical:src/tac/tests/test_z6_v2_candidate_1_wave_2_build.py + src/tac/substrates/time_traveler_l5_z6/tests/test_multi_layer_film_predictor.py 34/34 pass; Catalog #270 dispatch protocol PASS overall_pass=true 0 blockers; trainer extension + architecture extension + recipe + tests landed in same commit batch]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_z6_v2_candidate_1_wave_2_build_trainer_extension_and_recipe_landed_20260517.md (Catalog #300 v2 frontmatter + #294 9-dim checklist + #303 cargo-cult audit + #305 observability surface + #309 horizon_class frontier_pursuit + #316 frontier citation + 6-hook wire-in + sister-subagent ownership map)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_meta_fix_catalog_324_predicted_band_post_training_validation_required_20260517",
+      "name": "META-FIX Catalog #324: predicted-band post-training Tier-C validation",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/optimization/tier_c_density_post_training_validator.py + src/tac/preflight.py::check_no_predicted_band_without_post_training_tier_c_validation + tools/audit_predicted_band_provenance.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #324 wired warn-only in preflight_all (live count 10); src/tac/tests/test_check_324_predicted_band_post_training_validation.py (43 tests pass)"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_meta_fix_catalog_324_predicted_band_post_training_validation_required_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_recursive_adversarial_review_r3_council_rotation_c_seal_gate_post_r2_clean_20260517",
+      "name": "R3 SEAL gate council rotation C post R2 CLEAN",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "R3 council memo + landing memo + continual-learning anchor + 12 PVs verified; 0 NEW findings; counter 2/3 -> 3/3 SEAL ACHIEVED"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/recursive_adversarial_review_r3_council_rotation_c_seal_gate_20260517.md SEAL ACHIEVED counter 3/3 across rotations A R1 RE-FIRE + B R2 + C R3"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_recursive_adversarial_review_r3_council_rotation_c_seal_gate_post_r2_clean_landed_20260517.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_catalog_324_backfill_sweep_10_substrate_recipes_pending_post_training_20260518",
+      "name": "Catalog #324 backfill sweep \u2014 10 substrate recipes pending_post_training (NO-OP: sister 100% pre-completed)",
+      "phase": 6.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/tmp/predicted_band_audit_post_sister_backfill_verification.json \u2014 Catalog #324 audit verified fail_count 10\u21920; NO-OP per sister 100% pre-completion (sister id lane_recursive_adversarial_review_r3_council_rotation_c_seal_gate_post_r2_clean_20260517 in-flight at audit time)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_catalog_324_backfill_sweep_10_substrate_recipes_pending_post_training_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_c6_ibps_reactivation_path_b_latent_dim_sweep_build_20260518",
+      "name": "C6 IBPS reactivation path (b) latent_dim sweep {48,96,192}",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3 NEW recipes (latent48/96/192) at .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_latent{48,96,192}_modal_t4_smoke_dispatch.yaml; trainer + architecture already support --latent-dim via TIER_1_OPERATOR_REQUIRED_FLAGS; Catalog #270 dispatch protocol PASS per recipe (5/5+8/8+5/5)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #270 PASS for all 3 recipes (5/5+8/8+5/5); Catalog #324 PASS via predicted_band_validation_status=pending_post_training; Catalog #240 PASS via research_only=true; Catalog #220+#272 distinguishing_feature_* fields declared; 37 dedicated tests pass; 35 sister C6 tests still pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_c6_ibps_reactivation_path_b_latent_dim_sweep_build_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh (canonical baseline driver reused; threads --latent-dim via C6_E4_MDL_IBPS_LATENT_DIM env var); Catalog #244 NVML/CUDA env block present; Catalog #163 bootstrap sentinel present; Catalog #189 empty array guard present"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_z6_v2_wave_2_dispatch_smoke_before_full_paired_cpu_cuda_20260518",
+      "name": "Z6-v2 Wave 2 DISPATCH smoke-before-full + harvest + auto-paired CPU/CUDA",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Z6-v2 Wave 2 DISPATCH lane fired; both Modal call_ids harvested (fc-01KRW7RHFHP640BHTQ0FZM3M38 smoke + fc-01KRW7ZCYK5XF6MSHD24R71A46 full); both went _smoke_main path due to driver-level mode hardcoding; DEFER-PENDING-DRIVER-FIX per Catalog #313; integration-validated but architecture-as-specd not built. ~$0.50 spent total across both fires."
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z6_v2_wave_2_dispatch_smoke_before_full_paired_cpu_cuda_landed_20260518.md (pending)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_optimal_form_symposium_wave_doctrine_plus_c6_ibps_first_20260518",
+      "name": "Per-substrate optimal form symposium wave (doctrine + C6 IBPS first)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "CLAUDE.md doctrine amendment + Catalog #325 row + Catalog #325 STRICT preflight gate stub + warn-only wire-in + 37/37 dedicated tests pass; META-meta gates #118/#159/#176/#185 all clean post-landing"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #325 strict preflight gate landed warn-only with live count 2 (rudin_floor + z6_v2_candidate_1_multi_layer_film); strict-flip pending operator-routed backfill"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "C6 IBPS Phase 2 sextet+grand-council symposium verdict PROCEED_WITH_REVISIONS 10/10 with Contrarian dissent + Assumption-Adversary VETO recorded verbatim per Catalog #292"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "council_c6_ibps_post_empirical_reactivation_symposium_first_per_substrate_optimal_form_20260518.md + canonical council posterior anchor appended via tac.council_continual_learning.append_council_anchor per Catalog #300"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_driver_fix_smoke_hardcode_plus_new_catalog_gate_cross_substrate_audit_20260518",
+      "name": "Driver smoke-hardcode fix + cross-substrate audit + new Catalog gate",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "Implementation across check_substrate_driver_consumes_trainer_mode_env_var in tac/preflight.py + tools/audit_substrate_driver_mode_hardcode.py canonical audit helper + scripts/remote_lane_substrate_time_traveler_l5_z6.sh Z6_TRAINER_MODE multi-key fix + Z6-v2 Wave 2 recipe env_overrides"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #326 warn-only wire-in at preflight_all() strict=False; live count 0 at landing per CLAUDE.md Strict-flip atomicity rule; 33 dedicated tests pass"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_driver_fix_smoke_hardcode_plus_new_catalog_gate_cross_substrate_audit_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_c6_ibps_beta_ib_sweep_build_per_symposium_parallel_path_a_20260518",
+      "name": "C6 IBPS reactivation path (a) \u03b2_ib sweep BUILD per #848 symposium parallel",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "4 NEW recipes substrate_c6_e4_mdl_ibps_beta_ib_{0p0001,0p001,0p1,1p0}_modal_t4_smoke_dispatch.yaml; zero trainer/architecture/driver LOC delta (--beta-ib already wired); Catalog #270 PASS per recipe (5/5+8/8+5/5; 0 blockers)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #270 dispatch protocol + Catalog #324 predicted_band post-training validation + Catalog #240 recipe-vs-trainer-state + Catalog #220 + #272 distinguishing-feature contract + Catalog #309 horizon_class frontier_pursuit all PASS per recipe"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_c6_ibps_beta_ib_sweep_build_per_symposium_parallel_path_a_landed_20260518.md with v2 frontmatter per Catalog #300 + 9-dim per #294 + cargo-cult audit per #303 + observability surface per #305 + horizon_class per #309 + frontier citation per #316"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "Reuses canonical scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh (line 252 threads --beta-ib); zero modifications"
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_atw_v2_reactivation_20260518",
+      "name": "Per-substrate symposium: ATW V2 reactivation (Atick-Tishby-Wyner cooperative-receiver)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/council_per_substrate_symposium_atw_v2_reactivation_20260518.md (T2 symposium 2026-05-18 PROCEED_WITH_REVISIONS; sextet + 4 grand council Atick/Redlich/Tishby/Wyner; 7 binding revisions; ATW V2 V2-1 redesign path)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "T2 sextet + 4 grand council attendees ratified PROCEED_WITH_REVISIONS with Contrarian + Assumption-Adversary VETO incorporated as binding revisions; assumption-challenge axis Item #8 NEW hypothesis surfaced; HARD-EARNED-NEW classification"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/council_per_substrate_symposium_atw_v2_reactivation_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_signal_loss_audit_20260517",
+      "name": "Signal-loss audit: today's wave + .omx/state + orphan signals + cross-subagent recovery",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pre_rigor_kill_defer_falsified_inventory_20260517",
+      "name": "Pre-rigor KILL/DEFER/FALSIFIED inventory: per-substrate-symposium classification through rigor-wave lens",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_per_substrate_symposium_stc_clean_source_20260517",
+      "name": "Per-substrate symposium #857: stc_clean_source FALSIFIED-via-MPS-PROXY reactivation (cheapest re-probe in inventory)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -32945,5 +35581,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-17T13:08:57Z"
+  "updated_at": "2026-05-18T03:09:55Z"
 }
