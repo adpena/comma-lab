@@ -97,9 +97,10 @@ def tiny_head_alt() -> _TinyHead:
 class TestPackageState:
     def test_implemented_modules_canonical(self) -> None:
         assert "a1_pattern_inflate_time_bias_correction" in IMPLEMENTED_MODULES
+        assert "master_gradient_pair_weights" in IMPLEMENTED_MODULES
         assert "pause_distill_resume" in IMPLEMENTED_MODULES
         assert "quantizr_5_stage_staircase" in IMPLEMENTED_MODULES
-        assert len(IMPLEMENTED_MODULES) == 10
+        assert len(IMPLEMENTED_MODULES) == 11
 
     def test_deferred_modules_empty(self) -> None:
         assert DEFERRED_MODULES == ()

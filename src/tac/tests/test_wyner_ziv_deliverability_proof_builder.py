@@ -429,6 +429,7 @@ def test_t17_persistence_and_load_roundtrip(tmp_path: Path) -> None:
     assert loaded.archive_sha256 == _SHA_FIXTURE
     assert loaded.tier_1_byte_count == proof_written.tier_1_byte_count
     assert loaded.proof_sha256 == proof_written.proof_sha256
+    assert loaded.contest_compliance_rationale == proof_written.contest_compliance_rationale
 
 
 def test_t18_load_returns_none_when_no_proof_exists(tmp_path: Path) -> None:
@@ -550,6 +551,63 @@ def test_t22_comma2k19_prober_helper_propagated_to_proof(tmp_path: Path) -> None
     ok, blockers = verify_deliverability_proof_contest_compliance(proof)
     assert ok is True
     assert blockers == []
+
+
+# ---------------------------------------------------------------------------
+# Test 22b: canonical procedural-generation compliance rationale
+# ---------------------------------------------------------------------------
+
+
+def test_t22b_compliant_tier_2_proof_carries_loophole_boundary_rationale(
+    tmp_path: Path,
+) -> None:
+    wz = _make_wz_classification(candidates=(0,))
+    prober = {
+        "canonical_helper_invocation": "Comma2k19LocalCache.fetch_chunk(idx=42)",
+        "per_byte_classification": {
+            "0": {
+                "source_class": "comma2k19",
+                "compressed_size_bytes": 100,
+                "canonical_helper_invocation": "Comma2k19LocalCache.fetch_chunk(idx=42)",
+            }
+        },
+    }
+    proof = build_deliverability_proof_from_wyner_ziv_classification(
+        wyner_ziv_result=wz,
+        archive_sha256=_SHA_FIXTURE,
+        deliverability_prober_result=prober,
+        persist=False,
+    )
+    rationale = proof.contest_compliance_rationale
+    for anchor in (
+        "PR #68 loophole_v2",
+        "upstream/evaluate.py:63",
+        "Catalog #213",
+        "Comma2k19LocalCache",
+        "INSIDE archive.zip",
+        "OUTSIDE archive.zip",
+        "score_claim=False",
+        "promotion_eligible=False",
+    ):
+        assert anchor in rationale
+
+
+def test_t22c_verifier_rejects_tier_2_proof_with_blank_rationale() -> None:
+    proof = DeliverabilityProof(
+        archive_sha256=_SHA_FIXTURE,
+        candidate_shared_prior_byte_count=1,
+        tier_1_byte_count=0,
+        tier_2_byte_count=1,
+        tier_3_byte_count=0,
+        tier_4_byte_count=0,
+        tier_2_byte_indices=(0,),
+        canonical_helper_invocation="Comma2k19LocalCache.fetch_chunk(idx=0)",
+        contest_compliance_verdict="compliant",
+        contest_compliance_rationale="",
+    )
+    ok, blockers = verify_deliverability_proof_contest_compliance(proof)
+    assert ok is False
+    assert any("contest_compliance_rationale" in blocker for blocker in blockers)
 
 
 # ---------------------------------------------------------------------------

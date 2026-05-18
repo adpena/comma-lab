@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
-"""Canonical per-pair master gradient wire-in helper for §7.6 namespaces.
+"""Canonical per-pair master gradient wire-in helper for solver namespaces.
 
 LOW gap closure widened wave 2026-05-17 — `lane_low_gap_closure_widened_8_modules_
 plus_autopilot_wire_in_20260517` BUCKET A. Per CLAUDE.md "Subagent coherence-
 by-default" + "Beauty, simplicity, and developer experience" + "UNIQUE-AND-
 COMPLETE-PER-METHOD operating mode" Layer 1 canonical-helper-adoption-
 serves-because-bug-class: this is the canonical wire-in helper shared across
-the 5 §7.6 namespace packages (boosting / compress_time_optimization /
-inflate_time_post_processing / side_information / search).
+the solver namespace packages (boosting / compress_time_optimization /
+inflate_time_post_processing / side_information / search / training_curriculum).
 
 Each namespace re-exports ``compose_namespace_per_pair_wire_in(namespace=...)``
 via its own per-namespace shim with the namespace-id baked in. The shim
@@ -56,6 +56,7 @@ LEGAL_NAMESPACE_IDS: frozenset[str] = frozenset(
         "inflate_time_post_processing",
         "side_information",
         "search",
+        "training_curriculum",
     }
 )
 
@@ -125,7 +126,8 @@ def compose_namespace_per_pair_wire_in(
     ----------
     namespace_id
         One of LEGAL_NAMESPACE_IDS (boosting / compress_time_optimization /
-        inflate_time_post_processing / side_information / search).
+        inflate_time_post_processing / side_information / search /
+        training_curriculum).
     archive_sha256
         64-char hex sha of the target archive bytes.
     total_bit_budget

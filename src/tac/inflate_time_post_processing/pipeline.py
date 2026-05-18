@@ -487,6 +487,9 @@ class ComposableInflatePipeline:
         *,
         scorer_surrogate: Any | None = None,
         policy: Mapping[str, Any] | None = None,
+        auto_per_pair_wire_in: bool = False,
+        archive_sha256: str | None = None,
+        total_bit_budget: int | None = None,
         wallclock_strict: bool = False,
     ) -> InflateTimePipelineResult:
         """Execute the pipeline left-to-right against ``decoded_frames``.
@@ -524,6 +527,27 @@ class ComposableInflatePipeline:
         state: dict[str, Any] = (
             dict(decoded_frames) if decoded_frames is not None else {}
         )
+        effective_policy: dict[str, Any] = dict(policy) if policy else {}
+        if auto_per_pair_wire_in:
+            if not archive_sha256:
+                raise InflateTimePipelineError(
+                    "auto_per_pair_wire_in=True requires archive_sha256"
+                )
+            if total_bit_budget is None:
+                raise InflateTimePipelineError(
+                    "auto_per_pair_wire_in=True requires total_bit_budget"
+                )
+            from tac.inflate_time_post_processing.per_pair_master_gradient_wire_in import (
+                compose_inflate_time_post_processing_per_pair_wire_in,
+            )
+
+            effective_policy["per_pair_master_gradient_wire_in"] = (
+                compose_inflate_time_post_processing_per_pair_wire_in(
+                    archive_sha256=archive_sha256,
+                    total_bit_budget=total_bit_budget,
+                    auto_load=True,
+                )
+            )
         per_pass_outcomes: list[dict[str, Any]] = []
         rejected: list[str] = []
         elapsed_total = 0.0
@@ -562,7 +586,7 @@ class ComposableInflatePipeline:
                     ref,
                     group_input_state,
                     scorer_surrogate=scorer_surrogate,
-                    policy=policy,
+                    policy=effective_policy,
                 )
                 elapsed_this = time.monotonic() - start
 

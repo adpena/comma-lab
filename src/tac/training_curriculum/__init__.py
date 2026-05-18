@@ -157,6 +157,11 @@ from tac.training_curriculum.multi_stage_curriculum import (
     StageScheduler,
     StageTransition,
 )
+from tac.training_curriculum.master_gradient_pair_weights import (
+    MasterGradientPairWeights,
+    derive_master_gradient_pair_weights,
+    load_master_gradient_pair_weights_for_archive,
+)
 from tac.training_curriculum.pause_and_diagnose import (
     DiagnosticCheckpoint,
     DiagnosticMetric,
@@ -178,6 +183,10 @@ from tac.training_curriculum.pause_to_swap_loss import (
     LossSwap,
     LossSwapError,
     swap_loss_at_pause,
+)
+from tac.training_curriculum.per_pair_master_gradient_wire_in import (
+    TrainingCurriculumPerPairWireInOutcome,
+    compose_training_curriculum_per_pair_wire_in,
 )
 from tac.training_curriculum.quantizr_5_stage_staircase import (
     QUANTIZR_CANONICAL_STAGES,
@@ -203,6 +212,7 @@ IMPLEMENTED_MODULES: tuple[str, ...] = (
     "early_stopping_with_resume",
     "model_soup_averaging",
     "multi_stage_curriculum",
+    "master_gradient_pair_weights",
     "pause_and_diagnose",
     "pause_distill_resume",
     "pause_quantize_finetune",
@@ -240,6 +250,7 @@ __all__ = [
     "InflateBiasCorrectionVerdict",
     "LossSwap",
     "LossSwapError",
+    "MasterGradientPairWeights",
     "ModelSoupError",
     "ModelSoupResult",
     "PauseAndDiagnoseError",
@@ -255,12 +266,16 @@ __all__ = [
     "StageScheduler",
     "StageTransition",
     "StaircaseStage",
+    "TrainingCurriculumPerPairWireInOutcome",
     "UniformModelSoup",
     "apply_ema_shadow_to_inference",
     "apply_pause_quantize_finetune_plan",
+    "compose_training_curriculum_per_pair_wire_in",
+    "derive_master_gradient_pair_weights",
     "freeze_bn_stats",
     "freeze_param_groups",
     "kl_on_logits_distillation",
+    "load_master_gradient_pair_weights_for_archive",
     "pause_and_capture",
     "swap_loss_at_pause",
     "teacher_student_pair",

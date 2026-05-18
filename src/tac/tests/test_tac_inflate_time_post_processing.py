@@ -990,6 +990,38 @@ def test_pipeline_run_threads_max_frames_kwarg() -> None:
     assert captured["max_frames"] == 60
 
 
+def test_pipeline_run_auto_threads_per_pair_wire_in_policy(monkeypatch) -> None:
+    c = _minimal_contract(id="wire_probe", seed=42)
+    captured = {}
+    fake_wire = {"namespace_id": "inflate_time_post_processing"}
+
+    def fake_compose(**kwargs):
+        captured["compose_kwargs"] = kwargs
+        return fake_wire
+
+    monkeypatch.setattr(
+        "tac.inflate_time_post_processing.per_pair_master_gradient_wire_in."
+        "compose_inflate_time_post_processing_per_pair_wire_in",
+        fake_compose,
+    )
+
+    @inflate_time_post_filter(c)
+    def wire_probe(state, *, policy=None, seed=42):
+        captured["policy"] = policy
+        return {"wire": policy["per_pair_master_gradient_wire_in"]}
+
+    p = ComposableInflatePipeline() | "wire_probe"
+    result = p.run(
+        {},
+        auto_per_pair_wire_in=True,
+        archive_sha256="deadbeef1234567890abcdef",
+        total_bit_budget=321,
+    )
+    assert result.final_state["wire"] is fake_wire
+    assert captured["compose_kwargs"]["archive_sha256"] == "deadbeef1234567890abcdef"
+    assert captured["compose_kwargs"]["total_bit_budget"] == 321
+
+
 def test_pipeline_run_accepts_pass_within_wallclock_budget() -> None:
     import time
 

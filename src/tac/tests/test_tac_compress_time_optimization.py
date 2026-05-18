@@ -722,6 +722,42 @@ class TestPipelineComposition:
         assert r.per_pass_outcomes[0]["pass_id"] == "a10"
         assert r.per_pass_outcomes[0]["status"] == "accepted"
 
+    def test_run_auto_threads_per_pair_wire_in_policy(self, monkeypatch):
+        c = CompressTimePassContract(
+            id="wire_probe",
+            consumes=frozenset({"in"}),
+            emits=frozenset({"seen"}),
+            hook_not_applicable_rationale=_hook_rationale(),
+        )
+        captured = {}
+        fake_wire = {"namespace_id": "compress_time_optimization"}
+
+        def fake_compose(**kwargs):
+            captured["compose_kwargs"] = kwargs
+            return fake_wire
+
+        monkeypatch.setattr(
+            "tac.compress_time_optimization.per_pair_master_gradient_wire_in."
+            "compose_compress_time_optimization_per_pair_wire_in",
+            fake_compose,
+        )
+
+        @compress_time_pass(c)
+        def wire_probe(state, *, policy, seed=0):
+            captured["policy"] = policy
+            return {"seen": policy["per_pair_master_gradient_wire_in"], "bytes_added": 0}
+
+        p = ComposableCompressPipeline() | "wire_probe"
+        r = p.run(
+            seed_state={"in": 1},
+            auto_per_pair_wire_in=True,
+            archive_sha256="deadbeef1234567890abcdef",
+            total_bit_budget=123,
+        )
+        assert r.final_state["seen"] is fake_wire
+        assert captured["compose_kwargs"]["archive_sha256"] == "deadbeef1234567890abcdef"
+        assert captured["compose_kwargs"]["total_bit_budget"] == 123
+
     def test_run_no_op_when_pass_returns_none(self):
         c = CompressTimePassContract(
             id="noop",

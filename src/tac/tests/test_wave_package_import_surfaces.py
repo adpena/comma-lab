@@ -32,16 +32,19 @@ def test_training_curriculum_import_surface_is_not_dangling() -> None:
     assert set(mod.IMPLEMENTED_MODULES) == {
         "a1_pattern_inflate_time_bias_correction",
         "early_stopping_with_resume",
+        "master_gradient_pair_weights",
         "model_soup_averaging",
         "multi_stage_curriculum",
         "pause_and_diagnose",
         "pause_distill_resume",
         "pause_quantize_finetune",
         "pause_to_swap_loss",
+        "quantizr_5_stage_staircase",
         "swa_polyak_averaging",
     }
     assert mod.DEFERRED_MODULES == ()
     assert "DistillationConfig" in mod.__all__
+    assert "compose_training_curriculum_per_pair_wire_in" in mod.__all__
     assert "DEFERRED_RATIONALE" in mod.__all__
 
 

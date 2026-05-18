@@ -12,6 +12,7 @@ import json
 import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 import torch.nn as nn
@@ -31,6 +32,7 @@ from tac.training_curriculum import (
     InflateBiasCorrectionError,
     LossSwap,
     LossSwapError,
+    MasterGradientPairWeights,
     ModelSoupError,
     PauseAndDiagnoseError,
     PauseQuantizeFinetuneError,
@@ -42,6 +44,7 @@ from tac.training_curriculum import (
     SWASchedulerError,
     UniformModelSoup,
     apply_pause_quantize_finetune_plan,
+    derive_master_gradient_pair_weights,
     kl_on_logits_distillation,
     pause_and_capture,
     swap_loss_at_pause,
@@ -57,20 +60,50 @@ from tac.training_curriculum.demo_nscs01_wiring import (
 # ----- package surface -----
 
 
-def test_package_exposes_all_9_modules() -> None:
-    assert len(IMPLEMENTED_MODULES) == 9
+def test_package_exposes_all_11_modules() -> None:
+    assert len(IMPLEMENTED_MODULES) == 11
     expected = {
         "a1_pattern_inflate_time_bias_correction",
         "early_stopping_with_resume",
+        "master_gradient_pair_weights",
         "model_soup_averaging",
         "multi_stage_curriculum",
         "pause_and_diagnose",
         "pause_distill_resume",
         "pause_quantize_finetune",
         "pause_to_swap_loss",
+        "quantizr_5_stage_staircase",
         "swa_polyak_averaging",
     }
     assert set(IMPLEMENTED_MODULES) == expected
+
+
+def test_master_gradient_pair_weights_are_bounded_mean_normalized() -> None:
+    per_pair = np.zeros((3, 4, 3), dtype=np.float64)
+    per_pair[:, 0, :] = 0.1
+    per_pair[:, 1, :] = 1.0
+    per_pair[:, 2, :] = 3.0
+    weights = derive_master_gradient_pair_weights(
+        per_pair,
+        archive_sha256="deadbeef1234567890abcdef",
+        measurement_axis="[macOS-CPU advisory]",
+        measurement_hardware="macos_arm64",
+        min_weight=0.25,
+        max_weight=4.0,
+        top_k=2,
+        bottom_k=2,
+    )
+    assert isinstance(weights, MasterGradientPairWeights)
+    assert len(weights.pair_weights) == 4
+    assert min(weights.pair_weights) >= 0.25
+    assert max(weights.pair_weights) <= 4.0
+    assert weights.top_k_hardest_pair_indices[0] == 2
+    assert weights.bottom_k_easiest_pair_indices[0] == 3
+    assert weights.score_claim is False
+    assert weights.promotion_eligible is False
+    policy = weights.as_policy()
+    assert policy["measurement_axis"] == "[macOS-CPU advisory]"
+    assert policy["ready_for_exact_eval_dispatch"] is False
 
 
 def test_nscs01_demo_wiring_has_canonical_three_stage_budget() -> None:

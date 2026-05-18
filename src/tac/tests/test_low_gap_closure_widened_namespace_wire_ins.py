@@ -2,7 +2,7 @@
 """Tests for the §7.6 namespace per-pair master gradient wire-in shims.
 
 LOW gap closure widened wave 2026-05-17 — `lane_low_gap_closure_widened_8_modules_
-plus_autopilot_wire_in_20260517` BUCKET A. Exercises the 5 §7.6 namespace
+plus_autopilot_wire_in_20260517` BUCKET A. Exercises the solver namespace
 shims around the canonical
 ``tac.optimization.per_pair_namespace_wire_in.compose_namespace_per_pair_wire_in``
 helper.
@@ -41,13 +41,17 @@ from tac.side_information import (
     SideInformationPerPairWireInOutcome,
     compose_side_information_per_pair_wire_in,
 )
+from tac.training_curriculum import (
+    TrainingCurriculumPerPairWireInOutcome,
+    compose_training_curriculum_per_pair_wire_in,
+)
 
 
 # ── Shared helper invariants ──────────────────────────────────────────────────
 
 
 def test_legal_namespace_ids_pinned():
-    """LEGAL_NAMESPACE_IDS is the canonical 5-element frozenset."""
+    """LEGAL_NAMESPACE_IDS is the canonical 6-element frozenset."""
     assert isinstance(LEGAL_NAMESPACE_IDS, frozenset)
     assert LEGAL_NAMESPACE_IDS == frozenset({
         "boosting",
@@ -55,6 +59,7 @@ def test_legal_namespace_ids_pinned():
         "inflate_time_post_processing",
         "side_information",
         "search",
+        "training_curriculum",
     })
 
 
@@ -172,6 +177,17 @@ def test_search_shim_namespace_id():
     assert out.score_claim is False
 
 
+def test_training_curriculum_shim_namespace_id():
+    out = compose_training_curriculum_per_pair_wire_in(
+        archive_sha256="2222333344445555aaaabbbb",
+        total_bit_budget=96,
+        auto_load=False,
+    )
+    assert out.namespace_id == "training_curriculum"
+    assert out.score_claim is False
+    assert "training_curriculum" in out.rationale
+
+
 # ── Cascade path correctness ─────────────────────────────────────────────────
 
 
@@ -251,6 +267,7 @@ def test_boosting_outcome_type_alias_resolves_to_canonical():
     assert InflateTimePostProcessingPerPairWireInOutcome is NamespacePerPairWireInOutcome
     assert SideInformationPerPairWireInOutcome is NamespacePerPairWireInOutcome
     assert SearchPerPairWireInOutcome is NamespacePerPairWireInOutcome
+    assert TrainingCurriculumPerPairWireInOutcome is NamespacePerPairWireInOutcome
 
 
 # ── All 5 namespaces exhaustively covered ─────────────────────────────────────
