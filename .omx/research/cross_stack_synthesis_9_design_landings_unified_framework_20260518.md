@@ -1372,3 +1372,78 @@ cd /Users/adpena/Projects/pact && .venv/bin/python tools/lane_maturity.py add-la
 
 ---
 
+## 18. Canonical-vs-Unique Decision per Layer (Catalog #290)
+
+Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable + Catalog #290 (`check_substrate_design_memo_has_canonical_vs_unique_decision_section`): every substrate design memo MUST document per-layer canonical-vs-unique decisions. The synthesis is a META-level design memo over the 9 designs; its canonical-vs-unique decisions:
+
+| Layer | Canonical helper / pattern | Decision | Rationale |
+|---|---|---|---|
+| Lane registration | `tools/lane_maturity.py add-lane` | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #126 pre-registration discipline; no fork rationale |
+| Subagent checkpointing | `tools/subagent_checkpoint.py` | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #206 crash-resume discipline; canonical fcntl-locked JSONL store |
+| Commit serialization | `tools/subagent_commit_serializer.py --expected-content-sha256` | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #117/#157/#174/#216/#234/#235 commit-swap protection family |
+| Council anchor emission | `tac.council_continual_learning.append_council_anchor` | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #300 v2 frontmatter + Catalog #131 fcntl-locked discipline |
+| Council frontmatter schema | Catalog #300 v2 schema | **ADOPT_CANONICAL_BECAUSE_SERVES** | mandatory T2+ requirement; no fork rationale |
+| Cargo-cult audit format | Catalog #303 `## Cargo-cult audit per assumption` section | **ADOPT_CANONICAL_BECAUSE_SERVES** | mandatory per the standing directive 2026-05-15 + 2026-05-16 |
+| 9-dim checklist evidence format | Catalog #294 `## 9-dimension success checklist evidence` section | **ADOPT_CANONICAL_BECAUSE_SERVES** | mandatory per operator's 9-dim standing directive 2026-05-15 |
+| Observability surface format | Catalog #305 `## Observability surface` section | **ADOPT_CANONICAL_BECAUSE_SERVES** | mandatory per operator's max observability standing directive 2026-05-16 |
+| Cross-pollination matrix format | 9×9 matrix tabular form | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern (no prior synthesis canonicalizes the matrix); per Carmack binding Revision #3 the queryable matrix IS the canonical operator-facing surface; the synthesis ESTABLISHES this canonical pattern for future cross-design synthesis memos |
+| Canonical task queue format | 10-row EV-ranked op-routable table | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern per Carmack binding Revision #3 + CLAUDE.md "Meta-Lagrangian/Pareto solver" mandate that planning recipes use the current tool surfaces; the synthesis ESTABLISHES this canonical pattern for future cross-design synthesis memos |
+| 4-tier bilevel optimization framework | Section 5 unified action | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern per CLAUDE.md "Subagent coherence-by-default" + Catalog #125 6-hook wire-in unified-Lagrangian action migration target; the synthesis ESTABLISHES this canonical pattern as the migration target |
+| ASCII cross-pollination tree | Section 4 ASCII tree visualization | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern per Carmack binding Revision #3; 30-second-reviewability requires visual surface; the synthesis ESTABLISHES this canonical pattern |
+| Per-design reactivation criteria format | Section 15 per-design table | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #325 per-substrate symposium discipline reactivation criteria format |
+| Cross-references format | Section 14 4-subsection format | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern (no prior synthesis canonicalizes the 4-subsection split: memory / catalog / sister memos / codex deps); per CLAUDE.md "Required durable state" + "Subagent coherence-by-default" |
+| Premise verification trail format | Section 17 PV-1 through PV-8 numbered list | **FORK_BECAUSE_PRINCIPLED_MISMATCH** | NEW canonical pattern; the synthesis ESTABLISHES this canonical pattern for future cross-design synthesis memos |
+| Mission alignment classification | Catalog #300 v2 `council_predicted_mission_contribution: frontier_breaking` | **ADOPT_CANONICAL_BECAUSE_SERVES** | Catalog #300 v2 mandatory field; classified per Mission alignment subsection of Council hierarchy 4-tier protocol |
+
+### Per-layer summary
+
+- **9 of 16 layers adopt canonical**: lane registration / checkpointing / commit serialization / council anchor / council frontmatter / cargo-cult audit format / 9-dim checklist format / observability surface format / per-design reactivation criteria format / mission alignment.
+- **6 of 16 layers FORK because principled mismatch**: cross-pollination matrix format / canonical task queue format / 4-tier bilevel optimization framework / ASCII cross-pollination tree / cross-references format / premise verification trail format.
+
+All 6 FORK decisions are FORK_BECAUSE_PRINCIPLED_MISMATCH per the canonical-vs-unique decision framework per CLAUDE.md UNIQUE-AND-COMPLETE-PER-METHOD operating mode 2026-05-15. The synthesis ESTABLISHES these 6 new canonical patterns as the META-level canonical structure for future cross-design synthesis memos.
+
+---
+
+## 19. Closing Remarks
+
+The synthesis canonicalizes the 9 design landings of 2026-05-18 into ONE coherent framework. The 4-tier bilevel optimization framework (Section 5) is the canonical mathematical answer to "what mathematical object do all 9 designs jointly compute?". The 9×9 cross-pollination matrix (Section 4) is the canonical answer to "how do the 9 designs interact?". The canonical task queue (Section 9) is the canonical operator-facing routing surface for "what is the next highest-EV action?".
+
+### What this synthesis is NOT
+
+- NOT a substitute for any individual design memo (each design memo retains canonical authority over its own design).
+- NOT a paid-dispatch authorization (synthesis is research-only per `research_only: true` + `score_claim: false` + `promotion_eligible: false` + `provider_spend: false` frontmatter fields).
+- NOT a substitute for per-substrate symposium discipline per Catalog #325 (the synthesis recommends per-substrate symposiums for OP-4 + OP-8 per OP-SYN-10).
+- NOT a substitute for Wave N+1 council ratification of TT5L V2 (per TT5L V2 Revision #1 binding + Catalog #325).
+
+### What this synthesis IS
+
+- The canonical operator-facing routing surface for the 9 design landings of 2026-05-18.
+- The canonical META-level canonical-vs-unique decision per layer per Catalog #290 sister extension.
+- The canonical 4-tier bilevel optimization framework per Catalog #125 + CLAUDE.md Subagent coherence-by-default unified-Lagrangian action migration target.
+- The canonical 9×9 cross-pollination matrix per Carmack binding Revision #3 + Catalog #322 anti-additive evidence.
+- The canonical task queue with 10 EV-ranked op-routables per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable.
+
+### Per CLAUDE.md "Forbidden premature KILL" non-negotiable
+
+The synthesis preserves DEFERRED status for all 9 designs not yet at reactivation per Section 15. The cargo-cult resurrection TOP-3 wave + Z6/Z7/Z8 sequencing per the canonical task queue Section 9 are the canonical research paths forward. Per CLAUDE.md "Forbidden premature KILL without research exhaustion" + "KILL/FALSIFIED memory verdicts" non-negotiables: the synthesis does NOT kill any of the 9 designs; it RANKS them by EV + sequences them per the canonical task queue.
+
+### Per CLAUDE.md "Bugs must be permanently fixed AND self-protected against" non-negotiable
+
+The synthesis DOES NOT introduce a new STRICT preflight gate (no new bug class identified; the synthesis is a documentation + orchestration deliverable). The existing META-meta gates (Catalog #118 + #159 + #176 + #185 + #186 + #289 + #299 + #300) provide structural protection for the canonical task queue + cross-pollination matrix + per-design reactivation criteria.
+
+### Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" non-negotiable
+
+The synthesis is structured to RESPECT race-mode rigor inversion per Section 9.5. If the leaderboard moves during Weeks 2-8, the canonical task queue is REORDERED to prioritize the smallest credible bolt-on per the 2026-05-04 race postmortem template.
+
+---
+
+## End of Synthesis Memo
+
+**Lane**: `lane_cross_stack_synthesis_9_design_landings_20260518` (L1 at memo landing per Catalog #126)
+**Subagent**: `cross_stack_synthesis_20260518` (per Catalog #206 checkpoint discipline; 6+ checkpoints emitted)
+**Council anchor**: emitted via `tac.council_continual_learning.append_council_anchor` per Section 16
+**Memory file**: `~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_cross_stack_synthesis_9_design_landings_unified_framework_landed_20260518.md`
+**Verdict**: PROCEED_WITH_REVISIONS (4 binding revisions per Section 0; full text in Section 14)
+**Predicted aggregate ΔS band per Section 13.2**: REALISTIC `-0.040` to `-0.010` per archive; OPTIMISTIC `-0.080` to `-0.029` per archive (both axis-tagged `[prediction]` per Catalog #287; `predicted_band_validation_status: pending_post_training` per Catalog #324)
+**Predicted frontier trajectory**: from `0.19205 [contest-CPU]` toward `[0.165, 0.185]` REALISTIC + `[0.155, 0.175]` OPTIMISTIC
+**Mission contribution**: `frontier_breaking` per Catalog #300 v2 frontmatter
