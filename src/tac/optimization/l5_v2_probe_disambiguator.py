@@ -159,6 +159,12 @@ def _canonical_json_sha256(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def l5_v2_probe_verdict_sha256(verdict: Mapping[str, Any]) -> str:
+    """Return the canonical digest recorded in probe gate artifacts."""
+
+    return _canonical_json_sha256(verdict)
+
+
 def build_l5_v2_probe_gate_artifact(
     observations: Iterable[L5V2ProbeObservation],
     *,
@@ -187,7 +193,7 @@ def build_l5_v2_probe_gate_artifact(
             "paired_exact_axes_required": True,
             "observations": observation_payloads,
             "verdict": verdict,
-            "verdict_sha256": _canonical_json_sha256(verdict),
+            "verdict_sha256": l5_v2_probe_verdict_sha256(verdict),
         },
     }
 
@@ -655,6 +661,7 @@ __all__ = [
     "build_l5_v2_probe_gate_artifact",
     "build_probe_template",
     "evaluate_l5_v2_probe",
+    "l5_v2_probe_verdict_sha256",
     "load_observations_json",
     "observation_from_mapping",
 ]

@@ -53,7 +53,9 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_CANDIDATES,
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
+    build_l5_v2_probe_gate_artifact,
     evaluate_l5_v2_probe,
+    l5_v2_probe_verdict_sha256,
     observation_from_mapping,
 )
 from tac.optimization.substrate_composition_matrix import (
@@ -563,7 +565,7 @@ def _probe_disambiguator_payload(repo_root: Path) -> dict[str, object]:
         "paired_exact_axes_required": True,
         "observations": observations,
         "verdict": verdict,
-        "verdict_sha256": _canonical_json_sha256(verdict),
+        "verdict_sha256": l5_v2_probe_verdict_sha256(verdict),
     }
 
 
@@ -4098,6 +4100,36 @@ def test_l5_v2_canonical_probe_gate_evidence_auto_consumes_valid_artifact(
     assert evidence.predicate_passed is True
 
 
+def test_l5_v2_probe_gate_status_accepts_builder_verdict_hash(
+    tmp_path: Path,
+) -> None:
+    probe_payload = _probe_disambiguator_payload(tmp_path)
+    observations = [
+        observation_from_mapping(row)
+        for row in probe_payload["observations"]
+        if isinstance(row, dict)
+    ]
+    artifact_path = tmp_path / l5_v2.TT5L_PROBE_GATE_ARTIFACT_PATH
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        json.dumps(
+            build_l5_v2_probe_gate_artifact(observations, repo_root=tmp_path),
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    status = l5_v2.l5_v2_probe_gate_artifact_status(repo_root=tmp_path)
+
+    assert status["artifact_valid"] is True
+    assert (
+        "l5_v2_gate_artifact_semantics_invalid:"
+        "c1_z5_tt5l_probe_disambiguator:probe_verdict_sha256_mismatch"
+        not in status["blockers"]
+    )
+
+
 def test_l5_v2_canonical_probe_gate_evidence_skips_blocked_artifact(
     tmp_path: Path,
 ) -> None:
@@ -4113,7 +4145,7 @@ def test_l5_v2_canonical_probe_gate_evidence_skips_blocked_artifact(
                     "paired_exact_axes_required": True,
                     "observations": [],
                     "verdict": evaluate_l5_v2_probe(()),
-                    "verdict_sha256": _canonical_json_sha256(
+                    "verdict_sha256": l5_v2_probe_verdict_sha256(
                         evaluate_l5_v2_probe(())
                     ),
                 },
@@ -5899,7 +5931,7 @@ def test_l5_v2_probe_gate_rejects_selected_candidate_not_min_eligible_delta(
     assert isinstance(verdict, dict)
     verdict["selected_candidate_id"] = "c1_world_model_foveation"
     verdict["selected_delta"] = -0.010
-    probe["verdict_sha256"] = _canonical_json_sha256(verdict)
+    probe["verdict_sha256"] = l5_v2_probe_verdict_sha256(verdict)
     artifact_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
     evidence[gate_id]["artifact_sha256"] = _file_sha256(artifact_path)
 

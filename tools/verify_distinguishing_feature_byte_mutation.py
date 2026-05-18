@@ -33,6 +33,8 @@ Usage
         [--distinguishing-bytes-path <another_section>] ... \\
         [--distinguishing-byte-range label=member@offset:length] \\
         --output-json <experiments/results/<lane>/distinguishing_feature_byte_mutation_proof.json> \\
+        [--archive-staging-mode zip_file|extracted_members] \\
+        [--inflate-python /path/to/python] \\
         [--mutation-offsets-per-section 4] \\
         [--epsilon-hash-bytes 0]
 
@@ -88,8 +90,10 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import zipfile
@@ -270,12 +274,50 @@ def _hash_directory_contents(directory: Path) -> str:
     return h.hexdigest()
 
 
+def _safe_zip_member_output_path(archive_dir: Path, member_name: str) -> Path:
+    if member_name.startswith("/") or member_name.startswith("\\"):
+        raise ValueError(f"unsafe absolute ZIP member name: {member_name!r}")
+    out_path = (archive_dir / member_name).resolve()
+    archive_root = archive_dir.resolve()
+    out_path.relative_to(archive_root)
+    return out_path
+
+
+def _stage_archive_for_inflate(
+    archive: Path,
+    archive_dir: Path,
+    *,
+    archive_staging_mode: str,
+) -> None:
+    """Stage an archive for the contest inflate.sh signature.
+
+    Some runtimes read the ZIP file directly from ``archive_dir``. Others match
+    the contest harness and expect extracted members such as ``archive_dir/0.bin``.
+    Keep the mode explicit so a verifier pass cannot silently depend on the
+    wrong archive staging contract.
+    """
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    if archive_staging_mode == "zip_file":
+        shutil.copy2(archive, archive_dir / archive.name)
+        return
+    if archive_staging_mode != "extracted_members":
+        raise ValueError(f"unknown archive_staging_mode={archive_staging_mode!r}")
+    with zipfile.ZipFile(archive, "r") as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            out_path = _safe_zip_member_output_path(archive_dir, info.filename)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_bytes(zf.read(info.filename))
+
+
 def _run_inflate(
     inflate_sh: Path,
     archive_dir: Path,
     output_dir: Path,
     file_list: Path,
     timeout_seconds: int = 600,
+    inflate_python: str | None = None,
 ) -> tuple[int, str]:
     """Run inflate.sh; return (returncode, output_dir_hash)."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -286,12 +328,15 @@ def _run_inflate(
         str(output_dir),
         str(file_list),
     ]
+    env = os.environ.copy()
+    env.setdefault("PYTHON", inflate_python or sys.executable)
     try:
         result = subprocess.run(
             cmd,
             check=False,
             capture_output=True,
             timeout=timeout_seconds,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return 124, ""
@@ -340,6 +385,8 @@ def verify_distinguishing_feature_byte_mutation(
     mutations_per_section: int = DEFAULT_MUTATIONS_PER_SECTION,
     file_list: Path | None = None,
     inflate_timeout_seconds: int = 600,
+    archive_staging_mode: str = "zip_file",
+    inflate_python: str | None = None,
     verbose: bool = False,
 ) -> dict[str, Any]:
     """Run the distinguishing-feature byte-mutation smoke.
@@ -422,11 +469,15 @@ def verify_distinguishing_feature_byte_mutation(
 
     with tempfile.TemporaryDirectory(prefix="dfic_") as tmp_str:
         tmp = Path(tmp_str)
-        # Stage archive_dir (inflate.sh expects a directory containing the ZIP).
+        # Stage archive_dir for the runtime's declared archive-dir contract.
         archive_dir = tmp / "archive_dir"
-        archive_dir.mkdir(parents=True, exist_ok=True)
-        staged_archive = archive_dir / archive.name
+        staged_archive = tmp / archive.name
         shutil.copy2(archive, staged_archive)
+        _stage_archive_for_inflate(
+            staged_archive,
+            archive_dir,
+            archive_staging_mode=archive_staging_mode,
+        )
 
         # File list — minimal default if not provided.
         if file_list is None:
@@ -445,11 +496,12 @@ def verify_distinguishing_feature_byte_mutation(
             baseline_out,
             file_list_path,
             timeout_seconds=inflate_timeout_seconds,
+            inflate_python=inflate_python,
         )
         if rc != 0 or not baseline_hash:
             result = _infra_error(
                 f"baseline inflate failed rc={rc}",
-                distinguishing_bytes_paths,
+                target_labels,
                 output_json,
                 started,
                 archive_sha=archive_sha,
@@ -464,11 +516,12 @@ def verify_distinguishing_feature_byte_mutation(
             baseline_repeat_out,
             file_list_path,
             timeout_seconds=inflate_timeout_seconds,
+            inflate_python=inflate_python,
         )
         if rc != 0 or not baseline_repeat_hash:
             result = _infra_error(
                 f"baseline repeat inflate failed rc={rc}",
-                distinguishing_bytes_paths,
+                target_labels,
                 output_json,
                 started,
                 archive_sha=archive_sha,
@@ -482,7 +535,7 @@ def verify_distinguishing_feature_byte_mutation(
             result = _infra_error(
                 "baseline inflate nondeterministic: identical archive produced "
                 f"different aggregate hashes {baseline_hash} vs {baseline_repeat_hash}",
-                distinguishing_bytes_paths,
+                target_labels,
                 output_json,
                 started,
                 archive_sha=archive_sha,
@@ -541,8 +594,11 @@ def verify_distinguishing_feature_byte_mutation(
                 )
                 # Stage mutated archive and re-inflate.
                 mut_archive_dir = tmp / f"mut_archive_dir_{sec_idx}_{m_idx}"
-                mut_archive_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(mut_archive, mut_archive_dir / archive.name)
+                _stage_archive_for_inflate(
+                    mut_archive,
+                    mut_archive_dir,
+                    archive_staging_mode=archive_staging_mode,
+                )
                 mut_out = tmp / f"mut_out_{sec_idx}_{m_idx}"
                 rc, mut_hash = _run_inflate(
                     inflate_sh,
@@ -550,6 +606,7 @@ def verify_distinguishing_feature_byte_mutation(
                     mut_out,
                     file_list_path,
                     timeout_seconds=inflate_timeout_seconds,
+                    inflate_python=inflate_python,
                 )
                 if rc == 0 and mut_hash and mut_hash != baseline_hash:
                     changed += 1
@@ -586,6 +643,8 @@ def verify_distinguishing_feature_byte_mutation(
         "schema_version": SCHEMA_VERSION,
         "archive_sha256": archive_sha,
         "archive_size_bytes": archive_size,
+        "archive_staging_mode": archive_staging_mode,
+        "inflate_python": inflate_python or sys.executable,
         "inflate_sh_sha256": inflate_sha,
         "distinguishing_bytes_paths": target_labels,
         "section_results": [s.to_dict() for s in section_results],
@@ -674,6 +733,23 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--file-list", type=Path, default=None)
     parser.add_argument("--inflate-timeout-seconds", type=int, default=600)
+    parser.add_argument(
+        "--archive-staging-mode",
+        choices=("zip_file", "extracted_members"),
+        default="zip_file",
+        help=(
+            "How to stage the archive inside archive_dir before invoking inflate.sh. "
+            "Use extracted_members for contest runtimes that expect archive_dir/0.bin."
+        ),
+    )
+    parser.add_argument(
+        "--inflate-python",
+        default=None,
+        help=(
+            "Python executable exposed to inflate.sh as PYTHON. Defaults to the "
+            "interpreter running this verifier."
+        ),
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
     if not args.distinguishing_bytes_paths and not args.distinguishing_byte_ranges:
@@ -688,6 +764,8 @@ def main(argv: list[str] | None = None) -> int:
         mutations_per_section=args.mutations_per_section,
         file_list=args.file_list,
         inflate_timeout_seconds=args.inflate_timeout_seconds,
+        archive_staging_mode=args.archive_staging_mode,
+        inflate_python=args.inflate_python,
         verbose=args.verbose,
     )
 

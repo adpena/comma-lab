@@ -522,8 +522,8 @@ def test_recipe_yaml_dispatch_blockers_cleared_after_operator_approval() -> None
     assert recipe["dispatch_enabled"] is True
 
 
-def test_candidate_4c_recipe_yaml_loads_and_is_distinct_launchable_lane() -> None:
-    """Candidate 4c is a separate scorer-logit branch, not a Candidate 1 edit."""
+def test_candidate_4c_recipe_yaml_loads_as_distinct_diagnostic_lane() -> None:
+    """Candidate 4c is a separate scorer-logit diagnostic, not a Candidate 1 edit."""
     import yaml
     assert CANDIDATE4C_RECIPE_PATH.is_file(), (
         f"Candidate 4c recipe missing at {CANDIDATE4C_RECIPE_PATH}"
@@ -538,22 +538,38 @@ def test_candidate_4c_recipe_yaml_loads_and_is_distinct_launchable_lane() -> Non
         "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518"
     )
     assert recipe["research_only"] is False
-    assert recipe["dispatch_enabled"] is True
-    assert recipe["dispatch_blockers"] == []
+    assert recipe["dispatch_enabled"] is False
+    assert recipe["dispatch_blockers"] == [
+        "candidate4c_modal_training_recipe_is_diagnostic_only_exact_cuda_handoff_required"
+    ]
+    assert recipe["smoke_only"] is True
+    assert recipe["smoke_validation_contract"] == "training_artifact_v1"
+    assert "contest_exact_eval" not in recipe["target_modes"]
     assert recipe["distinguishing_feature_name"] == "scorer_logit_ego_source"
-    assert recipe["distinguishing_bytes_path"] == "ego_motion_blob"
+    assert recipe["distinguishing_bytes_path"] == "scorer_logit_ego_motion"
+    assert recipe["distinguishing_byte_range"] == "0.bin@192390:16"
+    assert recipe["byte_mutation_smoke_passes"].endswith(
+        "scorer_logit_ego_motion_byte_mutation_proof.json"
+    )
     assert recipe["smoke_before_full"] is True
-    assert recipe["horizon_class"] == "frontier_pursuit"
+    assert recipe["horizon_class"] == "asymptotic_pursuit"
     assert recipe["predicted_band"] == [0.11, 0.17]
+    assert recipe["predicted_band_validation_status"] == "pending_post_training"
+    assert "Catalog #324" in recipe["predicted_band_reactivation_criteria"]
+    assert "planning prior" in recipe["predicted_band_reactivation_criteria"]
+    assert "full-vs-identity disambiguator" in recipe[
+        "predicted_band_reactivation_criteria"
+    ]
     assert recipe["smoke_score_band"] == [0.13, 0.25]
     assert "full_minus_identity_score <= -0.005" in recipe["pact_must_prove"]
     assert "identity_minus_full_score >= 0.005" in recipe["pact_must_prove"]
     assert "lower score wins" in recipe["pact_must_prove"]
 
     cost_band = recipe["cost_band"]
-    assert cost_band["epochs"] == 300
-    assert cost_band["predicted_cost_usd"] == 13.0
-    assert cost_band["hand_calibrated_fallback_p50_usd"] == 10.0
+    assert cost_band["epochs"] == 100
+    assert cost_band["predicted_cost_usd"] == 1.25
+    assert cost_band["hand_calibrated_fallback_p50_usd"] == 1.0
+    assert cost_band["future_full_plus_paired_exact_eval_envelope_usd"] == 13.0
 
 
 def test_candidate_4c_recipe_threads_scorer_logit_env_ladder() -> None:
@@ -573,8 +589,27 @@ def test_candidate_4c_recipe_threads_scorer_logit_env_ladder() -> None:
     assert env["Z6_PREDICTOR_HIDDEN_DIM"] == "64"
     assert env["Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM"] == "32"
     assert env["Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE"] == "true"
+    assert env["Z6_MAX_PAIRS"] == "64"
+    assert env["Z6_SKIP_AUTH_EVAL"] == "1"
     assert env["Z6_TRAINER_MODE"] == "full"
     assert env["SMOKE_ONLY"] == "0"
+    assert recipe["modal"]["cost_band_epochs"] == 100
+
+
+def test_z6_remote_driver_pair_cap_skips_auth_eval() -> None:
+    """Pair-capped Candidate 4c diagnostic smokes must not invoke auth-eval."""
+
+    driver = (
+        REPO_ROOT / "scripts" / "remote_lane_substrate_time_traveler_l5_z6.sh"
+    ).read_text(encoding="utf-8")
+
+    assert 'Z6_MAX_PAIRS="${Z6_MAX_PAIRS:-}"' in driver
+    assert 'Z6_SKIP_AUTH_EVAL="${Z6_SKIP_AUTH_EVAL:-}"' in driver
+    assert 'MAX_PAIRS_ARGS+=(--max-pairs "$Z6_MAX_PAIRS")' in driver
+    assert "stage_4_pair_capped_smoke_skips_auth_eval" in driver
+    assert "AUTH_EVAL_ARGS+=(--skip-auth-eval)" in driver
+    assert '${MAX_PAIRS_ARGS[@]+"${MAX_PAIRS_ARGS[@]}"}' in driver
+    assert '${AUTH_EVAL_ARGS[@]+"${AUTH_EVAL_ARGS[@]}"}' in driver
 
 
 def test_full_main_runs_paired_identity_auth_eval_when_disambiguator_emits() -> None:

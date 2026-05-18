@@ -17,6 +17,9 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import shutil
+import subprocess
 import sys
 import zipfile
 from collections.abc import Mapping
@@ -49,6 +52,7 @@ DEFAULT_OUTPUT_MD = (
 TRAINER_PATH = "experiments/train_substrate_time_traveler_l5_z6.py"
 CONTEST_ARCHIVE_NORMALIZER_BYTES = 37_545_489.0
 FALSE_AUTHORITY_FLAGS = {
+    "research_only": True,
     "score_claim": False,
     "promotion_eligible": False,
     "rank_or_kill_eligible": False,
@@ -68,6 +72,10 @@ ARCHIVE_PAIR_BLOCKERS_NO_SCORE = [
     "no_paired_exact_eval_json",
     "no_contest_cpu_cuda_pair",
     "not_score_authority",
+]
+INFLATE_OUTPUT_BLOCKERS_NO_SCORE = [
+    "inflate_output_comparison_no_score_authority",
+    "no_contest_cpu_cuda_pair",
 ]
 
 
@@ -93,6 +101,12 @@ def _proxy_blockers(smoke_target_mode: object) -> list[str]:
 
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _truncate_text(text: str, *, limit: int = 4096) -> str:
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n...[truncated {len(text) - limit} chars]"
 
 
 def _repo_relative(path: Path, *, repo_root: Path) -> str:
@@ -320,6 +334,289 @@ def _default_eval_pair_from_run_dir(run_dir: Path) -> tuple[Path | None, Path | 
         missing = identity if full.is_file() else full
         raise ValueError(f"run-dir paired exact-eval JSON missing {missing}")
     return None, None
+
+
+def _hash_output_tree(root: Path, *, repo_root: Path) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    aggregate = hashlib.sha256()
+    total_bytes = 0
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        rel = path.relative_to(root).as_posix()
+        file_hash = hashlib.sha256()
+        size = 0
+        with path.open("rb") as fh:
+            while True:
+                chunk = fh.read(1024 * 1024)
+                if not chunk:
+                    break
+                file_hash.update(chunk)
+                size += len(chunk)
+        sha = file_hash.hexdigest()
+        aggregate.update(rel.encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(sha.encode("ascii"))
+        aggregate.update(b"\0")
+        rows.append(
+            {
+                "path": rel,
+                "repo_path": _repo_relative(path, repo_root=repo_root),
+                "bytes": size,
+                "sha256": sha,
+            }
+        )
+        total_bytes += size
+    return {
+        "path": _repo_relative(root, repo_root=repo_root),
+        "file_count": len(rows),
+        "total_bytes": total_bytes,
+        "aggregate_sha256": aggregate.hexdigest() if rows else None,
+        "files": rows,
+    }
+
+
+def _hash_runtime_closure(inflate_sh_path: Path, *, repo_root: Path) -> dict[str, Any]:
+    """Hash the inflate runtime code closure, excluding archive payloads."""
+
+    runtime_root = inflate_sh_path.parent
+    closure_paths: list[Path] = [inflate_sh_path]
+    sibling_inflate_py = runtime_root / "inflate.py"
+    if sibling_inflate_py.is_file():
+        closure_paths.append(sibling_inflate_py)
+    python_cache_files_excluded: list[str] = []
+    src_root = runtime_root / "src"
+    if src_root.is_dir():
+        for path in sorted(p for p in src_root.rglob("*") if p.is_file()):
+            if "__pycache__" in path.parts or path.suffix == ".pyc":
+                python_cache_files_excluded.append(
+                    path.relative_to(runtime_root).as_posix()
+                )
+                continue
+            closure_paths.append(path)
+
+    seen: set[Path] = set()
+    rows: list[dict[str, Any]] = []
+    aggregate = hashlib.sha256()
+    total_bytes = 0
+    for path in sorted(p.resolve() for p in closure_paths):
+        if path in seen:
+            continue
+        seen.add(path)
+        rel = path.relative_to(runtime_root).as_posix()
+        sha = _sha256_file(path)
+        size = path.stat().st_size
+        executable = bool(path.stat().st_mode & 0o111)
+        aggregate.update(rel.encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(sha.encode("ascii"))
+        aggregate.update(b"\0")
+        aggregate.update(str(int(executable)).encode("ascii"))
+        aggregate.update(b"\0")
+        rows.append(
+            {
+                "path": rel,
+                "repo_path": _repo_relative(path, repo_root=repo_root),
+                "bytes": size,
+                "sha256": sha,
+                "executable": executable,
+            }
+        )
+        total_bytes += size
+
+    archive_payloads_present = sorted(
+        p.name
+        for p in runtime_root.iterdir()
+        if p.is_file() and p.suffix.lower() in {".bin", ".zip"}
+    )
+    return {
+        "schema": "z6_inflate_runtime_closure_v1",
+        "runtime_root": _repo_relative(runtime_root, repo_root=repo_root),
+        "entrypoint": _repo_relative(inflate_sh_path, repo_root=repo_root),
+        "aggregate_sha256": aggregate.hexdigest() if rows else None,
+        "file_count": len(rows),
+        "total_bytes": total_bytes,
+        "files": rows,
+        "archive_payloads_excluded_from_runtime_hash": archive_payloads_present,
+        "python_cache_files_excluded_from_runtime_hash": python_cache_files_excluded,
+    }
+
+
+def _count_byte_differences(left: Path, right: Path) -> int:
+    differences = 0
+    chunk_size = 1024 * 1024
+    with left.open("rb") as left_fh, right.open("rb") as right_fh:
+        while True:
+            left_chunk = left_fh.read(chunk_size)
+            right_chunk = right_fh.read(chunk_size)
+            if not left_chunk and not right_chunk:
+                break
+            common = min(len(left_chunk), len(right_chunk))
+            differences += sum(
+                1
+                for idx in range(common)
+                if left_chunk[idx] != right_chunk[idx]
+            )
+            differences += abs(len(left_chunk) - len(right_chunk))
+    return differences
+
+
+def _compare_output_trees(
+    *,
+    full_output_dir: Path,
+    identity_output_dir: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    full_tree = _hash_output_tree(full_output_dir, repo_root=repo_root)
+    identity_tree = _hash_output_tree(identity_output_dir, repo_root=repo_root)
+    full_files = {row["path"]: row for row in full_tree["files"]}
+    identity_files = {row["path"]: row for row in identity_tree["files"]}
+    common_paths = sorted(set(full_files) & set(identity_files))
+    only_full = sorted(set(full_files) - set(identity_files))
+    only_identity = sorted(set(identity_files) - set(full_files))
+    file_diffs: list[dict[str, Any]] = []
+    total_byte_differences = 0
+    for rel in common_paths:
+        full_path = full_output_dir / rel
+        identity_path = identity_output_dir / rel
+        byte_differences = _count_byte_differences(full_path, identity_path)
+        total_byte_differences += byte_differences
+        file_diffs.append(
+            {
+                "path": rel,
+                "full_bytes": full_files[rel]["bytes"],
+                "identity_bytes": identity_files[rel]["bytes"],
+                "full_sha256": full_files[rel]["sha256"],
+                "identity_sha256": identity_files[rel]["sha256"],
+                "same_sha256": (
+                    full_files[rel]["sha256"] == identity_files[rel]["sha256"]
+                ),
+                "byte_differences": byte_differences,
+            }
+        )
+    same_file_set = not only_full and not only_identity
+    aggregate_match = (
+        same_file_set
+        and full_tree["aggregate_sha256"] == identity_tree["aggregate_sha256"]
+    )
+    return {
+        "full_output_tree": full_tree,
+        "identity_output_tree": identity_tree,
+        "same_output_file_set": same_file_set,
+        "same_output_aggregate_sha256": aggregate_match,
+        "only_full_output_files": only_full,
+        "only_identity_output_files": only_identity,
+        "common_output_files": common_paths,
+        "file_diffs": file_diffs,
+        "total_byte_differences": total_byte_differences,
+        "runtime_output_changed": (
+            not aggregate_match
+            or bool(only_full)
+            or bool(only_identity)
+            or total_byte_differences > 0
+        ),
+    }
+
+
+def compare_inflate_output_pair(
+    *,
+    full_archive_path: Path,
+    identity_archive_path: Path,
+    inflate_sh_path: Path,
+    file_list_path: Path,
+    output_root: Path,
+    repo_root: Path = REPO_ROOT,
+    python_executable: str | None = None,
+    timeout_seconds: int = 600,
+) -> dict[str, Any]:
+    """Run the same inflate runtime for full/identity archives and compare bytes."""
+
+    if output_root.exists() and any(output_root.iterdir()):
+        raise ValueError(
+            f"inflate output root must be absent or empty: {output_root}"
+        )
+    output_root.mkdir(parents=True, exist_ok=True)
+    full_archive_dir = output_root / "full_archive_dir"
+    identity_archive_dir = output_root / "identity_archive_dir"
+    full_output_dir = output_root / "full_output"
+    identity_output_dir = output_root / "identity_output"
+    for directory in (
+        full_archive_dir,
+        identity_archive_dir,
+        full_output_dir,
+        identity_output_dir,
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(full_archive_path, full_archive_dir / "0.bin")
+    shutil.copyfile(identity_archive_path, identity_archive_dir / "0.bin")
+
+    env = os.environ.copy()
+    env["PYTHON"] = python_executable or sys.executable
+
+    def run_one(mode: str, archive_dir: Path, output_dir: Path) -> dict[str, Any]:
+        command = [
+            str(inflate_sh_path),
+            str(archive_dir),
+            str(output_dir),
+            str(file_list_path),
+        ]
+        proc = subprocess.run(
+            command,
+            cwd=repo_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+        return {
+            "mode": mode,
+            "command": command,
+            "returncode": proc.returncode,
+            "stdout": _truncate_text(proc.stdout),
+            "stderr": _truncate_text(proc.stderr),
+        }
+
+    full_run = run_one("full_film_predictor", full_archive_dir, full_output_dir)
+    identity_run = run_one(
+        "identity_predictor",
+        identity_archive_dir,
+        identity_output_dir,
+    )
+    if full_run["returncode"] != 0 or identity_run["returncode"] != 0:
+        raise ValueError(
+            "inflate output comparison failed: "
+            f"full_returncode={full_run['returncode']} "
+            f"identity_returncode={identity_run['returncode']}"
+        )
+
+    comparison = _compare_output_trees(
+        full_output_dir=full_output_dir,
+        identity_output_dir=identity_output_dir,
+        repo_root=repo_root,
+    )
+    return {
+        "schema": "z6_identity_inflate_output_comparison_v1",
+        "evidence_grade": "local_inflate_output_comparison_no_score",
+        "evidence_axis": "[local-inflate-output advisory]",
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": list(INFLATE_OUTPUT_BLOCKERS_NO_SCORE),
+        "inflate_sh_path": _repo_relative(inflate_sh_path, repo_root=repo_root),
+        "inflate_sh_sha256": _sha256_file(inflate_sh_path),
+        "runtime_custody": _hash_runtime_closure(
+            inflate_sh_path,
+            repo_root=repo_root,
+        ),
+        "file_list_path": _repo_relative(file_list_path, repo_root=repo_root),
+        "file_list_sha256": _sha256_file(file_list_path),
+        "output_root": _repo_relative(output_root, repo_root=repo_root),
+        "python_executable": env["PYTHON"],
+        "timeout_seconds": int(timeout_seconds),
+        "runs": [full_run, identity_run],
+        **comparison,
+    }
 
 
 def _first_number(payload: Mapping[str, Any], keys: tuple[str, ...]) -> float | None:
@@ -759,6 +1056,7 @@ def evaluate_archive_pair(
     identity_eval_json_path: Path | None = None,
     axis: str | None = None,
     decision_delta_s: float = 0.005,
+    inflate_output_comparison: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate a byte-closed full/identity Z6 archive pair.
 
@@ -906,6 +1204,15 @@ def evaluate_archive_pair(
         verdict = "blocked_paired_archive_custody"
         evidence_grade = "byte_closed_archive_pair_fail_closed"
         result_classification = "paired_archive_custody_blocked"
+    if (
+        inflate_output_comparison is not None
+        and inflate_output_comparison.get("runtime_output_changed") is False
+    ):
+        blockers.append("identity_predictor_switch_inflate_output_noop")
+        if verdict != "blocked_paired_archive_custody":
+            verdict = "blocked_identity_predictor_switch_inflate_output_noop"
+            evidence_grade = "inflate_output_comparison_fail_closed"
+            result_classification = "identity_predictor_switch_runtime_noop"
 
     return {
         "schema": SCHEMA,
@@ -921,6 +1228,17 @@ def evaluate_archive_pair(
         "blockers": blockers,
         "source_archives": [full_row, identity_row],
         "paired_archive_checks": checks,
+        "runtime_custody": (
+            dict(inflate_output_comparison["runtime_custody"])
+            if inflate_output_comparison is not None
+            and isinstance(inflate_output_comparison.get("runtime_custody"), Mapping)
+            else None
+        ),
+        "inflate_output_comparison": (
+            dict(inflate_output_comparison)
+            if inflate_output_comparison is not None
+            else None
+        ),
         "exact_eval": exact_eval,
         "deltas": deltas,
         "result_review": {
@@ -935,6 +1253,18 @@ def evaluate_archive_pair(
             "score_claim_authority": False,
             "component_score_authority": exact_eval is not None and not blockers,
             "contest_compliance_authority": exact_eval is not None and not blockers,
+            "runtime_custody_available": (
+                inflate_output_comparison is not None
+                and isinstance(inflate_output_comparison.get("runtime_custody"), Mapping)
+            ),
+            "inflate_output_comparison_available": (
+                inflate_output_comparison is not None
+            ),
+            "identity_predictor_switch_changes_inflate_output": (
+                inflate_output_comparison.get("runtime_output_changed")
+                if inflate_output_comparison is not None
+                else None
+            ),
             "full_minus_identity_score_semantics": (
                 "negative means full-FiLM lower score; positive means identity lower score"
             ),
@@ -1054,6 +1384,52 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         lines.extend(["", "## Paired Archive Checks"])
         for key, value in checks.items():
             lines.append(f"- {key}: `{value}`")
+    runtime_custody = payload.get("runtime_custody")
+    if isinstance(runtime_custody, Mapping):
+        lines.extend(
+            [
+                "",
+                "## Runtime Custody",
+                f"- schema: `{runtime_custody.get('schema')}`",
+                f"- runtime_root: `{runtime_custody.get('runtime_root')}`",
+                f"- entrypoint: `{runtime_custody.get('entrypoint')}`",
+                f"- aggregate_sha256: `{runtime_custody.get('aggregate_sha256')}`",
+                f"- file_count: `{runtime_custody.get('file_count')}`",
+                f"- total_bytes: `{runtime_custody.get('total_bytes')}`",
+                "- archive_payloads_excluded_from_runtime_hash: "
+                f"`{runtime_custody.get('archive_payloads_excluded_from_runtime_hash')}`",
+                "- python_cache_files_excluded_from_runtime_hash: "
+                f"`{len(runtime_custody.get('python_cache_files_excluded_from_runtime_hash') or [])}`",
+            ]
+        )
+    inflate_output = payload.get("inflate_output_comparison")
+    if isinstance(inflate_output, Mapping):
+        lines.extend(
+            [
+                "",
+                "## Inflate Output Comparison",
+                f"- evidence_axis: `{inflate_output.get('evidence_axis')}`",
+                f"- evidence_grade: `{inflate_output.get('evidence_grade')}`",
+                f"- runtime_output_changed: `{inflate_output.get('runtime_output_changed')}`",
+                f"- same_output_file_set: `{inflate_output.get('same_output_file_set')}`",
+                f"- same_output_aggregate_sha256: `{inflate_output.get('same_output_aggregate_sha256')}`",
+                f"- total_byte_differences: `{inflate_output.get('total_byte_differences')}`",
+                f"- inflate_sh_path: `{inflate_output.get('inflate_sh_path')}`",
+                f"- file_list_path: `{inflate_output.get('file_list_path')}`",
+                f"- output_root: `{inflate_output.get('output_root')}`",
+            ]
+        )
+        full_tree = inflate_output.get("full_output_tree")
+        identity_tree = inflate_output.get("identity_output_tree")
+        if isinstance(full_tree, Mapping) and isinstance(identity_tree, Mapping):
+            lines.extend(
+                [
+                    f"- full_output_aggregate_sha256: `{full_tree.get('aggregate_sha256')}`",
+                    f"- identity_output_aggregate_sha256: `{identity_tree.get('aggregate_sha256')}`",
+                    f"- full_output_total_bytes: `{full_tree.get('total_bytes')}`",
+                    f"- identity_output_total_bytes: `{identity_tree.get('total_bytes')}`",
+                ]
+            )
     exact_eval = payload.get("exact_eval")
     if isinstance(exact_eval, Mapping):
         lines.extend(["", "## Exact Eval Inputs"])
@@ -1108,6 +1484,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--identity-eval-json", type=Path, default=None)
     parser.add_argument("--axis", default=None)
     parser.add_argument("--decision-delta-s", type=float, default=0.005)
+    parser.add_argument(
+        "--inflate-sh",
+        type=Path,
+        default=None,
+        help=(
+            "Optional inflate.sh runtime for local full-vs-identity output "
+            "comparison in archive-pair mode."
+        ),
+    )
+    parser.add_argument(
+        "--file-list",
+        type=Path,
+        default=None,
+        help="File list passed to --inflate-sh for output comparison.",
+    )
+    parser.add_argument(
+        "--inflate-output-root",
+        type=Path,
+        default=None,
+        help=(
+            "Absent/empty output directory where staged archives and raw "
+            "outputs for the local comparison are written."
+        ),
+    )
+    parser.add_argument(
+        "--inflate-python",
+        default=None,
+        help="PYTHON value exported to inflate.sh; defaults to this interpreter.",
+    )
+    parser.add_argument("--inflate-timeout-seconds", type=int, default=600)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
@@ -1144,6 +1550,20 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError("--run-dir cannot be combined with explicit archive paths")
         if not archive_mode and (args.full_eval_json is not None or args.identity_eval_json is not None):
             raise ValueError("exact eval JSON inputs require archive-pair mode")
+        inflate_compare_requested = any(
+            value is not None
+            for value in (args.inflate_sh, args.file_list, args.inflate_output_root)
+        )
+        if inflate_compare_requested and not archive_mode:
+            raise ValueError("inflate output comparison requires archive-pair mode")
+        if inflate_compare_requested and not all(
+            value is not None
+            for value in (args.inflate_sh, args.file_list, args.inflate_output_root)
+        ):
+            raise ValueError(
+                "--inflate-sh, --file-list, and --inflate-output-root must be "
+                "supplied together"
+            )
         if not archive_mode and not stats_mode:
             payload = build_plan_payload(
                 epochs=args.epochs,
@@ -1193,6 +1613,27 @@ def main(argv: list[str] | None = None) -> int:
                 if args.identity_eval_json is not None
                 else default_identity_eval_json_path
             )
+            inflate_output_comparison = None
+            if inflate_compare_requested:
+                inflate_output_comparison = compare_inflate_output_pair(
+                    full_archive_path=full_archive_path,
+                    identity_archive_path=identity_archive_path,
+                    inflate_sh_path=_resolve_repo_path(
+                        args.inflate_sh,
+                        repo_root=repo_root,
+                    ),
+                    file_list_path=_resolve_repo_path(
+                        args.file_list,
+                        repo_root=repo_root,
+                    ),
+                    output_root=_resolve_repo_path(
+                        args.inflate_output_root,
+                        repo_root=repo_root,
+                    ),
+                    repo_root=repo_root,
+                    python_executable=args.inflate_python,
+                    timeout_seconds=args.inflate_timeout_seconds,
+                )
             payload = evaluate_archive_pair(
                 full_archive_path=full_archive_path,
                 identity_archive_path=identity_archive_path,
@@ -1201,6 +1642,7 @@ def main(argv: list[str] | None = None) -> int:
                 identity_eval_json_path=identity_eval_json_path,
                 axis=args.axis,
                 decision_delta_s=args.decision_delta_s,
+                inflate_output_comparison=inflate_output_comparison,
             )
         output_json = _resolve_repo_path(args.output_json, repo_root=repo_root)
         output_md = _resolve_repo_path(args.output_md, repo_root=repo_root)

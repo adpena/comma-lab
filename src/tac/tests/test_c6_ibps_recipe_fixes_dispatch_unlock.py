@@ -13,7 +13,8 @@ Per lane `lane_c6_ibps_4_recipe_fixes_dispatch_unlock_20260517` deliverable #4:
   - Fix 4 (sextet PROCEED-unconditional): canonical posterior anchor
     `.omx/research/council_c6_ibps_phase_2_sextet_for_dispatch_unlock_20260517.md`
     + `.omx/state/council_deliberation_posterior.jsonl` entry
-  - Fix 5 (Recipe dispatch_enabled=true flip):
+  - Fix 5 (Recipe dispatch unlock, later superseded by Catalog #324
+    post-smoke deauthorization):
     `.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml`
 
 Per CLAUDE.md "Subagent coherence-by-default" + Catalog #229 premise verification
@@ -225,6 +226,23 @@ def test_fix_4_council_memo_v2_frontmatter_complete():
     assert len(fm["council_assumption_adversary_verdict"]) >= 4
 
 
+def test_fix_4_council_frontmatter_current_status_supersedes_stale_unlock():
+    """Frontmatter-only readers must not treat the historical unlock as current."""
+    body = COUNCIL_MEMO_PATH.read_text()
+    rest = body[4:]
+    fm_end = rest.find("\n---\n")
+    fm = yaml.safe_load(rest[:fm_end])
+
+    current_status = fm.get("council_current_status", "")
+    assert "SUPERSEDED_BY_CATALOG_324_DEAUTHORIZATION" in current_status
+    assert "current_recipe_dispatch_enabled=false" in current_status
+    assert "current_score_claim=false" in current_status
+    assert "current_promotion_eligible=false" in current_status
+
+    historical_decisions = fm["council_decisions_recorded"]
+    assert any("dispatch_enabled flag set true" in row for row in historical_decisions)
+
+
 def test_fix_4_council_posterior_anchor_appended():
     """Per Catalog #128 + #131 fcntl-locked JSONL discipline."""
     assert COUNCIL_POSTERIOR_PATH.exists()
@@ -263,7 +281,7 @@ def test_fix_4_council_classifies_one_cargo_cult():
     )
 
 
-# ── Fix 5: Recipe dispatch_enabled flip + Catalog #270 ─────────────────────
+# ── Fix 5: Recipe unlock + Catalog #324 supersession ───────────────────────
 
 
 def test_fix_5_recipe_parses():
@@ -271,19 +289,26 @@ def test_fix_5_recipe_parses():
     assert recipe["lane_id"] == "lane_c6_e4_mdl_ibps_substrate_20260514"
 
 
-def test_fix_5_recipe_dispatch_enabled_true():
+def test_fix_5_recipe_dispatch_deauthorized_after_catalog_324_smoke_miss():
     recipe = yaml.safe_load(RECIPE_PATH.read_text())
-    assert recipe.get("dispatch_enabled") is True, (
-        "Recipe MUST set dispatch_enabled=true post-unlock"
+    assert recipe.get("dispatch_enabled") is False, (
+        "Catalog #324 MUST keep C6 deauthorized after the first smoke missed "
+        "the random-init-derived band by ~22x"
     )
+    assert recipe.get("predicted_band_validation_status") == "pending_post_training"
+    criteria = recipe.get("predicted_band_reactivation_criteria", "")
+    assert "dispatch remains disabled" in criteria
+    assert "post-training Tier-C density" in criteria
+    assert "explicit operator waiver" in criteria
 
 
 def test_fix_5_recipe_predicted_band_revalidated():
     recipe = yaml.safe_load(RECIPE_PATH.read_text())
     assert recipe.get("predicted_band") == [0.113, 0.163], (
-        "Recipe predicted_band MUST flip from null to [0.113, 0.163]"
+        "Recipe keeps the historical unlocked band visible for debrief/debugging"
     )
     assert recipe.get("predicted_score_target") == pytest.approx(0.138)
+    assert recipe.get("predicted_band_validation_status") == "pending_post_training"
 
 
 def test_fix_5_recipe_dispatch_blockers_field_absent():

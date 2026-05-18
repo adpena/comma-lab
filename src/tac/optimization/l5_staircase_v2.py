@@ -47,6 +47,7 @@ from tac.optimization.l5_v2_probe_disambiguator import (
     L5V2_PROBE_SCHEMA,
     L5V2_PROBE_TOOL_PATH,
     evaluate_l5_v2_probe,
+    l5_v2_probe_verdict_sha256,
     observation_from_mapping,
 )
 from tac.optimization.l5_v2_probe_intake import (
@@ -6760,6 +6761,13 @@ def _canonical_json_sha256(payload: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _probe_verdict_sha256_candidates(verdict: Mapping[str, Any]) -> set[str]:
+    return {
+        l5_v2_probe_verdict_sha256(verdict),
+        _canonical_json_sha256(verdict),
+    }
+
+
 def _finite_json_number(value: object) -> bool:
     return (
         not isinstance(value, bool)
@@ -7676,13 +7684,11 @@ def _gate_semantic_blockers(
                     f"{gate_id}:probe_observation:{index}:{exc}"
                 )
         recomputed_verdict: dict[str, Any] | None = None
-        recomputed_verdict_sha256 = ""
         if observations and len(observations) == len(observation_rows):
             recomputed_verdict = evaluate_l5_v2_probe(
                 observations,
                 repo_root=repo_root,
             )
-            recomputed_verdict_sha256 = _canonical_json_sha256(recomputed_verdict)
             if recomputed_verdict.get("architecture_lock_allowed") is not True:
                 blockers.append(
                     "l5_v2_gate_artifact_semantics_invalid:"
@@ -7706,8 +7712,9 @@ def _gate_semantic_blockers(
                 f"l5_v2_gate_artifact_semantics_invalid:{gate_id}:probe_verdict_sha256"
             )
         elif (
-            recomputed_verdict_sha256
-            and declared_verdict_sha256 != recomputed_verdict_sha256
+            recomputed_verdict is not None
+            and declared_verdict_sha256
+            not in _probe_verdict_sha256_candidates(recomputed_verdict)
         ):
             blockers.append(
                 "l5_v2_gate_artifact_semantics_invalid:"

@@ -61,6 +61,52 @@ def _make_simple_inflate_sh(path: Path, payload_section: str, output_filename: s
     path.chmod(0o755)
 
 
+def _make_extracted_member_inflate_sh(
+    path: Path,
+    payload_member: str,
+    output_filename: str = "0.mkv",
+) -> None:
+    """Write a fake contest-style inflate.sh that reads archive_dir/member."""
+    body = (
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'ARCHIVE_DIR="$1"\n'
+        'OUTPUT_DIR="$2"\n'
+        'FILE_LIST="$3"\n'
+        'mkdir -p "$OUTPUT_DIR"\n'
+        f'cat "$ARCHIVE_DIR/{payload_member}" > "$OUTPUT_DIR/{output_filename}"\n'
+    )
+    path.write_text(body, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _make_python_env_inflate_sh(
+    path: Path,
+    payload_member: str,
+    output_filename: str = "0.mkv",
+) -> None:
+    """Write an inflate.sh that requires PYTHON and uses it to read a ZIP."""
+    body = (
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'ARCHIVE_DIR="$1"\n'
+        'OUTPUT_DIR="$2"\n'
+        'FILE_LIST="$3"\n'
+        ': "${PYTHON:?PYTHON must be set by verifier}"\n'
+        'mkdir -p "$OUTPUT_DIR"\n'
+        f'"$PYTHON" - "$ARCHIVE_DIR" "$OUTPUT_DIR/{output_filename}" <<\'PY\'\n'
+        "import pathlib, sys, zipfile\n"
+        "archive_dir = pathlib.Path(sys.argv[1])\n"
+        "output_path = pathlib.Path(sys.argv[2])\n"
+        "zip_path = next(archive_dir.glob('*.zip'))\n"
+        "with zipfile.ZipFile(zip_path) as zf:\n"
+        f"    output_path.write_bytes(zf.read({payload_member!r}))\n"
+        "PY\n"
+    )
+    path.write_text(body, encoding="utf-8")
+    path.chmod(0o755)
+
+
 def _make_dead_section_inflate_sh(path: Path, output_filename: str = "0.mkv") -> None:
     """Inflate.sh that ALWAYS writes the same fixed bytes (ignoring archive).
 
@@ -250,6 +296,59 @@ def test_verify_passed_when_member_byte_range_is_consumed(helper, tmp_path):
     assert sr["offset"] == 7
     assert sr["length"] == 22
     assert sr["mutations_changed_output"] > 0
+
+
+def test_verify_passed_with_extracted_member_staging_for_contest_runtime(
+    helper,
+    tmp_path,
+):
+    """Contest inflate signatures often consume extracted archive_dir/0.bin."""
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"0.bin": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_extracted_member_inflate_sh(inflate_sh, "0.bin")
+    output_json = tmp_path / "out.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=[],
+        distinguishing_byte_ranges=["distinguishing_section=0.bin@7:22"],
+        output_json=output_json,
+        archive_staging_mode="extracted_members",
+    )
+
+    assert result["verdict"] == "PASSED"
+    assert result["archive_staging_mode"] == "extracted_members"
+    sr = result["section_results"][0]
+    assert sr["member"] == "0.bin"
+    assert sr["target_basis"] == "member_byte_range"
+    assert sr["mutations_changed_output"] > 0
+
+
+def test_verify_sets_python_env_for_submission_runtime(
+    helper,
+    tmp_path,
+    monkeypatch,
+):
+    """Verifier must not depend on caller shell PYTHON for vendored runtimes."""
+    monkeypatch.delenv("PYTHON", raising=False)
+    archive = tmp_path / "archive.zip"
+    _make_archive(archive, {"0.bin": b"HEADER_DISTINGUISHING_PAYLOAD_TAIL"})
+    inflate_sh = tmp_path / "inflate.sh"
+    _make_python_env_inflate_sh(inflate_sh, "0.bin")
+    output_json = tmp_path / "out.json"
+
+    result = helper.verify_distinguishing_feature_byte_mutation(
+        archive=archive,
+        inflate_sh=inflate_sh,
+        distinguishing_bytes_paths=[],
+        distinguishing_byte_ranges=["distinguishing_section=0.bin@7:22"],
+        output_json=output_json,
+    )
+
+    assert result["verdict"] == "PASSED"
+    assert result["inflate_python"] == sys.executable
 
 
 # ---------------------------------------------------------------------------

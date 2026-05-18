@@ -11,7 +11,11 @@ from pathlib import Path
 from tac.auth_eval_result import recompute_contest_score_from_payload
 from tools.run_modal_smoke_before_full import (
     _expected_auth_artifact_markers,
+    _extract_recipe_budget_floor_usd,
+    _paid_session_authorization_error,
+    _paid_session_authorization_error_for_budget,
     _recipe_requests_smoke_only,
+    _resolve_recipe_path,
     _resolve_smoke_band,
     _smoke_validation_contract_from_recipe,
     _spawn_smoke_dispatch,
@@ -46,6 +50,23 @@ def _auth_payload(*, score_axis: str = "contest_cuda") -> dict:
     }
     payload["canonical_score"] = recompute_contest_score_from_payload(payload)
     return payload
+
+
+def test_resolve_recipe_path_accepts_basename_and_paths(tmp_path: Path) -> None:
+    recipes = tmp_path / ".omx" / "operator_authorize_recipes"
+    recipes.mkdir(parents=True)
+    recipe = recipes / "substrate_x.yaml"
+    recipe.write_text("schema_version: 1\n", encoding="utf-8")
+
+    assert _resolve_recipe_path("substrate_x", tmp_path) == recipe
+    assert _resolve_recipe_path("substrate_x.yaml", tmp_path) == recipe
+    assert (
+        _resolve_recipe_path(
+            ".omx/operator_authorize_recipes/substrate_x.yaml", tmp_path
+        )
+        == recipe
+    )
+    assert _resolve_recipe_path(str(recipe), tmp_path) == recipe
 
 
 def test_smoke_validation_accepts_canonical_contest_cuda_score() -> None:
@@ -180,6 +201,52 @@ def test_training_artifact_contract_accepts_current_false_authority_manifest() -
     assert green is True
     assert "research-only training_artifact_v1" in diagnostic
     assert "archive.zip contains exactly 0.bin" in diagnostic
+    assert "score/promotion/rank/readiness claims are false" in diagnostic
+
+
+def test_training_artifact_contract_accepts_pair_capped_smoke_manifest() -> None:
+    """Pair-capped real-video smokes are valid non-score training artifacts."""
+
+    payload = b"payload-0bin"
+    archive_zip, archive_zip_sha, archive_zip_bytes = _archive_zip_artifact(payload)
+    manifest = {
+        "lane_id": "lane_pair_capped_smoke",
+        "training_mode": "pair_capped_smoke",
+        "research_only": True,
+        "archive_bytes": len(payload),
+        "archive_sha256": hashlib.sha256(payload).hexdigest(),
+        "archive_zip_bytes": archive_zip_bytes,
+        "archive_zip_sha256": archive_zip_sha,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "result": {
+            "training_mode": "pair_capped_smoke",
+            "archive_bytes": len(payload),
+            "archive_sha256": hashlib.sha256(payload).hexdigest(),
+            "archive_zip_bytes": archive_zip_bytes,
+            "archive_zip_sha256": archive_zip_sha,
+        },
+    }
+
+    green, diagnostic = _validate_smoke_result(
+        {
+            "returncode": 0,
+            "timed_out": False,
+            "artifacts": {
+                "lane_pair_capped/output/manifest.json": json.dumps(manifest),
+                "lane_pair_capped/output/archive.zip": archive_zip,
+            },
+        },
+        required_artifact_markers=("lane_pair_capped/output/",),
+        validation_contract="training_artifact_v1",
+        required_lane_id="lane_pair_capped_smoke",
+    )
+
+    assert green is True
+    assert "training_mode=pair_capped_smoke" in diagnostic
     assert "score/promotion/rank/readiness claims are false" in diagnostic
 
 
@@ -396,6 +463,58 @@ def test_main_rejects_unknown_smoke_validation_contract(tmp_path: Path) -> None:
     rc = main(["--repo-root", str(tmp_path), "--recipe", "unknown"])
 
     assert rc == 7
+
+
+def test_main_rejects_paid_dispatch_without_session_budget(
+    monkeypatch, tmp_path: Path, capsys
+) -> None:
+    recipe_dir = tmp_path / ".omx/operator_authorize_recipes"
+    recipe_dir.mkdir(parents=True)
+    (recipe_dir / "paid.yaml").write_text(
+        "schema_version: 1\n"
+        "name: paid\n"
+        "lane_id: lane_paid\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE", raising=False)
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_SESSION_BUDGET_USD", raising=False)
+
+    rc = main(["--repo-root", str(tmp_path), "--recipe", "paid", "--smoke-only"])
+
+    assert rc == 9
+    assert "paid session authorization missing" in capsys.readouterr().err
+
+
+def test_paid_session_authorization_requires_paired_budget(monkeypatch) -> None:
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE", "1")
+    monkeypatch.delenv("OPERATOR_AUTHORIZE_SESSION_BUDGET_USD", raising=False)
+    assert "SESSION_BUDGET" in (_paid_session_authorization_error() or "")
+
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_SESSION_BUDGET_USD", "2.083")
+    assert _paid_session_authorization_error() is None
+
+
+def test_paid_session_authorization_rejects_budget_below_recipe_floor(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE", "1")
+    monkeypatch.setenv("OPERATOR_AUTHORIZE_SESSION_BUDGET_USD", "2.083")
+
+    msg = _paid_session_authorization_error_for_budget(13.0)
+
+    assert msg is not None
+    assert "below the recipe budget floor" in msg
+
+
+def test_extract_recipe_budget_floor_uses_declared_cost_band() -> None:
+    text = """
+schema_version: 1
+cost_band:
+  epochs: 300
+  predicted_cost_usd: 13.0
+  hand_calibrated_fallback_p50_usd: 10.0
+"""
+    assert _extract_recipe_budget_floor_usd(text) == 13.0
 
 
 def test_s2sbs_recipe_is_smoke_only_scaffold_guard() -> None:

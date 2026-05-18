@@ -161,6 +161,29 @@ def _archive_pair(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
     return full_path, identity_path, full_zip, identity_zip
 
 
+def _write_archive_copy_inflate(path: Path) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                'ARCHIVE_DIR="$1"',
+                'OUTPUT_DIR="$2"',
+                'FILE_LIST="$3"',
+                'mkdir -p "$OUTPUT_DIR"',
+                'while IFS= read -r name; do',
+                '  [[ -z "$name" ]] && continue',
+                '  stem="${name%.*}"',
+                '  cat "$ARCHIVE_DIR/0.bin" > "$OUTPUT_DIR/${stem}.raw"',
+                'done < "$FILE_LIST"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
 def test_z6_disambiguator_plan_is_fail_closed_and_paired() -> None:
     tool = _load_tool()
 
@@ -325,6 +348,102 @@ def test_z6_disambiguator_validates_byte_closed_archive_pair(tmp_path: Path) -> 
         identity_zip.stat().st_size - full_zip.stat().st_size
     )
     assert payload["result_review"]["classification"] == "byte_closed_archive_pair_no_score"
+
+
+def test_z6_disambiguator_can_compare_inflate_output_pair(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    full_path, identity_path, _full_zip, _identity_zip = _archive_pair(tmp_path)
+    inflate_sh = tmp_path / "inflate.sh"
+    file_list = tmp_path / "file_list.txt"
+    _write_archive_copy_inflate(inflate_sh)
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+
+    comparison = tool.compare_inflate_output_pair(
+        full_archive_path=full_path,
+        identity_archive_path=identity_path,
+        inflate_sh_path=inflate_sh,
+        file_list_path=file_list,
+        output_root=tmp_path / "inflate_compare",
+        repo_root=tmp_path,
+        python_executable=sys.executable,
+    )
+    payload = tool.evaluate_archive_pair(
+        full_archive_path=full_path,
+        identity_archive_path=identity_path,
+        repo_root=tmp_path,
+        inflate_output_comparison=comparison,
+    )
+
+    assert payload["inflate_output_comparison"]["score_claim"] is False
+    assert payload["inflate_output_comparison"]["runtime_output_changed"] is True
+    assert payload["inflate_output_comparison"]["same_output_file_set"] is True
+    assert payload["inflate_output_comparison"]["same_output_aggregate_sha256"] is False
+    assert payload["inflate_output_comparison"]["common_output_files"] == ["0.raw"]
+    assert payload["runtime_custody"]["schema"] == "z6_inflate_runtime_closure_v1"
+    assert payload["runtime_custody"]["entrypoint"] == "inflate.sh"
+    assert payload["runtime_custody"]["file_count"] == 1
+    assert payload["runtime_custody"]["files"][0]["path"] == "inflate.sh"
+    assert payload["runtime_custody"]["files"][0]["executable"] is True
+    assert payload["inflate_output_comparison"]["runtime_custody"] == (
+        payload["runtime_custody"]
+    )
+    assert payload["result_review"]["runtime_custody_available"] is True
+    assert payload["result_review"][
+        "identity_predictor_switch_changes_inflate_output"
+    ] is True
+    assert "identity_predictor_switch_inflate_output_noop" not in payload["blockers"]
+
+
+def test_z6_disambiguator_blocks_noop_inflate_output_pair(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    full_path, identity_path, _full_zip, _identity_zip = _archive_pair(tmp_path)
+    inflate_sh = tmp_path / "inflate_noop.sh"
+    file_list = tmp_path / "file_list.txt"
+    inflate_sh.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "set -euo pipefail",
+                'OUTPUT_DIR="$2"',
+                'FILE_LIST="$3"',
+                'mkdir -p "$OUTPUT_DIR"',
+                'while IFS= read -r name; do',
+                '  [[ -z "$name" ]] && continue',
+                '  stem="${name%.*}"',
+                '  printf "fixed-output" > "$OUTPUT_DIR/${stem}.raw"',
+                'done < "$FILE_LIST"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    inflate_sh.chmod(0o755)
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+
+    comparison = tool.compare_inflate_output_pair(
+        full_archive_path=full_path,
+        identity_archive_path=identity_path,
+        inflate_sh_path=inflate_sh,
+        file_list_path=file_list,
+        output_root=tmp_path / "inflate_compare_noop",
+        repo_root=tmp_path,
+        python_executable=sys.executable,
+    )
+    payload = tool.evaluate_archive_pair(
+        full_archive_path=full_path,
+        identity_archive_path=identity_path,
+        repo_root=tmp_path,
+        inflate_output_comparison=comparison,
+    )
+
+    assert payload["verdict"] == "blocked_identity_predictor_switch_inflate_output_noop"
+    assert payload["evidence_grade"] == "inflate_output_comparison_fail_closed"
+    assert "identity_predictor_switch_inflate_output_noop" in payload["blockers"]
+    assert payload["inflate_output_comparison"]["runtime_output_changed"] is False
 
 
 def test_z6_disambiguator_rejects_swapped_archive_flags(tmp_path: Path) -> None:

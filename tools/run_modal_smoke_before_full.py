@@ -120,6 +120,8 @@ DEFAULT_SMOKE_TIMEOUT_HOURS = 1.0
 DEFAULT_SMOKE_POLL_INTERVAL_SECONDS = 30
 DEFAULT_SMOKE_MAX_WAIT_SECONDS = 1800  # 30 min
 SMOKE_WAIT_MARGIN_SECONDS = 300
+SESSION_DIRECTIVE_ENV_VAR = "OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE"
+SESSION_BUDGET_ENV_VAR = "OPERATOR_AUTHORIZE_SESSION_BUDGET_USD"
 # Per CLAUDE.md SIREN audit 2026-05-13 DEFECT #2: previously (0.0, 10.0) was
 # trivially wide — it only caught NaN / Inf. The contest's frontier score
 # range is ~0.18-0.25; bands below 0.05 are physically implausible (the
@@ -138,18 +140,111 @@ SMOKE_VALIDATION_CONTRACTS = frozenset(
 
 
 def _resolve_recipe_path(recipe_name: str, repo_root: Path) -> Path:
-    """Return the path to ``.omx/operator_authorize_recipes/<name>.yaml``."""
+    """Return the path to a recipe YAML file.
+
+    The operator-facing contract is a recipe basename under
+    ``.omx/operator_authorize_recipes/``, but historical ledgers and some
+    generated commands carry full or repo-relative recipe paths. Accept both
+    forms so a valid handoff command does not fail before the smoke dry-run.
+    """
     recipes_dir = repo_root / ".omx" / "operator_authorize_recipes"
-    candidate = (
-        recipes_dir / recipe_name
-        if recipe_name.endswith(".yaml")
-        else recipes_dir / f"{recipe_name}.yaml"
+    raw = Path(recipe_name)
+    if raw.is_absolute():
+        candidates = [raw]
+    elif raw.parent != Path("."):
+        candidates = [repo_root / raw]
+        if raw.suffix != ".yaml":
+            candidates.append(repo_root / raw.with_suffix(".yaml"))
+    else:
+        candidates = [
+            recipes_dir / raw.name
+            if raw.suffix == ".yaml"
+            else recipes_dir / f"{raw.name}.yaml"
+        ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    if candidates:
+        candidate_text = ", ".join(str(path) for path in candidates)
+    else:
+        candidate_text = str(recipes_dir / f"{recipe_name}.yaml")
+    raise FileNotFoundError(
+        f"recipe not found: {candidate_text} (recipe={recipe_name!r})"
     )
-    if not candidate.is_file():
-        raise FileNotFoundError(
-            f"recipe not found: {candidate} (recipe={recipe_name!r})"
+
+
+def _paid_session_authorization_error() -> str | None:
+    """Return a fatal diagnostic when paid smoke/full dispatch lacks approval.
+
+    This wrapper invokes ``tools/operator_authorize.py --yes`` because it owns
+    a two-phase smoke-before-full sequence. That means the wrapper, not the
+    child process, must enforce the paired session directive before any paid
+    Modal work can be spawned.
+    """
+
+    return _paid_session_authorization_error_for_budget(0.0)
+
+
+def _paid_session_authorization_error_for_budget(
+    required_budget_usd: float,
+) -> str | None:
+    """Return a fatal diagnostic when paired authorization is absent/too small."""
+
+    raw_confirmed = os.environ.get(SESSION_DIRECTIVE_ENV_VAR, "")
+    if not raw_confirmed or raw_confirmed.strip().lower() in {"", "0", "false", "no"}:
+        return (
+            f"{SESSION_DIRECTIVE_ENV_VAR} is missing or false. Paid "
+            "smoke-before-full dispatch requires the same paired session "
+            "directive contract as operator_authorize.py because this wrapper "
+            "passes --yes to the child authorization command."
         )
-    return candidate
+    raw_budget = os.environ.get(SESSION_BUDGET_ENV_VAR, "")
+    if not raw_budget:
+        return (
+            f"{SESSION_DIRECTIVE_ENV_VAR} is set but {SESSION_BUDGET_ENV_VAR} "
+            "is missing. Set both env vars so the paid dispatch has an explicit "
+            "session budget envelope."
+        )
+    try:
+        budget_usd = float(raw_budget)
+    except ValueError:
+        return (
+            f"{SESSION_BUDGET_ENV_VAR}={raw_budget!r} is not a parseable USD "
+            "float."
+        )
+    if budget_usd <= 0.0:
+        return f"{SESSION_BUDGET_ENV_VAR}={budget_usd} must be > 0."
+    if budget_usd + 1e-9 < required_budget_usd:
+        return (
+            f"{SESSION_BUDGET_ENV_VAR}={budget_usd:.3f} is below the recipe "
+            f"budget floor ${required_budget_usd:.3f}. Increase the session "
+            "budget or run --dry-run."
+        )
+    return None
+
+
+def _extract_recipe_budget_floor_usd(recipe_text: str) -> float:
+    """Return the recipe-declared budget floor for a paid smoke/full sequence."""
+
+    import re
+
+    candidates: list[float] = []
+    for field in (
+        "predicted_cost_usd",
+        "hand_calibrated_fallback_p50_usd",
+    ):
+        for match in re.finditer(
+            rf"^\s+{field}\s*:\s*([-+0-9.eE]+)\s*$",
+            recipe_text,
+            re.MULTILINE,
+        ):
+            try:
+                value = float(match.group(1))
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(value) and value > 0:
+                candidates.append(value)
+    return max(candidates) if candidates else 0.0
 
 
 def _resolve_smoke_band(
@@ -525,7 +620,7 @@ def _validate_training_artifact_smoke_result(
         result_payload = payload.get("result")
         result_payload = result_payload if isinstance(result_payload, dict) else {}
         training_mode = payload.get("training_mode") or result_payload.get("training_mode")
-        if training_mode != "smoke":
+        if training_mode not in {"smoke", "pair_capped_smoke"}:
             diagnostics.append(f"{manifest_key}:training_mode={training_mode!r}")
             continue
         if payload.get("research_only") is not True:
@@ -602,6 +697,7 @@ def _validate_training_artifact_smoke_result(
                 "SMOKE GREEN [research-only training_artifact_v1; score_claim=false]: "
                 "rc=0, current manifest "
                 f"{manifest_key} + archive {archive_key}; research_only=true, "
+                f"training_mode={training_mode}, "
                 "archive.zip contains exactly 0.bin matching manifest bytes/sha, and "
                 "score/promotion/rank/readiness claims are false"
             )
@@ -1161,7 +1257,7 @@ def main(argv: list[str] | None = None) -> int:
             print("[smoke-before-full] recipe declares smoke_only: true")
         print(
             "[smoke-before-full] would dispatch SMOKE: "
-            f"recipe={args.recipe} smoke_epochs={args.smoke_epochs} "
+            f"recipe={recipe_path.stem} smoke_epochs={args.smoke_epochs} "
             f"smoke_gpu={resolved_smoke_gpu} (rationale={smoke_gpu_rationale}) "
             f"timeout_hours={args.smoke_timeout_hours}"
         )
@@ -1197,6 +1293,18 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 6
+
+    budget_floor_usd = _extract_recipe_budget_floor_usd(recipe_text)
+    paid_authorization_error = _paid_session_authorization_error_for_budget(
+        budget_floor_usd
+    )
+    if paid_authorization_error is not None:
+        print(
+            "[smoke-before-full] FATAL: paid session authorization missing: "
+            f"{paid_authorization_error}",
+            file=sys.stderr,
+        )
+        return 9
 
     if args.full_only:
         print(
@@ -1321,8 +1429,11 @@ __all__ = [
     "SMOKE_VALIDATION_CONTRACTS",
     "_count_dirty_paths",
     "_epoch_env_var_from_recipe",
+    "_extract_recipe_budget_floor_usd",
     "_resolve_recipe_path",
     "_resolve_smoke_band",
+    "_paid_session_authorization_error",
+    "_paid_session_authorization_error_for_budget",
     "_smoke_validation_contract_from_recipe",
     "_spawn_full_dispatch",
     "_spawn_smoke_dispatch",

@@ -921,15 +921,175 @@ _WHOLE_TREE_CLEAN_BYPASS_INTENT_ENV_VAR = (
 _WHOLE_TREE_CLEAN_BYPASS_ATTESTATION_ENV_VAR = (
     "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"
 )
+_WHOLE_TREE_CLEAN_BYPASS_AUDIT_JSON_ENV_VAR = (
+    "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON"
+)
 
 
-def _whole_tree_clean_check_bypass_active() -> bool:
+def _git_dirty_paths() -> set[str]:
+    """Return dirty git paths using porcelain output, fail-closed to empty."""
+
+    proc = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return set()
+    out: set[str] = set()
+    for line in proc.stdout.splitlines():
+        if not line:
+            continue
+        rel = line[3:] if len(line) > 3 else ""
+        if " -> " in rel:
+            old, new = rel.split(" -> ", 1)
+            out.add(old)
+            out.add(new)
+        elif rel:
+            out.add(rel)
+    return out
+
+
+def _sha256_file(path: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sentinel_set_sha256(path_to_sha: dict[str, str]) -> str:
+    import hashlib
+
+    encoded = json.dumps(
+        path_to_sha,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _resolve_catalog202_audit_path(raw: str) -> Path:
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path
+
+
+def _verify_catalog202_sentinel_audit(recipe: "Recipe", raw_path: str) -> None:
+    """Verify a Catalog #202 sentinel audit matches current effective sentinels."""
+
+    path = _resolve_catalog202_audit_path(raw_path)
+    if not path.is_file():
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit JSON "
+            f"missing at {path}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    try:
+        audit = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit JSON "
+            f"could not be parsed at {path}: {exc}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12) from exc
+    if audit.get("schema") != "catalog202_sentinel_cleanliness_audit_v1":
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit JSON has "
+            f"unexpected schema={audit.get('schema')!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    if str(audit.get("recipe_name")) != recipe.path.stem:
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit recipe "
+            f"mismatch: audit={audit.get('recipe_name')!r} recipe={recipe.path.stem!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    if audit.get("missing_sentinel_files") or audit.get(
+        "outside_modal_mount_sentinel_files"
+    ):
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit has "
+            "missing/outside-mount sentinels; rerun or fix the audit before "
+            "bypassing --require-clean-head.",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+
+    expected_paths = [p for p in _modal_sentinel_files(recipe).split(",") if p]
+    audit_paths = list(audit.get("effective_sentinel_files") or [])
+    if audit_paths != expected_paths:
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit path set "
+            f"mismatch. audit={audit_paths!r} current={expected_paths!r}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    audit_records = {
+        str(row.get("path")): str(row.get("sha256"))
+        for row in audit.get("sentinel_records") or []
+        if isinstance(row, dict) and row.get("path") and row.get("sha256")
+    }
+    current: dict[str, str] = {}
+    mismatches: list[str] = []
+    for rel in expected_paths:
+        current_path = REPO_ROOT / rel
+        if not current_path.is_file():
+            mismatches.append(f"{rel}:MISSING_CURRENT")
+            continue
+        current_sha = _sha256_file(current_path)
+        current[rel] = current_sha
+        if audit_records.get(rel) != current_sha:
+            mismatches.append(
+                f"{rel}:audit={audit_records.get(rel)} current={current_sha}"
+            )
+    if mismatches:
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel audit hash "
+            "mismatch; rerun audit after stabilizing intended sentinel bytes: "
+            + "; ".join(mismatches[:5]),
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    current_set_sha = _sentinel_set_sha256(current)
+    if audit.get("sentinel_set_sha256") != current_set_sha:
+        print(
+            "[operator-authorize] FATAL: Catalog #202 sentinel_set_sha256 "
+            f"mismatch audit={audit.get('sentinel_set_sha256')} "
+            f"current={current_set_sha}",
+            file=sys.stderr,
+        )
+        raise SystemExit(12)
+    print(
+        "[operator-authorize] Catalog #202 sentinel audit verified: "
+        f"{path} sentinel_set_sha256={current_set_sha}",
+        file=sys.stderr,
+    )
+
+
+def _whole_tree_clean_check_bypass_active(recipe: "Recipe | None" = None) -> bool:
     """Catalog #202 — return True iff the paired-env bypass attestation is set.
 
     The bypass fires only when BOTH env vars are set to truthy values:
       * ``OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK=1`` (intent flag)
       * ``OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED=1`` (operator
         attestation that the explicit sentinel set is clean)
+
+    If an effective Modal sentinel file is itself dirty in git status, the
+    operator must also provide
+    ``OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON=<path>``. That artifact
+    must match the current effective sentinel paths and SHA-256s. This keeps
+    trusted dirty-sentinel snapshots explicit without weakening Catalog #166's
+    worker-side hash check.
 
     When ONLY the intent flag is set without the attestation flag, the helper
     raises ``SystemExit(12)`` (sister to Catalog #199's ``SystemExit(11)``)
@@ -974,6 +1134,27 @@ def _whole_tree_clean_check_bypass_active() -> bool:
             file=sys.stderr,
         )
         raise SystemExit(12)
+    if recipe is not None:
+        dirty_paths = _git_dirty_paths()
+        effective_sentinels = {
+            rel for rel in _modal_sentinel_files(recipe).split(",") if rel
+        }
+        dirty_sentinels = sorted(effective_sentinels & dirty_paths)
+        raw_audit = os.environ.get(_WHOLE_TREE_CLEAN_BYPASS_AUDIT_JSON_ENV_VAR, "")
+        if dirty_sentinels and not raw_audit:
+            print(
+                "[operator-authorize] FATAL: Catalog #202 paired env vars are "
+                "set, but effective Modal sentinel file(s) are dirty in git "
+                f"status: {dirty_sentinels}. Set "
+                f"{_WHOLE_TREE_CLEAN_BYPASS_AUDIT_JSON_ENV_VAR}=<audit.json> "
+                "after running tools/audit_catalog202_sentinel_cleanliness.py "
+                "so the dirty sentinel snapshot is hash-verified.",
+                file=sys.stderr,
+            )
+            raise SystemExit(12)
+        if raw_audit:
+            _verify_catalog202_sentinel_audit(recipe, raw_audit)
+
     print(
         "[OPERATOR-AUTHORIZE BYPASS] Catalog #202 ACTIVE: "
         "--require-clean-head DISABLED — operator attests sentinel set is "
@@ -1346,11 +1527,25 @@ _MODAL_MOUNT_SET_PREFIXES: tuple[str, ...] = (
 
 def _path_under_modal_mount_set(rel: str) -> bool:
     """True iff `rel` is mounted by mount_manifest.STRUCTURAL_MINIMUM_DIRS."""
-    rel = rel.strip().lstrip("./")
+    rel = rel.strip()
+    while rel.startswith("./"):
+        rel = rel[2:]
     return any(
         rel.startswith(p) if p.endswith("/") else rel == p
         for p in _MODAL_MOUNT_SET_PREFIXES
     )
+
+
+def _iter_sentinel_path_values(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        values = [value]
+    elif isinstance(value, (list, tuple)):
+        values = [item for item in value if isinstance(item, str)]
+    else:
+        values = [str(value)]
+    return [item.strip() for item in values if item.strip()]
 
 
 def _modal_sentinel_files(recipe: Recipe) -> str:
@@ -1390,21 +1585,21 @@ def _modal_sentinel_files(recipe: Recipe) -> str:
             if value:
                 raw_paths.append(str(value))
     trainer = recipe.raw.get("required_input_files_trainer")
-    if trainer:
-        raw_paths.append(str(trainer))
+    raw_paths.extend(_iter_sentinel_path_values(trainer))
     # Recipe-declared sentinel_files (Catalog #191): substrate-specific
     # modules that must remain stable across the dispatch window.
     recipe_sentinels = recipe.raw.get("sentinel_files") or []
     if isinstance(recipe_sentinels, list):
         for entry in recipe_sentinels:
-            if isinstance(entry, str) and entry.strip():
-                raw_paths.append(entry.strip())
+            raw_paths.extend(_iter_sentinel_path_values(entry))
 
     seen: set[str] = set()
     out: list[str] = []
     skipped_outside_mount: list[str] = []
     for rel in raw_paths:
         rel = rel.strip()
+        while rel.startswith("./"):
+            rel = rel[2:]
         if not rel or rel in seen:
             continue
         if not (REPO_ROOT / rel).is_file():
@@ -1537,7 +1732,7 @@ def _dispatch_modal(
     # Modal worker fails-closed on any uncommitted edit. Catalog #166's
     # worker-side sentinel hash check (experiments/modal_train_lane.py)
     # runs INDEPENDENTLY of `--require-clean-head` regardless.
-    if not _whole_tree_clean_check_bypass_active():
+    if not _whole_tree_clean_check_bypass_active(recipe):
         cmd.append("--require-clean-head")
     else:
         print(

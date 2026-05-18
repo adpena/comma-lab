@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -19,6 +20,7 @@ from tac.preflight import (
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _INTENT = "OPERATOR_AUTHORIZE_SKIP_WHOLE_TREE_CLEAN_CHECK"
 _ATTESTATION = "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_CLEAN_VERIFIED"
+_AUDIT_JSON = "OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON"
 
 
 def test_live_repo_catalog_202_violation_count_zero() -> None:
@@ -202,3 +204,70 @@ def test_runtime_helper_falsy_attestation_exits_12() -> None:
     proc = _run_helper_with_env({_INTENT: "1", _ATTESTATION: "0"})
     assert proc.returncode == 12
     assert "missing or falsy" in proc.stderr
+
+
+def test_runtime_helper_dirty_sentinel_requires_audit_json(monkeypatch, tmp_path: Path):
+    sys.path.insert(0, str(_REPO_ROOT / "tools"))
+    import operator_authorize as oa  # noqa: E402
+
+    rel = "tools/dirty_sentinel.py"
+    path = tmp_path / rel
+    path.parent.mkdir(parents=True)
+    path.write_text("print('dirty but intended')\n", encoding="utf-8")
+    recipe_path = tmp_path / ".omx/operator_authorize_recipes/example.yaml"
+    recipe_path.parent.mkdir(parents=True)
+    recipe_path.write_text("name: example\n", encoding="utf-8")
+    recipe = oa.Recipe(name="example", path=recipe_path, raw={})
+
+    monkeypatch.setattr(oa, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(oa, "_modal_sentinel_files", lambda _recipe: rel)
+    monkeypatch.setattr(oa, "_git_dirty_paths", lambda: {rel})
+    monkeypatch.setenv(_INTENT, "1")
+    monkeypatch.setenv(_ATTESTATION, "operator-attests")
+    monkeypatch.delenv(_AUDIT_JSON, raising=False)
+
+    with pytest.raises(SystemExit) as exc:
+        oa._whole_tree_clean_check_bypass_active(recipe)
+    assert exc.value.code == 12
+
+
+def test_runtime_helper_dirty_sentinel_accepts_matching_audit_json(
+    monkeypatch, tmp_path: Path
+):
+    sys.path.insert(0, str(_REPO_ROOT / "tools"))
+    import operator_authorize as oa  # noqa: E402
+
+    rel = "tools/dirty_sentinel.py"
+    path = tmp_path / rel
+    path.parent.mkdir(parents=True)
+    path.write_text("print('dirty but intended')\n", encoding="utf-8")
+    recipe_path = tmp_path / ".omx/operator_authorize_recipes/example.yaml"
+    recipe_path.parent.mkdir(parents=True)
+    recipe_path.write_text("name: example\n", encoding="utf-8")
+    recipe = oa.Recipe(name="example", path=recipe_path, raw={})
+    sha = oa._sha256_file(path)
+    audit_path = tmp_path / ".omx/state/catalog202/example.json"
+    audit_path.parent.mkdir(parents=True)
+    audit_path.write_text(
+        json.dumps(
+            {
+                "schema": "catalog202_sentinel_cleanliness_audit_v1",
+                "recipe_name": "example",
+                "effective_sentinel_files": [rel],
+                "sentinel_records": [{"path": rel, "sha256": sha}],
+                "sentinel_set_sha256": oa._sentinel_set_sha256({rel: sha}),
+                "missing_sentinel_files": [],
+                "outside_modal_mount_sentinel_files": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(oa, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(oa, "_modal_sentinel_files", lambda _recipe: rel)
+    monkeypatch.setattr(oa, "_git_dirty_paths", lambda: {rel})
+    monkeypatch.setenv(_INTENT, "1")
+    monkeypatch.setenv(_ATTESTATION, "operator-attests")
+    monkeypatch.setenv(_AUDIT_JSON, str(audit_path))
+
+    assert oa._whole_tree_clean_check_bypass_active(recipe) is True
