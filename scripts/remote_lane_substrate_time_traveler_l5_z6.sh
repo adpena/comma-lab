@@ -51,8 +51,10 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
-LANE_ID="lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
+DEFAULT_LANE_ID="lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516"
+LANE_ID="${Z6_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"
 TAG="${TAG:-substrate_time_traveler_l5_z6}"
+RECIPE_PATH="${Z6_RECIPE_PATH:-.omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml}"
 
 # Catalog #204: when running on Modal default output to durable provider volume.
 if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ -n "${DISPATCH_INSTANCE_JOB_ID:-}" ]; then
@@ -65,8 +67,37 @@ OUTPUT_DIR="${OUTPUT_DIR:-$DEFAULT_OUTPUT_DIR}"
 PROVENANCE="$LOG_DIR/provenance.json"
 
 # Trainer flags - Catalog #151 TIER_1_OPERATOR_REQUIRED_FLAGS env-var ladder.
-# Smoke vs full ladder: SMOKE_ONLY=1 forces --smoke (default for first-anchor v1).
-SMOKE_ONLY="${SMOKE_ONLY:-1}"
+# Smoke vs full ladder per Catalog #326 (DRIVER-FIX wave 2026-05-18).
+#
+# Z6_TRAINER_MODE is the canonical env var ("smoke" or "full"); SMOKE_ONLY
+# is preserved for back-compat. Z6-v2 Wave 2 DEFER 2026-05-18 (call_ids
+# fc-01KRW7RHFHP640BHTQ0FZM3M38 + fc-01KRW7ZCYK5XF6MSHD24R71A46) anchored
+# this bug class: the Wave 2 recipe env_overrides did NOT set SMOKE_ONLY
+# so the driver defaulted to smoke and the trainer ran _smoke_main with
+# synthetic cfg, producing 27,850-param outputs INSTEAD of the council-
+# binding ~300K depth=3 spec. Per CLAUDE.md "Bugs must be permanently
+# fixed AND self-protected against": precedence is Z6_TRAINER_MODE >
+# SMOKE_ONLY; if neither is set, default to smoke + emit a loud WARN
+# banner so future operators see the implicit smoke-mode at log time.
+Z6_TRAINER_MODE="${Z6_TRAINER_MODE:-}"
+SMOKE_ONLY="${SMOKE_ONLY:-}"
+if [ -n "$Z6_TRAINER_MODE" ]; then
+    case "$Z6_TRAINER_MODE" in
+        smoke|SMOKE|Smoke)
+            SMOKE_ONLY="1"
+            ;;
+        full|FULL|Full)
+            SMOKE_ONLY="0"
+            ;;
+        *)
+            echo "[lane-z6-pcwm] FATAL: invalid Z6_TRAINER_MODE=$Z6_TRAINER_MODE; expected smoke|full" >&2
+            exit 29
+            ;;
+    esac
+elif [ -z "$SMOKE_ONLY" ]; then
+    echo "[lane-z6-pcwm] WARN: neither Z6_TRAINER_MODE nor SMOKE_ONLY set; defaulting to smoke. Per Catalog #326 recipes SHOULD declare Z6_TRAINER_MODE=full or SMOKE_ONLY=0 for full-mode dispatch." >&2
+    SMOKE_ONLY="1"
+fi
 Z6_VIDEO_PATH="${Z6_VIDEO_PATH:-$WORKSPACE/upstream/videos/0.mkv}"
 Z6_OUTPUT_DIR="${Z6_OUTPUT_DIR:-$OUTPUT_DIR}"
 Z6_EPOCHS="${Z6_EPOCHS:-}"
@@ -83,6 +114,12 @@ Z6_LAMBDA_RESIDUAL_ENTROPY="${Z6_LAMBDA_RESIDUAL_ENTROPY:-1.0}"
 Z6_PREDICTOR_KERNEL_SIZE="${Z6_PREDICTOR_KERNEL_SIZE:-3}"
 Z6_PREDICTOR_EGO_MOTION_DIM="${Z6_PREDICTOR_EGO_MOTION_DIM:-8}"
 Z6_IDENTITY_PREDICTOR="${Z6_IDENTITY_PREDICTOR:-false}"
+Z6_PREDICTOR_ARCHITECTURE="${Z6_PREDICTOR_ARCHITECTURE:-single_layer_film_75k}"
+Z6_PREDICTOR_PARAM_COUNT_TARGET="${Z6_PREDICTOR_PARAM_COUNT_TARGET:-300000}"
+Z6_EGO_SOURCE="${Z6_EGO_SOURCE:-posenet_projection}"
+Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION="${Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION:-shared_modules_seed_order_matched_v2}"
+Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE="${Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE:-false}"
+Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S="${Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S:-0.005}"
 Z6_DEVICE="${Z6_DEVICE:-cuda}"
 Z6_UPSTREAM_DIR="${Z6_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 Z6_ENABLE_AUTOCAST_FP16="${Z6_ENABLE_AUTOCAST_FP16:-false}"
@@ -173,7 +210,7 @@ append_terminal_claim() {
         --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
         --agent "remote_lane_substrate_time_traveler_l5_z6" \
         --status "$status" \
-        --notes "remote_driver_terminal rc=$rc output_dir=$Z6_OUTPUT_DIR smoke=$SMOKE_ONLY identity_predictor=$Z6_IDENTITY_PREDICTOR predictor_kernel=$Z6_PREDICTOR_KERNEL_SIZE" \
+        --notes "remote_driver_terminal rc=$rc output_dir=$Z6_OUTPUT_DIR smoke=$SMOKE_ONLY identity_predictor=$Z6_IDENTITY_PREDICTOR predictor_architecture=$Z6_PREDICTOR_ARCHITECTURE emit_disambiguator=$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE predictor_kernel=$Z6_PREDICTOR_KERNEL_SIZE" \
         >> "$LOG_DIR/run.log" 2>&1 || {
         log "WARN: failed to append terminal dispatch claim status=$status"
     }
@@ -183,6 +220,7 @@ cleanup() {
     local rc="$?"
     if [ -n "$HEARTBEAT_PID" ]; then
         kill "$HEARTBEAT_PID" 2>/dev/null || true
+        wait "$HEARTBEAT_PID" 2>/dev/null || true
     fi
     append_terminal_claim "$rc"
     exit "$rc"
@@ -207,9 +245,14 @@ fi
 
 # Stage 2: heartbeat (every 5 min).
 (
+    HEARTBEAT_SLEEP_PID=""
+    trap 'if [ -n "$HEARTBEAT_SLEEP_PID" ]; then kill "$HEARTBEAT_SLEEP_PID" 2>/dev/null || true; fi; exit 0' TERM INT EXIT
     while true; do
         date -u +%FT%TZ > "$LOG_DIR/heartbeat.log"
-        sleep 300
+        sleep 300 &
+        HEARTBEAT_SLEEP_PID="$!"
+        wait "$HEARTBEAT_SLEEP_PID" || true
+        HEARTBEAT_SLEEP_PID=""
     done
 ) &
 HEARTBEAT_PID=$!
@@ -220,7 +263,7 @@ cat > "$PROVENANCE" <<EOF
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "trainer": "experiments/train_substrate_time_traveler_l5_z6.py",
-  "recipe": ".omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml",
+  "recipe": "$RECIPE_PATH",
   "video_path": "$Z6_VIDEO_PATH",
   "output_dir": "$Z6_OUTPUT_DIR",
   "epochs": "$Z6_EPOCHS",
@@ -231,6 +274,12 @@ cat > "$PROVENANCE" <<EOF
   "predictor_kernel_size": "$Z6_PREDICTOR_KERNEL_SIZE",
   "predictor_ego_motion_dim": "$Z6_PREDICTOR_EGO_MOTION_DIM",
   "identity_predictor": "$Z6_IDENTITY_PREDICTOR",
+  "predictor_architecture": "$Z6_PREDICTOR_ARCHITECTURE",
+  "predictor_param_count_target": "$Z6_PREDICTOR_PARAM_COUNT_TARGET",
+  "ego_source": "$Z6_EGO_SOURCE",
+  "paired_control_initialization": "$Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION",
+  "emit_identity_predictor_disambiguator_archive": "$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE",
+  "paired_control_disambiguator_decision_criterion_delta_s": "$Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S",
   "enable_autocast_fp16": "$Z6_ENABLE_AUTOCAST_FP16",
   "smoke_only": "$SMOKE_ONLY",
   "dispatch_instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",
@@ -279,6 +328,19 @@ case "$Z6_ENABLE_AUTOCAST_FP16" in
         ;;
 esac
 
+DISAMBIGUATOR_FLAG_ARGS=()
+case "$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE" in
+    1|true|TRUE|True|yes|YES|Yes|on|ON|On)
+        DISAMBIGUATOR_FLAG_ARGS+=(--emit-identity-predictor-disambiguator-archive)
+        ;;
+    0|false|FALSE|False|no|NO|No|off|OFF|Off|"")
+        ;;
+    *)
+        log "FATAL: invalid Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE=$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE; expected 0/1/true/false"
+        exit 28
+        ;;
+esac
+
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --video-path "$Z6_VIDEO_PATH" \
     --output-dir "$Z6_OUTPUT_DIR" \
@@ -290,9 +352,15 @@ esac
     --lambda-residual-entropy "$Z6_LAMBDA_RESIDUAL_ENTROPY" \
     --predictor-kernel-size "$Z6_PREDICTOR_KERNEL_SIZE" \
     --predictor-ego-motion-dim "$Z6_PREDICTOR_EGO_MOTION_DIM" \
+    --predictor-architecture "$Z6_PREDICTOR_ARCHITECTURE" \
+    --predictor-param-count-target "$Z6_PREDICTOR_PARAM_COUNT_TARGET" \
+    --ego-source "$Z6_EGO_SOURCE" \
+    --enable-paired-control-initialization "$Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION" \
+    --paired-control-disambiguator-decision-criterion-delta-s "$Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S" \
     ${SMOKE_FLAG_ARGS[@]+"${SMOKE_FLAG_ARGS[@]}"} \
     ${IDENTITY_PREDICTOR_ARGS[@]+"${IDENTITY_PREDICTOR_ARGS[@]}"} \
     ${AUTOCAST_FLAG_ARGS[@]+"${AUTOCAST_FLAG_ARGS[@]}"} \
+    ${DISAMBIGUATOR_FLAG_ARGS[@]+"${DISAMBIGUATOR_FLAG_ARGS[@]}"} \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).

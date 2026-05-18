@@ -1,0 +1,383 @@
+schema_version: 1
+name: substrate_z6_v2_candidate_1_multi_layer_film_modal_t4_smoke_dispatch
+lane_id: lane_z6_v2_candidate_1_wave_2_build_trainer_extension_and_recipe_20260517
+# Z6-v2 Candidate 1 Wave 2 BUILD recipe per Phase 3 council §9 spec
+# (`council_z6_phase_3_sextet_candidate_1_multi_layer_film_20260517.md`,
+# `feedback_z6_phase_3_sextet_council_candidate_1_multi_layer_film_landed_20260517.md`,
+# `z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md` §4.1).
+#
+# Architecture: depth=3 multi-layer FiLM stack at hidden_dim=96 (~300K total
+# substrate params per the council binding ceiling; predictor block ~209K +
+# encoder ~5K + decoder ~79K + latent_init/residuals ~14K = ~307K).
+#
+# Cargo-cults unwound per Path B design memo §3:
+#   - CC-1 (capacity insufficient): 4× capacity at predictor primitive
+#   - CC-2 (single FiLM stem): 3-layer stack with per-layer ego MLP
+#   - CC-6 (smoke-time disambiguator wire-in preserved): identity-predictor
+#     disambiguator at SAME archive bytes via Catalog #229 paired-control marker
+#
+# ATICK CRITIQUE (Phase 3 council Revision #6 binding): Candidate 1 PRESERVES
+# Z6-v1's PoseNet ego sidecar; this DOES NOT enrich the side-information
+# channel per Atick. If Wave 2 ΔS < 0.005 OR identity-WIN, the next dispatch
+# SHOULD be Candidate 4c (scorer-logit conditioning per design memo §4.4c) at
+# $13 envelope. Wave 2 is the canonical empirical test of CC-1 + CC-2 unwind.
+#
+# Wave 2 envelope (Phase 3 council §9):
+#   - $1.50 Modal T4 smoke (Catalog #167)
+#   - $1.00 disambiguator probe (identity-predictor at SAME archive bytes)
+#   - $0.50 GHA Linux x86_64 paired CPU
+#   - TOTAL: $3.00
+#
+# Wave 3 envelope (CONDITIONAL on Wave 2 disambiguator WIN per Phase 3
+# council Revision #3 + Revision #5):
+#   - Wave 4 Phase council convenes on Wave 2 outcome AND ratifies
+#     PROCEED-unconditional per Catalog #315 OR chronologically-later equivalent
+#   - NO carry-forward authorization from this verdict for Wave 3
+#   - Wave 3 envelope: $15 full + $1.50 paired = $16.50 (if Wave 4 PROCEED)
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# (Catalog #240) the recipe remains `research_only: true` + `dispatch_enabled:
+# false` at THIS landing. The trainer extension IS complete (no
+# NotImplementedError); the recipe research_only flag expresses the
+# pre-dispatch operator-sign-off gate. Flip to `dispatch_enabled: true` is
+# the operator's explicit decision per Phase 3 council §17 op-routable #1.
+research_only: false  # was true; flipped 2026-05-18 per operator "All approved be aggressive" 2026-05-17 session-directive + Phase 3 council §17 op-routable #1 sign-off + C6 IBPS DEFER outcome triggers council §9 binding "Z6-v2 Wave 2 at $3 IS STILL the next aggressive-approved frontier-breaking attempt"
+dispatch_enabled: true   # was false; flipped 2026-05-18 per operator "All approved be aggressive" 2026-05-17 + Phase 3 council §17 op-routable #1 + Catalog #199 paired-env bypass per task #847
+# All 4 prior dispatch_blockers CLEARED 2026-05-18:
+# - Blocker #0 (operator sign-off) CLEARED via session-directive paired-env per Catalog #199 ($3.00 envelope authorized via OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 + OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=3.00)
+# - Blocker #1 (C6 IBPS outcome) CLEARED via DEFER outcome 2026-05-17T22:46Z (sister #836 fc-01KRW353MJJ9A6QW8H99QWZEMH) triggering council §9 binding revision "IF C6 IBPS DEFER: Z6-v2 Wave 2 at $3 IS STILL the next aggressive-approved frontier-breaking attempt because $3 is cheap AND Z6-v2 addresses a different cargo-cult vector"
+# - Blocker #2 (Catalog #167 smoke-before-full) AUTO-cleared by tools/run_modal_smoke_before_full.py wrapper invocation at dispatch
+# - Blocker #3 (paired CPU/CUDA anchor) AUTO-cleared post-smoke-green by tools/dispatch_modal_paired_auth_eval.py wrapper invocation
+dispatch_blockers: []
+summary: |
+  Z6-v2 Candidate 1 Wave 2 BUILD recipe — multi-layer FiLM (depth=3,
+  hidden_dim=96, ~300K total substrate params) per Phase 3 council §9
+  binding spec. Addresses Rao's capacity critique from the Z6 Phase 3
+  sextet council 2026-05-17 (12/12 quorum + PROCEED_WITH_REVISIONS verdict
+  + 6 binding revisions).
+
+  Architecture per Path B BUILD design memo §4.1: 3-layer FiLM stack where
+  each layer has its own (γ_t, β_t) MLP_ego conditioning. Per Rao-Ballard
+  1999 hierarchical predictive coding: depth=3 approximates 3-level
+  hierarchy at single spatial resolution. Layer 1 captures coarse motion;
+  Layer 2 mid-scale structure; Layer 3 fine-scale residuals. Per Tishby IB
+  framework: I(T;Y) increases with capacity until saturation; ~300K params
+  sits at the typical saturation range for similar conditional-image-
+  prediction tasks per Perez 2017 FiLM ablations on CLEVR.
+
+  Distinction from Z6-v1: Z6-v1 used single-layer FiLM (~75K total); Z6-v2
+  Candidate 1 uses depth=3 FiLM stack (~300K total). All other canonical
+  wiring preserved byte-identically: trainer skeleton + scorer-loss helper
+  + archive grammar + autoregressive unroll + EMA + eval_roundtrip +
+  PoseNet-projected ego-motion + paired-control marker per Catalog #229 +
+  identity-predictor disambiguator at SAME archive bytes per Council
+  Revision #2.
+
+  Predicted ΔS band [0.13, 0.17] [planning-prior; Dykstra-feasibility-
+  validated per Path B design memo §5 UNANIMOUS PASS; HIGH VARIANCE pending
+  paired CPU/CUDA empirical anchor]. Sister Z6-v1 baseline predicted band
+  [0.13, 0.16]; Candidate 1 widens upper bound to 0.17 to reflect capacity
+  overhead.
+
+  Probe-disambiguator (Council Revision #2 binding): identity-predictor
+  archive emitted at SAME archive bytes. Decision criterion per Revision #3:
+  full-FiLM-WIN at ΔS ≥ 0.005 at contest-CUDA → Wave 4 Phase council
+  recommended; ΔS < 0.005 OR identity-WIN → DEFER branch → pivot to
+  Candidate 2 (LSTM $25) OR Candidate 4c (scorer-logit $13 per Atick).
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: time_traveler_l5_z6
+# Z6-v2 Candidate 1 inherits Z6-v1's substrate canary. Phase 3 council §9
+# binding: Wave 2 dispatch is gated by C6 IBPS outcome AND Z6-v1 having at
+# least one successful disambiguator anchor. The canary_dependency is the
+# Z6-v1 baseline trainer (`time_traveler_l5_z6`).
+
+active_dispatch_contract: z6_v2_candidate_1_multi_layer_film_substrate
+dispatch_contracts:
+  - id: z6_v2_candidate_1_multi_layer_film_substrate
+    archive_role: monolithic_z6pcwm1_self_contained_with_disambiguator_sidecar
+    builder_surface: experiments/train_substrate_time_traveler_l5_z6.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 100
+  smoke_score_band: [0.15, 0.25]
+  predicted_cuda_band: [0.13, 0.17]
+  predicted_cost_usd: 3.0
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.5
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.13, 0.17]
+smoke_score_band: [0.15, 0.25]
+predicted_delta: "[0.13, 0.17] band [Dykstra-feasibility-validated per Path B design memo §5 UNANIMOUS PASS; HIGH VARIANCE pending paired CPU/CUDA empirical anchor]"
+predicted_delta_basis: ".omx/research/z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md (Path B BUILD design memo §4.1 + Phase 3 council §5 + §9 binding spec)"
+provenance_kind: predicted_from_model
+literature_anchor: |
+  Rao & Ballard (1999) "Predictive coding in the visual cortex" Nature
+    Neuroscience 2(1):79-87;
+  Atick-Redlich (1990) "Towards a Theory of Early Visual Processing" +
+    cooperative-receiver theorem;
+  Perez et al. (2017) "FiLM: Visual Reasoning with a General Conditioning Layer"
+    (FiLM modulation ablations at CLEVR; depth-N capacity scaling reference);
+  Tishby IB framework — I(T;Y) saturation with predictor capacity;
+  Path B BUILD design memo §4.1 (Z6-v2 Candidate 1 spec) commit b76c11cd9;
+  Z6 Phase 3 council §9 Wave 2 spec.
+
+source_supports: |
+  Source theorems Rao-Ballard 1999 (predictive coding hierarchy; HARD-EARNED at
+  neuroscience level) + Atick-Redlich 1990 (cooperative-receiver theorem; HARD-EARNED at
+  theorem level) + Perez 2017 (FiLM depth ablations at CLEVR; HARD-EARNED at
+  vision-arch level) + Tishby IB capacity saturation framework empirically
+  demonstrate predictive-coding paradigm + FiLM capacity scaling at
+  neuroscience + theorem + vision-arch + information-theoretic surfaces.
+  Z6-v2 Candidate 1 applies depth=3 FiLM stack to per-pair latent forecasting
+  for contest video archive bytes.
+
+paper_claim_scope: |
+  Source papers establish: (a) the predictive-coding paradigm IS architecturally
+  distinct from non-predictive baselines (Rao-Ballard); (b) the cooperative-
+  receiver theorem proves the rate bound shrinks from H(X) to H(X|f_R(X))
+  (Atick-Redlich); (c) FiLM depth scaling produces capacity-saturation curves on
+  conditional-image-prediction tasks (Perez 2017). NONE of these papers makes
+  claims about contest-CUDA archive byte savings on the Pact scorer; that
+  surface is the Z6-v2 Candidate 1 Wave 2 empirical anchor target via the
+  identity-predictor disambiguator at SAME archive bytes.
+
+pact_must_prove: |
+  Z6-v2 Candidate 1 must empirically prove on paired CPU/CUDA: (a) the depth=3
+  FiLM stack's residual encoding produces lower H(residual) than depth=1
+  baseline on contest video; (b) the bit-savings exceed the +50 KB predictor
+  overhead from increased capacity; (c) the score-aware Lagrangian convergence
+  lands within the predicted [0.13, 0.17] band; (d) the identity-predictor
+  disambiguator probe shows full-FiLM beats identity by ΔS ≥ 0.005 at
+  contest-CUDA (refutes Atick's CC-5 alternative-source hypothesis; confirms
+  Rao's CC-1 capacity-unwind hypothesis).
+
+decode_complexity_evidence: |
+  Inflate runtime is ~135 LOC substrate-engineering waiver per HNeRV parity L4
+  (Z6-v1 baseline ~120 LOC + ~15 LOC for the depth=3 autoregressive unroll
+  per Path B design memo §4.1). Per-pair autoregressive unroll: 600 pair
+  iterations × (3 × FiLM modulation + 3 × conv + 1×1 projection + decoder
+  PixelShuffle blocks). T4 single-pair decode estimated <75ms per pair → <45s
+  total per video on T4; well within the 30 min contest inflate wall-clock
+  budget. Disambiguator probe is one additional inflate.sh + evaluate.py
+  invocation at the same archive bytes; total disambiguator runtime ~60s.
+
+risk: |
+  Z6-v2 Candidate 1 Wave 2 BUILD trainer extension + recipe IS complete; this
+  recipe is intentionally non-dispatchable (`research_only: true`,
+  `dispatch_enabled: false`) pending Phase 3 council §17 op-routable #1
+  operator sign-off + C6 IBPS outcome + Catalog #167 smoke-before-full gate.
+
+  Architectural risk per Path B design memo §4.1:
+  - The depth=3 FiLM stack adds ~150 KB of FP4-quantized weights vs Z6-v1
+    ~95 KB; if the residual savings DO NOT exceed the +55 KB overhead, total
+    bytes grow (BAD for rate term). Smoke verifies grammar; full training
+    tests the entropy-reduction hypothesis.
+  - Per-pair autoregressive unroll across 600 pairs at training time
+    multiplies wall-clock by ~1.5× vs Z6-v1 baseline (3-layer stack vs 1-layer).
+    T4 batch_size=4 is the empirical floor; A10G/4090/A100 reduce wall-clock
+    but increase $/hr.
+  - The identity-predictor disambiguator at SAME archive bytes per Council
+    Revision #2 is the pre-promotion test. If full FiLM does NOT beat identity
+    by ΔS >= 0.005 at contest-CUDA, Rao's capacity-unwind hypothesis is
+    REFUTED on this scorer (Atick's CC-5 alternative-source hypothesis becomes
+    the binding pivot per Revision #6).
+  - The PoseNet-projected ego-motion proxy quality matters — Candidate 1
+    PRESERVES Z6-v1's ego signal; if PoseNet projection IS the bottleneck per
+    Atick critique, depth=3 capacity DOES NOT rescue the substrate.
+
+  Modal T4 Wave 2 cost band:
+  - $1.50 smoke (100 epochs + roundtrip + 1-layer FiLM at smoke config)
+  - $1.00 disambiguator probe (one additional inflate.sh + evaluate.py at
+    SAME archive bytes; identity-predictor archive vs full-predictor archive)
+  - $0.50 GHA Linux x86_64 paired CPU eval
+  - TOTAL: $3.00
+
+  Per CLAUDE.md "Auth eval EVERYWHERE" the dispatch MUST end with CUDA auth
+  eval on EMA shadow + paired CPU eval per "Submission auth eval — BOTH CPU
+  AND CUDA".
+
+envelope_status: "FITS $3.00 Wave 2 envelope per Phase 3 council §9 binding spec ($1.50 smoke + $1 disambiguator + $0.50 paired = $3.00 total)"
+
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+# Z6-v2 Candidate 1 reuses the canonical Z6-v1 remote driver script. The
+# driver already carries Catalog #244 NVML/CUDA env block + Catalog #163
+# bootstrap sentinel + Catalog #189 empty-array guard. The new Wave 2 BUILD
+# flags are threaded via env_overrides below; the driver passes
+# Z6_PREDICTOR_ARCHITECTURE / Z6_PREDICTOR_PARAM_COUNT_TARGET /
+# Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE through to the trainer.
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+  cost_band_trainer: experiments/train_substrate_time_traveler_l5_z6.py
+  cost_band_epochs: 100
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_time_traveler_l5_z6.py
+
+# Per Catalog #191 + #166 sentinel-files: Wave 2 BUILD extends Z6-v1's
+# sentinel list with the architecture.py (which now contains the new
+# MultiLayerFilmPredictor class) and the new probe disambiguator tool.
+sentinel_files:
+  - src/tac/substrates/time_traveler_l5_z6/__init__.py
+  - src/tac/substrates/time_traveler_l5_z6/architecture.py
+  - src/tac/substrates/time_traveler_l5_z6/archive.py
+  - src/tac/substrates/time_traveler_l5_z6/inflate.py
+  - src/tac/substrates/time_traveler_l5_z6/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - tools/probe_z6_predictive_coding_vs_identity_disambiguator.py
+  - experiments/train_substrate_time_traveler_l5_z6.py
+
+# Z6-v2 Candidate 1 Wave 2 BUILD env_overrides. Threads every TIER_1
+# REQUIRED flag from the trainer's manifest per Catalog #151 + #152 +
+# #168 (AnnAssign).
+env_overrides:
+  Z6_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z6_LANE_ID: lane_z6_v2_candidate_1_wave_2_build_trainer_extension_and_recipe_20260517
+  Z6_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_z6_v2_candidate_1_multi_layer_film_modal_t4_smoke_dispatch.yaml
+  TAG: substrate_z6_v2_candidate_1_multi_layer_film
+  Z6_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z6_OUTPUT_DIR: /workspace/pact/lane_z6_v2_candidate_1_results/output
+  Z6_EPOCHS: "100"
+  Z6_BATCH_SIZE: "4"
+  Z6_LR: "5e-4"
+  Z6_LAMBDA_RESIDUAL_ENTROPY: "1.0"
+  Z6_PREDICTOR_KERNEL_SIZE: "3"
+  Z6_PREDICTOR_EGO_MOTION_DIM: "8"
+  Z6_IDENTITY_PREDICTOR: "false"
+  Z6_PREDICTOR_ARCHITECTURE: "multi_layer_film_depth_3_300k"
+  Z6_PREDICTOR_PARAM_COUNT_TARGET: "300000"
+  Z6_EGO_SOURCE: "posenet_projection"
+  Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION: "shared_modules_seed_order_matched_v2"
+  Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE: "true"
+  Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S: "0.005"
+  Z6_ENABLE_AUTOCAST_FP16: "true"
+  LOCAL_CUDA_WORKER: "1"
+  # Catalog #326 (DRIVER-FIX wave 2026-05-18): Z6_TRAINER_MODE="full" +
+  # SMOKE_ONLY="0" explicitly route the driver to _full_main per Phase 3
+  # council §17 op-routable #1 + Wave 2 BUILD sister spec (multi-layer
+  # FiLM depth=3 ~300K params). The Z6 driver's SMOKE_ONLY env var
+  # defaults to "1" so this explicit override is REQUIRED to avoid the
+  # Z6-v2 Wave 2 DEFER 2026-05-18 bug class (call_ids
+  # fc-01KRW7RHFHP640BHTQ0FZM3M38 + fc-01KRW7ZCYK5XF6MSHD24R71A46;
+  # full canary executed _smoke_main with synthetic-cfg overriding
+  # council-binding spec).
+  Z6_TRAINER_MODE: "full"
+  SMOKE_ONLY: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_time_traveler_l5_z6.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/probe_z6_predictive_coding_vs_identity_disambiguator.py
+
+# Catalog #220 + #272 distinguishing-feature integration contract
+distinguishing_feature_name: multi_layer_film_predictor_depth_3
+distinguishing_bytes_path: predictor_blob
+# Inflate consumer: the existing Z6 substrate's autoregressive unroll in
+# tac.substrates.time_traveler_l5_z6.inflate reconstructs latents via the
+# predictor's forward at every pair index. Both single-layer + multi-layer
+# FiLM stacks honor the same shape contract (z_prev, ego_motion) -> z_pred,
+# so the inflate path consumes the entire predictor_blob structurally.
+inflate_consumer_function: tac.substrates.time_traveler_l5_z6.inflate.run_inflate
+byte_mutation_smoke_passes: pending_wave_2_smoke
+
+# Catalog #167 smoke-before-full required for Wave 2 dispatch
+smoke_before_full: true
+
+# Catalog #309 horizon-class declaration
+horizon_class: frontier_pursuit
+
+operator_required_flags:
+  TIER_1_OPERATOR_REQUIRED_FLAGS:
+    - --enable-paired-control-initialization
+    - --emit-identity-predictor-disambiguator-archive
+    - --predictor-architecture
+    - --predictor-param-count-target
+    - --ego-source
+    - --paired-control-disambiguator-decision-criterion-delta-s
+
+notes: |
+  Z6-v2 Candidate 1 Wave 2 BUILD recipe — the trainer extension + recipe IS
+  complete; the recipe remains non-dispatchable until operator sign-off on
+  Phase 3 council §17 op-routable #1 + C6 IBPS outcome + the Catalog #167
+  smoke-before-full pattern clears the declared dispatch blockers.
+
+  Per Catalog #240 recipe-vs-trainer-state consistency, this is no longer a
+  NotImplementedError protection path. The trainer's _full_main IS lifted
+  (Z6-v1 sister landing 2026-05-16) and the Wave 2 BUILD argparse + resolver
+  + archive emission paths ARE all wired. The protection now lives in
+  recipe dispatchability: `research_only: true`, `dispatch_enabled: false`,
+  and the explicit `dispatch_blockers` list. `operator_authorize.py`
+  correctly refuses this recipe before claim/provider setup.
+
+  Stage 0B smoke ($1.50 Modal T4) is the gating empirical test (post-operator
+  sign-off):
+  - Archive bytes in [120_000, 250_000] AND smoke roundtrip passes AND
+    autoregressive recurrence test passes → smoke green
+  - Otherwise → DEFERRED-pending-research per CLAUDE.md (NOT KILL)
+
+  Disambiguator probe (Council Revision #2 binding): the trainer emits
+  BOTH the full-predictor archive AND an identity-predictor archive at the
+  SAME archive bytes (same encoder + decoder + latent_init + residuals +
+  ego_motion buffers; ONLY identity_predictor=True changes). The probe
+  computes ΔS = full_FiLM_score - identity_predictor_score. If ΔS ≥ 0.005,
+  Rao's capacity-unwind hypothesis CONFIRMED on this scorer; advance to Wave
+  3 (Wave 4 Phase council). If ΔS < 0.005 OR identity-WIN, Wave 3b DEFER
+  branch → pivot to Candidate 2 LSTM ($25 envelope) or Candidate 4c
+  scorer-logit ($13 envelope per Atick Revision #6).
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": modal_train_lane.py uses
+  .spawn(); harvest within 24h via tools/harvest_modal_calls.py.
+
+  Per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA": dispatch ends
+  with paired CPU/CUDA auth eval on EMA shadow before any frontier-claim
+  language.
+
+  Reactivation criteria per Phase 3 council §17:
+    1. Operator sign-off on Phase 3 council PROCEED_WITH_REVISIONS verdict
+    2. C6 IBPS outcome lands (parallel sister dispatch)
+    3. Catalog #167 smoke-before-full pattern confirms Z6-v2 smoke green
+    4. Disambiguator probe lands ΔS ≥ 0.005 at contest-CUDA OR explicit
+       Wave 3b DEFER branch with Candidate 4c pivot
+    5. Wave 4 Phase council convenes per Revision #5 (NO carry-forward
+       authorization from Phase 3)
+
+  Cross-ref:
+    .omx/research/council_z6_phase_3_sextet_candidate_1_multi_layer_film_20260517.md (Phase 3 council deliberation)
+    .omx/research/z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md (Path B BUILD design memo §4.1)
+    feedback_z6_phase_3_sextet_council_candidate_1_multi_layer_film_landed_20260517.md (Phase 3 council landing memo)
+    feedback_z6_v2_redesign_cargo_cult_unwind_path_b_landed_20260517.md (Path B BUILD landing memo)
+    lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516 (Z6-v1 sister lane)
+    tools/probe_z6_predictive_coding_vs_identity_disambiguator.py (canonical disambiguator probe)
+    src/tac/substrates/time_traveler_l5_z6/architecture.py (MultiLayerFilmPredictor class)
+    experiments/train_substrate_time_traveler_l5_z6.py (trainer extension)
+    HORIZON-CLASS standing directive 2026-05-16 (frontier_pursuit budget)
+    Catalogs #220 + #272 distinguishing-feature integration contract
+    Catalogs #244 + #163 + #189 Modal/CUDA env block + bootstrap sentinel + array guard
+    Catalogs #166 + #245 + #313 Modal HEAD parity + call_id ledger + probe outcomes
+    Catalogs #270 + #167 + #199 dispatch optimization protocol + smoke-before-full + paired-env

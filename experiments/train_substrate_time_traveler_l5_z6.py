@@ -128,6 +128,34 @@ CONTEST_NORMALIZER = 37_545_489.0
 
 
 # ---------------------------------------------------------------------------
+# Z6-v2 Candidate 1 Wave 2 BUILD predictor-architecture resolver per Phase 3
+# council §9. Maps the operator-facing --predictor-architecture flag to the
+# (predictor_depth, predictor_hidden_dim) tuple consumed by
+# Z6PredictiveCodingConfig.
+# ---------------------------------------------------------------------------
+def _resolve_predictor_architecture(
+    name: str,
+) -> tuple[int, int]:
+    """Return ``(predictor_depth, predictor_hidden_dim)`` for ``name``.
+
+    Per Path B BUILD design memo §4.1 + Phase 3 council §9 binding spec:
+    - ``single_layer_film_75k`` preserves Z6-v1 (depth=1, hidden_dim=64;
+      total substrate ~75K params).
+    - ``multi_layer_film_depth_3_300k`` is Candidate 1 (depth=3, hidden_dim=96;
+      total substrate ~300K params per the council binding ceiling).
+    """
+    if name == "single_layer_film_75k":
+        return 1, 64
+    if name == "multi_layer_film_depth_3_300k":
+        return 3, 96
+    raise SystemExit(
+        f"ERROR: unknown --predictor-architecture {name!r}; expected one of "
+        "{'single_layer_film_75k', 'multi_layer_film_depth_3_300k'} per Phase 3 "
+        "council §9 binding spec"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Catalog #151 manifest — every flag below must be threaded by any operator
 # wrapper. AnnAssign per Catalog #168 (NOT bare Assign).
 # ---------------------------------------------------------------------------
@@ -199,6 +227,71 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
             "refutation/confirmation per Catalog #125 hook #6"
         ),
         "default": "false",
+    },
+    # Z6-v2 Candidate 1 Wave 2 extensions per Phase 3 council §9 spec.
+    "--predictor-architecture": {
+        "env": "Z6_PREDICTOR_ARCHITECTURE",
+        "rationale": (
+            "Z6-v2 Candidate 1 predictor architecture choice. "
+            "single_layer_film_75k preserves Z6-v1 backward-compat (depth=1, "
+            "~75K total substrate params). multi_layer_film_depth_3_300k uses "
+            "depth=3 FiLM stack at hidden_dim=96 (~300K total params per Path "
+            "B BUILD design memo §4.1 + Phase 3 council binding ceiling)."
+        ),
+        "default": "single_layer_film_75k",
+    },
+    "--predictor-param-count-target": {
+        "env": "Z6_PREDICTOR_PARAM_COUNT_TARGET",
+        "rationale": (
+            "Council binding ceiling on substrate total params (Phase 3 "
+            "council §9). Used at startup to verify the configured architecture "
+            "stays within ±5%% of the declared ceiling."
+        ),
+        "default": "300000",
+    },
+    "--ego-source": {
+        "env": "Z6_EGO_SOURCE",
+        "rationale": (
+            "Ego-motion source for the FiLM predictor. posenet_projection "
+            "preserves Z6-v1 baseline (PoseNet head -> 8-dim projection); "
+            "alternative sources (raft / optical_flow / scorer_logit / "
+            "multi_frame) per Path B BUILD design memo §4 sub-options are "
+            "DEFERRED to subsequent Candidate 4 dispatches per Phase 3 "
+            "council Revision #6."
+        ),
+        "default": "posenet_projection",
+    },
+    "--enable-paired-control-initialization": {
+        "env": "Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION",
+        "rationale": (
+            "Catalog #229 paired-control fix marker. "
+            "shared_modules_seed_order_matched_v2 preserves the canonical "
+            "Z6-v1 paired-control marker so identity-predictor disambiguator "
+            "at SAME archive bytes works apples-to-apples per Phase 3 "
+            "council Revision #2."
+        ),
+        "default": "shared_modules_seed_order_matched_v2",
+    },
+    "--emit-identity-predictor-disambiguator-archive": {
+        "env": "Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE",
+        "rationale": (
+            "When true, emit BOTH the full-predictor archive AND an identity-"
+            "predictor archive at the SAME archive bytes (same stride; same "
+            "600-pair sample) so the Wave 2 disambiguator can compute ΔS = "
+            "full_FiLM_score - identity_predictor_score per Catalog #105/#139/"
+            "#220/#272 + Council Revision #2."
+        ),
+        "default": "false",
+    },
+    "--paired-control-disambiguator-decision-criterion-delta-s": {
+        "env": "Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S",
+        "rationale": (
+            "Decision threshold for the disambiguator: full-FiLM-WIN at ΔS >= "
+            "this value at contest-CUDA triggers Wave 4 Phase council on Wave "
+            "3 spec; ΔS < threshold OR identity-WIN triggers Wave 3b DEFER "
+            "branch per Phase 3 council Revision #3 binding contingency."
+        ),
+        "default": "0.005",
     },
     "--enable-autocast-fp16": {
         "env": "Z6_ENABLE_AUTOCAST_FP16",
@@ -342,6 +435,59 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Probe-disambiguator regime: identity predictor (no learning); "
             "Catalog #125 hook #6"
+        ),
+    )
+    # Z6-v2 Candidate 1 Wave 2 extensions per Phase 3 council §9 spec.
+    p.add_argument(
+        "--predictor-architecture",
+        choices=("single_layer_film_75k", "multi_layer_film_depth_3_300k"),
+        default="single_layer_film_75k",
+        help=(
+            "Z6-v2 Candidate 1 predictor architecture: single_layer_film_75k "
+            "preserves Z6-v1 backward-compat (depth=1); "
+            "multi_layer_film_depth_3_300k uses depth=3 FiLM stack at "
+            "hidden_dim=96 (~300K total) per Path B BUILD design memo §4.1."
+        ),
+    )
+    p.add_argument(
+        "--predictor-param-count-target", type=int, default=300_000,
+        help=(
+            "Council binding ceiling on substrate total params (Phase 3 "
+            "council §9). Trainer prints diagnostic if ±5%% deviation."
+        ),
+    )
+    p.add_argument(
+        "--ego-source",
+        choices=("posenet_projection",),
+        default="posenet_projection",
+        help=(
+            "Ego-motion source. Candidate 1 preserves Z6-v1's "
+            "posenet_projection per Phase 3 council §9 spec; alternative "
+            "sources (Candidate 4 sub-options) are DEFERRED."
+        ),
+    )
+    p.add_argument(
+        "--enable-paired-control-initialization",
+        choices=("shared_modules_seed_order_matched_v2",),
+        default="shared_modules_seed_order_matched_v2",
+        help=(
+            "Catalog #229 paired-control marker; Phase 3 council Revision #2 "
+            "binding for identity-predictor disambiguator at SAME archive bytes."
+        ),
+    )
+    p.add_argument(
+        "--emit-identity-predictor-disambiguator-archive", action="store_true",
+        help=(
+            "Emit identity-predictor archive at SAME archive bytes alongside "
+            "the full-predictor archive so the Wave 2 disambiguator can compute "
+            "ΔS empirically (Council Revision #2)."
+        ),
+    )
+    p.add_argument(
+        "--paired-control-disambiguator-decision-criterion-delta-s",
+        type=float, default=0.005,
+        help=(
+            "Decision threshold ΔS for the disambiguator (Council Revision #3)."
         ),
     )
     p.add_argument(
@@ -583,7 +729,15 @@ def _smoke_main(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     effective_epochs = _smoke_effective_epochs(args.epochs)
 
-    # Tiny smoke config
+    # Z6-v2 Candidate 1 Wave 2 BUILD: resolve predictor architecture per
+    # Phase 3 council §9 spec. Smoke honors --predictor-architecture so the
+    # smoke validates the depth=3 forward path before any paid full dispatch.
+    predictor_depth, _full_hidden_dim_unused = _resolve_predictor_architecture(
+        getattr(args, "predictor_architecture", "single_layer_film_75k")
+    )
+
+    # Tiny smoke config (kept tiny for fast smoke; depth flows through to
+    # MultiLayerFilmPredictor dispatch in Z6PredictiveCodingSubstrate).
     num_pairs = 5
     cfg = Z6PredictiveCodingConfig(
         latent_dim=8,
@@ -597,6 +751,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         predictor_film_mlp_hidden_dim=8,
         predictor_kernel_size=args.predictor_kernel_size,
         predictor_ego_motion_dim=4,
+        predictor_depth=predictor_depth,
         identity_predictor=args.identity_predictor,
         lambda_residual_entropy=args.lambda_residual_entropy,
     )
@@ -686,6 +841,38 @@ def _smoke_main(args: argparse.Namespace) -> int:
     archive_path = out_dir / "0.bin"
     archive_path.write_bytes(archive_bytes)
 
+    # Z6-v2 Candidate 1 Wave 2 BUILD: identity-predictor disambiguator emission
+    # per Phase 3 council Revision #2 + Catalog #105/#139/#220/#272. When
+    # --emit-identity-predictor-disambiguator-archive is set, ALSO pack a
+    # second archive with identity_predictor=True at the SAME archive bytes
+    # so the disambiguator probe can compute ΔS empirically. Reuses the SAME
+    # encoder + decoder + latent_init + residuals + ego_motion buffers
+    # (paired-control-initialization=shared_modules_seed_order_matched_v2 per
+    # Catalog #229); the ONLY change is identity_predictor=True at archive-
+    # build time so the inflate path's predictor effect is decoupled from
+    # everything else.
+    disambiguator_archive_bytes: bytes | None = None
+    if getattr(args, "emit_identity_predictor_disambiguator_archive", False):
+        identity_meta = dict(meta)
+        identity_meta["identity_predictor_disambiguator"] = True
+        identity_meta["paired_control_marker"] = PAIRED_CONTROL_INITIALIZATION
+        identity_meta["paired_control_decision_criterion_delta_s"] = float(
+            getattr(args, "paired_control_disambiguator_decision_criterion_delta_s", 0.005)
+        )
+        disambiguator_archive_bytes = pack_archive(
+            enc_sd, dec_sd, pred_sd, latent_init, residuals, ego_motion,
+            identity_meta,
+            lambda_residual_entropy=args.lambda_residual_entropy,
+            predictor_kernel_size=args.predictor_kernel_size,
+            identity_predictor=True,
+        )
+        disambiguator_path = out_dir / "0_identity_predictor_disambiguator.bin"
+        disambiguator_path.write_bytes(disambiguator_archive_bytes)
+        print(
+            f"[z6-smoke] disambiguator archive emitted "
+            f"size={len(disambiguator_archive_bytes)}B path={disambiguator_path}"
+        )
+
     final = losses[-1] if losses else {"loss": float("inf")}
     stats = {
         "lane_id": SUBSTRATE_LANE_ID,
@@ -724,6 +911,21 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "ready_for_exact_eval_dispatch": False,
         "promotion_eligible": False,
         "param_breakdown": substrate.num_parameters_breakdown(),
+        # Z6-v2 Candidate 1 Wave 2 BUILD fields per Phase 3 council §9.
+        "predictor_architecture": getattr(args, "predictor_architecture", "single_layer_film_75k"),
+        "predictor_depth": predictor_depth,
+        "predictor_param_count_target": getattr(args, "predictor_param_count_target", 300_000),
+        "ego_source": getattr(args, "ego_source", "posenet_projection"),
+        "emit_identity_predictor_disambiguator_archive": bool(
+            getattr(args, "emit_identity_predictor_disambiguator_archive", False)
+        ),
+        "identity_predictor_disambiguator_archive_bytes": (
+            len(disambiguator_archive_bytes)
+            if disambiguator_archive_bytes is not None else None
+        ),
+        "paired_control_disambiguator_decision_criterion_delta_s": float(
+            getattr(args, "paired_control_disambiguator_decision_criterion_delta_s", 0.005)
+        ),
     }
     (out_dir / "stats.json").write_text(
         json.dumps(stats, sort_keys=True, indent=2), encoding="utf-8"
@@ -731,7 +933,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
     print(
         f"[z6-smoke] OK final_loss={final['loss']:.6f} archive={len(archive_bytes)}B "
         f"kernel={args.predictor_kernel_size} identity={args.identity_predictor} "
-        f"ego={args.smoke_ego_motion_mode}"
+        f"ego={args.smoke_ego_motion_mode} "
+        f"arch={getattr(args, 'predictor_architecture', 'single_layer_film_75k')} "
+        f"depth={predictor_depth}"
     )
     return 0
 
@@ -1259,6 +1463,24 @@ def _full_main(args: argparse.Namespace) -> int:
         val_indices_pool = list(range(val_idx_start, n_pairs))
 
         # 6. Build Z6 substrate at the requested num_pairs + ego-motion-dim.
+        # Z6-v2 Candidate 1 Wave 2 BUILD: resolve --predictor-architecture per
+        # Phase 3 council §9. multi_layer_film_depth_3_300k overrides
+        # --predictor-hidden-dim with the council-binding-ceiling 96 to hit
+        # the ~300K total params target per Path B BUILD design memo §4.1.
+        predictor_depth_full, predictor_hidden_dim_resolved = (
+            _resolve_predictor_architecture(
+                getattr(args, "predictor_architecture", "single_layer_film_75k")
+            )
+        )
+        # The canonical resolver's hidden_dim takes precedence ONLY when
+        # multi_layer_film_depth_3_300k is selected; single_layer_film_75k
+        # preserves the operator's --predictor-hidden-dim override (Z6-v1
+        # backward-compat).
+        effective_predictor_hidden_dim = (
+            predictor_hidden_dim_resolved
+            if predictor_depth_full > 1
+            else args.predictor_hidden_dim
+        )
         cfg = Z6PredictiveCodingConfig(
             latent_dim=args.latent_dim,
             encoder_input_channels=3,
@@ -1271,10 +1493,11 @@ def _full_main(args: argparse.Namespace) -> int:
             num_pairs=n_pairs,
             output_height=384,
             output_width=512,
-            predictor_hidden_dim=args.predictor_hidden_dim,
+            predictor_hidden_dim=effective_predictor_hidden_dim,
             predictor_film_mlp_hidden_dim=args.predictor_film_mlp_hidden_dim,
             predictor_ego_motion_dim=args.predictor_ego_motion_dim,
             predictor_kernel_size=args.predictor_kernel_size,
+            predictor_depth=predictor_depth_full,
             identity_predictor=args.identity_predictor,
             lambda_residual_entropy=args.lambda_residual_entropy,
         )
@@ -1294,11 +1517,32 @@ def _full_main(args: argparse.Namespace) -> int:
         print(
             f"[{SUBSTRATE_TAG}-full] params: total={n_params_total:,} "
             f"predictor={n_params_predictor:,} encoder={n_params_encoder:,} "
-            f"decoder={n_params_decoder:,}"
+            f"decoder={n_params_decoder:,} depth={cfg.predictor_depth} "
+            f"arch={getattr(args, 'predictor_architecture', 'single_layer_film_75k')}"
         )
+        # Z6-v2 Candidate 1 Wave 2 BUILD: param-count-target diagnostic per
+        # Phase 3 council §9. ±5% deviation surfaces a warning so the operator
+        # knows the substrate's empirical params deviate from the binding
+        # council ceiling. NOT a hard failure - the cfg-derived params reflect
+        # the operator's --predictor-architecture choice exactly.
+        target = int(getattr(args, "predictor_param_count_target", 300_000))
+        if target > 0:
+            deviation_pct = abs(n_params_total - target) / target * 100.0
+            if deviation_pct > 5.0:
+                print(
+                    f"[{SUBSTRATE_TAG}-full] WARNING: substrate total params "
+                    f"{n_params_total:,} deviates {deviation_pct:.1f}% from "
+                    f"council binding ceiling {target:,} (Phase 3 council §9)"
+                )
+            else:
+                print(
+                    f"[{SUBSTRATE_TAG}-full] OK: substrate total params "
+                    f"{n_params_total:,} within ±5%% of ceiling {target:,}"
+                )
         _stage(
             f"substrate_built_total_{n_params_total}_predictor_"
-            f"{n_params_predictor}_decoder_{n_params_decoder}"
+            f"{n_params_predictor}_decoder_{n_params_decoder}_"
+            f"depth_{cfg.predictor_depth}"
         )
 
         # 7. EMA shadow (CLAUDE.md non-negotiable, decay=0.997).
