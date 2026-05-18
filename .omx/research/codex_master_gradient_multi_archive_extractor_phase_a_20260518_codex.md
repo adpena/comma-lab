@@ -28,6 +28,9 @@ gradient-authority claim for every grammar.
   - `pr107_apogee_length_prefixed`
 - Heavy extraction now fails closed before codec/scorer import for grammars
   where byte-gradient projection is not implemented.
+- A1 headered PR101-family archives are now supported by the existing
+  projector: the 4-byte section header is preserved in the gradient subject
+  with zero-gradient semantics, while decoder bytes start at offset 4.
 - ZIP payload extraction is strict-single-member only. Multi-member ZIPs now
   fail closed so charged archive bytes cannot silently diverge from the
   gradient subject byte domain.
@@ -37,9 +40,9 @@ gradient-authority claim for every grammar.
 ## Authority Boundary
 
 `gradient_projection_supported=true` only for the already-supported
-fec6/PR101-compatible split-Brotli fixed-section path. A1, PR106 direct,
-PR106 format0d, true hnerv_lc_v2, and PR107 Apogee are layout/xray only until
-a grammar-aware projector is wired.
+fec6/PR101-compatible split-Brotli fixed-section path and the A1 headered
+variant. PR106 direct, PR106 format0d, true hnerv_lc_v2, and PR107 Apogee are
+layout/xray only until a grammar-aware projector is wired.
 
 This avoids the false-authority class where a single `x` member with enough
 bytes is misread as PR101 fixed-offset and then emitted as a master-gradient
@@ -48,7 +51,7 @@ anchor.
 ## Verification
 
 - `PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider src/tac/tests/test_extract_master_gradient.py`
-  - `33 passed`
+  - `34 passed`
 - `.venv/bin/ruff check tools/extract_master_gradient.py src/tac/tests/test_extract_master_gradient.py`
   - `All checks passed`
 - `git diff --check`
@@ -56,6 +59,7 @@ anchor.
 - Real local fixture probes:
   - FEC6: `fec6_fp11_selector`, `projection_supported=true`
   - public PR101: `pr101_lc_v2`, `projection_supported=true`
+  - A1: `a1_finetuned`, `projection_supported=true`
   - PR106 format0d: `pr106_format0d`, `projection_supported=false`
   - public PR106 direct: `pr106_ff_packed_hnerv`, `projection_supported=false`
   - public PR100 true lc_v2: `hnerv_lc_v2_length_prefixed`, `projection_supported=false`

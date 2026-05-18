@@ -15,6 +15,7 @@ import json
 import sys
 import zipfile
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -133,6 +134,34 @@ class _TinyDecoder(nn.Module):
         return torch.stack([f0, f1], dim=1)  # (B, 2, 3, H, W)
 
 
+class _TinyArchiveDecoder(nn.Module):
+    """State-dict surface for parser-only tiny codec tests."""
+
+    def __init__(self, latent_dim=4, base_channels=4, eval_size=(2, 2)):
+        super().__init__()
+        self.weight = nn.Parameter(torch.zeros(2))
+
+
+class _TinyA1CodecModule:
+    DECODER_BLOB_LEN = 5
+    LATENT_BLOB_LEN = 3
+    DECODER_STREAM_ENDS = (1,)
+    DECODER_STORAGE_ORDER = (0,)
+    DECODER_BYTE_MAPS: ClassVar[dict[int, str]] = {}
+    CONV4_STORAGE_PERMS: ClassVar[dict[int, tuple[int, ...]]] = {}
+    N_PAIRS = 1
+    LATENT_DIM = 4
+    BASE_CHANNELS = 4
+    EVAL_SIZE = (2, 2)
+    HNeRVDecoder = _TinyArchiveDecoder
+
+    @staticmethod
+    def decompress_brotli_streams(decoder_blob, n_streams):
+        assert decoder_blob == b"abcde"
+        assert n_streams == 1
+        return b"\x01\x02" + np.float16(1.5).tobytes()
+
+
 # ─────────────────────────────────────────────────────────────────────────── #
 # Test: per-tensor Jacobian scale projection                                  #
 # ─────────────────────────────────────────────────────────────────────────── #
@@ -169,6 +198,7 @@ def test_project_per_param_gradient_to_per_byte_uniform_spread(tmp_path):
         base_channels=4,
         eval_size=(2, 2),
         has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
     )
 
     # Per-weight gradient: [1.0, 2.0, 3.0, 4.0]; expected per-tensor mass = (1+2+3+4) * |scale|
@@ -220,6 +250,7 @@ def test_project_zero_gradient_yields_zero_seg_and_pose_columns(tmp_path):
         base_channels=1,
         eval_size=(1, 1),
         has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
     )
     grad_seg = {"stem.weight": torch.zeros(2)}
     grad_pose = {"stem.weight": torch.zeros(2)}
@@ -262,12 +293,32 @@ def test_project_handles_missing_tensor_in_grad_dict(tmp_path):
         base_channels=1,
         eval_size=(1, 1),
         has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
     )
 
     G = emg.project_per_param_gradient_to_per_byte(layout, {}, {})
     assert G.shape == (10, 3)
     assert np.allclose(G[:, 0], 0.0)
     assert np.allclose(G[:, 1], 0.0)
+
+
+def test_parse_fec6_archive_layout_supports_a1_headered_decoder(tmp_path):
+    """A1's 4-byte header is metadata; decoder bytes start at offset 4."""
+    raw_archive = (9).to_bytes(4, "little") + b"abcde" + b"lat" + b"sc"
+    path = tmp_path / "a1.raw"
+    path.write_bytes(raw_archive)
+
+    layout = emg.parse_fec6_archive_layout(path, _TinyA1CodecModule)
+
+    assert layout.has_a1_headered_decoder is True
+    assert layout.has_fp11_outer_wrapper is False
+    assert layout.decoder_blob_offset == 4
+    assert layout.decoder_blob_len == 5
+    assert layout.latent_blob_offset == 9
+    assert layout.latent_blob_len == 3
+    assert layout.sidecar_blob_offset == 12
+    assert layout.sidecar_blob_len == 2
+    assert layout.decoder_tensor_spans[0].fp16_scale == 1.5
 
 
 # ─────────────────────────────────────────────────────────────────────────── #
@@ -530,6 +581,7 @@ def test_rate_column_is_zero_for_byte_value_derivatives(tmp_path):
         base_channels=1,
         eval_size=(1, 1),
         has_fp11_outer_wrapper=False,
+        has_a1_headered_decoder=False,
     )
     G = emg.project_per_param_gradient_to_per_byte(layout, {}, {})
     np.testing.assert_allclose(G[:, 2], 0.0, rtol=0, atol=0)
@@ -624,7 +676,7 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
             _zip_payload(_a1_payload()),
             "a1_finetuned",
             ["a1_section_header", "decoder", "latent", "sidecar"],
-            False,
+            True,
         ),
         (
             _zip_payload(_pr101_payload()),

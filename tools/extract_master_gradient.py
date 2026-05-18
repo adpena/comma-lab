@@ -169,6 +169,7 @@ class _Fec6ArchiveLayout:
     base_channels: int
     eval_size: tuple[int, int]
     has_fp11_outer_wrapper: bool
+    has_a1_headered_decoder: bool
 
 
 @dataclass(frozen=True)
@@ -430,9 +431,9 @@ def parse_a1_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
         archive_bytes=archive_bytes,
         extracted=extracted,
         sections=sections,
-        gradient_projection_supported=False,
+        gradient_projection_supported=True,
         parser_notes=(
-            "A1 boundary detection is available, but byte-gradient projection is fail-closed until its length-header decoder path is wired.",
+            "A1 is PR101-family split-Brotli with a 4-byte decoder-section header; the header itself has zero gradient.",
         ),
     )
 
@@ -668,8 +669,9 @@ def parse_fec6_archive_layout(archive_path: Path, codec_module) -> _Fec6ArchiveL
     archive_sha256 = _sha256_bytes(archive_bytes)
     n_archive_bytes = len(archive_bytes)
 
-    # Detect FP11 outer wrapper
+    # Detect FP11 outer wrapper and A1's 4-byte decoder-section header.
     has_fp11_outer = archive_bytes[:4] == b"FP11"
+    has_a1_header = False
     if has_fp11_outer:
         # FP11 + 4-byte source_len + source bytes + 2-byte selector_len + selector
         source_len = struct.unpack_from("<I", archive_bytes, 4)[0]
@@ -678,6 +680,13 @@ def parse_fec6_archive_layout(archive_path: Path, codec_module) -> _Fec6ArchiveL
         # Decoder blob lives inside source_payload (PR101 inner archive).
         inner_bytes = source_payload
         inner_base = source_payload_offset
+    elif (
+        len(archive_bytes) >= 4
+        and struct.unpack_from("<I", archive_bytes, 0)[0] == codec_module.DECODER_BLOB_LEN + 4
+    ):
+        has_a1_header = True
+        inner_bytes = archive_bytes[4:]
+        inner_base = 4
     else:
         inner_bytes = archive_bytes
         inner_base = 0
@@ -754,6 +763,7 @@ def parse_fec6_archive_layout(archive_path: Path, codec_module) -> _Fec6ArchiveL
         base_channels=codec_module.BASE_CHANNELS,
         eval_size=tuple(codec_module.EVAL_SIZE),
         has_fp11_outer_wrapper=has_fp11_outer,
+        has_a1_headered_decoder=has_a1_header,
     )
 
 
@@ -1375,11 +1385,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise SystemExit("--inflate-py is required unless --detect-grammar-only is set")
     if args.upstream_dir is None:
         raise SystemExit("--upstream-dir is required unless --detect-grammar-only is set")
-    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2"}:
+    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2", "a1_finetuned"}:
         raise SystemExit(
             f"archive grammar {detected_name!r} is xray/detection-only in this extractor; "
             "byte-gradient authority is currently implemented only for fec6_fp11_selector "
-            "and pr101_lc_v2 with matching codec.py. Re-run with --detect-grammar-only "
+            "plus PR101-family fixed/headered layouts with matching codec.py. Re-run with --detect-grammar-only "
             "or wire a grammar-aware projector before emitting a master-gradient anchor."
         )
 
@@ -1458,11 +1468,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         segnet = segnet.to(dtype=compute_torch_dtype)
 
         # Parse decoder state_dict + latents from archive (using submitter codec)
-        print("[master-gradient] decoding archive via canonical codec.parse_archive")
+        print("[master-gradient] decoding archive via canonical codec parser")
         if layout.has_fp11_outer_wrapper:
             # parse_archive expects inner bytes
             source_payload = raw_archive_bytes[8 : 8 + struct.unpack_from("<I", raw_archive_bytes, 4)[0]]
             decoder_sd, latents, meta = codec_module.parse_archive(source_payload)
+        elif layout.has_a1_headered_decoder:
+            section_total = struct.unpack_from("<I", raw_archive_bytes, 0)[0]
+            decoder_blob = raw_archive_bytes[4:section_total]
+            latent_blob = raw_archive_bytes[section_total : section_total + codec_module.LATENT_BLOB_LEN]
+            sidecar_blob = raw_archive_bytes[section_total + codec_module.LATENT_BLOB_LEN :]
+            decoder_sd = codec_module.decode_decoder_compact(decoder_blob)
+            latents = codec_module.apply_latent_sidecar(
+                codec_module.decode_latents_compact(latent_blob),
+                sidecar_blob,
+            )
+            meta = {
+                "latent_dim": codec_module.LATENT_DIM,
+                "base_channels": codec_module.BASE_CHANNELS,
+                "eval_size": list(codec_module.EVAL_SIZE),
+            }
         else:
             decoder_sd, latents, meta = codec_module.parse_archive(raw_archive_bytes)
 
