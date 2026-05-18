@@ -2514,6 +2514,19 @@ def preflight_all(
         check_master_gradient_raw_byte_authority_not_landed(
             strict=True, verbose=verbose,
         )
+        # 2026-05-18 Catalog #327 — MASTER-GRADIENT CONTEST AXIS REQUIRES
+        # AUTHORITATIVE CUSTODY. Per the T3 synthesis adversarial review, an
+        # append-only state row mislabeled a macOS advisory 8-pair subset as
+        # [contest-CPU]. Refuse any unresolved effective master-gradient anchor
+        # whose contest axis conflicts with hardware/method/pair-count custody.
+        # Historical rows may be corrected append-only by a newer diagnostic
+        # axis row for the same archive; source consumers also filter row-by-row
+        # via tac.master_gradient.is_authoritative_axis_anchor.
+        # STRICT-from-byte-one after the live state correction row drove the
+        # effective count to zero.
+        check_master_gradient_contest_axis_requires_authoritative_custody(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-17 Catalog #319 — WYNER-ZIV REWEIGHT REQUIRES
         # DELIVERABILITY PROOF. The autopilot may demote high pair-specific
         # candidates from Venn classification alone, but any positive
@@ -70332,6 +70345,102 @@ def check_master_gradient_raw_byte_authority_not_landed(
             "check_master_gradient_raw_byte_authority_not_landed found "
             f"{len(violations)} raw-byte master-gradient authority issue(s) "
             "per Catalog #318.\n  "
+            + "\n  ".join(v[:500] for v in violations[:5])
+        )
+    return violations
+
+
+# Catalog #327 - check_master_gradient_contest_axis_requires_authoritative_custody
+# 2026-05-18 codex_t3_synthesis_adversarial_review_master_gradient_axis_guard.
+# Refuse effective append-only master-gradient anchors whose contest-axis label
+# contradicts their hardware/method/pair-count custody. This complements #318:
+# #318 blocks raw-byte source authority; #327 blocks stale live-state authority.
+
+
+def check_master_gradient_contest_axis_requires_authoritative_custody(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #327 — contest-axis master-gradient rows need real custody."""
+    from tac.master_gradient import (
+        MASTER_GRADIENT_LEDGER_PATH,
+        load_anchors_lenient,
+        unresolved_contest_axis_authority_violations,
+    )
+
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+    source_contracts = {
+        "src/tac/master_gradient_consumers.py": "is_authoritative_axis_anchor",
+        "src/tac/empirical_per_x_optimal_codec_planner/per_byte_strategy.py": "is_authoritative_axis_anchor",
+        "src/tac/canonical_duckdb/per_byte_sensitivity_ext.py": "is_authoritative_axis_anchor",
+        "tools/cathedral_autopilot_autonomous_loop.py": (
+            "latest_rejected_contest_axis_anchor_for_archive"
+        ),
+    }
+    for rel_path, required_token in source_contracts.items():
+        path = root / rel_path
+        if not path.exists():
+            continue
+        try:
+            source = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if required_token not in source:
+            violations.append(
+                f"{rel_path} does not contain required Catalog #327 authority "
+                f"filter token {required_token!r}. Master-gradient consumers "
+                "that read .omx/state/master_gradient_anchors.jsonl must route "
+                "through tac.master_gradient authority filtering so diagnostic "
+                "per-pair/aggregate signals stay useful for training, compress "
+                "time, and guarded inflate-time planning without becoming false "
+                "contest-CPU/contest-CUDA authority."
+            )
+
+    ledger = root / MASTER_GRADIENT_LEDGER_PATH
+    if not ledger.exists():
+        if verbose:
+            print(
+                "  [check_master_gradient_contest_axis_requires_authoritative_custody] "
+                "OK (no ledger)"
+            )
+    else:
+        rows = load_anchors_lenient(ledger)
+        for row, reason in unresolved_contest_axis_authority_violations(rows):
+            archive = str(row.get("archive_sha256", "<missing>"))
+            archive_short = archive[:16] if len(archive) > 16 else archive
+            violations.append(
+                f"{MASTER_GRADIENT_LEDGER_PATH} archive={archive_short} "
+                f"measurement_utc={row.get('measurement_utc', '<missing>')} "
+                f"measurement_axis={row.get('measurement_axis', '<missing>')} "
+                f"measurement_hardware={row.get('measurement_hardware', '<missing>')} "
+                f"measurement_method={row.get('measurement_method', '<missing>')} "
+                f"n_pairs_used={row.get('n_pairs_used', '<missing>')} "
+                f"n_pairs_total={row.get('n_pairs_total', '<missing>')} is not an "
+                f"authoritative contest-axis master-gradient anchor: {reason}. "
+                "Append a newer diagnostic/advisory correction row for the same archive "
+                "or regenerate the anchor under matching contest hardware, full pair "
+                "custody, and exact axis labels before consumers treat it as contest "
+                "authority."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_master_gradient_contest_axis_requires_authoritative_custody] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print(
+                "  [check_master_gradient_contest_axis_requires_authoritative_custody] OK"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "check_master_gradient_contest_axis_requires_authoritative_custody "
+            f"found {len(violations)} unresolved contest-axis custody issue(s) "
+            "per Catalog #327.\n  "
             + "\n  ".join(v[:500] for v in violations[:5])
         )
     return violations

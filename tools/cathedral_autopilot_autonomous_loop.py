@@ -4346,6 +4346,7 @@ def rerank_candidates_via_master_gradient(
     from tac.master_gradient import (
         MASTER_GRADIENT_LEDGER_PATH,
         latest_anchor_for_archive,
+        latest_rejected_contest_axis_anchor_for_archive,
     )
 
     axis_tag = f"[contest-{'CPU' if panel_axis == 'contest_cpu' else 'CUDA'}]"
@@ -4364,6 +4365,63 @@ def rerank_candidates_via_master_gradient(
             continue
         anchor = latest_anchor_for_archive(sha_candidate, path=ledger, axis=axis_tag)
         if anchor is None:
+            latest_any = latest_anchor_for_archive(sha_candidate, path=ledger)
+            if (
+                latest_any is not None
+                and latest_any.get("measurement_axis") != axis_tag
+                and str(latest_any.get("measurement_axis", "")).lower()
+                not in {"[contest-cpu]", "[contest-cuda]"}
+            ):
+                latest_axis = str(latest_any.get("measurement_axis", "<missing>"))
+                out.append(
+                    (
+                        c,
+                        float(c.predicted_score_delta),
+                        f"[predicted, master-gradient-anchor-diagnostic-only, {axis_tag}] "
+                        f"latest effective anchor for archive {sha_candidate[:12]} "
+                        f"is {latest_axis} "
+                        f"on hardware={latest_any.get('measurement_hardware', '<missing>')} "
+                        f"method={latest_any.get('measurement_method', '<missing>')}; "
+                        "no authoritative same-axis contest anchor available",
+                    )
+                )
+                continue
+            rejected = latest_rejected_contest_axis_anchor_for_archive(
+                sha_candidate, path=ledger, axis=axis_tag
+            )
+            if rejected is not None:
+                rejected_anchor, reason = rejected
+                out.append(
+                    (
+                        c,
+                        float(c.predicted_score_delta),
+                        f"[predicted, master-gradient-anchor-rejected, {axis_tag}] "
+                        f"archive {sha_candidate[:12]} row measured_at="
+                        f"{rejected_anchor.get('measurement_utc', '<missing>')} "
+                        f"hardware={rejected_anchor.get('measurement_hardware', '<missing>')} "
+                        f"method={rejected_anchor.get('measurement_method', '<missing>')} "
+                        f"failed authority filter: {reason}",
+                    )
+                )
+                continue
+            if (
+                latest_any is not None
+                and latest_any.get("measurement_axis") != axis_tag
+            ):
+                latest_axis = str(latest_any.get("measurement_axis", "<missing>"))
+                out.append(
+                    (
+                        c,
+                        float(c.predicted_score_delta),
+                        f"[predicted, master-gradient-anchor-different-authoritative-axis, {axis_tag}] "
+                        f"latest effective anchor for archive {sha_candidate[:12]} "
+                        f"is {latest_axis} "
+                        f"on hardware={latest_any.get('measurement_hardware', '<missing>')} "
+                        f"method={latest_any.get('measurement_method', '<missing>')}; "
+                        "no authoritative same-axis contest anchor available",
+                    )
+                )
+                continue
             out.append(
                 (
                     c,

@@ -131,6 +131,87 @@ def test_refresh_per_byte_sensitivity_synthetic_archive(tmp_path: Path) -> None:
     con.close()
 
 
+def test_refresh_per_byte_sensitivity_skips_false_contest_axis_anchor(
+    tmp_path: Path,
+) -> None:
+    """DuckDB backfill must not materialize rows from mislabeled contest anchors."""
+    repo = tmp_path
+    state_dir = repo / ".omx/state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    arr = np.ones((20, 3), dtype=np.float32)
+    npy_path = state_dir / "false_axis.npy"
+    np.save(npy_path, arr)
+    anchor = {
+        "archive_sha256": "sha_test_" + "c" * 56,
+        "operating_point": {"d_seg": 1e-3, "d_pose": 1e-4, "rate": 5e-3, "score": 0.2},
+        "gradient_array_path": ".omx/state/false_axis.npy",
+        "n_bytes": 20,
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset",
+        "measurement_axis": "[contest-CUDA]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_mps_advisory",
+        "measurement_call_id": "test",
+        "measurement_utc": "2026-05-18T00:00:00Z",
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    (state_dir / "master_gradient_anchors.jsonl").write_text(json.dumps(anchor) + "\n")
+
+    db_path = repo / "test.duckdb"
+    con = connect(db_path)
+    bootstrap_per_byte_sensitivity_table(con)
+    assert refresh_per_byte_sensitivity(con, repo) == 0
+    con.close()
+
+
+def test_refresh_per_byte_sensitivity_uses_advisory_correction_row(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path
+    state_dir = repo / ".omx/state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    arr = np.ones((20, 3), dtype=np.float32)
+    npy_path = state_dir / "advisory.npy"
+    np.save(npy_path, arr)
+    base = {
+        "archive_sha256": "sha_test_" + "d" * 56,
+        "operating_point": {"d_seg": 1e-3, "d_pose": 1e-4, "rate": 5e-3, "score": 0.2},
+        "gradient_array_path": ".omx/state/advisory.npy",
+        "n_bytes": 20,
+        "measurement_call_id": "test",
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    stale = {
+        **base,
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset",
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_utc": "2026-05-18T00:00:00Z",
+    }
+    correction = {
+        **base,
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset_axis_correction",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+    }
+    (state_dir / "master_gradient_anchors.jsonl").write_text(
+        json.dumps(stale) + "\n" + json.dumps(correction) + "\n"
+    )
+
+    db_path = repo / "test.duckdb"
+    con = connect(db_path)
+    bootstrap_per_byte_sensitivity_table(con)
+    assert refresh_per_byte_sensitivity(con, repo) == 20
+    rows = con.execute(
+        "SELECT DISTINCT source_measurement_axis, evidence_grade, promotion_eligible "
+        "FROM per_byte_sensitivity WHERE archive_sha256 = ?",
+        [base["archive_sha256"]],
+    ).fetchall()
+    assert rows == [("[macOS-CPU advisory]", "diagnostic", False)]
+    con.close()
+
+
 def test_refresh_per_byte_sensitivity_table_under_canonical_lock(tmp_path: Path) -> None:
     """The operator-facing entry uses the canonical lock + returns expected shape."""
     repo = tmp_path

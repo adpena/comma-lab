@@ -21,6 +21,12 @@ The table schema is:
         sensitivity_l1 FLOAT,            -- |grad_seg|+|grad_pose|+|grad_rate|
         sensitivity_quantile_rank DOUBLE, -- 0.0 = top byte, 1.0 = bottom byte
         sensitivity_class VARCHAR,       -- top_2pct / top_5pct / top_20pct / tail
+        source_measurement_axis VARCHAR,
+        source_measurement_hardware VARCHAR,
+        source_measurement_method VARCHAR,
+        source_measurement_utc VARCHAR,
+        evidence_grade VARCHAR,
+        promotion_eligible BOOLEAN,
         PRIMARY KEY (archive_sha256, byte_idx)
     )
 
@@ -46,6 +52,7 @@ from tac.canonical_duckdb.backfill import (
     canonical_duckdb_lock,
 )
 from tac.canonical_duckdb.schema import connect
+from tac.master_gradient import is_authoritative_axis_anchor
 
 
 PER_BYTE_SENSITIVITY_BOOTSTRAP_SQL = """
@@ -78,6 +85,15 @@ CLASS_NAMES: tuple[str, ...] = ("top_2pct", "top_5pct", "top_20pct", "tail")
 def bootstrap_per_byte_sensitivity_table(con) -> None:
     """Create the per_byte_sensitivity table + indices (idempotent)."""
     con.execute(PER_BYTE_SENSITIVITY_BOOTSTRAP_SQL)
+    for ddl in (
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_axis VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_hardware VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_method VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS source_measurement_utc VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS evidence_grade VARCHAR",
+        "ALTER TABLE per_byte_sensitivity ADD COLUMN IF NOT EXISTS promotion_eligible BOOLEAN",
+    ):
+        con.execute(ddl)
 
 
 def compute_sensitivity_classes(
@@ -153,6 +169,8 @@ def refresh_per_byte_sensitivity(
             continue
         if not isinstance(r, dict):
             continue
+        if not is_authoritative_axis_anchor(r):
+            continue
         if r.get("gradient_tensor_kind", "aggregate_per_byte_v1") != "aggregate_per_byte_v1":
             continue
         sha = r.get("archive_sha256")
@@ -160,7 +178,17 @@ def refresh_per_byte_sensitivity(
         n_bytes = r.get("n_bytes")
         if not (sha and npy_path_rel and n_bytes):
             continue
-        anchors.append((sha, npy_path_rel, int(n_bytes)))
+        anchors.append(
+            (
+                sha,
+                npy_path_rel,
+                int(n_bytes),
+                str(r.get("measurement_axis") or ""),
+                str(r.get("measurement_hardware") or ""),
+                str(r.get("measurement_method") or ""),
+                str(r.get("measurement_utc") or ""),
+            )
+        )
 
     if not anchors:
         return 0
@@ -174,7 +202,15 @@ def refresh_per_byte_sensitivity(
     )
 
     total = 0
-    for archive_sha, npy_path_rel, declared_n in anchors:
+    for (
+        archive_sha,
+        npy_path_rel,
+        declared_n,
+        measurement_axis,
+        measurement_hardware,
+        measurement_method,
+        measurement_utc,
+    ) in anchors:
         npy_path = repo_root / npy_path_rel
         if not npy_path.exists():
             continue
@@ -199,11 +235,36 @@ def refresh_per_byte_sensitivity(
                 float(sens[i]),
                 float(rank_arr[i]),
                 str(cls_arr[i]),
+                measurement_axis,
+                measurement_hardware,
+                measurement_method,
+                measurement_utc,
+                "diagnostic"
+                if not measurement_axis.startswith("[contest-")
+                else "contest_authoritative",
+                bool(measurement_axis.startswith("[contest-")),
             )
             for i in range(n)
         ]
         con.executemany(
-            "INSERT INTO per_byte_sensitivity VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            """
+            INSERT INTO per_byte_sensitivity (
+                archive_sha256,
+                byte_idx,
+                grad_seg,
+                grad_pose,
+                grad_rate,
+                sensitivity_l1,
+                sensitivity_quantile_rank,
+                sensitivity_class,
+                source_measurement_axis,
+                source_measurement_hardware,
+                source_measurement_method,
+                source_measurement_utc,
+                evidence_grade,
+                promotion_eligible
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             rows,
         )
         total += n

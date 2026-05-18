@@ -186,6 +186,68 @@ def test_planner_emits_provenance_per_catalog_323(tmp_path: Path) -> None:
     assert plan.provenance["evidence_grade"] == "predicted"
 
 
+def test_planner_uses_advisory_correction_not_false_contest_axis_anchor(
+    tmp_path: Path,
+) -> None:
+    """Per-X planning may use advisory gradients, but not stale contest-axis labels."""
+    repo = _make_synthetic_repo(tmp_path, n_bytes=100)
+    ledger = repo / ".omx/state/master_gradient_anchors.jsonl"
+    correction = json.loads(ledger.read_text().splitlines()[0])
+    stale = {
+        **correction,
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset",
+        "measurement_utc": "2026-05-18T00:00:00Z",
+    }
+    correction.update(
+        {
+            "measurement_axis": "[macOS-CPU advisory]",
+            "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+            "measurement_method": "autograd_per_parameter_projected_8pair_subset_axis_correction",
+            "measurement_utc": "2026-05-18T01:00:00Z",
+        }
+    )
+    ledger.write_text(json.dumps(stale) + "\n" + json.dumps(correction) + "\n")
+
+    plan = plan_per_byte_from_master_gradient(
+        archive_sha256="test_archive_sha256_" + "f" * 44,
+        codec_menu=("fp16", "int8", "int6", "int4"),
+        byte_budget=300_000,
+        sensitivity_threshold_quantiles=(0.02, 0.05, 0.20, 1.00),
+        repo_root=repo,
+    )
+
+    assert plan.measurement_axis == "[macOS-CPU advisory]"
+    assert plan.provenance["measurement_axis"] == "[macOS-CPU advisory]"
+
+
+def test_planner_rejects_only_false_contest_axis_anchor(tmp_path: Path) -> None:
+    repo = _make_synthetic_repo(tmp_path, n_bytes=100)
+    ledger = repo / ".omx/state/master_gradient_anchors.jsonl"
+    stale = json.loads(ledger.read_text().splitlines()[0])
+    stale.update(
+        {
+            "measurement_axis": "[contest-CUDA]",
+            "measurement_hardware": "darwin_arm64_m5_max_macos_mps_advisory",
+            "measurement_method": "autograd_per_parameter_projected_8pair_subset",
+            "measurement_utc": "2026-05-18T00:00:00Z",
+        }
+    )
+    ledger.write_text(json.dumps(stale) + "\n")
+
+    from tac.empirical_per_x_optimal_codec_planner import PlannerError
+
+    with pytest.raises(PlannerError, match="no master_gradient anchor"):
+        plan_per_byte_from_master_gradient(
+            archive_sha256="test_archive_sha256_" + "f" * 44,
+            codec_menu=("fp16", "int8", "int6", "int4"),
+            byte_budget=300_000,
+            sensitivity_threshold_quantiles=(0.02, 0.05, 0.20, 1.00),
+            repo_root=repo,
+        )
+
+
 def test_planner_rejects_invalid_codec_menu(tmp_path: Path) -> None:
     """Codec menu must contain only canonical codec names."""
     repo = _make_synthetic_repo(tmp_path)
@@ -317,5 +379,8 @@ def test_planner_on_live_fec6_emits_sensitivity_mask_aware_quantizr_v1() -> None
     assert plan.provenance["score_claim"] is False
     assert plan.provenance["evidence_grade"] == "predicted"
 
-    # Measurement axis is the canonical fec6 macos_cpu_advisory tag
-    assert plan.measurement_axis == "[contest-CPU]"
+    # Measurement axis is diagnostic/advisory unless regenerated with full
+    # contest-axis custody; the old local subset row must not survive as
+    # authoritative [contest-CPU].
+    assert plan.measurement_axis == "[macOS-CPU advisory]"
+    assert plan.provenance["promotion_eligible"] is False

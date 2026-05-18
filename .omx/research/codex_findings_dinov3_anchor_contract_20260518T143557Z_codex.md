@@ -59,15 +59,10 @@ evidence from stale-transform false authority.
 
 ## Strict-Gate Status
 
-A new strict preflight gate for this bug class was not added in this atomic
-commit because `.omx/state/subagent_progress.jsonl` showed an active sister
-checkpoint with `files_touched=["preflight"]` at
-`2026-05-18T14:18:09Z`. Per no-signal-loss/anti-absorption discipline, Codex
-did not edit `src/tac/preflight.py` or `CLAUDE.md` while that surface was
-owned by another in-flight agent.
+This DINOv3 transform/label bug is covered by focused regression tests in the
+submitted-job contract. A dedicated DINOv3 strict preflight gate is still a
+valid follow-up if this pattern recurs across more submitted jobs.
 
-Reactivation criterion: after the preflight surface is stable, add a Catalog
-gate that scans submitted DINOv3/timm anchor jobs for stale hardcoded transform
-sizes, raw `tokens[:, 1:, :]` patch extraction, and contest-score-like labels
-on tool-side frozen-anchor datasets.
-
+The later preflight work in this session landed Catalog #327 for the separate
+master-gradient contest-axis custody bug class. Do not read #327 as DINOv3
+coverage; it protects CPU/GPU master-gradient authority and consumers.

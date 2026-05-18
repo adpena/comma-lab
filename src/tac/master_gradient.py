@@ -47,7 +47,7 @@ import os
 import socket
 import tempfile
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -69,13 +69,16 @@ __all__ = [
     "OperatingPoint",
     "append_anchor_locked",
     "compute_marginal_coefficients",
+    "contest_axis_authority_violation_reason",
     "is_authoritative_axis_anchor",
     "latest_anchor_for_archive",
+    "latest_rejected_contest_axis_anchor_for_archive",
     "load_anchors_lenient",
     "load_anchors_strict",
     "predict_delta_s",
     "predict_delta_s_per_pair",
     "query_anchors_by_archive",
+    "unresolved_contest_axis_authority_violations",
     "update_from_anchor",
 ]
 
@@ -90,6 +93,26 @@ PER_PAIR_GRADIENT_TENSOR_KIND = "per_pair_per_byte_v1"
 LEGAL_GRADIENT_TENSOR_KINDS = frozenset(
     {AGGREGATE_GRADIENT_TENSOR_KIND, PER_PAIR_GRADIENT_TENSOR_KIND}
 )
+AUTHORITATIVE_CONTEST_AXES = frozenset({"[contest-CPU]", "[contest-CUDA]"})
+
+
+def _is_contest_axis_label(axis: object) -> bool:
+    text = str(axis or "").strip().lower().replace("-", "_")
+    return text in {
+        "[contest_cpu]",
+        "contest_cpu",
+        "[contest_cuda]",
+        "contest_cuda",
+    }
+
+
+def _normalized_contest_axis(axis: object) -> str | None:
+    text = str(axis or "").strip().lower().replace("-", "_")
+    if text in {"[contest_cpu]", "contest_cpu"}:
+        return "[contest-CPU]"
+    if text in {"[contest_cuda]", "contest_cuda"}:
+        return "[contest-CUDA]"
+    return None
 
 
 class MasterGradientLedgerCorruptError(RuntimeError):
@@ -428,8 +451,10 @@ def query_anchors_by_archive(
     ]
 
 
-def is_authoritative_axis_anchor(row: Mapping[str, object]) -> bool:
-    """Return whether a row can be consumed as an authoritative contest-axis anchor.
+def contest_axis_authority_violation_reason(
+    row: Mapping[str, object],
+) -> str | None:
+    """Return why a row cannot carry contest-axis master-gradient authority.
 
     Historical advisory/subset rows may carry an over-strong axis label. Treat
     those as diagnostic even if ``measurement_axis`` says ``[contest-CPU]`` or
@@ -437,22 +462,99 @@ def is_authoritative_axis_anchor(row: Mapping[str, object]) -> bool:
     stale local probes.
     """
     axis = row.get("measurement_axis")
-    if axis not in {"[contest-CPU]", "[contest-CUDA]"}:
-        return True
+    normalized_axis = _normalized_contest_axis(axis)
+    if normalized_axis is None:
+        return None
 
     hardware = str(row.get("measurement_hardware", "")).lower()
     if any(token in hardware for token in ("advisory", "darwin", "macos", "mps")):
-        return False
+        return "contest axis uses advisory/local/proxy hardware"
+    if normalized_axis == "[contest-CPU]":
+        if "linux" not in hardware or "cpu" not in hardware:
+            return "contest-CPU axis requires linux CPU hardware"
+    elif normalized_axis == "[contest-CUDA]":
+        cuda_tokens = ("cuda", "gpu", "t4", "a10", "a100", "h100", "l40", "rtx", "4090")
+        if not any(token in hardware for token in cuda_tokens):
+            return "contest-CUDA axis requires CUDA/GPU hardware"
+
+    method = str(row.get("measurement_method", "")).lower()
+    if "subset" in method:
+        return "contest axis uses subset measurement method"
+    if not str(row.get("measurement_call_id") or "").strip():
+        return "contest axis missing measurement call/runtime custody"
 
     n_pairs_used = row.get("n_pairs_used")
     n_pairs_total = row.get("n_pairs_total")
-    if n_pairs_used is not None and n_pairs_total is not None:
-        try:
-            if int(n_pairs_used) != int(n_pairs_total):
-                return False
-        except (TypeError, ValueError):
-            return False
-    return True
+    if n_pairs_used is None or n_pairs_total is None:
+        return "contest axis missing pair-count custody"
+    try:
+        if int(n_pairs_used) != int(n_pairs_total):
+            return "contest axis uses pair subset"
+    except (TypeError, ValueError):
+        return "contest axis has unparsable pair counts"
+
+    archive_sha = str(row.get("archive_sha256") or "")
+    scored_archive_sha = str(row.get("scored_archive_sha256") or "")
+    if not scored_archive_sha:
+        return "contest axis missing scored archive SHA custody"
+    if archive_sha and scored_archive_sha.lower() != archive_sha.lower():
+        return "contest axis scored archive SHA does not match anchor archive"
+    scored_archive_bytes = row.get("scored_archive_bytes")
+    if isinstance(scored_archive_bytes, bool):
+        return "contest axis has invalid scored archive byte custody"
+    try:
+        if int(scored_archive_bytes) <= 0:
+            return "contest axis has invalid scored archive byte custody"
+    except (TypeError, ValueError):
+        return "contest axis has invalid scored archive byte custody"
+    return None
+
+
+def is_authoritative_axis_anchor(row: Mapping[str, object]) -> bool:
+    """Return whether a row can be consumed as an authoritative contest-axis anchor."""
+    return contest_axis_authority_violation_reason(row) is None
+
+
+def unresolved_contest_axis_authority_violations(
+    rows: Iterable[Mapping[str, object]],
+) -> list[tuple[Mapping[str, object], str]]:
+    """Return effective contest-axis authority violations after append-only corrections.
+
+    The ledger is append-only historical state. A stale row can be corrected by a
+    later row for the same archive + tensor artifact that re-labels the operating
+    point as diagnostic/advisory. This helper therefore reports false-authority
+    rows only when they remain the latest effective row for that exact gradient
+    artifact. A later CUDA row, per-pair row, or different sidecar cannot hide an
+    older false CPU row.
+    """
+    materialized = list(rows)
+    latest_by_key: dict[tuple[str, str, str, str, str], Mapping[str, object]] = {}
+    for row in materialized:
+        archive = str(row.get("archive_sha256") or "")
+        if not archive:
+            continue
+        sidecar_or_call = str(row.get("gradient_array_path") or "")
+        if not sidecar_or_call:
+            sidecar_or_call = str(row.get("measurement_call_id") or "")
+        key = (
+            archive,
+            str(row.get("gradient_tensor_kind") or AGGREGATE_GRADIENT_TENSOR_KIND),
+            sidecar_or_call,
+            str(row.get("gradient_subject_sha256") or ""),
+            str(row.get("scored_archive_sha256") or ""),
+        )
+        current = latest_by_key.get(key)
+        if current is None or str(row.get("measurement_utc", "")) >= str(
+            current.get("measurement_utc", "")
+        ):
+            latest_by_key[key] = row
+
+    violations: list[tuple[Mapping[str, object], str]] = []
+    for row in latest_by_key.values():
+        reason = contest_axis_authority_violation_reason(row)
+        if reason is not None:
+            violations.append((row, reason))
+    return violations
 
 
 def latest_anchor_for_archive(
@@ -465,11 +567,37 @@ def latest_anchor_for_archive(
     rows = query_anchors_by_archive(archive_sha256, path=path)
     if axis is not None:
         rows = [r for r in rows if r.get("measurement_axis") == axis]
-        if axis in {"[contest-CPU]", "[contest-CUDA]"}:
+        if _is_contest_axis_label(axis):
             rows = [r for r in rows if is_authoritative_axis_anchor(r)]
+    else:
+        rows = [r for r in rows if is_authoritative_axis_anchor(r)]
     if not rows:
         return None
     return max(rows, key=lambda r: r.get("measurement_utc", ""))
+
+
+def latest_rejected_contest_axis_anchor_for_archive(
+    archive_sha256: str,
+    *,
+    path: Path | None = None,
+    axis: str,
+) -> tuple[Mapping[str, object], str] | None:
+    """Latest same-axis row that was rejected by the contest-axis authority filter."""
+    if axis not in AUTHORITATIVE_CONTEST_AXES:
+        raise ValueError(f"axis must be one of {sorted(AUTHORITATIVE_CONTEST_AXES)!r}")
+    rows = [
+        r
+        for r in query_anchors_by_archive(archive_sha256, path=path)
+        if r.get("measurement_axis") == axis
+    ]
+    rejected: list[tuple[Mapping[str, object], str]] = []
+    for row in rows:
+        reason = contest_axis_authority_violation_reason(row)
+        if reason is not None:
+            rejected.append((row, reason))
+    if not rejected:
+        return None
+    return max(rejected, key=lambda item: item[0].get("measurement_utc", ""))
 
 
 def update_from_anchor(anchor: dict, *, path: Path | None = None) -> None:

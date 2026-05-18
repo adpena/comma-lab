@@ -2306,7 +2306,174 @@ def test_master_gradient_rerank_rejects_subset_anchor(tmp_path):
     )
 
     assert ranked[0][1] == pytest.approx(-0.01)
-    assert "diagnostic-only" in ranked[0][2]
+    assert "master-gradient-anchor-rejected" in ranked[0][2]
+    assert "pair subset" in ranked[0][2]
+
+
+def test_master_gradient_rerank_reports_advisory_correction_for_stale_contest_row(
+    tmp_path,
+):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    archive_sha = _sha("1")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    sidecar.write_bytes(b"not-loaded")
+    op = OperatingPoint(
+        d_seg=0.0005,
+        d_pose=0.00003,
+        rate=178_517 / 37_545_489,
+        score=0.192,
+    )
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("2"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=8,
+            n_pairs_total=600,
+            operating_point=op,
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_8pair_subset",
+            measurement_axis="[contest-CPU]",
+            measurement_hardware="darwin_arm64_m5_max_macos_cpu_advisory",
+            measurement_call_id="call-stale",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("2"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=8,
+            n_pairs_total=600,
+            operating_point=op,
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_8pair_subset_axis_correction",
+            measurement_axis="[macOS-CPU advisory]",
+            measurement_hardware="darwin_arm64_m5_max_macos_cpu_advisory",
+            measurement_call_id="call-correction",
+            measurement_utc="2026-05-18T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand("not_a_hash", predicted_delta=-0.01, archive_sha256=archive_sha)
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cpu",
+        ledger_path=ledger,
+    )
+
+    assert ranked[0][1] == pytest.approx(-0.01)
+    assert "master-gradient-anchor-diagnostic-only" in ranked[0][2]
+    assert "[macOS-CPU advisory]" in ranked[0][2]
+
+
+def test_master_gradient_rerank_rejects_false_contest_cuda_mps_anchor(tmp_path):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    archive_sha = _sha("9")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    sidecar.write_bytes(b"not-loaded")
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("8"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=600,
+            n_pairs_total=600,
+            operating_point=OperatingPoint(
+                d_seg=0.0005,
+                d_pose=0.00003,
+                rate=178_517 / 37_545_489,
+                score=0.192,
+            ),
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_full",
+            measurement_axis="[contest-CUDA]",
+            measurement_hardware="darwin_arm64_m5_max_macos_mps_advisory",
+            measurement_call_id="call-mps",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand("not_a_hash", predicted_delta=-0.01, archive_sha256=archive_sha)
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cuda",
+        ledger_path=ledger,
+    )
+
+    assert "master-gradient-anchor-rejected" in ranked[0][2]
+    assert "[contest-CUDA]" in ranked[0][2]
+    assert "advisory/local/proxy hardware" in ranked[0][2]
+
+
+def test_master_gradient_rerank_reports_different_authoritative_axis(tmp_path):
+    from tac.master_gradient import MasterGradient, OperatingPoint, append_anchor_locked
+
+    archive_sha = _sha("7")
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    sidecar = tmp_path / "grad.npy"
+    sidecar.write_bytes(b"not-loaded")
+    append_anchor_locked(
+        MasterGradient(
+            archive_sha256=archive_sha,
+            scored_archive_sha256=archive_sha,
+            scored_archive_bytes=178_517,
+            gradient_subject_sha256=_sha("6"),
+            gradient_subject_bytes=178_417,
+            gradient_byte_domain="zip_inner_member_payload",
+            n_pairs_used=600,
+            n_pairs_total=600,
+            operating_point=OperatingPoint(
+                d_seg=0.0005,
+                d_pose=0.00003,
+                rate=178_517 / 37_545_489,
+                score=0.192,
+            ),
+            gradient_array_path=str(sidecar),
+            n_bytes=178_417,
+            measurement_method="autograd_per_parameter_projected_full",
+            measurement_axis="[contest-CUDA]",
+            measurement_hardware="linux_x86_64_cuda_t4",
+            measurement_call_id="call-cuda",
+            measurement_utc="2026-05-17T12:00:00+00:00",
+        ),
+        path=ledger,
+        lock_path=tmp_path / ".lock",
+    )
+    cand = _cand("not_a_hash", predicted_delta=-0.01, archive_sha256=archive_sha)
+
+    ranked = loop.rerank_candidates_via_master_gradient(
+        [cand],
+        panel_axis="contest_cpu",
+        ledger_path=ledger,
+    )
+
+    assert "master-gradient-anchor-different-authoritative-axis" in ranked[0][2]
+    assert "[contest-CUDA]" in ranked[0][2]
+    assert "[contest-CPU]" in ranked[0][2]
 
 
 def test_master_gradient_rerank_does_not_scrape_notes_or_candidate_id(tmp_path):

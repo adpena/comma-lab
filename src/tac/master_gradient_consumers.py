@@ -112,6 +112,7 @@ from tac.master_gradient import (
     PER_PAIR_GRADIENT_TENSOR_KIND,
     OperatingPoint,
     compute_marginal_coefficients,
+    is_authoritative_axis_anchor,
     load_anchors_lenient,
     load_anchors_strict,
 )
@@ -221,6 +222,7 @@ def _latest_per_pair_anchor(
     candidates = [
         a for a in anchors
         if "per_pair" in str(a.get("measurement_method", "")).lower()
+        and is_authoritative_axis_anchor(a)
     ]
     if archive_sha256 is not None:
         candidates = [a for a in candidates if a.get("archive_sha256") == archive_sha256]
@@ -283,6 +285,7 @@ def load_aggregate_gradient_from_anchor(
     candidates = [
         a for a in anchors
         if "per_pair" not in str(a.get("measurement_method", "")).lower()
+        and is_authoritative_axis_anchor(a)
     ]
     if archive_sha256 is not None:
         candidates = [a for a in candidates if a.get("archive_sha256") == archive_sha256]

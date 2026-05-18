@@ -171,6 +171,10 @@ src/tac.egg-info/
 .omx/state/modal_call_id_ledger.jsonl.lock
 .omx/state/modal_call_id_ledger.jsonl.tmp.*
 .omx/state/modal_call_id_ledger.jsonl.corrupt.*
+# Master-gradient ledgers/sidecars are local live/advisory state. Promote durable
+# signal into .omx/research memos or compact tracked manifests instead.
+.omx/state/master_gradient_anchors.jsonl
+.omx/state/master_gradient_*.npy
 # Generated exact-eval handoff packets are local state; summarize durable signal
 # in .omx/research ledgers before publishing.
 .omx/state/z7_exact_eval_handoff/

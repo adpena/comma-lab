@@ -53,6 +53,7 @@ from tac.empirical_per_x_optimal_codec_planner.contract import (
     PerXCodecAssignmentPlan,
     PlannerError,
 )
+from tac.master_gradient import is_authoritative_axis_anchor
 
 
 CONTEST_RATE_DENOM_BYTES: int = 37_545_489
@@ -123,7 +124,11 @@ def _resolve_master_gradient_anchor(
         except json.JSONDecodeError:
             continue
         if isinstance(r, dict) and r.get("archive_sha256") == archive_sha256:
-            if r.get("gradient_tensor_kind", "aggregate_per_byte_v1") == "aggregate_per_byte_v1":
+            if (
+                r.get("gradient_tensor_kind", "aggregate_per_byte_v1")
+                == "aggregate_per_byte_v1"
+                and is_authoritative_axis_anchor(r)
+            ):
                 matching_anchors.append(r)
 
     if not matching_anchors:

@@ -414,6 +414,118 @@ def test_load_aggregate_gradient_from_anchor_missing_raises():
         mgc.load_aggregate_gradient_from_anchor(archive_sha256="z" * 64)
 
 
+def test_load_per_pair_gradient_accepts_diagnostic_advisory_anchor(tmp_path: Path):
+    """Per-pair gradients stay usable for training/compress/inflate planning when tagged advisory."""
+    archive = "f" * 64
+    arr = np.zeros((5, 3, 3), dtype=np.float32)
+    npy_path = tmp_path / "per_pair.npy"
+    np.save(npy_path, arr)
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    anchor = {
+        "archive_sha256": archive,
+        "gradient_array_path": str(npy_path),
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "measurement_axis": "[macOS-CPU advisory]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_method": "autograd_per_pair_subset_axis_corrected",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+        "n_bytes": 5,
+        "n_pairs": 3,
+        "n_pairs_used": 3,
+        "n_pairs_total": 600,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    ledger.write_text(json.dumps(anchor) + "\n")
+
+    loaded, loaded_anchor = mgc.load_per_pair_gradient_from_anchor(
+        archive_sha256=archive,
+        anchor_path=ledger,
+    )
+
+    assert loaded.shape == (5, 3, 3)
+    assert loaded_anchor["measurement_axis"] == "[macOS-CPU advisory]"
+
+
+def test_load_per_pair_gradient_rejects_false_contest_axis_subset_anchor(
+    tmp_path: Path,
+):
+    """Mislabeled contest-axis per-pair subsets must not feed downstream consumers."""
+    archive = "f" * 64
+    arr = np.zeros((5, 3, 3), dtype=np.float32)
+    npy_path = tmp_path / "per_pair.npy"
+    np.save(npy_path, arr)
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    anchor = {
+        "archive_sha256": archive,
+        "gradient_array_path": str(npy_path),
+        "gradient_tensor_kind": "per_pair_per_byte_v1",
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_method": "autograd_per_pair_8pair_subset",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+        "n_bytes": 5,
+        "n_pairs": 3,
+        "n_pairs_used": 3,
+        "n_pairs_total": 600,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    ledger.write_text(json.dumps(anchor) + "\n")
+
+    with pytest.raises(FileNotFoundError, match="no per-pair master gradient anchor"):
+        mgc.load_per_pair_gradient_from_anchor(
+            archive_sha256=archive,
+            anchor_path=ledger,
+        )
+
+
+def test_load_aggregate_gradient_uses_axis_correction_instead_of_stale_contest_row(
+    tmp_path: Path,
+):
+    """Aggregate consumers use the latest advisory correction row, not stale contest authority."""
+    archive = "a" * 64
+    old_arr = np.zeros((4, 3), dtype=np.float32)
+    new_arr = np.ones((4, 3), dtype=np.float32)
+    old_path = tmp_path / "old.npy"
+    new_path = tmp_path / "new.npy"
+    np.save(old_path, old_arr)
+    np.save(new_path, new_arr)
+    base = {
+        "archive_sha256": archive,
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "n_bytes": 4,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    stale = {
+        **base,
+        "gradient_array_path": str(old_path),
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset",
+        "measurement_utc": "2026-05-18T00:00:00Z",
+    }
+    correction = {
+        **base,
+        "gradient_array_path": str(new_path),
+        "measurement_axis": "[macOS-CPU advisory]",
+        "measurement_hardware": "darwin_arm64_m5_max_macos_cpu_advisory",
+        "measurement_method": "autograd_per_parameter_projected_8pair_subset_axis_correction",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+    }
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    ledger.write_text(json.dumps(stale) + "\n" + json.dumps(correction) + "\n")
+
+    loaded, loaded_anchor = mgc.load_aggregate_gradient_from_anchor(
+        archive_sha256=archive,
+        anchor_path=ledger,
+    )
+
+    assert float(loaded.sum()) == pytest.approx(12.0)
+    assert loaded_anchor["measurement_axis"] == "[macOS-CPU advisory]"
+
+
 def test_public_api_completeness():
     """Verify all public symbols are exported via __all__ and importable.
 
