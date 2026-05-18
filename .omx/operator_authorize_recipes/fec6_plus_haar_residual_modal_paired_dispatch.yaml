@@ -1,0 +1,133 @@
+schema_version: 1
+name: fec6_plus_haar_residual_modal_paired_dispatch
+lane_id: lane_fec6_stacking_wave_5_grammar_extensions_20260517
+summary: |
+  Build fec6 + Haar 1-level wavelet residual packet (Ext 5 of fec6 stacking
+  wave) and dispatch a paired-axis (contest-CPU + contest-CUDA) auth-eval on
+  Modal. Dispatch-READY but NOT FIRED until operator authorizes and Phase 2
+  base-inflate wiring lands on the generated inflate.py.
+
+# Per Catalog #270 scope clarification: this is a TOOL invocation
+# (tools/build_fec6_plus_haar_residual_packet.py); not a substrate trainer.
+dispatch_kind: tool
+
+platform: modal
+gpu: "T4"
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+  - contest_one_video_replay
+canary_status: post_canary_dependent
+canary_dependency: pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 3.00
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target_cpu: "[predicted, theoretical] [0.19005, 0.19155] [contest-CPU GHA Linux x86_64]"
+predicted_score_target_cuda: "[predicted, theoretical] [0.22421, 0.22571] [contest-CUDA T4]"
+predicted_delta_cpu: -0.0005 to -0.0020
+predicted_delta_cuda: -0.0005 to -0.0020
+predicted_delta_basis: ".omx/research/fec6_plus_haar_residual_design_20260517.md §Predicted ΔS band (Dykstra-feasibility + Shannon R(D) wavelet citation)"
+literature_anchor: "Daubechies 1988 + Mallat 1989 wavelet R(D) theory; PR106 r2 format0d empirical anchor demonstrates additive corrections work on PR101 grammar"
+council_phase_5_prediction: null
+
+risk: |
+  PHASE 1 SCAFFOLD ONLY. The generated inflate.py raises NotImplementedError;
+  paired-axis dispatch will fail-closed until Phase 2 base-inflate wiring lands.
+  Operator should first land Phase 2 wiring + the offline residual computation
+  pipeline, then re-fire this dispatch.
+
+  Once Phase 2 wired:
+  - Bolt-on scope per HNeRV parity L7 (1-level Haar; Daubechies-4 multi-level
+    is substrate-engineering and DEFERRED).
+  - Byte-deterministic encoder per Catalog #158 (per-band fp16 scale + int8
+    mantissa + struct.pack header).
+  - Self-contained inflate.py per Catalog #295 (vendors tac.fec6_haar_residual).
+  - Paired-axis dispatch per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
+
+  Risk: residual computation requires inflating fec6 offline + comparing to GT
+  frames. This is ~600 frame inflates on macOS-CPU; ~1 hour wall-clock.
+
+  No score claim emitted until paired-axis dispatch lands.
+
+envelope_status: "FITS $5 envelope at p50 fallback (~$3.00)"
+
+remote_driver: scripts/operator_authorize_fec6_plus_haar_residual_modal_paired.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --fec6-archive
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - flag: --residuals-npz
+    default_path: experiments/results/fec6_plus_haar_residual_discovery_20260517/per_frame_residuals.npz
+
+modal:
+  lane_script: scripts/operator_authorize_fec6_plus_haar_residual_modal_paired.sh
+  cost_band_trainer: tools/build_fec6_plus_haar_residual_packet.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: tools/build_fec6_plus_haar_residual_packet.py
+
+MODAL_EXTRA_MOUNT_PATHS:
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - experiments/results/fec6_plus_haar_residual_discovery_20260517/per_frame_residuals.npz
+
+env_overrides:
+  FEC6_HAAR_RESIDUAL_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  FEC6_HAAR_RESIDUAL_FEC6_ARCHIVE_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  FEC6_HAAR_RESIDUAL_RESIDUALS_NPZ_PATH: /workspace/pact/experiments/results/fec6_plus_haar_residual_discovery_20260517/per_frame_residuals.npz
+  FEC6_HAAR_RESIDUAL_OUTPUT_DIR: /workspace/pact/experiments/results/fec6_plus_haar_residual_modal_dispatch_20260517
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/operator_authorize_fec6_plus_haar_residual_modal_paired.sh
+  - tools/build_fec6_plus_haar_residual_packet.py
+  - src/tac/fec6_haar_residual.py
+  - src/tac/tests/test_fec6_plus_haar_residual.py
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - tools/validate_dispatch_required_inputs.py
+  - tools/dispatch_modal_paired_auth_eval.py
+
+notes: |
+  Ext 5 of fec6 stacking wave (lane_fec6_stacking_wave_5_grammar_extensions_20260517).
+  Design memo: .omx/research/fec6_plus_haar_residual_design_20260517.md
+
+  PHASE 1 (this recipe): scaffold builder + tests + byte-deterministic packet.
+  Generated inflate.py is scaffold-only (raises NotImplementedError before
+  producing output). DO NOT FIRE this dispatch until Phase 2 base-inflate
+  wiring + offline residual computation pipeline land.
+
+  PHASE 2 (queued for operator approval):
+  - Sister tools/compute_fec6_plus_haar_residual_offline.py to:
+    * Inflate fec6 archive offline on macOS-CPU
+    * Compare to GT frames from upstream/videos/0.mkv
+    * Downsample residual to (96, 128) or similar
+    * Emit per_frame_residuals.npz
+  - Wire generated inflate.py to call fec6 base inflate, then apply Haar
+    residual additive correction at full camera resolution.
+  - Land a canonical fec6 base inflate helper at tac.fec6_base_inflate.
+  - Add a per-band byte-mutation smoke per Catalog #139 + #272 to prove the
+    Haar bytes are operationally consumed.
+
+  Per HNeRV parity L7: 1-level Haar IS bolt-on scope. Daubechies-4 multi-level
+  variant + per-band variable bit-width + wavelet hyperprior are DEFERRED to
+  substrate-engineering scope per the design memo's "Future work" section.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287: every
+  predicted-ΔS claim above carries [predicted, theoretical] tag. No
+  contest-CPU / contest-CUDA claims until paired-axis dispatch lands.
+
+  Per Catalog #313 predecessor probe outcome: no prior probe of this specific
+  (fec6 + Haar residual) composition exists.

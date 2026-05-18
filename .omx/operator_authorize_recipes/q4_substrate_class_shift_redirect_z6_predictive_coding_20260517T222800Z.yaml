@@ -1,0 +1,223 @@
+schema_version: 1
+name: q4_substrate_class_shift_redirect_z6_predictive_coding_20260517T222800Z
+
+# Q4 BUDGET REDIRECT STUB per REDO+PIVOT 2026-05-17 (operator NON-NEGOTIABLE
+# *"We need to fix all and redo"*). The original Q4 plan ($0.70 GPU spend on
+# pre-entropy Wyner-Ziv hoist of an existing contest archive member) was
+# empirically falsified by Option B sweep landed at
+# `.omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json`
+# (all 8 VALIDATED contest archives at entropy floor; aggregate ΔS < 0.001
+# leaderboard precision floor). Per Option B verdict `recommended_q4_target =
+# None` + `q4_verdict = DEFER_Q4`, Q4 must redirect to substrate-class-shift
+# methods per HORIZON-CLASS Stage 2 deferred plan.
+#
+# This STUB is operator-approvable but DOES NOT itself dispatch — it routes
+# operator authorization to the canonical Z6 recipe
+# `substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml` which already exists
+# at `research_only: true` + `dispatch_enabled: false` with the proper
+# Phase 2 council blockers documented.
+#
+# REDIRECT TARGET RATIONALE:
+#
+# Z6 (Time-Traveler L5 ego-motion-conditioned predictive coding via FiLM) is
+# the recommended top-1 substrate-class-shift candidate for Q4 budget
+# redirection because:
+#
+#   (a) PARADIGM SHIFT: F-asymptote-node predictive coding per Rao-Ballard
+#       1999 + Atick-Redlich 1990 cooperative-receiver theorem; structurally
+#       distinct from within-class (PR101/PR106/A1) plateau substrates per
+#       Catalog #309 horizon_class taxonomy + Catalog #310 (PRIMARY
+#       class-shift not bolt-on).
+#
+#   (b) IMPLEMENTATION READY: Phase 1B Z6 lift landed 2026-05-16 per
+#       `feedback_phase_1b_z6_lift_pr95_paradigm_landed_20260516.md`; trainer
+#       _full_main is implemented (no NotImplementedError); 74 dedicated
+#       tests pass; canonical sentinel files in place per Catalog #166.
+#
+#   (c) DYKSTRA-FEASIBILITY VALIDATED: predicted ΔS band [0.13, 0.16] per
+#       Z6/Z7/Z8 design memo Section 18 Dykstra-feasibility intersection
+#       check (Catalog #296 compliant).
+#
+#   (d) PROBE-DISAMBIGUATOR EXISTS: identity_predictor ablation per
+#       Catalog #125 hook #6 refutes/confirms Rao-Ballard at the smoke surface.
+#
+#   (e) COST ENVELOPE FITS: Z6 smoke is $1 Modal T4 (Q4's original $0.70
+#       budget rounds up to the canonical $1 smoke cost-band). Full $10
+#       training is FUTURE work pending Phase 2 council consensus.
+#
+# ALTERNATIVE CANDIDATES (RANKED PER CATALOG #227 + #309 + HORIZON-CLASS):
+#
+#   #2 C6 IBPS MDL Information Bottleneck Per Pair (lane
+#      `lane_c6_e4_mdl_ibps_substrate_20260514`) — substrate-class-shift via
+#      MDL-IBPS framework; Tier-C density evidence pending.
+#
+#   #3 ATW V2 cooperative-receiver loss (recipe
+#      `substrate_atw_codec_v2_modal_a100_dispatch.yaml`) — Atick-Redlich
+#      bolt-on at the loss surface; less paradigm-shift than Z6 but
+#      empirically anchored at the V2 D4 probe (INDEPENDENT verdict per
+#      probe-outcomes ledger 2026-05-16).
+#
+#   #4 TT5L L5 autonomy (lane `lane_time_traveler_l5_autonomy_substrate_
+#      20260513`) — broader L5 staircase; recommend AFTER Z6 anchor lands.
+#
+#   #5 Z7 wavelet-multi-scale Daubechies (Phase 1A scaffold) — HIGHER
+#      engineering risk per Z6/Z7/Z8 design memo §22.
+#
+#   #6 Z8 Hafner DreamerV3 latent dynamics (Phase 1A scaffold) — HIGHEST
+#      engineering risk; requires Z6 + Z7 anchors first.
+#
+# DEFERRED BY THIS REDIRECT (per CLAUDE.md "Forbidden premature KILL" —
+# DEFERRED NOT KILLED; reactivation criteria pinned):
+#
+#   - Lane `lane_q6_preprobe_pairwise_composition_alpha_20260517`
+#     (research_only=true; reactivation requires VALIDATED_CONTEST_MEMBER
+#     probe inputs per Catalog #321/#322).
+#
+#   - Lane `lane_super_additive_lane_g_v3_siren_topology_integration_20260517`
+#     (research_only=true; reactivation requires non-phantom-provenance
+#     α value via re-probe).
+#
+#   - Lane `lane_batched_815_consumer_15_amendment_plus_816_meta_meta_
+#     cleanup_plus_q6_op3_extended_20260517` (research_only=true;
+#     reactivation requires Catalog #321 revalidation).
+#
+# This stub is INTENTIONALLY NON-DISPATCHABLE — it exists to document the
+# Q4 redirect decision in the canonical operator_authorize_recipes surface.
+# The actual dispatch flows through the Z6 recipe AFTER Phase 2 council
+# consensus + Catalog #167 smoke-before-full pattern.
+
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - q4_budget_redirect_stub_does_not_dispatch_directly
+  - dispatch_routes_through_existing_z6_recipe_pending_phase_2_council_consensus
+  - catalog_167_smoke_before_full_pattern_required_on_z6_recipe
+  - phase_2_sextet_pact_council_consensus_required_per_z6_design_memo_section_19
+
+summary: |
+  Q4 BUDGET REDIRECT STUB: Z6 ego-motion-conditioned predictive coding is the
+  recommended top-1 substrate-class-shift candidate for the redirected $0.70
+  Q4 GPU spend (rounding to canonical $1 Modal T4 smoke cost-band). This
+  stub documents the redirect decision; actual dispatch routes through
+  `substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml` after Phase 2
+  council consensus.
+
+  The original Q4 plan (pre-entropy Wyner-Ziv hoist of existing contest
+  archive members) was empirically falsified by Option B sweep — all 8
+  validated archives at entropy floor; aggregate ΔS < leaderboard precision
+  floor. Pivot to substrate-class-shift per HORIZON-CLASS Stage 2.
+
+platform: stub
+gpu: stub
+min_vram_gb: 0
+target_modes:
+  - research_substrate
+
+canary_status: independent_substrate
+
+active_dispatch_contract: q4_substrate_class_shift_redirect_stub
+dispatch_contracts:
+  - id: q4_substrate_class_shift_redirect_stub
+    archive_role: not_applicable_stub
+    builder_surface: not_applicable_stub
+    status: redirect_stub_only
+    exact_eval_path: not_applicable_stub
+    redirect_target_recipe: .omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml
+    redirect_target_lane: lane_time_traveler_l5_z6_l1_scaffold_substrate_build_20260516
+    redirect_pending_gates:
+      - phase_2_sextet_pact_council_consensus_per_z6_design_memo_section_19_criterion_4
+      - catalog_167_smoke_before_full_pattern_per_design_memo_section_19_criterion_5
+
+cost_band:
+  epochs: 0
+  hand_calibrated_fallback_p50_usd: 0.0
+  platform_key: stub
+  gpu_key: stub
+
+predicted_score_target: null
+predicted_band: [0.13, 0.16]  # inherited from Z6 design memo
+smoke_score_band: [0.14, 0.30]
+predicted_delta: "Z6 redirect target: [0.13, 0.16] band [Dykstra-feasibility-validated per Z6 design memo Section 18]"
+predicted_delta_basis: |
+  Stub references Z6 design memo .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  (Section 4.1 + Section 18). Q4 original predicted band [0.147, 0.167] is
+  superseded by Option B empirical falsification 2026-05-17.
+
+literature_anchor: |
+  Rao & Ballard (1999) "Predictive coding in the visual cortex";
+  Atick-Redlich (1990) cooperative-receiver theorem;
+  Perez et al. (2017) "FiLM"; Z6/Z7/Z8 design memo aa412d2db.
+
+source_supports: |
+  Inherited from Z6 recipe — Rao-Ballard predictive-coding paradigm IS
+  structurally distinct from within-class (PR101/PR106/A1) plateau
+  substrates per HORIZON-CLASS Stage 2.
+
+paper_claim_scope: |
+  Source papers establish predictive-coding paradigm; cooperative-receiver
+  theorem; FiLM modulation. None claim contest-CUDA archive byte savings on
+  the Pact scorer — Z6 empirical anchor is the target.
+
+pact_must_prove: |
+  Z6 must empirically demonstrate (a) H(residual) < H(latent); (b) bit-savings
+  exceed predictor weight overhead; (c) score-aware Lagrangian convergence
+  in [0.13, 0.16] band; (d) identity-predictor disambiguator probe shows
+  full-FiLM beats identity by ΔS ≥ 0.005.
+
+decode_complexity_evidence: |
+  Inflate runtime ~120 LOC substrate-engineering waiver per HNeRV parity L4.
+  T4 single-pair decode <50ms; <30s total per video; well within 30-min
+  contest inflate wall-clock budget.
+
+risk: |
+  This stub does NOT dispatch. It documents the Q4 redirect decision
+  structurally so operator review at `tools/operator_authorize.py` can
+  surface the redirect target before authorizing the actual Z6 dispatch.
+
+  Actual Z6 dispatch risks per Z6 recipe: FiLM predictor overhead vs
+  residual savings tradeoff; autoregressive unroll 3-5× wall-clock vs Z5
+  baseline; ego-motion proxy quality matters.
+
+envelope_status: "Q4 redirect stub fits $0 GPU envelope (does not dispatch). Z6 actual: $1 smoke + $10 full + $1.50 paired = $12.50 total per Z6 recipe."
+
+remote_driver: not_applicable_stub
+
+required_input_files: []
+
+modal:
+  lane_script: not_applicable_stub
+
+required_input_files_trainer: not_applicable_stub
+
+sentinel_files:
+  - .omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml
+  - .omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json
+  - src/tac/substrates/time_traveler_l5_z6/__init__.py
+
+dependencies:
+  - .omx/operator_authorize_recipes/substrate_time_traveler_l5_z6_modal_t4_dispatch.yaml
+  - .omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json
+
+notes: |
+  Q4 BUDGET REDIRECT STUB landed by REDO+PIVOT subagent 2026-05-17.
+
+  Decision rationale: Option B sweep empirically falsified the original Q4
+  plan (pre-entropy Wyner-Ziv hoist of existing contest archive members).
+  All 8 VALIDATED contest archives at entropy floor; top aggregate savings
+  = 0.000332 < 0.001 leaderboard precision floor. Per Option B verdict
+  `recommended_q4_target=None`, `q4_verdict=DEFER_Q4`. Q4 redirects to
+  substrate-class-shift methods per HORIZON-CLASS Stage 2.
+
+  Z6 selected as top-1 redirect target. Alternative candidates (#2 C6 IBPS,
+  #3 ATW V2, #4 TT5L, #5 Z7, #6 Z8) documented in summary section above.
+
+  This stub does NOT dispatch. Operator authorization should route through
+  the canonical Z6 recipe AFTER Phase 2 council consensus.
+
+  Cross-references:
+  - Option B falsifier: .omx/state/wyner_ziv_deliverability/option_b_archive_member_sweep_20260517T221034.json
+  - Catalog #321 (entry-side phantom revert): src/tac/preflight.py
+  - Catalog #322 (downstream autopilot-consumer phantom revert): src/tac/preflight.py
+  - Z6 design memo: .omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_world_models_asymptotic_pursuit_scoping_design_20260516.md
+  - Phase 1B Z6 lift landing: feedback_phase_1b_z6_lift_pr95_paradigm_landed_20260516.md
+  - REDO+PIVOT landing: feedback_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_landed_20260517.md

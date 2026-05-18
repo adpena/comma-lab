@@ -1,0 +1,133 @@
+schema_version: 1
+name: substrate_c6_e4_mdl_ibps_beta_ib_0p01_modal_t4_smoke_dispatch
+lane_id: lane_c6_ibps_beta_ib_sweep_build_per_symposium_parallel_path_a_20260518
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - sym848_op_routable_path_a_requires_operator_sign_off_for_beta_ib_sweep_dispatch
+  - catalog_167_smoke_before_full_pattern_required_at_dispatch_time
+  - catalog_324_predicted_band_validation_status_pending_post_training_tier_c_required_before_promotion
+  - paired_cpu_cuda_empirical_anchor_required_before_promotion_eligible_per_catalog_220
+summary: |
+  C6 IBPS reactivation path (a) beta_ib=0.01 smoke control recipe.
+
+  This is the fixed-width beta sweep control. It matches the baseline
+  beta_ib value while preserving the path-a sweep lane id, recipe path,
+  50ep smoke shape, and variant-specific provenance used by the other
+  beta_ib recipes.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "A10G"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: c6_e4_mdl_ibps
+
+active_dispatch_contract: c6_mdl_ibps_beta_ib_0p01_substrate
+dispatch_contracts:
+  - id: c6_mdl_ibps_beta_ib_0p01_substrate
+    archive_role: monolithic_ibps1_self_contained_beta_ib_0p01
+    builder_surface: experiments/train_substrate_c6_e4_mdl_ibps.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 50
+  smoke_score_band: [0.10, 0.50]
+  predicted_cpu_band: TBD_post_training
+  predicted_cost_usd: 0.30
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: A10G
+
+predicted_score_target: null
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324 + #848 symposium parallel-path-(a): dispatch remains disabled until a 50ep Modal A10G smoke lands with archive + auth-eval evidence, post-training Tier-C density replaces the random-init basis, and a revised evidence-backed band is committed."
+smoke_score_band: [0.10, 0.50]
+predicted_delta: "pending_post_training_tier_c_re_measurement; beta_ib=0.01 is the fixed-width control for the path-a beta sweep"
+predicted_delta_basis: "#848 C6 IBPS symposium MacKay MDL verdict + Contrarian binding revision to run beta_ib path (a) in parallel with latent_dim path (b) under $5 envelope"
+provenance_kind: empirical_anchor_pending_smoke
+horizon_class: frontier_pursuit
+
+remote_driver: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  cost_band_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+  cost_band_epochs: 50
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+
+sentinel_files:
+  - src/tac/substrates/c6_e4_mdl_ibps/__init__.py
+  - src/tac/substrates/c6_e4_mdl_ibps/architecture.py
+  - src/tac/substrates/c6_e4_mdl_ibps/archive.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/inflate.py
+  - src/tac/substrates/c6_e4_mdl_ibps/mdl_loss.py
+  - src/tac/substrates/c6_e4_mdl_ibps/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  C6_E4_MDL_IBPS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  C6_E4_MDL_IBPS_LANE_ID: lane_c6_ibps_beta_ib_sweep_build_per_symposium_parallel_path_a_20260518
+  C6_E4_MDL_IBPS_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_beta_ib_0p01_modal_t4_smoke_dispatch.yaml
+  TAG: substrate_c6_e4_mdl_ibps_beta_ib_0p01
+  C6_E4_MDL_IBPS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  C6_E4_MDL_IBPS_OUTPUT_DIR: /workspace/pact/lane_substrate_c6_e4_mdl_ibps_beta_ib_0p01_results/output
+  C6_E4_MDL_IBPS_EPOCHS: "50"
+  C6_E4_MDL_IBPS_BATCH_SIZE: "4"
+  C6_E4_MDL_IBPS_LR: "5e-4"
+  C6_E4_MDL_IBPS_LATENT_DIM: "24"
+  C6_E4_MDL_IBPS_BETA_IB: "0.01"
+  C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16: "true"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_c6_e4_mdl_ibps.py
+  - tools/validate_dispatch_required_inputs.py
+
+distinguishing_feature_name: ibps_beta_ib_0p01_lagrangian_control
+distinguishing_bytes_path: latent_blob
+inflate_consumer_function: tac.substrates.c6_e4_mdl_ibps.inflate.inflate_one_video
+byte_mutation_smoke_passes: pending_smoke
+smoke_before_full: true
+horizon_class: frontier_pursuit
+
+operator_required_flags:
+  TIER_1_OPERATOR_REQUIRED_FLAGS:
+    - --video-path
+    - --output-dir
+    - --epochs
+    - --batch-size
+    - --lr
+    - --latent-dim
+    - --beta-ib
+    - --enable-autocast-fp16
+    - --enable-gt-scorer-cache
+
+notes: |
+  Non-dispatchable until operator sign-off. No score claim, no promotion
+  claim, and no numeric predicted band. Exact replay promotion requires
+  variant-specific archive/runtime custody, beta_ib in provenance and
+  terminal dispatch notes, paired CPU/CUDA axis labels, and Catalog #324
+  post-training Tier-C validation.

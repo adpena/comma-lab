@@ -1,0 +1,144 @@
+schema_version: 1
+name: master_gradient_fec6_modal_cpu_dispatch
+lane_id: lane_op_routable_1_master_gradient_extractor_20260517
+summary: Extract per-byte master gradient for fec6 frontier archive on Modal CPU (Linux x86_64 contest-CPU axis), per symposium §3.2 REVISED methodology + op-routable #1 of master gradient campaign plan.
+
+# Per Catalog #270 scope clarification (2026-05-17 + lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517):
+# this dispatch is a TOOL invocation (``tools/extract_master_gradient.py``), NOT a
+# substrate trainer. ``dispatch_kind: tool`` opts this recipe out of substrate-only
+# Tier 2/3 fields (Catalogs #172 autocast / #178 TF32 / #179 torch.compile / #226
+# canonical auth-eval helper) and accepts ``CPU`` as a legal ``min_smoke_gpu`` /
+# ``gpu`` value (#215 GPU class enforcement is for substrate trainers).
+dispatch_kind: tool
+
+platform: modal
+gpu: "CPU"
+min_vram_gb: 1
+# Per Catalog #215 + Catalog #270 scope fix: tool dispatches MAY declare ``CPU``
+# (case-insensitive) for ``min_smoke_gpu``. The extractor is one-shot, not
+# training-iterative, so smoke == full and no GPU class is needed.
+min_smoke_gpu: "CPU"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+  - contest_one_video_replay
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.00
+  platform_key: modal
+  gpu_key: CPU
+
+predicted_score_target: null  # extraction emits metadata, not a score
+predicted_delta: "n/a — this is a sensitivity extractor, not a score-lowering dispatch"
+predicted_delta_basis: ".omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md §1.1"
+literature_anchor: "Symposium §3 + §3.6 (8 in-training/in-design uses; this dispatch produces the canonical anchor for autopilot consumer hooks 3, 4, 5, 7, and 8)"
+council_phase_5_prediction: null
+
+risk: |
+  Low-risk CPU-only extraction. 1 forward + 2 backward passes through the fec6
+  HNeRV decoder + frozen scorers; expected wall-clock ~10-15 min on a Modal CPU
+  instance (Linux x86_64; matches contest-CPU axis per CLAUDE.md "Submission auth
+  eval — BOTH CPU AND CUDA, ON 1:1 CONTEST-COMPLIANT HARDWARE" non-negotiable).
+  No score claim; emits a MasterGradient anchor + sidecar .npy for autopilot
+  consumer hooks per symposium §3.6.
+
+  Sensitivity-mass projection through the fec6 int8+fp16 codec Jacobian is the
+  primary numerical risk; mitigated by the strict gradient-finiteness check
+  (NaN/Inf -> RuntimeError) before sidecar write.
+
+  Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" (Catalog #220
+  transient-evidence trap): output sidecar MUST live under .omx/state/ or
+  experiments/results/. The CLI explicitly refuses /tmp paths.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": when fired via
+  experiments/modal_train_lane.py-style dispatch this lane uses .spawn(); the
+  ledger anchor is harvested via the canonical helper. For the extractor (which
+  is short — single-script invocation) operator may prefer modal run directly.
+
+envelope_status: "FITS $5 envelope at p50 fallback (~$1)"
+
+remote_driver: scripts/operator_authorize_master_gradient_fec6_modal_cpu.sh
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --archive
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - flag: --inflate-py
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/operator_authorize_master_gradient_fec6_modal_cpu.sh
+  cost_band_trainer: tools/extract_master_gradient.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 8
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: tools/extract_master_gradient.py
+
+env_overrides:
+  MASTER_GRADIENT_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  MASTER_GRADIENT_ARCHIVE_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  MASTER_GRADIENT_INFLATE_PY_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  MASTER_GRADIENT_UPSTREAM_DIR: /workspace/pact/upstream
+  MASTER_GRADIENT_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  MASTER_GRADIENT_OUTPUT_NPY: /workspace/pact/.omx/state/master_gradient_fec6_contest_cpu_20260517.npy
+  MASTER_GRADIENT_AXIS: "[contest-CPU]"
+  MASTER_GRADIENT_DEVICE: cpu
+  MASTER_GRADIENT_N_PAIRS_USED: "8"
+  MASTER_GRADIENT_HARDWARE_SUBSTRATE: linux_x86_64_modal_cpu
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/operator_authorize_master_gradient_fec6_modal_cpu.sh
+  - tools/extract_master_gradient.py
+  - src/tac/master_gradient.py
+  - src/tac/differentiable_eval_roundtrip.py
+  - src/tac/scorer.py
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/inflate.py
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/src
+  - tools/validate_dispatch_required_inputs.py (Catalog #152)
+  - tools/run_modal_smoke_before_full.py (Catalog #167; for this lane, smoke ≡ full)
+
+notes: |
+  Op-routable #1 of the CPU frontier master gradient campaign plan
+  (.omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md §1.1).
+  Symposium §3.2 REVISED methodology: 1 forward + 2 backward passes (NOT
+  finite-difference per-bit — Round-1 C-1 + C-2 falsified that).
+
+  This dispatch produces the canonical master-gradient anchor for the fec6
+  frontier archive (0.19205 [contest-CPU] per `reports/latest.md` FRONTIER
+  section + lane `pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean`).
+  The anchor is consumed by:
+    - tac.autopilot_rudin_daubechies.master_gradient_lens (canonical autopilot
+      ranker hook per symposium §3.6 use #7) — already wired
+    - tac.optimization.bit_allocator (planned consumer per use #3)
+    - tac.packet_compiler.score_aware_selector (planned consumer per use #8)
+    - tac.continual_learning posterior (planned consumer per use #7)
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": axis=[contest-CPU]
+  per fec6's known operating point on the PUBLIC LEADERBOARD AXIS. A sister
+  [contest-CUDA] anchor is queued as op-routable #1b (separate recipe).
+
+  Cost band: tac.cost_band_calibration.predict('modal', 'CPU', 1) - current
+  confidence: hand_calibrated_fallback (N=0 master-gradient anchors). The
+  first dispatch in this lane bootstraps the master-gradient calibration.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": the extractor's output
+  is fcntl-locked to `.omx/state/master_gradient_anchors.jsonl` ON THE WORKER;
+  the harvest step copies the worker's anchor row back to the local ledger.
+
+  Cross-ref:
+    .omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md
+    .omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md
+    src/tac/master_gradient.py (canonical helper; #245-exemplar 4-layer pattern)
+    tools/cathedral_autopilot_autonomous_loop.py::rerank_candidates_via_master_gradient

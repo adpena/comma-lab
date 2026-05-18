@@ -1,0 +1,201 @@
+schema_version: 1
+name: substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch
+lane_id: lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518
+
+# Z6-v2 Candidate 4c: Atick side-information-channel branch.
+# This is a distinct lane from Candidate 1. Candidate 1 tests whether
+# increasing FiLM capacity rescues the original PoseNet-projection ego source.
+# Candidate 4c tests whether the side-information source itself was the
+# bottleneck by keeping the single-layer Z6 predictor and replacing the ego
+# source with compress-time scorer-logit features.
+
+research_only: false
+dispatch_enabled: true
+dispatch_blockers: []
+
+summary: |
+  Z6-v2 Candidate 4c scorer-logit conditioning recipe. Uses the canonical
+  Z6 single-layer FiLM predictor but sets `Z6_EGO_SOURCE=scorer_logit`, so the
+  trainer derives the fixed-width ego buffer from compress-time SegNet logits
+  plus PoseNet head features. Inflate remains scorer-free because only the
+  reduced side-info vector is packed into the existing Z6PCWM1 ego-motion
+  section.
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 14
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: time_traveler_l5_z6
+
+active_dispatch_contract: z6_v2_candidate_4c_scorer_logit_substrate
+dispatch_contracts:
+  - id: z6_v2_candidate_4c_scorer_logit_substrate
+    archive_role: monolithic_z6pcwm1_self_contained_with_disambiguator_sidecar
+    builder_surface: experiments/train_substrate_time_traveler_l5_z6.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 300
+  smoke_score_band: [0.13, 0.25]
+  predicted_cuda_band: [0.11, 0.17]
+  predicted_cost_usd: 13.0
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 10.0
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target: null
+predicted_band: [0.11, 0.17]
+smoke_score_band: [0.13, 0.25]
+predicted_delta: "[0.11, 0.17] band [planning-prior; Path B design memo section 4.4c; HIGH VARIANCE pending paired CPU/CUDA empirical anchor]"
+predicted_delta_basis: ".omx/research/z6_v2_cargo_cult_unwind_4_candidate_redesign_path_b_20260517.md section 4.4c + council_per_substrate_symposium_atw_v2_reactivation_20260518.md Revision #5"
+provenance_kind: predicted_from_model
+literature_anchor: |
+  Atick-Redlich cooperative-receiver theorem; Rao-Ballard predictive coding;
+  Z6 Phase 3 council Revision #6; ATW V2 reactivation symposium Revision #5.
+
+source_supports: |
+  Candidate 4c directly tests Atick's side-information-channel critique:
+  Z6-v1 and Candidate 1 both preserve the PoseNet-projection ego sidecar,
+  while Candidate 4c enriches the side-info with scorer-logit signals derived
+  at compress time. This can validate or falsify the scorer-logit channel for
+  both Z6 and ATW V2-1 without loading scorers at inflate time.
+
+paper_claim_scope: |
+  This recipe is not a score claim. It is a launchable empirical probe for the
+  side-information-source hypothesis. Promotion requires harvested paired
+  CPU/CUDA auth-eval artifacts, archive bytes/SHA-256, runtime custody,
+  component distances, and terminal lane-claim rows.
+
+pact_must_prove: |
+  Candidate 4c must prove that scorer-logit-derived side-info beats the
+  identity-predictor control by `full_minus_identity_score <= -0.005`
+  at contest-CUDA (equivalently `identity_minus_full_score >= 0.005`, since
+  lower score wins) and that the rate/seg/pose tradeoff lands below the current
+  exact frontier on the same archive/runtime axis. A DEFER outcome on 4c
+  updates the ATW V2-1 channel choice toward per-region histograms per the ATW
+  V2 symposium.
+
+decode_complexity_evidence: |
+  Inflate complexity is unchanged from Z6-v1. The scorer-logit extraction is
+  compress-time only; the archive stores the reduced ego buffer and the runtime
+  consumes it through the existing Z6PCWM1 inflate path.
+
+risk: |
+  Candidate 4c is higher leverage than a Candidate 1 re-fire because it gates
+  ATW V2-1's scorer-logit channel choice. The risk is that the compressed
+  scorer-logit summary may still have low mutual information with the latent
+  stream; that is an empirical DEFER, not a method kill. Dirty worktree
+  dispatch still requires the Catalog #202 paired-env attestation and the
+  Catalog #166 worker-side sentinel hash check.
+
+envelope_status: "FITS $13 Candidate 4c envelope per Path B design memo section 4.4c ($1 smoke + $0.50 CPU + $10 full + $1.50 paired)"
+
+remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+  cost_band_trainer: experiments/train_substrate_time_traveler_l5_z6.py
+  cost_band_epochs: 300
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_time_traveler_l5_z6.py
+
+sentinel_files:
+  - src/tac/substrates/time_traveler_l5_z6/__init__.py
+  - src/tac/substrates/time_traveler_l5_z6/architecture.py
+  - src/tac/substrates/time_traveler_l5_z6/archive.py
+  - src/tac/substrates/time_traveler_l5_z6/inflate.py
+  - src/tac/substrates/time_traveler_l5_z6/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+  - tools/probe_z6_predictive_coding_vs_identity_disambiguator.py
+  - experiments/train_substrate_time_traveler_l5_z6.py
+
+env_overrides:
+  Z6_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  Z6_LANE_ID: lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518
+  Z6_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch.yaml
+  TAG: substrate_z6_v2_candidate_4c_scorer_logit
+  Z6_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  Z6_OUTPUT_DIR: /workspace/pact/lane_z6_v2_candidate_4c_results/output
+  Z6_EPOCHS: "300"
+  Z6_BATCH_SIZE: "4"
+  Z6_LR: "5e-4"
+  Z6_LAMBDA_RESIDUAL_ENTROPY: "1.0"
+  Z6_PREDICTOR_KERNEL_SIZE: "3"
+  Z6_PREDICTOR_EGO_MOTION_DIM: "8"
+  Z6_IDENTITY_PREDICTOR: "false"
+  Z6_PREDICTOR_ARCHITECTURE: "single_layer_film_75k"
+  Z6_PREDICTOR_PARAM_COUNT_TARGET: "120000"
+  Z6_PREDICTOR_HIDDEN_DIM: "64"
+  Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM: "32"
+  Z6_EGO_SOURCE: "scorer_logit"
+  Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION: "shared_modules_seed_order_matched_v2"
+  Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE: "true"
+  Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S: "0.005"
+  Z6_ENABLE_AUTOCAST_FP16: "true"
+  LOCAL_CUDA_WORKER: "1"
+  Z6_TRAINER_MODE: "full"
+  SMOKE_ONLY: "0"
+
+dependencies:
+  - scripts/remote_lane_substrate_time_traveler_l5_z6.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_time_traveler_l5_z6.py
+  - tools/validate_dispatch_required_inputs.py
+  - tools/probe_z6_predictive_coding_vs_identity_disambiguator.py
+
+distinguishing_feature_name: scorer_logit_ego_source
+distinguishing_bytes_path: ego_motion_blob
+inflate_consumer_function: tac.substrates.time_traveler_l5_z6.inflate.run_inflate
+byte_mutation_smoke_passes: pending_candidate_4c_smoke
+
+smoke_before_full: true
+horizon_class: frontier_pursuit
+
+operator_required_flags:
+  TIER_1_OPERATOR_REQUIRED_FLAGS:
+    - --enable-paired-control-initialization
+    - --emit-identity-predictor-disambiguator-archive
+    - --predictor-architecture
+    - --predictor-param-count-target
+    - --predictor-hidden-dim
+    - --predictor-film-mlp-hidden-dim
+    - --ego-source
+    - --paired-control-disambiguator-decision-criterion-delta-s
+
+notes: |
+  This recipe deliberately does not modify the existing Candidate 1 recipe.
+  Candidate 1 remains the capacity-unwind branch; Candidate 4c is the
+  side-info-channel branch. Operator choice is still required before spending,
+  but the 4c dispatch surface is now concrete and auditable.
+
+  Recommended dry-run before spend:
+    .venv/bin/python tools/run_modal_smoke_before_full.py \
+      --recipe substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch \
+      --operator-handle codex:z6_candidate4c_scorer_logit \
+      --dry-run
+
+  Recommended paid path, only after explicit operator choice and fresh claim
+  hygiene:
+    OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+    OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=13.00 \
+    .venv/bin/python tools/run_modal_smoke_before_full.py \
+      --recipe substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch \
+      --operator-handle codex:z6_candidate4c_scorer_logit

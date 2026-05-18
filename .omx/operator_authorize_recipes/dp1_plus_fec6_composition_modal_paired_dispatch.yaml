@@ -1,0 +1,158 @@
+schema_version: 1
+name: dp1_plus_fec6_composition_modal_paired_dispatch
+lane_id: lane_dp1_plus_fec6_dual_stacking_build_20260517
+summary: Paired-axis auth-eval of DP1+fec6 composition packet (PATH 1; +25.8 KB DP1 prefix + fec6 frontier archive); contest-CPU + contest-CUDA on the SAME composed archive bytes per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA". L1 packet ships with PACT_DP1_PRIOR_STRENGTH=0.0 (rate-axis cost in isolation; frame-axis effect deferred to L2 INTEGRATION).
+
+# Per Catalog #270 scope clarification (2026-05-17 + lane_catalog_270_scope_fix_tool_vs_substrate_dispatch_20260517):
+# this dispatch is a TOOL/eval invocation (paired auth-eval on a pre-built composition
+# packet), NOT a substrate trainer. ``dispatch_kind: tool`` opts this recipe out of
+# substrate-only Tier 2/3 fields (Catalogs #172 autocast / #178 TF32 / #179 torch.compile
+# / #226 canonical auth-eval helper) and accepts ``T4`` / ``CPU`` as a legal
+# ``min_smoke_gpu`` / ``gpu`` value for the paired-axis paths.
+dispatch_kind: tool
+
+platform: modal
+gpu: "T4"
+min_vram_gb: 8
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+canary_status: independent_substrate
+
+cost_band:
+  epochs: 0
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 1.50
+  platform_key: modal
+  gpu_key: T4
+
+# Sister CPU axis arm: same packet, --device cpu, contest-CPU axis.
+paired_axis:
+  enabled: true
+  cpu_gpu: "CPU"
+  cpu_min_vram_gb: 1
+  cpu_min_smoke_gpu: "CPU"
+  cpu_hand_calibrated_fallback_p50_usd: 0.40
+
+predicted_score_target: 0.19000  # mid-band of [-0.003, -0.012] from fec6 0.19205 baseline
+predicted_delta: "-0.003 to -0.012 [time-traveler-prediction]"
+predicted_delta_basis: |
+  fec6 baseline: 0.19205 [contest-CPU] (canonical anchor sha 6bae0201). DP1
+  frame-prior on highway / sky / road bands historically yields -0.003 to -0.012
+  on substrates already exploiting frame structure (per HNeRV-DP1 distillation
+  ablation in feedback_dp1_phase_2_landed_20260514). Conservative band because
+  L1 packet ships with PACT_DP1_PRIOR_STRENGTH=0.0 — actual delta depends on
+  L2 INTEGRATION strength sweep. NO Dykstra-feasibility intersection required
+  because the composition does NOT add any new rate/distortion polytope
+  constraint at L1; the DP1 prefix is dormant bytes (CLAUDE.md "Bit-level
+  deconstruction" 2-phase composition discipline). The L1 measurement IS the
+  rate-axis cost baseline for the L2 frame-axis effect sweep.
+literature_anchor: |
+  DP1 substrate L1 SCAFFOLD (lane_pretrained_driving_prior_lane_scaffold_20260513) +
+  Phase 2 (lane_pretrained_driving_prior_phase_2_20260514). DPCOMP wrapper
+  canonical helper at src/tac/substrates/pretrained_driving_prior/composition.py.
+  fec6 frontier anchor (reports/latest.md FRONTIER section + lane
+  pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean).
+council_phase_5_prediction: null
+
+risk: |
+  Low-risk paired auth-eval. The composition packet is byte-stable at L1
+  (PACT_DP1_PRIOR_STRENGTH=0.0; decompose runs but does not apply prior).
+  Expected paths:
+    (A) Composed inflate produces byte-identical raw frames to fec6 standalone
+        — expected ΔS_seg = 0, ΔS_pose = 0; rate increases by +25.8KB / 37,545,489 =
+        +0.0000172 contest rate term. Net ΔS ≈ +0.000017 (rate cost only).
+        This is the rate-axis baseline measurement.
+    (B) Future L2 INTEGRATION (PACT_DP1_PRIOR_STRENGTH > 0) will measure the
+        frame-axis effect on the same archive bytes.
+
+  Risk: misattribution if (A) accidentally lands with PRIOR_STRENGTH > 0 (e.g.
+  env var leakage). Mitigated by the L1 inflate.py explicit RuntimeError on
+  strength > 0 — see L1 contract section in inflate.py.
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline": the paired-axis
+  dispatch MUST run BOTH cpu + cuda on the SAME composed archive bytes;
+  inflated raw frames on each axis are hashed for cross-axis parity.
+
+  Per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE": this recipe uses .spawn();
+  the modal_call_id_ledger anchor is harvested via the canonical helper per
+  Catalog #245.
+
+envelope_status: "FITS $5 envelope at p50 fallback (~$1.90 = $1.50 T4 + $0.40 CPU)"
+
+remote_driver: scripts/operator_authorize_dp1_plus_fec6_composition_modal.sh
+timeout_hours: 1.5
+
+required_input_files:
+  - flag: --packet-dir
+    default_path: experiments/results/dp1_plus_fec6_composition_20260517
+    required_input_file: true
+
+modal:
+  lane_script: scripts/operator_authorize_dp1_plus_fec6_composition_modal.sh
+  cost_band_trainer: tools/build_dp1_plus_fec6_composition_packet.py
+  cost_band_epochs: 0
+  cost_band_batch_size: 0
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: tools/build_dp1_plus_fec6_composition_packet.py
+
+env_overrides:
+  DP1_FEC6_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  DP1_FEC6_PACKET_DIR: /workspace/pact/experiments/results/dp1_plus_fec6_composition_20260517
+  DP1_FEC6_AXIS: "[contest-CUDA-and-contest-CPU-paired]"
+  DP1_FEC6_DEVICE: cuda_and_cpu
+  DP1_FEC6_HARDWARE_SUBSTRATE_CUDA: linux_x86_64_modal_t4
+  DP1_FEC6_HARDWARE_SUBSTRATE_CPU: linux_x86_64_modal_cpu
+  PACT_DP1_PRIOR_STRENGTH: "0.0"  # L1 packet contract — strength=0.0 (rate-axis baseline)
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/operator_authorize_dp1_plus_fec6_composition_modal.sh
+  - tools/build_dp1_plus_fec6_composition_packet.py
+  - src/tac/substrates/pretrained_driving_prior/composition.py
+  - src/tac/substrates/pretrained_driving_prior/archive.py
+  - src/tac/substrates/pretrained_driving_prior/codebook.py
+  - experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/0.bin
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+
+notes: |
+  PATH 1 of dual-stacking build per operator 2026-05-17 directive (grand council
+  T3 + comprehensive audit converged on DP1 stacking). Composition packet built
+  via tools/build_dp1_plus_fec6_composition_packet.py (32 dedicated tests pass).
+
+  PATH 1 (this recipe) measures the rate-axis cost in isolation:
+    +25.8 KB DP1 prefix = +0.0000172 contest rate term
+    L1 frame-axis effect = 0 (PACT_DP1_PRIOR_STRENGTH=0.0)
+    Expected paired anchors: 0.19207 CPU / 0.20535 CUDA (fec6 baseline + rate term)
+    Confirmed prediction → operator decides whether to fire L2 INTEGRATION which
+    enables PACT_DP1_PRIOR_STRENGTH > 0 frame-axis effect sweep.
+
+  PATH 2 (paired sister recipe) is reformulated to point at pr101_lc_v2_clone
+  (learned-decoder substrate) where DP1 frame-prior fits the trainer's loss
+  architecture — see lane_dp1_plus_pr101_lc_v2_prior_regularizer_20260517 (DEFERRED;
+  research_only; council Phase 2 approval required to lift _full_main
+  NotImplementedError).
+
+  Per CLAUDE.md "KILL is LAST RESORT": fec6 + DP1 weight-space-L2-reg is
+  DEFERRED-pending-research (not killed) because fec6 has no learned decoder
+  weights to constrain. The frame-space DP1 prior IS compatible with fec6's
+  output stream and is the L2 INTEGRATION path documented in the design memo.
+
+  Cross-ref:
+    .omx/research/dp1_dual_stacking_design_20260517.md (PATH 1 + PATH 2 design)
+    .omx/tmp/dp1_dual_stacking_premise_verifier.txt (10 verified premises)
+    src/tac/substrates/pretrained_driving_prior/composition.py (canonical helper)
+    tools/build_dp1_plus_fec6_composition_packet.py (build tool)
+    src/tac/tests/test_dp1_plus_fec6_composition.py (32 tests, all pass)
+    feedback_dp1_phase_2_landed_20260514.md (DP1 substrate Phase 2 anchor)
+    feedback_permanent_fix_frontier_signal_loss_landed_20260517.md (fec6 frontier anchor)

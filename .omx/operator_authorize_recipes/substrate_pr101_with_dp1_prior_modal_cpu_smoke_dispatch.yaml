@@ -1,0 +1,132 @@
+schema_version: 1
+name: substrate_pr101_with_dp1_prior_modal_cpu_smoke_dispatch
+lane_id: lane_dp1_plus_fec6_dual_stacking_build_20260517
+summary: PATH 2 scaffold smoke (CPU advisory) — validates DashcamPriorLoss correctness on pr101_lc_v2_clone integration surface. NO dispatch enabled until council Phase 2 lifts _full_main NotImplementedError. Recipe is research_only + smoke_only per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" non-negotiable.
+
+platform: modal
+gpu: "CPU"
+min_vram_gb: 1
+min_smoke_gpu: "CPU"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: not_applicable  # scaffold smoke does not decode video
+target_modes:
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: pretrained_driving_prior
+
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" +
+# Catalog #240: _full_main raises NotImplementedError; recipe MUST be
+# research_only=true OR smoke_only=true. We mark BOTH:
+#   research_only=true — full path explicitly deferred to council Phase 2
+#   smoke_only=true — only --smoke is dispatchable until full path lands
+research_only: true
+smoke_only: true
+dispatch_enabled: false
+
+# Council Phase 2 reactivation criteria (per Catalog #240 dispatch_blockers):
+dispatch_blockers:
+  - phase_2_council_approval_required_to_lift_full_main_NotImplementedError
+  - variant_a_vs_variant_b_codebook_design_decision_required
+  - probe_disambiguator_landing_required
+  - pr101_lc_v2_integration_surface_premise_verification_required
+
+cost_band:
+  epochs: 0  # scaffold smoke, no training
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.10
+  platform_key: modal
+  gpu_key: CPU
+
+predicted_score_target: null  # scaffold smoke — no score claim
+predicted_delta: "n/a — scaffold smoke validates DashcamPriorLoss correctness, not a score"
+predicted_delta_basis: ".omx/research/dp1_dual_stacking_design_20260517.md § PATH 2 Reformulated"
+literature_anchor: |
+  PATH 2 is REFORMULATED from operator's original "L2 regularizer on PR101
+  decoder weights" because fec6 has no learned decoder weights (premise-verifier
+  PV-6). Reformulation: apply DP1 FRAME-SPACE prior (DashcamPriorLoss; Atick-
+  Redlich cooperative-receiver lens) on pr101_lc_v2_clone learned-decoder RGB
+  output. The natural recipient substrate is train_substrate_pr101_lc_v2_clone_
+  enhanced_curriculum (commit 90bca47ff sister). DP1 codebook is FROZEN during
+  training (buffers, not parameters); λ_DP1 is the only tunable hyperparam.
+council_phase_5_prediction: null
+
+risk: |
+  Zero risk. Scaffold smoke runs on CPU advisory; no GPU spend; no Modal
+  dispatch fires for this recipe until council Phase 2 approves lifting
+  _full_main NotImplementedError + design decisions land (variant-A vs B,
+  λ_DP1 sweep design, pr101_lc_v2 integration surface).
+
+  Per CLAUDE.md "Forbidden premature KILL": PATH 2 as operator originally
+  described (L2 weight reg on fec6) is DEFERRED-pending-research (NOT
+  KILLED) because the reformulation (DP1 frame-prior on pr101_lc_v2_clone
+  learned decoder) IS the canonically-correct substrate-coupling for the
+  DP1 codebook's mathematical type (frame-space). The deferred state is
+  expected to flip to full dispatch once Phase 2 council deliberates.
+
+envelope_status: "FITS $5 envelope (~$0.10 scaffold smoke)"
+
+remote_driver: null  # scaffold smoke runs LOCAL only; no remote dispatch
+timeout_hours: 0.1
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+    required_input_file: true
+  - flag: --dp1-codebook-bin
+    default_path: experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/codebook.bin
+    required_input_file: true
+
+modal: null  # no Modal config — scaffold smoke is LOCAL only
+
+required_input_files_trainer: experiments/train_substrate_pr101_with_dp1_prior_regularizer.py
+
+env_overrides:
+  PR101_DP1_VIDEO_PATH: upstream/videos/0.mkv
+  PR101_DP1_CODEBOOK_BIN: experiments/results/dp1_tiny_full_cpu_advisory_20260515_codex/codebook.bin
+
+dependencies:
+  - experiments/train_substrate_pr101_with_dp1_prior_regularizer.py
+  - src/tac/substrates/pretrained_driving_prior/score_aware_loss.py
+  - src/tac/substrates/pretrained_driving_prior/prior_application.py
+  - src/tac/substrates/pretrained_driving_prior/codebook.py
+  - src/tac/substrates/pretrained_driving_prior/__init__.py
+  - src/tac/substrate_registry/contract.py
+  - src/tac/substrate_registry/decorator.py
+  - upstream/videos/0.mkv
+  - tools/validate_dispatch_required_inputs.py
+  - tools/run_modal_smoke_before_full.py
+  - .omx/research/dp1_dual_stacking_design_20260517.md
+
+notes: |
+  PATH 2 SCAFFOLD-ONLY recipe. Per CLAUDE.md "Substrate scaffolds MUST be
+  COMPLETE or RESEARCH-ONLY" + Catalog #240: the recipe is research_only=true
+  + smoke_only=true + dispatch_enabled=false UNTIL council Phase 2 deliberates.
+
+  Reactivation criteria (council Phase 2):
+    1. Design memo decision on variant-A (codebook in archive; +5-10KB rate)
+       vs variant-B (codebook baked into inflate.py source; +0 archive bytes
+       per CLAUDE.md Catalog #146 contest_one_video_replay allowance).
+    2. λ_DP1 sweep design — which values to test in parallel ({0, 0.01, 0.05,
+       0.10, 0.25, 0.50} or council-selected band).
+    3. Probe-disambiguator landing: tools/probe_dp1_prior_lambda_disambiguator.py
+       sweeps λ to disambiguate prior-effect from overfitting on the canonical
+       pr101_lc_v2 lattice.
+    4. pr101_lc_v2_clone integration surface premise verification (Catalog
+       #229): which exact loss-hook to inject DashcamPriorLoss at;
+       compatibility with the canonical scorer_loss_terms_btchw lattice;
+       gradient sanity in the eval-roundtrip path (Catalog #8).
+
+  Per Catalog #313 probe-outcomes ledger: no blocking predecessor outcome for
+  this substrate at landing (verified via tools/check_predecessor_probe_outcome.py).
+
+  PATH 1 sister recipe (ALREADY dispatchable; the operator can fire paired
+  auth-eval at any time):
+    .omx/operator_authorize_recipes/dp1_plus_fec6_composition_modal_paired_dispatch.yaml
+
+  Cross-ref:
+    .omx/research/dp1_dual_stacking_design_20260517.md
+    .omx/tmp/dp1_dual_stacking_premise_verifier.txt
+    experiments/train_substrate_pr101_with_dp1_prior_regularizer.py
+    src/tac/tests/test_train_substrate_pr101_with_dp1_prior.py (19 tests pass)
+    feedback_dp1_phase_2_landed_20260514.md (DP1 substrate Phase 2 anchor)
+    .omx/research/grand_council_t3_strategic_symposium_50_dollar_budget_20260517.md Decision #3

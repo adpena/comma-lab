@@ -1,0 +1,137 @@
+schema_version: 1
+name: fec6_plus_format0d_extra_modal_paired_dispatch
+lane_id: lane_fec6_stacking_wave_5_grammar_extensions_20260517
+summary: |
+  Build fec6 + format0d-EXTRA additive latent correction packet (Ext 4 of
+  fec6 stacking wave) and dispatch a paired-axis (contest-CPU + contest-CUDA)
+  auth-eval on Modal. This recipe is dispatch-READY but NOT FIRED until the
+  operator authorizes and the Phase 2 base-inflate wiring lands on the
+  generated inflate.py.
+
+# Per Catalog #270 scope clarification: this is a TOOL invocation
+# (tools/build_fec6_plus_format0d_extra_packet.py); not a substrate trainer.
+dispatch_kind: tool
+
+# Per Catalog #167 smoke-before-full: not applicable (smoke ≡ full for a
+# byte-deterministic tool dispatch; the build is offline; the paired-axis
+# eval is the only spend).
+
+platform: modal
+gpu: "T4"  # for the CUDA half of the paired auth-eval
+min_vram_gb: 16
+min_smoke_gpu: "T4"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - research_substrate
+  - contest_one_video_replay
+canary_status: post_canary_dependent
+canary_dependency: pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean
+
+cost_band:
+  epochs: 1
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 2.50
+  platform_key: modal
+  gpu_key: T4
+
+predicted_score_target_cpu: "[predicted, council-consensus] [0.18905, 0.19155] [contest-CPU GHA Linux x86_64]"
+predicted_score_target_cuda: "[predicted, council-consensus] [0.22321, 0.22571] [contest-CUDA T4]"
+predicted_delta_cpu: -0.0005 to -0.0030
+predicted_delta_cuda: -0.0005 to -0.0030
+predicted_delta_basis: ".omx/research/fec6_plus_format0d_extra_design_20260517.md §Predicted ΔS band (Dykstra-feasibility + first-principles Shannon R(D) cited)"
+literature_anchor: "PR106 format0d 2-pass additive correction stream (submissions/pr106_latent_sidecar_r2_pr101_grammar/inflate.py:549-575); empirical PR106 r2 measured ΔS = -0.0033 vs PR101 baseline on contest-CPU"
+council_phase_5_prediction: null  # Phase 2 base-inflate wiring pending before any council deliberation
+
+risk: |
+  PHASE 1 SCAFFOLD ONLY. The generated inflate.py raises NotImplementedError;
+  paired-axis dispatch will fail-closed until Phase 2 base-inflate wiring lands.
+  Operator should first land Phase 2 wiring (operator review + canonical helpers),
+  then re-fire this dispatch.
+
+  Once Phase 2 wired:
+  - Low-risk additive-latent-correction extension on fec6's already-verified
+    frontier archive (6bae0201).
+  - Predicted ΔS band cited per Catalog #296 with Dykstra-feasibility check.
+  - Byte-deterministic encoder per Catalog #158.
+  - Self-contained inflate.py per Catalog #295 (vendors tac.fec6_format0d_extra).
+  - Paired-axis dispatch per CLAUDE.md "Submission auth eval — BOTH CPU AND CUDA".
+
+  No score claim emitted until paired-axis dispatch lands.
+
+envelope_status: "FITS $5 envelope at p50 fallback (~$2.50)"
+
+remote_driver: scripts/operator_authorize_fec6_plus_format0d_extra_modal_paired.sh
+timeout_hours: 2.0
+
+required_input_files:
+  - flag: --fec6-archive
+    default_path: experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - flag: --extra-corrections-json
+    default_path: experiments/results/fec6_plus_format0d_extra_discovery_20260517/extra_corrections.json
+
+modal:
+  lane_script: scripts/operator_authorize_fec6_plus_format0d_extra_modal_paired.sh
+  cost_band_trainer: tools/build_fec6_plus_format0d_extra_packet.py
+  cost_band_epochs: 1
+  cost_band_batch_size: 1
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: tools/build_fec6_plus_format0d_extra_packet.py
+
+MODAL_EXTRA_MOUNT_PATHS:
+  # Per Catalog #152 WAVE-1 extension: required_input_files under
+  # experiments/results/** are Modal-IGNORED via DEFAULT_RESULTS_IGNORE.
+  # Explicitly declare so the Modal worker receives them.
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - experiments/results/fec6_plus_format0d_extra_discovery_20260517/extra_corrections.json
+
+env_overrides:
+  FEC6_FORMAT0D_EXTRA_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  FEC6_FORMAT0D_EXTRA_FEC6_ARCHIVE_PATH: /workspace/pact/experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  FEC6_FORMAT0D_EXTRA_CORRECTIONS_JSON_PATH: /workspace/pact/experiments/results/fec6_plus_format0d_extra_discovery_20260517/extra_corrections.json
+  FEC6_FORMAT0D_EXTRA_OUTPUT_DIR: /workspace/pact/experiments/results/fec6_plus_format0d_extra_modal_dispatch_20260517
+  LOCAL_CUDA_WORKER: "0"
+
+dependencies:
+  - scripts/operator_authorize_fec6_plus_format0d_extra_modal_paired.sh
+  - tools/build_fec6_plus_format0d_extra_packet.py
+  - src/tac/fec6_format0d_extra.py
+  - src/tac/tests/test_fec6_format0d_extra.py
+  - upstream/videos/0.mkv
+  - upstream/models/posenet.safetensors
+  - upstream/models/segnet.safetensors
+  - experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/archive.zip
+  - tools/validate_dispatch_required_inputs.py
+  - tools/dispatch_modal_paired_auth_eval.py
+
+notes: |
+  Ext 4 of fec6 stacking wave (lane_fec6_stacking_wave_5_grammar_extensions_20260517).
+  Design memo: .omx/research/fec6_plus_format0d_extra_design_20260517.md
+
+  PHASE 1 (this recipe): scaffold builder + tests + byte-deterministic packet.
+  Generated inflate.py is scaffold-only (raises NotImplementedError before
+  producing output). DO NOT FIRE this dispatch until Phase 2 base-inflate wiring
+  lands; the auth-eval will fail-closed without it.
+
+  PHASE 2 (queued for operator approval):
+  - Wire generated inflate.py to call fec6 base inflate (PR101 + frame_selector)
+    before applying format0d-EXTRA latent correction.
+  - Land a canonical fec6 base inflate helper at tac.fec6_base_inflate (or
+    sister name) so the inflate.py is ≤100 LOC per HNeRV parity L4.
+  - Add a per-pair byte-mutation smoke per Catalog #139 + #272 to prove the
+    EXTRA bytes are operationally consumed.
+  - Sister tools/discover_fec6_plus_format0d_extra_corrections.py to compute
+    the per-pair (dim, delta_q) corrections offline on macOS-CPU axis (warm-start
+    from PR106 r2's discovered values per CARGO-CULTED assumption #2 unwind).
+
+  Per CLAUDE.md "Apples-to-apples evidence discipline" + Catalog #287: every
+  predicted-ΔS claim above carries [predicted, council-consensus] tag. No
+  contest-CPU / contest-CUDA claims until paired-axis dispatch lands.
+
+  Per Catalog #313 predecessor probe outcome: no prior probe of this specific
+  (fec6 + format0d-EXTRA) composition exists. This is a fresh composition.
+
+# Per Catalog #313: probe outcome registration is auto-applied on first
+# paired-axis dispatch via tools/dispatch_modal_paired_auth_eval.py.
+# Per Catalog #245: Modal call_id is auto-registered via the canonical helper.

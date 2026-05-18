@@ -1,0 +1,271 @@
+schema_version: 1
+name: substrate_c6_e4_mdl_ibps_latent96_modal_t4_smoke_dispatch
+lane_id: lane_c6_ibps_reactivation_path_b_latent_dim_sweep_build_20260518
+# C6 IBPS reactivation path (b) — latent_dim=96 (4x baseline) Wave 2 BUILD
+# recipe per R3 SEAL council (`feedback_recursive_adversarial_review_r3_council_rotation_c_seal_gate_post_r2_clean_landed_20260517.md`)
+# op-routable #2 + C6 IBPS first-asymptotic dispatch empirical falsification
+# anchor (`feedback_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_landed_20260517.md`).
+#
+# Architecture: same C6 IBPS substrate as baseline; ONLY change is latent_dim=96
+# vs baseline 24. Parameter counts: encoder=45024 + decoder=106466 + latents=57600
+# = 209090 total (+62% vs baseline 128882). Per-pair int8 latent: 57600 bytes
+# (vs baseline 14400 bytes).
+#
+# Cargo-cult unwound per the IBPS empirical falsification:
+#   - CC-1 (latent_dim=24 sufficient): 50ep smoke produced 3.04 with SegNet
+#     collapse (score_seg_contribution=2.60 dominates); 24-dim IB bottleneck
+#     compresses pose well but DESTROYS segmentation. 4x capacity tests
+#     stronger SegNet preservation operating point.
+#
+# Empirical hypothesis (per Tishby I(T;Y) information-bottleneck framework):
+#   - IF latent_96 smoke → score significantly < latent_48 smoke → linear-in-
+#     dim positive trend (more capacity helps); confirms 24-dim was structural
+#     bottleneck
+#   - IF latent_96 smoke ≈ latent_48 smoke → diminishing returns; sweet spot
+#     is somewhere in (24, 96]; consider intermediate widths (e.g. 64)
+#
+# Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY"
+# (Catalog #240) the recipe remains `research_only: true` + `dispatch_enabled:
+# false` at THIS landing pending operator sign-off.
+research_only: true
+dispatch_enabled: false
+dispatch_blockers:
+  - r3_seal_op_routable_2_requires_operator_sign_off_for_reactivation_path_b_dispatch
+  - catalog_167_smoke_before_full_pattern_required_at_dispatch_time
+  - catalog_324_predicted_band_validation_status_pending_post_training_tier_c_required_before_promotion
+  - paired_cpu_cuda_empirical_anchor_required_before_promotion_eligible_per_catalog_220
+  - latent_48_smoke_outcome_required_before_latent_96_fire_per_cost_band_ladder
+summary: |
+  C6 IBPS reactivation path (b) — latent_dim=96 (4x baseline) Wave 2 BUILD
+  recipe per R3 SEAL council op-routable #2 (Schmidhuber rationale).
+
+  Architecture: same C6 IBPS substrate (IBEncoder + IBDecoder + per-pair
+  latents) as baseline; ONLY change is latent_dim=96 vs baseline 24.
+
+  Hypothesis: per Tishby I(T;Y) framework, 4x capacity provides substantial
+  SegNet feature preservation headroom. Tests the linear-in-dim positive
+  trend hypothesis vs the diminishing-returns alternative.
+
+  Predicted ΔS band: TBD_post_training_tier_c_re_measurement per Catalog #324.
+  This recipe declares predicted_band_validation_status: pending_post_training
+  and requires a 50ep smoke + post-training Tier-C re-measurement BEFORE any
+  predictive band is committed.
+
+  Param breakdown (verified empirically):
+    encoder = 45,024 params
+    decoder = 106,466 params
+    latents = 57,600 params (600 pairs x 96 latent_dim)
+    TOTAL   = 209,090 params (+62% vs baseline 128,882)
+    per-pair int8 = 57,600 bytes (vs baseline 14,400)
+    archive estimate: ~300-400 KB (vs baseline 225 KB)
+
+platform: modal
+gpu: "${MODAL_GPU:-T4}"
+min_vram_gb: 16
+min_smoke_gpu: "A10G"
+video_input_strategy: per_dispatch_local_copy
+pyav_decode_strategy: cpu_thread_async_upload
+target_modes:
+  - contest_one_video_replay
+  - contest_generalized
+  - research_substrate
+canary_status: post_canary_dependent
+canary_dependency: c6_e4_mdl_ibps_latent48
+# Sequential cost-band ladder: latent_48 smoke is the canary for latent_96.
+# Per R3 SEAL Schmidhuber: cheap-first dispatching tests the hypothesis at
+# minimum cost. If latent_48 fails to improve over baseline, latent_96 +
+# latent_192 are DEFERRED (saved budget for alternative reducer enumeration).
+
+active_dispatch_contract: c6_mdl_ibps_latent96_substrate
+dispatch_contracts:
+  - id: c6_mdl_ibps_latent96_substrate
+    archive_role: monolithic_ibps1_self_contained_latent96
+    builder_surface: experiments/train_substrate_c6_e4_mdl_ibps.py
+    status: active_recipe_contract
+    exact_eval_path: archive.zip -> submission/inflate.sh -> experiments/contest_auth_eval.py --device cuda
+
+cost_band:
+  epochs: 50
+  smoke_score_band: [0.10, 0.50]
+  predicted_cpu_band: TBD_post_training
+  predicted_cost_usd: 0.50
+  all_flags_on: true
+  hand_calibrated_fallback_p50_usd: 0.30
+  platform_key: modal
+  gpu_key: A10G
+
+predicted_score_target: null
+predicted_band_validation_status: pending_post_training
+predicted_band_reactivation_criteria: "Catalog #324 + R3 SEAL op-routable #2: dispatch remains disabled until (a) 50ep Modal A10G smoke lands with archive + auth-eval evidence, (b) post-training Tier-C density measurement replaces random-init basis, (c) revised predicted band is committed based on empirical evidence. If latent_48 sweep already improved over baseline 3.04, the latent_96 width tests the linear-in-dim trend OR diminishing returns hypothesis."
+smoke_score_band: [0.10, 0.50]
+predicted_delta: "pending_post_training_tier_c_re_measurement per Catalog #324; baseline C6 IBPS at latent_dim=24 produced 3.04 [contest-CPU advisory]; latent_48 sweep is sequential canary; latent_96 reactivation path (b) hypothesis is 4x capacity provides substantial SegNet preservation headroom"
+predicted_delta_basis: "R3 SEAL council op-routable #2 (Schmidhuber rationale; rotation C 2026-05-18) + C6 IBPS first-asymptotic dispatch empirical falsification + Catalog #324 META-FIX (pending post-training Tier-C validation required for any predicted_band)"
+provenance_kind: empirical_anchor_pending_smoke
+literature_anchor: |
+  Tishby & Zaslavsky (2015) "Deep Learning and the Information Bottleneck Principle"
+    IEEE Info. Theory Workshop DOI 10.1109/ITW.2015.7133169;
+  Schmidhuber (R3 SEAL council 2026-05-18) — C6 IBPS empirical 3.04 + SegNet
+    collapse IS empirical validation that 24-dim is WRONG operating point per
+    Tishby I(T;Y) decomposition, NOT refutation of compression-as-intelligence
+    framework;
+  Atick & Redlich (1990) "Towards a theory of early visual processing";
+  Rissanen (1978) "Modeling by shortest data description" Automatica 14:465-471;
+  Alemi et al. (2017) "Deep Variational Information Bottleneck" ICLR.
+
+source_supports: |
+  Tishby-Zaslavsky 2015 IB framework establishes that I(T;Y) saturation depends
+  on bottleneck capacity vs task complexity (HARD-EARNED at information-theory
+  level). 4x capacity (96 vs 24) provides substantial information channel
+  for SegNet + PoseNet joint feature preservation.
+
+paper_claim_scope: |
+  Source theorems establish bottleneck-width vs task-complexity relationship.
+  Neither paper makes claims about latent_dim=96 being optimal for the Pact
+  contest scorer. That surface IS the C6 IBPS latent96 sweep empirical anchor
+  target via the 50ep Modal A10G smoke + paired CPU/CUDA auth-eval.
+
+pact_must_prove: |
+  C6 IBPS latent_dim=96 must empirically prove on paired CPU/CUDA: (a) the
+  4x-wider bottleneck preserves SegNet-relevant features substantially better
+  than 24-dim baseline AND 48-dim variant; (b) score_seg_contribution
+  approaches pose_contribution (the operating point where both signals
+  preserved); (c) the rate increase from 57600 vs 14400 bytes/pair is
+  recovered by segmentation gain; (d) the smoke score IS lower than both
+  baseline 3.04 and latent_48 smoke — IF YES → linear-in-dim trend
+  confirmed; advance to latent_192 + paired-CPU; IF latent_96 ≈ latent_48 →
+  diminishing returns; sweet spot in (24, 96]; DEFER latent_192 dispatch +
+  pivot to alternative reducers per Catalog #308.
+
+decode_complexity_evidence: |
+  Inflate runtime: same vendored C6 IBPS substrate package. Per-pair int8
+  latent grows 4x from 14400 → 57600 bytes/pair. T4 single-pair decode time
+  marginally affected (decoder body identical; only input embedding width
+  grows). Total per-video inflate well within 30 min contest budget.
+
+risk: |
+  C6 IBPS latent_dim=96 sweep BUILD trainer extension IS complete (zero LOC
+  delta). Recipe non-dispatchable (`research_only: true`, `dispatch_enabled:
+  false`) pending R3 SEAL op-routable #2 operator sign-off + Catalog #167
+  smoke-before-full gate + Catalog #324 post-training Tier-C re-measurement.
+
+  Architectural risk:
+  - If 4x capacity STILL doesn't unlock SegNet preservation, the IB bottleneck
+    is NOT the dominant bottleneck — the SegNet collapse mechanism may be
+    architectural (decoder body) or loss-balancing (β_IB Lagrangian) rather
+    than capacity-bound. The latent_192 sweep variant is the next test.
+  - Encoder + decoder grow modestly (+62% total params); per-pair latent grows
+    4x (57600 bytes). Archive estimate 300-400 KB; rate term penalty grows
+    with archive size.
+  - β_IB default 0.01 may be sub-optimal for 4x wider bottleneck. β-sweep
+    deferred to follow-up wave.
+
+  Modal A10G per baseline + canonical A10G minimum. Helper
+  `tools/run_modal_smoke_before_full.py` honors `min_smoke_gpu: "A10G"`.
+
+  Per CLAUDE.md "Auth eval EVERYWHERE" + "Submission auth eval — BOTH CPU AND
+  CUDA": dispatch ends with CUDA auth eval + paired CPU eval before any
+  frontier-claim language.
+
+envelope_status: "FITS $0.50 smoke envelope at A10G p50 fallback ($0.30); paired CPU adds $0.20; total $0.50 per latent_96 dispatch (sequential AFTER latent_48 outcome)"
+
+remote_driver: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+timeout_hours: 1.0
+
+required_input_files:
+  - flag: --video-path
+    default_path: upstream/videos/0.mkv
+
+modal:
+  lane_script: scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  cost_band_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+  cost_band_epochs: 50
+  cost_band_batch_size: 4
+  cost_band_all_flags_on: true
+
+required_input_files_trainer: experiments/train_substrate_c6_e4_mdl_ibps.py
+
+sentinel_files:
+  - src/tac/substrates/c6_e4_mdl_ibps/__init__.py
+  - src/tac/substrates/c6_e4_mdl_ibps/architecture.py
+  - src/tac/substrates/c6_e4_mdl_ibps/archive.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_decoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/ib_encoder.py
+  - src/tac/substrates/c6_e4_mdl_ibps/inflate.py
+  - src/tac/substrates/c6_e4_mdl_ibps/mdl_loss.py
+  - src/tac/substrates/c6_e4_mdl_ibps/score_aware_loss.py
+  - src/tac/substrates/_shared/trainer_skeleton.py
+  - src/tac/substrates/_shared/inflate_runtime.py
+  - src/tac/substrates/score_aware_common.py
+
+env_overrides:
+  C6_E4_MDL_IBPS_DISPATCH_INSTANCE_JOB_ID: "${INSTANCE_JOB_ID}"
+  C6_E4_MDL_IBPS_LANE_ID: lane_c6_ibps_reactivation_path_b_latent_dim_sweep_build_20260518
+  C6_E4_MDL_IBPS_RECIPE_PATH: .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_latent96_modal_t4_smoke_dispatch.yaml
+  TAG: substrate_c6_e4_mdl_ibps_latent96
+  C6_E4_MDL_IBPS_VIDEO_PATH: /workspace/pact/upstream/videos/0.mkv
+  C6_E4_MDL_IBPS_OUTPUT_DIR: /workspace/pact/lane_substrate_c6_e4_mdl_ibps_latent96_results/output
+  C6_E4_MDL_IBPS_EPOCHS: "50"
+  C6_E4_MDL_IBPS_BATCH_SIZE: "4"
+  C6_E4_MDL_IBPS_LR: "5e-4"
+  C6_E4_MDL_IBPS_LATENT_DIM: "96"
+  C6_E4_MDL_IBPS_BETA_IB: "0.01"
+  C6_E4_MDL_IBPS_ENABLE_AUTOCAST_FP16: "true"
+  LOCAL_CUDA_WORKER: "1"
+
+dependencies:
+  - scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh
+  - upstream/videos/0.mkv
+  - experiments/train_substrate_c6_e4_mdl_ibps.py
+  - tools/validate_dispatch_required_inputs.py
+
+distinguishing_feature_name: ibps_latent_96_capacity_unwind
+distinguishing_bytes_path: latent_blob
+inflate_consumer_function: tac.substrates.c6_e4_mdl_ibps.inflate.inflate_one_video
+byte_mutation_smoke_passes: pending_smoke
+
+smoke_before_full: true
+horizon_class: frontier_pursuit
+
+operator_required_flags:
+  TIER_1_OPERATOR_REQUIRED_FLAGS:
+    - --video-path
+    - --output-dir
+    - --epochs
+    - --batch-size
+    - --lr
+    - --latent-dim
+    - --beta-ib
+    - --enable-autocast-fp16
+    - --enable-gt-scorer-cache
+
+notes: |
+  C6 IBPS reactivation path (b) — latent_dim=96 (4x baseline) Wave 2 BUILD
+  recipe. Trainer extension complete (zero LOC delta); recipe non-dispatchable
+  until R3 SEAL op-routable #2 operator sign-off + Catalog #167 smoke-before-
+  full gate clears. SEQUENTIAL dispatch ladder: latent_48 outcome required
+  BEFORE latent_96 fire.
+
+  Per Catalog #240 recipe-vs-trainer-state consistency, trainer's _full_main
+  IS lifted; protection lives in recipe dispatchability.
+
+  Stage 0B smoke ($0.30-$0.50 Modal A10G):
+  - smoke score < latent_48 smoke → linear-in-dim trend confirmed; advance to
+    latent_192
+  - smoke score ≈ latent_48 smoke → diminishing returns; DEFER latent_192 +
+    pivot to alternative reducers per Catalog #308
+
+  Per Catalog #324 predicted_band_validation_status MUST remain
+  `pending_post_training` until 50ep smoke + post-training Tier-C measurement.
+
+  Cross-ref:
+    feedback_recursive_adversarial_review_r3_council_rotation_c_seal_gate_post_r2_clean_landed_20260517.md (R3 SEAL op-routable #2)
+    feedback_c6_ibps_first_asymptotic_dispatch_smoke_before_full_paired_landed_20260517.md (empirical falsification anchor)
+    feedback_meta_fix_catalog_324_predicted_band_post_training_validation_landed_20260518.md (Catalog #324)
+    .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_latent48_modal_t4_smoke_dispatch.yaml (sister latent_48 canary)
+    .omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_modal_t4_dispatch.yaml (baseline)
+    scripts/remote_lane_substrate_c6_e4_mdl_ibps.sh (canonical driver; reused)
+    Catalog #220 + #272 distinguishing-feature integration contract
+    Catalog #244 + #163 + #189 Modal/CUDA env block + bootstrap sentinel + array guard
+    Catalog #166 + #245 + #313 Modal HEAD parity + call_id ledger + probe outcomes
+    Catalog #270 + #167 + #199 dispatch optimization protocol + smoke-before-full + paired-env
+    Catalog #324 META-FIX predicted-band post-training validation
