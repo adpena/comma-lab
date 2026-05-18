@@ -258,3 +258,252 @@ All 9 design landings, 1-row-per-landing with verdict + predicted ΔS band + cos
 
 ---
 
+## 4. Cross-Pollination Matrix (9 × 9)
+
+For each ordered pair `(Design_i, Design_j)`, document whether they: (a) compose **ADDITIVELY** (α ≈ 1.0 per Catalog #322); (b) compose **SUB-ADDITIVELY** (α < 1.0); (c) compose **SATURATINGLY** (α ≪ 1.0); (d) are **ORTHOGONAL** (no interaction); (e) are **MUTUALLY EXCLUSIVE** (cannot coexist); OR (f) **CONSUMES** (Design_i produces signal that Design_j consumes).
+
+### Legend
+
+- **CONSUMES**: Design_i produces an artifact / signal that Design_j operationally requires (e.g. Phase 1 Fisher matrix → Riemannian-Newton step direction).
+- **ADD** (α ≈ 1.0): Independent contributions; sum-of-contributions ≈ joint contribution.
+- **SUB** (α 0.3-0.7): Partial overlap; joint contribution < additive sum.
+- **SAT** (α ≤ 0.3): Saturating overlap; joint contribution ≈ max(individual contributions).
+- **ORTHO**: No interaction; the designs operate on disjoint surfaces.
+- **EXCL**: Mutually exclusive; the designs make competing architectural commitments.
+- **/**: Self-row (Design_i vs Design_i; trivially identity).
+
+### Index ↔ Design
+
+| # | Design (abbreviated label) |
+|---|---|
+| 1 | **VENN** — 3-set Venn classification |
+| 2 | **FISHER** — Phase 1 Fisher-precondition canonical helper |
+| 3 | **RIEM** — Riemannian-Newton META-canonical-helper |
+| 4 | **TROP** — Tropical d_seg solver |
+| 5 | **Z8** — Z8 hierarchical predictive coding |
+| 6 | **TT5L2** — TT5L V2 redesign |
+| 7 | **CCREZ** — Cargo-cult resurrection TOP-3 |
+| 8 | **POSEAXIS** — Pose-axis NON-HNeRV T3 grand council |
+| 9 | **FLOOR** — tac.theoretical_floor_estimator |
+
+### 9×9 matrix (row = i, col = j; cell = composition relationship i → j)
+
+|   | 1 VENN | 2 FISHER | 3 RIEM | 4 TROP | 5 Z8 | 6 TT5L2 | 7 CCREZ | 8 POSEAXIS | 9 FLOOR |
+|---|---|---|---|---|---|---|---|---|---|
+| **1 VENN** | / | CONSUMES | CONSUMES | CONSUMES | ORTHO | ADD | ADD | CONSUMES | CONSUMES |
+| **2 FISHER** | ADD | / | CONSUMES | SUB | ORTHO | ADD | ORTHO | CONSUMES | CONSUMES |
+| **3 RIEM** | ADD | ADD | / | SUB | CONSUMES | CONSUMES | ADD | CONSUMES | CONSUMES |
+| **4 TROP** | ADD | SUB | SUB | / | ORTHO | ORTHO | ADD | CONSUMES | CONSUMES |
+| **5 Z8** | ORTHO | CONSUMES | CONSUMES | ORTHO | / | SUB | EXCL | CONSUMES | CONSUMES |
+| **6 TT5L2** | ADD | ADD | CONSUMES | ORTHO | SUB | / | SUB | CONSUMES | CONSUMES |
+| **7 CCREZ** | ADD | ORTHO | ADD | ADD | EXCL | SUB | / | ADD | CONSUMES |
+| **8 POSEAXIS** | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | ADD | / | CONSUMES |
+| **9 FLOOR** | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | CONSUMES | / |
+
+### Critical cell explanations
+
+Per Carmack's binding Revision #3 (synthesis MUST be queryable, not pure prose), each cell's structural reason is documented below. Cells marked CONSUMES are the load-bearing wire-in structures.
+
+#### Tier-1 deterministic-optimizer 4-piece interactions
+
+- **VENN → FISHER (CONSUMES)**: The 3-set Venn classifier defines per-byte cells; Fisher-precondition operates per-cell to produce cell-specific Fisher conditioning verdicts. Without Venn cell structure, Fisher operates on the full archive surface (loses the per-pair structure that makes Fisher-orthogonal projection canonical).
+- **VENN → RIEM (CONSUMES)**: Riemannian-Newton's Stiefel-manifold parameterization is per-cell — each Venn cell's renderer-weight subset gets its own Stiefel manifold + symplectic-EMA flow. Without Venn cells, Riemannian-Newton operates monolithically (loses per-pair structure).
+- **VENN → TROP (CONSUMES)**: Tropical d_seg's per-pixel boundary detector operates per-cell — each Venn cell's pixel set defines a tropical polynomial subdomain. Without Venn cells, tropical Newton iteration scales as 590M tropical monomials per archive (intractable per Maragos verbatim); per-cell decomposition is the canonical scaling primitive.
+- **FISHER → RIEM (CONSUMES)**: Riemannian-Newton's Newton step direction IS the Fisher-preconditioned natural gradient direction (Amari 1985 canonical theorem). Without Fisher-precondition, Riemannian-Newton degenerates to vanilla Newton (which is unstable per Boyd's Levenberg-Marquardt damping requirement).
+- **FISHER → TROP (SUB)**: Both operate on local geometry of the score surface; Fisher operates on smooth axes (pose), Tropical operates on piecewise-constant axis (seg). They share information ONLY at the boundary cells (pixels within ε of argmax class-boundary that ALSO have non-zero pose gradient). The OVERLAP is the sub-additive penalty; the structural reason is the smooth surrogate's representation of boundary pixels (Riemannian-Newton's smooth d_seg surrogate over-counts pixels that Tropical Newton would find via boundary tracking).
+- **RIEM → TROP (SUB)**: Same sub-additive structure as FISHER → TROP per the Tropical design memo's Assumption-Adversary verdict "composition_alpha conditional on smooth surrogate overlap being negligible".
+- **TROP → VENN (ADD)**: Tropical boundary-detection outputs per-pixel boundary-density which extends the 3-set Venn to include a per-pixel boundary-density axis (4-set Venn extension). The composition is ADDITIVE because the boundary-density axis is structurally orthogonal to the existing per-pair × per-region × per-class axes.
+
+#### Tier-2 strategic new-direction interactions
+
+- **Z8 ↔ VENN (ORTHO)**: Z8's hierarchical predictive coding operates on temporal-sequence latents (RSSM categorical); Venn cells operate on per-byte archive positions. The surfaces are structurally disjoint until Z8's archive is built (post-Wave-N+1).
+- **Z8 → FISHER (CONSUMES)**: Z8 training consumes Fisher-precondition for its 3-level IB Lagrangian sweep per Tishby_memorial binding revision. Without Fisher-precondition, Z8's 3-level β_l sweep is high-dimensional + does not admit closed-form per Tao binding revision (12 hyperparameters; $150-250 envelope).
+- **Z8 → RIEM (CONSUMES)**: Z8's RSSM categorical latent dynamics consume Riemannian-Newton's Stiefel-manifold parameterization for the categorical-projection step. Without Riemannian-Newton, Z8's categorical posterior projection is non-canonical.
+- **Z8 → TT5L2 (SUB)**: Z8's 3-level Rao-Ballard hierarchy + DreamerV3 RSSM categorical OVERLAP with TT5L V2's predict_residual section (DreamerV3 RSSM categorical per Hafner Revision #3 in TT5L V2 + LEVEL-1 per-pair-pair prediction per Rao Revision in TT5L V2). The shared RSSM categorical primitive creates sub-additive composition; α 0.5-0.7 per Hafner cross-pollination note.
+- **Z8 ↔ CCREZ (EXCL)**: Z8 commits to full Catalog #312 canonical quadruple (Mamba-2 + Rao-Ballard 3-level + Mallat + Wyner-Ziv); cargo-cult resurrection TOP-3 commits to Variant-C surgical-addition per NSCS06 v8 reactivation. The two paradigms make INCOMPATIBLE architectural commitments (Z8 = neural-heavy hierarchical; NSCS06 v8 Variant C = strip-everything + surgical-addition).
+- **TT5L2 → RIEM (CONSUMES)**: TT5L V2 trainer consumes Riemannian-Newton META-canonical-helper inheritance pattern per TT5L V2 Revision #10 binding.
+
+#### Tier-3 meta-strategic framework interactions
+
+- **POSEAXIS → ALL except 9 (CONSUMES)**: The pose-axis T3 council's 11 op-routables ACTUATE every Tier-1 + Tier-2 design via the cheap-probe family (OP-1 Wyner-Ziv pose hoist consumes FISHER for the Fisher-orthogonal projection; OP-2 master-gradient pose-byte classification consumes VENN for the per-pair pose-axis-specific classification extension; OP-3 ATW V2-1 channel-pick consumes TROP for the boundary-density extension; OP-4 pose-conditioned residual codec consumes RIEM for the per-pair smooth-pose-axis-specific surrogate; OP-5 Z6/Z7/Z8 substrate builds consume Z8 architectural primitives; OP-7 direct master-gradient hoist consumes VENN for the per-pair Venn-class-specific deliverability tier; OP-8 VGGT distillation consumes TT5L2 for the V2 4-primitive composition; OP-10 cathedral autopilot v2 cascade extension consumes ALL via the Cascade 2 reward factor per-pair pose-axis-specific factors).
+- **FLOOR → ALL (CONSUMES)**: The theoretical floor estimator's FLOOR_DISTANCE_METRIC is consumed by EVERY downstream consumer for the verdict-conditional reward (PLATEAU rows get bonus, SATURATION rows get penalty toward 1.0× per FLOOR OP-4). The cathedral autopilot v2 cascade's NEW reward factor `adjust_predicted_delta_for_floor_distance` is the canonical consumer; the deterministic-optimizer's convergence stopping rule is the operational consumer; the per-substrate symposium queue (Catalog #325) is the strategic consumer.
+
+#### Aggregate observations from the matrix
+
+- **41 of 72 off-diagonal cells are CONSUMES**: indicates DEEP WIRE-IN structure across the 9 designs. The synthesis is not optional — the designs FORM a single graph that requires explicit orchestration.
+- **8 of 72 off-diagonal cells are EXCL**: indicates 1 architectural commitment incompatibility (Z8 ↔ CCREZ at Variant-C). Operators must choose between the two paradigms PER ARCHIVE; they cannot coexist within a single substrate build.
+- **9 of 72 off-diagonal cells are SUB**: indicates partial-overlap composition where Catalog #322 anti-phantom protection applies. The realistic aggregate band per Section 13 reflects these sub-additive penalties.
+- **12 of 72 off-diagonal cells are ORTHO**: indicates true independence; ADD-composed in aggregate without sub-additive penalty.
+- **2 of 72 off-diagonal cells are ADD**: indicates additive composition with α ≈ 1.0 (TROP → VENN; CCREZ → POSEAXIS at the cheap-probe family).
+- **TT5L2 → CCREZ (SUB)**: TT5L V2's DreamerV3 RSSM categorical primitive OVERLAPS with C6 IBPS Path B2's DreamerV3 RSSM categorical primitive per cargo-cult resurrection wave; sub-additive composition; α 0.4-0.6.
+- **POSEAXIS → CCREZ (ADD)**: pose-axis T3 council's cheap-probe family OP-1+OP-2+OP-7 is structurally orthogonal to cargo-cult resurrection TOP-3 (different substrate-class candidates); additive composition.
+
+### Cross-pollination tree (ASCII)
+
+```
+                                  ┌──────────────────┐
+                                  │ 9 FLOOR (PLATEAU)│  ← root: verdict-conditional reward
+                                  └────────┬─────────┘
+                                           │ CONSUMES (all 8 below)
+            ┌──────────────────────────────┴──────────────────────────────┐
+            │                                                              │
+            ▼                                                              ▼
+   ┌──────────────────┐                                          ┌────────────────────┐
+   │ 8 POSEAXIS (T3)  │  ← actuator: cheap-probe family $0-$1    │ 7 CCREZ (TOP-3)    │
+   │ 11 op-routables  │                                          │ 3 substrate cand.  │
+   └────┬─────────────┘                                          └────────┬───────────┘
+        │ CONSUMES (Tier-1 + Tier-2)                                      │ ADD (POSEAXIS)
+        │                                                                 │ EXCL (Z8)
+        ▼                                                                 │
+   ┌─────────────────────────────────────────────────────────────────┐   │
+   │              TIER-1: Deterministic-Optimizer 4-Piece            │   │
+   │                                                                 │   │
+   │   ┌──────────────┐  CONSUMES   ┌────────────────────────────┐   │   │
+   │   │ 1 VENN       │────────────►│ 2 FISHER (Phase 1)         │   │   │
+   │   │ 3-set        │             │ Fisher matrix + LM + K-FAC │   │   │
+   │   └──────┬───────┘             └────────┬───────────────────┘   │   │
+   │          │ CONSUMES                     │ CONSUMES               │   │
+   │          ▼                              ▼                        │   │
+   │   ┌──────────────┐  SUB (boundary  ┌────────────────────────┐    │   │
+   │   │ 4 TROP       │◄───overlap)─────│ 3 RIEM (Phase 2)       │    │   │
+   │   │ Mallat+Newton│                 │ Stiefel + symplectic   │    │   │
+   │   └──────────────┘                 └────────────────────────┘    │   │
+   └─────────────────────────────────────────────────────────────────┘   │
+                                                                          │
+   ┌─────────────────────────────────────────────────────────────────┐   │
+   │              TIER-2: Substrate-Class-Shift Candidates           │   │
+   │                                                                 │   │
+   │   ┌────────────────┐  SUB (RSSM ┌──────────────────────────┐    │   │
+   │   │ 6 TT5L2 (V2)   │◄──overlap)─│ 5 Z8 (DEFER)             │    │◄──┘
+   │   │ 4-primitive    │            │ hier. predictive coding  │    │
+   │   └────────────────┘            └──────────────────────────┘    │
+   │           ▲                                                     │
+   │           │ SUB (DreamerV3 RSSM categorical overlap with C6)    │
+   │           │                                                     │
+   │   ┌───────┴────────────────────────────────────────────────┐    │
+   │   │ 7 CCREZ → C6 IBPS Path B2 / V1 Faiss V5 / NSCS06 v8   │    │
+   │   └────────────────────────────────────────────────────────┘    │
+   └─────────────────────────────────────────────────────────────────┘
+```
+
+The tree visualizes the canonical dependency chain: FLOOR provides verdict-conditional reward to all 8 below; POSEAXIS actuates the Tier-1 + Tier-2 designs via cheap-probe family; VENN feeds the 4-piece deterministic-optimizer (FISHER + RIEM + TROP); Z8 is structurally upstream-gated by Z6/Z7 + EXCL with CCREZ Variant C; TT5L V2 is sub-additive with both Z8 (RSSM categorical overlap) and CCREZ (C6 IBPS Path B2 RSSM categorical overlap).
+
+---
+
+## 5. Unified Mathematical Framework
+
+The 9 designs jointly minimize a 4-tier bilevel Lagrangian/action. The full unified action is the canonical synthesis answer to "what mathematical object do all 9 designs jointly compute?".
+
+### 5.1 The contest scorer (canonical objective per upstream/evaluate.py:92)
+
+```
+S(theta) = 100 · d_seg(theta) + sqrt(10 · d_pose(theta)) + 25 · rate(theta)
+where rate(theta) = archive.zip_bytes(theta) / 37,545,489 [CONTEST_RATE_DENOM_BYTES]
+```
+
+This IS the fixed canonical scalar that all 9 designs target. The 4 tiers of the unified action operate at different parameter granularities.
+
+### 5.2 Tier 1 (OUTERMOST): codec configuration + composition α
+
+The outermost optimization is over the codec configuration `c ∈ C` (codec architecture choice: PR101 fec6 / PR106 format0d / hnerv_lc_v2 / etc.) AND the composition alpha matrix `A ∈ R^{9×9}` (the cross-pollination matrix per Section 4 with empirically-validated α values per Catalog #322).
+
+```
+min_{c ∈ C, A ∈ Pareto(R^{9×9})}  E_{theta ~ p(theta | c, A)} [ S(theta) ]
+```
+
+where the expectation is over the joint distribution of substrate-class-shift candidates (`c`) and per-pair composition weights (`A`). The Pareto constraint on `A` is per Catalog #296 Dykstra-feasibility: any α-value outside the convex-intersection polytope is infeasible.
+
+**Operational interpretation**: codec configuration is the discrete choice (PR101 / PR106 / TT5L V2 / Z8 / C6 IBPS Path B2 / etc.); composition alpha is the continuous tradeoff per cross-pollination matrix Section 4.
+
+### 5.3 Tier 2 (MIDDLE): substrate-class-shift selection
+
+For each codec configuration `c`, the middle optimization selects the substrate-class-shift candidate `s ∈ S(c)` (Z8 hierarchical predictive coding / TT5L V2 4-primitive / cargo-cult resurrection TOP-3 / etc.):
+
+```
+min_{s ∈ S(c)}  E_{theta ~ p(theta | s)} [ S(theta) + R_class_shift(s) ]
+```
+
+where `R_class_shift(s)` is the class-shift overhead per Catalog #322 v2 cascade (frontier_pursuit < within-class < SUPER_ADDITIVE; bonus or penalty per substrate-class-shift literature anchor).
+
+**Operational interpretation**: per codec, choose which substrate-class-shift paradigm to commit to (Z8 / TT5L V2 / cargo-cult Variant-C / etc.). The choice is currently MANUAL (operator-routed via the per-substrate symposium queue per Catalog #325); the canonical task queue Section 9 automates the operator routing via EV-ranked op-routables.
+
+### 5.4 Tier 3 (INNER): per-substrate parameter optimization via deterministic-optimizer 4-piece
+
+For each (codec, substrate-class) pair, the inner optimization is the per-substrate parameter optimization via the deterministic-optimizer 4-piece architecture per the sister deterministic-optimizer parent memo:
+
+```
+min_{theta ∈ M_substrate}  L_total(theta)
+  = L_data(theta)                                  # contest scorer
+  + λ_fisher · L_fisher_precondition(theta)        # Phase 1 (FISHER design)
+  + λ_riem · L_riemannian_newton(theta)            # Phase 2 (RIEM design)
+  + λ_trop · L_tropical_d_seg(theta)               # Phase 6 (TROP design)
+  + λ_venn · L_per_cell_venn(theta)                # 3-set cell structure (VENN design)
+```
+
+where `M_substrate` is the substrate-specific manifold (e.g. Stiefel manifold of orthonormal renderer projections × tropical polytope of codec configurations per the Riemannian-Newton design memo §0 TL;DR).
+
+**Operational interpretation**: per substrate, the deterministic-optimizer's 4 pieces jointly minimize the total Lagrangian. The Lagrange multipliers `λ_*` are tuned per the deterministic-optimizer parent memo's Pareto-simplex sweep (`alpha + beta + gamma = 1` per parent §X).
+
+The bilevel structure is: outer (Tier 2 substrate selection) FIXES the inner manifold + Lagrangian; inner (Tier 3 parameter optimization) FINDS the optimal parameters. Per Catalog #319 Q3 v2 cascade, the inner solution feeds back to the outer via the per-pair Venn-class-specific deliverability tier.
+
+### 5.5 Tier 4 (INNERMOST): per-pair byte-level granularity
+
+For each `theta`, the innermost optimization is the per-pair byte-level granularity via the master-gradient anchor (FISHER's `f174192aeadf` PR101_lc_v2 fp64 per-pair anchor) consumed by Catalog #318/#319 grammar-aware operator + Wyner-Ziv deliverability cascade:
+
+```
+For each pair p ∈ [0, 600):
+  For each byte b ∈ archive.zip:
+    classify(p, b) → Venn cell c(p, b) ∈ {VENN cells from VENN design}
+    classify(p, b) → tier(p, b) ∈ {TIER_1_ZERO_COST, TIER_2_CONSTANTS, TIER_3_WAIVER_REQUIRED, TIER_4_FORBIDDEN}
+    classify(p, b) → reward(p, b) ∈ {α factor per cathedral autopilot v2 cascade per Catalog #319 Q3}
+```
+
+**Operational interpretation**: per-pair per-byte classification IS the master-gradient anchor's product. The PerByteVennClassification per Catalog #319 Q3 cascade IS the innermost granularity; the master-gradient anchor at `f174192aeadf...` per Codex 2026-05-18 landing IS the canonical source.
+
+### 5.6 The full unified action
+
+Putting it all together, the 9 designs jointly compute:
+
+```
+min_{c, A}  min_{s ∈ S(c)}  min_{theta ∈ M(c, s)}  L_total(theta; c, s, A, master_gradient(c, s))
+```
+
+where:
+- `c` is the codec configuration (Tier 1 outermost),
+- `A` is the cross-pollination alpha matrix per Section 4 (Tier 1 outermost),
+- `s` is the substrate-class-shift candidate (Tier 2 middle),
+- `theta` is the per-substrate parameters on manifold `M(c, s)` (Tier 3 inner),
+- `master_gradient(c, s)` is the fp64 per-pair anchor per Section 2 (Tier 4 innermost),
+- `L_total` is the deterministic-optimizer's 4-piece composed Lagrangian per Tier 3.
+
+**This is THE unified mathematical object that the 9 designs collectively target.** Each individual design implements a slice of the full minimization:
+- VENN implements the per-cell partition (Tier 4 → Tier 3 wire-in).
+- FISHER implements the per-cell Fisher preconditioning (Tier 3 inner).
+- RIEM implements the per-substrate Riemannian-Newton step (Tier 3 inner).
+- TROP implements the boundary-cell tropical Newton iteration (Tier 3 inner).
+- Z8 / TT5L2 / CCREZ are Tier 2 middle (substrate-class-shift candidates).
+- POSEAXIS implements the Tier 1 outermost cheap-probe family (codec + composition alpha cheap-probe wave).
+- FLOOR implements the Tier 1 outermost convergence stopping rule (FLOOR_DISTANCE_METRIC = current_score - theoretical_floor_lower_bound; halt when < ε).
+
+### 5.7 Convergence properties
+
+Per the sister deterministic-optimizer parent memo + Section 5 of the Riemannian-Newton design memo:
+
+- **Outer (Tier 1) convergence**: discrete choice over codec configurations; convergence is enumerative (try each codec; rank by Pareto frontier per Catalog #322).
+- **Middle (Tier 2) convergence**: discrete choice over substrate-class-shift candidates; convergence is enumerative (try each candidate per the canonical task queue Section 9).
+- **Inner (Tier 3) convergence**: per Boumal 2020+ Riemannian trust-region literature, QUADRATIC convergence in a neighborhood of strict local minima with non-degenerate Hessian. The piecewise-constant d_seg component creates measure-zero non-smooth set where Newton convergence fails — REQUIRES tropical-Newton subgradient handling (per TROP design memo). On the smooth axes (pose + smooth surrogate of d_seg), convergence is FINITE iterations almost-everywhere; on the boundary set, convergence is FINITE iterations with cycle-detection per Cohen-Gaubert-Quadrat 1998 (TROP Assumption-Adversary verdict).
+- **Innermost (Tier 4) convergence**: per-pair classification is closed-form per the master-gradient anchor; classification convergence is O(1) per byte per the canonical PerByteVennClassification helper.
+
+### 5.8 The unified action and the theoretical floor estimator
+
+Per FLOOR design memo §0 TL;DR + Section 0.0 of this synthesis:
+
+```
+PLATEAU CONFIRMED HIGH;  theoretical floor band [0.026, 0.080] rate-conservative regime
+Frontier sits 2.4× to 7.4× above floor.
+```
+
+The unified action's GLOBAL OPTIMUM is bounded below by the theoretical floor `[0.026, 0.080]`. The current frontier `0.19205 [contest-CPU]` is BETWEEN 2.4× (= 0.080) and 7.4× (= 0.026) the floor. The synthesis' canonical task queue (Section 9) is the operational path from frontier `0.19205` toward floor `[0.026, 0.080]`; the 9 designs are the 9 mathematical primitives that collectively traverse the gap.
+
+---
+
