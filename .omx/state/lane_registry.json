@@ -37673,11 +37673,11 @@
       "id": "lane_closure_campaign_pursue_and_confirm_20260518",
       "name": "Closure Campaign Pursue + Confirm Coordinator",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "master memo at .omx/research/closure_campaign_pursue_and_confirm_master_20260518.md commit 2669226e7; 5 routing directives commit 551bc37d8"
         },
         "real_archive_empirical": {
           "status": false,
@@ -37700,8 +37700,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "feedback_closure_campaign_pursue_and_confirm_landed_20260518.md pending; council anchor in .omx/state/council_deliberation_posterior.jsonl"
         },
         "deploy_runbook": {
           "status": false,
@@ -37713,6 +37713,88 @@
     {
       "id": "lane_codex_to_claude_inbox_bidirectional_channel_20260518",
       "name": "Codex to Claude inbox bidirectional channel",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/codex_to_claude_inbox.py + tools/codex_to_claude_inbox.py + operator_briefing wire-in; tests 37 inbox + 21 briefing green"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Catalog #333 check_codex_inbox_open_questions_have_response_or_default_within_deadline wired warn-only in preflight_all; direct strict smoke green; Catalog #176 row-presence test green"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_execution_monitoring_synthesis_post_b_landing_20260518",
+      "name": "Execution Monitoring Synthesis Post-B Landing",
+      "phase": 5.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/execution_monitoring_synthesis_post_b_landing_20260518.md [867 lines, commit 0ad09a675; canonical filename per Catalog #316/#125; 5 op-routables ranked by empirical EV; council T2 PROCEED_WITH_REVISIONS 10 attendees]"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/execution_monitoring_synthesis_post_b_landing_20260518.md + council anchor appended to .omx/state/council_deliberation_posterior.jsonl per Catalog #300 hook #5"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_rate_attack_43_vectors_meta_paradigm_deep_research_20260518",
+      "name": "PRIMARY rate-attack 43 vectors META-paradigm deep research",
       "phase": 4.0,
       "level": 0,
       "gates": {
@@ -37752,14 +37834,14 @@
       "notes": ""
     },
     {
-      "id": "lane_execution_monitoring_synthesis_post_b_landing_20260518",
-      "name": "Execution Monitoring Synthesis Post-B Landing",
-      "phase": 5.0,
-      "level": 0,
+      "id": "lane_adversarial_rate_attack_paradigm_challenger_20260518",
+      "name": "Adversarial rate-attack paradigm challenger (sister to PRIMARY 43-vectors)",
+      "phase": 2.0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/adversarial_rate_attack_paradigm_challenger_20260518.md (1066 lines; T2 sister review; council posterior anchor emitted)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -37782,8 +37864,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/adversarial_rate_attack_paradigm_challenger_20260518.md (this memo IS the memory entry; commit 4c6e46bfa)"
         },
         "deploy_runbook": {
           "status": false,
@@ -37800,5 +37882,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T20:43:00Z"
+  "updated_at": "2026-05-18T21:14:42Z"
 }

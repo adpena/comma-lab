@@ -976,6 +976,30 @@ def _format_provider_readiness(refresh: bool = False) -> str:
     return "\n".join(lines)
 
 
+def _codex_inbox_summary() -> dict[str, object]:
+    from tac.codex_to_claude_inbox import inbox_summary
+
+    try:
+        return inbox_summary()
+    except Exception as exc:
+        return {"_error": f"{type(exc).__name__}: {exc}"}
+
+
+def _format_codex_inbox_summary() -> str:
+    payload = _codex_inbox_summary()
+    if payload.get("_error"):
+        return f"Codex inbox unavailable: {payload['_error']}"
+    return "\n".join(
+        [
+            "Codex to Claude inbox. This is an execution-loop coordination surface, not score authority.",
+            f"  open_questions:         {payload.get('open_questions_count', 0)}",
+            f"  expired_open_questions: {payload.get('expired_open_questions_count', 0)}",
+            f"  oldest_open_age_hours:  {payload.get('open_questions_oldest_age_hours', 0.0)}",
+            f"  relays:                 {payload.get('relays_count', 0)}",
+        ]
+    )
+
+
 def _format_dispatch_claim_summary() -> str:
     summary = _dispatch_claim_summary()
     if summary.get("_error"):
@@ -2386,6 +2410,7 @@ def main(argv: list[str] | None = None) -> int:
         dispatch_claim_summary = _dispatch_claim_summary()
         out = {
             "target_score": args.target_score,
+            "codex_inbox_summary": _codex_inbox_summary(),
             "dispatch_claim_summary": dispatch_claim_summary,
             "dispatch_claim_historical_summary": _dispatch_claim_historical_summary(),
             "dispatch_readiness": _dispatch_readiness(),
@@ -2445,6 +2470,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # Human-readable composite
     parts: list[str] = ["OPERATOR BRIEFING — dispatch trio"]
+    parts.append(_section(
+        "Codex inbox — open design questions and relays",
+        _format_codex_inbox_summary(),
+    ))
     parts.append(_section(
         "Dispatch claim coordination — active lane guard",
         _format_dispatch_claim_summary(),

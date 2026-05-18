@@ -55,6 +55,8 @@ def test_briefing_delegates_to_repo_venv_when_available(monkeypatch):
 
 def test_briefing_runs_all_three_phases():
     proc = _run("--top", "3")
+    assert "Codex inbox" in proc.stdout
+    assert "open_questions:" in proc.stdout
     assert "Dispatch claim coordination" in proc.stdout
     assert "claim_lane_dispatch.py summary" in proc.stdout
     assert "Cloud provider readiness" in proc.stdout
@@ -110,6 +112,9 @@ def test_briefing_json_composite_has_all_three_keys():
     proc = _run("--json", "--top", "3")
     out = json.loads(proc.stdout)
     assert out["target_score"] == 0.19
+    assert "codex_inbox_summary" in out
+    assert out["codex_inbox_summary"]["schema_version"] == "codex_to_claude_inbox_v1_20260518"
+    assert "open_questions_count" in out["codex_inbox_summary"]
     assert out["dispatch_claim_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
     assert out["dispatch_claim_historical_summary"]["schema"] == "pact.dispatch_claim_summary.v1"
     assert out["dispatch_readiness"]["schema"] == "pact.operator_dispatch_readiness.v1"

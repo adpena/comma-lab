@@ -5071,6 +5071,9 @@ def preflight_all(
         check_canonical_task_status_no_dangling_transitions(
             strict=True, verbose=verbose
         )
+        check_codex_inbox_open_questions_have_response_or_default_within_deadline(
+            strict=False, verbose=verbose
+        )
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
@@ -27775,6 +27778,82 @@ def check_canonical_task_status_no_dangling_transitions(
         return [str(exc)]
 
 
+def check_codex_inbox_open_questions_have_response_or_default_within_deadline(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #333 - expired Codex inbox questions must be resolved.
+
+    The Codex to Claude inbox is append-only; a question remains open until a
+    later row answers it, withdraws it, or records that Codex invoked the
+    declared operator default. This gate refuses stale unresolved questions so
+    the persistent Codex loop cannot silently block on missing design judgment.
+    """
+
+    from tac.codex_to_claude_inbox import (
+        EVENT_QUESTION,
+        STATUS_OPEN,
+        latest_status_by_event_id,
+        load_inbox_strict,
+    )
+
+    root = Path(repo_root or REPO_ROOT)
+    path = root / ".omx" / "state" / "codex_to_claude_inbox.jsonl"
+    if not path.exists():
+        if verbose:
+            print("  [codex-inbox-deadlines] OK: inbox ledger absent")
+        return []
+
+    rows = load_inbox_strict(path)
+    statuses = latest_status_by_event_id(path=path)
+    now = _dt.datetime.now(_dt.UTC)
+    violations: list[str] = []
+    for row in rows:
+        if row.get("event_type") != EVENT_QUESTION:
+            continue
+        event_id = str(row.get("event_id", ""))
+        if statuses.get(event_id) != STATUS_OPEN:
+            continue
+        deadline_raw = row.get("response_deadline_utc")
+        if not deadline_raw:
+            continue
+        text = str(deadline_raw)
+        parse_text = text[:-1] + "+00:00" if text.endswith("Z") else text
+        try:
+            deadline = _dt.datetime.fromisoformat(parse_text)
+        except ValueError as exc:
+            violations.append(f"[Check 333] {event_id}: invalid response_deadline_utc={text!r}: {exc}")
+            continue
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=_dt.UTC)
+        deadline = deadline.astimezone(_dt.UTC)
+        if now >= deadline:
+            task = row.get("blocking_task_id") or "<none>"
+            violations.append(
+                f"[Check 333] {event_id}: open Codex inbox question for blocking_task_id={task!r} "
+                f"passed response_deadline_utc={text!r} without answer, withdrawal, or "
+                "operator_default_invoked row"
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [codex-inbox-deadlines] {len(violations)} expired open question(s)")
+            for violation in violations[:5]:
+                print(f"    - {violation[:240]}")
+        else:
+            print("  [codex-inbox-deadlines] OK: 0 expired open question(s)")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "Codex inbox open questions past deadline:\n"
+            + "\n".join(f"  - {v}" for v in violations[:5])
+            + "\n\nFix: append a Claude answer, withdraw the question, or run "
+            "`tools/codex_to_claude_inbox.py operator-default-invoked`."
+        )
+    return violations
+
+
 # ── Check 93: logit-margin loss callers pass explicit threshold ──────────────
 # Lane 19 (SegNet logit-margin boundary loss) - see council memo
 # .omx/research/council_lane_19_logit_margin_design_20260430.md.
@@ -37900,6 +37979,9 @@ _SHARED_STATE_PATH_MARKERS: tuple[str, ...] = (
     # Catalog #313 — canonical probe-outcomes ledger.
     "probe_outcomes.jsonl",
     "PROBE_OUTCOMES_LEDGER_PATH",
+    # Catalog #333 — canonical Codex to Claude inbox ledger.
+    "codex_to_claude_inbox",
+    "INBOX_PATH",
 )
 
 _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
@@ -37910,6 +37992,7 @@ _BARE_WRITE_LOCK_TOKENS: tuple[str, ...] = (
     "_active_jobs_lock",
     "_active_vms_lock",
     "_ledger_lock",  # Catalog #245 (Modal call_id ledger)
+    "_inbox_lock",  # Catalog #333 (Codex to Claude inbox)
     "FileLock",
 )
 
@@ -37953,6 +38036,14 @@ _BARE_WRITE_CANONICAL_HELPER_CALL_TOKENS: tuple[str, ...] = (
     "register_probe_outcome",
     "update_probe_outcome",
     "load_outcomes_strict",
+    # Catalog #333 — canonical Codex to Claude inbox helpers.
+    "append_inbox_question",
+    "append_inbox_relay",
+    "append_inbox_answer",
+    "append_inbox_operator_default_invoked",
+    "append_inbox_ack",
+    "append_inbox_withdraw",
+    "load_inbox_strict",
 )
 
 # Files that legitimately implement canonical fcntl-locked helpers OR are
@@ -37974,6 +38065,7 @@ _BARE_WRITE_CANONICAL_HELPERS: tuple[str, ...] = (
     "src/tac/deploy/azure/active_vms_state.py",  # canonical (codex round 4 #133)
     "src/tac/deploy/modal/call_id_ledger.py",  # canonical (Catalog #245)
     "src/tac/probe_outcomes_ledger.py",  # canonical (Catalog #313)
+    "src/tac/codex_to_claude_inbox.py",  # canonical (Catalog #333)
     "src/tac/deploy/vastai/client.py",  # routes through register_instance (vastai_tracker)
     "src/tac/preflight.py",  # this gate's own scanning code
     "src/tac/preflight_fs_cache.py",  # threading.Lock (in-process cache only)
