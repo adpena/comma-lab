@@ -423,120 +423,15 @@ def _append_call_id_ledger_terminal_event(
 ) -> dict[str, Any]:
     """Mirror a terminal harvest into the canonical Modal call_id ledger."""
 
-    call_id = str(metadata.get("call_id") or "").strip()
-    if not call_id or call_id == "?":
-        return {"appended": False, "reason": "metadata_missing_call_id"}
-    status = _call_ledger_status_from_terminal(
+    from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event
+
+    return append_terminal_call_id_ledger_event(
+        repo_root=repo_root,
+        metadata=metadata,
         harvested=harvested,
         terminal_claim=terminal_claim,
+        agent=agent,
     )
-    if status is None:
-        return {"appended": False, "reason": "nonterminal_or_unclassified", "call_id": call_id}
-
-    try:
-        from tac.deploy.modal.call_id_ledger import (
-            TERMINAL_STATUSES,
-            latest_status_by_call_id,
-            query_by_call_id,
-            update_call_id_outcome,
-        )
-    except Exception as exc:  # pragma: no cover - defensive local import
-        return {
-            "appended": False,
-            "reason": f"call_id_ledger_import_failed:{type(exc).__name__}:{exc}",
-            "call_id": call_id,
-        }
-
-    ledger_path = repo_root / ".omx" / "state" / "modal_call_id_ledger.jsonl"
-    lock_path = ledger_path.with_suffix(ledger_path.suffix + ".lock")
-    try:
-        latest = latest_status_by_call_id(path=ledger_path).get(call_id)
-    except Exception as exc:
-        return {
-            "appended": False,
-            "reason": f"call_id_ledger_status_read_failed:{type(exc).__name__}:{exc}",
-            "call_id": call_id,
-        }
-    rc = None
-    elapsed_seconds = None
-    score = None
-    score_axis = None
-    archive_sha256 = None
-    archive_bytes = None
-    evidence_grade = None
-    if isinstance(harvested, dict):
-        rc = _coerce_int(harvested.get("rc"))
-        if rc is None:
-            rc = _coerce_int(harvested.get("returncode"))
-        elapsed_seconds = _coerce_float(harvested.get("elapsed_seconds"))
-        score = _coerce_float(harvested.get("score"))
-        score_axis = harvested.get("score_axis")
-        archive_sha256 = harvested.get("archive_sha256")
-        archive_bytes = _coerce_int(harvested.get("archive_bytes"))
-        evidence_grade = harvested.get("evidence_grade")
-    if latest in TERMINAL_STATUSES:
-        try:
-            lifecycle = query_by_call_id(call_id, path=ledger_path)
-        except Exception:
-            lifecycle = []
-        latest_row = lifecycle[-1] if lifecycle else {}
-        missing_structured_signal = any(
-            latest_row.get(key) in {None, ""}
-            for key, value in (
-                ("rc", rc),
-                ("elapsed_seconds", elapsed_seconds),
-                ("archive_sha256", archive_sha256),
-                ("archive_bytes", archive_bytes),
-            )
-            if value is not None
-        )
-        if not missing_structured_signal:
-            return {
-                "appended": False,
-                "already_terminal": True,
-                "call_id": call_id,
-                "latest_status": latest,
-            }
-    try:
-        record = update_call_id_outcome(
-            call_id=call_id,
-            status=status,
-            harvest_result=harvested,
-            rc=rc,
-            elapsed_seconds=elapsed_seconds,
-            score=score,
-            score_axis=score_axis if isinstance(score_axis, str) else None,
-            archive_sha256=archive_sha256 if isinstance(archive_sha256, str) else None,
-            archive_bytes=archive_bytes,
-            evidence_grade=evidence_grade if isinstance(evidence_grade, str) else None,
-            agent=agent,
-            path=ledger_path,
-            lock_path=lock_path,
-            lane_id=metadata.get("lane_id"),
-            label=metadata.get("label"),
-            platform=metadata.get("platform", "modal"),
-            gpu=metadata.get("gpu"),
-            expected_cost_usd=metadata.get("expected_cost_usd"),
-            expected_axis=metadata.get("expected_axis"),
-            recipe=metadata.get("recipe"),
-            dispatched_at_utc=metadata.get("dispatched_at"),
-            max_seconds=metadata.get("max_seconds"),
-            mounted_code_git_head=metadata.get("mounted_code_git_head"),
-        )
-    except Exception as exc:
-        return {
-            "appended": False,
-            "reason": f"call_id_ledger_append_failed:{type(exc).__name__}:{exc}",
-            "call_id": call_id,
-            "target_status": status,
-        }
-    return {
-        "appended": True,
-        "call_id": call_id,
-        "status": status,
-        "ledger_path": str(ledger_path),
-        "written_at_utc": record.get("written_at_utc"),
-    }
 
 
 def list_modal_lanes(*, repo_root: Path) -> list[dict[str, Any]]:

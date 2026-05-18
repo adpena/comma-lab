@@ -16,20 +16,17 @@ Per CLAUDE.md harness pillar 7 — dedicated tests for every primitive.
 from __future__ import annotations
 
 import json
+import sys as _sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 # Ensure tools/ + src/ on sys.path for the test module itself.
-import sys as _sys
-from pathlib import Path as _Path
 
-_THIS = _Path(__file__).resolve()
+_THIS = Path(__file__).resolve()
 _REPO = _THIS.parents[3]
 for _p in (_REPO, _REPO / "src", _REPO / "tools"):
     _sp = str(_p)
@@ -37,6 +34,63 @@ for _p in (_REPO, _REPO / "src", _REPO / "tools"):
         _sys.path.insert(0, _sp)
 
 from tools import parallel_harvest_actuator as actuator  # noqa: E402
+
+
+class _FakeFunctionCall:
+    def __init__(self, outcome: Any) -> None:
+        self.outcome = outcome
+
+    def get(self, timeout: float) -> Any:
+        if isinstance(self.outcome, BaseException):
+            raise self.outcome
+        return self.outcome
+
+
+def _install_fake_modal(
+    monkeypatch,
+    outcome: Any,
+    *,
+    output_expired_cls: type[Exception] | None = None,
+    function_timeout_cls: type[Exception] | None = None,
+) -> tuple[type[Exception], type[Exception]]:
+    if output_expired_cls is None:
+        class OutputExpiredError(Exception):
+            pass
+    else:
+        OutputExpiredError = output_expired_cls
+    if function_timeout_cls is None:
+        class FunctionTimeoutError(Exception):
+            pass
+    else:
+        FunctionTimeoutError = function_timeout_cls
+
+    fake_modal = SimpleNamespace(
+        functions=SimpleNamespace(
+            FunctionCall=SimpleNamespace(
+                from_id=lambda call_id: _FakeFunctionCall(outcome)
+            )
+        ),
+        exception=SimpleNamespace(
+            OutputExpiredError=OutputExpiredError,
+            FunctionTimeoutError=FunctionTimeoutError,
+        ),
+    )
+    monkeypatch.setitem(_sys.modules, "modal", fake_modal)
+    return OutputExpiredError, FunctionTimeoutError
+
+
+def _register_call_id(tmp_path: Path, call_id: str, lane_id: str = "lane_single") -> Path:
+    from tac.deploy.modal.call_id_ledger import register_dispatched_call_id
+
+    ledger = tmp_path / ".omx" / "state" / "modal_call_id_ledger.jsonl"
+    register_dispatched_call_id(
+        call_id=call_id,
+        lane_id=lane_id,
+        label=lane_id,
+        path=ledger,
+        lock_path=ledger.with_suffix(ledger.suffix + ".lock"),
+    )
+    return ledger
 
 
 # -- Discovery tests ---------------------------------------------------------
@@ -352,6 +406,182 @@ def test_fan_out_harvest_empty_lane_list(tmp_path):
         append_posterior=False,
     )
     assert out == []
+
+
+def test_harvest_one_call_success_appends_call_id_ledger(tmp_path, monkeypatch):
+    """A terminal rc=0 Modal result appends a harvested call-id ledger row."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "single", "fc-SINGLE", harvested=False)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-SINGLE")
+    _install_fake_modal(
+        monkeypatch,
+        {"returncode": 0, "elapsed_seconds": 12.5, "artifacts": {}, "stdout_tail": ""},
+    )
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "harvested"
+    assert out["call_id_ledger"]["appended"] is True
+    assert [row["status"] for row in query_by_call_id("fc-SINGLE", path=ledger)] == [
+        "dispatched",
+        "harvested",
+    ]
+
+
+def test_harvest_one_call_nonzero_rc_appends_failed_call_id_ledger(tmp_path, monkeypatch):
+    """A terminal nonzero Modal result appends a failed call-id ledger row."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "failed", "fc-FAILED", harvested=False)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-FAILED", lane_id="lane_failed")
+    _install_fake_modal(
+        monkeypatch,
+        {"returncode": 7, "elapsed_seconds": 22.0, "artifacts": {}, "stdout_tail": "boom"},
+    )
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "harvested"
+    rows = query_by_call_id("fc-FAILED", path=ledger)
+    assert [row["status"] for row in rows] == ["dispatched", "failed"]
+    assert rows[-1]["rc"] == 7
+
+
+def test_harvest_one_call_expired_appends_stale_call_id_ledger(tmp_path, monkeypatch):
+    """Modal result-cache expiry is terminal stale, not a generic error."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "expired", "fc-EXPIRED", harvested=False)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-EXPIRED", lane_id="lane_expired")
+    class OutputExpiredError(Exception):
+        pass
+
+    _install_fake_modal(
+        monkeypatch,
+        OutputExpiredError("expired"),
+        output_expired_cls=OutputExpiredError,
+    )
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "expired"
+    assert [row["status"] for row in query_by_call_id("fc-EXPIRED", path=ledger)] == [
+        "dispatched",
+        "stale",
+    ]
+
+
+def test_harvest_one_call_function_timeout_appends_failed_call_id_ledger(
+    tmp_path,
+    monkeypatch,
+):
+    """Modal function timeout is terminal failed, not an in-flight poll timeout."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "fn_timeout", "fc-FNTIMEOUT", harvested=False)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-FNTIMEOUT", lane_id="lane_fn_timeout")
+
+    class FunctionTimeoutError(Exception):
+        pass
+
+    _install_fake_modal(
+        monkeypatch,
+        FunctionTimeoutError("timeout"),
+        function_timeout_cls=FunctionTimeoutError,
+    )
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "function_timeout"
+    assert [row["status"] for row in query_by_call_id("fc-FNTIMEOUT", path=ledger)] == [
+        "dispatched",
+        "failed",
+    ]
+
+
+def test_harvest_one_call_poll_timeout_does_not_terminalize_call_id_ledger(
+    tmp_path,
+    monkeypatch,
+):
+    """Plain poll timeout remains in-flight and does not append terminal state."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "notready", "fc-NOTREADY", harvested=False)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-NOTREADY", lane_id="lane_notready")
+    _install_fake_modal(monkeypatch, TimeoutError("still running"))
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "not_ready"
+    assert [row["status"] for row in query_by_call_id("fc-NOTREADY", path=ledger)] == [
+        "dispatched"
+    ]
+
+
+def test_harvest_one_call_already_harvested_backfills_call_id_ledger(tmp_path):
+    """Already-harvested local state still mirrors terminal state to the ledger."""
+
+    from tac.deploy.modal.call_id_ledger import query_by_call_id
+
+    results = tmp_path / "experiments" / "results"
+    _make_lane_metadata(results, "done", "fc-DONE", harvested=True)
+    lane_row = actuator.discover_inflight_modal_lanes(repo_root=tmp_path)[0]
+    ledger = _register_call_id(tmp_path, "fc-DONE", lane_id="lane_done")
+
+    out = actuator._harvest_one_call(
+        lane_row=lane_row,
+        repo_root=tmp_path,
+        per_call_timeout_seconds=1.0,
+        append_posterior=False,
+    )
+
+    assert out["harvest_status"] == "already_harvested"
+    assert out["call_id_ledger"]["appended"] is True
+    assert [row["status"] for row in query_by_call_id("fc-DONE", path=ledger)] == [
+        "dispatched",
+        "harvested",
+    ]
 
 
 def test_fan_out_harvest_per_call_error_does_not_kill_batch(tmp_path, monkeypatch):

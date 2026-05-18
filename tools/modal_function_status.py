@@ -40,6 +40,7 @@ def inspect_function_call(
     if modal_module is None:
         import modal as modal_module  # type: ignore[no-redef]
 
+    # HARVESTER_LEDGER_WRITE_OK: read-only inspection helper; canonical recover/harvest tools own terminal ledger writes.
     fc = modal_module.functions.FunctionCall.from_id(function_call_id)
     payload: dict[str, Any] = {
         "schema_version": "modal_function_status_v1",

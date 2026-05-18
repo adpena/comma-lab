@@ -55,7 +55,6 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import json
-import os
 import sys
 import threading
 from datetime import UTC, datetime
@@ -418,6 +417,37 @@ def build_contest_result_row(
 _POSTERIOR_THREAD_LOCK = threading.Lock()
 
 
+def _append_terminal_call_id_ledger_safely(
+    *,
+    repo_root: Path,
+    lane_row: dict[str, Any],
+    harvested: dict[str, Any] | None,
+    terminal_claim: dict[str, Any] | None,
+    agent: str,
+) -> dict[str, Any]:
+    """Mirror terminal Modal harvest state into the canonical call-id ledger."""
+
+    try:
+        ensure_repo_imports(repo_root)
+        from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event
+    except Exception as exc:
+        return {
+            "appended": False,
+            "reason": f"call_id_ledger_helper_import_failed:{type(exc).__name__}:{exc}",
+            "call_id": lane_row.get("call_id"),
+        }
+    metadata = dict(lane_row)
+    if "dispatched_at_utc" not in metadata and "dispatched_at" in metadata:
+        metadata["dispatched_at_utc"] = metadata.get("dispatched_at")
+    return append_terminal_call_id_ledger_event(
+        repo_root=repo_root,
+        metadata=metadata,
+        harvested=harvested,
+        terminal_claim=terminal_claim,
+        agent=agent,
+    )
+
+
 def _harvest_one_call(
     *,
     lane_row: dict[str, Any],
@@ -441,7 +471,6 @@ def _harvest_one_call(
     out_dir = Path(lane_row["out_dir"])
     artifacts_dir = out_dir / "harvested_artifacts"
     call_id = lane_row["call_id"]
-    label = lane_row["label"]
     base: dict[str, Any] = {
         **lane_row,
         "harvest_status": "unknown",
@@ -449,6 +478,7 @@ def _harvest_one_call(
         "score_claim": None,
         "custody_accepted": None,
         "posterior_update": None,
+        "call_id_ledger": None,
         "error": None,
     }
 
@@ -458,6 +488,14 @@ def _harvest_one_call(
         summary_path = artifacts_dir / "_harvest_summary.json"
         if summary_path.is_file():
             base["harvest_summary"] = _read_json(summary_path)
+        terminal_claim = _read_json(out_dir / "modal_training_terminal_claim.json")
+        base["call_id_ledger"] = _append_terminal_call_id_ledger_safely(
+            repo_root=repo_root,
+            lane_row=lane_row,
+            harvested=base["harvest_summary"],
+            terminal_claim=terminal_claim,
+            agent="codex:parallel_harvest_actuator",
+        )
         extracted = extract_score_claim_from_harvested_dir(out_dir)
         base["score_claim"] = extracted
         if extracted is not None:
@@ -486,6 +524,38 @@ def _harvest_one_call(
     try:
         fc = modal.functions.FunctionCall.from_id(call_id)
         result = fc.get(timeout=per_call_timeout_seconds)
+    except modal.exception.OutputExpiredError:
+        base["harvest_status"] = "expired"
+        base["harvest_summary"] = {
+            "status": "expired",
+            "crash_kind": "RESULT_CACHE_EXPIRED",
+            "n_artifacts": 0,
+        }
+        base["call_id_ledger"] = _append_terminal_call_id_ledger_safely(
+            repo_root=repo_root,
+            lane_row=lane_row,
+            harvested=base["harvest_summary"],
+            terminal_claim=None,
+            agent="codex:parallel_harvest_actuator",
+        )
+        return base
+    except modal.exception.FunctionTimeoutError as exc:
+        base["harvest_status"] = "function_timeout"
+        base["harvest_summary"] = {
+            "status": "function_timeout",
+            "error_type": type(exc).__name__,
+            "error_message": str(exc)[:1000],
+            "crash_kind": "FUNCTION_TIMEOUT",
+            "n_artifacts": 0,
+        }
+        base["call_id_ledger"] = _append_terminal_call_id_ledger_safely(
+            repo_root=repo_root,
+            lane_row=lane_row,
+            harvested=base["harvest_summary"],
+            terminal_claim=None,
+            agent="codex:parallel_harvest_actuator",
+        )
+        return base
     except TimeoutError:
         base["harvest_status"] = "not_ready"
         return base
@@ -503,6 +573,13 @@ def _harvest_one_call(
         "n_artifacts": len(result.get("artifacts", {}) if isinstance(result, dict) else {}),
         "stdout_tail": (result.get("stdout_tail", "") if isinstance(result, dict) else "")[-500:],
     }
+    base["call_id_ledger"] = _append_terminal_call_id_ledger_safely(
+        repo_root=repo_root,
+        lane_row=lane_row,
+        harvested=base["harvest_summary"],
+        terminal_claim=None,
+        agent="codex:parallel_harvest_actuator",
+    )
     # The canonical artifact-write path is in harvest_modal_calls.py; we
     # surface that the canonical tool should be invoked for full custody.
     # Do NOT duplicate artifact-write logic here — the actuator's job is
@@ -617,7 +694,7 @@ def fan_out_harvest(
                     }
         except concurrent.futures.TimeoutError:
             # Mark all unfinished as "timeout_executor"
-            for future, index in future_to_index.items():
+            for _future, index in future_to_index.items():
                 if results[index] is None:
                     row = lane_rows[index]
                     results[index] = {
@@ -718,7 +795,7 @@ def _print_plan(
 ) -> None:
     inflight_modal = sum(1 for r in lane_rows if not r["harvested"])
     print(
-        f"=== parallel_harvest_actuator (read-only plan; pass --execute to fan out) ==="
+        "=== parallel_harvest_actuator (read-only plan; pass --execute to fan out) ==="
     )
     print(
         f"Modal lanes:          {len(lane_rows)} total ({inflight_modal} pending, "

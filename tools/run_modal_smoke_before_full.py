@@ -113,6 +113,7 @@ _REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(_REPO_ROOT)
 
 from tac.auth_eval_result import parse_auth_eval_score_claim  # noqa: E402
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
 
 DEFAULT_SMOKE_EPOCHS = 100
 DEFAULT_SMOKE_GPU = "T4"
@@ -982,8 +983,33 @@ def _wait_for_smoke_completion(
         try:
             fn_call = modal.functions.FunctionCall.from_id(call_id)
             result = fn_call.get(timeout=2)
+            if isinstance(result, dict):
+                append_terminal_call_id_ledger_event(
+                    repo_root=repo_root,
+                    metadata={
+                        "call_id": call_id,
+                        "lane_id": "smoke_before_full",
+                        "label": "smoke_before_full",
+                        "platform": "modal",
+                    },
+                    harvested={key: value for key, value in result.items() if key != "artifacts"},
+                    terminal_claim=None,
+                    agent="codex:run_modal_smoke_before_full",
+                )
             return result if isinstance(result, dict) else {"raw": result}
         except modal.exception.OutputExpiredError as exc:
+            append_terminal_call_id_ledger_event(
+                repo_root=repo_root,
+                metadata={
+                    "call_id": call_id,
+                    "lane_id": "smoke_before_full",
+                    "label": "smoke_before_full",
+                    "platform": "modal",
+                },
+                harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+                terminal_claim=None,
+                agent="codex:run_modal_smoke_before_full",
+            )
             print(
                 f"[smoke-before-full] SMOKE call {call_id} expired (24h cache TTL)",
                 file=sys.stderr,

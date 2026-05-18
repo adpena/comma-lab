@@ -169,6 +169,7 @@ from tac.deploy.modal.runtime import (  # noqa: E402
     PYTORCH_CUDA_ALLOC_CONF_VALUE,
     build_contest_cuda_base_image,
 )
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
 
 
 app = modal.App(APP_NAME)
@@ -1645,6 +1646,13 @@ def recover(label: str) -> int:
         fc = modal.functions.FunctionCall.from_id(call_id)
         result = fc.get(timeout=2)
     except modal.exception.OutputExpiredError:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "platform": "modal"},
+            harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+            terminal_claim=None,
+            agent="codex:modal_t1_balle_endtoend",
+        )
         _close_recovery_claim(
             instance_job_id=instance_job_id,
             call_id=call_id,
@@ -1656,6 +1664,17 @@ def recover(label: str) -> int:
         print(f"NOT READY: call_id={call_id} still queued or running. Re-run later.")
         return 4
     except Exception as exc:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "platform": "modal"},
+            harvested={
+                "status": "error_recover_exception",
+                "error_type": type(exc).__name__,
+                "error_message": str(exc)[:1000],
+            },
+            terminal_claim=None,
+            agent="codex:modal_t1_balle_endtoend",
+        )
         _close_recovery_claim(
             instance_job_id=instance_job_id,
             call_id=call_id,
@@ -1664,6 +1683,16 @@ def recover(label: str) -> int:
         )
         return 5
     if not isinstance(result, dict):
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "platform": "modal"},
+            harvested={
+                "status": "error_unexpected_result_type",
+                "error_type": type(result).__name__,
+            },
+            terminal_claim=None,
+            agent="codex:modal_t1_balle_endtoend",
+        )
         _close_recovery_claim(
             instance_job_id=instance_job_id,
             call_id=call_id,
@@ -1739,6 +1768,17 @@ def recover(label: str) -> int:
         call_id=call_id,
         status=status,
         notes=notes,
+    )
+    append_terminal_call_id_ledger_event(
+        repo_root=REPO_ROOT,
+        metadata={**metadata, "call_id": call_id, "platform": "modal"},
+        harvested={
+            key: value
+            for key, value in result.items()
+            if key != "artifacts"
+        },
+        terminal_claim=None,
+        agent="codex:modal_t1_balle_endtoend",
     )
     if close_rc != 0:
         return 6

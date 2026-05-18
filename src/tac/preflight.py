@@ -2101,6 +2101,14 @@ def preflight_all(
         check_modal_dispatches_register_call_id(
             strict=True, verbose=verbose,
         )
+        # 2026-05-18 Catalog #330 (MODAL-HARVESTER-CALL-ID-OUTCOME-LEDGER):
+        # every Modal harvester/recovery surface that polls
+        # `FunctionCall.from_id(...).get(...)` MUST mirror terminal outcomes
+        # into the canonical Modal call-id ledger. This is the harvest-side
+        # sister of Catalog #245's dispatch-side call-id registration guard.
+        check_modal_harvesters_record_call_id_outcome(
+            strict=True, verbose=verbose,
+        )
         # 2026-05-15 Catalog #246. Paired Modal auth-eval callers should use
         # the anchor-skip flag so an existing promotable per-axis anchor does
         # not trigger redundant CPU/CUDA spend. Warn-only at landing; live
@@ -55662,6 +55670,128 @@ def check_modal_dispatches_register_call_id(
             "register the call_id in the canonical ledger. Per CLAUDE.md "
             "'Modal `.spawn()` HARVEST OR LOSE' non-negotiable + Catalog "
             "#245 (canonical Modal call_id ledger):\n  "
+            + "\n  ".join(v[:400] for v in violations[:5])
+        )
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Catalog #330 (MODAL-HARVESTER-CALL-ID-OUTCOME-LEDGER 2026-05-18)
+# Modal FunctionCall.get harvesters must record terminal call_id outcomes.
+# ─────────────────────────────────────────────────────────────────────────
+
+_CHECK_330_OUTCOME_TOKENS: tuple[str, ...] = (
+    "append_terminal_call_id_ledger_event",
+    "_append_call_id_ledger_terminal_event",
+    "_append_terminal_call_id_ledger_safely",
+    "update_call_id_outcome",
+)
+_CHECK_330_WAIVER_MARKER = "HARVESTER_LEDGER_WRITE_OK"
+_CHECK_330_SCAN_DIRS: tuple[str, ...] = ("experiments", "tools", "scripts", "src/tac")
+_CHECK_330_CANONICAL_FILES: frozenset[str] = frozenset(
+    {
+        "src/tac/deploy/modal/harvest_outcomes.py",
+        "src/tac/preflight.py",
+    }
+)
+
+
+def _check_330_has_nonplaceholder_waiver(text: str) -> bool:
+    for line in text.splitlines():
+        if _CHECK_330_WAIVER_MARKER not in line:
+            continue
+        after = line.split(_CHECK_330_WAIVER_MARKER, 1)[1].lstrip(":").strip()
+        if after and after not in {"<rationale>", "<reason>"}:
+            return True
+    return False
+
+
+def _check_330_line_is_comment_or_literal(line: str) -> bool:
+    stripped = line.lstrip()
+    return "``" in line or stripped.startswith(("#", '"', "'", "f\"", "f'", "r\"", "r'"))
+
+
+def check_modal_harvesters_record_call_id_outcome(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #330 — Modal harvesters must terminalize call_id outcomes.
+
+    Refuses any production source file under ``experiments/``, ``tools/``,
+    ``scripts/``, or ``src/tac/`` that polls a Modal call via
+    ``FunctionCall.from_id(...).get(...)`` without using the canonical terminal
+    outcome helper or a visible ``HARVESTER_LEDGER_WRITE_OK:<rationale>``
+    waiver.
+
+    This is the harvest-side sister of Catalog #245. Registering a call_id at
+    dispatch time is insufficient if a later harvester can observe terminal
+    provider state and leave the canonical ledger in ``dispatched`` forever.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    for rel_dir in _CHECK_330_SCAN_DIRS:
+        scan_dir = root / rel_dir
+        if not scan_dir.is_dir():
+            continue
+        for py in scan_dir.rglob("*.py"):
+            rel = str(py.relative_to(root))
+            if rel in _CHECK_330_CANONICAL_FILES:
+                continue
+            if "/tests/" in rel or py.name.startswith("test_"):
+                continue
+            if (
+                "experiments/results/" in rel
+                or "_intake_" in rel
+                or "/.omx/oss_export/" in rel
+                or "/build/lib/" in rel
+            ):
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            lines = text.splitlines()
+            for lineno, line in enumerate(lines):
+                if "FunctionCall.from_id" not in line:
+                    continue
+                if _check_330_line_is_comment_or_literal(line):
+                    continue
+                # Harvester terminalization often happens after artifact writes,
+                # terminal-claim evidence, and summary construction. Keep this
+                # bounded to the surrounding harvest block rather than the
+                # entire file.
+                window = "\n".join(lines[max(0, lineno - 20) : min(len(lines), lineno + 180)])
+                if ".get(" not in window:
+                    continue
+                if any(token in window for token in _CHECK_330_OUTCOME_TOKENS):
+                    continue
+                if _check_330_has_nonplaceholder_waiver(window):
+                    continue
+                violations.append(
+                    f"{rel}:{lineno + 1} — Modal FunctionCall.from_id(...).get(...) "
+                    "harvester does not record terminal outcomes in the canonical "
+                    "call_id ledger. Use `tac.deploy.modal.harvest_outcomes."
+                    "append_terminal_call_id_ledger_event(...)`, call "
+                    "`update_call_id_outcome(...)`, or add "
+                    "`# HARVESTER_LEDGER_WRITE_OK:<rationale>`."
+                )
+
+    if verbose:
+        print(
+            f"check_modal_harvesters_record_call_id_outcome: "
+            f"{len(violations)} violations"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "check_modal_harvesters_record_call_id_outcome found "
+            f"{len(violations)} Modal harvester(s) that can observe terminal "
+            "FunctionCall state without mirroring it to the canonical call_id "
+            "ledger. Per Catalog #330 + Catalog #245, every terminal Modal "
+            "call_id lifecycle must be append-only recoverable:\n  "
             + "\n  ".join(v[:400] for v in violations[:5])
         )
     return violations

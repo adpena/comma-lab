@@ -35,6 +35,7 @@ from tac.deploy.modal.auth_eval import (
     ModalArtifactWriteError,
     materialize_modal_artifacts,
 )
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event
 
 
 def label_from_modal_result_dir(dirname: str) -> str:
@@ -276,6 +277,18 @@ def recover_one(label: str | None, call_id: str | None) -> int:
         print_still_running_guidance(call_id, label=label)
         return 0
     except modal.exception.OutputExpiredError:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={
+                "call_id": call_id,
+                "lane_id": label or call_id,
+                "label": label or call_id,
+                "platform": "modal",
+            },
+            harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+            terminal_claim=None,
+            agent="codex:modal_recover_lane",
+        )
         if label:
             expired_out_dir = REPO_ROOT / "experiments" / "results" / f"lane_{label}_modal"
             _print_terminal_claim_summary(
@@ -289,6 +302,21 @@ def recover_one(label: str | None, call_id: str | None) -> int:
         return 3
 
     if not isinstance(result, dict):
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={
+                "call_id": call_id,
+                "lane_id": label or call_id,
+                "label": label or call_id,
+                "platform": "modal",
+            },
+            harvested={
+                "status": "error_unexpected_result_type",
+                "error_type": type(result).__name__,
+            },
+            terminal_claim=None,
+            agent="codex:modal_recover_lane",
+        )
         print(f"  unexpected result type: {type(result)}", file=sys.stderr)
         return 4
 
@@ -327,6 +355,18 @@ def recover_one(label: str | None, call_id: str | None) -> int:
                 status="failed_modal_training_invalid_artifacts",
             )
         )
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={
+                "call_id": call_id,
+                "lane_id": label or call_id,
+                "label": label or call_id,
+                "platform": "modal",
+            },
+            harvested=failure,
+            terminal_claim=None,
+            agent="codex:modal_recover_lane",
+        )
         print(
             "  FATAL: Modal returned unsafe or malformed artifacts; "
             f"wrote fail-closed summary to {out_dir / 'modal_recover_summary.json'}",
@@ -361,6 +401,18 @@ def recover_one(label: str | None, call_id: str | None) -> int:
             out_dir=out_dir,
             result=result,
         )
+    )
+    append_terminal_call_id_ledger_event(
+        repo_root=REPO_ROOT,
+        metadata={
+            "call_id": call_id,
+            "lane_id": label or call_id,
+            "label": label or call_id,
+            "platform": "modal",
+        },
+        harvested={key: value for key, value in result.items() if key != "artifacts"},
+        terminal_claim=None,
+        agent="codex:modal_recover_lane",
     )
 
     # Extract score from artifacts

@@ -32,6 +32,7 @@ from pathlib import Path
 import modal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 EXPECTED_PFP16_SHA256 = "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
 EXPECTED_PFP16_BYTES = 686635
 RESULT_ROOT = REPO_ROOT / "experiments/results/modal_component_sensitivity"
@@ -39,6 +40,8 @@ APP_NAME = "comma-component-sensitivity"
 REMOTE_PYTHONPATH = "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact"
 
 app = modal.App(APP_NAME)
+
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -588,9 +591,54 @@ def recover(label: str) -> int:
         except TimeoutError:
             pending.append(shard_index)
             continue
-        if not isinstance(result, dict):
+        except modal.exception.OutputExpiredError:
+            append_terminal_call_id_ledger_event(
+                repo_root=REPO_ROOT,
+                metadata={
+                    "call_id": str(call_id),
+                    "lane_id": f"component_sensitivity_{label}",
+                    "label": f"{label}_shard_{shard_index:02d}",
+                    "platform": "modal",
+                    "gpu": str(payload.get("gpu", "")),
+                },
+                harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+                terminal_claim=None,
+                agent="codex:modal_component_sensitivity_shards",
+            )
             failed.append(shard_index)
             continue
+        if not isinstance(result, dict):
+            append_terminal_call_id_ledger_event(
+                repo_root=REPO_ROOT,
+                metadata={
+                    "call_id": str(call_id),
+                    "lane_id": f"component_sensitivity_{label}",
+                    "label": f"{label}_shard_{shard_index:02d}",
+                    "platform": "modal",
+                    "gpu": str(payload.get("gpu", "")),
+                },
+                harvested={
+                    "status": "error_unexpected_result_type",
+                    "error_type": type(result).__name__,
+                },
+                terminal_claim=None,
+                agent="codex:modal_component_sensitivity_shards",
+            )
+            failed.append(shard_index)
+            continue
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={
+                "call_id": str(call_id),
+                "lane_id": f"component_sensitivity_{label}",
+                "label": f"{label}_shard_{shard_index:02d}",
+                "platform": "modal",
+                "gpu": str(payload.get("gpu", "")),
+            },
+            harvested={key: value for key, value in result.items() if key != "artifacts"},
+            terminal_claim=None,
+            agent="codex:modal_component_sensitivity_shards",
+        )
         shard_dir = RESULT_ROOT / label / f"shard_{shard_index:02d}"
         shard_dir.mkdir(parents=True, exist_ok=True)
         for name, data in result.get("artifacts", {}).items():

@@ -69,7 +69,7 @@ def run_ruff_undefined_name(staged: list[str]) -> int:
         return 0
     try:
         result = subprocess.run(
-            [".venv/bin/ruff", "check", "--select", "F821", "--no-cache", *staged],
+            [".venv/bin/ruff", "check", "--force-exclude", "--select", "F821", "--no-cache", *staged],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,

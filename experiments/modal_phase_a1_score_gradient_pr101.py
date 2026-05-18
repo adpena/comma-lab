@@ -174,6 +174,7 @@ from tac.deploy.modal.runtime import (  # noqa: E402
     PYTORCH_CUDA_ALLOC_CONF_VALUE,
     build_contest_cuda_base_image,
 )
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -2213,6 +2214,13 @@ def recover(label: str) -> int:
         fc = modal.functions.FunctionCall.from_id(call_id)
         result = fc.get(timeout=2)
     except modal.exception.OutputExpiredError:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "platform": "modal"},
+            harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+            terminal_claim=None,
+            agent="codex:modal_phase_a1_score_gradient_pr101",
+        )
         print(f"FATAL: Modal result cache EXPIRED for call_id={call_id} (>24h since dispatch)")
         close_rc = _close_modal_expired_claim(
             instance_job_id=instance_job_id,
@@ -2226,6 +2234,17 @@ def recover(label: str) -> int:
         print(f"NOT READY: call_id={call_id} still queued or running. Re-run later.")
         return 4
     except Exception as exc:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "platform": "modal"},
+            harvested={
+                "status": "error_recover_exception",
+                "error_type": type(exc).__name__,
+                "error_message": str(exc)[:1000],
+            },
+            terminal_claim=None,
+            agent="codex:modal_phase_a1_score_gradient_pr101",
+        )
         print(f"FATAL: recover failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         close_rc = _close_modal_exception_claim(
             instance_job_id=instance_job_id,
@@ -2304,6 +2323,17 @@ def recover(label: str) -> int:
         "lane_tag": evidence["lane_tag"],
         "tag": summary.get("tag"),
     })
+    append_terminal_call_id_ledger_event(
+        repo_root=REPO_ROOT,
+        metadata={**metadata, "call_id": call_id, "platform": "modal"},
+        harvested={
+            key: value
+            for key, value in result.items()
+            if key != "artifacts"
+        },
+        terminal_claim=None,
+        agent="codex:modal_phase_a1_score_gradient_pr101",
+    )
     print(f"[recover] summary saved: {summary_path}")
     close_rc = _close_modal_recovery_claim(
         instance_job_id=instance_job_id,

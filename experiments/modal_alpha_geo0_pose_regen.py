@@ -37,6 +37,7 @@ from typing import Any
 import modal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 REMOTE_REPO = Path("/workspace/pact")
 REMOTE_PYTHONPATH = f"{REMOTE_REPO / 'src'}:{REMOTE_REPO / 'upstream'}:{REMOTE_REPO}"
 REMOTE_OUT_ROOT = Path("/tmp/modal_alpha_geo0_pose_regen")
@@ -60,6 +61,7 @@ MASK_H = 384
 MASK_W = 512
 
 app = modal.App(APP_NAME)
+from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
 
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -1282,8 +1284,28 @@ def recover(label: str) -> int:
     except TimeoutError:
         print(json.dumps({"label": label_safe, "status": "pending", "call_id": call_id}, indent=2, sort_keys=True))
         return 1
+    except modal.exception.OutputExpiredError:
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "label": label_safe, "platform": "modal"},
+            harvested={"status": "expired", "crash_kind": "RESULT_CACHE_EXPIRED"},
+            terminal_claim=None,
+            agent="codex:modal_alpha_geo0_pose_regen",
+        )
+        print(f"FATAL: Modal result cache EXPIRED for call_id={call_id}", file=sys.stderr)
+        return 5
 
     if not isinstance(result, dict):
+        append_terminal_call_id_ledger_event(
+            repo_root=REPO_ROOT,
+            metadata={**metadata, "call_id": call_id, "label": label_safe, "platform": "modal"},
+            harvested={
+                "status": "error_unexpected_result_type",
+                "error_type": type(result).__name__,
+            },
+            terminal_claim=None,
+            agent="codex:modal_alpha_geo0_pose_regen",
+        )
         print(f"FATAL: Modal result for {call_id} was not a dict", file=sys.stderr)
         return 3
 
@@ -1304,6 +1326,13 @@ def recover(label: str) -> int:
     summary["saved_artifacts"] = saved
     summary["result_dir"] = str(out_dir)
     _write_json(out_dir / "modal_alpha_geo0_result_summary.json", summary)
+    append_terminal_call_id_ledger_event(
+        repo_root=REPO_ROOT,
+        metadata={**metadata, "call_id": call_id, "label": label_safe, "platform": "modal"},
+        harvested=summary,
+        terminal_claim=None,
+        agent="codex:modal_alpha_geo0_pose_regen",
+    )
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0 if result.get("passed") else int(result.get("returncode") or 1)
 
