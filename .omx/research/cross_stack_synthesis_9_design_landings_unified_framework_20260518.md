@@ -751,3 +751,222 @@ Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" non-negotiab
 
 ---
 
+## 10. Cargo-Cult Audit per Shared Assumption (Catalog #303)
+
+Per CLAUDE.md "Forbidden premature KILL" + Catalog #303 (`check_substrate_design_memo_has_cargo_cult_audit_section`): every substrate design memo MUST audit cargo-culted assumptions. The synthesis identifies SHARED assumptions across the 9 designs and classifies them HARD-EARNED vs CARGO-CULTED per the HARD-EARNED-vs-CARGO-CULTED addendum.
+
+### 10.1 Shared assumption: "PR101_lc_v2 anchor IS the canonical empirical surface"
+
+**Classification**: HARD-EARNED.
+
+**Rationale**: Per Codex 2026-05-18 master-gradient canonical helper landing + Catalog #318/#327 self-protection: the per-pair fp64 master-gradient extraction on PR101_lc_v2 IS the only canonical fp64 master-gradient anchor on a contest-faithful substrate (frontier `0.19205 [contest-CPU]` fec6 is BUILT from PR101_lc_v2 per `reports/latest.md` FRONTIER section).
+
+**Risk**: single-anchor evidence. OP-SYN-1 (extend extraction to 6 archives) resolves the single-anchor risk by providing cross-substrate comparison. Until OP-SYN-1 lands, the synthesis' per-design predictions carry single-anchor uncertainty.
+
+**Reactivation criterion**: post-OP-SYN-1 landing, if cross-substrate Fisher conditioning verdicts diverge significantly from PR101_lc_v2's (e.g. C6 IBPS's 24-dim IB bottleneck creates Fisher-near-singularity per FISHER design memo MacKay binding revision), the synthesis predictions reweight per-substrate.
+
+### 10.2 Shared assumption: "Cheap-probe family is THE highest-EV near-frontier move"
+
+**Classification**: HARD-EARNED.
+
+**Rationale**: Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" + the 2026-05-04 race postmortem + Hotz binding revision in pose-axis T3 council + cargo-cult resurrection TOP-3 wave Hotz Revision #6: cheapest-signal-first sequencing is empirically validated at zero-provider-spend by sister waves (LFV1 telescope foveation candidate 2026-05-13; cargo-cult resurrection wave 2026-05-17 cheap-probe family).
+
+**Risk**: cheap probes may produce false-positive frontier-breaking signals that don't compose into full Tier-1 / Tier-2 cascades. The cross-pollination matrix Section 4's SUB cells (FISHER → TROP; RIEM → TROP; TT5L V2 → CCREZ; Z8 → TT5L V2) are the canonical risk surface — sub-additive composition means cheap-probe individual ΔS doesn't sum to Tier-1 cascade ΔS.
+
+**Reactivation criterion**: per-OP empirical anchor post-cheap-probe landing demonstrates ≥ predicted lower-bound ΔS; if EITHER OP-SYN-4 (POSEAXIS cheap-probe wave) OR OP-SYN-5 (C6 IBPS Path B2) lands below predicted lower bound, REVERT to single-anchor single-probe sequencing per CLAUDE.md "Forbidden premature KILL without research exhaustion" non-negotiable.
+
+### 10.3 Shared assumption: "Substrate-class-shift requires Z8 / TT5L V2-class redesigns"
+
+**Classification**: CARGO-CULTED-PENDING-EMPIRICAL per cargo-cult resurrection symposium recommendations.
+
+**Rationale**: Per the cargo-cult resurrection TOP-3 wave + sister symposiums: V1 Faiss V5 wavelet-multi-scale + C6 IBPS Path B2 RSSM categorical + NSCS06 v8 Variant C surgical-addition are LIGHTER-WEIGHT substrate-class-shift candidates than Z8 / TT5L V2-class redesigns. The classification of "substrate-class-shift REQUIRES heavy-weight 4-primitive composition (Z8) OR full-redesign (TT5L V2)" is CARGO-CULTED — the cargo-cult resurrection wave demonstrates that LIGHTER substrate-class-shift candidates exist at $5-15 envelope rather than $150-250.
+
+**Risk**: heavy-weight Tier-2 substrate-class-shift candidates (Z8, TT5L V2) may indeed produce higher aggregate ΔS than lighter cargo-cult resurrection candidates IF their conjunction composes additively. Per Catalog #322 anti-additive evidence (4/8 probed substrate-pair α-pairs sub-additive), the additive-composition assumption is itself CARGO-CULTED — sub-additive composition means heavy-weight substrates may underperform their additive prediction.
+
+**Reactivation criterion**: cargo-cult resurrection wave Week 5 lands ≥1 PROCEED-unconditional anchor on V1 Faiss V5 OR C6 IBPS Path B2; IF lands, defer Z8 / TT5L V2 heavy-weight builds to Week 8+; IF cargo-cult resurrection wave falsifies (all 3 below predicted lower bound), escalate Z8 / TT5L V2 to Week 6+.
+
+### 10.4 Shared assumption: "Composition_alpha across 9 designs averages to additive"
+
+**Classification**: CARGO-CULTED-PENDING-EMPIRICAL (most likely sub-additive per Catalog #322 anti-additive evidence).
+
+**Rationale**: Per Catalog #322 anti-phantom composition_alpha + sister #823 SUPER_ADDITIVE landing 2026-05-17 v2 cascade bounded reward `[1.0, 2.0]`: 4-of-8 probed substrate-pair α-pairs are sub-additive (α < 1.0); pure-additive (α ≈ 1.0) is empirically RARE.
+
+The cross-pollination matrix Section 4 reflects this: 9 of 72 off-diagonal cells are SUB (sub-additive); 2 of 72 are ADD (additive). The aggregate predicted ΔS band per Section 13 reflects sub-additive composition.
+
+**Risk**: cherry-picking additive-only cells would inflate the predicted aggregate ΔS. Per Boyd's Dykstra-feasibility binding Revision #4: the realistic LOWER BOUND on aggregate ΔS is the Dykstra-projection on the 9-dimensional constraint polytope, NOT additive sum.
+
+**Reactivation criterion**: per Catalog #322 sister #823 deliverability_proof: every α prediction MUST cite a deliverability_proof artifact (per-pair gradient artifact path); aggregate α estimates that don't cite deliverability_proofs are CARGO-CULTED. The synthesis predicted aggregate band per Section 13 cites Catalog #322 anti-phantom protection AND applies Dykstra-feasibility per Boyd's binding revision.
+
+### 10.5 Shared assumption: "Theoretical floor band [0.026, 0.080] is reachable via Tier-1 + Tier-2 cascade"
+
+**Classification**: HARD-EARNED-WITH-REVISION per FLOOR design memo §0 TL;DR (3 anchors agree PLATEAU CONFIRMED HIGH).
+
+**Rationale**: Per FLOOR design memo §0: "PLATEAU CONFIRMED HIGH; theoretical floor band [0.026, 0.080] for the rate-conservative regime; frontier sits 2.4× to 7.4× above this floor; gap is structurally PLATEAU shape (the gap is dominated by rate-term reducibility + pose-term reducibility that the current paradigm does not unlock), not SATURATION shape."
+
+**Risk**: theoretical floor is RATE-CONSERVATIVE regime (archive size ≤ 200,000 bytes). If Tier-2 substrate-class-shift candidates (Z8 / TT5L V2) inflate archive size beyond 200,000 bytes, the floor MOVES per the rate-term contribution (Z8's predicted ~73 KB + TT5L V2's predicted ~35-40 KB + DP1's predicted ~70 KB = ~178 KB if stacked — within rate-conservative regime; but Z8's $150-250 envelope per Tao binding revision suggests larger archives in practice).
+
+**Reactivation criterion**: per FLOOR OP-4 (per-archive theoretical-floor re-measurement): emit floor-distance manifest at `.omx/state/theoretical_floor_distance/floor_<archive_sha[:12]>_<utc>.json` on every new master-gradient anchor. If post-Tier-2 archives MOVE the floor (rate-term inflation), the synthesis predicted aggregate band reweights per the moved floor.
+
+### 10.6 Shared assumption: "Pose-axis is the dominant marginal value at PR106 frontier"
+
+**Classification**: HARD-EARNED.
+
+**Rationale**: Per CLAUDE.md "SegNet vs PoseNet importance — operating-point dependent" non-negotiable (verified 2026-05-04): at pose_avg = 3.4e-5 (PR106 frontier operating point), the pose marginal coefficient is 271 vs SegNet 100 = 2.71×. Below pose_avg crossover threshold 2.5e-4, pose marginal dominates. Empirical receipt: `docs/pr97_anti_pattern_pose_vs_seg_marginal_20260504.md` + `docs/pr_family_evolution_timeline_20260504.md`.
+
+**Risk**: at the PR101 fec6 frontier `0.19205 [contest-CPU]`, the operating point may differ from PR106 format0d (`0.20533 [contest-CUDA T4]`). The 2026-05-04 verification was on PR106 specifically; PR101 fec6 may have different pose_avg per Section 6.2 anchor consumption.
+
+**Reactivation criterion**: OP-SYN-1 (extend extraction to 6 archives) provides per-substrate pose_avg estimates; if PR101 fec6's pose_avg differs significantly from PR106 format0d's 3.4e-5 (e.g. pose_avg ≥ 2.5e-4 crossover threshold), the synthesis pose-axis-priority sequencing reweights per the per-substrate operating point.
+
+### 10.7 Aggregate cargo-cult audit verdict
+
+- **2 of 6 shared assumptions are HARD-EARNED**: PR101_lc_v2 anchor canonicity; cheap-probe family EV.
+- **1 of 6 shared assumptions is HARD-EARNED-WITH-REVISION**: theoretical floor reachability.
+- **1 of 6 shared assumptions is HARD-EARNED**: pose-axis dominance at PR106 frontier (with caveat for PR101 fec6 operating point).
+- **2 of 6 shared assumptions are CARGO-CULTED-PENDING-EMPIRICAL**: substrate-class-shift requires heavy-weight; composition_alpha averages to additive.
+
+**Per Catalog #303 + Catalog #294 9-dim checklist evidence**: the 2 CARGO-CULTED assumptions are surfaced explicitly with reactivation criteria. The synthesis predicted aggregate band per Section 13 applies CONSERVATIVE projection (sub-additive composition + heavy-weight substrate-class-shift deferred to Week 6+ pending cargo-cult resurrection wave outcome).
+
+---
+
+## 11. 9-Dimension Success Checklist Evidence (Catalog #294)
+
+Per CLAUDE.md "9-DIMENSION SUCCESS CHECKLIST EVIDENCE SECTION" standing directive 2026-05-15 + Catalog #294 (`check_substrate_landing_memo_has_9_dim_checklist_evidence_section`): every substrate landing + composition memo MUST document evidence across ALL 9 dimensions.
+
+### 11.1 Dimension 1: UNIQUENESS (class-shift not within-class)
+
+**Evidence**: The synthesis IS a META-class-shift over the 9 designs — it canonicalizes the 4-tier bilevel optimization framework that no single design memo articulates. Per CLAUDE.md "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" non-negotiable: the synthesis is the canonical operator-routing surface for the 9 designs; without it, the 9 designs sit as INDEPENDENT research artifacts.
+
+### 11.2 Dimension 2: BEAUTY + ELEGANCE (PR101-style 30-sec-reviewable)
+
+**Evidence**: The synthesis is structured as a queryable + machine-routable surface per Carmack's binding Revision #3. The 9×9 cross-pollination matrix (Section 4) + canonical task queue (Section 9) + ASCII cross-pollination tree (Section 17 below) are the 30-second-reviewable surfaces. Each numbered op-routable in Section 9 carries concrete file paths + estimated $/hour cost + dependencies + predicted ΔS + EV rank.
+
+### 11.3 Dimension 3: DISTINCTNESS (explicitly different from sisters)
+
+**Evidence**: The synthesis is distinct from the prior synthesis attempt at `.omx/research/comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_20260518.md` (125KB) — this synthesis extends the prior by:
+
+- Adding the 4-tier bilevel optimization framework per Section 5 (NEW vs the prior synthesis' inventory-only framing).
+- Adding the 9×9 cross-pollination matrix per Section 4 (NEW vs the prior synthesis' surface-list-only).
+- Adding the canonical task queue per Section 9 with 10 EV-ranked op-routables per Carmack's binding Revision #3 (NEW vs the prior synthesis' research-only deliverable).
+- Adding the 6-hook wire-in synthesis per Section 8 (NEW vs the prior synthesis' single-design-per-section structure).
+- Anchored on the PR101_lc_v2 master-gradient `f174192aeadf...` per Codex 2026-05-18 landing (NEW vs the prior synthesis' pre-master-gradient anchor structure).
+
+### 11.4 Dimension 4: RIGOR (premise verification + adversarial review + assumption classification + empirical anchor)
+
+**Evidence**:
+- **Premise verification per Catalog #229**: documented in Section 16 (Premise Verification Trail). 9-of-9 design memos read; 9-of-9 frontmatter + verdicts + cost envelopes confirmed; 9-of-9 anchor on PR101_lc_v2.
+- **Adversarial review per Catalog #292**: 4 binding revisions per Contrarian + Assumption-Adversary + Carmack + Boyd documented in Section 0 + full text in Section 14.
+- **Assumption classification per Catalog #303**: 6 shared assumptions classified HARD-EARNED-vs-CARGO-CULTED in Section 10.
+- **Empirical anchor per Catalog #287**: every numeric ΔS prediction carries `[prediction]` axis tag; aggregate band per Section 13 cites Dykstra-feasibility + Catalog #322 anti-additive.
+
+### 11.5 Dimension 5: OPTIMIZATION-PER-TECHNIQUE (covered by Catalog #290 sister gate; synthesis is META-level)
+
+**Evidence**: The synthesis is META-level over the 9 designs; the per-design optimization is documented in each design memo's "Canonical-vs-unique decision per layer" section per Catalog #290 sister gate. The synthesis' own canonical-vs-unique decision IS the 4-tier bilevel framework per Section 5: the framework is UNIQUE (no prior memo canonicalizes the 4-tier bilevel structure); the 6-hook wire-in is CANONICAL (per Catalog #125 mandatory).
+
+### 11.6 Dimension 6: STACK-OF-STACKS-COMPOSABILITY (orthogonal axes + additive ΔS)
+
+**Evidence**: Per the cross-pollination matrix Section 4: 12 of 72 off-diagonal cells are ORTHO; 2 of 72 are ADD. The orthogonality + additive cells define the composable stack-of-stacks structure. The 9-dimensional Pareto polytope per Section 5.2 IS the canonical stack-of-stacks surface; the 9 designs each contribute a constraint that the joint stack respects.
+
+### 11.7 Dimension 7: DETERMINISTIC REPRODUCIBILITY (byte-stable + seed-pinned)
+
+**Evidence**: The synthesis itself is documentation; reproducibility is per the 9 individual designs' implementations. Per CLAUDE.md "Canonical pipeline standard" non-negotiable: all 9 designs MUST use `experiments/pipeline.py` with a profile name; seeds pinned; deterministic CUDA; full provenance JSON.
+
+### 11.8 Dimension 8: EXTREME-OPTIMIZATION + PERFORMANCE
+
+**Evidence**: Per Section 7.2 per-week sequencing: $0-$1 total Week 1 + $0 Week 2 + $0-$1 Week 3-4 + $5-25 Week 5 + $10-50 Week 6+. The cheap-probe-first sequencing per CLAUDE.md "Production-hardened dispatch optimization protocol" non-negotiable extracts maximum information at minimum cost.
+
+### 11.9 Dimension 9: OPTIMAL-MINIMAL-CONTEST-SCORE
+
+**Evidence**: Per Section 13 predicted aggregate ΔS band: REALISTIC `[0.165, 0.185]` per archive frontier-axis shift; OPTIMISTIC `[0.155, 0.175]`. The current frontier `0.19205 [contest-CPU]` moves toward `[0.155, 0.185]` per the canonical task queue Section 9 cascade. Per FLOOR design memo: theoretical floor band `[0.026, 0.080]` — the synthesis predicted band is 2.4-3.4× above the floor, leaving significant headroom for subsequent rounds.
+
+---
+
+## 12. Observability Surface (Catalog #305)
+
+Per CLAUDE.md "Max observability — non-negotiable" + Catalog #305 (`check_substrate_design_memo_has_observability_surface_section`): every substrate design / experiment / tool / canonical helper / dispatch wrapper memo MUST declare its observability surface across the 6 facets.
+
+### 12.1 Facet 1: inspectable per layer
+
+The synthesis exposes every layer of the 4-tier bilevel optimization framework per Section 5:
+- Tier 1 (OUTERMOST) — codec configuration + composition_alpha matrix; inspectable via Section 4 cross-pollination matrix + `.omx/state/substrate_composition_matrix.json`.
+- Tier 2 (MIDDLE) — substrate-class-shift selection; inspectable via per-substrate symposium queue per Catalog #325.
+- Tier 3 (INNER) — per-substrate parameter optimization; inspectable via per-substrate trainer's `tac.substrates._shared.trainer_skeleton.detect_hardware_substrate` + `tac.riemannian_newton_meta_substrate` canonical helper (post-OP-SYN-2 landing).
+- Tier 4 (INNERMOST) — per-pair byte-level granularity; inspectable via `tac.master_gradient_consumers.classify_bytes_by_pair_variance` + `tac.canonical_n_set_venn_classification` (post-OP-SYN-3 landing).
+
+### 12.2 Facet 2: decomposable per signal
+
+The synthesis decomposes the unified action's `S_total` per Section 5.4 into 5 separable Lagrangian terms: `L_data + λ_fisher L_fisher + λ_riem L_riem + λ_trop L_trop + λ_venn L_venn`. Each term is operationally decomposable via the per-design contribution per Section 4 cross-pollination matrix.
+
+### 12.3 Facet 3: diff-able across runs
+
+Per Catalog #131/#138 fcntl-locked JSONL store pattern: every design's canonical posterior at `.omx/state/<design>_anchors.jsonl` is APPEND-ONLY per Catalog #110/#113 HISTORICAL_PROVENANCE. Run-to-run diff via:
+- `.omx/state/master_gradient_anchors.jsonl` (per-archive master-gradient anchors)
+- `.omx/state/fisher_conditioning_anchors.jsonl` (per-archive Fisher conditioning verdicts; post-OP-SYN-2)
+- `.omx/state/n_set_venn_sparsity_atlas/` (per-archive sparsity atlases; post-OP-SYN-3)
+- `.omx/state/tropical_d_seg_anchors.jsonl` (per-archive tropical boundary anchors; post-OP-SYN-7)
+- `.omx/state/riemannian_newton_convergence.jsonl` (per-archive convergence anchors; post-OP-SYN-6)
+- `.omx/state/theoretical_floor_distance/floor_<archive_sha[:12]>_<utc>.json` (per-archive theoretical floor distance manifests; FLOOR OP-4)
+
+### 12.4 Facet 4: queryable post-hoc
+
+All canonical posteriors are JSONL/JSON; queryable via `tac.continual_learning.posterior_update_locked` + `tools/cathedral_autopilot_autonomous_loop.py::query_*` helpers. The synthesis cross-pollination matrix Section 4 is queryable via `tac.optimization.substrate_composition_matrix.classify_pairwise_composability`.
+
+### 12.5 Facet 5: cite-able
+
+Every anchor per Catalog #245 modal_call_id_ledger + per Catalog #131 canonical fcntl-locked discipline carries `(substrate / commit / call_id / config / random_seed / upstream_snapshot_sha256)` tuple. The synthesis cites:
+- Codex 2026-05-18 `tools/extract_master_gradient.py` landing
+- 9 design memos with full sha256 path references
+- Catalog #316 `reports/latest.md` FRONTIER section (`scan_best_anchor_per_axis.py` 2026-05-18T16:18Z)
+
+### 12.6 Facet 6: counterfactual-able
+
+Per Catalog #139 packet compiler no-op detector + Catalog #272 distinguishing-feature integration contract + Catalog #105 no-op provenance: every byte mutation can be probed counterfactually via `tools/verify_distinguishing_feature_byte_mutation.py`. The synthesis predictions per Section 9 op-routables include Catalog #272 byte-mutation smoke as the counterfactual probe (e.g. FISHER OP-4 byte-mutation smoke per Contrarian VETO).
+
+---
+
+## 13. Predicted Aggregate ΔS Band Under Realistic α-Adjusted Composition
+
+Per Boyd's binding Revision #4 + Catalog #322 anti-additive evidence + Catalog #296 Dykstra-feasibility check: the synthesis predicted aggregate band reflects SUB-ADDITIVE composition of the 9 designs' individual ΔS contributions.
+
+### 13.1 Per-tier predicted contribution
+
+| Tier | Designs | Per-archive ΔS additive sum (axis tag `[prediction]`) | α-adjusted ΔS realistic (sub-additive per Catalog #322) | α-adjusted ΔS optimistic |
+|---|---|---|---|---|
+| **Tier 1 (4 designs)** | VENN + FISHER + RIEM + TROP | `-0.055` to `-0.020` (sum of individual bands) | `-0.035` to `-0.015` (sub-additive penalty 0.6× per Catalog #322 4/8 anti-additive rate) | `-0.045` to `-0.018` (best-case orthogonal composition) |
+| **Tier 2 (3 designs)** | Z8 (deferred) + TT5L V2 + CCREZ | `-0.030` to `-0.010` (CCREZ TOP-3 aggregate if all 3 PROCEED; TT5L V2 hypothetical; Z8 deferred) | `-0.018` to `-0.005` (sub-additive penalty 0.6× + Z8 deferred) | `-0.025` to `-0.008` |
+| **Tier 3 (2 designs)** | POSEAXIS + FLOOR | `-0.012` to `-0.003` (POSEAXIS cheap-probe family aggregate + FLOOR verdict-conditional reward) | `-0.008` to `-0.003` | `-0.010` to `-0.003` |
+
+### 13.2 Aggregate predicted band
+
+**Conservative (sum of α-adjusted realistic per-tier)**: `-0.061` to `-0.023` per archive `[prediction]`.
+
+**Realistic (Boyd Dykstra-feasibility convex-intersection projection on 9-dim polytope)**: `-0.040` to `-0.010` per archive `[prediction]`.
+
+**Optimistic (orthogonal composition assumption; rare per Catalog #322)**: `-0.080` to `-0.029` per archive `[prediction]`.
+
+### 13.3 Aggregate frontier trajectory
+
+| Scenario | Frontier band shift from `0.19205 [contest-CPU]` | Resulting frontier band |
+|---|---|---|
+| **CONSERVATIVE** | `-0.040` to `-0.010` (Realistic per-archive × 1 frontier archive) | `[0.182, 0.152]` (lower bound = optimistic; upper bound = baseline minus realistic-low) |
+| **REALISTIC** | `-0.060` to `-0.018` (4 archives composed sub-additively per Catalog #322) | `[0.174, 0.132]` |
+| **OPTIMISTIC** | `-0.090` to `-0.040` (4 archives composed orthogonally; rare) | `[0.152, 0.102]` |
+
+**Per Catalog #324 + Section 0 reactivation criteria**: the predicted band's `validation_status` is `pending_post_training`; reactivation criterion = post-training Tier-C re-measurement on first 4 composition archives (PR101_lc_v2 + A1 + PR106 format0d + sane_hnerv) consuming Tier-1 deterministic-optimizer cascade falls within band 3-of-4.
+
+### 13.4 Per-OP predicted contribution detail (for canonical task queue Section 9)
+
+| OP-SYN-* | Per-archive ΔS (axis tag `[prediction]`) | Confidence (HARD-EARNED / CARGO-CULTED-PENDING) | Notes |
+|---|---|---|---|
+| OP-SYN-1 (anchor extension) | indirect (unlocks all downstream) | HARD-EARNED (Codex landing complete) | gating unlock; EV is in downstream |
+| OP-SYN-2 (Phase 1 FISHER) | Phase 1 ALONE `[-0.015, -0.005]`; CASCADE `[-0.060, -0.019]` | HARD-EARNED-WITH-REVISION per FISHER design memo | depends on Fisher conditioning verdict |
+| OP-SYN-3 (3-set VENN) | `-0.005` per Shannon's H(X\|Y_6-set) lens | HARD-EARNED per Shannon verbatim | per-cell sparsity unlock |
+| OP-SYN-4 (POSEAXIS cheap-probe) | `[-0.007, -0.0025]` aggregate | HARD-EARNED per Catalog #319 Q3 v2 cascade landed | depends on FISHER for Fisher-orthogonal projection |
+| OP-SYN-5 (C6 IBPS Path B2) | `[0.18, 0.45]` if lower bound holds reaches frontier | CARGO-CULTED-PENDING-EMPIRICAL per Catalog #324 | wide band reflects high-variance prediction |
+| OP-SYN-6 (Phase 2 RIEM) | `[-0.025, -0.008]` Phase 2 single-framework | HARD-EARNED-WITH-REVISION per RIEM design memo | depends on Phase 1 Fisher-precondition |
+| OP-SYN-7 (TROP Phase 1) | Phase 1 ALONE `[-0.010, -0.002]`; CASCADE `[-0.040, -0.012]` | HARD-EARNED-WITH-REVISION per TROP design memo | depends on VENN cell structure |
+| OP-SYN-8 (V1 Faiss V5) | `[-0.005, -0.001]` per archive | HARD-EARNED per cargo-cult resurrection sister §5.2 | cheapest cargo-cult resurrection probe |
+| OP-SYN-9 (unified action) | indirect (solver coherence) | CARGO-CULTED-PENDING-EMPIRICAL (post-migration) | deferred to Week 8+ |
+| OP-SYN-10 (POSEAXIS OP-4 + OP-8 symposiums) | gating unlock; downstream `[-0.018, -0.006]` aggregate | HARD-EARNED-WITH-REVISION per pose-axis T3 council | unlocks Week 6+ paid dispatch |
+
+---
+
