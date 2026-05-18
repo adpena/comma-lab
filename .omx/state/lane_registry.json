@@ -38001,11 +38001,11 @@
       "id": "lane_dynamic_per_candidate_composition_framework_20260518",
       "name": "Dynamic per-candidate composition framework",
       "phase": 2.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/dynamic_per_candidate_composition_framework_all_canonical_apparatus_composed_20260518.md (2928 lines master memo) + .omx/research/codex_routing_directive_dynamic_per_candidate_composition_helper_20260518.md (routing directive)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -38028,8 +38028,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/state/council_deliberation_posterior.jsonl T3 grand council anchor dynamic_per_candidate_composition_framework_all_canonical_apparatus_composed_20260518"
         },
         "deploy_runbook": {
           "status": false,
@@ -38087,5 +38087,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T22:16:22Z"
+  "updated_at": "2026-05-18T22:19:22Z"
 }
