@@ -47,8 +47,8 @@ jobs:
 
       - name: Ruff lint (F821 critical, full rule set warnings)
         run: |
-          .venv/bin/ruff check --select F821 src/ experiments/ submissions/robust_current/ scripts/
-          .venv/bin/ruff check src/ || true  # warnings non-blocking initially
+          .venv/bin/ruff check --force-exclude --select F821 src/ experiments/ submissions/robust_current/ scripts/ tools/
+          .venv/bin/ruff check --force-exclude src/ || true  # warnings non-blocking initially
 
       - name: Type check (Astral ty)
         # ty is gradual — fail only on unresolved-reference (NameError class).

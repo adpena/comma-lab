@@ -198,7 +198,10 @@ tac = ["py.typed"]
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-extend-exclude = ["experiments/archive"]  # archived experiments — dead code
+extend-exclude = [
+    "experiments/archive",  # archived experiments — dead code
+    "experiments/results",  # generated custody/artifact trees; canonicalize signal before linting
+]
 
 [tool.ruff.lint]
 select = [
