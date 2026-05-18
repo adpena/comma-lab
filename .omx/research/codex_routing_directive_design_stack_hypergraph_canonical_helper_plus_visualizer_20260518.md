@@ -253,4 +253,18 @@ Standard discipline applies. Codex builds following canonical 4-layer pattern.
 - [ ] DOT export produces valid graphviz output
 - [ ] First `query_orphan_signals()` returns 3 hook-CONSUMER-without-producer flags per cross-stack synthesis §8
 
+## CATALOG # CLARIFICATION (added post multi-loop /goal F landing 2026-05-18 commit 38db94424)
+
+The literal Catalog # numbers cited in this directive (#333 for `check_design_graph_hook_coverage_complete_or_orphans_declared`) are **INFORMATIONAL HINTS at directive-write time**, NOT binding claims. Codex MUST resolve the actual catalog # transactionally at execution time via:
+
+```bash
+.venv/bin/python tools/claim_catalog_number.py claim --commit-via-serializer --reason "Design-stack hypergraph canonical helper STRICT gate"
+```
+
+The canonical helper returns the next available number, committed transactionally per Catalog #186. Substitute the returned number into the gate function name + CLAUDE.md row template + test fixtures + sister directive cross-references. Catalog #118 no-duplicate-numbers protection is structurally extincted by this transactional pattern.
+
+Sister directives with the same informational-hint pattern:
+- `.omx/research/codex_routing_directive_codex_to_claude_inbox_bidirectional_channel_20260518.md` (proposed #331; resolves next-available)
+- `.omx/research/codex_routing_directive_claude_memory_hermetic_export_channel_20260518.md` (proposed #332; #332 CLAIMED by multi-loop /goal F; resolves next-available)
+
 — Main-Claude 2026-05-18 (operator-approved 4-layer canonical pattern + deterministic-byte-derivation META-category first-class per "wyner-ziv is still being considered as part of the seed")

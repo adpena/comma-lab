@@ -317,4 +317,18 @@ After Codex lands this channel, the operator can review Claude's outstanding mem
 
 Claude curates new exports on demand at high-value moments (post-council, post-investigation, post-canonical-fix-landing). The hermetic export channel makes Claude's MEMORY.md knowledge queryable + APPEND-ONLY + auditable for Codex AND CI AND clean clones AND future Claude sessions — without ever requiring external `memory_dir=...` paths.
 
+## CATALOG # CLARIFICATION (added post multi-loop /goal F landing 2026-05-18 commit 38db94424)
+
+The literal Catalog # numbers cited in this directive (#332 for `check_claude_memory_export_citation_chain_traceable`) were INFORMATIONAL HINTS at directive-write time. **#332 has been CLAIMED transactionally** by the multi-loop Codex /goal design memo (commit 38db94424, lane `lane_multi_loop_codex_goal_design_20260518`) for `check_codex_loop_coordination_no_file_collision`. Codex MUST resolve the actual catalog # for THIS directive via:
+
+```bash
+.venv/bin/python tools/claim_catalog_number.py claim --commit-via-serializer --reason "Claude memory hermetic export channel STRICT gate"
+```
+
+The canonical helper returns the next available number (likely #333 or higher at execution time), committed transactionally per Catalog #186. Substitute the returned number into the gate function name + CLAUDE.md row template + test fixtures + sister inbox-channel directive cross-references. Catalog #118 no-duplicate-numbers protection is structurally extincted by this transactional pattern.
+
+Sister directives with the same informational-hint pattern:
+- `.omx/research/codex_routing_directive_codex_to_claude_inbox_bidirectional_channel_20260518.md` (proposed #331; resolves next-available)
+- `.omx/research/codex_routing_directive_design_stack_hypergraph_canonical_helper_plus_visualizer_20260518.md` (proposed #333; resolves next-available)
+
 — Main-Claude 2026-05-18 (relayed on behalf of operator directive "also write the directives for ... the memory hermetic export channel now")

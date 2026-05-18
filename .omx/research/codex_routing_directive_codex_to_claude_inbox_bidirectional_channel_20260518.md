@@ -349,4 +349,18 @@ When Codex hits a NEW design ambiguity that needs Claude's judgment, the operato
 
 Once this channel is operational, the planned /goal v2.5 directive (separate; queued) extends the persistent /goal LOOP step 1 + step 5 + step 7 to use it.
 
+## CATALOG # CLARIFICATION (added post multi-loop /goal F landing 2026-05-18 commit 38db94424)
+
+The literal Catalog # numbers cited in this directive (#331 for `check_codex_inbox_open_questions_have_response_or_default_within_deadline`) are **INFORMATIONAL HINTS at directive-write time**, NOT binding claims. Codex MUST resolve the actual catalog # transactionally at execution time via:
+
+```bash
+.venv/bin/python tools/claim_catalog_number.py claim --commit-via-serializer --reason "Codex→Claude inbox channel STRICT gate"
+```
+
+The canonical helper returns the next available number, committed transactionally per Catalog #186. Substitute the returned number into the gate function name + CLAUDE.md row template + test fixtures + sister memory-export directive cross-references. Catalog #118 no-duplicate-numbers protection is structurally extincted by this transactional pattern.
+
+Sister directives with the same informational-hint pattern:
+- `.omx/research/codex_routing_directive_claude_memory_hermetic_export_channel_20260518.md` (proposed #332; #332 has been CLAIMED by multi-loop /goal F via commit 38db94424; Codex resolves next-available)
+- `.omx/research/codex_routing_directive_design_stack_hypergraph_canonical_helper_plus_visualizer_20260518.md` (proposed #333; resolves next-available at execution)
+
 — Main-Claude 2026-05-18 (relayed on behalf of operator directive "And maybe codex should be able to relay information back or ask questions of us")
