@@ -3116,6 +3116,54 @@ def load_candidates_from_jsonl(path: Path) -> list[CandidateRow]:
     return rows
 
 
+def load_candidates_from_master_gradient_optimal_plans(
+    *,
+    root: Path | None = None,
+    archive_sha256: str | None = None,
+) -> list[CandidateRow]:
+    """Load planning-only Cathedral candidates from master-gradient sidecars.
+
+    This is deliberately NOT an exact-ready queue loader. It consumes
+    ``.omx/state/master_gradient_consumers/optimal_plan_*.json`` prediction
+    sidecars, validates the no-authority contract in
+    ``tac.master_gradient_consumers.optimal_plan_payload_to_candidate_row``,
+    and emits CandidateRow objects with dispatch/promote/score authority false.
+    """
+    base = root or (REPO_ROOT / ".omx" / "state" / "master_gradient_consumers")
+    if not base.exists():
+        return []
+    if archive_sha256 is not None:
+        sha = archive_sha256.strip().lower()
+        if len(sha) < 12 or not _is_sha256_hex(sha.ljust(64, "0")[:64]):
+            raise ValueError(
+                f"archive_sha256 must be a 12+ char hex prefix; got {archive_sha256!r}"
+            )
+        pattern = f"optimal_plan_{sha[:12]}_*.json"
+    else:
+        pattern = "optimal_plan_*.json"
+
+    from tac.master_gradient_consumers import optimal_plan_payload_to_candidate_row
+
+    latest_by_archive: dict[str, CandidateRow] = {}
+    for path in sorted(base.glob(pattern)):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        archive = str(payload.get("archive_sha256", "")).strip().lower()
+        file_prefix = path.name[len("optimal_plan_"):len("optimal_plan_") + 12]
+        if not archive.startswith(file_prefix.lower()):
+            continue
+        try:
+            row = optimal_plan_payload_to_candidate_row(payload, sidecar_path=path)
+        except (TypeError, ValueError):
+            continue
+        latest_by_archive[row.archive_sha256] = row
+    return [latest_by_archive[k] for k in sorted(latest_by_archive)]
+
+
 def load_candidates_from_exact_ready_queue(
     path: Path,
     *,
@@ -5352,6 +5400,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=None,
                         help="Where to write the per-iteration report JSON")
     parser.add_argument(
+        "--include-master-gradient-optimal-plans",
+        action="store_true",
+        help=(
+            "Append planning-only CandidateRows from canonical "
+            ".omx/state/master_gradient_consumers/optimal_plan_*.json "
+            "sidecars before ranking. This is a Cathedral consumer hook only: "
+            "rows are score_claim=False, promotion_eligible=False, and "
+            "ready_for_exact_eval_dispatch=False."
+        ),
+    )
+    parser.add_argument(
+        "--master-gradient-optimal-plan-root",
+        type=Path,
+        default=None,
+        help=(
+            "Optional root for --include-master-gradient-optimal-plans "
+            "(defaults to .omx/state/master_gradient_consumers)."
+        ),
+    )
+    parser.add_argument(
         "--operator-authorized-le-5-dollar-mode",
         action="store_true",
         help=(
@@ -5633,6 +5701,18 @@ def main(argv: list[str] | None = None) -> int:
             for candidate in candidates:
                 if lattice_dispatch_blocker not in candidate.blockers:
                     candidate.blockers.append(lattice_dispatch_blocker)
+            return candidates
+
+    if args.include_master_gradient_optimal_plans:
+        base_source = _source
+
+        def _source() -> list[CandidateRow]:
+            candidates = base_source()
+            candidates.extend(
+                load_candidates_from_master_gradient_optimal_plans(
+                    root=args.master_gradient_optimal_plan_root
+                )
+            )
             return candidates
 
     # ─── REPORT-ONLY MODE (A2 from operator's orchestration question 2026-05-17) ───

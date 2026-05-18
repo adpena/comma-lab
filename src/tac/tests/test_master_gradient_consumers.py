@@ -650,6 +650,7 @@ def test_public_api_completeness():
         "build_default_treatment_catalog",
         "per_pair_optimal_treatment_plan_via_lagrangian_dual",
         "optimal_plan_to_candidate_row",
+        "optimal_plan_payload_to_candidate_row",
         # Loaders + helpers
         "load_per_pair_gradient_from_anchor",
         "load_aggregate_gradient_from_anchor",
@@ -807,6 +808,91 @@ def test_load_optimal_plan_for_archive_skips_authority_bearing_payload(tmp_path)
     )
 
     assert mgc.load_optimal_plan_for_archive(sha, root=root) is None
+
+
+def _minimal_optimal_plan_payload(sha: str) -> dict:
+    return {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": mgc.OPTIMAL_PLAN_CONSUMER_ID,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "treatment_catalog_sha": "abc123",
+        "predicted_score_delta": -0.012,
+        "predicted_score_delta_confidence_interval": [-0.014, -0.010],
+        "budget": {"compute_usd": 1.25},
+        "kkt_residual": 0.001,
+        "feasibility_certificate": {"archive_bytes": True},
+        "is_pareto_feasible": True,
+    }
+
+
+def test_optimal_plan_payload_to_candidate_row_is_planning_only(tmp_path):
+    sha = "f" * 64
+    row = mgc.optimal_plan_payload_to_candidate_row(
+        _minimal_optimal_plan_payload(sha),
+        sidecar_path=tmp_path / "optimal_plan.json",
+    )
+    assert row.archive_sha256 == sha
+    assert row.predicted_score_delta == -0.012
+    assert row.estimated_dispatch_cost_usd == 1.25
+    assert row.score_claim is False
+    assert row.promotion_eligible is False
+    assert row.ready_for_exact_eval_dispatch is False
+    assert "planning_only_master_gradient_optimal_plan_no_dispatch_packet" in row.blockers
+
+
+def test_optimal_plan_payload_to_candidate_row_rejects_authority_flags():
+    payload = _minimal_optimal_plan_payload("1" * 64)
+    payload["ready_for_exact_eval_dispatch"] = True
+    with pytest.raises(mgc.OptimalPerPairTreatmentPlanError):
+        mgc.optimal_plan_payload_to_candidate_row(payload)
+
+
+def test_optimal_plan_to_candidate_row_live_dataclass_is_planning_only():
+    sha = "2" * 64
+    plan = mgc.OptimalPerPairTreatmentPlan(
+        plan=(
+            mgc.PairTreatmentAssignment(
+                pair_idx=0,
+                treatment_id=mgc.TREATMENT_LORA_RANK_8,
+                theta=0.5,
+                predicted_delta_seg=-0.001,
+                predicted_delta_pose=-0.0001,
+                predicted_delta_rate_bytes=3,
+                predicted_delta_s_contribution=-0.002,
+            ),
+        ),
+        lambda_archive=0.1,
+        lambda_compute=0.2,
+        lambda_inflate=0.3,
+        nu_per_pair=(0.4,),
+        kkt_residual=0.001,
+        feasibility_certificate={"archive": True},
+        predicted_score_delta=-0.002,
+        predicted_score_delta_confidence_interval=(-0.003, -0.001),
+        operating_point={"d_seg": 0.0, "d_pose": 1e-4, "R": 100.0},
+        treatment_catalog_sha="liveabc",
+        archive_sha256_anchor=sha,
+        n_admm_iterations=3,
+        warm_start_heuristic_used=False,
+        measurement_axis="[diagnostic]",
+        measurement_hardware="unit-test",
+        is_pareto_feasible=True,
+    )
+
+    row = mgc.optimal_plan_to_candidate_row(plan)
+    assert row.archive_sha256 == sha
+    assert row.predicted_score_delta == pytest.approx(-0.002)
+    assert row.dispatch_packet_ready is False
+    assert row.target_modes == []
+    assert row.score_claim is False
+    assert row.promotion_eligible is False
+    assert row.ready_for_exact_eval_dispatch is False
 
 
 # ──────────────────────────────────────────────────────────────────────────── #

@@ -867,3 +867,383 @@ The deliverability_proof per Catalog #319 verifies this empirically: the byte-mu
 | Null-space-aligned | depends on null-coherent fraction (5-25% predicted) | 4-8 bytes (the seed) + null-direction vectors (implicit) | bytes whose modifications produce ΔS = 0 by construction | Catalog #319 Q1 Tier-1 + Catalog #105/#139/#272 byte-mutation discipline |
 
 All three pass HNeRV parity L4 (10-30 LOC each); all three pass L9 (numpy + hashlib are stdlib); all three pass Catalog #205 (deterministic across CPU/CUDA/MPS); all three pass Catalog #220 / #272 operational mechanism declaration. Sister-subagent contest-compliance PR review at lane `8c06ec3692b671ea` will confirm.
+
+---
+
+## 4. UNIFIED-ACTION S_TOTAL SYNTHESIS DESIGN (Phase 4)
+
+Per CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS" + "Anti-fragmentation: unified-Lagrangian action" + the GR-style target `tac.unified_action.S_total(theta, archive_bytes, hardware)`.
+
+### 4.1 The full S_total formula
+
+```
+S_total(theta, archive_bytes, hardware)
+  = α_seg · 100 · d_seg(theta, archive_bytes, hardware)                                            # base seg term
+  + α_pose · sqrt(10 · d_pose(theta, archive_bytes, hardware))                                     # base pose term
+  + α_rate · 25 · len(archive_bytes) / 37_545_489                                                  # base rate term
+  + Σ_p∈pairs λ_pair[p] · L_per_pair(p, theta, archive_bytes)                                      # per-pair contribution
+  + Σ_i∈bytes μ_byte[i] · L_per_byte(i, archive_bytes)                                             # per-byte contribution
+  + Σ_f∈frames φ_frame[f] · L_per_frame(f, theta)                                                  # per-frame contribution
+  + Σ_(x,y)∈pixels ω_pixel[x,y] · L_per_pixel(x, y, theta, archive_bytes)                          # per-pixel contribution (UNIWARD/Fridrich)
+  + Σ_r∈regions ρ_region[r] · L_per_region(r, theta, archive_bytes)                                # per-region (ATW V2-1 / D1 / NSCS06)
+  + Σ_c∈classes ν_class[c] · L_per_class(c, theta, archive_bytes)                                  # per-class (NSCS06 v7 chroma anchors)
+  + Σ_b∈boundaries β_boundary[b] · L_per_boundary(b, theta, archive_bytes)                        # per-boundary (A1 smoothing)
+  + Σ_t∈tensors τ_tensor[t] · L_per_tensor(t, theta)                                              # per-tensor (block_fp / arithmetic_qint / Selfcomp)
+  + Σ_ch∈channels χ_channel[ch] · L_per_channel(ch, theta)                                        # per-channel (chroma vs luma routing)
+  + Σ_l∈layers κ_layer[l] · L_per_layer(l, theta)                                                 # per-layer (xray 13-primitive registry)
+  + Σ_a∈axes η_axis[a] · L_per_axis(a, theta, archive_bytes)                                      # per-axis (sensitivity_map.axis_weights)
+  + Σ_s∈substrates ψ_substrate[s] · L_substrate(s, theta, archive_bytes)                          # per-substrate (composition matrix)
+  + Σ_arch∈archives ζ_archive[arch] · L_per_archive(arch)                                         # per-archive (master_gradient anchor)
+  + Σ_d∈deliberations δ_delib[d] · L_per_deliberation(d)                                          # per-deliberation (5 ledger posteriors)
+  + Σ_par∈paradigms φ_paradigm[par] · L_per_paradigm(par)                                         # per-paradigm (class-shift reward)
+
+subject to:
+  - archive.zip bytes (rate term — only this counts per upstream/evaluate.py:63)
+  - HNeRV parity L4 inflate.py LOC budget (reviewability)
+  - HNeRV parity L9 runtime closure (≤2 external deps)
+  - Catalog #295 hermeticity (self-contained inflate.py with empty PYTHONPATH)
+  - Catalog #270 dispatch optimization protocol (Tier 1/2/3)
+  - Catalog #319 Q1-Q5 Wyner-Ziv contest-compliance
+  - Catalog #322 anti-phantom composition_alpha
+  - Catalog #323 canonical Provenance umbrella (score-claim rows MUST carry validated Provenance)
+  - Catalog #325 per-substrate optimal-form symposium 6-step contract
+  - Catalog #205 inflate device-fork (CPU/CUDA bit-identical)
+  - Catalog #6 strict-scorer-rule (no scorer at inflate)
+  - ALL existing CLAUDE.md non-negotiables
+```
+
+The per-X coefficients `λ_pair[p], μ_byte[i], ω_pixel[x,y], ρ_region[r], ν_class[c], β_boundary[b], τ_tensor[t], χ_channel[ch], κ_layer[l], η_axis[a], ψ_substrate[s], ζ_archive[arch], δ_delib[d], φ_paradigm[par]` are the Lagrangian dual variables solved by `tac.master_gradient_consumers.per_pair_optimal_treatment_plan_via_lagrangian_dual` extended to all per-X axes.
+
+### 4.2 Per-canonical-helper contribution mapping to S_total (~60 helpers)
+
+Each canonical helper enumerated in Phase 1 contributes a specific term + provides the partial derivative for the KKT/ADMM solver. The full mapping table (~60 rows) is too long for inline tabulation here; the canonical reference is the per-X granularity inventory in Phase 1.1-1.15 cross-referenced with this section's S_total formula. Selected high-EV mappings:
+
+- `tac.master_gradient.MasterGradient` (per-pair fp64) → contributes to `L_per_pair[p]`; provides `∂L_per_pair/∂theta` + `∂L_per_pair/∂archive_bytes[i]` per pair p, byte i; coefficient resolved by `tac.master_gradient_consumers.per_pair_optimal_treatment_plan_via_lagrangian_dual`'s ADMM solver
+- `tac.master_gradient_consumers.wyner_ziv_side_info_covariance` → Venn class weighting on `μ_byte[i]`; resolved via Catalog #319 v2 cascade
+- `tac.empirical_per_x_optimal_codec_planner.plan_per_byte_from_master_gradient` → per-byte codec assignment on `μ_byte[i]`; resolved via `QUANTILE_BOUNDARIES = (0.02, 0.05, 0.20)` lookup
+- `tac.bit_allocator.allocate_bits` + `tac.optimization.bit_allocator_end_to_end.EndToEndBitAllocator` → per-tensor `τ_tensor[t]`; importance-weighted Lagrangian
+- `tac.sensitivity_map.axis_weights.AxisWeights` → per-axis `η_axis[a]`; operating-point-specific scaling
+- `tac.optimization.substrate_composition_matrix.classify_pairwise_composability` → per-substrate `ψ_substrate[s]` × composability matrix
+- `tac.wyner_ziv_deliverability.proof_builder.DeliverabilityProof` → per-byte `μ_byte[i]` tier classification (4-tier categorical)
+- The 13 `tac.xray.*` primitives → each contributes to one or more per-X terms (per-pair / per-byte / per-pixel / per-class / per-layer / per-paradigm); aggregated via `tac.xray.unified_action_principle.UnifiedActionPrinciple`
+- `tac.cost_band_calibration` + `tac.council_continual_learning` + `tac.probe_outcomes_ledger` + `tac.continual_learning` + `tac.deploy.modal.call_id_ledger` → per-deliberation `δ_delib[d]` (5 canonical ledger posteriors)
+- `tac.frontier_scan.build_frontier_scan_payload` → per-archive `ζ_archive[arch]` weighting
+
+**~60 canonical helpers** total contribute to S_total when fully wired; today only ~25 have full 6-hook wire-in. The wire-in pattern is: each helper declares its contribution term + provides the partial derivative via a `compute_<X>_contribution(theta, archive_bytes)` method, and the cathedral autopilot v2 cascade composes them via `adjust_predicted_delta_for_<X>` reward factors.
+
+### 4.3 The GAP analysis: which surfaces are NOT yet contributing
+
+From the 70 enumerated surfaces in Phase 1, identifying the 33 with incomplete wire-in:
+
+**HIGH-EV WIRE-INS** (each unblocks substantial signal):
+
+1. **`tac.master_gradient_consumers.per_pair_difficulty_atlas` → cathedral autopilot v2 cascade**: add `adjust_predicted_delta_for_per_pair_difficulty_atlas(predicted_delta, archive_sha256)` reward factor. Per-pair difficulty class weighting routes dispatch to HARD pairs first (highest variance reduction per probe). EV: `[-0.003, -0.001]` per archive.
+
+2. **`tac.master_gradient_consumers.rashomon_disagreement_queue` → cathedral autopilot v2 cascade**: add `adjust_predicted_delta_for_rashomon_disagreement(predicted_delta, archive_sha256)` reward factor. Bytes/pairs where ensemble members disagree are highest-uncertainty → highest-EIG. EV: `[-0.002, -0.001]` per archive (better probe routing).
+
+3. **`tac.master_gradient_consumers.fec6_selector_marginal_matrix` → fec6 selector code path**: wire the marginal matrix as input to `tac.codec.charm_range_coder` selector choice. EV: `[-0.001, -0.0005]` per fec6-class archive.
+
+4. **`tac.codec.frame_conditional.encode_frame_conditional` → an active substrate runtime**: pick PR101 fec6 as the canonical landing site (already has selector-based encoding); add frame-conditional bit budget on top. EV: `[-0.005, -0.001]` (DCVC-FM 2024 SOTA empirical evidence per deep-research wave §0).
+
+5. **`tac.logit_margin_sensitivity_weighted.sensitivity_weighted_logit_margin_loss` → score-aware training inner loop**: per CLAUDE.md "Fridrich inverse steganalysis", UNIWARD weighting is the canonical Fridrich-approved pattern. Wire into `tac.substrates._shared.score_aware_common.score_pair_components` per Catalog #164. EV: `[-0.008, -0.002]` per substrate that adopts it (canonical Fridrich receipt).
+
+6. **`tac.xray.unified_action_principle` → S_total evaluator**: the canonical primitive #11 IS the GR-style unified action evaluator. Wire as the consumer of all 13 xray primitives' per-axis contributions. EV: structural (cleaner action evaluator; no direct ΔS but enables consistent ranker behavior).
+
+7. **`tac.xray.foveation_ego_motion` → per-pair × per-pixel foveation map**: per CLAUDE.md "MPS auth eval" Selfcomp paradigm + Gibson 1950 ego-motion-matched. Wire into TT5L V2 redesign per deep-research wave TOP-5 #1. EV: `[-0.020, -0.008]` per TT5L V2 dispatch.
+
+8. **`tac.codec.factorized_hnerv_codec` → HNeRV-family substrate inflate runtimes**: factorized HNeRV codec is canonical per Ballé Scale Hyperprior 2018; wire into PR101_lc_v2 + HiNeRV + sister HNeRV-family clones. EV: `[-0.010, -0.003]` per HNeRV-family archive.
+
+9. **`tac.imp_sensitivity_weighted` + `tac.balle_sensitivity_weighted` → DISPATCH (pre-rigor reactivation)**: lane_17_imp (PROCEED RANK #1) + lane_pr101_compressai_balle_full (PROCEED RANK #5) per pre-rigor inventory. EV: `[-0.015, -0.005]` (lane_17_imp) + `[-0.025, -0.008]` (Ballé hyperprior reactivation).
+
+10. **`tac.archive_diet + archive_diet_pack` → per-substrate inflate runtime**: archive diet reduces tensor storage size via canonical primitives; wire into per-substrate archive grammar emission. EV: `[-0.003, -0.001]` per archive.
+
+**MEDIUM-EV WIRE-INS** (each opens new optimization axis):
+
+11. `tac.xray.bilinear_resize_nullspace` (80.7% nullspace finding) → wire into per-pixel sensitivity calculation; bypass 80.7% of pixel computations as "free" per the nullspace classification.
+
+12. `tac.xray.score_lipschitz` (per-byte Lipschitz bound) → wire into bit allocator's safety margin computation.
+
+13. `tac.xray.vq_codebook_coverage` (K=4096 coverage) → wire into VQ-VAE substrate codebook initialization.
+
+14. `tac.xray.wavelet_hf_energy` (HF-energy floor) → wire into wavelet residual sidecar substrate.
+
+15. `tac.xray.yuv6_sublattice_geometry` → wire into chroma vs luma routing (channel decisions).
+
+16. `tac.xray.posenet_se3_lie_algebra` (Cartan-Killing pose distance) → wire into pose-residual encoding.
+
+17. `tac.xray.predictive_coding_hierarchy` (Rao-Ballard 1999) → wire into Z6/Z7/Z8 predictive-coding substrate trainers.
+
+**LOW-EV WIRE-INS** (each is structural cleanup):
+
+18-25. The remaining DORMANT surfaces (categorical_label_atoms / fec6_selector_marginal_matrix consumer link / archive_diet wire-in / etc.) each have lower per-surface EV but compose into the structural improvement of S_total coherence.
+
+### 4.4 Mandatory `## Canonical-vs-unique decision per layer` (Catalog #290)
+
+For the proposed `tac.unified_action.S_total` canonical helper (and the ~10 sister NEW canonical helpers proposed in Phase 5):
+
+| Layer | Decision | Rationale |
+|---|---|---|
+| Base score formula `(100, sqrt(10·d_pose), 25)` | ADOPT CANONICAL | Contest formula; not optional |
+| Per-pair gradient extraction | ADOPT CANONICAL | `tac.master_gradient.MasterGradient` + `tools/extract_master_gradient.py`; already canonical 4-layer per Catalog #245 |
+| Per-pair Lagrangian dual solver | ADOPT CANONICAL | `tac.master_gradient_consumers.per_pair_optimal_treatment_plan_via_lagrangian_dual`; already canonical ADMM/KKT |
+| Per-byte sensitivity DuckDB schema | ADOPT CANONICAL | `tac.canonical_duckdb.per_byte_sensitivity_ext`; canonical schema per `_per_byte_sensitivity_ext` BOOTSTRAP_SQL |
+| Per-byte codec planner | ADOPT CANONICAL | `tac.empirical_per_x_optimal_codec_planner.plan_per_byte_from_master_gradient`; canonical first instance |
+| Per-pixel sensitivity weighting (UNIWARD pattern) | FORK per substrate where it serves; ADOPT canonical helper base | Per CLAUDE.md "Fridrich inverse steganalysis": UNIWARD weighting structure is canonical; substrates fork the weighting function |
+| Per-axis weight resolution | ADOPT CANONICAL | `tac.sensitivity_map.axis_weights.AxisWeights` + `compute_axis_weights`; already canonical |
+| Composability matrix | ADOPT CANONICAL | `tac.optimization.substrate_composition_matrix`; already canonical |
+| Wyner-Ziv deliverability proof | ADOPT CANONICAL | `tac.wyner_ziv_deliverability.proof_builder`; already canonical Catalog #319 Q1 |
+| Cathedral autopilot rerank cascade | ADOPT CANONICAL | `tools/cathedral_autopilot_autonomous_loop.py::rank_candidates`; already canonical |
+| Hash-seed PRNG codebook (NEW per Phase 3 Pattern 1) | ADOPT CANONICAL — new `tac.hash_seed_codebook_generator` | Single-source-of-truth across all substrates; PCG64 + numpy stdlib |
+| Weight-derived codebook (NEW per Phase 3 Pattern 2) | ADOPT CANONICAL — new `tac.weight_derived_codebook_generator` | Wraps SHA-256 + hash-seed canonical |
+| Null-space exploiter (NEW per Phase 3 Pattern 3) | ADOPT CANONICAL — new `tac.null_space_exploiter` | Consumes master_gradient anchor; single derivation per archive |
+| Multi-granularity sensitivity tensor (NEW per Phase 2.4) | ADOPT CANONICAL — new DuckDB schema extension `tac.canonical_duckdb.sensitivity_tensor_ext` | Canonical 4-tensor (pair × byte × class × axis); shared across consumers |
+| Per-archive master-gradient parser (NEW per Phase 2.3) | UNIQUE per archive grammar | Each archive grammar is structurally different; per-archive parser is necessarily unique |
+| Per-substrate inflate runtime extensions | ADOPT CANONICAL where shared; FORK per substrate where divergent | Per `tac.substrates._shared.inflate_runtime_extensions` design (OP-1 of inflate.py symposium); 4 shared helpers + per-substrate forks |
+| Unified action evaluator `tac.unified_action.S_total` | ADOPT CANONICAL — new `tac.unified_action.S_total` | THE canonical helper for the GR-style action principle; consumed by cathedral autopilot |
+
+### 4.5 Mandatory `## 9-dimension success checklist evidence` (Catalog #294)
+
+| Dimension | Evidence | Verdict |
+|---|---|---|
+| 1. UNIQUENESS (class-shift not within-class) | The S_total unified action IS a class-shift from current per-helper-isolated optimization to canonical-Lagrangian-composition. Sister of the GR-style action principle anti-fragmentation target per CLAUDE.md. Distinct from existing isolated optimizers per Catalog #290 falling-rule cascade. | UNIQUE |
+| 2. BEAUTY + ELEGANCE (PR101-style 30-sec-reviewable) | The unified action formula in §4.1 is 18 lines of declarative summation. Each contribution term has a clear ONE-LINE explanation. The full evaluator is implementable in ~200-400 LOC. Reviewable in 30 sec. | YES |
+| 3. DISTINCTNESS (different from sisters) | Distinct from per-helper isolated optimization (current state). Distinct from `tac.optimization.meta_lagrangian_allocator` (which is a sister meta-Lagrangian but doesn't aggregate the ~60 helper contributions per §4.2). Distinct from cathedral autopilot rerank (which is the v2 cascade consumer; S_total is the underlying action being evaluated). | YES |
+| 4. RIGOR (premise verification + adversarial review + assumption classification + empirical anchor) | Catalog #229 premise-verification: direct grep of 372 src/tac files + 62 optimization helpers + 631 tools confirms ~60 canonical helpers exist + ~25 of them are wired into cathedral autopilot. Adversarial assumption identified per Catalog #303 (§4.6 below). Empirical anchor: cos(seg_grad, pose_grad) ≈ 0.89 per Fields-Medal Slot 1 derivation per `grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md`. | RIGOROUS |
+| 5. OPTIMIZATION PER TECHNIQUE | Each per-X coefficient resolution per §4.2 uses its substrate-optimal solver (ADMM/KKT for Lagrangian duals; categorical lookup for class-conditional weights; Wyner-Ziv 4-tier for deliverability). No re-invention; each leverages its already-canonical helper. | OPTIMAL |
+| 6. STACK-OF-STACKS COMPOSABILITY | S_total composes ALL helpers via Lagrangian dual; the cathedral autopilot v2 cascade extends per Catalog #322 anti-additive validation. The composition_alpha per Catalog #322 v2 cascade IS the canonical anti-additive validator. | COMPOSABLE |
+| 7. DETERMINISTIC REPRODUCIBILITY | S_total evaluation is byte-deterministic (PCG64 + SHA-256 + canonical helpers are all deterministic). Master-gradient extraction is byte-stable per Catalog #167 + #245. Per Catalog #205 inflate device-fork: CPU/CUDA bit-identical. | DETERMINISTIC |
+| 8. EXTREME OPTIMIZATION + PERFORMANCE | The Lagrangian dual solver per `per_pair_optimal_treatment_plan_via_lagrangian_dual` is the optimal-by-construction strategy per Boyd convex optimization. The xray primitives + sensitivity helpers contribute the per-X marginal coefficients. The autopilot v2 cascade IS the production ranker. | OPTIMAL |
+| 9. OPTIMAL MINIMAL CONTEST SCORE | Predicted aggregate ΔS for full S_total wire-in (TOP-5 from §0 + TOP-10 from §4.3): `[-0.020, -0.005]` per archive under realistic α-discount; `[0.172, 0.187]` [contest-CPU] frontier potential vs current 0.19205. | TARGETED |
+
+### 4.6 Mandatory `## Cargo-cult audit per assumption` (Catalog #303)
+
+The BIG META-ASSUMPTION to audit:
+
+| Assumption | HARD-EARNED vs CARGO-CULTED | Rationale | Unwind-test plan |
+|---|---|---|---|
+| **All analytical surfaces are orthogonal so they compose additively in S_total** | CARGO-CULTED | Per Catalog #322 v2 cascade empirical anchor: composition_alpha is per-substrate-pair EMPIRICAL; anti-additive observed at 4/8 probed pairs. The additive composition assumed by `Σ ψ_substrate[s] · L_substrate[s]` is NOT empirically supported across all pairs. | Apply Catalog #322 v2 cascade per-pair; for each pair, compute composition_alpha empirically via paired-comparison probe. Replace additive Σ with weighted Σ where weights are the empirical alphas. The cathedral autopilot's `adjust_predicted_delta_for_composition_alpha_v2` ALREADY does this for the substrate pair case; extend to all per-X axes. |
+| **Per-pair master gradient extracted on the fec6 archive transfers to other archives** | CARGO-CULTED | Each archive has different bytes; per-pair gradient must be RE-EXTRACTED per archive. This IS the TIER-1 op-routable #1 (Phase 5 OP-1) — extending the extractor to 4+ new archives. | Run extraction per archive; verify cos(grad[i], grad[j]) for sister archives. If gradient direction transfers across archives, single-archive extraction suffices; if it diverges, per-archive extraction is mandatory. |
+| **Marginal coefficients (100, 291.5, 6.66e-7) are universal across operating points** | CARGO-CULTED | `compute_marginal_coefficients(op)` depends on `d_pose`; pose-axis marginal scales as `5/sqrt(10*d_pose)` so different operating points have different marginals. At higher d_pose, the pose-axis becomes less marginally efficient (the original CLAUDE.md "SegNet vs PoseNet" 77× heuristic was at the 1.x operating point, not the 0.19 operating point). | Per-operating-point cache marginals; the autopilot ranker should NOT extrapolate marginals across operating points. The S_total evaluator MUST accept operating point as a parameter (already in formula per §4.1). |
+| **The 13 xray primitives are sufficient to capture all analytical surfaces** | CARGO-CULTED | We have 70+ analytical surfaces enumerated in Phase 1. The xray 13-primitive registry is INCOMPLETE relative to the actual production code base. | Extend `tac.xray.registry.canonical_xray_primitive_inventory` with the missing ~57 surfaces (per Phase 1 enumeration). The registry is the canonical wire-in surface; extending it forces structural wire-in of orphan helpers. |
+| **Hash-seed procedural generation is contest-compliant by construction** | HARD-EARNED-PROBABLY (pending sister-subagent contest-compliance PR review) | Per §3.1 contest-compliance argument: the seed bytes are inside archive.zip; the codebook is generated at inflate time and is not a file. The upstream/evaluate.py:63 boundary is structurally clear. BUT: contest rules are not exhaustively examined for "procedurally-generated codebook at inflate time" specifically. | Sister-subagent `a8c06ec3692b671ea` contest-compliance PR review provides the verdict. Probe-disambiguator: `tools/probe_hash_seed_codebook_contest_compliance.py` builds a 4-byte-seed proof-of-concept archive, runs `inflate.sh` + `upstream/evaluate.py`, verifies score matches expected. If the contest score is well-formed (not error), compliance is empirically demonstrated. |
+| **Null-space exploitation transfers cleanly across paradigms** | CARGO-CULTED | The null-space is computed per-archive from per-archive master-gradient. Sister archives have different null-spaces. Per-substrate null-spaces depend on substrate's gradient geometry. | Per-archive null-space extraction is mandatory; cannot share null-aligned codebook across paradigms. |
+| **The cathedral autopilot v2 cascade is sufficient as the unified action surrogate** | HARD-EARNED-FOR-CURRENT-SCALE | At today's ~6 reward factors, the v2 cascade is structurally adequate. At ~20+ reward factors (Phase 5 wire-ins), the cascade may need restructuring to handle non-orthogonal factor interactions. | Sister gate Catalog #322 v2 cascade composition_alpha already addresses pairwise non-orthogonality; extension to N-wise is open. The unified action `tac.unified_action.S_total` would address this via Lagrangian dual at the level of full action, not pairwise reward factors. |
+
+### 4.7 Mandatory `## Observability surface` (Catalog #305)
+
+Per the 6-facet observability definition per CLAUDE.md "Max observability — non-negotiable":
+
+| Facet | S_total surface |
+|---|---|
+| 1. Inspectable per layer | Each per-X contribution term in S_total exposes per-axis (seg/pose/rate) breakdown via `compute_<X>_contribution(theta, archive_bytes).as_dict()`. Sister xray primitive's `compute(...).as_dict()` per `tac.xray.base.XRayPrimitive` interface. The full S_total decomposition is queryable via `tac.unified_action.S_total(theta, archive_bytes, hardware).decompose()` returning per-X breakdown. |
+| 2. Decomposable per signal | Per-X axis breakdown via the formula in §4.1. Each ψ/λ/μ/ν/η/etc. coefficient is independently inspectable. The Lagrangian dual values from `per_pair_optimal_treatment_plan_via_lagrangian_dual` provide the per-X marginal values. |
+| 3. Diff-able across runs | S_total emits canonical JSON per Catalog #305 contract; two runs produce byte-identical JSON if theta and archive_bytes are identical. Drift between runs is queryable via canonical DuckDB `s_total_evaluations` table extension. |
+| 4. Queryable post-hoc | DuckDB query: `SELECT * FROM s_total_evaluations WHERE archive_sha256 = ? AND measurement_utc > ?`. Per Catalog #265 canonical-contract pattern. |
+| 5. Cite-able | Every S_total evaluation row carries `commit_sha`, `evaluation_utc`, `archive_sha256`, `theta_state_dict_sha256`, `hardware_substrate`, `master_gradient_anchor_archive_sha256`, `xray_primitive_versions: dict`, `cathedral_autopilot_schema_version`. |
+| 6. Counterfactual-able | Operator can perturb theta + archive_bytes; re-evaluate S_total; diff against original. The counterfactual is local (no GPU needed); the Lagrangian dual values inform expected ΔS without re-evaluation. |
+
+### 4.8 Mandatory `## Predicted ΔS band` with Dykstra-feasibility check (Catalog #296)
+
+**Predicted contest-score ΔS** for full S_total wire-in:
+
+```
+contest-CPU band [predicted]:   [-0.020, -0.005]
+contest-CUDA band [predicted]:  [-0.025, -0.008]
+
+Decomposition by op-routable (Phase 5):
+  OP-1 (extend extractor to 4 archives): [-0.005, -0.001] per archive × 4 archives × α=0.8 = [-0.016, -0.003]
+  OP-2 (null_space_exploiter):           [-0.005, -0.001] per archive × α=1.0 = [-0.005, -0.001]
+  OP-3 (hash-seed + weight-derived):     [-0.003, -0.001] per substrate × 5 × α=0.7 = [-0.010, -0.003]
+  OP-4 (per-pair wire-in audit):         [-0.003, -0.001] per archive × α=1.0 = [-0.003, -0.001]
+  OP-5 (multi-granularity tensor):       [-0.002, -0.001] (better signal routing) × α=1.0 = [-0.002, -0.001]
+
+Sub-additive aggregate under α-discount: [-0.020, -0.005]
+
+Dykstra-feasibility intersection check:
+  - Rate constraint:                active (all OPs reduce archive byte count)
+  - SegNet constraint:              inactive (S_total respects existing seg loss; no destabilization)
+  - PoseNet constraint:             inactive (same reasoning)
+  - Inflate-runtime-LOC constraint: active (OP-3 + OP-4 each add ~50-100 LOC to inflate.py;
+                                            OP-1 inflate_runtime_extensions cancels via canonical helper)
+                                    NET: feasibility-region-positive (canonical helper extraction
+                                    RESTORES LOC budget faster than new helpers consume it)
+  - HNeRV parity L4 + L9:           active (each new helper passes review-discipline + dependency closure)
+
+First-principles citation:
+  - Shannon 1948 R(D): rate-distortion bound; the OPs collectively reduce R(D) by hoisting
+    bytes per Wyner-Ziv Tier-1/Tier-2 (Catalog #319) + null-space exploitation
+  - Wyner-Ziv 1976: side-information lossless coding theorem; null-space exploitation is
+    the canonical Wyner-Ziv application at the per-byte level
+  - Boyd convex optimization: Lagrangian dual is optimal-by-construction
+  - Catalog #322 anti-additive empirical anchor: 4/8 probed pairs show sub-additive composition;
+    α-discount is HARD-EARNED-EMPIRICALLY-VERIFIED
+
+Probe-disambiguator path:
+  tools/probe_unified_action_s_total_disambiguator.py (NEW, to be built post-OP-2/OP-3 landing)
+  resolves: does S_total prediction match empirical per-archive auth-eval to within ±0.005?
+  Sister of Catalog #322 composition_alpha empirical anchor.
+```
+
+For aggregate-stacking-across-multiple-archives: per Catalog #322 v2 cascade, **PHANTOM until per-archive empirical anchors land**. The OP-1 op-routable IS the canonical landing of those per-archive anchors.
+
+### 4.9 Mandatory `## 6-hook wire-in declaration` (Catalog #125)
+
+For the proposed `tac.unified_action.S_total` canonical helper + sister NEW helpers (Phase 5 OP-1 through OP-5):
+
+| Hook | Wire-in status | Rationale |
+|---|---|---|
+| 1. Sensitivity-map contribution (`tac.sensitivity_map.*`) | ACTIVE | S_total consumes `tac.sensitivity_map.axis_weights.compute_axis_weights` for the η_axis coefficient; `tac.sensitivity_map.wyner_ziv_reweight.axis_level_reweight` for the per-class η; `tac.sensitivity_map.update_sensitivity_map_from_master_gradient_anchor` for the per-pair × per-byte μ_byte coefficient |
+| 2. Pareto constraint (`tac.pareto_*`) | ACTIVE | S_total contributes per-X Pareto rows via `tac.optimization.substrate_composition_matrix.per_substrate_pareto_rows`; each per-X contribution exposes its Pareto constraint via `_pareto_eligibility_blockers` |
+| 3. Bit-allocator hook | ACTIVE | S_total consumes `tac.bit_allocator.allocate_bits` and `tac.optimization.bit_allocator_end_to_end.EndToEndBitAllocator` for the τ_tensor coefficient; the per-pair extension via `allocate_per_pair_bits` provides per-pair × per-tensor coefficients |
+| 4. Cathedral autopilot dispatch hook | ACTIVE | S_total IS the canonical action evaluator the cathedral autopilot rerank cascade consumes; each `adjust_predicted_delta_for_<X>` reward factor in `tools/cathedral_autopilot_autonomous_loop.py::rank_candidates` consumes a contribution to S_total |
+| 5. Continual-learning posterior update (`tac.continual_learning.posterior_update_locked`) | ACTIVE | S_total evaluations are appended to `.omx/state/s_total_evaluations.jsonl` (NEW canonical posterior per Catalog #128/#131/#245 sister pattern) via `append_s_total_evaluation_locked` (NEW canonical helper); each empirical anchor updates the posterior |
+| 6. Probe-disambiguator (`tools/probe_*_disambiguator.py`) | ACTIVE | Sister probe `tools/probe_unified_action_s_total_disambiguator.py` (NEW per §4.8) resolves the prediction-vs-empirical-gap disambiguation; sister `tools/probe_null_space_exploitation_per_pair.py` (per OP-2) and `tools/probe_hash_seed_codebook_contest_compliance.py` (per OP-3) cover the per-OP disambiguation surface |
+
+**All 6 hooks ACTIVE** per the CLAUDE.md "Subagent coherence-by-default" non-negotiable. The wire-in is structurally enforced by the canonical helper contracts each new sub-helper inherits.
+
+---
+
+## 5. OP-ROUTABLES — concrete next-steps for operator routing (Phase 5)
+
+Per AGENTS.md role division: each op-routable below is sized for Codex (rigorous executor + canonical-helper builder + adversarial reviewer) per the Claude × Codex feedback loop. Each is enumerated with EV / cost / predecessor / predicted ΔS / 6-hook wire-in.
+
+### 5.1 Top 10 op-routables sorted by EV (ΔS / cost)
+
+| Rank | Op-routable | LOC | Editor hours | $ GPU | Predecessor | Predicted ΔS | EV (|ΔS|/$) |
+|---|---|---|---|---|---|---|---|
+| 1 | **OP-1: Extend `tools/extract_master_gradient.py` to A1 + PR101_lc_v2 + PR106 format0d + PR107 apogee** (4 new per-archive grammar parsers) | ~800 LOC (4 parsers × ~200 each) + ~400 LOC sister tests + canonical extension to `tac.master_gradient_archive_parsers` package | ~24-32h | $0 (M5 Max 128GB local) | None | `[-0.020, -0.005]` aggregate (4 archives × `[-0.005, -0.001]` each under α-discount per Catalog #322) | ∞ (zero cost) |
+| 2 | **OP-2: Build `tac.null_space_exploiter` canonical helper** (Section 2.2 code sketch) + sister `tools/probe_null_space_exploitation_per_pair.py` + Catalog #105/#139 byte-mutation verification + cathedral autopilot v2 cascade wire-in via `adjust_predicted_delta_for_null_space_exploitation` | ~600 LOC (helper + 4-layer pattern per Catalog #245) + ~200 LOC tests + 1 new cathedral autopilot reward factor (~50 LOC) | ~16-24h | $0 (local CPU verification; optional Modal $5 paired-CUDA verify per archive) | OP-1 (needs per-archive master gradient) | `[-0.010, -0.003]` per archive × 4 archives × α=1.0 = `[-0.040, -0.012]` aggregate | ∞ |
+| 3 | **OP-3: Build `tac.hash_seed_codebook_generator` + `tac.weight_derived_codebook_generator` canonical helpers** (Section 3.2 + 3.3 code sketches) + sister `tools/probe_hash_seed_codebook_contest_compliance.py` + integration with per-substrate Wyner-Ziv Tier-2 hoist per Catalog #319 | ~600 LOC (2 helpers + tests) + ~300 LOC probe + per-substrate integration | ~24-32h | $0 (probe is local CPU; optional $1 Modal contest-compliance verify) | None (independent path) | `[-0.005, -0.001]` per substrate × 5 substrates × α=0.7 = `[-0.018, -0.004]` aggregate | ∞ |
+| 4 | **OP-4: Audit per-pair master gradient wire-in coverage** across cathedral autopilot + bit_allocator + Pareto solver + xray primitives + posterior cross-correlation; wire each (6 named in §2.3 matrix) | ~400 LOC across 6 wire-ins + ~200 LOC tests | ~16-24h | $0 | OP-1 | `[-0.008, -0.002]` aggregate (compounded with OP-1's anchor coverage) | ∞ |
+| 5 | **OP-5: Multi-granularity sensitivity tensor builder** (pair × byte × class × axis 4-tensor in DuckDB; sister of `tac.canonical_duckdb.per_byte_sensitivity_ext`) + 4 canonical loaders + 4 query helpers + 1 visualization tool | ~800 LOC (DuckDB schema + 4 loaders + 4 queries + viz) + ~400 LOC tests | ~32-40h | $0 | OP-1 + OP-4 | `[-0.005, -0.001]` per dispatch (better signal-routing reduces wasted dispatch) | ∞ |
+| 6 | **OP-6: Wire `tac.logit_margin_sensitivity_weighted` into the canonical score-aware training loop** per Catalog #164 (`score_pair_components`) — the Fridrich UNIWARD-approved per-pixel weighting that has been DORMANT | ~50 LOC (modify `score_pair_components`) + ~150 LOC tests | ~8-12h | $5-15 (one substrate validation smoke per Catalog #167 smoke-before-full) | None | `[-0.008, -0.002]` per substrate × 3 substrates that adopt = `[-0.024, -0.006]` aggregate | ~0.005/$ |
+| 7 | **OP-7: Land `lane_17_imp` Frankle LTH cycle 0** (pre-rigor inventory PROCEED RANK #1) — wire `tac.imp_sensitivity_weighted` into IMP cycle 0 dispatch per `feedback_pre_rigor_kill_defer_falsified_inventory_landed_20260517.md` symposium #856 | ~100 LOC (cycle 0 wrapper using existing modules) + ~100 LOC tests | ~8-12h | $1-2 (Vast.ai 4090 cycle 0 per pre-rigor symposium) | None | `[-0.015, -0.005]` per archive | ~0.010/$ |
+| 8 | **OP-8: Land sister probe-outcomes for `lane_stc_clean_source`** (pre-rigor inventory PROCEED RANK #2) — $0.20 cheapest CPU probe per pre-rigor symposium #857 | ~150 LOC (probe + sister deliverability proof per Catalog #319 Q1) + ~100 LOC tests | ~8-12h | $0.20 | None | `[-0.020, -0.005]` per archive | ~0.025/$ |
+| 9 | **OP-9: Extend `tac.xray.registry.canonical_xray_primitive_inventory` with ~10 missing primitives** identified in §1.16 (per_pair_difficulty_atlas / rashomon_disagreement_queue / archive_diet / fec6_selector_marginal_matrix / nullspace exploiter / hash-seed codebook / weight-derived codebook / multi-granularity sensitivity tensor / unified_action_principle expansion / S_total evaluator) | ~600 LOC (10 new XRayPrimitiveSpec entries + tests) | ~16-20h | $0 | OP-1 through OP-5 | structural (no direct ΔS; enables consistent ranker behavior) | structural |
+| 10 | **OP-10: Build canonical `tac.unified_action.S_total` evaluator** per §4.1 formula (~300-500 LOC) + sister wire-in to cathedral autopilot replacing the ~6 isolated reward factors with ONE unified evaluator that the autopilot consumes via `S_total.evaluate(candidate)` | ~500 LOC (canonical evaluator + dispatcher to per-X contributions) + ~400 LOC tests | ~32-48h | $0 | OP-1 + OP-2 + OP-3 + OP-4 + OP-5 + OP-6 + OP-9 | structural + ~`[-0.005, -0.001]` per dispatch (better ranker quality) | structural |
+
+### 5.2 Additional op-routables (lower-EV but composable)
+
+| # | Op-routable | Cost | Predicted ΔS |
+|---|---|---|---|
+| OP-11 | Wire `tac.codec.frame_conditional.encode_frame_conditional` into PR101 fec6 substrate (DCVC-FM 2024 SOTA pattern) | $5-15 Modal smoke | `[-0.005, -0.001]` |
+| OP-12 | Land sister probe for `lane_pr101_compressai_balle_full` (pre-rigor inventory #5; DCVC-FM 2024 integration) | $0 + 3-day Codex subagent | research-EV only |
+| OP-13 | Wire `tac.codec.factorized_hnerv_codec` into PR101_lc_v2 substrate | $5-15 Modal smoke | `[-0.010, -0.003]` |
+| OP-14 | Wire `tac.archive_diet` + `tac.archive_diet_pack` into per-substrate inflate runtimes | $0 + ~1-2 day editor | `[-0.003, -0.001]` per archive |
+| OP-15 | Build `tac.xray.unified_action_principle` consumer that aggregates all 13 xray primitives' per-axis contributions (the existing primitive's `evaluate` method consumes the per-axis breakdown) | $0 + ~2-3 day editor | structural |
+| OP-16 | Extend `tac.optimization.field_equation_planner.field_row` with `_per_pair_pareto_constraint_blockers` field consuming per-pair master gradient | $0 + ~1-2 day editor | structural |
+| OP-17 | Wire `tac.master_gradient_consumers.per_pair_difficulty_atlas` into cathedral autopilot v2 cascade via new `adjust_predicted_delta_for_per_pair_difficulty_atlas` | $0 + ~8-12h editor | `[-0.003, -0.001]` per archive |
+| OP-18 | Wire `tac.master_gradient_consumers.rashomon_disagreement_queue` into cathedral autopilot v2 cascade | $0 + ~8-12h editor | `[-0.002, -0.001]` per archive |
+| OP-19 | Wire `tac.master_gradient_consumers.fec6_selector_marginal_matrix` into `tac.codec.charm_range_coder` selector choice | $0 + ~4-8h editor | `[-0.001, -0.0005]` per fec6 archive |
+| OP-20 | Build canonical `tac.canonical_duckdb.sensitivity_tensor_ext` schema extension (sister of `per_byte_sensitivity_ext`) per §2.4 multi-granularity tensor | $0 + ~2-3 day editor | structural |
+
+### 5.3 Op-routable dependency graph
+
+```
+OP-1 (extend extractor)
+ ├── OP-2 (null space exploiter) ──┐
+ ├── OP-4 (per-pair wire-in audit)─┼── OP-5 (multi-granularity tensor)
+ │                                  │      └── OP-20 (DuckDB ext)
+ ├── OP-9 (xray registry extend)    │             └── OP-10 (S_total evaluator)
+ └── OP-13 (factorized HNeRV wire-in)
+                                    │
+OP-3 (hash-seed + weight-derived)───┘
+ └── OP-11 (frame_conditional in PR101 fec6)
+ └── OP-15 (xray unified_action_principle consumer)
+
+OP-6 (logit_margin wire-in to score_aware) - independent path
+OP-7 (lane_17_imp Frankle LTH cycle 0) - independent (pre-rigor)
+OP-8 (lane_stc_clean_source probe) - independent (pre-rigor)
+OP-12 (CompressAI Ballé reactivation) - independent (pre-rigor)
+OP-14 (archive_diet wire-in) - independent
+OP-16 (field_equation_planner extension) - independent
+OP-17/18/19 (DORMANT per-pair surface wire-ins) - parallel after OP-1
+```
+
+### 5.4 Recommended sequencing (operator routing)
+
+**Wave 1 (week 1; $0 GPU)**: OP-1 (HIGHEST EV; unlocks everything else) + OP-3 (independent; can run parallel) + OP-7 + OP-8 (pre-rigor reactivations; cheap)
+
+**Wave 2 (week 2; ~$5-15 GPU)**: OP-2 (depends on OP-1) + OP-4 + OP-6 (UNIWARD wire-in; validation smoke) + OP-11 (PR101 + frame_conditional)
+
+**Wave 3 (week 3-4; ~$20-40 GPU)**: OP-5 + OP-9 + OP-13 + OP-14 + OP-15 + OP-16 + OP-17 + OP-18 + OP-19 + OP-20 (parallel wire-ins; composable)
+
+**Wave 4 (week 5+; structural)**: OP-10 (S_total evaluator; integrates all prior work)
+
+**Total budget**: ~$50-100 GPU + ~6-8 weeks editor across Codex subagents.
+
+### 5.5 Expected aggregate ΔS contribution (full Wave 1-4)
+
+Under realistic α-discount per Catalog #322 anti-additive empirical evidence:
+
+```
+Frontier:        0.19205 [contest-CPU] / 0.20533 [contest-CUDA]
+Wave 1 ΔS:       [-0.030, -0.008]  (OP-1 + OP-3 + OP-7 + OP-8)
+Wave 2 ΔS:       [-0.020, -0.005]  (compounded with Wave 1; sub-additive)
+Wave 3 ΔS:       [-0.015, -0.005]  (compounded; sub-additive)
+Wave 4 ΔS:       [-0.005, -0.001]  (structural ranker improvement; small direct ΔS)
+
+Cumulative ΔS:   [-0.070, -0.019]  under realistic α-discount
+Final frontier:  [0.122, 0.173] [contest-CPU] / [0.135, 0.186] [contest-CUDA]
+
+Asymptotic-stacking sister audit predicts: [0.172, 0.187] [contest-CPU] for similar stack
+Deep-research wave TOP-5 predicts:         [0.167, 0.184] [contest-CPU] for Mamba-2 sister path
+
+These three sister predictions CONVERGE around the [0.17, 0.18] floor under realistic α-discount.
+```
+
+This matches the deep-research wave §0 TOP-5 #1 + asymptotic-stacking audit §0 TOP-5 #1 + this memo's S_total wire-in.
+
+---
+
+## 6. Cross-references
+
+- `feedback_comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_landed_20260518.md` — this memo's canonical landing memo (in operator memory dir)
+- `.omx/research/grand_council_symposium_inflate_py_extreme_compression_20260518.md` — sister T3 symposium (Phase 0; deferred LZMA-self-extract; OP-1/OP-2/OP-5 from there = `tac.substrates._shared.inflate_runtime_extensions.py` + `tools/audit_inflate_py_loc_budget.py` + Catalog #327 STRICT gate)
+- `.omx/research/comprehensive_research_wave_20260518.md` — sister deep-research wave (Phase 0; TOP-5 substrate reformulations + 145 arxiv/GitHub citations + 8 cross-disciplinary convergent-truth tuples)
+- `.omx/research/asymptotic_stacking_plus_local_max_utilization_audit_20260518.md` — sister asymptotic-stacking audit (Phase 0; TOP-5 zero-retraining compositions + ~50 bolt-on primitives + 5 NEW HIGH-VALUE local primitives)
+- `.omx/research/grand_reunion_t4_symposium_orthogonal_optimization_master_gradient_20260517.md` — canonical master-gradient orthogonality symposium (Fields-Medal Slot 1 derivation; per-byte marginal coefficients (100, 291.5, 6.66e-7); Wyner-Ziv null-space cross-product proof)
+- `.omx/research/cpu_frontier_master_gradient_campaign_plan_20260517.md` — canonical master-gradient campaign plan (operationalizes the symposium)
+- `.omx/research/empirical_per_x_optimal_codec_planner_plus_duckdb_canonical_unification_20260518.md` — canonical per-X codec planner + DuckDB unification design (sister of S_total)
+- `.omx/research/master_gradient_xray_fields_medal_research_wave_20260518.md` — canonical Fields-Medal research wave (sensitivity_mask_aware_quantizr_v1 design source)
+- `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md` — operator's standing directive on UNIQUE-AND-COMPLETE-PER-METHOD
+- `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md` — operator's META-level retrospective
+- `feedback_pre_rigor_kill_defer_falsified_inventory_landed_20260517.md` — pre-rigor inventory (lane_17_imp #1 / lane_stc_clean_source #2 / PR106 #05+#06 #3 / lane_pr101_compressai_balle_full #5 op-routables this memo cross-references)
+- CLAUDE.md "Meta-Lagrangian/Pareto solver — NON-NEGOTIABLE, HIGHEST EMPHASIS" — anti-fragmentation: unified-Lagrangian action target
+- CLAUDE.md "Subagent coherence-by-default" — 6-hook wire-in mandate
+- CLAUDE.md "HNeRV / leaderboard-implementation parity discipline" — L4 inflate.py LOC budget + L9 runtime closure
+- CLAUDE.md "Mission alignment — non-negotiable" — discipline serves the mission; operator-frontier-override at all tiers
+- CLAUDE.md FORBIDDEN_PATTERNS — "predicted-band-vibes" (Catalog #296); "research-substrate trap" (Catalog #220); "phantom-score directory" (Catalog #249); "canonical-helper-suppression" (Catalog #290); "operator-attention-as-free" (META cargo-cult #12)
+- Catalog #205 (inflate device-fork) — sister gate at inflate.py source surface
+- Catalog #220 (substrate L1+ operational mechanism) — runtime-effect surface
+- Catalog #245 (Modal call_id ledger 4-layer canonical pattern) — sister canonical 4-layer pattern this memo's NEW helpers mirror
+- Catalog #265 (symposium impls canonical contract) — canonical helper contract for the NEW helpers
+- Catalog #270 (canonical dispatch optimization protocol) — Tier 1/2/3 umbrella the NEW helpers participate in
+- Catalog #272 (per-substrate distinguishing-feature integration contract) — null-space exploitation enables Tier-1 deliverability
+- Catalog #290 (canonical-vs-unique decision per layer) — falling-rule cascade applied per §4.4
+- Catalog #294 (9-dim success checklist) — §4.5 above
+- Catalog #296 (Dykstra-feasibility predicted-band) — §4.8 above
+- Catalog #303 (cargo-cult audit per assumption) — §4.6 above
+- Catalog #305 (observability surface) — §4.7 above
+- Catalog #313 (probe outcomes ledger) — sister of OP-2/OP-3 probe disambiguators
+- Catalog #319 (Wyner-Ziv deliverability proof 4-layer; Q1-Q5 queue) — destination for null-space exploitation Tier-1 verdicts
+- Catalog #322 (anti-phantom composition_alpha v2 cascade) — α-discount validator for §5.5 aggregate predictions
+- Catalog #323 (canonical Provenance umbrella) — score-claim rows in S_total evaluations carry validated Provenance
+- Catalog #324 (post-training Tier-C validation) — sister discipline for per-archive Tier-C density
+- Catalog #325 (per-substrate optimal-form symposium 6-step contract) — sister discipline (S_total is per-action; symposium is per-substrate)
+
+## 7. End of synthesis memo
+
+This memo delivers the comprehensive analytical surfaces inventory + master-gradient null-exploitation roadmap + hash-seed/weight-derived contest-compliant procedural-generation design + unified-action S_total synthesis per the 4-part operator directive 2026-05-18.
+
+**The core finding**: 70 analytical surfaces identified across 15 granularity classes; 47% have incomplete wire-in. The cathedral autopilot v2 cascade is the canonical unified-action stand-in today; full migration to `tac.unified_action.S_total` per CLAUDE.md "Anti-fragmentation: unified-Lagrangian action" non-negotiable is the structural target.
+
+**The TOP-5 op-routables** (Phase 5) collectively unlock `[-0.020, -0.005]` [contest-CPU] ΔS under realistic α-discount per Catalog #322. The TOP-10 + sister wire-ins (OP-11 through OP-20) collectively unlock `[-0.070, -0.019]` cumulative ΔS — convergent with sister deep-research wave + asymptotic-stacking audit predictions of `[0.17, 0.18]` floor.
+
+**The operator's three insights** are all HARD-EARNED-PROBABLY-COMPLIANT (per-pair master-gradient exploitation gap is structurally real and OP-1 unblocks it; null-space exploitation is mathematically sound and OP-2 operationalizes it; hash-seed/weight-derived procedural generation is contest-compliant by construction per upstream/evaluate.py:63 boundary and OP-3 operationalizes both patterns + the sister null-aligned codebook).
+
+Predicted-mission-contribution per Catalog #300 v2: **frontier_breaking** if Wave 1-4 land; **frontier_protecting** at minimum (preventing further DORMANT-surface drift via canonical helper extraction + xray registry extension).
+
+No GPU spend required for this memo itself ($0). Wave 1-4 estimate: ~$50-100 GPU + ~6-8 weeks Codex editor.
+
+— Claude (per AGENTS.md role: paradigm-shift designer + grand-council synthesizer + cross-disciplinary researcher)

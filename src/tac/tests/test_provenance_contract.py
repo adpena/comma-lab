@@ -296,6 +296,83 @@ def test_predicted_cannot_be_promotable():
         )
 
 
+def test_archive_seed_procedural_generation_is_non_promotable_supporting_provenance():
+    prov = Provenance(
+        artifact_kind=ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
+        source_path="submissions/hash_seed/archive.zip:seed.bin",
+        source_sha256="1" * 64,
+        measurement_axis="[research-signal]",
+        hardware_substrate="unknown",
+        evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc="2026-05-18T16:00:00Z",
+        canonical_helper_invocation=(
+            "tac.provenance.builders."
+            "build_provenance_for_archive_seed_procedural_generation"
+        ),
+        rejection_reason="seed bytes are charged inside archive.zip",
+    )
+    assert prov.artifact_kind == ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED
+
+
+def test_archive_seed_procedural_generation_requires_rationale():
+    with pytest.raises(InvalidProvenanceError, match="requires non-empty rationale"):
+        Provenance(
+            artifact_kind=ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
+            source_path="submissions/hash_seed/archive.zip:seed.bin",
+            source_sha256="1" * 64,
+            measurement_axis="[research-signal]",
+            hardware_substrate="unknown",
+            evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+            promotion_eligible=False,
+            score_claim_valid=False,
+            captured_at_utc="2026-05-18T16:00:00Z",
+            canonical_helper_invocation=(
+                "tac.provenance.builders."
+                "build_provenance_for_archive_seed_procedural_generation"
+            ),
+        )
+
+
+def test_weight_derived_codebook_cannot_have_valid_score_claim():
+    with pytest.raises(InvalidProvenanceError, match="score_claim_valid"):
+        Provenance(
+            artifact_kind=ProvenanceKind.WEIGHT_DERIVED_CODEBOOK,
+            source_path="submissions/weight_codebook/archive.zip:renderer.bin",
+            source_sha256="2" * 64,
+            measurement_axis="[research-signal]",
+            hardware_substrate="unknown",
+            evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+            promotion_eligible=False,
+            score_claim_valid=True,
+            captured_at_utc="2026-05-18T16:00:00Z",
+            canonical_helper_invocation=(
+                "tac.provenance.builders.build_provenance_for_weight_derived_codebook"
+            ),
+            rejection_reason="codebook derived from shipped renderer weights",
+        )
+
+
+def test_forbidden_out_of_archive_payload_requires_rejection_reason():
+    with pytest.raises(InvalidProvenanceError, match="FORBIDDEN_OUT_OF_ARCHIVE"):
+        Provenance(
+            artifact_kind=ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD,
+            source_path="/external/payload.bin",
+            source_sha256="3" * 64,
+            measurement_axis="[research-signal]",
+            hardware_substrate="unknown",
+            evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+            promotion_eligible=False,
+            score_claim_valid=False,
+            captured_at_utc="2026-05-18T16:00:00Z",
+            canonical_helper_invocation=(
+                "tac.provenance.builders."
+                "build_provenance_for_forbidden_out_of_archive_payload"
+            ),
+        )
+
+
 # -----------------------------------------------------------------------------
 # Provenance: grade × axis × hardware cross-checks
 # -----------------------------------------------------------------------------

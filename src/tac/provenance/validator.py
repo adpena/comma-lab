@@ -346,6 +346,12 @@ def audit_score_claim_dict(
     # Validate the reconstructed Provenance
     prov_valid, prov_blockers = validate_provenance(prov)
     blockers.extend(prov_blockers)
+    if prov.artifact_kind == ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD:
+        blockers.append(
+            "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD provenance cannot accompany "
+            "a score-claiming payload; pre-dispatch refusal required per "
+            "Catalog #329"
+        )
 
     # Axis match check
     if expected_axis and prov.measurement_axis != expected_axis:

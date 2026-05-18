@@ -16,6 +16,11 @@ The 6 canonical builders mirror the 6 ProvenanceKind values:
   * ``build_provenance_aggregate`` — AGGREGATE_OF_PROVENANCES
   * ``build_provenance_invalid_byte_identity_artifact`` — INVALID_BYTE_IDENTITY_ARTIFACT
     sentinel for the Catalog #823 SUPER_ADDITIVE class
+  * ``build_provenance_for_archive_seed_procedural_generation`` —
+    PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED
+  * ``build_provenance_for_weight_derived_codebook`` — WEIGHT_DERIVED_CODEBOOK
+  * ``build_provenance_for_forbidden_out_of_archive_payload`` —
+    FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD
 
 Plus 2 ergonomics helpers:
 
@@ -533,6 +538,102 @@ def build_provenance_invalid_byte_identity_artifact(
 
 
 # -----------------------------------------------------------------------------
+# Builders: contest-compliance procedural-generation boundary kinds
+# -----------------------------------------------------------------------------
+
+def build_provenance_for_archive_seed_procedural_generation(
+    seed_source_path: str,
+    seed_sha256: str,
+    rationale: str,
+    captured_at_utc: Optional[str] = None,
+) -> Provenance:
+    """Canonical builder for archive-seed procedural-generation provenance.
+
+    The seed bytes must be charged inside archive.zip. This provenance can
+    support a future exact-eval score claim, but it is not a score claim itself.
+    """
+    if not rationale or not rationale.strip():
+        raise InvalidProvenanceError(
+            "PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED requires non-empty rationale"
+        )
+    _refuse_transient_path(seed_source_path)
+    return Provenance(
+        artifact_kind=ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
+        source_path=seed_source_path,
+        source_sha256=seed_sha256,
+        measurement_axis="[research-signal]",
+        hardware_substrate="unknown",
+        evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc=captured_at_utc or _utc_now_iso(),
+        canonical_helper_invocation=(
+            "tac.provenance.builders."
+            "build_provenance_for_archive_seed_procedural_generation"
+        ),
+        rejection_reason=rationale,
+    )
+
+
+def build_provenance_for_weight_derived_codebook(
+    weight_source_path: str,
+    weight_sha256: str,
+    rationale: str,
+    captured_at_utc: Optional[str] = None,
+) -> Provenance:
+    """Canonical builder for codebooks derived from shipped archive weights."""
+    if not rationale or not rationale.strip():
+        raise InvalidProvenanceError(
+            "WEIGHT_DERIVED_CODEBOOK requires non-empty rationale"
+        )
+    _refuse_transient_path(weight_source_path)
+    return Provenance(
+        artifact_kind=ProvenanceKind.WEIGHT_DERIVED_CODEBOOK,
+        source_path=weight_source_path,
+        source_sha256=weight_sha256,
+        measurement_axis="[research-signal]",
+        hardware_substrate="unknown",
+        evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc=captured_at_utc or _utc_now_iso(),
+        canonical_helper_invocation=(
+            "tac.provenance.builders.build_provenance_for_weight_derived_codebook"
+        ),
+        rejection_reason=rationale,
+    )
+
+
+def build_provenance_for_forbidden_out_of_archive_payload(
+    payload_source_path: str,
+    payload_sha256: str,
+    rejection_reason: str,
+    captured_at_utc: Optional[str] = None,
+) -> Provenance:
+    """Canonical fail-closed sentinel for output-affecting external payloads."""
+    if not rejection_reason or not rejection_reason.strip():
+        raise InvalidProvenanceError(
+            "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason"
+        )
+    return Provenance(
+        artifact_kind=ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD,
+        source_path=payload_source_path,
+        source_sha256=payload_sha256,
+        measurement_axis="[research-signal]",
+        hardware_substrate="unknown",
+        evidence_grade=ProvenanceEvidenceGrade.RESEARCH_ONLY,
+        promotion_eligible=False,
+        score_claim_valid=False,
+        captured_at_utc=captured_at_utc or _utc_now_iso(),
+        canonical_helper_invocation=(
+            "tac.provenance.builders."
+            "build_provenance_for_forbidden_out_of_archive_payload"
+        ),
+        rejection_reason=rejection_reason,
+    )
+
+
+# -----------------------------------------------------------------------------
 # Class-method shorthand on Provenance (ergonomics)
 # -----------------------------------------------------------------------------
 
@@ -653,5 +754,8 @@ __all__ = [
     "build_provenance_for_mps_proxy",
     "build_provenance_aggregate",
     "build_provenance_invalid_byte_identity_artifact",
+    "build_provenance_for_archive_seed_procedural_generation",
+    "build_provenance_for_weight_derived_codebook",
+    "build_provenance_for_forbidden_out_of_archive_payload",
     "requires_canonical_provenance",
 ]

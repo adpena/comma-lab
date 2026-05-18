@@ -52,8 +52,9 @@ CLAUDE.md compliance
 """
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+import math
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum
 from typing import Any
 
@@ -61,6 +62,12 @@ import torch
 
 ACTION_SCHEMA_VERSION = "tac_unified_action_v1"
 ACTION_EVIDENCE_GRADE = "[predicted; unified-action; closed-form weighted-sum]"
+OPTIMIZER_ANALYTICAL_BOUNDARIES_SCHEMA_VERSION = (
+    "tac_optimizer_analytical_boundaries_v1"
+)
+OPTIMIZER_ANALYTICAL_BOUNDARIES_EVIDENCE_GRADE = (
+    "[predicted; unified-action; analytical-boundary-bundle]"
+)
 
 
 class TrackKind(str, Enum):
@@ -77,6 +84,18 @@ class TrackKind(str, Enum):
     T20_KL_POSE_DISTILL = "t20_kl_pose_distill"  # Pose-axis training-time refinement
     T22_TEMPORAL_CONSISTENCY = "t22_temporal_consistency"  # Temporal smoothness regularizer
     LANE_12_V2 = "lane_12_v2_nerv_as_renderer"  # Architecture-class atom
+
+
+class SurfaceKind(str, Enum):
+    """Framework-agnostic analytical surfaces feeding deterministic solvers."""
+
+    BOUNDARY = "boundary"
+    MASTER_GRADIENT_BOUNDARY = "master_gradient_boundary"
+    HARD_PAIR = "hard_pair"
+    SENSITIVE_BYTE = "sensitive_byte"
+    XRAY_PRIMITIVE = "xray_primitive"
+    SENSITIVITY_MAP = "sensitivity_map"
+    VENN_CLASS = "venn_class"
 
 
 @dataclass(frozen=True)
@@ -98,6 +117,539 @@ class DualVariables:
     lambda_t13: float = 0.0  # T13 is a CONSTRAINT not a soft term; usually unused
     lambda_t20: float = 0.0
     lambda_t22: float = 0.0
+
+
+@dataclass(frozen=True)
+class MasterGradientBoundarySummary:
+    """Planning-only boundary summary derived from a per-pair master gradient.
+
+    The summary is the deterministic-optimizer handoff layer for the operator's
+    "boundaries / hard pairs / sensitive bytes" directive. It never carries
+    score, promotion, or dispatch authority; exact contest eval on emitted bytes
+    is still required before any score claim.
+    """
+
+    archive_sha256: str
+    n_bytes: int
+    n_pairs: int
+    n_axes: int
+    sign_flip_byte_indices: tuple[int, ...]
+    magnitude_cliff_byte_indices: tuple[int, ...]
+    hard_pair_indices: tuple[int, ...]
+    sensitive_byte_indices: tuple[int, ...]
+    mean_seg_pose_cosine: float
+    min_seg_pose_cosine: float
+    max_seg_pose_cosine: float
+    magnitude_cliff_ratio: float
+    sensitive_byte_fraction: float
+    evidence_grade: str = "[predicted; unified-action; master-gradient-boundary]"
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    rank_or_kill_eligible: bool = False
+    dispatch_packet_ready: bool = False
+
+    def __post_init__(self) -> None:
+        if (
+            self.score_claim
+            or self.promotion_eligible
+            or self.ready_for_exact_eval_dispatch
+            or self.rank_or_kill_eligible
+            or self.dispatch_packet_ready
+        ):
+            raise ValueError(
+                "MasterGradientBoundarySummary is planning-only and cannot carry "
+                "score/promotion/rank/dispatch authority"
+            )
+        if self.n_bytes < 0 or self.n_pairs < 0 or self.n_axes < 0:
+            raise ValueError("n_bytes, n_pairs, and n_axes must be non-negative")
+        for name in (
+            "mean_seg_pose_cosine",
+            "min_seg_pose_cosine",
+            "max_seg_pose_cosine",
+            "magnitude_cliff_ratio",
+            "sensitive_byte_fraction",
+        ):
+            if not math.isfinite(float(getattr(self, name))):
+                raise ValueError(f"{name} must be finite")
+
+    def as_dict(self) -> dict[str, Any]:
+        """JSON-safe payload for ledgers, xray tools, and autopilot notes."""
+        return {
+            "schema": "master_gradient_boundary_summary_v1",
+            "surface_kind": SurfaceKind.MASTER_GRADIENT_BOUNDARY.value,
+            "archive_sha256": self.archive_sha256,
+            "n_bytes": self.n_bytes,
+            "n_pairs": self.n_pairs,
+            "n_axes": self.n_axes,
+            "sign_flip_byte_indices": list(self.sign_flip_byte_indices),
+            "magnitude_cliff_byte_indices": list(self.magnitude_cliff_byte_indices),
+            "hard_pair_indices": list(self.hard_pair_indices),
+            "sensitive_byte_indices": list(self.sensitive_byte_indices),
+            "mean_seg_pose_cosine": self.mean_seg_pose_cosine,
+            "min_seg_pose_cosine": self.min_seg_pose_cosine,
+            "max_seg_pose_cosine": self.max_seg_pose_cosine,
+            "magnitude_cliff_ratio": self.magnitude_cliff_ratio,
+            "sensitive_byte_fraction": self.sensitive_byte_fraction,
+            "evidence_grade": self.evidence_grade,
+            "score_claim": self.score_claim,
+            "promotion_eligible": self.promotion_eligible,
+            "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
+            "rank_or_kill_eligible": self.rank_or_kill_eligible,
+            "dispatch_packet_ready": self.dispatch_packet_ready,
+        }
+
+
+def _json_safe(value: Any) -> Any:
+    """Return a deterministic JSON-safe representation for planning bundles."""
+    if hasattr(value, "as_dict") and callable(value.as_dict):
+        return _json_safe(value.as_dict())
+    if is_dataclass(value) and not isinstance(value, type):
+        return _json_safe(asdict(value))
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, Mapping):
+        return {str(k): _json_safe(v) for k, v in sorted(value.items(), key=lambda item: str(item[0]))}
+    if isinstance(value, tuple | list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, set | frozenset):
+        return [_json_safe(v) for v in sorted(value, key=str)]
+    if isinstance(value, torch.Tensor):
+        return _json_safe(value.detach().cpu().tolist())
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"non-finite float cannot be serialized: {value!r}")
+        return value
+    if isinstance(value, int | str | bool) or value is None:
+        return value
+    return str(value)
+
+
+def _authority_flags_are_false(surface: Mapping[str, Any], *, surface_name: str) -> None:
+    """Reject score/promotion/dispatch/rank authority in optimizer inputs."""
+    for flag in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "dispatch_packet_ready",
+        "rank_or_kill_eligible",
+    ):
+        if surface.get(flag) is True:
+            raise ValueError(
+                f"{surface_name} carries {flag}=True; optimizer analytical "
+                "boundaries are planning-only"
+            )
+
+
+def _axis_weights_payload(weights: Any) -> dict[str, Any]:
+    if hasattr(weights, "as_dict") and callable(weights.as_dict):
+        payload = weights.as_dict()
+    elif is_dataclass(weights) and not isinstance(weights, type):
+        payload = asdict(weights)
+    elif isinstance(weights, Mapping):
+        payload = dict(weights)
+    else:
+        payload = {
+            name: getattr(weights, name)
+            for name in ("seg", "pose", "rate", "mixed", "operating_point_tag", "basis")
+            if hasattr(weights, name)
+        }
+    return dict(_json_safe(payload))
+
+
+def _summarize_sensitivity_weights(weights: Mapping[int, float] | None) -> dict[str, Any] | None:
+    if weights is None:
+        return None
+    values = [float(v) for _, v in sorted(weights.items())]
+    if not values:
+        return {
+            "schema": "sensitivity_byte_weight_summary_v1",
+            "n_weights": 0,
+            "min_weight": 0.0,
+            "max_weight": 0.0,
+            "mean_weight": 0.0,
+            "n_downweighted": 0,
+            "n_upweighted": 0,
+        }
+    return {
+        "schema": "sensitivity_byte_weight_summary_v1",
+        "n_weights": len(values),
+        "min_weight": min(values),
+        "max_weight": max(values),
+        "mean_weight": sum(values) / len(values),
+        "n_downweighted": sum(1 for v in values if v < 1.0),
+        "n_upweighted": sum(1 for v in values if v > 1.0),
+    }
+
+
+@dataclass(frozen=True)
+class OptimizerAnalyticalBoundaries:
+    """Planning-only bundle for deterministic optimizer boundary inputs.
+
+    This is the canonical handoff from master-gradient, xray, sensitivity-map,
+    bit-allocation, and Lagrangian-dual surfaces into deterministic optimizers.
+    It deliberately cannot rank/kill, claim a score, promote, or dispatch.
+    """
+
+    archive_sha256: str
+    master_gradient_anchor: Mapping[str, Any]
+    master_gradient_boundary_summary: MasterGradientBoundarySummary
+    master_gradient_authority_violation_reason: str | None
+    master_gradient_planning_usable: bool
+    master_gradient_contest_authoritative: bool
+    per_pair_difficulty_atlas: Mapping[str, Any] | None = None
+    wyner_ziv_side_info: Mapping[str, Any] | None = None
+    optimal_plan_candidate_row: Mapping[str, Any] | None = None
+    sensitivity_axis_weights: Mapping[str, Any] | None = None
+    sensitivity_byte_weights_summary: Mapping[str, Any] | None = None
+    xray_hook_inventory: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    xray_hook_bundles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    bit_allocation_envelope: Mapping[str, Any] | None = None
+    lagrangian_dual_envelope: Mapping[str, Any] | None = None
+    evidence_grade: str = OPTIMIZER_ANALYTICAL_BOUNDARIES_EVIDENCE_GRADE
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+    rank_or_kill_eligible: bool = False
+    dispatch_packet_ready: bool = False
+
+    def __post_init__(self) -> None:
+        if (
+            self.score_claim
+            or self.promotion_eligible
+            or self.ready_for_exact_eval_dispatch
+            or self.rank_or_kill_eligible
+            or self.dispatch_packet_ready
+        ):
+            raise ValueError(
+                "OptimizerAnalyticalBoundaries is planning-only and cannot "
+                "carry score/promotion/rank/dispatch authority"
+            )
+        if not self.master_gradient_planning_usable:
+            raise ValueError(
+                "master-gradient anchor is not usable for planning: "
+                f"{self.master_gradient_authority_violation_reason}"
+            )
+        if self.master_gradient_contest_authoritative and self.master_gradient_authority_violation_reason:
+            raise ValueError(
+                "contest-authoritative anchor cannot also carry an authority "
+                f"violation: {self.master_gradient_authority_violation_reason}"
+            )
+        for name in (
+            "master_gradient_anchor",
+            "per_pair_difficulty_atlas",
+            "wyner_ziv_side_info",
+            "optimal_plan_candidate_row",
+            "bit_allocation_envelope",
+            "lagrangian_dual_envelope",
+        ):
+            surface = getattr(self, name)
+            if isinstance(surface, Mapping):
+                _authority_flags_are_false(surface, surface_name=name)
+
+    def as_dict(self) -> dict[str, Any]:
+        """Deterministic JSON-safe payload for optimizer/research ledgers."""
+        return {
+            "schema": OPTIMIZER_ANALYTICAL_BOUNDARIES_SCHEMA_VERSION,
+            "archive_sha256": self.archive_sha256,
+            "master_gradient_anchor": _json_safe(self.master_gradient_anchor),
+            "master_gradient_boundary_summary": self.master_gradient_boundary_summary.as_dict(),
+            "master_gradient_authority_violation_reason": (
+                self.master_gradient_authority_violation_reason
+            ),
+            "master_gradient_planning_usable": self.master_gradient_planning_usable,
+            "master_gradient_contest_authoritative": self.master_gradient_contest_authoritative,
+            "per_pair_difficulty_atlas": _json_safe(self.per_pair_difficulty_atlas),
+            "wyner_ziv_side_info": _json_safe(self.wyner_ziv_side_info),
+            "optimal_plan_candidate_row": _json_safe(self.optimal_plan_candidate_row),
+            "sensitivity_axis_weights": _json_safe(self.sensitivity_axis_weights),
+            "sensitivity_byte_weights_summary": _json_safe(
+                self.sensitivity_byte_weights_summary
+            ),
+            "xray_hook_inventory": _json_safe(self.xray_hook_inventory),
+            "xray_hook_bundles": _json_safe(self.xray_hook_bundles),
+            "bit_allocation_envelope": _json_safe(self.bit_allocation_envelope),
+            "lagrangian_dual_envelope": _json_safe(self.lagrangian_dual_envelope),
+            "evidence_grade": self.evidence_grade,
+            "score_claim": self.score_claim,
+            "promotion_eligible": self.promotion_eligible,
+            "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
+            "rank_or_kill_eligible": self.rank_or_kill_eligible,
+            "dispatch_packet_ready": self.dispatch_packet_ready,
+        }
+
+
+def summarize_master_gradient_boundaries(
+    per_pair_gradient: torch.Tensor | Sequence[Any],
+    *,
+    archive_sha256: str = "",
+    magnitude_cliff_ratio: float = 10.0,
+    hard_pair_top_k: int = 50,
+    sensitive_byte_fraction: float = 0.02,
+) -> MasterGradientBoundarySummary:
+    """Summarize sign flips, cliffs, hard pairs, and sensitive bytes.
+
+    Args:
+        per_pair_gradient: tensor-like shape ``(n_bytes, n_pairs, n_axes)``.
+          Axis 0 is treated as SegNet sensitivity and axis 1 as PoseNet
+          sensitivity for cosine statistics when present.
+        archive_sha256: optional archive identity for custody. Empty is allowed
+          for synthetic tests, but production callers should pass the scored
+          archive SHA.
+        magnitude_cliff_ratio: adjacent byte-norm ratio threshold.
+        hard_pair_top_k: number of highest-norm pairs to retain.
+        sensitive_byte_fraction: fraction of highest-norm bytes to retain.
+    """
+    if magnitude_cliff_ratio <= 1.0:
+        raise ValueError("magnitude_cliff_ratio must be > 1.0")
+    if hard_pair_top_k < 0:
+        raise ValueError("hard_pair_top_k must be >= 0")
+    if not (0.0 < sensitive_byte_fraction <= 1.0):
+        raise ValueError("sensitive_byte_fraction must be in (0, 1]")
+
+    grad = torch.as_tensor(per_pair_gradient, dtype=torch.float64)
+    if grad.ndim != 3:
+        raise ValueError(
+            "per_pair_gradient must have shape (n_bytes, n_pairs, n_axes); "
+            f"got ndim={grad.ndim}"
+        )
+    n_bytes, n_pairs, n_axes = (int(v) for v in grad.shape)
+    if n_bytes == 0 or n_pairs == 0 or n_axes < 2:
+        raise ValueError(
+            "per_pair_gradient must have n_bytes>0, n_pairs>0, and n_axes>=2"
+        )
+
+    byte_vectors = grad.mean(dim=1)
+    byte_norms = torch.linalg.vector_norm(byte_vectors, dim=1)
+    if n_bytes >= 2:
+        adjacent_dot = (byte_vectors[1:] * byte_vectors[:-1]).sum(dim=1)
+        sign_flip_indices = tuple(
+            int(i + 1) for i in torch.nonzero(adjacent_dot < 0, as_tuple=False).flatten()
+        )
+        left = byte_norms[:-1]
+        right = byte_norms[1:]
+        eps = torch.finfo(torch.float64).eps
+        low = torch.clamp(torch.minimum(left, right), min=eps)
+        high = torch.maximum(left, right)
+        cliff_indices = tuple(
+            int(i + 1)
+            for i in torch.nonzero((high / low) >= magnitude_cliff_ratio, as_tuple=False).flatten()
+        )
+    else:
+        sign_flip_indices = ()
+        cliff_indices = ()
+
+    pair_matrix = grad.permute(1, 0, 2).reshape(n_pairs, n_bytes * n_axes)
+    pair_norms = torch.linalg.vector_norm(pair_matrix, dim=1)
+    n_hard = min(n_pairs, int(hard_pair_top_k))
+    hard_pair_indices = (
+        tuple(int(i) for i in torch.topk(pair_norms, k=n_hard).indices.tolist())
+        if n_hard > 0
+        else ()
+    )
+
+    byte_matrix = grad.reshape(n_bytes, n_pairs * n_axes)
+    full_byte_norms = torch.linalg.vector_norm(byte_matrix, dim=1)
+    n_sensitive = max(1, min(n_bytes, math.ceil(n_bytes * sensitive_byte_fraction)))
+    sensitive_byte_indices = tuple(
+        int(i) for i in torch.topk(full_byte_norms, k=n_sensitive).indices.tolist()
+    )
+
+    seg = grad[:, :, 0]
+    pose = grad[:, :, 1]
+    denom = torch.linalg.vector_norm(seg, dim=1) * torch.linalg.vector_norm(pose, dim=1)
+    valid = denom > torch.finfo(torch.float64).eps
+    if bool(valid.any()):
+        cosines = (seg[valid] * pose[valid]).sum(dim=1) / denom[valid]
+        mean_cos = float(cosines.mean().item())
+        min_cos = float(cosines.min().item())
+        max_cos = float(cosines.max().item())
+    else:
+        mean_cos = 0.0
+        min_cos = 0.0
+        max_cos = 0.0
+
+    return MasterGradientBoundarySummary(
+        archive_sha256=archive_sha256,
+        n_bytes=n_bytes,
+        n_pairs=n_pairs,
+        n_axes=n_axes,
+        sign_flip_byte_indices=sign_flip_indices,
+        magnitude_cliff_byte_indices=cliff_indices,
+        hard_pair_indices=hard_pair_indices,
+        sensitive_byte_indices=sensitive_byte_indices,
+        mean_seg_pose_cosine=mean_cos,
+        min_seg_pose_cosine=min_cos,
+        max_seg_pose_cosine=max_cos,
+        magnitude_cliff_ratio=float(magnitude_cliff_ratio),
+        sensitive_byte_fraction=float(sensitive_byte_fraction),
+    )
+
+
+def build_optimizer_analytical_boundaries(
+    *,
+    archive_sha256: str | None = None,
+    per_pair_gradient: torch.Tensor | Sequence[Any] | None = None,
+    master_gradient_anchor: Mapping[str, Any] | None = None,
+    optimal_plan_payload: Mapping[str, Any] | None = None,
+    xray_targets_by_hook: Mapping[str, Mapping[str, Any]] | None = None,
+    total_bit_budget: int | None = None,
+) -> OptimizerAnalyticalBoundaries:
+    """Build the canonical planning-only boundary bundle for optimizers.
+
+    The function delegates to existing canonical helpers and disables sidecar
+    persistence. It refuses master-gradient rows with contest-axis authority
+    violations and strips every downstream surface down to non-authoritative
+    planning evidence.
+    """
+    if per_pair_gradient is None:
+        from tac.master_gradient_consumers import load_per_pair_gradient_from_anchor
+
+        loaded_gradient, loaded_anchor = load_per_pair_gradient_from_anchor(
+            archive_sha256=archive_sha256
+        )
+        per_pair_gradient = loaded_gradient
+        if master_gradient_anchor is None:
+            master_gradient_anchor = loaded_anchor
+    if master_gradient_anchor is None:
+        raise ValueError(
+            "master_gradient_anchor is required when per_pair_gradient is supplied"
+        )
+
+    from tac.master_gradient import (
+        contest_axis_authority_violation_reason,
+        is_authoritative_contest_axis_anchor,
+        is_usable_planning_anchor,
+    )
+    from tac.master_gradient_consumers import (
+        load_optimal_plan_for_archive,
+        optimal_plan_payload_to_candidate_row,
+        per_pair_difficulty_atlas,
+        wyner_ziv_side_info_covariance,
+    )
+    from tac.sensitivity_map.axis_weights import default_axis_weights
+    from tac.sensitivity_map.wyner_ziv_reweight import axis_level_reweight
+    from tac.xray.wire_in import (
+        aggregate_hook_evidence_grade,
+        discover_primitives_by_hook,
+        wire_in_for_hook,
+    )
+
+    anchor = dict(master_gradient_anchor)
+    archive = str(archive_sha256 or anchor.get("archive_sha256") or "").lower()
+    if not archive:
+        raise ValueError("archive_sha256 is required for optimizer boundaries")
+
+    violation = contest_axis_authority_violation_reason(anchor)
+    planning_usable = is_usable_planning_anchor(anchor)
+    contest_authoritative = is_authoritative_contest_axis_anchor(anchor)
+    if not planning_usable:
+        raise ValueError(f"master-gradient anchor is not planning-usable: {violation}")
+
+    measurement_axis = str(anchor.get("measurement_axis", "diagnostic"))
+    measurement_hardware = str(anchor.get("measurement_hardware", "unknown"))
+    summary = summarize_master_gradient_boundaries(
+        per_pair_gradient,
+        archive_sha256=archive,
+    )
+    difficulty = per_pair_difficulty_atlas(
+        torch.as_tensor(per_pair_gradient, dtype=torch.float64).cpu().numpy(),
+        archive_sha256=archive,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+        write_sidecar=False,
+    )
+    wz = wyner_ziv_side_info_covariance(
+        torch.as_tensor(per_pair_gradient, dtype=torch.float64).cpu().numpy(),
+        archive_sha256=archive,
+        measurement_axis=measurement_axis,
+        measurement_hardware=measurement_hardware,
+        write_sidecar=False,
+    )
+    sensitivity_weights = axis_level_reweight(wz)
+
+    if optimal_plan_payload is None:
+        optimal_plan_payload = load_optimal_plan_for_archive(archive)
+    optimal_candidate = None
+    if optimal_plan_payload is not None:
+        optimal_candidate = optimal_plan_payload_to_candidate_row(dict(optimal_plan_payload))
+
+    inventory = {
+        str(hook): [str(name) for name in names]
+        for hook, names in discover_primitives_by_hook().items()
+    }
+    xray_bundles: dict[str, dict[str, Any]] = {}
+    targets_by_hook = {
+        str(hook): dict(targets)
+        for hook, targets in (xray_targets_by_hook or {}).items()
+    }
+    for hook in inventory:
+        bundle = wire_in_for_hook(
+            hook,
+            targets=targets_by_hook.get(hook, {}),
+            skip_on_error=True,
+        )
+        xray_bundles[hook] = {
+            "n_primitives": int(bundle.n_primitives),
+            "n_results": len(bundle.results),
+            "skipped_primitives": list(bundle.skipped_primitives),
+            "evidence_grade": aggregate_hook_evidence_grade(bundle),
+            "result_primitives": [
+                {
+                    "primitive_name": result.primitive_name,
+                    "evidence_grade": result.evidence_grade,
+                    "confidence_band": result.confidence_band,
+                    "wire_in_hooks_engaged": list(result.wire_in_hooks_engaged),
+                }
+                for result in bundle.results
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "rank_or_kill_eligible": False,
+            "dispatch_packet_ready": False,
+        }
+
+    bit_envelope = None
+    if total_bit_budget is not None:
+        from tac.optimization.bit_allocator_end_to_end import allocate_per_pair_bits
+
+        bit_envelope = allocate_per_pair_bits(
+            archive_sha256=archive,
+            total_bit_budget=total_bit_budget,
+            per_pair_gradient=torch.as_tensor(per_pair_gradient, dtype=torch.float64).cpu().numpy(),
+            optimal_plan=dict(optimal_plan_payload) if optimal_plan_payload is not None else None,
+            sensitivity_reweight=sensitivity_weights,
+            auto_load=False,
+            persist_sidecar=False,
+        )
+
+    from tac.optimization.field_equation_planner import consume_per_pair_lagrangian_duals
+
+    dual_envelope = consume_per_pair_lagrangian_duals(
+        archive_sha256=archive,
+        optimal_plan=dict(optimal_plan_payload) if optimal_plan_payload is not None else None,
+        auto_load=False,
+        persist_sidecar=False,
+    )
+
+    return OptimizerAnalyticalBoundaries(
+        archive_sha256=archive,
+        master_gradient_anchor=anchor,
+        master_gradient_boundary_summary=summary,
+        master_gradient_authority_violation_reason=violation,
+        master_gradient_planning_usable=planning_usable,
+        master_gradient_contest_authoritative=contest_authoritative,
+        per_pair_difficulty_atlas=_json_safe(difficulty),
+        wyner_ziv_side_info=_json_safe(wz),
+        optimal_plan_candidate_row=_json_safe(optimal_candidate),
+        sensitivity_axis_weights=_axis_weights_payload(default_axis_weights()),
+        sensitivity_byte_weights_summary=_summarize_sensitivity_weights(sensitivity_weights),
+        xray_hook_inventory=inventory,
+        xray_hook_bundles=xray_bundles,
+        bit_allocation_envelope=_json_safe(bit_envelope),
+        lagrangian_dual_envelope=_json_safe(dual_envelope),
+    )
 
 
 @dataclass
@@ -415,8 +967,15 @@ def make_action_from_track_callables(
 __all__ = [
     "ACTION_SCHEMA_VERSION",
     "ACTION_EVIDENCE_GRADE",
+    "OPTIMIZER_ANALYTICAL_BOUNDARIES_SCHEMA_VERSION",
+    "OPTIMIZER_ANALYTICAL_BOUNDARIES_EVIDENCE_GRADE",
     "TrackKind",
+    "SurfaceKind",
     "DualVariables",
+    "MasterGradientBoundarySummary",
+    "OptimizerAnalyticalBoundaries",
+    "summarize_master_gradient_boundaries",
+    "build_optimizer_analytical_boundaries",
     "Action",
     "make_action_from_track_callables",
 ]

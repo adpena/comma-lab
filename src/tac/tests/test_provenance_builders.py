@@ -17,11 +17,14 @@ from tac.provenance import (
     ProvenanceKind,
     ScoreClaim,
     build_provenance_aggregate,
+    build_provenance_for_archive_seed_procedural_generation,
     build_provenance_for_archive_member,
+    build_provenance_for_forbidden_out_of_archive_payload,
     build_provenance_for_macos_cpu_advisory,
     build_provenance_for_mps_proxy,
     build_provenance_for_predicted,
     build_provenance_for_research_sidecar,
+    build_provenance_for_weight_derived_codebook,
     build_provenance_invalid_byte_identity_artifact,
     requires_canonical_provenance,
 )
@@ -179,6 +182,53 @@ def test_build_predicted_constructs():
     )
     assert prov.artifact_kind == ProvenanceKind.PREDICTED_FROM_MODEL
     assert not prov.promotion_eligible
+
+
+# -----------------------------------------------------------------------------
+# contest-compliance procedural-generation boundary builders
+# -----------------------------------------------------------------------------
+
+def test_build_archive_seed_procedural_generation_constructs():
+    prov = build_provenance_for_archive_seed_procedural_generation(
+        seed_source_path="submissions/hash_seed/archive.zip:seed.bin",
+        seed_sha256="1" * 64,
+        rationale="seed bytes are charged inside archive.zip",
+    )
+    assert prov.artifact_kind == ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED
+    assert prov.evidence_grade == ProvenanceEvidenceGrade.RESEARCH_ONLY
+    assert not prov.score_claim_valid
+    assert "archive.zip" in prov.rejection_reason
+
+
+def test_build_archive_seed_procedural_generation_requires_rationale():
+    with pytest.raises(InvalidProvenanceError):
+        build_provenance_for_archive_seed_procedural_generation(
+            seed_source_path="submissions/hash_seed/archive.zip:seed.bin",
+            seed_sha256="1" * 64,
+            rationale="",
+        )
+
+
+def test_build_weight_derived_codebook_constructs():
+    prov = build_provenance_for_weight_derived_codebook(
+        weight_source_path="submissions/weight_codebook/archive.zip:renderer.bin",
+        weight_sha256="2" * 64,
+        rationale="codebook is derived from shipped renderer weights",
+    )
+    assert prov.artifact_kind == ProvenanceKind.WEIGHT_DERIVED_CODEBOOK
+    assert not prov.promotion_eligible
+    assert "renderer weights" in prov.rejection_reason
+
+
+def test_build_forbidden_out_of_archive_payload_constructs():
+    prov = build_provenance_for_forbidden_out_of_archive_payload(
+        payload_source_path="/external/payload.bin",
+        payload_sha256="3" * 64,
+        rejection_reason="output-affecting payload bytes are outside archive.zip",
+    )
+    assert prov.artifact_kind == ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD
+    assert not prov.score_claim_valid
+    assert "outside archive.zip" in prov.rejection_reason
 
 
 # -----------------------------------------------------------------------------

@@ -25,8 +25,12 @@ from tac.unified_action import (
     ACTION_SCHEMA_VERSION,
     Action,
     DualVariables,
+    OptimizerAnalyticalBoundaries,
+    SurfaceKind,
     TrackKind,
+    build_optimizer_analytical_boundaries,
     make_action_from_track_callables,
+    summarize_master_gradient_boundaries,
 )
 
 
@@ -120,6 +124,142 @@ def test_active_tracks_baselines_always_active_even_at_lambda_zero():
     # Baseline track is still listed as active (it's mathematically there at lambda=0
     # because lambda_seg modulates magnitude not active/inactive).
     assert TrackKind.SEG_BASELINE in actives
+
+
+# ── Master-gradient boundary summaries ─────────────────────────────────────
+
+
+def test_summarize_master_gradient_boundaries_detects_core_surfaces():
+    grad = torch.zeros((4, 3, 3), dtype=torch.float64)
+    # Byte 0 points positive; byte 1 points negative -> sign-flip boundary at 1.
+    grad[0, :, 0] = torch.tensor([1.0, 1.0, 1.0])
+    grad[1, :, 0] = torch.tensor([-1.0, -1.0, -1.0])
+    # Byte 2 is tiny and byte 3 is huge on the same side -> magnitude cliff at 3.
+    grad[2, :, 0] = -0.01
+    grad[3, :, 0] = -10.0
+    # Pair 2 is hardest and byte 3 is most sensitive.
+    grad[:, 2, :] *= 5.0
+    # Pose axis aligned enough to produce finite cosine stats.
+    grad[:, :, 1] = grad[:, :, 0] * 0.5
+
+    summary = summarize_master_gradient_boundaries(
+        grad,
+        archive_sha256="a" * 64,
+        magnitude_cliff_ratio=10.0,
+        hard_pair_top_k=1,
+        sensitive_byte_fraction=0.25,
+    )
+    assert summary.sign_flip_byte_indices == (1,)
+    assert 3 in summary.magnitude_cliff_byte_indices
+    assert summary.hard_pair_indices == (2,)
+    assert summary.sensitive_byte_indices == (3,)
+    assert summary.mean_seg_pose_cosine == pytest.approx(1.0)
+    assert summary.score_claim is False
+    assert summary.promotion_eligible is False
+    assert summary.ready_for_exact_eval_dispatch is False
+
+
+def test_master_gradient_boundary_summary_as_dict_is_json_safe():
+    grad = torch.ones((2, 2, 2), dtype=torch.float64)
+    summary = summarize_master_gradient_boundaries(grad)
+    payload = summary.as_dict()
+    assert payload["surface_kind"] == SurfaceKind.MASTER_GRADIENT_BOUNDARY.value
+    assert payload["evidence_grade"].startswith("[predicted;")
+    json.dumps(payload)
+
+
+def test_summarize_master_gradient_boundaries_rejects_bad_shape():
+    with pytest.raises(ValueError, match="shape"):
+        summarize_master_gradient_boundaries(torch.ones((2, 2)))
+
+
+def _minimal_optimal_plan_payload(sha: str) -> dict:
+    return {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": 15,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "measurement_axis": "[diagnostic]",
+        "measurement_hardware": "unit-test",
+        "treatment_catalog_sha": "catalog123",
+        "predicted_score_delta": -0.01,
+        "predicted_score_delta_confidence_interval": [-0.012, -0.008],
+        "budget": {"compute_usd": 0.5},
+        "kkt_residual": 0.001,
+        "feasibility_certificate": {"archive_bytes": True},
+        "is_pareto_feasible": True,
+    }
+
+
+def test_build_optimizer_analytical_boundaries_is_planning_only_and_json_safe():
+    sha = "b" * 64
+    grad = torch.ones((4, 3, 3), dtype=torch.float64)
+    grad[3, :, :] = 4.0
+    anchor = {
+        "archive_sha256": sha,
+        "measurement_axis": "[diagnostic]",
+        "measurement_hardware": "unit-test",
+        "measurement_method": "synthetic unit test",
+    }
+
+    bundle = build_optimizer_analytical_boundaries(
+        archive_sha256=sha,
+        per_pair_gradient=grad,
+        master_gradient_anchor=anchor,
+        optimal_plan_payload=_minimal_optimal_plan_payload(sha),
+    )
+    payload = bundle.as_dict()
+    assert payload["schema"] == "tac_optimizer_analytical_boundaries_v1"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["dispatch_packet_ready"] is False
+    assert payload["master_gradient_boundary_summary"]["score_claim"] is False
+    assert payload["optimal_plan_candidate_row"]["dispatch_packet_ready"] is False
+    assert payload["lagrangian_dual_envelope"]["score_claim"] is False
+    assert "sensitivity_map" in payload["xray_hook_inventory"]
+    assert "cathedral_autopilot" in payload["xray_hook_bundles"]
+    assert json.dumps(payload, sort_keys=True) == json.dumps(bundle.as_dict(), sort_keys=True)
+
+
+def test_optimizer_analytical_boundaries_rejects_authority_flags():
+    grad = torch.ones((2, 2, 2), dtype=torch.float64)
+    summary = summarize_master_gradient_boundaries(grad)
+    with pytest.raises(ValueError, match="planning-only"):
+        OptimizerAnalyticalBoundaries(
+            archive_sha256="c" * 64,
+            master_gradient_anchor={"archive_sha256": "c" * 64},
+            master_gradient_boundary_summary=summary,
+            master_gradient_authority_violation_reason=None,
+            master_gradient_planning_usable=True,
+            master_gradient_contest_authoritative=False,
+            score_claim=True,
+        )
+
+
+def test_build_optimizer_analytical_boundaries_rejects_false_contest_axis_anchor():
+    sha = "d" * 64
+    anchor = {
+        "archive_sha256": sha,
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "macOS M5 advisory",
+        "measurement_method": "subset",
+        "measurement_call_id": "",
+        "n_pairs_used": 8,
+        "n_pairs_total": 600,
+        "scored_archive_sha256": sha,
+        "scored_archive_bytes": 123,
+    }
+    with pytest.raises(ValueError, match="not planning-usable"):
+        build_optimizer_analytical_boundaries(
+            archive_sha256=sha,
+            per_pair_gradient=torch.ones((2, 2, 3), dtype=torch.float64),
+            master_gradient_anchor=anchor,
+        )
 
 
 # ── Gradient + autograd consistency ─────────────────────────────────────────

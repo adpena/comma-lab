@@ -164,6 +164,7 @@ __all__ = [
     "build_default_treatment_catalog",
     "per_pair_optimal_treatment_plan_via_lagrangian_dual",
     "optimal_plan_to_candidate_row",
+    "optimal_plan_payload_to_candidate_row",
     # Loader helpers
     "load_per_pair_gradient_from_anchor",
     "load_aggregate_gradient_from_anchor",
@@ -3032,6 +3033,138 @@ def optimal_plan_to_candidate_row(plan: OptimalPerPairTreatmentPlan) -> object:
             f"${total_compute_usd:.4f} USD across {n_treated} pair treatments; "
             f"feasibility certificate: {plan.feasibility_certificate}"
         ),
+        dispatch_packet_ready=False,
+        target_modes=[],
+        archive_sha256=plan.archive_sha256_anchor,
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+    )
+
+
+def _require_planning_only_optimal_plan_payload(payload: dict) -> None:
+    """Validate persisted optimal-plan payload before Cathedral consumption."""
+    if not isinstance(payload, dict):
+        raise OptimalPerPairTreatmentPlanError("optimal-plan payload must be a dict")
+    if payload.get("consumer_id") != "per_pair_optimal_treatment_plan_via_lagrangian_dual":
+        raise OptimalPerPairTreatmentPlanError("payload consumer_id is not optimal-plan")
+    if payload.get("catalog_consumer_id") != OPTIMAL_PLAN_CONSUMER_ID:
+        raise OptimalPerPairTreatmentPlanError(
+            "payload catalog_consumer_id is not the optimal-plan consumer"
+        )
+    if payload.get("evidence_grade") != "predicted":
+        raise OptimalPerPairTreatmentPlanError(
+            f"payload evidence_grade must be 'predicted'; got {payload.get('evidence_grade')!r}"
+        )
+    for flag in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    ):
+        if payload.get(flag) is not False:
+            raise OptimalPerPairTreatmentPlanError(
+                f"payload {flag} must be False for planning-only Cathedral consumption"
+            )
+    if payload.get("rank_or_kill_eligible") is True:
+        raise OptimalPerPairTreatmentPlanError(
+            "payload rank_or_kill_eligible must not be True for predicted plans"
+        )
+    archive_sha = str(payload.get("archive_sha256", ""))
+    if len(archive_sha) < 12 or any(
+        c not in "0123456789abcdefABCDEF" for c in archive_sha
+    ):
+        raise OptimalPerPairTreatmentPlanError(
+            f"payload archive_sha256 must be 12+ hex chars; got {archive_sha!r}"
+        )
+    try:
+        float(payload["predicted_score_delta"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise OptimalPerPairTreatmentPlanError(
+            "payload predicted_score_delta must be numeric"
+        ) from exc
+
+
+def optimal_plan_payload_to_candidate_row(
+    payload: dict,
+    *,
+    sidecar_path: Path | str | None = None,
+) -> object:
+    """Adapter: convert persisted optimal-plan JSON to a planning CandidateRow.
+
+    This is the file-backed twin of :func:`optimal_plan_to_candidate_row`.
+    It exists because Cathedral usually sees persisted
+    ``optimal_plan_<sha>_*.json`` sidecars, not live
+    ``OptimalPerPairTreatmentPlan`` objects. The conversion is deliberately
+    planning-only: false score/promotion/exact-dispatch flags are validated
+    before the row is emitted.
+    """
+    _require_planning_only_optimal_plan_payload(payload)
+
+    from tools.cathedral_autopilot_autonomous_loop import CandidateRow
+
+    archive_sha = str(payload["archive_sha256"]).lower()
+    treatment_catalog_sha = str(payload.get("treatment_catalog_sha", "unknown"))
+    ci = payload.get("predicted_score_delta_confidence_interval", [0.0, 0.0])
+    if not isinstance(ci, (list, tuple)) or len(ci) != 2:
+        ci = [0.0, 0.0]
+    try:
+        ci_half_width = abs(float(ci[1]) - float(ci[0])) / 2.0
+    except (TypeError, ValueError):
+        ci_half_width = 0.0
+
+    budget = payload.get("budget", {})
+    compute_usd = 0.0
+    if isinstance(budget, dict):
+        try:
+            compute_usd = max(0.0, float(budget.get("compute_usd", 0.0)))
+        except (TypeError, ValueError):
+            compute_usd = 0.0
+
+    is_pareto_feasible = bool(payload.get("is_pareto_feasible", False))
+    blockers = ["planning_only_master_gradient_optimal_plan_no_dispatch_packet"]
+    if not is_pareto_feasible:
+        blockers.append("plan_violates_budget_constraints")
+
+    sidecar_note = f" sidecar={sidecar_path}" if sidecar_path is not None else ""
+    notes = (
+        "Lagrangian-dual optimal-plan sidecar; "
+        f"measurement_axis={payload.get('measurement_axis', '<missing>')} "
+        f"measurement_hardware={payload.get('measurement_hardware', '<missing>')} "
+        f"kkt_residual={payload.get('kkt_residual', '<missing>')} "
+        f"is_pareto_feasible={is_pareto_feasible}; "
+        "PREDICTED planning signal only, no dispatch/promote/score authority."
+        f"{sidecar_note}"
+    )
+
+    return CandidateRow(
+        candidate_id=f"optimal_plan_{archive_sha[:12]}_{treatment_catalog_sha}",
+        family="lagrangian_dual_per_pair_treatment_plan",
+        predicted_score_delta=float(payload["predicted_score_delta"]),
+        expected_information_gain=float(ci_half_width),
+        estimated_dispatch_cost_usd=compute_usd,
+        blockers=blockers,
+        notes=notes,
+        lane_id="lane_per_pair_optimal_treatment_plan_via_lagrangian_dual_20260517",
+        archive_sha256=archive_sha,
+        literature_anchor="symposium §3.6 use #7 (per-pair KKT) + Catalog #364 meta-Lagrangian",
+        source_supports=(
+            "Persisted master-gradient optimal-plan sidecar validated as "
+            "evidence_grade=predicted with no authority flags."
+        ),
+        paper_claim_scope=(
+            "PREDICTED sidecar row. Exact contest CPU/CUDA auth-eval on emitted "
+            "archive bytes is required before any score claim."
+        ),
+        pact_must_prove=(
+            "Build the candidate archive from the treatment plan, then run paired "
+            "contest-CUDA and contest-CPU auth eval with archive/runtime custody."
+        ),
+        decode_complexity_evidence=(
+            f"budget.compute_usd={compute_usd:.4f}; "
+            f"feasibility_certificate={payload.get('feasibility_certificate', {})}"
+        ),
+        dispatch_packet_ready=False,
+        target_modes=[],
         score_claim=False,
         promotion_eligible=False,
         ready_for_exact_eval_dispatch=False,

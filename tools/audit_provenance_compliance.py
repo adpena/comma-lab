@@ -46,6 +46,8 @@ Per-violation classifier:
   * BYTE_IDENTITY_ARTIFACT — composed_from parts share sha256 (Catalog #823)
   * RESEARCH_SIDECAR_SCORE_CLAIMED — Catalog #321 anchor
   * AXIS_HARDWARE_MISMATCH — measurement_axis ≠ hardware_substrate canonical pairing
+  * FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD — output-affecting payload bytes live
+    outside archive.zip; fail-closed before dispatch
   * INVALID_PROVENANCE_SHAPE — cannot reconstruct as canonical Provenance
   * STALE_CAPTURED_AT — captured_at_utc > 90 days old
 """
@@ -214,6 +216,8 @@ def _classify_payload(
                     classifiers.append("STALE_CAPTURED_AT")
                 if "axis" in b.lower() or "hardware" in b.lower():
                     classifiers.append("AXIS_HARDWARE_MISMATCH")
+                if "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD" in b:
+                    classifiers.append("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD")
             return "VIOLATION", list(set(classifiers)), blockers
     except Exception as exc:
         classifiers.append("INVALID_PROVENANCE_SHAPE")

@@ -2515,3 +2515,80 @@ def test_master_gradient_rerank_does_not_scrape_notes_or_candidate_id(tmp_path):
     )
 
     assert "structured archive_sha256 missing or malformed" in ranked[0][2]
+
+
+def _optimal_plan_payload_for_cathedral_loader(sha: str, delta: float) -> dict:
+    return {
+        "archive_sha256": sha,
+        "consumer_id": "per_pair_optimal_treatment_plan_via_lagrangian_dual",
+        "catalog_consumer_id": 15,
+        "evidence_grade": "predicted",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "measurement_axis": "[contest-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "treatment_catalog_sha": "catsha",
+        "predicted_score_delta": delta,
+        "predicted_score_delta_confidence_interval": [delta - 0.001, delta + 0.001],
+        "budget": {"compute_usd": 0.75},
+        "kkt_residual": 0.002,
+        "feasibility_certificate": {"archive_bytes": True},
+        "is_pareto_feasible": True,
+    }
+
+
+def test_load_candidates_from_master_gradient_optimal_plans_latest_only(tmp_path):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "8" * 64
+    (root / f"optimal_plan_{sha[:12]}_20260518T100000.json").write_text(
+        json.dumps(_optimal_plan_payload_for_cathedral_loader(sha, -0.001)),
+        encoding="utf-8",
+    )
+    (root / f"optimal_plan_{sha[:12]}_20260518T200000.json").write_text(
+        json.dumps(_optimal_plan_payload_for_cathedral_loader(sha, -0.009)),
+        encoding="utf-8",
+    )
+    rows = loop.load_candidates_from_master_gradient_optimal_plans(root=root)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.archive_sha256 == sha
+    assert row.predicted_score_delta == -0.009
+    assert row.score_claim is False
+    assert row.promotion_eligible is False
+    assert row.ready_for_exact_eval_dispatch is False
+    assert "planning_only_master_gradient_optimal_plan_no_dispatch_packet" in row.blockers
+
+
+def test_report_only_appends_master_gradient_optimal_plan_rows(tmp_path, capsys):
+    root = tmp_path / "master_gradient_consumers"
+    root.mkdir()
+    sha = "9" * 64
+    (root / f"optimal_plan_{sha[:12]}_20260518T200000.json").write_text(
+        json.dumps(_optimal_plan_payload_for_cathedral_loader(sha, -0.011)),
+        encoding="utf-8",
+    )
+    candidates_jsonl = tmp_path / "candidates.jsonl"
+    candidates_jsonl.write_text("", encoding="utf-8")
+    out = tmp_path / "report.json"
+
+    rc = loop.main([
+        "--candidates-jsonl",
+        str(candidates_jsonl),
+        "--include-master-gradient-optimal-plans",
+        "--master-gradient-optimal-plan-root",
+        str(root),
+        "--report-only",
+        "--output",
+        str(out),
+    ])
+    assert rc == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["n_candidates_total"] == 1
+    assert payload["top_candidates"][0]["candidate_id"].startswith("optimal_plan_")
+    assert payload["top_candidates"][0]["score_claim"] is False
+    assert "planning_only_master_gradient_optimal_plan_no_dispatch_packet" in (
+        payload["top_candidates"][0]["blockers"]
+    )
+    capsys.readouterr()

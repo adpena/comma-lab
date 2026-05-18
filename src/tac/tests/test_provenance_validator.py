@@ -15,6 +15,7 @@ from tac.provenance import (
     ProvenanceKind,
     ScoreClaim,
     audit_score_claim_dict,
+    build_provenance_for_forbidden_out_of_archive_payload,
     build_provenance_for_predicted,
     build_provenance_for_research_sidecar,
     provenance_to_dict,
@@ -256,6 +257,18 @@ def test_audit_expected_axis_mismatch_flagged():
     valid, blockers = audit_score_claim_dict(payload, expected_axis="[contest-CUDA]")
     assert not valid
     assert any("axis" in b.lower() for b in blockers)
+
+
+def test_audit_forbidden_out_of_archive_payload_fails_even_for_zero_score():
+    prov = build_provenance_for_forbidden_out_of_archive_payload(
+        payload_source_path="/external/payload.bin",
+        payload_sha256="3" * 64,
+        rejection_reason="output-affecting payload bytes are outside archive.zip",
+    )
+    payload = {"score": 0.0, "provenance": provenance_to_dict(prov)}
+    valid, blockers = audit_score_claim_dict(payload)
+    assert not valid
+    assert any("FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD" in b for b in blockers)
 
 
 # -----------------------------------------------------------------------------

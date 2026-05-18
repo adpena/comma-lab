@@ -172,6 +172,23 @@ DEFAULT_CONTEST_COMPLIANCE_RATIONALE = (
     "(score_claim=False, promotion_eligible=False)."
 )
 
+DEFAULT_CONTEST_COMPLIANCE_CITATION_CHAIN: tuple[str, ...] = (
+    "archive.zip seed inclusion",
+    "weight-derived codebook from shipped archive bytes",
+    "null-space in-archive byte reduction",
+    "reviewability-only no-score-impact",
+    "upstream/evaluate.py:63 archive.zip rate term",
+    "PR #68 loophole_v2 forbidden out-of-archive payload boundary",
+    "Catalog #213 Comma2k19LocalCache canonical cache boundary",
+)
+
+_LEGAL_CONTEST_COMPLIANCE_CITATION_ANCHORS = frozenset({
+    "archive.zip seed inclusion",
+    "weight-derived codebook from shipped archive bytes",
+    "null-space in-archive byte reduction",
+    "reviewability-only no-score-impact",
+})
+
 
 # ---------------------------------------------------------------------------
 # Tier-1 / Tier-4 detection patterns (no runtime imports required)
@@ -259,6 +276,9 @@ class DeliverabilityProof:
     # Contest compliance verdict
     contest_compliance_verdict: str = "pending"
     contest_compliance_rationale: str = DEFAULT_CONTEST_COMPLIANCE_RATIONALE
+    contest_compliance_citation_chain: tuple[str, ...] = (
+        DEFAULT_CONTEST_COMPLIANCE_CITATION_CHAIN
+    )
 
     # Custody / promotion routing per CLAUDE.md "Apples-to-apples evidence
     # discipline" + Catalog #127 (custody validator)
@@ -365,6 +385,37 @@ class DeliverabilityProof:
                 f"{sorted(_LEGAL_CATALOG_319_STATUSES)}; got "
                 f"{self.catalog_319_gate_status!r}"
             )
+        if not isinstance(self.contest_compliance_rationale, str) or not (
+            self.contest_compliance_rationale.strip()
+        ):
+            raise ValueError("contest_compliance_rationale must be non-empty")
+        if not isinstance(self.contest_compliance_citation_chain, tuple):
+            raise ValueError(
+                "contest_compliance_citation_chain must be a tuple of strings"
+            )
+        citation_chain = tuple(
+            str(citation).strip()
+            for citation in self.contest_compliance_citation_chain
+            if str(citation).strip()
+        )
+        if not citation_chain:
+            raise ValueError(
+                "contest_compliance_citation_chain must contain at least one citation"
+            )
+        if not (
+            set(citation_chain) & _LEGAL_CONTEST_COMPLIANCE_CITATION_ANCHORS
+        ):
+            raise ValueError(
+                "contest_compliance_citation_chain must cite at least one "
+                "contest-compliant route: archive.zip seed inclusion, "
+                "weight-derived codebook from shipped archive bytes, "
+                "null-space in-archive byte reduction, or reviewability-only "
+                "no-score-impact"
+            )
+        if citation_chain != self.contest_compliance_citation_chain:
+            object.__setattr__(
+                self, "contest_compliance_citation_chain", citation_chain
+            )
 
         if self.promotion_eligible:
             if self.contest_compliance_verdict not in {"compliant", "partial"}:
@@ -391,6 +442,7 @@ class DeliverabilityProof:
             "tier_2_byte_indices",
             "tier_3_byte_indices",
             "tier_4_byte_indices",
+            "contest_compliance_citation_chain",
         ):
             d[k] = list(d[k])
         return d
@@ -888,6 +940,9 @@ def build_deliverability_proof_from_wyner_ziv_classification(
         "canonical_helper_invocation": helper,
         "contest_compliance_verdict": verdict,
         "contest_compliance_rationale": rationale,
+        "contest_compliance_citation_chain": list(
+            DEFAULT_CONTEST_COMPLIANCE_CITATION_CHAIN
+        ),
         "evidence_grade": "predicted",
         "score_claim": False,
         "promotion_eligible": False,
@@ -920,6 +975,7 @@ def build_deliverability_proof_from_wyner_ziv_classification(
         canonical_helper_invocation=helper,
         contest_compliance_verdict=verdict,
         contest_compliance_rationale=rationale,
+        contest_compliance_citation_chain=DEFAULT_CONTEST_COMPLIANCE_CITATION_CHAIN,
         evidence_grade="predicted",
         score_claim=False,
         promotion_eligible=False,
@@ -987,9 +1043,13 @@ def load_deliverability_proof_for_archive(
             "tier_2_byte_indices",
             "tier_3_byte_indices",
             "tier_4_byte_indices",
+            "contest_compliance_citation_chain",
         ):
             if tier_key in kwargs and isinstance(kwargs[tier_key], list):
-                kwargs[tier_key] = tuple(int(i) for i in kwargs[tier_key])
+                if tier_key == "contest_compliance_citation_chain":
+                    kwargs[tier_key] = tuple(str(i) for i in kwargs[tier_key])
+                else:
+                    kwargs[tier_key] = tuple(int(i) for i in kwargs[tier_key])
         try:
             return DeliverabilityProof(**kwargs)
         except (TypeError, ValueError):

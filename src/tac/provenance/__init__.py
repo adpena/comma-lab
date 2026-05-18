@@ -68,11 +68,14 @@ from tac.provenance.contract import (
 )
 from tac.provenance.builders import (
     build_provenance_aggregate,
+    build_provenance_for_archive_seed_procedural_generation,
     build_provenance_for_archive_member,
+    build_provenance_for_forbidden_out_of_archive_payload,
     build_provenance_for_macos_cpu_advisory,
     build_provenance_for_mps_proxy,
     build_provenance_for_predicted,
     build_provenance_for_research_sidecar,
+    build_provenance_for_weight_derived_codebook,
     build_provenance_invalid_byte_identity_artifact,
     requires_canonical_provenance,
 )
@@ -114,6 +117,9 @@ __all__ = [
     "build_provenance_for_mps_proxy",
     "build_provenance_aggregate",
     "build_provenance_invalid_byte_identity_artifact",
+    "build_provenance_for_archive_seed_procedural_generation",
+    "build_provenance_for_weight_derived_codebook",
+    "build_provenance_for_forbidden_out_of_archive_payload",
     "requires_canonical_provenance",
     # Validator
     "DEFAULT_PROVENANCE_STALE_DAYS",

@@ -44,7 +44,8 @@ Public surface (narrow per CLAUDE.md "Beauty, simplicity, and developer
 experience" non-negotiable):
 
   Enums:
-    - ``ProvenanceKind`` (5 canonical kinds + 1 sentinel)
+    - ``ProvenanceKind`` (9 canonical kinds including contest-compliance
+      procedural-generation boundary sentinels)
     - ``ProvenanceEvidenceGrade`` (8 canonical grades incl. INVALID
       sentinel for the #823 byte-identity artifact class)
 
@@ -162,7 +163,7 @@ _SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 class ProvenanceKind(str, Enum):
-    """The 6 canonical kinds of Provenance.
+    """The canonical kinds of Provenance.
 
     Each kind has distinct invariants enforced in Provenance.__post_init__:
 
@@ -187,6 +188,18 @@ class ProvenanceKind(str, Enum):
     - AGGREGATE_OF_PROVENANCES: a composition of multiple Provenances
       (e.g., a pairwise composition_alpha row). composed_from MUST be
       non-empty. Catalog #319 + Catalog #823 anchor.
+
+    - PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED: deterministic codebook /
+      tensor generation whose seed bytes are inside archive.zip. This is
+      compliance-supporting provenance, not score evidence by itself.
+
+    - WEIGHT_DERIVED_CODEBOOK: deterministic codebook derived from shipped
+      archive weights. This is compliance-supporting provenance, not score
+      evidence by itself.
+
+    - FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD: explicit sentinel for output-affecting
+      bytes outside archive.zip. Any score row carrying this kind must refuse
+      dispatch/promotion before provider spend.
     """
 
     CONTEST_ARCHIVE_MEMBER = "contest_archive_member"
@@ -195,6 +208,9 @@ class ProvenanceKind(str, Enum):
     PREDICTED_FROM_MODEL = "predicted_from_model"
     ADVISORY_NON_PROMOTABLE = "advisory_non_promotable"
     AGGREGATE_OF_PROVENANCES = "aggregate_of_provenances"
+    PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED = "procedural_generation_from_archive_seed"
+    WEIGHT_DERIVED_CODEBOOK = "weight_derived_codebook"
+    FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD = "forbidden_out_of_archive_payload"
 
 
 class ProvenanceEvidenceGrade(str, Enum):
@@ -459,6 +475,38 @@ class Provenance:
                 blockers.append(
                     "PREDICTED_FROM_MODEL cannot be promotion_eligible"
                     " until an empirical anchor lands"
+                )
+        elif self.artifact_kind in (
+            ProvenanceKind.PROCEDURAL_GENERATION_FROM_ARCHIVE_SEED,
+            ProvenanceKind.WEIGHT_DERIVED_CODEBOOK,
+        ):
+            if self.promotion_eligible:
+                blockers.append(
+                    f"{self.artifact_kind.value} cannot be promotion_eligible; "
+                    "it is compliance-supporting provenance, not score evidence"
+                )
+            if self.score_claim_valid:
+                blockers.append(
+                    f"{self.artifact_kind.value} cannot have score_claim_valid; "
+                    "exact eval of the emitted archive must carry the score"
+                )
+            if not self.rejection_reason:
+                blockers.append(
+                    f"{self.artifact_kind.value} requires non-empty rationale in "
+                    "rejection_reason documenting the archive-contained byte source"
+                )
+        elif self.artifact_kind == ProvenanceKind.FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD:
+            if self.promotion_eligible:
+                blockers.append(
+                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot be promotion_eligible"
+                )
+            if self.score_claim_valid:
+                blockers.append(
+                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD cannot have score_claim_valid"
+                )
+            if not self.rejection_reason:
+                blockers.append(
+                    "FORBIDDEN_OUT_OF_ARCHIVE_PAYLOAD requires non-empty rejection_reason"
                 )
 
         # Grade × Kind cross-checks

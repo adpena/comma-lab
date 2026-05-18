@@ -430,6 +430,10 @@ def test_t17_persistence_and_load_roundtrip(tmp_path: Path) -> None:
     assert loaded.tier_1_byte_count == proof_written.tier_1_byte_count
     assert loaded.proof_sha256 == proof_written.proof_sha256
     assert loaded.contest_compliance_rationale == proof_written.contest_compliance_rationale
+    assert (
+        loaded.contest_compliance_citation_chain
+        == proof_written.contest_compliance_citation_chain
+    )
 
 
 def test_t18_load_returns_none_when_no_proof_exists(tmp_path: Path) -> None:
@@ -592,22 +596,47 @@ def test_t22b_compliant_tier_2_proof_carries_loophole_boundary_rationale(
         assert anchor in rationale
 
 
-def test_t22c_verifier_rejects_tier_2_proof_with_blank_rationale() -> None:
+def test_t22c_proof_rejects_blank_rationale() -> None:
+    with pytest.raises(ValueError, match="contest_compliance_rationale"):
+        DeliverabilityProof(
+            archive_sha256=_SHA_FIXTURE,
+            candidate_shared_prior_byte_count=1,
+            tier_1_byte_count=0,
+            tier_2_byte_count=1,
+            tier_3_byte_count=0,
+            tier_4_byte_count=0,
+            tier_2_byte_indices=(0,),
+            canonical_helper_invocation="Comma2k19LocalCache.fetch_chunk(idx=0)",
+            contest_compliance_verdict="compliant",
+            contest_compliance_rationale="",
+        )
+
+
+def test_t22d_proof_requires_compliance_citation_chain_route() -> None:
+    with pytest.raises(ValueError, match="contest_compliance_citation_chain"):
+        DeliverabilityProof(
+            archive_sha256=_SHA_FIXTURE,
+            candidate_shared_prior_byte_count=0,
+            tier_1_byte_count=0,
+            tier_2_byte_count=0,
+            tier_3_byte_count=0,
+            tier_4_byte_count=0,
+            contest_compliance_citation_chain=("PR #68 loophole_v2",),
+        )
+
+
+def test_t22e_as_dict_serializes_compliance_citation_chain() -> None:
     proof = DeliverabilityProof(
         archive_sha256=_SHA_FIXTURE,
-        candidate_shared_prior_byte_count=1,
+        candidate_shared_prior_byte_count=0,
         tier_1_byte_count=0,
-        tier_2_byte_count=1,
+        tier_2_byte_count=0,
         tier_3_byte_count=0,
         tier_4_byte_count=0,
-        tier_2_byte_indices=(0,),
-        canonical_helper_invocation="Comma2k19LocalCache.fetch_chunk(idx=0)",
-        contest_compliance_verdict="compliant",
-        contest_compliance_rationale="",
     )
-    ok, blockers = verify_deliverability_proof_contest_compliance(proof)
-    assert ok is False
-    assert any("contest_compliance_rationale" in blocker for blocker in blockers)
+    payload = proof.as_dict()
+    assert isinstance(payload["contest_compliance_citation_chain"], list)
+    assert "archive.zip seed inclusion" in payload["contest_compliance_citation_chain"]
 
 
 # ---------------------------------------------------------------------------
