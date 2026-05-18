@@ -10,9 +10,12 @@ import pytest
 
 from tac.frontier_scan import (
     Anchor,
+    build_cpu_axis_optimal_payload,
     build_frontier_scan_payload,
+    cpu_axis_family_for_anchor,
     render_frontier_scan_text,
     scan_frontier_citation_surface,
+    select_cpu_optimal_per_family,
 )
 from tac.preflight import (
     PreflightError,
@@ -89,6 +92,158 @@ def test_frontier_scan_payload_uses_qualifying_best_per_axis(tmp_path: Path) -> 
     assert "0.1920513169" in text
     assert "lane_cpu_frontier" in text
     assert "reports/latest.md" in text
+    assert payload["g1_cpu_axis_optimization"]["improvement_found"] is False
+    assert payload["g1_cpu_axis_optimization"]["new_score_claim_valid"] is False
+    assert (
+        payload["g1_cpu_axis_optimization"]["score_claim_kind"]
+        == "existing_anchor_rerank_no_new_score_claim"
+    )
+    assert payload["g1_cpu_axis_optimization"]["qualifying_cpu_anchor_count"] == 1
+    assert "G1 CPU-AXIS OPTIMIZATION" in text
+
+
+def test_g1_cpu_axis_selector_groups_by_family_and_filters_advisory() -> None:
+    anchors = [
+        Anchor(
+            score=0.193,
+            axis="contest_cpu",
+            archive_sha256="1" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr101_old"},
+        ),
+        Anchor(
+            score=0.192,
+            axis="contest_cpu",
+            archive_sha256="2" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr101_new"},
+        ),
+        Anchor(
+            score=0.180,
+            axis="contest_cpu",
+            archive_sha256="3" * 64,
+            hardware_substrate="macos_arm64",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr101_macos_advisory"},
+        ),
+        Anchor(
+            score=0.196,
+            axis="contest_cpu",
+            archive_sha256="4" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr107_public_axis"},
+        ),
+        Anchor(
+            score=0.197,
+            axis="contest_cpu",
+            archive_sha256="7" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr106_component_prefix16_pr101grammar"},
+        ),
+        Anchor(
+            score=0.205,
+            axis="contest_cuda",
+            archive_sha256="5" * 64,
+            hardware_substrate="linux_x86_64_t4",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr106_cuda_only"},
+        ),
+        Anchor(
+            score=0.199,
+            axis="contest_cpu",
+            archive_sha256="6" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={},
+        ),
+    ]
+
+    assert cpu_axis_family_for_anchor(anchors[0]) == "pr101"
+    assert cpu_axis_family_for_anchor(anchors[-1]) == "other"
+    assert cpu_axis_family_for_anchor(anchors[4]) == "pr106"
+    per_family = select_cpu_optimal_per_family(anchors)
+    assert per_family["pr101"].archive_sha256 == "2" * 64
+    assert per_family["pr106"].archive_sha256 == "7" * 64
+    assert per_family["pr107"].archive_sha256 == "4" * 64
+    assert per_family["other"].archive_sha256 == "6" * 64
+
+
+def test_continual_learning_loader_reads_live_accepted_anchor_history(
+    tmp_path: Path,
+) -> None:
+    _write_json(
+        tmp_path / ".omx/state/continual_learning_posterior.json",
+        {
+            "schema": "continual_learning_posterior_v1",
+            "accepted_anchor_history": [
+                {
+                    "score_value": 0.19284757743677347,
+                    "axis": "cpu",
+                    "archive_sha256": "8" * 64,
+                    "hardware_substrate": "linux_x86_64_gha_cpu",
+                    "architecture_class": "pr101_lossy_coarsening",
+                    "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+                    "observed_at_utc": "2026-05-09T02:03:11+00:00",
+                    "archive_bytes": 178262,
+                },
+                {
+                    "score_value": 0.2066181354574151,
+                    "axis": "cuda",
+                    "archive_sha256": "9" * 64,
+                    "hardware_substrate": "linux_x86_64_t4",
+                    "architecture_class": "lane_pr106_latent_sidecar_r2_pr101_grammar",
+                    "evidence_tag": "[contest-CUDA]",
+                    "observed_at_utc": "2026-05-11T18:09:15.320614+00:00",
+                    "archive_bytes": 186780,
+                },
+            ],
+        },
+    )
+
+    payload = build_frontier_scan_payload(tmp_path)
+
+    assert payload["scan_stats"] == {
+        "total_anchors": 2,
+        "qualifying": 2,
+        "excluded": 0,
+    }
+    assert payload["best_per_axis"]["contest_cpu"]["archive_sha256"] == "8" * 64
+    assert payload["best_per_axis"]["contest_cuda"]["archive_sha256"] == "9" * 64
+    buckets = payload["g1_cpu_axis_optimization"]["per_metadata_bucket_optimal"]
+    assert buckets["pr101"]["archive_sha256"] == "8" * 64
+
+
+def test_g1_cpu_axis_payload_reports_improvement_only_when_cpu_best_beats_frontier() -> None:
+    anchors = [
+        Anchor(
+            score=0.192,
+            axis="contest_cpu",
+            archive_sha256="a" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr101_frontier"},
+        ),
+        Anchor(
+            score=0.189,
+            axis="contest_cpu",
+            archive_sha256="b" * 64,
+            hardware_substrate="linux_x86_64_cpu",
+            source_path="fixture",
+            extra={"lane_id": "lane_pr107_better_cpu"},
+        ),
+    ]
+
+    payload = build_cpu_axis_optimal_payload(anchors, current_frontier_cpu=0.192)
+
+    assert payload["overall_cpu_optimal"]["archive_sha256"] == "b" * 64
+    assert payload["delta_vs_current_frontier"] == pytest.approx(-0.003)
+    assert payload["improvement_found"] is True
+    assert payload["existing_anchor_selection_valid"] is True
+    assert payload["new_score_claim_valid"] is False
 
 
 def test_scan_best_anchor_cli_delegates_to_canonical_module(tmp_path: Path) -> None:
@@ -108,8 +263,7 @@ def test_scan_best_anchor_cli_delegates_to_canonical_module(tmp_path: Path) -> N
         check=False,
         cwd=repo_root,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
 
     assert completed.returncode == 1
@@ -117,6 +271,83 @@ def test_scan_best_anchor_cli_delegates_to_canonical_module(tmp_path: Path) -> N
     payload = json.loads(completed.stdout)
     assert payload["schema"] == "pact_frontier_scan_v1"
     assert payload["best_per_axis"]["contest_cpu"]["archive_sha256"] == "6" * 64
+    assert payload["g1_cpu_axis_optimization"]["schema"] == "g1_cpu_axis_optimal_archive_v1"
+
+
+def test_cpu_axis_optimal_archive_selector_cli(tmp_path: Path) -> None:
+    _write_frontier_fixture(tmp_path)
+    repo_root = Path(__file__).resolve().parents[3]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools/cpu_axis_optimal_archive_selector.py"),
+            "--repo-root",
+            str(tmp_path),
+            "--json",
+        ],
+        check=False,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    payload = json.loads(completed.stdout)
+    assert payload["schema"] == "g1_cpu_axis_optimal_archive_v1"
+    assert payload["overall_cpu_optimal"]["archive_sha256"] == "6" * 64
+    assert payload["qualifying_cpu_anchor_count"] == 1
+
+
+def test_probe_g1_cpu_axis_re_rank_cli_reports_axis_gap(tmp_path: Path) -> None:
+    _write_frontier_fixture(tmp_path)
+    repo_root = Path(__file__).resolve().parents[3]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools/probe_g1_cpu_axis_re_rank.py"),
+            "--repo-root",
+            str(tmp_path),
+            "--json",
+        ],
+        check=False,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    payload = json.loads(completed.stdout)
+    assert payload["schema"] == "g1_cpu_axis_re_rank_probe_v1"
+    assert payload["g1_cpu_axis_optimization"]["schema"] == "g1_cpu_axis_optimal_archive_v1"
+    assert payload["verdict"] == "FRONTIER_STABLE_VIA_RE_RANK"
+    assert payload["score_claim_valid"] is False
+    assert payload["axis_rank_cpu"][0]["archive_sha256"] == "6" * 64
+    assert payload["predicted_cpu_score_pr101_lc_v2"] is None
+
+    report_dir = tmp_path / "experiments/results/g1_cpu_axis_re_rank_fixture"
+    report_run = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "tools/probe_g1_cpu_axis_re_rank.py"),
+            "--repo-root",
+            str(tmp_path),
+            "--output-dir",
+            str(report_dir),
+        ],
+        check=False,
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+    )
+
+    assert report_run.returncode == 0
+    assert report_run.stdout.strip() == "experiments/results/g1_cpu_axis_re_rank_fixture/report.json"
+    report_payload = json.loads((report_dir / "report.json").read_text(encoding="utf-8"))
+    assert report_payload["verdict"] == "FRONTIER_STABLE_VIA_RE_RANK"
 
 
 def test_preflight_frontier_scan_gate_blocks_stale_report(
@@ -197,6 +428,7 @@ def test_autopilot_frontier_threshold_uses_canonical_scan(monkeypatch) -> None:
     if str(tools_path) not in sys.path:
         sys.path.insert(0, str(tools_path))
     import cathedral_autopilot_autonomous_loop as loop
+
     import tac.frontier_scan as frontier_scan
 
     anchors = [

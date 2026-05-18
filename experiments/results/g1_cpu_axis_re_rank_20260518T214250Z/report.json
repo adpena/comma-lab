@@ -1,0 +1,3595 @@
+{
+  "axis_gap_per_archive": {
+    "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac": {
+      "archive_sha256_cpu": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "archive_sha256_cuda": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "contest_cpu_score": 0.1982817145388956,
+      "contest_cuda_score": 0.231727964404999,
+      "cpu_minus_cuda": -0.033446249866103395,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1": {
+      "archive_sha256_cpu": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "archive_sha256_cuda": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "contest_cpu_score": 0.22352198595409703,
+      "contest_cuda_score": 0.2568473324645485,
+      "cpu_minus_cuda": -0.033325346510451465,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f": {
+      "archive_sha256_cpu": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "archive_sha256_cuda": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "contest_cpu_score": 0.22787475059700513,
+      "contest_cuda_score": 0.20642625334307507,
+      "cpu_minus_cuda": 0.021448497253930054,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d": {
+      "archive_sha256_cpu": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "archive_sha256_cuda": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "contest_cpu_score": 0.22796397327358284,
+      "contest_cuda_score": 0.2065174760196528,
+      "cpu_minus_cuda": 0.021446497253930025,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a": {
+      "archive_sha256_cpu": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "archive_sha256_cuda": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "contest_cpu_score": 3.8987840060549908,
+      "contest_cuda_score": 3.9007398365396795,
+      "cpu_minus_cuda": -0.0019558304846887253,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e": {
+      "archive_sha256_cpu": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "archive_sha256_cuda": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "contest_cpu_score": 0.2088908495021802,
+      "contest_cuda_score": 0.2261263460995081,
+      "cpu_minus_cuda": -0.0172354965973279,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d": {
+      "archive_sha256_cpu": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "archive_sha256_cuda": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "contest_cpu_score": 0.19839589432454263,
+      "contest_cuda_score": 0.23175416774323881,
+      "cpu_minus_cuda": -0.03335827341869618,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e": {
+      "archive_sha256_cpu": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "archive_sha256_cuda": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "contest_cpu_score": 0.2294549901682079,
+      "contest_cuda_score": 0.26193283305735077,
+      "cpu_minus_cuda": -0.03247784288914288,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365": {
+      "archive_sha256_cpu": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "archive_sha256_cuda": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "contest_cpu_score": 0.23010997767094082,
+      "contest_cuda_score": 0.20934621522786373,
+      "cpu_minus_cuda": 0.020763762443077094,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7": {
+      "archive_sha256_cpu": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "archive_sha256_cuda": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "contest_cpu_score": 0.22776488386973992,
+      "contest_cuda_score": 0.2063163866158099,
+      "cpu_minus_cuda": 0.021448497253930027,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96": {
+      "archive_sha256_cpu": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "archive_sha256_cuda": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "contest_cpu_score": 0.23016349151751497,
+      "contest_cuda_score": 0.20941739550293906,
+      "cpu_minus_cuda": 0.020746096014575915,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b": {
+      "archive_sha256_cpu": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "archive_sha256_cuda": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "contest_cpu_score": 90.57816474855734,
+      "contest_cuda_score": 90.58142803863508,
+      "cpu_minus_cuda": -0.0032632900777400664,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf": {
+      "archive_sha256_cpu": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "archive_sha256_cuda": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "contest_cpu_score": 0.1920513168811056,
+      "contest_cuda_score": 0.22621002169349796,
+      "cpu_minus_cuda": -0.03415870481239236,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10": {
+      "archive_sha256_cpu": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "archive_sha256_cuda": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "contest_cpu_score": 0.19486971742763273,
+      "contest_cuda_score": 0.22776607182321268,
+      "cpu_minus_cuda": -0.032896354395579946,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f": {
+      "archive_sha256_cpu": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "archive_sha256_cuda": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "contest_cpu_score": 0.22809238271134513,
+      "contest_cuda_score": 0.20664588545741508,
+      "cpu_minus_cuda": 0.021446497253930052,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5": {
+      "archive_sha256_cpu": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "archive_sha256_cuda": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "contest_cpu_score": 0.19284757743677347,
+      "contest_cuda_score": 0.2263520234784395,
+      "cpu_minus_cuda": -0.033504446041666025,
+      "hardware_cpu": "linux_x86_64_gha_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0": {
+      "archive_sha256_cpu": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "archive_sha256_cuda": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "contest_cpu_score": 0.22782680632923968,
+      "contest_cuda_score": 0.20638030907530963,
+      "cpu_minus_cuda": 0.021446497253930052,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409": {
+      "archive_sha256_cpu": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "archive_sha256_cuda": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "contest_cpu_score": 0.19209788683213053,
+      "contest_cuda_score": 0.22626723761043824,
+      "cpu_minus_cuda": -0.03416935077830771,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0": {
+      "archive_sha256_cpu": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "archive_sha256_cuda": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "contest_cpu_score": 0.20736549114794994,
+      "contest_cuda_score": 0.23714449393769646,
+      "cpu_minus_cuda": -0.029779002789746517,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48": {
+      "archive_sha256_cpu": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "archive_sha256_cuda": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "contest_cpu_score": 0.2286802845175232,
+      "contest_cuda_score": 0.20739428085403283,
+      "cpu_minus_cuda": 0.02128600366349037,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4": {
+      "archive_sha256_cpu": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "archive_sha256_cuda": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "contest_cpu_score": 0.22712591739832488,
+      "contest_cuda_score": 0.20533002902019143,
+      "cpu_minus_cuda": 0.021795888378133454,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9": {
+      "archive_sha256_cpu": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "archive_sha256_cuda": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "contest_cpu_score": 0.19836541637745966,
+      "contest_cuda_score": 0.2317362548377786,
+      "cpu_minus_cuda": -0.033370838460318936,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe": {
+      "archive_sha256_cpu": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "archive_sha256_cuda": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "contest_cpu_score": 0.20143815804513954,
+      "contest_cuda_score": 0.2342490775283781,
+      "cpu_minus_cuda": -0.032810919483238554,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b": {
+      "archive_sha256_cpu": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "archive_sha256_cuda": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "contest_cpu_score": 0.1986956456779881,
+      "contest_cuda_score": 0.23170948072940661,
+      "cpu_minus_cuda": -0.03301383505141853,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291": {
+      "archive_sha256_cpu": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "archive_sha256_cuda": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "contest_cpu_score": 0.2011587759556391,
+      "contest_cuda_score": 0.23354941003137458,
+      "cpu_minus_cuda": -0.032390634075735475,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383": {
+      "archive_sha256_cpu": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "archive_sha256_cuda": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "contest_cpu_score": 0.22806551797550428,
+      "contest_cuda_score": 0.2066181354574151,
+      "cpu_minus_cuda": 0.021447382518089197,
+      "hardware_cpu": "linux_x86_64_gha_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589": {
+      "archive_sha256_cpu": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "archive_sha256_cuda": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "contest_cpu_score": 90.58102532784203,
+      "contest_cuda_score": 90.58427695093009,
+      "cpu_minus_cuda": -0.003251623088061706,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab": {
+      "archive_sha256_cpu": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "archive_sha256_cuda": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "contest_cpu_score": 0.22071572261110622,
+      "contest_cuda_score": 0.24513262253913132,
+      "cpu_minus_cuda": -0.024416899928025093,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a": {
+      "archive_sha256_cpu": "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a",
+      "archive_sha256_cuda": "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a",
+      "contest_cpu_score": 0.22810213271134513,
+      "contest_cuda_score": 0.2066336354574151,
+      "cpu_minus_cuda": 0.021468497253930047,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce": {
+      "archive_sha256_cpu": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "archive_sha256_cuda": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "contest_cpu_score": 0.22966566346263317,
+      "contest_cuda_score": 0.20898305277982338,
+      "cpu_minus_cuda": 0.0206826106828098,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814": {
+      "archive_sha256_cpu": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "archive_sha256_cuda": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "contest_cpu_score": 0.2011832266102615,
+      "contest_cuda_score": 0.2339322883249223,
+      "cpu_minus_cuda": -0.0327490617146608,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81": {
+      "archive_sha256_cpu": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "archive_sha256_cuda": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "contest_cpu_score": 0.22810213271134513,
+      "contest_cuda_score": 0.2066336354574151,
+      "cpu_minus_cuda": 0.021468497253930047,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/continual_learning_posterior.json",
+      "source_cuda": ".omx/state/continual_learning_posterior.json"
+    },
+    "lane_pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514": {
+      "archive_sha256_cpu": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "archive_sha256_cuda": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "contest_cpu_score": 0.19209788683213053,
+      "contest_cuda_score": 0.22626723761043824,
+      "cpu_minus_cuda": -0.03416935077830771,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/active_lane_dispatch_claims.md",
+      "source_cuda": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515": {
+      "archive_sha256_cpu": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "archive_sha256_cuda": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "contest_cpu_score": 0.1920513168811056,
+      "contest_cuda_score": 0.22621002169349796,
+      "cpu_minus_cuda": -0.03415870481239236,
+      "hardware_cpu": "linux_x86_64_cpu",
+      "hardware_cuda": "linux_x86_64_t4",
+      "source_cpu": ".omx/state/active_lane_dispatch_claims.md",
+      "source_cuda": ".omx/state/active_lane_dispatch_claims.md"
+    }
+  },
+  "axis_rank_cpu": [
+    {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+        "archive_bytes": 178517,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T02:01:39.355227+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr101",
+      "score": 0.1920513168811056,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr101",
+      "score": 0.1920513168811056,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514",
+        "archive_bytes": 178517,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T20:48:23.471340+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr101",
+      "score": 0.19209788683213053,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514",
+        "posterior_update": "accepted"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr101",
+      "score": 0.19209788683213053,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "hnerv_ft_microcodec",
+        "archive_bytes": 178262,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-09T02:03:11+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_gha_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19284757743677347,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu",
+        "archive_bytes": 178205,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T21:58:16.644438+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr103",
+      "score": 0.19486971742763273,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19486971742763273,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_blue_payload_contest_cpu",
+        "archive_bytes": 185378,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:22:58.472828+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.1982817145388956,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.1982817145388956,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_green_payload_contest_cpu",
+        "archive_bytes": 185379,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:22:58.590233+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19836541637745966,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19836541637745966,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_red_payload_contest_cpu",
+        "archive_bytes": 185376,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:22:58.597095+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19839589432454263,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.19839589432454263,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_z3_balle_hyperprior_bolton_recover_20260514_paired_contest_cpu",
+        "archive_bytes": 179130,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T15:57:25.739400+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.1986956456779881,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514_paired_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.1986956456779881,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_payload_contest_cpu",
+        "archive_bytes": 185830,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:05:45.764751+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2011587759556391,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2011587759556391,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_alternating_contest_cpu",
+        "archive_bytes": 185845,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:09:45.407860+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2011832266102615,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2011832266102615,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_negate_contest_cpu",
+        "archive_bytes": 185834,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:04:12.407013+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.20143815804513954,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.20143815804513954,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_shrunk96_b100k_L2_green_payload_contest_cpu",
+        "archive_bytes": 185309,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:00:35.228997+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.20736549114794994,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.20736549114794994,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "frame_exploit_selector_fes1_contest_cpu_20260514T130645Z",
+        "archive_bytes": 187209,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T13:12:09.894507+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2088908495021802,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2088908495021802,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_shrunk96_b100k_L2_rgb_payload_contest_cpu",
+        "archive_bytes": 185307,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:00:35.293959+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.22071572261110622,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.22071572261110622,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_b50k_L2_rgb_payload_contest_cpu",
+        "archive_bytes": 222129,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:54:49.319204+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.22352198595409703,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.22352198595409703,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_format0d_latent_score_table_20260516_contest_cpu",
+        "archive_bytes": 186876,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-16T07:23:10.079573+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22712591739832488,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr106_format0d_latent_score_table_20260516_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22712591739832488,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_format0c_exact_radix_paired_20260515_contest_cpu",
+        "archive_bytes": 186327,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T09:22:37.819599+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22776488386973992,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr106_format0c_exact_radix_paired_20260515_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22776488386973992,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "unknown__hnerv_hlm1_fixed_latent_recode_modal_cpu_enforced_20260513",
+        "archive_bytes": 186423,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.107415+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.22782680632923968,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "unknown__pr106_r2_lowlevel_hdm4_cpu_20260513T095252Z_codex",
+        "archive_bytes": 186492,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.110039+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22787475059700513,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "pr101_lossy_coarsening",
+        "archive_bytes": 186629,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.110371+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr101",
+      "score": 0.22796397327358284,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r2_pr101_grammar",
+        "archive_bytes": 186780,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.105306+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_gha_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22806551797550428,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r2",
+        "archive_bytes": 186822,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.109335+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22809238271134513,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_c3_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.108046+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22810213271134513,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_wavelet_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.108416+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.22810213271134513,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r1",
+        "archive_bytes": 186808,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.109027+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.2286802845175232,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "d1_b100k_L2_green_payload_contest_cpu",
+        "archive_bytes": 223981,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:54:49.522780+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2294549901682079,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 0.2294549901682079,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "pr103_on_pr106",
+        "archive_bytes": 185578,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.108730+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr103",
+      "score": 0.22966566346263317,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_component_prefix16_pr101grammar_20260515T191614Z_contest_cpu",
+        "archive_bytes": 186278,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T19:22:03.409205+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.23010997767094082,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr106_component_prefix16_pr101grammar_20260515T191614Z_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.23010997767094082,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_topk8_cpu_eval_20260515_runtimefix1",
+        "archive_bytes": 186302,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T10:49:10.885684+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.23016349151751497,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_pr106_latent_topk8_cpu_eval_20260515_runtimefix1",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "pr106",
+      "score": 0.23016349151751497,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "unknown__contest_cpu_eval-lane_g_v3-25772267506",
+        "archive_bytes": 694074,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.104800+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_gha_cpu",
+      "metadata_bucket": "other",
+      "score": 1.0375828860270313,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+        "archive_bytes": 34603,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-16T23:40:48.289083+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 3.8987840060549908,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_l5_v2_measure_tt5l_autonomy_paired_exact_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 3.8987840060549908,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_full_contest_cpu",
+        "archive_bytes": 211866,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-18T11:11:18.925822+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 90.57816474855734,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_full_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 90.57816474855734,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_identity_contest_cpu",
+        "archive_bytes": 212047,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-18T11:11:18.949611+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 90.58102532784203,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "axis": "contest_cpu",
+      "extra": {
+        "lane_id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_identity_contest_cpu",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_cpu",
+      "metadata_bucket": "other",
+      "score": 90.58102532784203,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    }
+  ],
+  "axis_rank_cuda": [
+    {
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_format0d_latent_score_table_20260516_contest_cuda",
+        "archive_bytes": 186876,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-16T07:20:32.164015+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20533002902019143,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_format0d_latent_score_table_20260516_contest_cuda",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20533002902019143,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm12_hlm3_magicless_exact_radix_format0c_20260515",
+        "archive_bytes": 186327,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T09:09:05.197813+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063163866158099,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "56cdd10bdc43708f2021458d0877b6c5e5a065a482a61280e727078462aed8e7",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm12_hlm3_magicless_exact_radix_format0c_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063163866158099,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515",
+        "archive_bytes": 186341,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T07:36:42.188846+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20632570864115363,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "5c9ef623a089893d6f2dd13c0417149b86a6bdfe52b1f472988e73bd2cfddc4d",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm11_hlm3_magicless_packetir_format0b_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20632570864115363,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "186a3d59f2038be61bfda7aa97cdc7abcf970ce4f2d20cd84d42386e894d2ce7",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm10_hlm3_packetir_format0a_20260515",
+        "archive_bytes": 186349,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T05:52:24.716718+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063310355127786,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "186a3d59f2038be61bfda7aa97cdc7abcf970ce4f2d20cd84d42386e894d2ce7",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm10_hlm3_packetir_format0a_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063310355127786,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "09bcd867c2778d38d5ac04b648d44cb3bdfcfd3e3db402beb8886826cced50e9",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm9_packetir_format09_20260515",
+        "archive_bytes": 186352,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T04:40:23.836171+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20633303308963796,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "09bcd867c2778d38d5ac04b648d44cb3bdfcfd3e3db402beb8886826cced50e9",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm9_packetir_format09_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20633303308963796,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "20b91d7283dbb63f3846a019dba4909adc8849e73c8d5669345de3be0a8c36f9",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm8_inner_headerless_fmt08_20260515",
+        "archive_bytes": 186376,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T03:39:45.159584+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063490137045129,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "20b91d7283dbb63f3846a019dba4909adc8849e73c8d5669345de3be0a8c36f9",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm8_inner_headerless_fmt08_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063490137045129,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "d09550244c8f12aca9bb958f9dfddeca6ec559e8c1b726fc639ca61c49198258",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm8_headerless_fmt07_20260515",
+        "archive_bytes": 186380,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T02:58:34.921824+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20635167714032537,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "d09550244c8f12aca9bb958f9dfddeca6ec559e8c1b726fc639ca61c49198258",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm8_headerless_fmt07_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20635167714032537,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "44eb228ab2ae58f267d91c53db9119db3beb6a6c8488c7c903d9bb78e8798844",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_hdm8_implicit_len_fmt06_20260515",
+        "archive_bytes": 186382,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T01:04:11.587859+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063530088582316,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "44eb228ab2ae58f267d91c53db9119db3beb6a6c8488c7c903d9bb78e8798844",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_hdm8_implicit_len_fmt06_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063530088582316,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "9a8e7c4e09572586bac0c1ae425400267ae65b70c918a1c9d13a4ddb08f05adc",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_hdm8_fixed_meta_rank_elided_exact_cuda_20260515",
+        "archive_bytes": 186386,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T00:22:25.148142+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2063556722940441,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9a8e7c4e09572586bac0c1ae425400267ae65b70c918a1c9d13a4ddb08f05adc",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2063556722940441,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm8_fixed_lengths_exact_eval",
+        "archive_bytes": 186395,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T09:52:05.165597+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20636166502462222,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8a30730e863a2f846d7ca3a707b3191ad64312f5270976dc5f9322ba4228e8c2",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20636166502462222,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "df2e07084233fd38b01c46a4ffebe244391b01a8bf2e04392a4e0348463f1bbb",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm7_final_len_elided_exact_eval",
+        "archive_bytes": 186405,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T09:04:19.949033+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20636832361415344,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "df2e07084233fd38b01c46a4ffebe244391b01a8bf2e04392a4e0348463f1bbb",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20636832361415344,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "f3941568035d40bc7cb9e6fc0a108a5ec8bedf33f7ae14f6c060e92f7f247593",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm6_q_brotli_tuned_exact_eval",
+        "archive_bytes": 186408,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T08:21:35.802351+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2063703211910128,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f3941568035d40bc7cb9e6fc0a108a5ec8bedf33f7ae14f6c060e92f7f247593",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2063703211910128,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "2c6e5f8d71f687227a28a9a378dc5edfc3215b762015042203b6bf58bfee9378",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hlm2_fixed_latent_recode_exact_eval",
+        "archive_bytes": 186411,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T07:00:44.345151+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20637231876787215,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2c6e5f8d71f687227a28a9a378dc5edfc3215b762015042203b6bf58bfee9378",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20637231876787215,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hlm1_xmember_exact_eval_20260514",
+        "archive_bytes": 186415,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T04:08:27.833420+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20637498220368466,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "391400008b69e66f8bd522f4eb2a53c465e58a17e536d171caf039f9e51e874f",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20637498220368466,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hlm1_fixed_latent_recode_exact_eval",
+        "archive_bytes": 186423,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-13T12:42:00.404248+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20638030907530963,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8801845d5099b957898fb6c6e58625bfb4cc065085ed2e3154c2cbc702dc91e0",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20638030907530963,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm4_q_brotli_split_exact_eval",
+        "archive_bytes": 186492,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-13T07:44:51.711384+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20642625334307507,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "218ae16f3f13b722e9752d698667ed8770151e40d44b5756c0ebbccb7682825f",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20642625334307507,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+        "archive_bytes": 186518,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T03:09:38.846315+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2064796628814009,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "98fd0bd779404970f11ca616b5c98dcb3ec41f74fb0a4ffe6d4ce613684d1223",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_hdm8_cuda_selector_sparse_top001_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2064796628814009,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_r2_lowlevel_hdm3_sidecar_pr101_runtime_exact_cuda",
+        "archive_bytes": 186615,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-13T06:39:23.573981+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2065081539943091,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8cc7e3b21a5f77604331abb727c105e21351e8c199456db741eecb1fc7714093",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2065081539943091,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_r2_pr101_grammar_lowlevel_repack_151b_cuda",
+        "archive_bytes": 186629,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-13T04:53:00.298287+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2065174760196528,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "287e6edc612803a9a9d5de3ce50b421c039704f38bae442a6dcc97a3e8d6ed4d",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2065174760196528,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "c9d117fd6e9b5ef3fe7c1165d724c572560bfbc7f3b4cb8cc485b9bb4c612af5",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_fixed_meta_rank_elided_exact_cuda_20260514",
+        "archive_bytes": 186771,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T00:03:52.664657+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20661202799099615,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "c9d117fd6e9b5ef3fe7c1165d724c572560bfbc7f3b4cb8cc485b9bb4c612af5",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20661202799099615,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "bf83c2ffc559dd42eec131e283bf106b789c0debfe7c3323e10ce1b5d8aa9a70",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_r2_rank_elided_format04_exact_cuda_20260514",
+        "archive_bytes": 186776,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T15:57:18.341392+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20661535728576175,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "bf83c2ffc559dd42eec131e283bf106b789c0debfe7c3323e10ce1b5d8aa9a70",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20661535728576175,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r2_pr101_grammar",
+        "archive_bytes": 186780,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-11T18:09:15.320614+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066181354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "c48631e11a9bb18d051da9100ca4d5773558a8a81ac38dc8f6f4e8b6119d0383",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_latent_sidecar_r2_pr101_grammar",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066181354574151,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_c3_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-11T18:13:10.792022+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_wavelet_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-11T18:13:16.714402+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8e61ff2d5a42f463d4ad455a2d82a1163f8e709f60d246458f44f7b9e2a5c67f",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_c3_residual_pr106_sidecar_l2_sparse_aware_dispatch",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-11T20:43:16.318536+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "d48600da99bad7a75301a4b982d9e3d2e1e3b0dba23e2a49859187305b06cf44",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_cool_chic_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.373742+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "01df6f12e562fdd1ad7c0a2d4dfc289ce814823cdea06c9a5987feb021d17cc1",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_coord_mlp_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.374235+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f373b308b08059e4d8749a0ff4c25d814e2b7af0f30109a8f5f8246ceca1e878",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_siren_residual_pr106_sidecar_dispatch_ready",
+        "archive_bytes": 186832,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.374530+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8e61ff2d5a42f463d4ad455a2d82a1163f8e709f60d246458f44f7b9e2a5c67f",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_c3_residual_pr106_sidecar_l2_sparse_aware_dispatch",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ed90a2250e948ed70086162a84ab907a866099b9d2a7d13fd13870e5fa29fe81",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_wavelet_residual_pr106_sidecar_dispatch_ready",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "eafb1a027f7065751bc6eb8716f9cc92e0e86c290c68eaa529c59b0066f0960a",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_c3_residual_pr106_sidecar_dispatch_ready",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.2066336354574151,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "7f926bc3e213af1c3ea4be0608c63d041d455eb6b988562b64465e81b25f3a3f",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r2",
+        "archive_bytes": 186822,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.379265+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20664588545741508,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "72a9516608e9f8770211f763d1e5689d6ab31e5594e3ff0b618828dd83193a8b",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_frame_exploit_fes1_all_none_control_20260514",
+        "archive_bytes": 187209,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T13:37:17.331960+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20690367421246367,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "72a9516608e9f8770211f763d1e5689d6ab31e5594e3ff0b618828dd83193a8b",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_frame_exploit_fes1_all_none_control_20260514",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20690367421246367,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "947b85e8a69db295d4dcf80b0b528639c47839f40f289a2c05b70a2064658b48",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_sidecar_r1",
+        "archive_bytes": 186808,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.378951+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20739428085403283,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b0645ee705cf7fe34300f5b4586efe03d5c3262c66ac72a503b90599a996d004",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_hdm8_cuda_selector_sparse_budget128_20260515",
+        "archive_bytes": 186760,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T03:14:43.189835+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20787717836935493,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b0645ee705cf7fe34300f5b4586efe03d5c3262c66ac72a503b90599a996d004",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_hdm8_cuda_selector_sparse_budget128_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.20787717836935493,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ec0890c2d2317dcad903ed37ffddb2794cd19c1df9effa057cb7f05af205e1ce",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_on_pr106",
+        "archive_bytes": 185578,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.377575+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.20898305277982338,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_component_prefix16_pr101grammar_20260515T191614Z_contest_cuda",
+        "archive_bytes": 186278,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T19:18:07.196531+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20934621522786373,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "4e9a10339cb6474ad1ca332cb1ddbd255d1577a18197ce541df4b8c189c12365",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_component_prefix16_pr101grammar_20260515T191614Z_contest_cuda",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20934621522786373,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "626b1c76d318eaed45198dc26aea7ee98c8a05f685b840356cf5b621bcddeea7",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr106_quantization_sweep",
+        "archive_bytes": 186088,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.379573+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20936498680571203,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr106_latent_topk8_cuda_eval_20260515_runtimefix1",
+        "archive_bytes": 186302,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T10:45:53.149088+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20941739550293906,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "582c6ff6ea427c03f7bc241c85830a30d95302bd1a0bf03da7891530bb20ed96",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr106_latent_topk8_cuda_eval_20260515_runtimefix1",
+        "posterior_update": "accepted"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.20941739550293906,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "34dc94644f5619ea7e6254079e3e4d3bbf0952f8a0ad287f675f7a249f359071",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_hdm8_selector_cuda_full_aggressive_exact_t4_20260515",
+        "archive_bytes": 187226,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T02:41:09.334854+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2095197967107254,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "34dc94644f5619ea7e6254079e3e4d3bbf0952f8a0ad287f675f7a249f359071",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_hdm8_selector_cuda_full_aggressive_exact_t4_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2095197967107254,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "793747837bb1d71987e4a7055f35e25620f8eb530e6f297cc2020e5e00f1d798",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm8_film_grain_sidecar_exact_eval",
+        "archive_bytes": 187366,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T21:21:28.876412+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2161099173824375,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "793747837bb1d71987e4a7055f35e25620f8eb530e6f297cc2020e5e00f1d798",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2161099173824375,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "frame_exploit_selector_fes1_exact_cuda_20260514T125729Z",
+        "archive_bytes": 187209,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T13:00:08.139045+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2261263460995081,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "30ace55bcaef0d86e4164bd75fd7e3e04682f97eb9c8e9e059655cb457793e2e",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2261263460995081,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+        "archive_bytes": 178517,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T02:07:55.809518+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.22621002169349796,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+        "posterior_update": "accepted"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.22621002169349796,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514",
+        "archive_bytes": 178517,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T00:18:35.034160+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.22626723761043824,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "8866ebb655e96ccf0ffcd84feae08c131734cba8c402bfb8c661a29f289ce409",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_pr101_frame_exploit_selector_fec3_compact_exact_k8_cpu_overlay_20260514",
+        "posterior_update": "accepted"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.22626723761043824,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_ft_microcodec",
+        "archive_bytes": 178262,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-09T02:42:55+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2263520234784395,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr101_lossy_coarsening",
+        "archive_bytes": 178258,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.375549+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.22650343150032118,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f220be0350675eb06399e38a39d5849f9d57b6b0ebdac1c8295845d32e6cf6ca",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__eval_work",
+        "archive_bytes": 178279,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.111848+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.22655968711150934,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cuda",
+        "archive_bytes": 178205,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T21:49:12.038670+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.22776607182321268,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.22776607182321268,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8460014d70855ce9226285f80513d6d743ed23723870a6a38b009cfca40f423e",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_arithmetic_coding",
+        "archive_bytes": 178207,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.376717+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.22776742708207615,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "578c8f4e86eafc9dc04eefe61cc0e7f3f3f43e134ef4447cf9ef26fd23a23551",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_arithmetic_coding",
+        "archive_bytes": 178211,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.376437+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.22777017708207614,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2427cbb7f68e8e3bcf1e989eee0cf511bff5994a5e856b500bfca3c95ca181d8",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_arithmetic_coding",
+        "archive_bytes": 178215,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.377253+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.22777267708207616,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_arithmetic_coding",
+        "archive_bytes": 178223,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.378669+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 0.22777817708207615,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f44cabbdcbac50e49f1d67e5075bb6912919877f6566e34053ab6423eeb165fe",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "hnerv_hdm8_even_frame_selector_exact_eval_20260514",
+        "archive_bytes": 188756,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T11:20:58.057393+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.22816528594942062,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f44cabbdcbac50e49f1d67e5075bb6912919877f6566e34053ab6423eeb165fe",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.22816528594942062,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__pr102-public-exact-replay-hardened-g4dn2-20260508T103725Z",
+        "archive_bytes": 178981,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.106284+00:00"
+      },
+      "family": "pr102",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr102",
+      "score": 0.22839372989108092,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "6564c32a9edeeaf08abd7f0ea673ba2fda23444605ca207eb4ba794cc66797b8",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__pr104-public-exact-replay-rootstaged-g4dn2-20260508T1130Z",
+        "archive_bytes": 178637,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.106635+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23113446620399658,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_z3_balle_hyperprior_bolton_recover_20260514_paired_contest_cuda",
+        "archive_bytes": 179130,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T15:57:25.718979+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23170948072940661,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "b6c4a6f1f1f4bb29695e8ee095ca3862690b2c4833fba31579406179aaf35a4b",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_z3_balle_hyperprior_bolton_recover_20260514_paired_contest_cuda",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23170948072940661,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_blue_payload_contest_cuda",
+        "archive_bytes": 185378,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:15:36.329355+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.231727964404999,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "14190c2aac3d4fca767d9ba9ab64d4a9cf1a79c804f952d936f5add8ad2c36ac",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.231727964404999,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_green_payload_contest_cuda",
+        "archive_bytes": 185379,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:15:36.231121+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2317362548377786,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ac8b7681cde000ff4fc701649543ecb9f3585fd7ab80ac68c2dd18973e5208f9",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2317362548377786,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_cert_sparse96_b3k_L2_red_payload_contest_cuda",
+        "archive_bytes": 185376,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:15:46.406937+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23175416774323881,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "3198847f7ca839df8e183ebccaf640d6f7fe2bf1b8e50623509154315db35c7d",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23175416774323881,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_payload_contest_cuda",
+        "archive_bytes": 185830,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:03:15.650952+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23354941003137458,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "bcabbb509b225e68b24346743921a4c15d5073ec60df98b5fd339f6e02dbb291",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23354941003137458,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_alternating_contest_cuda",
+        "archive_bytes": 185845,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:09:45.316663+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2339322883249223,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ed8b53de9f50ed0d7fc73eacca9a57ad64252c6abb2c02f219e51e893f0c5814",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2339322883249223,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "efc0466bc38edb9cb57193d5f43e4d4fbf2d993cd41069f2c3700aa4bedbfeae",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr101_lossy_coarsening",
+        "archive_bytes": 178014,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.374892+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.2339625235094184,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_sparse96_b5k_L2_green_negate_contest_cuda",
+        "archive_bytes": 185834,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T18:01:42.253145+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2342490775283781,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "adb4566c5db1eecf180843a9828a3cd7e24b04a656041762a879e8ec11588cfe",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2342490775283781,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "39dbfd05d4861c6c5ea12e7bfc8fba17e8249dcc761e9c44943eeba8d56c6ade",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr101_lossy_coarsening",
+        "archive_bytes": 177928,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.375176+00:00"
+      },
+      "family": "pr101",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr101",
+      "score": 0.23488497704294406,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_shrunk96_b100k_L2_green_payload_contest_cuda",
+        "archive_bytes": 185309,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:57:34.625608+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23714449393769646,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "9195e42f80a55b84ed7e6950a96cdbeabfadb9a0f18b8d9bb9b320b096b648c0",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.23714449393769646,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_shrunk96_b100k_L2_rgb_payload_contest_cuda",
+        "archive_bytes": 185307,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:57:34.393218+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.24513262253913132,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "e8cd5499a1e5f012d60bb600ef8cf1d3b52ea54d11665bf76d4b18ec199c9aab",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.24513262253913132,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_b50k_L2_rgb_payload_contest_cuda",
+        "archive_bytes": 222129,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:54:49.281434+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2568473324645485,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "1e027e2092e51c77c31185013d5fec81d67c283473ac1f85dc09a2421f33adc1",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.2568473324645485,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "d1_b100k_L2_green_payload_contest_cuda",
+        "archive_bytes": 223981,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T17:54:49.409627+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.26193283305735077,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "3c910bc7b26272087fc4c56d657d9506679aec22d8b283274983f0f18867ae4e",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": null,
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.26193283305735077,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "0641b8ac8084b362b80e7c5bbe3c122946a8dbf7843fcbcd9f445aee7a56af7b",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__pr106-uniward-rms005-exact-20260508T083555Z",
+        "archive_bytes": 150511,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.107047+00:00"
+      },
+      "family": "pr106",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr106",
+      "score": 0.3371617511972341,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "ab8a8a13c70b3d3bbf2ce3d8a81a77691b776a6e0fb1cbe9ce504dc3f59c1b28",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__auth_eval_work",
+        "archive_bytes": 156404,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.105981+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.351718793322788,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "f5d04f22d46bc1c4b863e9e2989c25f9b04e07cb21d54980b5effb654edc127a",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__eval_work",
+        "archive_bytes": 206110,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.111522+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 0.5447505505333358,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_time_traveler_l5_autonomy_recovered_exact_eval_20260514",
+        "archive_bytes": 34603,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T11:10:42.906143+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 3.9007398365396795,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2b05b7351b690b0b2251ddc620d80dd9a1833051cfa07e679106d00fbc70024a",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_time_traveler_l5_autonomy_recovered_exact_eval_20260514",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 3.9007398365396795,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8274e88c0ab1d26a06470a0730d17fe004556afa564460cf1c05624ff6060278",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "pr103_arithmetic_coding",
+        "archive_bytes": 185574,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-12T12:35:28.376172+00:00"
+      },
+      "family": "pr103",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "pr103",
+      "score": 41.34951661322894,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_c6_ibps1_decoder34858_byte_patch_exact_cuda_20260514",
+        "archive_bytes": 224481,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T18:31:55.381542+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 52.7169058085588,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "2d6416874c6563d6f2ebf9b502c98a45b5b4dfee88f42124dbbaa1910579bb3a",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_c6_ibps1_decoder34858_byte_patch_exact_cuda_20260514",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 52.7169058085588,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "8cd20cc0caaa2327e4ca5a1b642d9e666bdea926e75fe53ae72e38cca65435e2",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "unknown__auth_eval_work",
+        "archive_bytes": 495206,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-14T01:02:07.110734+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 56.06364706567909,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_full_contest_cuda",
+        "archive_bytes": 211866,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-18T11:07:47.052078+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 90.58142803863508,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "5b371490b4459b85e95e6173653fc1b9aa78010681862ec51111166a6c867c4b",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_full_contest_cuda",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 90.58142803863508,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    },
+    {
+      "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "axis": "contest_cuda",
+      "extra": {
+        "architecture_class": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_identity_contest_cuda",
+        "archive_bytes": 212047,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CUDA]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-18T11:07:47.129154+00:00"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 90.58427695093009,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    {
+      "archive_sha256": "e6cd9bf67ca68bcdf93aa0e804435b75b813e420d5e3964b3a6cb6cee28e3589",
+      "axis": "contest_cuda",
+      "extra": {
+        "lane_id": "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518_identity_contest_cuda",
+        "posterior_update": "accepted"
+      },
+      "family": "other",
+      "hardware_substrate": "linux_x86_64_t4",
+      "metadata_bucket": "other",
+      "score": 90.58427695093009,
+      "source_path": ".omx/state/active_lane_dispatch_claims.md"
+    }
+  ],
+  "g1_cpu_axis_optimization": {
+    "axis": "contest_cpu",
+    "blockers": [],
+    "current_frontier_cpu": 0.1920513168811056,
+    "delta_vs_current_frontier": 0.0,
+    "evidence_grade": "[contest-CPU]",
+    "excluded_anchor_count": 139,
+    "existing_anchor_selection_valid": true,
+    "family_method": "metadata_token_match_no_archive_sha_guess",
+    "improvement_found": false,
+    "input_anchor_count": 194,
+    "metadata_bucket_method": "metadata_token_match_no_archive_sha_guess",
+    "new_score_claim_valid": false,
+    "overall_cpu_optimal": {
+      "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+      "axis": "contest_cpu",
+      "extra": {
+        "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+        "archive_bytes": 178517,
+        "archive_id": null,
+        "evidence_grade": null,
+        "evidence_tag": "[contest-CPU]",
+        "label": null,
+        "lane_id": null,
+        "measured_at_utc": "2026-05-15T02:01:39.355227+00:00"
+      },
+      "hardware_substrate": "linux_x86_64_cpu",
+      "score": 0.1920513168811056,
+      "source_path": ".omx/state/continual_learning_posterior.json"
+    },
+    "per_family_optimal": {
+      "other": {
+        "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "hnerv_ft_microcodec",
+          "archive_bytes": 178262,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-09T02:03:11+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_gha_cpu",
+        "score": 0.19284757743677347,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr101": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+          "archive_bytes": 178517,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-15T02:01:39.355227+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.1920513168811056,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr103": {
+        "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu",
+          "archive_bytes": 178205,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-14T21:58:16.644438+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.19486971742763273,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr106": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "lane_pr106_format0d_latent_score_table_20260516_contest_cpu",
+          "archive_bytes": 186876,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-16T07:23:10.079573+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.22712591739832488,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      }
+    },
+    "per_metadata_bucket_optimal": {
+      "other": {
+        "archive_sha256": "87ec7ca5f2f328a8acdfc65f5cce0ab08a3a558eae88f36d4140870f141492b5",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "hnerv_ft_microcodec",
+          "archive_bytes": 178262,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU GHA Linux x86_64]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-09T02:03:11+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_gha_cpu",
+        "score": 0.19284757743677347,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr101": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+          "archive_bytes": 178517,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-15T02:01:39.355227+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.1920513168811056,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr103": {
+        "archive_sha256": "7d1e46331a048abeeb40a59e95eb87970bc93f070a2f51f3bf9af8e107ec2c10",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu",
+          "archive_bytes": 178205,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-14T21:58:16.644438+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.19486971742763273,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "pr106": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "lane_pr106_format0d_latent_score_table_20260516_contest_cpu",
+          "archive_bytes": 186876,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-16T07:23:10.079573+00:00"
+        },
+        "hardware_substrate": "linux_x86_64_cpu",
+        "score": 0.22712591739832488,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      }
+    },
+    "qualifying_cpu_anchor_count": 55,
+    "schema": "g1_cpu_axis_optimal_archive_v1",
+    "score_claim_kind": "existing_anchor_rerank_no_new_score_claim"
+  },
+  "notes": [
+    "Existing exact-eval anchors are reranked on contest-CPU only.",
+    "No new archive score is claimed by this probe."
+  ],
+  "predicted_cpu_score_pr101_lc_v2": null,
+  "predicted_delta_s_band": [
+    0.0,
+    0.0
+  ],
+  "re_rank_opportunities": [
+    {
+      "cpu_best": {
+        "archive_sha256": "6bae0201fb082457a02c69565531aba4c5942669c384fdc48e7d554f7b893fcf",
+        "axis": "contest_cpu",
+        "extra": {
+          "architecture_class": "lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515",
+          "archive_bytes": 178517,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CPU]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-15T02:01:39.355227+00:00"
+        },
+        "family": "pr101",
+        "hardware_substrate": "linux_x86_64_cpu",
+        "metadata_bucket": "pr101",
+        "score": 0.1920513168811056,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "cuda_best": {
+        "archive_sha256": "9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4",
+        "axis": "contest_cuda",
+        "extra": {
+          "architecture_class": "lane_pr106_format0d_latent_score_table_20260516_contest_cuda",
+          "archive_bytes": 186876,
+          "archive_id": null,
+          "evidence_grade": null,
+          "evidence_tag": "[contest-CUDA]",
+          "label": null,
+          "lane_id": null,
+          "measured_at_utc": "2026-05-16T07:20:32.164015+00:00"
+        },
+        "family": "pr106",
+        "hardware_substrate": "linux_x86_64_t4",
+        "metadata_bucket": "pr106",
+        "score": 0.20533002902019143,
+        "source_path": ".omx/state/continual_learning_posterior.json"
+      },
+      "kind": "cpu_best_differs_from_cuda_best"
+    }
+  ],
+  "schema": "g1_cpu_axis_re_rank_probe_v1",
+  "score_claim": false,
+  "score_claim_kind": "existing_anchor_rerank_no_new_score_claim",
+  "score_claim_valid": false,
+  "verdict": "FRONTIER_STABLE_VIA_RE_RANK"
+}

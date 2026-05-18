@@ -19,10 +19,9 @@ from pathlib import Path
 import pytest
 
 from tac.frontier_scan import (
-    Anchor,
     QUALIFYING_HARDWARE,
+    Anchor,
     best_per_axis,
-    collect_all_anchors,
     detect_drift,
     load_active_lane_dispatch_claims_anchors,
     load_continual_learning_anchors,
@@ -32,7 +31,6 @@ from tac.preflight import (
     PreflightError,
     check_reports_latest_md_not_stale_vs_canonical_frontier,
 )
-
 
 # ----------------------------------------------------------------------------
 # Anchor + canonical-helper contract
@@ -95,6 +93,7 @@ def test_qualifying_hardware_pins_canonical_set():
         "linux_x86_64_4090",
         "linux_x86_64_h100",
         "linux_x86_64_l40s",
+        "linux_x86_64_gha_cpu",
     }
     assert set(QUALIFYING_HARDWARE) == expected
 
@@ -412,7 +411,7 @@ def test_catalog_316_gate_silent_when_repo_missing_state(tmp_path):
 def test_catalog_316_gate_live_repo_regression_guard():
     """Live-repo guard: this session's reports/latest.md FRONTIER section
     must be in sync with state. Bound at 0 (operator's permanent fix)."""
-    from tac.preflight import REPO_ROOT  # noqa: PLC0415
+    from tac.preflight import REPO_ROOT
     violations = check_reports_latest_md_not_stale_vs_canonical_frontier(
         strict=False, verbose=False, repo_root=REPO_ROOT
     )

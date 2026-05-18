@@ -36,30 +36,34 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 __all__ = [
-    "Anchor",
-    "DriftRow",
-    "QUALIFYING_HARDWARE",
-    "QUALIFYING_AXES",
     "AXIS_LABELS",
     "FRONTIER_CITATION_SURFACE_PATHS",
-    "collect_all_anchors",
+    "QUALIFYING_AXES",
+    "QUALIFYING_HARDWARE",
+    "Anchor",
+    "DriftRow",
     "best_per_axis",
+    "build_cpu_axis_optimal_payload",
     "build_frontier_scan_payload",
-    "scan_frontier_citation_surface",
-    "scan_reports_latest_md",
+    "collect_all_anchors",
+    "cpu_axis_family_for_anchor",
     "detect_drift",
+    "load_active_lane_dispatch_claims_anchors",
+    "load_continual_learning_anchors",
+    "load_experiments_results_anchors",
+    "load_modal_call_id_ledger_anchors",
     "render_frontier_scan_json",
     "render_frontier_scan_text",
-    "load_continual_learning_anchors",
-    "load_modal_call_id_ledger_anchors",
-    "load_active_lane_dispatch_claims_anchors",
-    "load_experiments_results_anchors",
+    "scan_frontier_citation_surface",
+    "scan_reports_latest_md",
+    "select_cpu_optimal_per_family",
 ]
 
 # Per CLAUDE.md "Submission auth eval" non-negotiable: only 1:1
 # contest-compliant hardware qualifies for frontier promotion.
 QUALIFYING_HARDWARE: tuple[str, ...] = (
     "linux_x86_64_cpu",
+    "linux_x86_64_gha_cpu",
     "linux_x86_64_t4",
     "linux_x86_64_a10g",
     "linux_x86_64_a100",
@@ -126,7 +130,14 @@ def load_continual_learning_anchors(repo_root: Path) -> list[Anchor]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return []
-    rows: list = data.get("anchors", []) if isinstance(data, dict) else data
+    rows: list = []
+    if isinstance(data, dict):
+        for key in ("anchors", "accepted_anchor_history"):
+            value = data.get(key)
+            if isinstance(value, list):
+                rows.extend(value)
+    elif isinstance(data, list):
+        rows = data
     out: list[Anchor] = []
     for row in rows:
         if not isinstance(row, dict):
@@ -150,10 +161,17 @@ def load_continual_learning_anchors(repo_root: Path) -> list[Anchor]:
                 source_path=str(path.relative_to(repo_root)),
                 extra={
                     "evidence_grade": row.get("evidence_grade"),
+                    "evidence_tag": row.get("evidence_tag"),
                     "measured_at_utc": (
-                        row.get("measured_at_utc") or row.get("promoted_at_utc")
+                        row.get("measured_at_utc")
+                        or row.get("promoted_at_utc")
+                        or row.get("observed_at_utc")
                     ),
                     "lane_id": row.get("lane_id"),
+                    "architecture_class": row.get("architecture_class"),
+                    "archive_id": row.get("archive_id"),
+                    "label": row.get("label"),
+                    "archive_bytes": row.get("archive_bytes"),
                 },
             )
         )
@@ -332,6 +350,118 @@ def best_per_axis(anchors: list[Anchor]) -> dict[str, list[Anchor]]:
     for lst in by_axis.values():
         lst.sort(key=lambda a: a.score)
     return by_axis
+
+
+_CPU_AXIS_FAMILY_PREFIXES: tuple[str, ...] = (
+    "pr101",
+    "pr102",
+    "pr103",
+    "pr106",
+    "pr107",
+    "a1",
+)
+
+
+def cpu_axis_family_for_anchor(anchor: Anchor) -> str:
+    """Return the metadata bucket used by G1 CPU-axis reranking.
+
+    The bucket is derived only from custody metadata that already exists on
+    frontier anchors. Unknown/null lane ids intentionally fall into ``other``
+    rather than guessing from archive SHA.
+    """
+
+    candidates = (
+        anchor.extra.get("lane_id"),
+        anchor.extra.get("architecture_class"),
+        anchor.extra.get("archive_id"),
+        anchor.extra.get("label"),
+        anchor.source_path,
+    )
+    for raw in candidates:
+        if not raw:
+            continue
+        text = str(raw).lower()
+        for token in re.split(r"[^a-z0-9]+", text):
+            if token in _CPU_AXIS_FAMILY_PREFIXES:
+                return token
+    return "other"
+
+
+def select_cpu_optimal_per_family(anchors: list[Anchor]) -> dict[str, Anchor]:
+    """Select the lowest qualifying contest-CPU anchor for each family."""
+
+    grouped: dict[str, list[Anchor]] = {}
+    for anchor in anchors:
+        if anchor.canonical_axis() != "contest_cpu" or not anchor.is_qualifying():
+            continue
+        grouped.setdefault(cpu_axis_family_for_anchor(anchor), []).append(anchor)
+    return {
+        family: sorted(family_anchors, key=lambda anchor: anchor.score)[0]
+        for family, family_anchors in sorted(grouped.items())
+        if family_anchors
+    }
+
+
+def build_cpu_axis_optimal_payload(
+    anchors: list[Anchor],
+    *,
+    current_frontier_cpu: float | None = None,
+) -> dict[str, object]:
+    """Build the G1 CPU-axis reranking payload.
+
+    This is evidence routing, not a promotion claim. ``improvement_found`` is
+    true only when an existing qualifying CPU anchor beats the current CPU
+    frontier by more than numerical tolerance.
+    """
+
+    qualifying_cpu_anchors = [
+        anchor
+        for anchor in anchors
+        if anchor.canonical_axis() == "contest_cpu" and anchor.is_qualifying()
+    ]
+    per_family = select_cpu_optimal_per_family(anchors)
+    overall = None
+    if per_family:
+        overall = sorted(per_family.values(), key=lambda anchor: anchor.score)[0]
+    if current_frontier_cpu is None:
+        best = best_per_axis(anchors).get("contest_cpu") or []
+        current_frontier_cpu = best[0].score if best else None
+    delta = None
+    improvement_found = False
+    if overall is not None and current_frontier_cpu is not None:
+        delta = overall.score - current_frontier_cpu
+        improvement_found = delta < -1e-9
+    blockers = []
+    if not qualifying_cpu_anchors:
+        blockers.append("no_qualifying_contest_cpu_anchors")
+    if current_frontier_cpu is None:
+        blockers.append("current_frontier_cpu_missing")
+    return {
+        "schema": "g1_cpu_axis_optimal_archive_v1",
+        "axis": "contest_cpu",
+        "evidence_grade": "[contest-CPU]",
+        "input_anchor_count": len(anchors),
+        "qualifying_cpu_anchor_count": len(qualifying_cpu_anchors),
+        "excluded_anchor_count": len(anchors) - len(qualifying_cpu_anchors),
+        "metadata_bucket_method": "metadata_token_match_no_archive_sha_guess",
+        "family_method": "metadata_token_match_no_archive_sha_guess",
+        "current_frontier_cpu": current_frontier_cpu,
+        "overall_cpu_optimal": None if overall is None else _serialize_anchor(overall),
+        "delta_vs_current_frontier": delta,
+        "improvement_found": improvement_found,
+        "existing_anchor_selection_valid": overall is not None,
+        "new_score_claim_valid": False,
+        "score_claim_kind": "existing_anchor_rerank_no_new_score_claim",
+        "blockers": blockers,
+        "per_family_optimal": {
+            family: _serialize_anchor(anchor)
+            for family, anchor in sorted(per_family.items())
+        },
+        "per_metadata_bucket_optimal": {
+            family: _serialize_anchor(anchor)
+            for family, anchor in sorted(per_family.items())
+        },
+    }
 
 
 def _record_cited_score(cited: dict[str, float], axis_key: str, score: float) -> None:
@@ -525,6 +655,7 @@ def build_frontier_scan_payload(repo_root: Path) -> dict[str, object]:
         "frontier_citation_surfaces": citation_surfaces,
         "frontier_citation_surface_drift": surface_drift,
         "reports_latest_md_cited": cited,
+        "g1_cpu_axis_optimization": build_cpu_axis_optimal_payload(all_anchors),
         "drift": [
             {
                 "axis": row.axis,
@@ -650,4 +781,49 @@ def render_frontier_scan_text(payload: Mapping[str, object]) -> str:
             f"{int(stats.get('qualifying') or 0)} qualifying; "
             f"{int(stats.get('excluded') or 0)} excluded"
         )
+    g1 = payload.get("g1_cpu_axis_optimization")
+    if isinstance(g1, dict):
+        lines.extend(["", "=" * 72, "G1 CPU-AXIS OPTIMIZATION", "=" * 72])
+        overall = g1.get("overall_cpu_optimal")
+        if isinstance(overall, dict):
+            score = float(overall.get("score") or 0.0)
+            delta = g1.get("delta_vs_current_frontier")
+            delta_s = "n/a" if delta is None else f"{float(delta):+.10f}"
+            sha = str(overall.get("archive_sha256") or "")
+            extra = overall.get("extra")
+            lane_id = extra.get("lane_id") if isinstance(extra, dict) else None
+            lines.append(f"  best existing CPU-axis archive = {score:.10f}")
+            lines.append(f"  delta vs current frontier      = {delta_s}")
+            lines.append(f"  archive_sha256                 = {sha}")
+            if lane_id:
+                lines.append(f"  lane_id                        = {lane_id}")
+            lines.append(
+                "  verdict                        = "
+                + (
+                    "improvement_found"
+                    if bool(g1.get("improvement_found"))
+                    else "current_frontier_remains_cpu_optimal"
+                )
+            )
+            lines.append(
+                "  score_claim_kind               = "
+                + str(g1.get("score_claim_kind") or "unknown")
+            )
+            lines.append(
+                "  qualifying_cpu_anchor_count    = "
+                + str(g1.get("qualifying_cpu_anchor_count") or 0)
+            )
+        per_family = g1.get("per_family_optimal")
+        if isinstance(per_family, dict) and per_family:
+            lines.append("  per-metadata-bucket CPU optima:")
+            for family, row in sorted(per_family.items()):
+                if not isinstance(row, dict):
+                    continue
+                score = float(row.get("score") or 0.0)
+                sha = str(row.get("archive_sha256") or "")[:12]
+                extra = row.get("extra")
+                lane_id = ""
+                if isinstance(extra, dict) and extra.get("lane_id"):
+                    lane_id = f"  {extra['lane_id']}"
+                lines.append(f"    {family}: {score:.10f}  {sha}{lane_id}")
     return "\n".join(lines)

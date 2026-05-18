@@ -30,20 +30,20 @@ council_dissent:
   - member: Contrarian
     verbatim: "The reconciliation cannot resolve the 43-arbitrariness critique by renaming TOP-5; it must EITHER mathematically partition vectors into theorem-anchored sub-paradigms per Tao OR explicitly defer the META-paradigm framing until A-2 N-7 lands. I VOTE PROCEED only if the reconciled TOP-5 carries explicit SATURATION-INDEPENDENT vs SATURATION-DEPENDENT tags per vector AND the SATURATION-DEPENDENT vectors are formally gated on A-2 N-7 verdict."
   - member: Assumption-Adversary
-    verbatim: "The shared assumption I am operating within: PRIMARY's two HARD-EARNED anchors (G1 cross-axis empirical + F1 source-verified) are independent of the saturation hypothesis; therefore reconciliation can safely PROCEED on those two while DEFERRING the saturation-dependent vectors. This is HARD-EARNED-PARTIAL because (a) G1 anchor uses dual-eval data already in canonical state — no compressor sweep required to validate; (b) F1 anchor cites upstream/modules.py:84 — no compressor sweep required. The other PRIMARY TOP-5 (B1/Y3+Y6/H1) all depend on whether the archive packet has remaining rate-extractable structure, which A-2 N-7 directly tests."
+    verbatim: "The shared assumption I am operating within: PRIMARY's two HARD-EARNED anchors (G1 cross-axis empirical prior + F1 source-verified unscored dims) are independent of the saturation hypothesis; therefore reconciliation can safely PROCEED on probes for those two while DEFERRING the saturation-dependent vectors. This is HARD-EARNED-PARTIAL because (a) G1 has paired-axis data but the actual existing-anchor rerank later measured 0.0 delta; (b) F1 anchor proves unscored internal dims but not archive-byte capacity. The other PRIMARY TOP-5 (B1/Y3+Y6/H1) all depend on whether the archive packet has remaining rate-extractable structure, which A-2 N-7 directly tests."
 council_assumption_adversary_verdict:
   - assumption: "PRIMARY's TOP-5 and ADVERSARIAL's TOP-5 are necessarily conflicting (operator must choose one)"
     classification: CARGO-CULTED
-    rationale: "Per detailed cross-classification in §3-§4: G1+F1 are SATURATION-INDEPENDENT (proceed regardless); A-2/A-3/A-4 (compressor sweep / Dykstra / MI-min) are TESTS or STRUCTURAL primitives that INFORM rather than COMPETE WITH PRIMARY's TOP-5; A-1/A-5 (Brotli dict / LOC budget) are SUPPLEMENTARY low-risk experiments. The two TOP-5s are largely COMPLEMENTARY, not conflicting. The framing that operator must choose one is itself the cargo-cult."
+    rationale: "Per detailed cross-classification in §3-§4 plus later Codex correction: G1 and corrected F1/A2 probes are saturation-independent as probe axes, not as guaranteed score movement; A-2/A-3/A-4 (compressor sweep / Dykstra / MI-min) are TESTS or STRUCTURAL primitives that INFORM rather than COMPETE WITH PRIMARY's TOP-5; A-1/A-5 (Brotli dict / LOC budget) are SUPPLEMENTARY low-risk experiments. The two TOP-5s are largely COMPLEMENTARY, not conflicting. The framing that operator must choose one is itself the cargo-cult."
   - assumption: "A-2 N-7 verdict is essential gating for ALL rate-attack work"
     classification: HARD-EARNED-PARTIAL
-    rationale: "A-2 N-7 IS essential for SATURATION-DEPENDENT vectors (B1, Y3+Y6, H1, Cat-A scorer-aware-byte-level minus A1, most of Cat-M ZIP-overhead, etc.) because if standard compressors beat current frontier rate, the rate is NOT saturated, and those vectors have real upside. A-2 N-7 is NOT essential for SATURATION-INDEPENDENT vectors (G1 cross-axis exploit + F1 dim 7-12 score-invariance) because they exploit different structural information (cross-axis sensitivity + scorer-feature-invariance) orthogonal to the compression-saturation axis."
-  - assumption: "The PR102 +0.033 CPU-CUDA gap is general (not PR102-specific)"
-    classification: HARD-EARNED-EMPIRICALLY-VERIFIED
-    rationale: "Per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA' empirical receipts: PR102 CUDA 0.22839 / CPU 0.19538 = +0.033; PR107 CUDA 0.22936 / CPU 0.19664 = +0.033 (identical delta to 3 decimal places); PR101 GOLD CPU 0.193 vs hypothetical CUDA implied ~0.226 = ~+0.033. Three independent HNeRV-family observations all show consistent +0.033. This is the canonical empirical anchor for G1."
+    rationale: "A-2 N-7 IS essential for SATURATION-DEPENDENT vectors (B1, Y3+Y6, H1, Cat-A scorer-aware-byte-level minus A1-SPECIALIZED, most of Cat-M ZIP-overhead, etc.) because if standard compressors beat current frontier rate, the rate is NOT saturated, and those vectors have real upside. A-2 N-7 is NOT essential for SATURATION-INDEPENDENT vectors (G1 cross-axis exploit + corrected F1/A2 scorer-blind RGB perturbation capacity) because they exploit different structural information (cross-axis sensitivity + scorer-feature-invariance) orthogonal to the compression-saturation axis."
+  - assumption: "The PR102 +0.033 CPU-CUDA gap is a reusable conversion factor"
+    classification: FALSE_AS_CONVERSION__HARD_EARNED_AS_PER_ARCHIVE_PRIOR
+    rationale: "PR102 observed a +0.033 CUDA-minus-CPU gap on its own archive/runtime pair. Treat this as a prior for paired-axis probing only, not as a conversion factor. PR107 and PR101-family observations are supporting priors, not authority to convert CUDA to CPU or claim frontier movement without paired exact evidence."
   - assumption: "Hydra dims 7-12 are STRUCTURALLY ignored by scorer"
     classification: HARD-EARNED-VERIFIED-FROM-SOURCE
-    rationale: "upstream/modules.py:84 source line `return sum((out1[h.name][..., : h.out // 2] - out2[h.name][..., : h.out // 2]).pow(2).mean(...) for h in self.hydra.heads if h.name in distortion_heads)` confirms scorer reads ONLY first 6 dims via `[..., : h.out // 2]` slice with h.out=12. Dims 6-11 (0-indexed) are computed by encoder but DISCARDED by scorer. F1 exploit (encoder-controlled bits in dims 7-12 traveling through scorer at zero rate cost) is HARD-EARNED at the structural level. Recoverability of arbitrary bits at full fidelity remains CARGO-CULTED-PENDING-PROBE (the probe `tools/probe_hydra_dim_7_12_score_invariance.py` is op-routable 2 in §11)."
+    rationale: "upstream/modules.py:84 source line `return sum((out1[h.name][..., : h.out // 2] - out2[h.name][..., : h.out // 2]).pow(2).mean(...) for h in self.hydra.heads if h.name in distortion_heads)` confirms scorer reads ONLY first 6 dims via `[..., : h.out // 2]` slice with h.out=12. Dims 6-11 (0-indexed) are computed internally but DISCARDED by scorer. The direct dim-channel exploit is superseded; corrected F1/A2 must prove RGB perturbation capacity under first-6-dim and SegNet-argmax stability."
   - assumption: "ADVERSARIAL's 60% predicted SATURATION_HARD_EARNED is calibrated"
     classification: CARGO-CULTED-PENDING-EMPIRICAL
     rationale: "ADVERSARIAL claims 60% probability the saturation hypothesis is HARD-EARNED based on the closure_campaign Wyner-Ziv sweep landing below leaderboard-precision floor. But (a) one Wyner-Ziv sweep is not the same prior surface as the broad standard-compressor sweep A-2 N-7 will run; (b) the 60% number is a quartet estimate, not an empirically anchored frequentist probability. RECONCILIATION TREATS this as 'meaningful prior but not authority'; A-2 N-7 verdict is the actual signal."
@@ -52,7 +52,7 @@ council_assumption_adversary_verdict:
     rationale: "G1 is per-axis-archive re-ranking using existing dual-eval data in `.omx/state/continual_learning_posterior.jsonl` + `.omx/state/modal_call_id_ledger.jsonl`. It produces NO new archive bytes; therefore the compression-saturation question is structurally orthogonal. Hotz directive PROCEED IMMEDIATELY is operator-routable in current session."
 council_decisions_recorded:
   - "RECONCILED-1: PRIMARY's TOP-5 and ADVERSARIAL's alternative TOP-5 are NOT conflicting; they are complementary. Reconciled TOP-5 (operator-facing) drawn from BOTH inputs per §6."
-  - "RECONCILED-2: SATURATION-INDEPENDENT vectors (G1, F1) PROCEED IMMEDIATELY independent of A-2 N-7 outcome. Hotz binding directive on G1 unblocks current session."
+  - "RECONCILED-2: SATURATION-INDEPENDENT probe axes (G1, corrected F1/A2) PROCEED IMMEDIATELY independent of A-2 N-7 outcome. Later Codex G1 existing-anchor rerank measured actual_delta_s=0.0, so G1 remains a future paired-anchor/candidate-selection criterion, not a landed frontier move."
   - "RECONCILED-3: SATURATION-DEPENDENT vectors (B1, Y3+Y6, H1 from PRIMARY; A-1 Brotli-dict from ADVERSARIAL) gated on A-2 N-7 verdict per §7 sequencing."
   - "RECONCILED-4: A-2 N-7 routed to Codex per `.omx/research/codex_routing_directive_a2_n7_cpu_axis_tier1_standard_compressor_sweep_empirical_anchor_20260518.md` commit 1ac2063de; canonical /goal LOOP will execute. ETA 4-6h wall-clock at $0."
   - "RECONCILED-5: A-3 (Dykstra-feasibility intersection) + A-4 (MI-min Wyner-Ziv) + A-5 (LOC budget OPTIMIZER) are STRUCTURAL PRIMITIVES that should land as canonical helpers regardless of A-2 N-7 outcome — they reduce wasted enumeration effort + provide canonical bounds."
@@ -68,7 +68,7 @@ substrate_aliases:
 deferred_substrate_id: null
 deferred_substrate_retrospective_due_utc: null
 predicted_band_validation_status: pending_post_training
-predicted_band_validation_reactivation_criteria: "Reconciled TOP-5 aggregate predicted band [0.155, 0.184] [contest-CPU] validated when G1 + F1 SATURATION-INDEPENDENT vectors each achieve their per-vector predicted band on paired Linux x86_64 [contest-CPU] anchor per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA' + A-2 N-7 verdict lands + SATURATION-DEPENDENT vectors are re-evaluated per the verdict-driven cascade in §7."
+predicted_band_validation_reactivation_criteria: "Reconciled TOP-5 aggregate predicted band [0.155, 0.184] [contest-CPU] is hypothesis-grade. It can only validate when G1/corrected-F1/A2 each achieve measured post-probe net movement on paired Linux x86_64 [contest-CPU] anchors per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA' + A-2 N-7 verdict lands + SATURATION-DEPENDENT vectors are re-evaluated per the verdict-driven cascade in §7. Codex G1 existing-anchor rerank 2026-05-18 measured actual_delta_s=0.0."
 score_claim: false
 promotion_eligible: false
 provider_spend: false
@@ -106,24 +106,55 @@ notes: "Canonical OPERATOR-FACING reconciliation of three sister landings: PRIMA
 
 ---
 
+## Codex erratum and supersession note (2026-05-18T21:46Z)
+
+This memo preserves the reconciliation panel's original signal, but its F1
+language is superseded by the later legal-receiver-path audit committed at
+`35b06f9ec` and by Codex finding
+`.omx/research/codex_findings_g1_cpu_axis_rerank_and_f1_reframe_20260518T214650Z_codex.md`.
+
+Corrected F1 interpretation:
+
+- True: PoseNet dims 7-12 are source-verified unscored internal outputs.
+- False: dims 7-12 are a free archive byte channel.
+- Canonical F1: scorer-blind RGB perturbations constrained to the PoseNet
+  first-6-dim invariance manifold. This collapses F1 into A2-style
+  adversarial steganography on a specific scorer-blind manifold.
+- Legal receiver path: standard inflate-to-RGB only; no PoseNet/SegNet load at
+  inflate time.
+- Scope of this erratum: this corrects the direct F1 "dims 7-12 are archive
+  bytes" framing only. It does **not** reject A1-SPECIALIZED deterministic packet
+  compiler work. A tiny self-contained per-pattern transducer, fixed table,
+  symbolic formula, or distilled sparse/quantized native binary remains
+  sanctioned by CLAUDE.md `contest_one_video_replay` when exact CUDA auth eval
+  validates it. The rejected case is the naive full-scorer/full-PoseNet receiver
+  path, not specialized generated replay code.
+
+Therefore any phrase below that says "dim 7-12 bits travel through scorer" or
+implies a direct free archive channel should be read as historical pre-erratum
+language, not as the current canonical design.
+
+---
+
 ## 1. Executive Summary (OPERATOR-FACING)
 
 ### 1.1 The reconciliation in one paragraph
 
-PRIMARY produced a 43-vector master memo with TOP-5 (F1+G1+B1+Y3+Y6+H1) predicted aggregate `[0.152, 0.179]` [contest-CPU]. ADVERSARIAL critiqued it via 5 binding revisions (Tao paradigm-conflation / Contrarian arbitrariness / Assumption-Adversary saturation-PENDING / Boyd composition-infeasibility / Hotz apparatus_maintenance) + 12 NEW vectors + alternative TOP-5 (Brotli-dict + CPU-sweep + Dykstra + MI-min + LOC-budget) + mandatory A-2 N-7 empirical anchor. The reconciliation panel (T2 sextet + Tao+Carmack+Hotz+Boyd) finds the two TOP-5s are **NOT conflicting but COMPLEMENTARY**: G1 (cross-axis re-rank) + F1 (Hydra dim 7-12) are **SATURATION-INDEPENDENT** (proceed regardless of A-2 N-7 outcome — different structural information than compression saturation); B1+Y3+Y6+H1 are **SATURATION-DEPENDENT** (gated on A-2 N-7 verdict); ADVERSARIAL's A-1/A-5 are **SUPPLEMENTARY LOW-RISK EXPERIMENTS**; ADVERSARIAL's A-2/A-3/A-4 are **STRUCTURAL PRIMITIVES** that should land as canonical helpers regardless. **Final reconciled TOP-5** = G1 (immediate) + F1 (probe-then-dispatch) + A-3 Dykstra-feasibility-FIRST (structural) + A-4 MI-min-Wyner-Ziv (structural) + verdict-conditional (B1 OR H1 OR Y3+Y6 OR A-1 Brotli-dict, picked by A-2 N-7 outcome).
+PRIMARY produced a 43-vector master memo with TOP-5 (F1+G1+B1+Y3+Y6+H1) predicted aggregate `[0.152, 0.179]` [contest-CPU]. ADVERSARIAL critiqued it via 5 binding revisions (Tao paradigm-conflation / Contrarian arbitrariness / Assumption-Adversary saturation-PENDING / Boyd composition-infeasibility / Hotz apparatus_maintenance) + 12 NEW vectors + alternative TOP-5 (Brotli-dict + CPU-sweep + Dykstra + MI-min + LOC-budget) + mandatory A-2 N-7 empirical anchor. The reconciliation panel (T2 sextet + Tao+Carmack+Hotz+Boyd) finds the two TOP-5s are **NOT conflicting but COMPLEMENTARY**: G1 (cross-axis re-rank) + corrected F1/A2 (PoseNet-first-6-invariant scorer-blind RGB perturbation capacity) are **SATURATION-INDEPENDENT** (proceed regardless of A-2 N-7 outcome — different structural information than compression saturation); B1+Y3+Y6+H1 are **SATURATION-DEPENDENT** (gated on A-2 N-7 verdict); ADVERSARIAL's A-1/A-5 are **SUPPLEMENTARY LOW-RISK EXPERIMENTS**; ADVERSARIAL's A-2/A-3/A-4 are **STRUCTURAL PRIMITIVES** that should land as canonical helpers regardless. **Final reconciled TOP-5** = G1 (immediate) + corrected F1/A2 probe-then-dispatch + A-3 Dykstra-feasibility-FIRST (structural) + A-4 MI-min-Wyner-Ziv (structural) + verdict-conditional (B1 OR H1 OR Y3+Y6 OR A-1 Brotli-dict, picked by A-2 N-7 outcome).
 
 ### 1.2 Operator decision table (the single page that matters)
 
 | # | Action | Cost | Time | Saturation-dependent | Expected ΔS [contest-CPU] | Operator op-routable | Status |
 |---|---|---|---|---|---|---|---|
-| **1** | **G1 cross-axis CPU re-rank** (Hotz IMMEDIATE) | **$0** | **THIS SESSION** | NO (cross-axis empirical) | `[-0.010, -0.003]` HARD-EARNED-EMPIRICAL | **GO** per Hotz binding directive | Routing directive landed (`83440e8a5`); Codex /goal LOOP picks up |
-| **2** | **F1 Hydra dims 7-12 probe** then build | $0 probe + $1-3 build | 1-2 days | NO (source-verified) | `[-0.012, -0.004]` HARD-EARNED-STRUCTURAL | **GO probe FIRST** per Fridrich+Contrarian revision; build CONDITIONAL on probe PASS | Routing directive landed (`83440e8a5`) |
+| **1** | **G1 cross-axis CPU re-rank** (Hotz IMMEDIATE) | **$0** | **DONE** | NO (cross-axis empirical) | `0.0` realized for existing-anchor rerank; no new score claim | **DONE / MONITOR** for future paired CPU anchors | Report `experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/report.json`; `FRONTIER_STABLE_VIA_RE_RANK` |
+| **2** | **Corrected F1/A2 scorer-blind RGB perturbation probe** then build | $0 probe + $1-3 build | 1-2 days | NO (source-verified invariant; archive capacity empirical) | `[-0.012, -0.004]` PENDING-EMPIRICAL-CAPACITY | **GO probe FIRST** per Fridrich+Contrarian revision; build CONDITIONAL on probe PASS | Routing directive landed (`83440e8a5`); direct dim-channel framing superseded |
 | **3** | **A-2 N-7 standard compressor sweep** (Codex executing) | $0 | 4-6h | TESTS the assumption | INFORMS all other vectors | **GO** per ADVERSARIAL mandatory anchor | Routing directive `1ac2063de` landed; Codex /goal LOOP picks up |
 | **4** | **A-3 Dykstra-feasibility-FIRST canonical helper** | $0 | 1 day | NO (structural primitive) | N/A — process; reduces wasted enumeration by 75-90% | **GO** per Boyd RECONCILED-5 | Queue for Codex post-A-2-N-7 |
 | **5** | **A-4 MI-min Wyner-Ziv canonical helper** | $0 | 1 day | NO (structural primitive) | N/A — informs B1 + B2 + other Wyner-Ziv vectors | **GO** per Tao RECONCILED-5 | Queue for Codex post-A-2-N-7 |
 | **6** | **POST-A-2-N-7: pick ONE of {B1, H1, Y3+Y6, A-1 Brotli-dict}** based on verdict | $1-8 | conditional | YES | conditional | **HOLD** until A-2 N-7 lands | gated |
 | **7** | LOC budget OPTIMIZER (A-5 Carmack) | $0 | 1 day | LOW dependence | `[-0.003, -0.001]` direct + `[-0.010, -0.003]` if forces simpler codec | OPTIONAL post-RECONCILED-1-5 | low priority |
 | **8** | Dual-device master-gradient extension | $0-$2 | DEFERRED | n/a | research question | **DEFER** per RECONCILED-6 | gated on A-2 N-7 outcome |
+| **P0** | **A1-SPECIALIZED deterministic packet-compiler feasibility** | $0 | this session | NO for feasibility; YES for promotion | no score claim until charged-byte packet + exact CUDA | **GO feasibility** | Measure charged bytes, runtime-consumption proof, and net score accounting before promotion |
 
 ### 1.3 Immediate-action recommendation (next operator turn)
 
@@ -131,21 +162,21 @@ PRIMARY produced a 43-vector master memo with TOP-5 (F1+G1+B1+Y3+Y6+H1) predicte
 
 ### 1.4 Predicted aggregate scoreboard motion
 
-**If G1 + F1 land successfully (SATURATION-INDEPENDENT subset)**:
-- G1 alone: ~`[-0.010, -0.003]` per Hotz empirical anchor on PR102 +0.033 gap
-- F1 alone: ~`[-0.012, -0.004]` per upstream/modules.py:84 source-verified Hydra exploit
-- Both combined (ORTHO per §3): `[-0.022, -0.007]` → frontier displacement to `[0.170, 0.185]` [contest-CPU]
-- **This BEATS PR101 GOLD 0.193 in the lower bound by 0.023 and approaches medal-class territory**
+**If G1 + corrected F1/A2 land successfully (SATURATION-INDEPENDENT probe subset)**:
+- G1 existing-anchor rerank (measured later by Codex): `actual_delta_s=0.0`; future G1 value depends on new paired CPU anchors or candidate selection, not current public-anchor rerank
+- Corrected F1/A2 alone: hypothesis band `[-0.012, -0.004]` only after RGB perturbation capacity + net byte savings are measured
+- Combined movement remains hypothesis-grade until both probes produce measured net improvements on paired Linux x86_64 [contest-CPU] anchors
+- Do not read the original `[0.170, 0.185]` aggregate as a current score claim
 
 **If A-2 N-7 returns SATURATION_REFUTED** (~40% per ADVERSARIAL prior):
 - Adds 1 verdict-conditional vector @ predicted `[-0.005, -0.015]` per the winning standard compressor
-- Aggregate: `[0.155, 0.180]` [contest-CPU]
+- Aggregate after G1 realized zero movement: hypothesis-grade only; corrected-F1/A2 plus row-6 planning band `[0.171, 0.185]` [contest-CPU] until artifacts land
 
 **If A-2 N-7 returns SATURATION_HARD_EARNED** (~60% per ADVERSARIAL prior):
 - SATURATION-DEPENDENT vectors deferred per Catalog #325 + #322
 - Rate-attack budget reallocated to substrate-class-shift candidates (Z6/Z7/Z8 cascade per pose-axis council)
-- G1 + F1 remain valid (SATURATION-INDEPENDENT)
-- Aggregate from rate-attack: `[0.170, 0.185]`; total mission contribution requires substrate-class-shift work
+- G1 + corrected-F1/A2 remain valid as SATURATION-INDEPENDENT probes; G1's existing-anchor result is `0.0`
+- Aggregate from rate-attack: corrected-F1/A2 only, hypothesis-grade `[0.180, 0.188]` if capacity validates; total mission contribution requires substrate-class-shift work
 
 ---
 
@@ -153,9 +184,9 @@ PRIMARY produced a 43-vector master memo with TOP-5 (F1+G1+B1+Y3+Y6+H1) predicte
 
 Per CLAUDE.md "Council hierarchy: 4-tier protocol" + "Mission alignment" non-negotiable Consequence 5: every T2+ verdict declares `council_predicted_mission_contribution`. This memo's contribution is **frontier_breaking** because:
 
-1. **G1 IMMEDIATE-EXECUTION is structurally frontier-breaking** — cross-axis re-ranking unlocks the PR102 +0.033 empirical gap currently sitting un-exploited for 14 days. Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first": when a frontier-breaking move is identified, immediate execution dominates rigor budget. Hotz binding directive in PRIMARY §8 makes this binding.
+1. **G1 IMMEDIATE-EXECUTION is structurally useful but measured zero current frontier movement** — cross-axis reranking tests whether existing anchors hide a CPU-axis win. Codex's 2026-05-18 probe found no existing qualifying CPU anchor below PR101/fec6 (`actual_delta_s=0.0`). The PR102 +0.033 CUDA-minus-CPU gap remains a per-archive prior for paired-axis probing only, not a conversion factor.
 
-2. **F1 probe-then-build is structurally frontier-breaking** — Hydra dims 7-12 source-verified at zero rate cost; the probe is $0 / 1 day; the build is $1-3 / 1-2 days. Per Catalog #313 probe-outcomes ledger: no predecessor INDEPENDENT/KILL/DEFER verdict on F1 (this is novel work).
+2. **Corrected F1/A2 probe-then-build is structurally frontier-breaking if the capacity probe passes** — the source-verified invariant is that PoseNet computes dims 7-12 but `compute_distortion` scores only dims 0-5; the deliverable contest exploit must be RGB perturbation capacity that preserves PoseNet dims 0-5 and SegNet argmax. The probe is $0 / 1 day; the build is $1-3 / 1-2 days. Per Catalog #313 probe-outcomes ledger: no predecessor INDEPENDENT/KILL/DEFER verdict on corrected F1/A2 (this is novel work).
 
 3. **A-2 N-7 verdict is a MASSIVE information unlock** — either confirms saturation (correctly DEFER 22+ vectors and reallocate budget) OR refutes saturation (correctly green-light those vectors). $0 / 4-6h for either outcome is the highest-EV CPU-probe of the session per Catalog #229.
 
@@ -171,18 +202,18 @@ This is the CRITICAL classification step that drives the reconciliation. Each PR
 
 ### 3.1 G1 — CPU-axis-specific optimization → **SATURATION-INDEPENDENT** ✓
 
-**Why independent**: G1 exploits a CROSS-AXIS sensitivity gap (PR102 +0.033 CUDA-CPU), not a within-archive rate-extractable structure. The mechanism is per-axis-archive RE-RANKING using existing dual-eval data; it produces ZERO new archive bytes; therefore the compression-saturation question is structurally orthogonal.
+**Why independent**: G1 exploits per-archive CROSS-AXIS sensitivity, not a within-archive rate-extractable structure. The mechanism is per-axis-archive RE-RANKING using paired exact-eval data; it produces ZERO new archive bytes; therefore the compression-saturation question is structurally orthogonal. The 2026-05-18 Codex existing-anchor probe measured no current frontier move.
 
 **Empirical receipts**:
-- PR102 CUDA 0.22839 / CPU 0.19538 = +0.033 (CLAUDE.md "Submission auth eval" empirical anchor)
-- PR107 CUDA 0.22936 / CPU 0.19664 = +0.033 (consistent)
-- PR101 GOLD CPU 0.193 (implied CUDA ~0.226 = +0.033 per Hotz reasoning in PRIMARY §2.8)
+- PR102 CUDA 0.22839 / CPU 0.19538 = +0.033 on that archive/runtime pair
+- PR107 CUDA 0.22936 / CPU 0.19664 = +0.033 on that archive/runtime pair
+- PR101/fec6 remains the measured CPU frontier in the current probe; no CUDA-to-CPU conversion is allowed
 
-**Conclusion**: Hotz binding directive PROCEED IMMEDIATELY stands. No A-2 N-7 gating. Routing directive `83440e8a5` already landed. Predicted ΔS `[-0.010, -0.003]` per existing PRIMARY+ADVERSARIAL agreement.
+**Conclusion**: Hotz binding directive PROCEED IMMEDIATELY was correct as a $0 probe. No A-2 N-7 gating. The measured result is `actual_delta_s=0.0`; future G1 movement requires a new paired CPU anchor or a candidate-selection situation where the CPU-optimal candidate differs from the CUDA-optimal candidate.
 
-### 3.2 F1 — PoseNet Hydra dims 7-12 → **SATURATION-INDEPENDENT** ✓
+### 3.2 Corrected F1/A2 — PoseNet-first-6-invariant RGB perturbations → **SATURATION-INDEPENDENT if capacity probe passes** ✓
 
-**Why independent**: F1 exploits the scorer's STRUCTURAL invariance to dims 7-12 (source-verified at upstream/modules.py:84 line: `[..., : h.out // 2]` slice with h.out=12 → only dims 0-5 scored; dims 6-11 are computed by encoder but DISCARDED). The exploit is encoder-controlled bits traveling through scorer at ZERO rate cost via the existing pose pipeline. This is a SCORER-FEATURE-INVARIANCE exploit, not a compression-extraction exploit; therefore compression-saturation question is structurally orthogonal.
+**Why independent**: corrected F1/A2 exploits scorer-blind RGB perturbations whose PoseNet first-6-dim output and SegNet argmax remain stable. The source-verified invariant at upstream/modules.py:84 (`[..., : h.out // 2]` with h.out=12) proves dims 6-11 are unscored internal outputs; it does **not** prove dims 6-11 are archive bytes. The deliverable exploit is encoder-controlled RGB variation inside a scorer-invariant manifold. This is a SCORER-FEATURE-INVARIANCE exploit, not a compression-extraction exploit; therefore compression-saturation question is structurally orthogonal once capacity is empirically confirmed.
 
 **Source-level verification** (canonical citation):
 ```
@@ -228,13 +259,13 @@ return sum((out1[h.name][..., : h.out // 2] - out2[h.name][..., : h.out // 2]).p
 
 | PRIMARY TOP-5 | Classification | A-2 N-7 gating | Hardware-axis caveats | Predicted ΔS [contest-CPU] |
 |---|---|---|---|---|
-| **G1 (RANK 2)** | **SATURATION-INDEPENDENT** | NO | CPU-axis directly relevant; AXIS-INVARIANT exploit | `[-0.010, -0.003]` ✓ |
+| **G1 (RANK 2)** | **SATURATION-INDEPENDENT probe** | NO | CPU-axis directly relevant; AXIS-INVARIANT exploit | `0.0` realized for existing-anchor rerank; future paired-anchor upside only |
 | **F1 (RANK 1)** | **SATURATION-INDEPENDENT** | NO | Scorer-feature-invariance is axis-invariant | `[-0.012, -0.004]` ✓ |
 | **B1 (RANK 3)** | SATURATION-DEPENDENT | YES | AXIS-INVARIANT (mostly); patches deterministic | `[-0.020, -0.005]` conditional |
 | **Y3+Y6 (RANK 4)** | SATURATION-DEPENDENT | YES | BOTH-WITH-DIFFERENT-OPTIMAL (JPEG decode paths differ) | `[-0.015, -0.004]` conditional |
 | **H1 (RANK 5)** | SATURATION-DEPENDENT + HARDWARE-AVAILABILITY-DEPENDENT | YES | GPU-ONLY for NVDEC; leaderboard is CPU | `[-0.025, -0.008]` doubly conditional |
 
-**Key finding**: 2-of-5 PRIMARY TOP-5 are SATURATION-INDEPENDENT (40%); 3-of-5 are SATURATION-DEPENDENT (60%). The SATURATION-INDEPENDENT subset (G1+F1) combined aggregate `[-0.022, -0.007]` is FRONTIER-BREAKING on its own (would beat PR101 gold by 0.023 in the lower bound, approach medal-class in the upper).
+**Key finding**: 2-of-5 PRIMARY TOP-5 are SATURATION-INDEPENDENT probe axes (40%); 3-of-5 are SATURATION-DEPENDENT (60%). The original SATURATION-INDEPENDENT aggregate `[-0.022, -0.007]` is now hypothesis-grade: G1 existing-anchor rerank measured `actual_delta_s=0.0`, and corrected F1/A2 still needs capacity + net-byte proof.
 
 ---
 
@@ -319,7 +350,7 @@ The RECONCILIATION downgrades the importance of the count "43" — it's the part
 ADVERSARIAL Assumption-Adversary argued the META-paradigm is operating within a CARGO-CULTED-PENDING assumption that the archive packet has remaining rate-extractable structure. The reconciliation **ACCEPTS the critique IN FULL** and operationalizes via:
 
 1. A-2 N-7 routing directive landed (commit `1ac2063de`); Codex /goal LOOP executes
-2. SATURATION-INDEPENDENT subset (G1+F1) is structurally orthogonal to saturation; proceeds regardless
+2. SATURATION-INDEPENDENT subset (G1+corrected-F1/A2) is structurally orthogonal enough to justify probes regardless; measured score authority still requires each probe's artifact
 3. SATURATION-DEPENDENT subset (B1+Y3+Y6+H1) explicitly GATED on A-2 N-7 verdict
 4. Predicted verdict distribution: 60% SATURATION_HARD_EARNED (defer SATURATION-DEPENDENT subset) / 30% SATURATION_PENDING (extended sweep) / 10% SATURATION_REFUTED (green-light)
 5. Either verdict outcome is HIGHEST-EV information per Catalog #229
@@ -333,7 +364,7 @@ ADVERSARIAL Boyd argued naive TOP-5 composition will produce Pareto-feasibility-
 1. Per-pair Dykstra-feasibility check per Catalog #296 BEFORE any composition_alpha α-prediction (PRIMARY had this in §3 9×8 matrix; we ratify and extend)
 2. RECONCILED aggregate ΔS reported as SUB-ADDITIVE realistic (per Catalog #322 v2 cascade `adjust_predicted_delta_for_composition_alpha_v2`), not naive-additive
 3. A-3 Dykstra-feasibility-FIRST canonical helper landed per RECONCILED-5 ensures future composition decisions go through Dykstra projection FIRST
-4. RECONCILED TOP-5's aggregate `[0.155, 0.184]` already incorporates sub-additive composition (G1 ORTHO F1; both SUB with verdict-conditional vector)
+4. RECONCILED TOP-5's aggregate `[0.155, 0.184]` remains a hypothesis-grade planning band; G1 now has measured `actual_delta_s=0.0`, so any aggregate must be recomputed from probe evidence before promotion
 
 **Operator-routable benefit**: predicted aggregates are realistic (not optimistic); operator budget reservations are accurate.
 
@@ -343,11 +374,11 @@ ADVERSARIAL Hotz argued PRIMARY's 43 SCAFFOLD vectors without empirical anchor r
 
 **Accepted**: 41-of-43 vectors WITHOUT empirical anchor are at risk of becoming apparatus_maintenance; ADVERSARIAL's $0 mandatory anchor (A-2 N-7) is the canonical fix.
 
-**Rejected for 2-of-43**: G1 has empirical anchor (PR102 +0.033 cross-axis gap); F1 has source-level anchor (upstream/modules.py:84). These two are EMPIRICALLY GROUNDED, not scaffold-only. Hotz's own binding directive in PRIMARY §8 on G1 IMMEDIATE EXECUTION is consistent with this.
+**Rejected for 2-of-43 only as probe axes**: G1 has per-archive paired-axis priors (e.g. PR102 +0.033 CUDA-minus-CPU on that archive/runtime pair); F1 has source-level unscored-dim evidence (upstream/modules.py:84). These two are grounded enough for probes, not enough for score movement claims. Hotz's own binding directive in PRIMARY §8 on G1 IMMEDIATE EXECUTION is consistent with running the $0 probe.
 
-**Net effect**: the SATURATION-INDEPENDENT subset (G1+F1) is frontier-breaking; the SATURATION-DEPENDENT subset is research-pending until A-2 N-7 lands. The reconciliation puts the operator-routable IMMEDIATE-action items in the SATURATION-INDEPENDENT subset; defers the rest.
+**Net effect**: the SATURATION-INDEPENDENT subset (G1+corrected-F1/A2) is probe-worthy; the SATURATION-DEPENDENT subset is research-pending until A-2 N-7 lands. The reconciliation puts the operator-routable IMMEDIATE-action items in the SATURATION-INDEPENDENT subset; defers the rest.
 
-**Operator-routable benefit**: no $30-80 burn on apparatus_maintenance dressed as frontier_breaking; clear separation between immediate-frontier-breaking work (G1+F1) and contingent-on-empirical-anchor work (B1+Y3+Y6+H1+A-1).
+**Operator-routable benefit**: no $30-80 burn on apparatus_maintenance dressed as frontier_breaking; clear separation between immediate $0 probes (G1+corrected-F1/A2) and contingent-on-empirical-anchor work (B1+Y3+Y6+H1+A-1).
 
 ---
 
@@ -357,22 +388,22 @@ ADVERSARIAL Hotz argued PRIMARY's 43 SCAFFOLD vectors without empirical anchor r
 
 | Rank | PRIMARY TOP-5 | ADVERSARIAL Quartet TOP-5 | Reconciled |
 |---|---|---|---|
-| **1** | F1 Hydra dims 7-12 | A-1 Brotli + comma2k19 dict | **G1 Cross-axis re-rank** (immediate; $0; Hotz binding) |
-| **2** | G1 CPU-axis-specific | A-2 N-7 CPU-axis Tier-1 sweep | **F1 Hydra dims 7-12** (probe-then-build; $0+$1-3; source-verified) |
+| **1** | F1 Hydra dims 7-12 (superseded direct-channel framing) | A-1 Brotli + comma2k19 dict | **G1 Cross-axis re-rank** (immediate; $0; Hotz binding) |
+| **2** | G1 CPU-axis-specific | A-2 N-7 CPU-axis Tier-1 sweep | **Corrected F1/A2 scorer-blind RGB perturbation capacity** (probe-then-build; $0+$1-3; capacity-pending) |
 | **3** | B1 Contest-video-codebook | A-3 Dykstra-feasibility-FIRST | **A-2 N-7 standard compressor sweep** ($0; executing via Codex; verdict-driving) |
 | **4** | Y3+Y6 Luma + JPEG-quant | A-4 MI-min Wyner-Ziv | **A-3 Dykstra-feasibility-FIRST canonical helper** ($0; structural primitive) |
 | **5** | H1 NVDEC hardware decode | A-5 inflate.py ≤30 LOC OPTIMIZER | **A-4 MI-min Wyner-Ziv canonical helper** ($0; structural primitive) |
 | **6 (conditional)** | — | — | **POST-A-2-N-7 PICK: B1 OR H1 OR Y3+Y6 OR A-1 Brotli-dict** based on verdict |
 | **Cost (all 5)** | $30-80+ Modal/Lightning | $0 | **$0** (immediate-action 5; $1-8 for conditional row 6) |
 | **Time** | 5-10 days | ~1 day | THIS SESSION for G1; 1-2 days for F1; 4-6h for A-2 N-7; 1 day each A-3/A-4 |
-| **HARD-EARNED count** | 1-of-5 (F1 source-verified) + 1-of-5 (G1 empirical) = 2-of-5 | 4-of-5 (Carmack/Hotz/Boyd/Tao theorem-anchored) + 1 empirical anchor | **5-of-5 HARD-EARNED at the structural level** (G1+F1+A-2-N-7-is-test+A-3+A-4-are-canonical-helpers) |
-| **Empirical-anchor-included** | NO | YES (A-2 N-7) | **YES (A-2 N-7 + G1 dual-eval re-eval)** |
+| **HARD-EARNED count** | 1-of-5 (F1 source-verified) + 1-of-5 (G1 empirical probe, zero movement) = 2-of-5 probe-grounded | 4-of-5 (Carmack/Hotz/Boyd/Tao theorem-anchored) + 1 empirical anchor | **5-of-5 structurally grounded, but only probe-authoritative until artifacts land** (G1+corrected-F1/A2+A-2-N-7-is-test+A-3+A-4-are-canonical-helpers) |
+| **Empirical-anchor-included** | NO | YES (A-2 N-7) | **YES (A-2 N-7 + G1 existing-anchor CPU rerank result `actual_delta_s=0.0`)** |
 
 ### 6.2 The RECONCILED TOP-5 with explicit per-vector justification
 
 #### RECONCILED-TOP-1: G1 Cross-axis CPU re-rank (PRIMARY RANK 2) — SATURATION-INDEPENDENT — IMMEDIATE EXECUTION
 
-**Why TOP-1 in reconciled order**: Hotz binding directive PROCEED IMMEDIATELY makes this the only operator-routable IMMEDIATELY-actionable item; cost $0; expected ΔS `[-0.010, -0.003]` HARD-EARNED-EMPIRICAL.
+**Why TOP-1 in reconciled order**: Hotz binding directive PROCEED IMMEDIATELY made this the lowest-cost operator-routable probe; cost $0; Codex's 2026-05-18 execution measured `actual_delta_s=0.0` on existing qualifying CPU anchors, so G1 is evidence-producing but not a current frontier move.
 
 **Routing status**: Routing directive `83440e8a5` already landed; Codex /goal LOOP picks up.
 
@@ -380,13 +411,13 @@ ADVERSARIAL Hotz argued PRIMARY's 43 SCAFFOLD vectors without empirical anchor r
 
 **Mathematical paradigm (Tao partition)**: (c) Pareto-tightening — axis-conditioned RD frontier optimization.
 
-#### RECONCILED-TOP-2: F1 Hydra dims 7-12 probe → build (PRIMARY RANK 1) — SATURATION-INDEPENDENT — PROBE FIRST
+#### RECONCILED-TOP-2: Corrected F1/A2 scorer-blind RGB perturbation probe → build (PRIMARY RANK 1 superseded framing) — SATURATION-INDEPENDENT IF CAPACITY PASSES — PROBE FIRST
 
-**Why TOP-2 in reconciled order**: Source-verified at upstream/modules.py:84; predicted ΔS `[-0.012, -0.004]`; probe is $0; build is $1-3. Demoted from RANK 1 in PRIMARY's ordering because G1 is OPERATOR-ROUTABLE IMMEDIATELY whereas F1 requires a probe gate.
+**Why TOP-2 in reconciled order**: Source-verified invariant at upstream/modules.py:84 plus pending RGB-manifold capacity probe; predicted ΔS `[-0.012, -0.004]` remains hypothesis-band only until probe evidence lands; probe is $0; build is $1-3. Demoted from RANK 1 in PRIMARY's ordering because G1 is OPERATOR-ROUTABLE IMMEDIATELY whereas corrected F1/A2 requires a capacity probe gate.
 
 **Routing status**: Routing directive `83440e8a5` already landed; probe gate at step 1; build conditional on probe PASS.
 
-**Per-axis matrix classification**: AXIS-INVARIANT (Hydra dims 7-12 are scorer-invariant on both CPU and CUDA).
+**Per-axis matrix classification**: AXIS-INVARIANT if measured as RGB perturbations that preserve scored PoseNet dims 0-5 and SegNet argmax on both CPU and CUDA.
 
 **Mathematical paradigm (Tao partition)**: (a) MI-min Wyner-Ziv — zero-rate side channel through scorer-feature-invariance.
 
@@ -433,29 +464,29 @@ ADVERSARIAL Hotz argued PRIMARY's 43 SCAFFOLD vectors without empirical anchor r
 
 ### 6.3 Aggregate predicted ΔS for RECONCILED TOP-5
 
-**SATURATION-INDEPENDENT subset (G1 + F1)**: 
-- Additive: `[-0.022, -0.007]`
-- Sub-additive per Catalog #322 v2 (ORTHO; alpha=1.0): unchanged at `[-0.022, -0.007]`
-- Frontier displacement: `[0.170, 0.185]` [contest-CPU]
+**SATURATION-INDEPENDENT subset after G1 execution (G1 + corrected F1/A2)**:
+- G1 realized movement on existing qualifying CPU anchors: `0.0` [contest-CPU]; no new score claim
+- Remaining corrected-F1/A2 upside: hypothesis-grade `[-0.012, -0.004]` until RGB-perturbation capacity and net byte savings are measured
+- Frontier displacement authority: none yet; post-G1 planning band is corrected-F1/A2 only, `[0.180, 0.188]` [contest-CPU] if the hypothesis validates
 
 **With STRUCTURAL primitives (A-3 + A-4)**: no direct ΔS contribution; reduces wasted enumeration and provides theorem-level bounds.
 
 **With CONDITIONAL row 6 (BEST CASE: SATURATION_REFUTED + winning vector adds `[-0.015, -0.005]`)**:
-- 3-vector additive: `[-0.037, -0.012]`
-- Sub-additive (G1 ORTHO F1; both SUB with row-6 vector; alpha ≈ 0.7): `[-0.030, -0.010]`
-- Frontier displacement: `[0.162, 0.182]` [contest-CPU]
+- Additive after G1 realized zero movement: `[-0.027, -0.009]`
+- Sub-additive (corrected-F1/A2 plus row-6 vector; alpha ≈ 0.7): `[-0.021, -0.007]`
+- Frontier displacement planning band: `[0.171, 0.185]` [contest-CPU], hypothesis-grade until artifacts land
 
 **With CONDITIONAL row 6 (PROBABILITY-WEIGHTED: 0.4 × `[-0.015, -0.005]` + 0.6 × `[0, 0]`)**:
 - Expected: `[-0.006, -0.002]` additional from row 6
-- Combined with SATURATION-INDEPENDENT: `[-0.028, -0.009]` expected total
-- Frontier displacement: `[0.164, 0.183]` [contest-CPU] expected
+- Combined with corrected-F1/A2 hypothesis only: `[-0.018, -0.006]` expected total
+- Frontier displacement planning band: `[0.174, 0.186]` [contest-CPU], hypothesis-grade
 
 **Comparison vs PRIMARY's predicted aggregate `[0.152, 0.179]`**: RECONCILED is slightly less aggressive in the lower bound (0.164 vs 0.152) but more REALISTIC because:
 - Removes assumption that all 5 PRIMARY vectors land at predicted band (only 2 are SATURATION-INDEPENDENT)
 - Incorporates probability-weighting per A-2 N-7 verdict prior
 - Uses sub-additive composition_alpha per Catalog #322 v2
 
-**Comparison vs ADVERSARIAL's predicted `[-0.015, -0.004]`**: RECONCILED is more aggressive in the lower bound (-0.030 vs -0.015) because it INCLUDES G1+F1 SATURATION-INDEPENDENT subset which ADVERSARIAL's alternative TOP-5 omits.
+**Comparison vs ADVERSARIAL's predicted `[-0.015, -0.004]`**: historical RECONCILED was more aggressive in the lower bound because it included G1+F1 as SATURATION-INDEPENDENT. Post-Codex execution, G1 contributes authority and a zero-delta guardrail, not score movement; the remaining upside must come from corrected-F1/A2 capacity proof or row-6 empirical artifacts.
 
 ---
 
@@ -514,8 +545,8 @@ Per supplement Part 1 the 4-class matrix is: CPU-ONLY / GPU-ONLY / BOTH-WITH-DIF
 
 | Vector | Per-axis class | CPU-axis relevance (leaderboard) | CUDA-axis relevance (transparency) | Reconciliation note |
 |---|---|---|---|---|
-| **RECONCILED-1 G1** | AXIS-INVARIANT (mechanism) + CPU-axis-OPTIMAL (operational) | DIRECT (the exploit IS axis-selection for CPU) | n/a (cross-axis re-rank doesn't hurt CUDA — chosen archive still has its CUDA eval recorded) | Move 1 unblocks ~+0.033 cross-axis gap on leaderboard CPU |
-| **RECONCILED-2 F1** | AXIS-INVARIANT (Hydra dims invariant on both axes) | DIRECT (dim 7-12 bits travel through scorer on both axes) | DIRECT (same) | Per-pair bit-channel safe on both axes |
+| **RECONCILED-1 G1** | AXIS-INVARIANT (mechanism) + CPU-axis-OPTIMAL (operational) | DIRECT as candidate-selection/probe criterion; current existing-anchor result is 0.0 | n/a (cross-axis re-rank doesn't hurt CUDA — chosen archive still has its CUDA eval recorded) | Treat +0.033 gaps as per-archive priors only; no conversion factor |
+| **RECONCILED-2 corrected F1/A2** | AXIS-INVARIANT if capacity probe passes on both axes | DIRECT only as scorer-blind RGB perturbation capacity | DIRECT same constraint; no direct dim-channel receiver | Per-pair perturbation manifold must preserve scored pose dims 0-5 + SegNet argmax |
 | **RECONCILED-3 A-2 N-7** | TESTS AXIS-INVARIANT exploits | DIRECT (tests CPU axis specifically per Hotz N-7 framing) | INDIRECT (sweep can extend to CUDA-axis archives) | Phase 1 CPU-only per directive; could extend if SATURATION_REFUTED |
 | **RECONCILED-4 A-3 Dykstra** | STRUCTURAL primitive | n/a (helper) | n/a (helper) | Operates on constraint sets, not bytes |
 | **RECONCILED-5 A-4 MI-min** | AXIS-INVARIANT (MI is deterministic on byte data) | INDIRECT (provides bounds for vectors) | INDIRECT (same) | Operates on byte data, not axis-specific |
@@ -621,19 +652,19 @@ Per CLAUDE.md "FORBIDDEN PATTERNS — Forbidden symposium-band-prediction-withou
 
 **Verdict**: HARD-EARNED-PARTIAL.
 
-**Rationale**: per §5, 4-of-5 critiques (Tao paradigm-partition / Contrarian per-sub-paradigm-counting / Assumption-Adversary saturation-pending / Boyd Pareto-feasibility) are FULLY accepted; 1-of-5 (Hotz apparatus_maintenance) is PARTIALLY accepted (G1+F1 SATURATION-INDEPENDENT subset is empirically anchored, NOT apparatus_maintenance). The reconciliation operationalizes all 5 critiques without losing PRIMARY's HARD-EARNED structural anchors.
+**Rationale**: per §5, 4-of-5 critiques (Tao paradigm-partition / Contrarian per-sub-paradigm-counting / Assumption-Adversary saturation-pending / Boyd Pareto-feasibility) are FULLY accepted; 1-of-5 (Hotz apparatus_maintenance) is PARTIALLY accepted because G1 and corrected-F1/A2 are probe-grounded rather than pure apparatus. G1's probe result is now zero movement; F1 still needs capacity proof.
 
 ### 11.3 Claim: "Reconciled TOP-5 maximizes operator EV"
 
 **Verdict**: HARD-EARNED via the explicit operator-decision-table format in §1.2.
 
-**Rationale**: the reconciled TOP-5 is operator-actionable IMMEDIATELY for G1 + F1 + A-2 N-7 (which are already routed to Codex); the conditional row 6 is gated on A-2 N-7 verdict. The aggregate predicted ΔS `[-0.022, -0.007]` for SATURATION-INDEPENDENT subset alone is frontier-breaking at $0+$1-3 total cost; this dominates ALL ALTERNATIVE single-TOP-5 selections on (cost, time, HARD-EARNED count) per the side-by-side in §6.1.
+**Rationale**: the reconciled TOP-5 was operator-actionable immediately for G1 + F1 + A-2 N-7; the conditional row 6 is gated on A-2 N-7 verdict. After Codex's G1 execution, the SATURATION-INDEPENDENT aggregate is no longer authority for score movement: G1 measured `actual_delta_s=0.0`, and corrected-F1/A2 remains capacity-gated. The value of the ordering is now evidence velocity and fail-closed dispatch selection, not a promoted aggregate score claim.
 
-### 11.4 Claim: "The aggregate predicted band `[0.164, 0.183]` is realistic"
+### 11.4 Claim: "The historical aggregate predicted band `[0.164, 0.183]` is realistic"
 
 **Verdict**: HARD-EARNED-PARTIAL.
 
-**Rationale**: SATURATION-INDEPENDENT subset (G1+F1) aggregate is realistic per the per-vector HARD-EARNED anchors (PR102 +0.033 cross-axis; upstream/modules.py:84 source-verified). CONDITIONAL row 6 contribution is probability-weighted (0.4 × good outcome + 0.6 × no outcome) which may be optimistic if A-2 N-7 prior of 60% SATURATION_HARD_EARNED is itself optimistic. The realistic aggregate is more honestly stated as "SATURATION-INDEPENDENT subset alone is `[0.170, 0.185]`; conditional row 6 may add 0-0.015 expected".
+**Rationale**: SATURATION-INDEPENDENT subset (G1+corrected-F1/A2) aggregate is hypothesis-grade, not realistic-current. G1 existing-anchor rerank measured 0.0 movement; corrected F1/A2 needs capacity proof. CONDITIONAL row 6 contribution is probability-weighted (0.4 × good outcome + 0.6 × no outcome) which may be optimistic if A-2 N-7 prior of 60% SATURATION_HARD_EARNED is itself optimistic.
 
 ### 11.5 Claim: "G1 can land THIS SESSION via Codex /goal LOOP"
 
@@ -681,11 +712,11 @@ This memo is BYTE-STABLE (frontmatter date-pinned; council attendees pinned; ver
 
 ### 12.8 EXTREME OPTIMIZATION + PERFORMANCE
 
-The reconciliation is optimized for: (a) operator attention (§1 executive summary fits 30-sec review; §1.2 decision table is the single-page); (b) cost (RECONCILED TOP-5 all $0 + $1-3 build for F1); (c) time (THIS SESSION for G1; 4-6h for A-2 N-7 verdict). Per CLAUDE.md "Mission alignment" Consequence 5: this memo is frontier_breaking by converting the WAVE into operator-routable IMMEDIATE-action items.
+The reconciliation is optimized for: (a) operator attention (§1 executive summary fits 30-sec review; §1.2 decision table is the single-page); (b) cost (RECONCILED TOP-5 all $0 + $1-3 build for F1); (c) time (THIS SESSION for G1; 4-6h for A-2 N-7 verdict). Per CLAUDE.md "Mission alignment" Consequence 5: this memo is frontier-directed by converting the WAVE into operator-routable immediate evidence items; score authority begins only at measured artifacts.
 
 ### 12.9 OPTIMAL MINIMAL CONTEST SCORE
 
-The reconciliation's CONTRIBUTION to optimal minimal contest score is DIRECT for SATURATION-INDEPENDENT subset (G1+F1; aggregate `[-0.022, -0.007]` displaces frontier to `[0.170, 0.185]` [contest-CPU]). Combined with verdict-conditional row 6, expected aggregate `[-0.028, -0.009]` → `[0.164, 0.183]` [contest-CPU]. This is **frontier-breaking** in the operator-routable sense: G1 alone unlocks the PR102 +0.033 cross-axis gap currently sitting un-exploited; F1 build adds an additional 14,400 free bytes per archive.
+The reconciliation's CONTRIBUTION to optimal minimal contest score is now evidence-routed rather than directly score-authoritative for SATURATION-INDEPENDENT subset. G1+corrected-F1/A2 no longer carries aggregate movement authority: G1 measured `actual_delta_s=0.0`, and corrected-F1/A2 remains a capacity-gated hypothesis until probe evidence lands. Combined with verdict-conditional row 6, the planning band is hypothesis-grade only. This is frontier-directed in the operator-routable sense: G1 closes a false-authority gap with existing anchors, while corrected F1/A2 tests whether scorer-blind RGB perturbation capacity can become charged archive savings.
 
 ---
 
@@ -730,7 +761,7 @@ Every numeric claim carries citation:
 ### 13.6 Counterfactual-able
 
 The reconciliation supports counterfactual queries:
-- "What if SATURATION_HARD_EARNED?" → defer SATURATION-DEPENDENT subset; G1+F1+structural primitives proceed; reallocate budget to substrate-class-shift
+- "What if SATURATION_HARD_EARNED?" → defer SATURATION-DEPENDENT subset; G1+corrected-F1/A2+structural primitives proceed as probes; reallocate build budget to substrate-class-shift
 - "What if SATURATION_REFUTED with X% improvement?" → pick row-6 vector per cascade
 - "What if Hotz binding directive lifted on G1?" → reorder reconciled TOP-5 putting F1 first
 - "What if Boyd Dykstra-feasibility check finds row-6 INFEASIBLE?" → skip row-6 entirely; aggregate is SATURATION-INDEPENDENT subset only
@@ -766,9 +797,9 @@ Per CLAUDE.md "Council conduct" amendment + Catalog #292: every member of the T2
 
 ### 15.1 Sextet pact (binding; 6-of-6 quorum)
 
-**Shannon LEAD**: "The shared assumption I am operating within: the SATURATION-INDEPENDENT subset (G1+F1) exploits DIFFERENT structural information than the SATURATION-DEPENDENT subset; therefore the reconciliation can safely PROCEED on the independent subset while DEFERRING the dependent subset until A-2 N-7 lands. This is HARD-EARNED-FROM-INFORMATION-THEORY: G1 exploits cross-axis sensitivity (a feature of the scoring function), F1 exploits scorer-feature-invariance (a feature of the architecture), neither of which is a function of the archive's compression entropy. PROCEED 5-of-5 on the reconciled TOP-5."
+**Shannon LEAD**: "The shared assumption I am operating within: the SATURATION-INDEPENDENT subset (G1+corrected-F1/A2) probes DIFFERENT structural information than the SATURATION-DEPENDENT subset; therefore the reconciliation can safely PROCEED on the independent probes while DEFERRING the dependent subset until A-2 N-7 lands. This is HARD-EARNED-FROM-INFORMATION-THEORY as a probe rationale: G1 probes cross-axis sensitivity, corrected F1/A2 probes scorer-feature-invariance, neither of which is a function of the archive's compression entropy. PROCEED 5-of-5 on the reconciled probe queue."
 
-**Dykstra CO-LEAD**: "The shared assumption I am operating within: the composition_alpha for the SATURATION-INDEPENDENT subset (G1+F1) is approximately ORTHO (independent contributions); for the conditional row 6 SUB (sub-additive); for the structural primitives (A-3+A-4) N/A (no direct ΔS contribution but reduces wasted enumeration). This is HARD-EARNED per Catalog #322 v2 cascade. PROCEED."
+**Dykstra CO-LEAD**: "The shared assumption I am operating within: composition_alpha for the SATURATION-INDEPENDENT subset (G1+corrected-F1/A2) is not claimable until both probes produce measured net deltas; for the conditional row 6 SUB (sub-additive); for the structural primitives (A-3+A-4) N/A (no direct ΔS contribution but reduces wasted enumeration). This is HARD-EARNED per Catalog #322 v2 cascade. PROCEED."
 
 **Yousfi**: "The shared assumption I am operating within: the contest scorer architecture (upstream/modules.py) is the canonical truth and F1's source-verification at modules.py:84 is sufficient evidence of dim 7-12 score-invariance for memo-landing purposes (the runtime probe `tools/probe_hydra_dim_7_12_score_invariance.py` is the empirical confirmation). PROCEED with probe-gate per Fridrich+Contrarian revision."
 
@@ -784,9 +815,9 @@ Per CLAUDE.md "Council conduct" amendment + Catalog #292: every member of the T2
 
 **Carmack** (engineering reduction): "The shared assumption I am operating within: ALREADY-IN-STANDARD-LIBRARY exploits dominate novel-cryptography exploits on (cost, time, HARD-EARNED count). A-2 N-7 tests ALL standard compressors; if any beat current frontier, A-1 Brotli-dict OR direct compressor swap is the trivially-implementable winning vector. RECONCILED row 6 pick honors this. My critique is OPERATIONALIZED. PROCEED. Note: I PUSH for A-5 (LOC budget OPTIMIZER) to be a structural primitive too, not just optional; will queue post-RECONCILED-4-5 landing."
 
-**Hotz** (raw empirical + binding G1 directive): "The shared assumption I am operating within: the leaderboard is CPU; the empirical PR102 +0.033 gap has been sitting un-exploited for 14 days because no one has run G1's cross-axis re-rank; THIS IS THE LOWEST-HANGING FRUIT IN THE CONTEST. Codex /goal LOOP must pick up `83440e8a5` THIS SESSION. My binding directive STANDS. The reconciliation's RECONCILED-1 = G1 IMMEDIATE EXECUTION honors this. PROCEED. Note: I'm also satisfied with A-2 N-7 being the parallel empirical anchor; the Codex /goal LOOP can pick up BOTH directives in parallel."
+**Hotz** (raw empirical + binding G1 directive): "The shared assumption I am operating within: the leaderboard is CPU; paired-axis gaps are cheap enough to test immediately. Codex /goal LOOP must pick up `83440e8a5` THIS SESSION. My binding directive STANDS as a probe directive, not as a guaranteed frontier move. The reconciliation's RECONCILED-1 = G1 IMMEDIATE EXECUTION honors this. PROCEED. Note: I'm also satisfied with A-2 N-7 being the parallel empirical anchor; the Codex /goal LOOP can pick up BOTH directives in parallel."
 
-**Boyd** (Pareto-feasibility across reconciled TOP-5): "The shared assumption I am operating within: the reconciled TOP-5's composition is COMPOSITIONALLY CLEAN per the per-pair analysis in §3 (G1 ORTHO F1; both SUB with row 6 conditional vector). No EXCL cells. Dykstra-feasibility intersection of {rate-constraint, seg-tolerance, pose-tolerance, runtime-LOC budget} is non-empty for the SATURATION-INDEPENDENT subset (G1+F1). My critique is OPERATIONALIZED via RECONCILED-4 (A-3 Dykstra-feasibility-FIRST canonical helper). PROCEED. Note: I'd like the A-3 canonical helper to be the FIRST routing post-A-2-N-7 so future composition decisions go through it."
+**Boyd** (Pareto-feasibility across reconciled TOP-5): "The shared assumption I am operating within: the reconciled TOP-5's composition must stay measured, not asserted. No EXCL cells proven for the probe queue. Dykstra-feasibility intersection of {rate-constraint, seg-tolerance, pose-tolerance, runtime-LOC budget} is non-empty only after corrected F1/A2 and A1-SPECIALIZED report byte-charged net deltas. My critique is OPERATIONALIZED via RECONCILED-4 (A-3 Dykstra-feasibility-FIRST canonical helper). PROCEED. Note: I'd like the A-3 canonical helper to be the FIRST routing post-A-2-N-7 so future composition decisions go through it."
 
 ### 15.3 Grand-council attendees
 
@@ -816,11 +847,11 @@ Per CLAUDE.md "Subagent coherence-by-default" + Catalog #125: every subagent lan
 
 ### Hook #2: Pareto constraint
 
-**ACTIVE**: A-3 Dykstra-feasibility-FIRST canonical helper IS the Pareto constraint helper; consumed by future composition decisions per Catalog #322. G1+F1 SATURATION-INDEPENDENT subset's predicted aggregate respects the rate-distortion-perception Pareto frontier.
+**ACTIVE**: A-3 Dykstra-feasibility-FIRST canonical helper IS the Pareto constraint helper; consumed by future composition decisions per Catalog #322. G1+corrected-F1/A2 SATURATION-INDEPENDENT subset's predicted aggregate remains pending the corrected F1/A2 capacity probe.
 
 ### Hook #3: Bit-allocator hook
 
-**ACTIVE**: G1 re-ranking + F1 dim-7-12 side-channel both impact per-tensor importance (G1 via per-axis sensitivity; F1 via free-channel bit allocation in pose dim 7-12). A-4 MI-min canonical helper provides the bit-allocation prior.
+**ACTIVE**: G1 re-ranking + corrected F1/A2 both impact per-tensor importance (G1 via per-axis sensitivity; corrected F1/A2 via scored-pose-stable RGB perturbation capacity, not a direct dim-7-12 archive channel). A-4 MI-min canonical helper provides the bit-allocation prior.
 
 ### Hook #4: Cathedral autopilot dispatch hook
 
@@ -848,7 +879,7 @@ Per CLAUDE.md "Subagent coherence-by-default" + Catalog #125: every subagent lan
 - **Lane**: `lane_rate_attack_g1_cpu_axis_specific_20260518`
 - **Action**: extend `tools/scan_best_anchor_per_axis.py` + new `tools/cpu_axis_optimal_archive_selector.py`; re-rank existing PR101+102+103+106+107 archives by per-axis CPU eval; identify CPU-axis-optimal per-archive-family variant; update `reports/latest.md` FRONTIER section per Catalog #316
 - **Cost**: $0 (locally computed; existing dual-eval data)
-- **Expected return**: -0.003 to -0.010 ΔS [contest-CPU]
+- **Expected return**: realized `0.0` ΔS [contest-CPU] for existing-anchor rerank; future upside requires a new paired Linux x86_64 CPU anchor or a candidate-selection case where CPU-optimal differs from CUDA-optimal
 - **Time**: this session (1-2 hours operator + Codex)
 - **Risk**: very low (re-ranking is reversible; existing data)
 - **Routing**: `83440e8a5` already landed; Codex /goal LOOP
@@ -909,8 +940,8 @@ Per CLAUDE.md "Subagent coherence-by-default" + Catalog #125: every subagent lan
 
 ### Op-Routable 7 (OPTIONAL): F1 Build (CONDITIONAL on Op-Routable 2 PASS)
 
-- **Lane**: `lane_rate_attack_f1_hydra_dims_7_12_substrate_20260518`
-- **Action**: per PRIMARY's `.omx/research/rate_attack_vector_1_f1_hydra_dims_7_12_design_memo_20260518.md` — implement encoder-side dim 7-12 emission + inflate-time side-channel extraction
+- **Lane**: `lane_rate_attack_f1_hydra_dims_7_12_substrate_20260518` (name historical; implementation must use corrected F1/A2 framing)
+- **Action**: supersede PRIMARY's direct dim-channel design with corrected F1/A2 — measure and implement scorer-blind RGB perturbation capacity that preserves PoseNet scored dims 0-5 and SegNet argmax; do not implement encoder-side dim 7-12 emission or inflate-time side-channel extraction as a contest-capacity proof
 - **Cost**: $1-3 (Modal T4 smoke + paired CPU re-eval)
 - **Expected return**: -0.004 to -0.012 ΔS [contest-CPU]
 - **Time**: 1-2 days post-probe
@@ -993,7 +1024,7 @@ from tac.council_continual_learning import (
 
 record = CouncilDeliberationRecord(
     deliberation_id="rate_attack_synthesis_v2_reconciliation_primary_plus_adversarial_plus_supplement_20260518",
-    topic="Canonical OPERATOR-FACING reconciliation of today's rate-attack research wave: PRIMARY 43-vector META-paradigm research + ADVERSARIAL paradigm challenger + supplement. SATURATION-INDEPENDENT subset (G1+F1) proceeds immediately; SATURATION-DEPENDENT subset gated on A-2 N-7 verdict. Reconciled TOP-5 = G1 + F1 + A-2 N-7 + A-3 Dykstra + A-4 MI-min; conditional row 6 post-A-2-N-7. Aggregate predicted band [0.164, 0.183] [contest-CPU] expected; SATURATION-INDEPENDENT subset alone [0.170, 0.185].",
+    topic="Canonical OPERATOR-FACING reconciliation of today's rate-attack research wave: PRIMARY 43-vector META-paradigm research + ADVERSARIAL paradigm challenger + supplement. SATURATION-INDEPENDENT probes (G1+corrected-F1/A2) proceed immediately as evidence-gathering; SATURATION-DEPENDENT subset gated on A-2 N-7 verdict. Reconciled TOP-5 = G1 + F1 + A-2 N-7 + A-3 Dykstra + A-4 MI-min; conditional row 6 post-A-2-N-7. Aggregate bands are hypothesis-grade until artifacts land; Codex G1 measured actual_delta_s=0.0.",
     council_tier=CouncilTier.T2,
     council_attendees=(
         # Sextet pact
@@ -1007,19 +1038,19 @@ record = CouncilDeliberationRecord(
     council_verdict="PROCEED_WITH_REVISIONS",
     council_dissent=(
         {"member": "Contrarian", "verbatim": "PROCEED conditional on (a) reconciled TOP-5 carries explicit SATURATION-INDEPENDENT vs SATURATION-DEPENDENT tags, AND (b) SATURATION-DEPENDENT vectors are formally gated on A-2 N-7 verdict. Both conditions met."},
-        {"member": "Assumption-Adversary", "verbatim": "HARD-EARNED-PARTIAL on G1+F1 SATURATION-INDEPENDENT subset; A-2 N-7 is essential for SATURATION-DEPENDENT subset."},
+        {"member": "Assumption-Adversary", "verbatim": "HARD-EARNED-PARTIAL on G1+corrected-F1/A2 SATURATION-INDEPENDENT probe subset; A-2 N-7 is essential for SATURATION-DEPENDENT subset."},
     ),
     council_assumption_adversary_verdict=(
         {"assumption": "PRIMARY's TOP-5 and ADVERSARIAL's TOP-5 are necessarily conflicting", "classification": "CARGO-CULTED", "rationale": "Two streams are largely COMPLEMENTARY per §3-§4; the framing that operator must choose one is the cargo-cult"},
-        {"assumption": "A-2 N-7 verdict is essential gating for ALL rate-attack work", "classification": "HARD-EARNED-PARTIAL", "rationale": "Essential for SATURATION-DEPENDENT vectors; NOT essential for SATURATION-INDEPENDENT (G1+F1)"},
-        {"assumption": "The PR102 +0.033 CPU-CUDA gap is general (not PR102-specific)", "classification": "HARD-EARNED-EMPIRICALLY-VERIFIED", "rationale": "PR102 / PR107 / PR101 GOLD all show consistent +0.033"},
+        {"assumption": "A-2 N-7 verdict is essential gating for ALL rate-attack work", "classification": "HARD-EARNED-PARTIAL", "rationale": "Essential for SATURATION-DEPENDENT vectors; not a blocker for SATURATION-INDEPENDENT probes (G1+corrected-F1/A2), but those probes still need artifact authority"},
+        {"assumption": "The PR102 +0.033 CPU-CUDA gap is a reusable conversion factor", "classification": "FALSE_AS_CONVERSION__HARD_EARNED_AS_PER_ARCHIVE_PRIOR", "rationale": "PR102 / PR107 / PR101-family observations are paired-axis priors only; Codex G1 existing-anchor rerank measured actual_delta_s=0.0 and no CPU/CUDA conversion is allowed"},
         {"assumption": "Hydra dims 7-12 are STRUCTURALLY ignored by scorer", "classification": "HARD-EARNED-VERIFIED-FROM-SOURCE", "rationale": "upstream/modules.py:84 source line confirms [..., : h.out // 2] slice"},
         {"assumption": "ADVERSARIAL's 60% predicted SATURATION_HARD_EARNED is calibrated", "classification": "CARGO-CULTED-PENDING-EMPIRICAL", "rationale": "Quartet quartile estimate, not frequentist; A-2 N-7 verdict is the actual signal"},
         {"assumption": "G1 immediate execution does NOT need A-2 N-7 to land first", "classification": "HARD-EARNED-FROM-FIRST-PRINCIPLES", "rationale": "G1 produces no new archive bytes; saturation question is structurally orthogonal"},
     ),
     council_decisions_recorded=(
         "RECONCILED-1: PRIMARY's TOP-5 and ADVERSARIAL's alternative TOP-5 are complementary; reconciled TOP-5 drawn from both",
-        "RECONCILED-2: SATURATION-INDEPENDENT vectors (G1, F1) PROCEED IMMEDIATELY independent of A-2 N-7 outcome",
+        "RECONCILED-2: SATURATION-INDEPENDENT probes (G1, corrected-F1/A2) may proceed independent of A-2 N-7 outcome; G1 measured actual_delta_s=0.0, F1 requires capacity proof",
         "RECONCILED-3: SATURATION-DEPENDENT vectors (B1, Y3+Y6, H1, A-1 Brotli-dict) gated on A-2 N-7 verdict",
         "RECONCILED-4: A-2 N-7 routed to Codex per commit 1ac2063de; canonical /goal LOOP executes; ETA 4-6h at $0",
         "RECONCILED-5: A-3 Dykstra-feasibility-FIRST + A-4 MI-min Wyner-Ziv land as canonical helpers regardless of A-2 N-7 outcome",

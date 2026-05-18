@@ -1,7 +1,7 @@
 # Rate-attack legal-receiver-path audit + Codex F1 finding relay
 # Date: 2026-05-18
 # Codex's adversarial finding (operator-relayed 2026-05-18 verbatim): "dims 7-12 are genuinely unscored inside PoseNet, but they are not a contest-visible byte channel without a legal receiver path."
-# Per CLAUDE.md "Strict scorer rule — non-negotiable (canonical, binding)" Catalog #6 + HNeRV parity discipline L4 inflate.py ≤200 LOC + 2 dep budget
+# Per CLAUDE.md "Strict scorer rule — non-negotiable (canonical, binding)" Catalog #6 + "Deterministic packet compiler" contest_one_video_replay target + HNeRV parity discipline L4 inflate.py ≤200 LOC + 2 dep budget
 # Sister to: PRIMARY rate-attack memo (`rate_attack_43_vectors_meta_paradigm_deep_research_20260518.md` commit 2cae89a87 estimated) + ADVERSARIAL paradigm-challenger memo (commit 4c6e46bfa) + supplement (commit d43ecddb0) + in-flight SYNTHESIS-V2 subagent (`a18c228872a761bdb`)
 
 ## CANONICAL POINTERS
@@ -13,7 +13,43 @@
 5. `.omx/research/rate_attack_43_vectors_meta_paradigm_deep_research_20260518.md` (PRIMARY master memo; 43 vectors; TOP-5 includes F1)
 6. `.omx/research/adversarial_rate_attack_paradigm_challenger_20260518.md` (ADVERSARIAL memo; 5 binding critiques include Hotz "apparatus_maintenance" critique structurally similar to this finding)
 7. `.omx/research/rate_attack_research_context_supplement_per_axis_hardware_plus_dual_device_master_gradient_20260518.md` (supplement; per-axis matrix)
-8. Sister in-flight: `a18c228872a761bdb` SYNTHESIS-V2 reconciliation subagent (will incorporate this finding when it discovers this memo via `.omx/research/` glob)
+8. `src/tac/packet_compiler/deterministic_compiler.py` (canonical packet compiler; contest_one_video_replay profile)
+9. `src/tac/packet_compiler/pr98_decode_side_nudge.py` (fixed-video generated-code precedent)
+10. `runtime-rs/crates/tac-packet-compiler/README.md` (native packet-compiler parity surface)
+11. Sister in-flight: `a18c228872a761bdb` SYNTHESIS-V2 reconciliation subagent (will incorporate this finding when it discovers this memo via `.omx/research/` glob)
+
+## SECTION 0 — OPERATOR CORRECTION: A1-SPECIALIZED IS LIVE
+
+This memo originally over-collapsed A1 into `STRICT_SCORER_RULE_VIOLATION`.
+That was too conservative. The corrected classification is two separate
+claims:
+
+- **A1-CANONICAL / generic scorer receiver**: loading full PoseNet, SegNet, or a
+  generic scorer-feature inverter at inflate time remains rejected. It either
+  ships a catastrophic full-weight payload or violates the strict scorer rule.
+- **A1-SPECIALIZED / deterministic packet compiler**: a tiny, self-contained
+  per-pattern byte transducer, fixed table, generated code path, symbolic
+  closed form, or distilled sparse/quantized native binary is a live canonical
+  path under CLAUDE.md `contest_one_video_replay`.
+
+The legality test is not "does it approximate a scorer concept?" The legality
+test is:
+
+1. all runtime code/data needed for replay is inside the archive or fixed
+   contest runtime;
+2. all shipped bytes are charged to the archive, with no hidden sidecars,
+   network state, scorer modification, or uncharged dependency;
+3. the scored `inflate.sh archive_dir output_dir file_list` path consumes the
+   packet and emits contest RGB frames deterministically;
+4. exact CUDA auth eval validates the archive/runtime packet;
+5. the packet compiler records a typed runtime-consumption proof and payload
+   change proof.
+
+Therefore every `STRICT_SCORER_RULE_VIOLATION` label below should be read as
+applying to the naive full-scorer/full-generic-inverter variant only unless the
+row explicitly says otherwise. Specialized packet-compiler variants are
+`RECLAIMABLE_VIA_PACKET_COMPILER` pending a byte-size proof and exact-eval
+artifact.
 
 ## SECTION 1 — CODEX'S FINDING (operator-relayed 2026-05-18)
 
@@ -46,9 +82,9 @@ Archive bytes → inflate.py → RGB frames → SCORER (T4) → PoseNet → 12-d
 
 **Why it's broken**: there's no encoder path FROM archive bytes TO "dim 7-12 territory". Dims 7-12 are OUTPUTS of PoseNet's forward pass on RGB inputs. The only way to influence them is to perturb the RGB inputs (which are themselves OUTPUTS of inflate.py reading archive bytes).
 
-### F1 as it ACTUALLY works (canonical):
+### F1 corrected probe framing (canonical):
 
-The genuine F1 exploit is: **find RGB perturbations whose corresponding PoseNet first-6-dim output is INVARIANT** (i.e., perturbations that change dim 7-12 but NOT dim 1-6). Those perturbations are SCORE-INVARIANT but pixel-level-distinct. We can use them as steganographic carriers — encode information as choice of which scorer-invariant perturbation to apply.
+The genuine F1 hypothesis is: **find RGB perturbations whose corresponding PoseNet first-6-dim output is INVARIANT** (i.e., perturbations that change dim 7-12 but NOT dim 1-6). Those perturbations would be SCORE-INVARIANT but pixel-level-distinct. The legal receiver path exists for a probe because standard inflate emits RGB and the scorer reads RGB; the unproven part is capacity and net archive-byte savings.
 
 This is STRUCTURALLY IDENTICAL to vector A2 (Adversarial steganography on scorer blind-spots — Fridrich + Yousfi PhD territory) applied specifically to the PoseNet first-6-dim invariance manifold.
 
@@ -59,8 +95,8 @@ Original framing  Information → "dim 7-12 channel"   (impossible — no path e
 (BROKEN)          → archive bytes
 
 Canonical         Information → RGB perturbation     Standard inflate.py reads archive
-framing           in PoseNet-1to6-invariant          → produces RGB frames (perturbations
-(WORKS)           manifold → archive bytes (entropy  embedded) → scorer reads RGB →
+probe framing     in PoseNet-1to6-invariant          → produces RGB frames (perturbations
+(UNPROVEN)        manifold → archive bytes (entropy  embedded) → scorer reads RGB →
                   coded; smaller because we have     PoseNet → 12-dim → compute_distortion
                   more degrees of freedom)           ignores dim 7-12 → score unchanged
 ```
@@ -76,12 +112,16 @@ For each of the 43 vectors enumerated in PRIMARY rate-attack memo + supplement, 
 - **LEGAL_RECEIVER_IN_BUDGET**: requires inflate.py code addition WITHIN ≤200 LOC + ≤2 dep budget per HNeRV parity L4
 - **LEGAL_RECEIVER_OVER_BUDGET**: requires inflate.py changes EXCEEDING budget; structural risk
 - **STRICT_SCORER_RULE_VIOLATION**: requires loading scorer component at inflate; FORBIDDEN per Catalog #6 (~73MB rate hit + non-compliance per CLAUDE.md non-negotiable)
+- **RECLAIMABLE_VIA_PACKET_COMPILER**: naive scorer-load framing is forbidden,
+  but a tiny self-contained deterministic transducer/generated-code/fixed-table
+  variant is admissible if exact CUDA auth eval validates it
 
 ### Category A — SCORER-AWARE BYTE-LEVEL (3 vectors)
 
 | Vector | Receiver path needed? | Status |
 |---|---|---|
-| A1 Scorer-feature-space encoding (skip RGB) | YES — need scorer-feature-to-byte inverter at inflate | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
+| A1-CANONICAL scorer-feature-space encoding (generic/full scorer) | YES — full scorer or generic scorer-feature inverter | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
+| A1-SPECIALIZED deterministic packet compiler | YES — tiny per-pattern transducer/fixed table/generated code; no full scorer | **RECLAIMABLE_VIA_PACKET_COMPILER** ✓ pending byte-size proof + exact CUDA auth eval |
 | A2 Adversarial steganography on scorer blind-spots | NO — scorer IS the receiver | **NO_RECEIVER_NEEDED** ✓ |
 | A3 MIN-CARDINALITY adversarial pruning | NO — encode-time pruning; standard inflate | **NO_RECEIVER_NEEDED** ✓ |
 
@@ -141,15 +181,21 @@ For each of the 43 vectors enumerated in PRIMARY rate-attack memo + supplement, 
 | Vector | Receiver path needed? | Status |
 |---|---|---|
 | F1 PoseNet Hydra dims 7-12 (originally framed) | YES — would need scorer at inflate to "read" dim 7-12 | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
-| **F1-CORRECTED (scorer-blind RGB perturbation)** | **NO — scorer IS the receiver via RGB invariance manifold** | **NO_RECEIVER_NEEDED** ✓ (collapses to A2) |
+| **F1-CORRECTED (scorer-blind RGB perturbation)** | **NO — scorer IS the receiver via RGB invariance manifold** | **LEGAL_RECEIVER_PATH_EXISTS_FOR_PROBE; CAPACITY_AND_NET_SAVINGS_UNPROVEN** (collapses to A2) |
 | F2 SegNet non-argmax logits | YES if framed as "encode in logits"; NO if framed as scorer-blind | **Same as F1** ⚠️ → ✓ |
-| F3 PoseNet vision(2048) feature-space encoding | YES — need vision-2048 inverter at inflate | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
-| F4 PoseNet summary(512) bottleneck | YES — need summary-512 inverter | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
-| F5 PoseNet ResBlock output deterministic | YES — need ResBlock inverter | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
-| F6 Hydra trunk-vs-head split | YES — need trunk/head inverter | **STRICT_SCORER_RULE_VIOLATION** ⚠️ |
+| F3 PoseNet vision(2048) feature-space encoding | YES — generic vision-2048 inverter is forbidden; specialized byte transducer may be tiny | **RECLAIMABLE_VIA_PACKET_COMPILER** ⚠️ |
+| F4 PoseNet summary(512) bottleneck | YES — generic summary-512 inverter is forbidden; specialized bottleneck table may be tiny | **RECLAIMABLE_VIA_PACKET_COMPILER** ⚠️ |
+| F5 PoseNet ResBlock output deterministic | YES — generic ResBlock inverter is forbidden; specialized generated code may be tiny | **RECLAIMABLE_VIA_PACKET_COMPILER** ⚠️ |
+| F6 Hydra trunk-vs-head split | YES — generic trunk/head inverter is forbidden; specialized split transducer may be tiny | **RECLAIMABLE_VIA_PACKET_COMPILER** ⚠️ |
 | F7 PR95 Phase 2-4 dual-RGB-head | YES — dual-head architecture | **Depends on framing** ⚠️ |
 
-**Verdict for F-category**: F1-F6 ALL have the same structural issue Codex identified. Reframed as scorer-blind RGB perturbations (A2-instances), they become **NO_RECEIVER_NEEDED** but collapse to vector A2 (Adversarial steganography on scorer blind-spots). The "novelty" was illusory.
+**Verdict for F-category**: The direct "dims/logits/intermediate tensors are free
+archive channels" framing is broken. Reframed as scorer-blind RGB
+perturbations, F1/F2 become **legal-receiver-path A2 probe instances** whose
+capacity and net byte savings remain unproven. Reframed as specialized
+deterministic packet-compiler transducers, F3-F6 remain live
+research/implementation candidates pending byte-size proof, runtime-consumption
+proof, and exact CUDA auth eval.
 
 ### Category G — CPU-vs-GPU STRUCTURAL ASYMMETRY (7 vectors)
 
@@ -168,7 +214,8 @@ For each of the 43 vectors enumerated in PRIMARY rate-attack memo + supplement, 
 ### Vectors that need RE-FRAMING (canonical-collapse to scorer-blind input perturbation)
 
 - F1, F2 (when framed as "dim 7-12 channel" / "non-argmax logits channel") → collapse to A2
-- F3, F4, F5, F6 (encode in scorer intermediate features) → ALL require scorer-load at inflate; STRICT_SCORER_RULE_VIOLATION per Catalog #6
+- F3, F4, F5, F6 (encode in scorer intermediate features) → generic scorer-load
+  variants fail closed; specialized packet-compiler variants remain live
 
 ### Vectors that need budget audit (LEGAL_RECEIVER_OVER_BUDGET candidates)
 
@@ -176,11 +223,14 @@ For each of the 43 vectors enumerated in PRIMARY rate-attack memo + supplement, 
 - H9 NVIDIA DALI pipeline — DALI ≠ standard inflate.py environment; needs structural-fit audit
 - B3 Decoder-driven byte rejection — depends on test complexity; needs per-test audit
 
-### Vectors that need STRICT_SCORER_RULE re-classification
+### Vectors that need deterministic-packet-compiler re-classification
 
-- A1 Scorer-feature-space encoding — requires inverter from scorer-features to bytes; this IS a scorer component
-- F3, F4, F5, F6 — all require scorer intermediate-stage components
-- These should be DEFERRED-pending-strict-scorer-rule-re-classification OR explicitly research_only=true
+- A1-SPECIALIZED scorer-feature-space encoding — viable when reduced to a
+  small self-contained byte transducer/fixed table/generated code packet
+- F3, F4, F5, F6 — viable only as specialized per-pattern transducers; generic
+  scorer-intermediate components remain rejected
+- These should be routed through the deterministic packet compiler feasibility
+  path, not silently killed and not silently promoted
 
 ## SECTION 5 — IMPLICATIONS FOR PRIMARY + ADVERSARIAL + SYNTHESIS-V2
 
@@ -198,14 +248,15 @@ ADVERSARIAL's "5 binding critiques" were structurally correct in spirit. Codex's
 ### For SYNTHESIS-V2 in-flight subagent (`a18c228872a761bdb`)
 
 SYNTHESIS-V2 should incorporate this audit + Codex's finding into its reconciliation:
-- F-category collapse to A2 → final TOP-5 likely changes
-- A1, F3-F6 should be DEFERRED-pending-strict-scorer-rule-re-classification
+- F1/F2 direct-channel framing collapses to A2; F3-F6 require deterministic
+  packet-compiler reclaimability audit
+- A1-SPECIALIZED should be reopened as a high-priority feasibility path
 - G1 + G6 + G7 (SATURATION-INDEPENDENT + NO_RECEIVER_NEEDED) become highest-EV candidates
 - A2 + B1 + C1 become structurally strongest (NO_RECEIVER_NEEDED canonical)
 
 If SYNTHESIS-V2 doesn't pick this up via `.omx/research/` glob, write a follow-on memo to explicitly cite.
 
-## SECTION 6 — RECOMMENDED RECONCILED TOP-5 (post-audit)
+## SECTION 6 — RECOMMENDED RECONCILED TOP-5 (strict no-full-scorer subset)
 
 Per this audit's NO_RECEIVER_NEEDED + SATURATION-INDEPENDENT + HARD-EARNED criteria:
 
@@ -217,13 +268,17 @@ Per this audit's NO_RECEIVER_NEEDED + SATURATION-INDEPENDENT + HARD-EARNED crite
 | 4 | **B1** Contest-video-as-codebook | $0-$5 | LEGAL_RECEIVER_IN_BUDGET (~30 LOC) | YES (depends on A-2 N-7) | Wyner-Ziv 1976 canonical |
 | 5 | **C1** Cross-archive bytes-as-libraries | $0 | NONE (sibling files OUTSIDE rate) | NO | Maintainer precedent per CLAUDE.md |
 
-This RECONCILED TOP-5 has 4-of-5 vectors with NO_RECEIVER_NEEDED + 4-of-5 SATURATION-INDEPENDENT + 5-of-5 HARD-EARNED. Maximum EV under strict-scorer-rule + L4 budget constraints.
+This RECONCILED TOP-5 is the strict no-full-scorer/no-specialized-binary subset.
+It does not supersede A1-SPECIALIZED; instead, A1-SPECIALIZED becomes a
+parallel highest-EV feasibility track under the deterministic packet compiler.
 
 ## DISCIPLINE
 
 - Catalog #229 premise verification: `upstream/modules.py:26` + `:84` source-verified
 - Catalog #287 evidence tags throughout
-- Catalog #6 strict-scorer-rule: ALL vectors flagged STRICT_SCORER_RULE_VIOLATION marked explicitly
+- Catalog #6 strict-scorer-rule: naive full-scorer variants flagged explicitly
+- Deterministic packet compiler: specialized per-pattern transducer variants
+  preserved as live `contest_one_video_replay` candidates
 - HNeRV parity discipline L4 inflate.py ≤200 LOC + ≤2 dep budget: vectors at risk flagged LEGAL_RECEIVER_OVER_BUDGET
 - Catalog #117/#157/#174 commit serializer with POST-EDIT sha
 - Catalog #314 absorption avoidance: this memo's scope is `.omx/research/rate_attack_legal_receiver_path_audit_codex_f1_finding_relay_*.md` ONLY

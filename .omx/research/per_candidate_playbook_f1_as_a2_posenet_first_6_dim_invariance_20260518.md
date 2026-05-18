@@ -3,7 +3,7 @@
 **Parent framework**: `.omx/research/dynamic_per_candidate_composition_framework_all_canonical_apparatus_composed_20260518.md` §14.2
 **Lane**: per parent framework derived
 **Routing**: Codex (already routed via `83440e8a5` probe; build conditional on probe PASS)
-**Mission alignment**: frontier_breaking per CLAUDE.md "Mission alignment" + META-audit CONFLATE_DECLARATIVE_WITH_PHYSICAL correction
+**Mission alignment**: frontier-directed probe per CLAUDE.md "Mission alignment" + META-audit CONFLATE_DECLARATIVE_WITH_PHYSICAL correction
 
 ---
 
@@ -14,7 +14,7 @@
 - **Candidate lane_id**: TBD per probe verdict landing
 - **Asymptotic approach**: PLATEAU_ADJACENT per Catalog #309 (scorer-feature-invariance is within-class; no substrate class shift)
 - **Budget**: $0 probe + $1-3 build (conditional on probe PASS)
-- **Predicted aggregate ΔS band**: `[-0.012, -0.004]` [contest-CPU] per HARD-EARNED-STRUCTURAL via upstream/modules.py:84 source-verification
+- **Predicted aggregate ΔS band**: hypothesis-grade `[-0.012, -0.004]` [contest-CPU] only if probe proves RGB perturbation capacity and build proves net charged-byte savings; source only proves first-6-dim scoring, not capacity
 - **Per-axis hardware classification**: AXIS-INVARIANT per primitive 14 (Hydra dims 7-12 are scorer-invariant on both CPU and CUDA per source line `[..., : h.out // 2]`)
 - **Mathematical sub-paradigm (Tao partition)**: (a) MI-min Wyner-Ziv — zero-rate side channel through scorer-feature-invariance
 - **Predecessor probe outcome**: none per `.omx/state/probe_outcomes.jsonl`; F1-as-A2 is novel territory per SYNTHESIS-V2
@@ -25,7 +25,7 @@
 
 **Why broken**: dim 7-12 are OUTPUTS of PoseNet's forward pass on RGB inputs; they don't exist in archive bytes. There's no encoder path FROM archive bytes TO "dim 7-12 territory".
 
-**Canonical F1-as-A2 framing (WORKS per META-audit + framework Layer 1 §6.1.(d))**: "find RGB perturbations whose corresponding PoseNet first-6-dim output is INVARIANT (i.e., perturbations that change dim 7-12 but NOT dim 1-6). Those perturbations are SCORE-INVARIANT but pixel-level-distinct. Use them as steganographic carriers — encode information as choice of which scorer-invariant perturbation to apply."
+**Canonical F1-as-A2 framing (legal probe path per META-audit + framework Layer 1 §6.1.(d))**: "find RGB perturbations whose corresponding PoseNet first-6-dim output is INVARIANT (i.e., perturbations that change dim 7-12 but NOT dim 1-6)." If such perturbations exist with enough density, they may become steganographic carriers. The capacity and net charged-byte savings are unproven until the probe/build artifacts land.
 
 This is STRUCTURALLY IDENTICAL to vector A2 (Adversarial steganography on scorer blind-spots — Fridrich + Yousfi PhD territory) applied specifically to the PoseNet first-6-dim invariance manifold.
 
@@ -52,7 +52,7 @@ Combined with `upstream/modules.py:26` (`HEADS = [Head('pose', 32, 12)]`): PoseN
 | 3 | per-pair / per-frame / byte-level granularity | **ACTIVE** at per-pair granularity | per per-pair perturbation magnitude |
 | 4 | hard-pair atlas + sensitivity_map | **ACTIVE** (identify hardest pairs for dim 7-12 channel encoding capacity) | per hardest 100 pairs |
 | 5 | composition_alpha N-way | **ACTIVE** (sub-additive composition for primitives 1 × 6 × 10) | α ≈ 0.7 expected per parent memo |
-| 6 | Wyner-Ziv deliverability | **PRIMARY** (F1-as-A2 IS the canonical Wyner-Ziv example; bits ship through scorer-feature-invariance channel at zero rate cost) | per per-substrate proof |
+| 6 | Wyner-Ziv deliverability | **PRIMARY-PENDING-PROOF** (F1-as-A2 is a candidate Wyner-Ziv/scorer-invariance channel; net rate is not free until capacity and byte savings are measured) | per per-substrate proof |
 | 7 | probe_outcomes ledger | ACTIVE (F1-as-A2 outcome registers per Catalog #313) | per candidate |
 | 8 | xray observability | **ACTIVE** (xray scorer output to verify first-6-dim invariance per perturbation) | per perturbation magnitude |
 | 9 | cathedral autopilot v2 cascade | ACTIVE (per-pair routing per Catalog #319 Q3) | per per-pair classification |
@@ -62,7 +62,7 @@ Combined with `upstream/modules.py:26` (`HEADS = [Head('pose', 32, 12)]`): PoseN
 | 13 | A1-SPECIALIZED binary | NOT-REQUIRED (F1-as-A2 doesn't require binary distillation; perturbations modify RGB directly) | n/a |
 | 14 | per-axis hardware exploit matrix | ACTIVE (AXIS-INVARIANT per Hydra dims invariant on both CPU and CUDA) | per axis routing |
 
-**Key insight**: F1-as-A2 is the RICHEST composition in the framework — 11 primitives ACTIVE; only 3 NOT-REQUIRED. The composition leverages master_gradient + Venn classifier + sensitivity_map + Wyner-Ziv deliverability + null_space_exploiter jointly.
+**Key insight**: F1-as-A2 is a rich probe composition — 11 primitives ACTIVE; only 3 NOT-REQUIRED. The composition leverages master_gradient + Venn classifier + sensitivity_map + Wyner-Ziv deliverability + null_space_exploiter jointly, but it stays capacity-pending until the perturbation probe lands.
 
 ## Layer 3 bilevel optimizer state
 
@@ -75,7 +75,7 @@ Combined with `upstream/modules.py:26` (`HEADS = [Head('pose', 32, 12)]`): PoseN
 
 ### (a) HARD-EARNED vs CARGO-CULTED classification per Catalog #303
 
-**HARD-EARNED-VERIFIED-FROM-SOURCE** per upstream/modules.py:84 line `[..., : h.out // 2]` with h.out=12.
+**HARD-EARNED-VERIFIED-FROM-SOURCE** for the narrow claim that PoseNet's last 6 output dims are unscored, per upstream/modules.py:84 line `[..., : h.out // 2]` with h.out=12.
 
 **Recoverability claim is CARGO-CULTED-PENDING-PROBE**: "encoder can freely set dims 7-12 without affecting forward pass" requires probe verification per Fridrich+Contrarian revision in PRIMARY § (probe gate at step 1).
 
@@ -83,7 +83,7 @@ Combined with `upstream/modules.py:26` (`HEADS = [Head('pose', 32, 12)]`): PoseN
 
 - `[source-trace:upstream/modules.py:84]` per Codex F1 finding source verification
 - `[empirical:.omx/state/master_gradient_anchors.jsonl]` per per-pair gradient signature (PR101_lc_v2 `f174192aeadf...`)
-- `[prediction]` per predicted ΔS band `[-0.012, -0.004]` pending probe PASS
+- `[prediction]` per hypothesis-grade ΔS band `[-0.012, -0.004]` pending probe PASS + net-byte build proof
 
 ### (c) Per-candidate adaptation evidence
 
@@ -96,11 +96,11 @@ Per-pair RGB perturbation directions differ per per-pair gradient signature. Two
 
 ### (d) Legal-receiver-path classification per Catalog #6 + HNeRV parity L4
 
-**NO_RECEIVER_NEEDED** — perturbations modify RGB in-place; inflate.py reads modified RGB identically; scorer first-6-dim output unchanged. ZERO additional inflate code or deps. Per the META-audit's CONFLATE_DECLARATIVE_WITH_PHYSICAL correction: F1-as-A2 is a steganographic-perturbation primitive, not a free-bytes-in-archive primitive.
+**LEGAL_RECEIVER_PATH_EXISTS_FOR_PROBE / NO_EXTRA_RECEIVER_CODE** — perturbations would modify RGB in-place; inflate.py reads modified RGB identically; scorer first-6-dim output must remain unchanged. No extra inflate code or deps are required for the probe, but capacity and net charged-byte savings are unproven. Per the META-audit's CONFLATE_DECLARATIVE_WITH_PHYSICAL correction: F1-as-A2 is a steganographic-perturbation primitive, not a free-bytes-in-archive primitive.
 
 ### (e) Dykstra-feasibility intersection per Catalog #296
 
-Per primitives 1 + 6 + 10 composition; Boyd's alternating projections converge per the SUB-ADDITIVE prior per Catalog #322. Expected α ≈ 0.7 per the parent memo.
+Per primitives 1 + 6 + 10 composition; Boyd/Dykstra feasibility is pending empirical perturbation constraints. Expected α ≈ 0.7 per the parent memo remains a planning prior, not a score claim.
 
 ## Cost + time
 
@@ -165,7 +165,7 @@ If build returns DEFER (perturbations work in probe but build doesn't ship bits 
 - Codex F1 finding `rate_attack_legal_receiver_path_audit_codex_f1_finding_relay_*.md` (source verification)
 - SYNTHESIS-V2 §3.2 (HARD-EARNED-VERIFIED-FROM-SOURCE classification)
 - CLAUDE.md "Fridrich inverse steganalysis" (Fridrich+Yousfi adversarial steganography framework)
-- Catalog #6 strict-scorer-rule (NO_RECEIVER_NEEDED satisfies)
+- Catalog #6 strict-scorer-rule (no extra receiver code for the probe; scored build still needs capacity + net-byte proof)
 - Catalog #319 Q3 v2 cascade (cathedral autopilot routing)
 
 — Per-candidate playbook for F1-as-A2 PoseNet first-6-dim invariance steganography per parent framework §14.2

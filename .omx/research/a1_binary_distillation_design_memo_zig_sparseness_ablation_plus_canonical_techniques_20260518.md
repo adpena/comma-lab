@@ -37,7 +37,7 @@ council_dissent:
 council_assumption_adversary_verdict:
   - assumption: "A small specialized binary preserves the strict-scorer-rule's INTENT"
     classification: HARD-EARNED-PENDING-INTERPRETATION
-    rationale: "Yousfi (PR #35 author) verbatim interpretation: a binary that obviously cannot be re-used as 'PoseNet for arbitrary input' is COMPLIANT. CLAUDE.md 'contest_one_video_replay' target mode EXPLICITLY SANCTIONS this path. But the social/spirit interpretation is HARD-EARNED-PENDING social ratification. PROCEED on the per-pattern distilled inversion path (clearly specialized) rather than generic PoseNet distillation (interpretively risky)."
+    rationale: "Yousfi (PR #35 author) verbatim interpretation supports a binary that obviously cannot be re-used as 'PoseNet for arbitrary input'. CLAUDE.md 'contest_one_video_replay' target mode EXPLICITLY SANCTIONS this path as feasibility. But scored compliance still depends on a self-contained charged-byte packet, runtime-consumption proof, no generic scorer behavior, and exact CUDA auth eval. PROCEED on the per-pattern distilled inversion path (clearly specialized) rather than generic PoseNet distillation (interpretively risky)."
   - assumption: "Hinton 2014 distillation can shrink PoseNet by 100-1000×"
     classification: HARD-EARNED
     rationale: "PR101 empirical precedent: 88K-param FiLM-conditioned DSConv renderer at ~64 KB FP4+Brotli reproduces useful frame outputs. Hinton 2014 + Quantizr distillation literature: 100-1000× compression for SPECIALIZED student domains is the canonical result. For A1's per-pattern inversion (NOT generic PoseNet), the student domain is dramatically narrower → even higher compression ratios achievable."
@@ -45,8 +45,8 @@ council_assumption_adversary_verdict:
     classification: CARGO-CULTED
     rationale: "Per Hotz verbatim: Python is already on the system; we don't ship it. ELF/Mach-O overhead alone (30-50 KB even for a Zig binary) exceeds Python's marginal cost (which is ~0 bytes of archive — Python is in the upstream pinned environment). Zig wins ONLY for: (a) deterministic float operations across CPU architectures, (b) procedural codebook GENERATION at compress time with shipped code-as-bytes. Zig binary as 'inflate executor' is NEGATIVE EV vs Python."
   - assumption: "contest_one_video_replay is the canonical path for distilled inverters"
-    classification: HARD-EARNED-VERIFIED
-    rationale: "CLAUDE.md verbatim: 'It may replace learned inference with deterministic generated code, fixed tables, distilled byte transducers, or per-frame/per-pair streams derived from the trained model's behavior on the scored video. It is admissible only when the archive remains self-contained and exact CUDA auth eval validates it.' The target mode + the deterministic packet compiler section together EXPLICITLY SANCTION this path. Compliance is HARD-EARNED-VERIFIED in the text."
+    classification: HARD-EARNED-SANCTIONED-FEASIBILITY
+    rationale: "CLAUDE.md verbatim: 'It may replace learned inference with deterministic generated code, fixed tables, distilled byte transducers, or per-frame/per-pair streams derived from the trained model's behavior on the scored video. It is admissible only when the archive remains self-contained and exact CUDA auth eval validates it.' The target mode + the deterministic packet compiler section together EXPLICITLY SANCTION feasibility. Scored compliance remains pending until the archive is self-contained, the packet's charged bytes are consumed by runtime, no generic scorer behavior is present, and exact CUDA auth eval validates it."
   - assumption: "Per-pattern specialization yields larger compression than generic PoseNet distillation"
     classification: HARD-EARNED
     rationale: "Standard information-theoretic result: the rate-distortion function R(D) for a SPECIALIZED domain (our exact shipped patterns) is strictly below the generic R(D). Per VQ-VAE/Wyner-Ziv canonical: encoding the K patterns we use saturates at log2(K) bits per selection, independent of the full PoseNet domain's complexity. Estimated 10-100× advantage over generic distillation."
@@ -106,7 +106,7 @@ notes: "T2 design memo executing operator's 2026-05-18 question 'should we be ab
 
 ### TL;DR
 
-**A1 can be reactivated from STRICT_SCORER_RULE_VIOLATION to PROCEED_WITH_REVISIONS** by replacing the naive "full PoseNet inverter at inflate" (~53.2 MB rate hit, non-compliant) with a **per-pattern distilled VQ-VAE inverter** sized 5-20 KB (rate cost +0.0003 to +0.0013 ΔS) that is OBVIOUSLY specialized (NOT a re-usable PoseNet). The realistic smallest viable binary is **~5-10 KB** assembled from the canonical composition stack (VQ-VAE codebook + procedural codebook seed + tiny Hinton student + Brotli), achievable using EXISTING canonical helpers (`tac.procedural_codebook_generator`, `tac.null_space_exploiter`, `tac.quantization.FakeQuantFP4`). Operator's instinct that "Zig" or "sparseness" or "ablation" can shrink the binary is **directionally correct** but the dominant techniques are **VQ-VAE codebook lookup + Hinton distillation + FP4 quantization + Brotli/zstd entropy coding** — Zig provides a marginal 1-3× advantage on the binary container format ONLY in regimes where it eliminates the Python-interpreter dependency (which we don't pay for; Python is in the pinned environment).
+**A1 can be reactivated from STRICT_SCORER_RULE_VIOLATION to PROCEED_WITH_REVISIONS** by replacing the naive "full PoseNet inverter at inflate" (~53.2 MB if charged to archive, non-compliant and rate-catastrophic) with a **per-pattern distilled VQ-VAE inverter** sized 5-20 KB (rate cost roughly +0.0034 to +0.0136 ΔS for KiB units) that is OBVIOUSLY specialized (NOT a re-usable PoseNet). The realistic smallest viable binary is **~5-10 KB** assembled from the canonical composition stack (VQ-VAE codebook + procedural codebook seed + tiny Hinton student + Brotli), achievable using EXISTING canonical helpers (`tac.procedural_codebook_generator`, `tac.null_space_exploiter`, `tac.quantization.FakeQuantFP4`). Operator's instinct that "Zig" or "sparseness" or "ablation" can shrink the binary is **directionally correct** but the dominant techniques are **VQ-VAE codebook lookup + Hinton distillation + FP4 quantization + Brotli/zstd entropy coding** — Zig provides a marginal 1-3× advantage on the binary container format ONLY in regimes where it eliminates the Python-interpreter dependency (which we don't pay for; Python is in the pinned environment).
 
 ### Reconciled verdict on A1 viability
 
@@ -114,10 +114,10 @@ notes: "T2 design memo executing operator's 2026-05-18 question 'should we be ab
 |---|---|---|---|---|---|
 | Current "full PoseNet at inflate" | 53.2 MB | NON-COMPLIANT (Catalog #6) | N/A | $0 | STRICT_SCORER_RULE_VIOLATION ⚠️ |
 | Naive Hinton distillation (generic PoseNet student) | 500 KB - 5 MB | INTERPRETIVELY RISKY (looks like a re-usable PoseNet) | -0.005 to -0.012 | $30-100 | NOT RECOMMENDED |
-| **VQ-VAE per-pattern inverter (specialized)** | **5-20 KB** | **COMPLIANT per CLAUDE.md `contest_one_video_replay`** | **-0.008 to -0.015** | **$1-5 prototype** | **TOP-1 RECOMMENDED** ✅ |
-| Procedural codebook + Hinton student composition | 3-10 KB | COMPLIANT | -0.005 to -0.012 | $2-8 | TOP-2 RECOMMENDED |
-| Custom binary container (Carmack task #236) + above | 2-8 KB | COMPLIANT | -0.005 to -0.012 | $5-15 | TOP-3 (marginal) |
-| Pure Zig/Rust ELF + FP4 distillation | 30-200 KB | COMPLIANT but expensive | -0.003 to -0.008 | $20-50 | NOT RECOMMENDED (Hotz verbatim) |
+| **VQ-VAE per-pattern inverter (specialized)** | **5-20 KB** | **SANCTIONED_FEASIBILITY under CLAUDE.md `contest_one_video_replay`; compliance pending packet proof** | **gross -0.008 to -0.015 before byte-rate cost** | **$1-5 prototype** | **TOP-1 RECOMMENDED; net-positive only if measured savings exceed size cost** ✅ |
+| Procedural codebook + Hinton student composition | 3-10 KB | SANCTIONED_FEASIBILITY; compliance pending packet proof | gross -0.005 to -0.012 before byte-rate cost | $2-8 | TOP-2 RECOMMENDED |
+| Custom binary container (Carmack task #236) + above | 2-8 KB | SANCTIONED_FEASIBILITY; compliance pending packet proof | -0.005 to -0.012 | $5-15 | TOP-3 (marginal) |
+| Pure Zig/Rust ELF + FP4 distillation | 30-200 KB | POTENTIALLY_COMPLIANT but expensive; compliance pending packet proof | -0.003 to -0.008 | $20-50 | NOT RECOMMENDED (Hotz verbatim) |
 
 ### Smallest achievable binary size estimate
 
@@ -137,7 +137,7 @@ Layer 4 (compression):  Brotli (canonical at inflate)  1.5-3× on int4 codes
 Layer 5 (delivery):     Embedded in standard inflate.py  No new binary container needed
 ```
 
-**TOP-1 op-routable for Codex prototype**: `tools/build_a1_per_pattern_vq_vae_inverter_prototype.py` — assemble VQ-VAE codebook + procedural seed + Hinton student via existing canonical helpers; ship as ≤20 KB sidecar in canonical Python inflate.py. **Cost: $1-3 (1-hour CPU smoke)**. **Predicted output: 5-10 KB binary, ≥95% A1 baseline accuracy preserved.**
+**TOP-1 op-routable for Codex prototype**: `tools/build_a1_per_pattern_vq_vae_inverter_prototype.py` — assemble VQ-VAE codebook + procedural seed + Hinton student via existing canonical helpers; ship as ≤20 KB sidecar in canonical Python inflate.py. **Cost: $1-3 (1-hour CPU smoke)**. **Predicted output: 5-10 KB binary, ≥95% A1 baseline accuracy preserved, and explicit net-score accounting after byte-rate cost.**
 
 ---
 
@@ -158,7 +158,7 @@ The literal text does NOT forbid:
 - Loading a CUSTOM BINARY at inflate
 - Computing PoseNet-equivalent outputs via non-PoseNet means
 
-By the LETTER, a distilled student model is COMPLIANT.
+By the LETTER, a distilled student model is a sanctioned feasibility path, not a scored-compliant packet until archive/runtime proof and exact CUDA validation land.
 
 ### 1.3 The intent (social/spirit reading)
 
@@ -182,11 +182,11 @@ Yousfi as challenge author (council seat verbatim above) draws the line:
 Per CLAUDE.md "Contest vs production target modes — non-negotiable" §`contest_one_video_replay`:
 > *"contest-only, one-video overfit replay. It may replace learned inference with deterministic generated code, fixed tables, distilled byte transducers, or per-frame/per-pair streams derived from the trained model's behavior on the scored video."*
 
-**This EXPLICITLY SANCTIONS** the path: distilled byte transducer / fixed table / deterministic generated code that derives from PoseNet's behavior on the scored video.
+**This EXPLICITLY SANCTIONS feasibility** for the path: distilled byte transducer / fixed table / deterministic generated code that derives from PoseNet's behavior on the scored video.
 
 ### 1.6 Resolution verdict
 
-**A1 path is COMPLIANT under the per-pattern distilled inversion framing** when ALL of:
+**A1 path is POTENTIALLY_COMPLIANT / SANCTIONED_FEASIBILITY under the per-pattern distilled inversion framing** and becomes scored-compliant only when ALL of:
 1. The shipped binary obviously cannot serve as a re-usable PoseNet (specialized to our archive's patterns)
 2. The binary is documented as a "distilled byte transducer" or "fixed table" per `contest_one_video_replay`
 3. The archive remains self-contained
@@ -580,14 +580,14 @@ For each TOP technique, estimate the binary size contribution assuming baseline 
 | Full PoseNet (baseline) | 53,200 KB | 1× | NON-COMPLIANT per Catalog #6 |
 | Hinton student (generic; 1M params @ fp32) | 4,000 KB | 13× | INTERPRETIVELY RISKY |
 | Hinton student (1M params @ FP4) | 500 KB | 106× | INTERPRETIVELY RISKY |
-| Per-pattern Hinton student (10K params @ FP4 + 50% sparse + Brotli) | 5-15 KB | 3,500-10,000× | COMPLIANT |
-| **VQ-VAE codebook (K=256, 12-dim, fp8)** | **3 KB** | **17,000×** | COMPLIANT ★ TOP-1 |
-| VQ-VAE codebook (K=64, 12-dim, fp8) + delta-coded indices | 768 B + 300 B = **~1 KB** | **53,000×** | COMPLIANT ★ AGGRESSIVE |
-| Procedural codebook (8-byte seed + generator) | 8 B + 0.5 KB code | **100,000×** | COMPLIANT but lossier |
+| Per-pattern Hinton student (10K params @ FP4 + 50% sparse + Brotli) | 5-15 KB | 3,500-10,000× | SANCTIONED_FEASIBILITY; compliance pending packet proof |
+| **VQ-VAE codebook (K=256, 12-dim, fp8)** | **3 KB** | **17,000×** | SANCTIONED_FEASIBILITY ★ TOP-1; compliance pending packet proof |
+| VQ-VAE codebook (K=64, 12-dim, fp8) + delta-coded indices | 768 B + 300 B = **~1 KB** | **53,000×** | SANCTIONED_FEASIBILITY ★ AGGRESSIVE; compliance pending packet proof |
+| Procedural codebook (8-byte seed + generator) | 8 B + 0.5 KB code | **100,000×** | SANCTIONED_FEASIBILITY but lossier |
 | Weight-derived codebook (no new bytes) | 0 B | ∞ | Requires shipped renderer weights with right structure |
-| Cool-Chic INR student | 10-30 KB | 1,800-5,300× | COMPLIANT; v2 candidate |
+| Cool-Chic INR student | 10-30 KB | 1,800-5,300× | SANCTIONED_FEASIBILITY; v2 candidate |
 | Symbolic closed-form inverter | <500 B | >100,000× | EXPLORATORY |
-| LoRA-decomposed Hinton student (rank 16) | 1-3 KB | 17,000-53,000× | COMPLIANT |
+| LoRA-decomposed Hinton student (rank 16) | 1-3 KB | 17,000-53,000× | SANCTIONED_FEASIBILITY |
 | Pure Zig binary (ELF + FP4 weights) | 30-200 KB | 250-1,800× | NEGATIVE-EV per Hotz |
 
 ### Key empirical anchors
@@ -610,7 +610,9 @@ For A1 to be rate-positive, the savings from feature-space encoding (predicted -
 | -0.015 | 22.5 KB |
 | -0.020 | 30 KB |
 
-**The 5-20 KB target band is exactly within the rate-positive zone** for the most plausible ΔS predictions.
+**The 5-20 KB target band is only rate-positive when measured A1 savings exceed
+the binary's own rate term**. At the lower end (5-10 KB), that requires roughly
+0.003-0.007 score savings; at 20 KB, it requires roughly 0.013 score savings.
 
 ---
 
@@ -708,8 +710,11 @@ Layer 5: Replace inflate.py with binary call (compliance concern)
 
 **V2 (VQ-VAE + RESIDUAL STUDENT)** is the canonical first prototype:
 - Builds on canonical helpers (Quantizr FP4 + Hinton + Brotli)
-- Lands in 5-10 KB band (rate-positive for any ΔS ≥ -0.007)
-- Compliance is unambiguous (specialized per-pattern table)
+- Lands in 5-10 KB band (rate-positive only if measured savings exceed roughly
+  0.003-0.007 score)
+- Sanctioned feasibility is clear under `contest_one_video_replay`; scored compliance is
+  pending a self-contained charged-byte packet, typed runtime-consumption proof,
+  no generic scorer behavior, and exact CUDA auth eval
 - Engineering cost is LOW ($1-5 for prototype)
 - Provides empirical anchor to validate or invalidate V1/V3 more ambitious variants
 
@@ -749,10 +754,10 @@ Practically:
 ### 6.4 The compliance argument
 
 Per Yousfi verbatim (council seat above):
-- Specialized inverter (cannot serve as PoseNet for arbitrary input) = **COMPLIANT**
+- Specialized inverter (cannot serve as PoseNet for arbitrary input) = **SANCTIONED_FEASIBILITY / POTENTIALLY_COMPLIANT pending packet proof**
 - Generic Hinton student (can serve as PoseNet for ~80% of inputs) = **INTERPRETIVELY RISKY**
 
-The compliance advantage and the size advantage POINT IN THE SAME DIRECTION. Specialization is the canonical path.
+The compliance-risk reduction and the size advantage POINT IN THE SAME DIRECTION. Specialization is the canonical path, but promotion still requires a self-contained charged-byte packet, runtime-consumption proof, and exact CUDA auth eval.
 
 ---
 
@@ -795,7 +800,9 @@ Bytes saved by A1 encoding (ΔR) ≥ Bytes added by distilled inverter
 For A1 predicted ΔS = -0.010 → ΔR ≥ 15 KB of savings → binary budget ≤ 15 KB.
 For A1 predicted ΔS = -0.020 → ΔR ≥ 30 KB of savings → binary budget ≤ 30 KB.
 
-**The 5-20 KB design space comfortably fits within the Pareto-feasible region** for most plausible ΔS predictions.
+**The 5-20 KB design space is Pareto-feasible only in the upper half of the
+predicted savings band**. A 20 KB transducer needs roughly 0.013 score savings
+before it is net-positive.
 
 ---
 
@@ -864,13 +871,13 @@ Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposiu
 
 1. **Binary size landing within band**: Per-pattern distilled binary lands at ≤20 KB (target 5-10 KB) measured on real archive.
 2. **Accuracy preservation**: Preserves ≥95% of A1 baseline accuracy on per-pair inversion (Hinton 2014 standard threshold).
-3. **Compliance interpretation memo**: Yousfi-style interpretation memo confirms the specialized binary is COMPLIANT under `contest_one_video_replay` mode (this memo's §1.4-1.6 satisfies this when ratified by operator).
+3. **Compliance interpretation + packet proof**: Yousfi-style interpretation memo confirms the specialized binary is within `contest_one_video_replay` sanctioned feasibility, then a self-contained charged-byte packet proves runtime consumption and exact CUDA auth eval validates it.
 4. **Byte-mutation smoke per Catalog #139**: Confirms the inflate path consumes the binary's bytes (the binary is OPERATIONAL, not decorative).
 
 ### 9.3 The DEFER-vs-RESTART decision tree
 
 ```
-If prototype lands ≤ 20 KB AND ≥ 95% accuracy AND ΔS ≤ -0.005 [contest-CPU]:
+If prototype lands ≤ 20 KB AND ≥ 95% accuracy AND net ΔS after byte-rate cost is < 0.0 [contest-CPU]:
     → A1 PROMOTES to L2+ via Catalog #233 4-gate canonical
 Else if prototype lands ≤ 50 KB AND ≥ 90% accuracy:
     → A1 DEFERS pending K-sweep / codebook restructure
@@ -897,7 +904,7 @@ When the prototype lands, register the outcome to `.omx/state/probe_outcomes.jso
 | "Specialized small binary preserves strict-scorer-rule intent" | HARD-EARNED-PENDING-INTERPRETATION | Yousfi verbatim + CLAUDE.md `contest_one_video_replay` sanctioning. Unwind path: operator ratification of this memo OR independent compliance interpretation memo. |
 | "Distillation can shrink PoseNet by 100-1000×" | HARD-EARNED | Quantizr PR101 88K-param precedent + Hinton 2014 canonical. No unwind needed. |
 | "Zig binary is 5-50× smaller than Python equivalent" | CARGO-CULTED | Hotz verbatim: Python is in pinned env; ELF overhead exceeds Python marginal cost. Unwind: prototype Zig variant; measure overhead empirically; expect NEGATIVE EV. |
-| "contest_one_video_replay is the canonical path" | HARD-EARNED-VERIFIED | CLAUDE.md verbatim sanctioning. No unwind needed. |
+| "contest_one_video_replay is the canonical path" | HARD-EARNED-SANCTIONED-FEASIBILITY | CLAUDE.md verbatim sanctioning. Unwind if charged-byte packet proof, no-generic-scorer proof, or exact CUDA auth eval fails. |
 | "Per-pattern specialization yields 10-100× advantage over generic distillation" | HARD-EARNED | Information-theoretic + VQ-VAE/Wyner-Ziv canonical. No unwind. |
 | "Composition is multiplicative in size reduction" | CARGO-CULTED-PENDING-EMPIRICAL | Per Catalog #322 sub-additive default. Unwind: paired-comparison smoke at prototype phase. |
 | "VQ-VAE K=256 is the right operating point" | CARGO-CULTED-PENDING-EMPIRICAL | Convention from VQ-VAE literature; needs K-sweep on our specific feature space. Unwind: prototype with K ∈ {16, 64, 256, 1024} sweep. |
@@ -1214,7 +1221,7 @@ The operator's intuition that A1 might be salvageable via Zig/sparseness/ablatio
 The recommended path:
 1. **REACTIVATE A1** from STRICT_SCORER_RULE_VIOLATION → PROCEED_WITH_REVISIONS via per-pattern distilled VQ-VAE inverter
 2. **TOP-1 prototype**: V2 composition stack (VQ-VAE K=256 + FP4 + Brotli) targeting 5-10 KB binary
-3. **Compliance**: sanctioned by CLAUDE.md `contest_one_video_replay` target mode + Yousfi interpretation
+3. **Compliance path**: sanctioned feasibility by CLAUDE.md `contest_one_video_replay` target mode + Yousfi interpretation; scored compliance pending charged-byte packet proof + exact CUDA auth eval
 4. **Predicted ΔS**: [-0.012, -0.003] [contest-CPU; prediction; not validated]
 5. **Cost**: $1-3 prototype + Phase 2 paired CPU/CUDA validation
 

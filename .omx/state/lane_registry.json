@@ -38078,6 +38078,47 @@
         }
       },
       "notes": "research_only=true substrate_engineering / per A1 binary distillation framework commit 0701c323b; systematic re-classification of 43-vector audit STRICT_SCORER_RULE_VIOLATION rows for reclaimability via V1/V2/V3 composition stacks + Catalog #325 reactivation criteria + 6-hook wire-in"
+    },
+    {
+      "id": "lane_top_3_reclamation_probe_routing_directives_20260518",
+      "name": "TOP-3 reclamation probe routing directives",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "4 directives + index landed at commit 248120281; lane_top_3 L0 -> L1"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -38087,5 +38128,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T22:19:22Z"
+  "updated_at": "2026-05-18T22:27:11Z"
 }

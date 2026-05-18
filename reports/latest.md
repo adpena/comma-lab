@@ -84,6 +84,21 @@ last_refreshed_note: |
 - The Top-5 CUDA bucket is dominated by PR106 `format0*` family (alien-tech routing per `feedback_a1d3dd050fc09dc54`) — a clear architectural cluster worth deeper investigation.
 - The CPU/CUDA bifurcation is real: best-CPU is fec6 (PR101 family) but best-CUDA is format0d (PR106 family). Different lanes win different axes. **A binding artifact that combines fec6's selector + PR106 format0d's score-table grammar + FP4 codebook + Ballé hyperprior + Cheng2020 has every primitive we'd need for a dual-axis frontier sweep.**
 
+### G1 CPU-axis optimization — 2026-05-18 Codex local rerank
+
+Per `codex_routing_directive_rate_attack_vector_2_g1_cpu_axis_optimization_20260518.md`, Codex added a $0 CPU-axis-only reranker over canonical `tac.frontier_scan` anchors. Result: no existing qualifying Linux x86_64 CPU anchor beats the current CPU frontier.
+
+Evidence report: `experiments/results/g1_cpu_axis_re_rank_20260518T214250Z/report.json`.
+
+| Metadata bucket | CPU score | Archive sha256 (first 12) | Lane / source metadata |
+|---|---:|---|---|
+| pr101 | 0.1920513169 | `6bae0201fb08` | `lane_pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515` |
+| pr106 | 0.2271259174 | `9cb989cef519` | `lane_pr106_format0d_latent_score_table_20260516_contest_cpu` |
+| pr103 | 0.1948697174 | `7d1e46331a04` | `pr103_global_combo_mid32_latent_hi_brotli_retune_exact_cpu` |
+| other | 0.1928475774 | `87ec7ca5f2f3` | `hnerv_ft_microcodec` |
+
+**G1 verdict:** `current_frontier_remains_cpu_optimal`; delta vs current CPU frontier = `+0.0000000000` (CPU-axis delta, not a frontier score citation). The probe scanned 194 canonical anchors, including 55 qualifying CPU anchors from the live `accepted_anchor_history` posterior plus dispatch-claim surfaces. This does not retire CPU-axis-specific optimization as a class; it closes the zero-cost existing-anchor rerank probe and leaves any future G1 improvement dependent on new paired Linux x86_64 CPU anchors.
+
 ### ASYMPTOTIC PURSUIT pivot (2026-05-17)
 
 Per operator directive 2026-05-17 verbatim *"Want to keep pushing to asymptotic as top priority"* + Option B falsification (WZ-on-existing-archives DEFERRED; top aggregate ΔS = 0.000421 << 0.001 leaderboard precision floor). ASYMPTOTIC pivot must come from **substrate-class-shift methods** per CLAUDE.md "Substrate retirement discipline" + HORIZON-CLASS council 2026-05-17 Stage 2 deferred queue.

@@ -5,7 +5,7 @@
 
 ## STRATEGIC CONTEXT
 
-SYSTEMATIC RECLAIMABILITY RE-EXAMINATION (commit `4480d9b14`) reclassified 5 of 8 rate-attack vectors previously buried as `STRICT_SCORER_RULE_VIOLATION` per the 43-vector audit (commit `35b06f9ec`) as `RECLAIMABLE` via the canonical binary-distillation framework (commit `0701c323b`; T2 sextet PROCEED_WITH_REVISIONS + 5 binding revisions; Yousfi PR #35 author compliance interpretation: "a small specialized binary that obviously cannot be re-used as PoseNet for arbitrary input is COMPLIANT").
+SYSTEMATIC RECLAIMABILITY RE-EXAMINATION (commit `4480d9b14`) reclassified 5 of 8 rate-attack vectors previously buried as `STRICT_SCORER_RULE_VIOLATION` per the 43-vector audit (commit `35b06f9ec`) as `RECLAIMABLE` hypotheses via the canonical binary-distillation framework (commit `0701c323b`; T2 sextet PROCEED_WITH_REVISIONS + 5 binding revisions). Yousfi-style interpretation supports specialized binaries that cannot be reused as PoseNet; scored compliance still requires charged-byte packet proof, no generic scorer behavior, and exact CUDA auth eval.
 
 The TOP-3 highest-EV reclamation paths are queued via 3 Codex routing directives. This index lets the operator decide budget authorization at a glance.
 
@@ -19,7 +19,7 @@ The TOP-3 highest-EV reclamation paths are queued via 3 Codex routing directives
 
 **TOTAL budget envelope (all 3): $5-13 paid GPU spend.**
 
-All 3 use the same binary-distillation framework: per-pattern codebook (VQ-VAE K=256 for TOP-1 / PQ-8x8+K=64 for TOP-2+TOP-3) + FP4 quantization + 50% sparseness + Brotli compression. Each path produces a `<5-20 KB` specialized inverter binary that's `contest_one_video_replay`-mode compliant per CLAUDE.md "Contest vs production target modes" non-negotiable.
+All 3 use the same binary-distillation framework: per-pattern codebook (VQ-VAE K=256 for TOP-1 / PQ-8x8+K=64 for TOP-2+TOP-3) + FP4 quantization + 50% sparseness + Brotli compression. Each path targets a `<5-20 KB` specialized inverter binary under `contest_one_video_replay` sanctioned feasibility; promotion requires its own packet proof and exact-eval evidence.
 
 ## OPERATOR-DECISION MATRIX
 

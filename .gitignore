@@ -49,6 +49,13 @@ experiments/results/**/*.pt
 # promoting compact summaries into .omx/research/, docs/, reports/, or source;
 # use `git add -f` only for intentionally curated exact-evidence artifacts.
 experiments/results/
+# Curated probe reports are small control-plane artifacts; keep raw experiment
+# outputs ignored, but allow G1's directive-required report.json to be tracked.
+!experiments/results/
+experiments/results/*
+!experiments/results/g1_cpu_axis_re_rank_*/
+experiments/results/g1_cpu_axis_re_rank_*/*
+!experiments/results/g1_cpu_axis_re_rank_*/report.json
 outputs/
 
 # Local Claude scheduler locks contain machine/session PIDs and must not churn.
@@ -176,6 +183,7 @@ src/tac.egg-info/
 !.omx/state/canonical_task_status.jsonl
 !.omx/state/codex_persistent_session_state.jsonl
 !.omx/state/codex_to_claude_inbox.jsonl
+!.omx/state/probe_outcomes.jsonl
 .omx/state/.canonical_task_status.lock
 .omx/state/canonical_task_status.jsonl.lock
 .omx/state/canonical_task_status.jsonl.tmp.*
