@@ -898,3 +898,592 @@ def classify_primitive_per_axis(
 **6-hook wire-in declaration**: hook #4 cathedral autopilot dispatch = ACTIVE (cascade consumes per-axis classification for ranking).
 
 ---
+
+## 4. Layer 3 — Deterministic Bilevel Optimizer (4-Piece Architecture)
+
+This section documents how the framework's Layer 3 (deterministic bilevel optimizer) composes the 4-piece architecture per cross-stack synthesis §15 + the 4 sister design memos. The 4 pieces interlock bilevelly: outer codec config + composition_alpha; middle substrate-class-shift selection; inner Fisher-precondition + Riemannian-Newton + Tropical d_seg; innermost per-pair byte-level via master_gradient + grammar-aware operator.
+
+### 4.1 The 4-tier bilevel canonical action
+
+Per cross-stack synthesis §0 executive summary verbatim:
+
+> **The 9 design landings of 2026-05-18 jointly define a 4-tier bilevel-optimization framework over the contest scorer:** (OUTER) deterministic codec configuration + composition_alpha per Catalog #322 anti-phantom rules; (MIDDLE) substrate-class-shift selection from the Tier 2 paradigm queue (Z8 hierarchical predictive coding / TT5L V2 / cargo-cult resurrection TOP-3); (INNER) per-substrate parameter optimization via the deterministic-optimizer 4-piece architecture (Fisher-precondition + Riemannian-Newton + Tropical d_seg + 3-set Venn); (INNERMOST) per-pair byte-level granularity via the master-gradient anchor at `f174192aeadf...` consumed by Catalog #318/#319 grammar-aware operator + Wyner-Ziv deliverability cascade.
+
+The framework's Layer 3 IS this 4-tier action; the framework's Layer 4 (per-candidate orchestration) is the META-action that selects WHICH bilevel optimization sub-action applies per-candidate per-asymptotic-approach.
+
+### 4.2 OUTER tier: deterministic codec config + composition_alpha N-way
+
+**What it does**: Given a list of candidate primitives (from Layer 2), the OUTER tier selects the optimal codec configuration + per-primitive composition_alpha per Catalog #322 N-way composition_alpha sub-additive default.
+
+**Inputs**:
+- `archive_sha256` (per-candidate target)
+- `applicable_primitives` (filtered list per Layer 2 + legal-receiver-path filter per §6)
+- `asymptotic_approach` (per Catalog #309 horizon class)
+- `budget_usd` (per-candidate budget envelope)
+
+**Outputs**:
+- `OUTER_TierVerdict` with codec_config + per_primitive_alpha + dykstra_feasibility_verdict + predicted_aggregate_band
+
+**Algorithm pseudocode**:
+```python
+def optimize_outer_tier(
+    archive_sha256: str,
+    applicable_primitives: list[CompositionPrimitive],
+    asymptotic_approach: AsymptoticApproach,
+    budget_usd: float,
+) -> OuterTierVerdict:
+    # Step 1: Per Catalog #322 v2, get per-primitive composition_alpha from substrate composition matrix
+    per_alpha = {
+        p.primitive_id: estimate_composition_alpha_n_way([p], archive_sha256=archive_sha256)
+        for p in applicable_primitives
+    }
+
+    # Step 2: Per Catalog #296 Dykstra-feasibility intersection,
+    # check that the N-primitive composition is convex-feasible
+    dykstra_verdict = check_dykstra_feasibility(
+        applicable_primitives,
+        per_alpha=per_alpha,
+    )
+    # If infeasible, prune primitives until feasible per Boyd's alternating projections
+
+    # Step 3: Per Catalog #319 Q3 v2 cascade, apply per-primitive reward factors
+    cascade_verdict = apply_v2_cascade_per_primitive(
+        applicable_primitives,
+        archive_sha256=archive_sha256,
+    )
+
+    # Step 4: Aggregate predicted ΔS = sum(per_primitive_ΔS * per_primitive_alpha)
+    # SUB-ADDITIVE default per Catalog #322 (4-of-8 empirical priors)
+    aggregate_band = aggregate_predicted_delta_with_sub_additive(
+        applicable_primitives,
+        per_alpha=per_alpha,
+        cascade_verdict=cascade_verdict,
+    )
+
+    return OuterTierVerdict(
+        codec_config=select_codec_config_per_archive(archive_sha256),
+        per_primitive_alpha=per_alpha,
+        dykstra_feasibility_verdict=dykstra_verdict,
+        predicted_aggregate_band=aggregate_band,
+    )
+```
+
+### 4.3 MIDDLE tier: substrate-class-shift selection
+
+**What it does**: Given the OUTER tier's verdict + the per-candidate asymptotic_approach, the MIDDLE tier selects which substrate-class-shift candidate to apply (if any). For PLATEAU_ADJACENT candidates, this is typically "stay within-class" (no class shift). For FRONTIER_PURSUIT candidates, this is "consider class shifts within the Tier 2 paradigm queue". For ASYMPTOTIC_PURSUIT candidates, this is "require class shift via Z8 hierarchical predictive coding / TT5L V2 / cargo-cult resurrection TOP-3".
+
+**Per Catalog #309 horizon class binding**:
+- PLATEAU_ADJACENT [0.180, 0.200] → MIDDLE tier defaults to "stay within-class"; class shift requires explicit override
+- FRONTIER_PURSUIT [0.120, 0.180] → MIDDLE tier evaluates Tier 2 paradigm queue
+- ASYMPTOTIC_PURSUIT [0.050, 0.120] → MIDDLE tier REQUIRES class shift (within-class is structurally insufficient at this horizon)
+
+**Algorithm pseudocode**:
+```python
+def select_substrate_class_shift(
+    outer_verdict: OuterTierVerdict,
+    asymptotic_approach: AsymptoticApproach,
+    archive_sha256: str,
+) -> MiddleTierVerdict:
+    # Per Catalog #309 horizon class binding:
+    if asymptotic_approach == AsymptoticApproach.PLATEAU_ADJACENT:
+        # Stay within-class; no class shift required
+        return MiddleTierVerdict(class_shift_required=False, substrate_id="within_class_optimization")
+
+    if asymptotic_approach == AsymptoticApproach.FRONTIER_PURSUIT:
+        # Evaluate Tier 2 paradigm queue for orthogonal class shift candidates
+        tier_2_queue = load_tier_2_paradigm_queue()
+        # Filter by per-axis hardware exploit matrix per primitive 14
+        candidates = filter_by_per_axis_relevance(tier_2_queue, leaderboard_axis="cpu")
+        # Per cathedral autopilot v2 cascade, rank candidates
+        ranked = rank_candidates_via_v2_cascade(candidates, archive_sha256=archive_sha256)
+        return MiddleTierVerdict(
+            class_shift_required=False,  # optional at FRONTIER_PURSUIT
+            substrate_id=ranked[0].substrate_id if ranked else "within_class_optimization",
+            alternative_candidates=ranked[:3],
+        )
+
+    if asymptotic_approach == AsymptoticApproach.ASYMPTOTIC_PURSUIT:
+        # REQUIRE class shift; within-class is structurally insufficient
+        cargo_cult_resurrection_top_3 = load_cargo_cult_resurrection_top_3()
+        z8_candidates = load_z8_hierarchical_predictive_coding_candidates()
+        tt5l_v2_candidates = load_tt5l_v2_candidates()
+        all_class_shift = cargo_cult_resurrection_top_3 + z8_candidates + tt5l_v2_candidates
+        ranked = rank_candidates_via_v2_cascade(all_class_shift, archive_sha256=archive_sha256)
+        if not ranked:
+            raise NoViableClassShiftCandidateError(
+                f"ASYMPTOTIC_PURSUIT requires class shift but no viable candidate for {archive_sha256}"
+            )
+        return MiddleTierVerdict(
+            class_shift_required=True,
+            substrate_id=ranked[0].substrate_id,
+            alternative_candidates=ranked[:3],
+        )
+```
+
+### 4.4 INNER tier: Fisher-precondition + Riemannian-Newton + Tropical d_seg + 3-set Venn
+
+**What it does**: Given the MIDDLE tier's substrate selection, the INNER tier runs the deterministic-optimizer 4-piece architecture for per-substrate parameter optimization. Each piece handles a specific axis of the contest scorer:
+
+- **Fisher-precondition (Phase 1)** preconditions the per-pair Fisher matrix for both the smooth-pose subproblem (Phase 2) and the boundary-class subproblem (Phase 6)
+- **Riemannian-Newton (Phase 2)** handles the smooth-pose subproblem (`sqrt(10 · d_pose)`); Newton iterations on the Riemannian manifold of pose parameters
+- **Tropical d_seg (Phase 6)** handles the piecewise-constant boundary subproblem (`100 · d_seg`); tropical algebra for boundary classification
+- **3-set Venn (cell structure)** defines the CELL STRUCTURE over which the above 3 phases each apply; each cell receives its own deliverability tier + autopilot reward factor
+
+**Cross-stack interlock per §15 cross-stack synthesis**:
+```
+Fisher-precondition matrix M ∈ R^{N_params × N_params}
+        ↓
+Phase 2 Riemannian-Newton on smooth-pose subproblem:
+        x_{k+1} = x_k - M^{-1} · ∇_θ (sqrt(10 · d_pose))
+        constrained to 3-set Venn cell boundaries
+        ↓
+Phase 6 Tropical d_seg on boundary subproblem:
+        boundary_class_assignment via tropical sum-min algebra
+        constrained to 3-set Venn cell boundaries
+        ↓
+Joint convergence per Catalog #296 Dykstra-feasibility
+```
+
+**API signature**:
+```python
+def run_inner_tier_deterministic_optimizer(
+    middle_verdict: MiddleTierVerdict,
+    archive_sha256: str,
+    master_gradient: MasterGradientAnchor,
+    venn_classification: NSetVennClassification,
+) -> InnerTierVerdict:
+    """Run the 4-piece bilevel optimizer for per-substrate parameter optimization."""
+
+    # Phase 1: Fisher-precondition per fisher_precondition_canonical_helper design memo
+    fisher_verdict = compute_fisher_precondition_matrix(
+        master_gradient=master_gradient,
+        venn_classification=venn_classification,
+    )
+
+    # Phase 2: Riemannian-Newton smooth-pose per riemannian_newton design memo
+    riem_verdict = run_riemannian_newton_smooth_pose(
+        archive_sha256=archive_sha256,
+        fisher_precondition=fisher_verdict,
+        venn_cells=venn_classification.cells,
+    )
+
+    # Phase 6: Tropical d_seg boundary-class per tropical_d_seg design memo
+    tropical_verdict = run_tropical_d_seg_boundary_classification(
+        archive_sha256=archive_sha256,
+        fisher_precondition=fisher_verdict,
+        venn_cells=venn_classification.cells,
+    )
+
+    return InnerTierVerdict(
+        fisher_verdict=fisher_verdict,
+        riemannian_newton_verdict=riem_verdict,
+        tropical_d_seg_verdict=tropical_verdict,
+        joint_convergence_status=check_joint_convergence_dykstra(
+            riem_verdict, tropical_verdict
+        ),
+    )
+```
+
+### 4.5 INNERMOST tier: per-pair byte-level via master_gradient + grammar-aware operator
+
+**What it does**: Given the INNER tier's per-substrate parameter optimization, the INNERMOST tier runs per-pair byte-level decisions per Catalog #318/#319 grammar-aware operator + Wyner-Ziv deliverability cascade. This is where the framework's Layer 1 anti-arbitrariness foundation is MOST STRUCTURAL: every byte position carries its per-pair gradient signature + its Venn cell classification + its legal-receiver-path classification + its per-axis hardware classification.
+
+**Cross-stack interlock per Catalog #318 raw-byte-authority guard**:
+- Master_gradient at `f174192aeadf...` provides the per-pair fp64 gradient signature
+- Grammar-aware operator per Catalog #318 emits typed `CandidateModificationSpec` response rows
+- Wyner-Ziv deliverability cascade per Catalog #319 routes per-pair decisions through Q3 v2 cascade
+
+**API signature**:
+```python
+def run_innermost_tier_per_pair_byte_level(
+    inner_verdict: InnerTierVerdict,
+    archive_sha256: str,
+    master_gradient: MasterGradientAnchor,
+    venn_classification: NSetVennClassification,
+) -> InnermostTierVerdict:
+    """Run per-pair byte-level decisions per Catalog #318/#319."""
+
+    # Per Catalog #318: grammar-aware operator emits typed response rows
+    candidate_modifications = []
+    for pair_idx, pair_gradient in enumerate(master_gradient.per_pair_gradients):
+        # Per Catalog #319 Q3 Cascade 1: if Lagrangian-dual plan exists, use it
+        optimal_plan = load_optimal_plan_for_archive(archive_sha256)
+        if optimal_plan is not None:
+            # Cascade 1 (PRIMARY): replace with planner's predicted_score_delta
+            candidate_modifications.append(
+                build_modification_from_optimal_plan(
+                    pair_idx=pair_idx,
+                    plan=optimal_plan,
+                )
+            )
+            continue
+
+        # Per Catalog #319 Q3 Cascade 2: if DeliverabilityProof + HIGH_PAIR_INVARIANT, reward
+        deliverability_proof = load_deliverability_proof_for_archive(archive_sha256)
+        venn_cell = venn_classification.cell_for_pair(pair_idx)
+        if (deliverability_proof is not None
+                and venn_cell.is_high_pair_invariant()):
+            # Cascade 2 (DELIVERABILITY): apply per-tier reward
+            tier_reward = compute_per_tier_byte_weighted_reward(
+                deliverability_proof, venn_cell
+            )
+            candidate_modifications.append(
+                build_modification_from_deliverability(
+                    pair_idx=pair_idx,
+                    proof=deliverability_proof,
+                    tier_reward=tier_reward,
+                )
+            )
+            continue
+
+        # Per Catalog #319 Q3 Cascade 3: 1.0× passthrough
+        candidate_modifications.append(
+            build_passthrough_modification(pair_idx=pair_idx)
+        )
+
+    return InnermostTierVerdict(
+        per_pair_modifications=candidate_modifications,
+        cascade_distribution=count_cascade_distribution(candidate_modifications),
+    )
+```
+
+### 4.6 The 4-tier action's interlock with the 14 primitives
+
+| Tier | Primitives consumed | Primitives NOT consumed (out-of-scope at this tier) |
+|---|---|---|
+| OUTER | 5 (composition_alpha N-way) + 9 (cathedral autopilot v2 cascade) + 14 (per-axis hardware exploit matrix) | 1 (master_gradient — consumed at INNERMOST) + 8 (xray — consumed at INNER) |
+| MIDDLE | 7 (probe_outcomes ledger) + 9 (cathedral autopilot v2 cascade ranks Tier 2 paradigm queue) + 14 (per-axis hardware exploit matrix) | 3, 4, 10, 11, 12, 13 (per-byte-level primitives consumed at INNER + INNERMOST) |
+| INNER | 1 (master_gradient) + 2 (Venn classifier) + 4 (hard-pair sensitivity atlas + sensitivity_map) + 8 (xray) + Fisher + Riem-Newton + Tropical | 9, 14 (per-axis-level + autopilot consumed at OUTER); 13 (A1-SPECIALIZED is at INNERMOST) |
+| INNERMOST | 1 (master_gradient) + 2 (Venn classifier) + 3 (per-pair granularity) + 6 (Wyner-Ziv deliverability) + 10 (null_space_exploiter) + 11 (procedural_codebook_generator) + 12 (freezing exploits) + 13 (A1-SPECIALIZED) | 5 (composition_alpha — consumed at OUTER); 7 (probe_outcomes — consumed at MIDDLE) |
+
+**Key insight**: every primitive is consumed at exactly ONE tier (no double-consumption); every tier consumes a non-empty subset of primitives (no orphan tier).
+
+---
+
+## 5. The Per-Candidate Composition Algorithm (Detailed Specification)
+
+This section provides the detailed algorithm specification beyond the executive summary pseudocode in §0. Each step is broken down with inputs / outputs / error handling / per-candidate adaptation notes.
+
+### 5.1 Step 1: Load master_gradient anchor for candidate
+
+**Input**: `candidate_archive_sha256: str`, `repo_root: Path | None`
+
+**Output**: `MasterGradientAnchor` (or raises if extraction unavailable + budget exceeded)
+
+**Logic**:
+1. Call `load_master_gradient_for_archive(archive_sha256, repo_root)` (primitive 1)
+2. If returns None AND `budget_usd >= 0.30`: call `extract_master_gradient` per `tools/extract_master_gradient.py` (CPU smoke ~$0 OR Modal A10G ~$0.30)
+3. If returns None AND `budget_usd < 0.30`: raise `InsufficientBudgetForMasterGradientExtractionError`
+4. If extraction fails: log warning + return `MasterGradientAnchor.unavailable_fallback()` (degraded mode; passthrough primitive selection)
+
+**Per-candidate adaptation**: the per-candidate fp64 gradient signature drives ALL subsequent primitive selections. Two candidates with different archive_sha256 get different master_gradient anchors → different Venn classifications → different per-pair primitive selections.
+
+**Anti-arbitrariness anchor**: Per §6 anti-arbitrariness framework: master_gradient IS the canonical empirical anchor; all primitive selections trace back to per-pair gradient evidence.
+
+### 5.2 Step 2: Classify byte positions via 3-set or 6-set Venn
+
+**Input**: `archive_sha256: str`, `master_gradient: MasterGradientAnchor`, `n: int = 6` (operator-tunable)
+
+**Output**: `NSetVennClassification` (cells with per-cell aggregated gradient + per-cell byte_mass)
+
+**Logic** (per primitive 2):
+1. Call `classify_archive_bytes_via_n_set_venn(archive_sha256, master_gradient, n=n)`
+2. For 3-set baseline: classify per `tac.wyner_ziv_deliverability::DeliverabilityTier` mapping
+3. For 6-set extension per N-set Venn design memo: project per-pair gradient onto 6 dimensions (pair × region × class × frame × axis × component); cluster bytes by Venn cell signature
+4. Persist classification per `tac.canonical_n_set_venn_classification` (fcntl-locked per Catalog #131)
+
+**Per-candidate adaptation**: each candidate's archive bytes get their own cell signature. The classification depends on per-candidate gradient signature; two candidates with similar gradients get similar classifications.
+
+**Anti-arbitrariness anchor**: Per §6 anti-arbitrariness framework: Venn cell signature is empirically derived from master_gradient; sparsity-atlas probe per cross-stack synthesis OP-SYN-3 provides per-cell byte_mass evidence.
+
+### 5.3 Step 3: Build hard-pair sensitivity atlas
+
+**Input**: `archive_sha256: str`, `master_gradient: MasterGradientAnchor`, `venn_classification: NSetVennClassification`, `n_hardest_pairs: int = 100`
+
+**Output**: `HardPairSensitivityAtlas` (top-N hardest pairs + per-pair axis dominance)
+
+**Logic** (per primitive 4):
+1. Compute per-pair |∇_θ score| from master_gradient
+2. Rank pairs by |∇_θ score| descending; select top n_hardest_pairs (default 100/600 = 17%)
+3. Per hardest pair, identify dominant axis (pose vs seg vs rate) via xray decomposition per primitive 8
+4. Persist atlas per `tac.sensitivity_map` axis-weight reweighting API per Catalog #275
+
+**Per-candidate adaptation**: each candidate's hardest pairs differ. The atlas drives which pairs get MOST optimization effort per the 80/20 rule.
+
+**Anti-arbitrariness anchor**: Per §6: hardness is empirically measured via per-pair |∇_θ score|; xray axis decomposition per Catalog #305 6-facet observability gives per-pair axis evidence.
+
+### 5.4 Step 4: Run deterministic-optimizer 4-piece bilevel
+
+**Input**: `archive_sha256`, `master_gradient`, `venn_classification`, `hard_pair_atlas`, `asymptotic_approach`
+
+**Output**: `BilevelOptimizerState` (Fisher matrix + Riemannian-Newton converged params + Tropical d_seg boundary classification + Dykstra joint-convergence status)
+
+**Logic** (per §4 4-tier action):
+1. OUTER tier per §4.2: select codec config + composition_alpha
+2. MIDDLE tier per §4.3: select substrate-class-shift (or "stay within-class")
+3. INNER tier per §4.4: run Fisher + Riem-Newton + Tropical
+4. INNERMOST tier per §4.5: per-pair byte-level decisions via grammar-aware operator + Wyner-Ziv cascade
+5. Check Dykstra joint-convergence per Catalog #296; if infeasible, prune primitives until feasible per Boyd's alternating projections
+
+**Per-candidate adaptation**: each candidate's bilevel optimization state differs per (archive_sha256, asymptotic_approach). PLATEAU_ADJACENT candidates skip MIDDLE tier class-shift exploration; ASYMPTOTIC_PURSUIT candidates REQUIRE class-shift.
+
+**Anti-arbitrariness anchor**: Per §6: every tier's verdict carries its own evidence (Fisher matrix derived from master_gradient; Riem-Newton converged via Newton iterations on Riemannian manifold; Tropical d_seg derived via tropical sum-min algebra on Venn cell boundaries; Dykstra joint-convergence per Boyd's alternating projections theorem).
+
+### 5.5 Step 5: Per byte position, choose composition of applicable primitives
+
+**Input**: `venn_classification`, `hard_pair_atlas`, `bilevel_optimizer_state`, `budget_usd`
+
+**Output**: `per_position_primitives: dict[ByteRange, list[CompositionPrimitive]]`
+
+**Logic**:
+1. For each Venn cell:
+   1. Enumerate applicable primitives per cell type (e.g. HIGH_PAIR_INVARIANT → wyner_ziv + null_exploit + procedural_codebook; HIGH_PAIR_SPECIFIC → hardest-pair-targeted optimization; NEUTRAL → passthrough)
+   2. Filter by legal-receiver-path classification per §6 (refuse STRICT_SCORER_RULE_VIOLATION; gate RECLAIMABLE_VIA_PACKET_COMPILER on A1-SPECIALIZED size proof)
+   3. Filter by per-axis hardware exploit matrix per primitive 14 (refuse GPU-ONLY if leaderboard_axis="cpu")
+   4. Sort applicable primitives by predicted-ΔS-per-LOC descending
+2. Assign per-Venn-cell primitive list to per-byte-range slot in output dict
+
+**Per-candidate adaptation**: each candidate's per-position primitive selection differs per per-cell-classification + per-axis-relevance + per-budget-envelope.
+
+**Anti-arbitrariness anchor**: Per §6: every primitive selection has its empirical anchor + HARD-EARNED vs CARGO-CULTED classification + legal-receiver-path classification. No primitive is selected ad-hoc.
+
+### 5.6 Step 6: Apply cathedral autopilot v2 cascade
+
+**Input**: `candidate_archive_sha256`, `venn_classification`, `per_position_primitives`, `bilevel_optimizer_state`
+
+**Output**: `CathedralAutopilotVerdict` (per-cascade-tier counts + aggregate verdict)
+
+**Logic** (per primitive 9):
+1. Cascade 1 (PRIMARY): for each per_position_primitive, check if Lagrangian-dual `OptimalPerPairTreatmentPlan` exists; if yes, REPLACE predicted_delta with planner's predicted_score_delta
+2. Cascade 2 (DELIVERABILITY): else if `DeliverabilityProof` exists AND Venn class HIGH_PAIR_INVARIANT, apply per-tier byte-weighted reward (Tier 1 = 1.20x, Tier 2 = 1.10x, approved Tier 3 = 1.05x)
+3. Cascade 3 (PASSTHROUGH): no plan + no proof → 1.0x passthrough
+4. HIGH_PAIR_SPECIFIC 0.85× PENALTY preserved across cascades
+
+**Per-candidate adaptation**: each candidate's cascade-tier distribution differs per (Lagrangian-plan-availability, DeliverabilityProof-availability, Venn-cell-distribution).
+
+**Anti-arbitrariness anchor**: Per §6: Catalog #319 Q3 v2 cascade IS the canonical answer; the 3-cascade decision tree is structurally complete (no ad-hoc branching).
+
+### 5.7 Step 7: Build CompositionPlan output
+
+**Input**: All prior outputs
+
+**Output**: `CompositionPlan` (typed dataclass per the canonical helper API)
+
+**Logic**:
+1. Assemble per-byte-position primitive selection + per-primitive composition_alpha + cathedral autopilot verdict
+2. Aggregate predicted ΔS band per Catalog #296 Dykstra-feasibility intersection (NOT additive sum)
+3. Compute cost estimate (Modal/Lightning/Vast.ai + CPU-only probe budget)
+4. Enumerate reactivation criteria per CLAUDE.md "Forbidden premature KILL" (4 paths per primitive that defers)
+5. Emit 6-hook wire-in declaration per Catalog #125
+
+**Per-candidate adaptation**: the CompositionPlan is uniquely identified by `(candidate_archive_sha256, candidate_lane_id, asymptotic_approach, budget_usd)`; the framework caches plans per this 4-tuple key.
+
+**Anti-arbitrariness anchor**: Per §6: every field in CompositionPlan is grounded in an empirical anchor + structural classification; no ad-hoc fields.
+
+### 5.8 Step 8: Persist plan to canonical state ledger
+
+**Input**: `CompositionPlan`, `repo_root`
+
+**Output**: None (persists to `.omx/state/composition_plans/<archive_sha[:12]>_<lane_id>_<utc>.json`)
+
+**Logic** (per Catalog #131 fcntl-locked + Catalog #245 sister discipline):
+1. Acquire fcntl LOCK_EX on `.omx/state/composition_plans/_ledger.lock`
+2. Write plan to `.omx/state/composition_plans/<archive_sha[:12]>_<lane_id>_<utc>.json.tmp.<uuid12>`
+3. `os.replace(...)` atomic rename
+4. Append summary row to `.omx/state/composition_plans/_index.jsonl`
+5. Release fcntl LOCK
+
+**Per-candidate adaptation**: each plan is persisted with unique filename per (archive_sha[:12], lane_id, utc); plans are queryable per candidate per asymptotic_approach per budget.
+
+**Anti-arbitrariness anchor**: Per §6: persistence is canonical per Catalog #131/#138/#245 sister discipline; fcntl-locked + atomic replace + append-only manifest.
+
+### 5.9 Step 9: Append council-deliberation anchor
+
+**Input**: `CompositionPlan`, `repo_root`
+
+**Output**: None (appends to `.omx/state/council_deliberation_posterior.jsonl` per Catalog #300 hook #5)
+
+**Logic**:
+1. Build `CouncilDeliberationRecord` with the CompositionPlan as evidence
+2. Call `tac.council_continual_learning.append_council_anchor(record)` per Catalog #131/#300
+3. Sister update to `.omx/state/probe_outcomes.jsonl` per Catalog #313 if plan defers any primitive
+
+**Per-candidate adaptation**: each plan emits its own council anchor; query helpers per `tac.council_continual_learning.query_anchors_by_topic` return per-candidate plan history.
+
+**Anti-arbitrariness anchor**: Per §6: every plan landing emits a canonical council anchor; the continual-learning posterior accumulates per-candidate plan evidence over time.
+
+---
+
+## 6. Anti-Arbitrariness Framework (Layer 1 Foundation)
+
+This section is the framework's DEFENSE against the META-audit CONFLATE_DECLARATIVE_WITH_PHYSICAL pattern. For EVERY primitive selection in the composition plan, the framework binds 5 forms of evidence; ad-hoc primitive selection is REFUSED.
+
+### 6.1 The 5 forms of per-primitive evidence
+
+#### (a) HARD-EARNED vs CARGO-CULTED classification per Catalog #303
+
+Every primitive selection MUST be classified as HARD-EARNED-VERIFIED / HARD-EARNED-PARTIAL / CARGO-CULTED-PENDING-EMPIRICAL / CARGO-CULTED-FALSIFIED per the hard-earned-vs-cargo-culted addendum.
+
+**Example for primitive 6 (Wyner-Ziv deliverability)**:
+- HARD-EARNED-VERIFIED for Tier 1 ZERO_COST bytes (per Catalog #319 Q1 canonical helper landing 2026-05-17; mathematically deterministic via Wyner-Ziv 1976 theorem)
+- HARD-EARNED-PARTIAL for Tier 2 CONSTANTS bytes (depends on per-substrate constant identification; per-candidate empirical anchor required)
+- CARGO-CULTED-PENDING-EMPIRICAL for Tier 3 WAIVER_REQUIRED bytes (depends on operator review status; reactivation criteria pinned)
+- CARGO-CULTED-FALSIFIED for Tier 4 FORBIDDEN bytes (strict-scorer-rule violation; REFUSED at framework Layer 1)
+
+#### (b) Empirical anchor cite per Catalog #287
+
+Every primitive selection MUST cite its empirical anchor evidence with explicit tag:
+- `[empirical:<artifact path>]` for empirical measurement
+- `[contest-CUDA]` for CUDA-axis contest score
+- `[contest-CPU]` for CPU-axis contest score (1:1 hardware on Linux x86_64)
+- `[prediction]` for predicted ΔS
+- `[advisory only]` for non-promotable advisory
+- `[macOS-CPU advisory]` for Apple Silicon CPU
+- `[MPS-PROXY]` for MPS proxy
+
+**Example for primitive 1 (master_gradient)**:
+- `[empirical:.omx/state/master_gradient_anchors.jsonl]` per Codex 2026-05-18 landing
+- `[contest-CUDA]` baseline at `f174192aeadf...` (PR101_lc_v2 archive)
+
+#### (c) Per-candidate adaptation evidence
+
+Every primitive selection MUST cite per-candidate evidence (not one-size-fits-all). The evidence demonstrates the primitive's applicability to THIS candidate, not a generic-substrate-applicability claim.
+
+**Example for primitive 4 (hard-pair sensitivity atlas)**:
+- For candidate PR101_lc_v2: hardest 100 pairs per master_gradient at `f174192aeadf...`; pair 247 dominates with |∇| = 0.0034
+- For candidate sane_hnerv: hardest 100 pairs per master_gradient at `<sane_hnerv_sha256>`; pair 113 dominates with |∇| = 0.0028
+- The atlas DIFFERS per candidate; the framework REQUIRES per-candidate evidence
+
+#### (d) Legal-receiver-path classification per Catalog #6 + HNeRV parity L4
+
+Every primitive selection MUST be classified per the 4-class legal-receiver-path taxonomy:
+
+1. **NO_RECEIVER_NEEDED** — primitive modifies archive bytes that inflate.py reads identically; no additional inflate code or deps required. Example: null_space_exploit (primitive 10).
+
+2. **LEGAL_RECEIVER_IN_BUDGET** — primitive requires additional inflate code, but within HNeRV parity L4 budget (≤200 LOC + ≤2 deps). Example: Wyner-Ziv Tier 1 / Tier 2 deliverable bytes (primitive 6 partial).
+
+3. **RECLAIMABLE_VIA_PACKET_COMPILER** — primitive requires scorer-like processing, but reclaimed via Catalog #6 `contest_one_video_replay` deterministic packet compiler legal path. Example: A1-SPECIALIZED binary distillation (primitive 13).
+
+4. **STRICT_SCORER_RULE_VIOLATION** — primitive requires loading full PoseNet/SegNet weights at inflate; FORBIDDEN per Catalog #6 strict-scorer-rule non-negotiable. REFUSED at framework Layer 1.
+
+**The META-audit CONFLATE_DECLARATIVE_WITH_PHYSICAL extinction**: every primitive selection passes through this classifier BEFORE entering the composition plan. The classifier prevents the 12 historical claims documented in the META-audit (F1 / F3-F6 / A1-original / etc.) from re-occurring; each new primitive MUST cite explicit legal-receiver-path evidence.
+
+#### (e) Dykstra-feasibility intersection per Catalog #296
+
+Every primitive selection's aggregate predicted ΔS MUST pass Dykstra-feasibility intersection per Catalog #296. The N-primitive composed Pareto polytope is N-dimensional; convex-intersection projection gives the realistic LOWER BOUND on aggregate ΔS (NOT additive sum). Sub-additive default per Catalog #322 4-of-8 empirical priors.
+
+**Algorithm** (per primitive 5 composition_alpha N-way):
+```python
+def check_dykstra_feasibility_intersection(
+    primitives: list[CompositionPrimitive],
+    per_alpha: dict[str, float],
+) -> DykstraFeasibilityVerdict:
+    """Project N-primitive composition onto Pareto polytope per Boyd's alternating projections."""
+    polytope = build_pareto_polytope_from_primitives(primitives, per_alpha)
+    feasible_projection = dykstra_alternating_projections(polytope)
+    return DykstraFeasibilityVerdict(
+        feasible=feasible_projection is not None,
+        projected_aggregate_delta=feasible_projection.aggregate_delta if feasible_projection else None,
+        infeasible_primitives=feasible_projection.pruned_primitives if not feasible_projection else [],
+    )
+```
+
+### 6.2 The per-primitive evidence table
+
+This table shows the 5 forms of evidence per the 14 primitives. The framework's canonical helper enforces this table structurally.
+
+| Primitive | HARD-EARNED classification | Empirical anchor | Per-candidate adaptation | Legal-receiver-path | Sub-paradigm (Tao) |
+|---|---|---|---|---|---|
+| 1. master_gradient | HARD-EARNED-VERIFIED | `f174192aeadf...` fp64 per-pair | per archive_sha256 | NO_RECEIVER_NEEDED | outside-formalism |
+| 2. 3-set/6-set Venn | HARD-EARNED-PARTIAL (3-set baseline) | Catalog #319 | per gradient signature | NO_RECEIVER_NEEDED | (c) Pareto-tightening |
+| 3. per-pair / per-frame / byte-level | HARD-EARNED-VERIFIED | per primitive helper | per granularity | NO_RECEIVER_NEEDED | outside-formalism |
+| 4. hard-pair atlas + sensitivity_map | HARD-EARNED-VERIFIED | Catalog #275 | per hardest-pair ranking | NO_RECEIVER_NEEDED | outside-formalism |
+| 5. composition_alpha N-way | HARD-EARNED-PARTIAL | Catalog #322 4-of-8 | per primitive-set | NO_RECEIVER_NEEDED | (c) Pareto-tightening |
+| 6. Wyner-Ziv deliverability | HARD-EARNED-VERIFIED (Tier 1) | Catalog #319 Q1 | per substrate proof | NO/LEG/RECLAIM per Tier | (a) MI-min Wyner-Ziv |
+| 7. probe_outcomes ledger | HARD-EARNED-VERIFIED | Catalog #313 | per substrate verdict | NO_RECEIVER_NEEDED | outside-formalism |
+| 8. xray observability | HARD-EARNED-VERIFIED | Catalog #305 | per layer | NO_RECEIVER_NEEDED | outside-formalism |
+| 9. cathedral autopilot v2 cascade | HARD-EARNED-VERIFIED | Catalog #319 Q3 | per archive | NO_RECEIVER_NEEDED | (c) Pareto-tightening |
+| 10. null_space_exploiter | HARD-EARNED-PARTIAL | Codex `7c13abda3` | per null-space directions | NO_RECEIVER_NEEDED | (a) MI-min Wyner-Ziv |
+| 11. procedural_codebook | HARD-EARNED-PARTIAL | Codex `7c13abda3` | per seed/weights | NO_RECEIVER_NEEDED | (b) K-complexity-min + (a) MI-min |
+| 12. freezing exploits | CARGO-CULTED-PENDING | Catalog #779 | per frozen target | NO_RECEIVER_NEEDED | (a) MI-min + (b) K-min |
+| 13. A1-SPECIALIZED binary | CARGO-CULTED-PENDING | sister subagent | per substrate class | RECLAIMABLE_VIA_PACKET_COMPILER | (b) K-min + (d) per-axis |
+| 14. per-axis hardware matrix | HARD-EARNED-PARTIAL | Hotz supplement | per primitive | NO_RECEIVER_NEEDED | (d) per-axis-hardware-exploit |
+
+### 6.3 The anti-arbitrariness invariant (binding)
+
+**INVARIANT**: every primitive selection in EVERY CompositionPlan output by the framework MUST carry ALL 5 forms of evidence (a)-(e). The canonical helper's `build_composition_plan(...)` REFUSES plans where any primitive lacks any of the 5 forms.
+
+**Operational consequence**: the framework structurally PREVENTS the 12 historical strategic claims documented in the META-audit from recurring. Any future primitive selection that lacks one of (a)-(e) is REFUSED at plan construction time, NOT after-the-fact at execution time.
+
+**Sister gate**: STRICT preflight gate `check_composition_plan_carries_per_primitive_evidence` (queued per §16 OP-FRAMEWORK-5 sister directive); refuses any persisted CompositionPlan ledger entry lacking the 5-form evidence per primitive.
+
+---
+
+## 7. The META-Audit CONFLATE_DECLARATIVE_WITH_PHYSICAL Extinction
+
+This section operationalizes the META-audit (`feedback_meta_audit_conflate_declarative_with_physical_error_pattern_12_claim_self_audit_20260518.md`) PROSPECTIVELY: the framework's Layer 1 anti-arbitrariness foundation prevents the next CONFLATE_DECLARATIVE_WITH_PHYSICAL error.
+
+### 7.1 The META-audit's 12 historical claims
+
+Per the META-audit Section 1 self-audit:
+
+| # | Historical claim | Error pattern | Resolution |
+|---|---|---|---|
+| 1 | F1 "dim 7-12 are free byte channel in archive" | CONFLATE_DECLARATIVE_WITH_PHYSICAL | RESOLVED via F1→A2 collapse |
+| 2 | F3-F6 "encode in PoseNet vision/summary/ResBlock/Hydra trunk" | CONFLATE_DECLARATIVE_WITH_PHYSICAL | RECLAIMABILITY pending sister subagent |
+| 3 | A1 "scorer-feature-space requires full PoseNet" | CONFLATE_DECLARATIVE_WITH_PHYSICAL (over-pessimistic) | RECLAIMABILITY pending A1-SPECIALIZED subagent |
+| 4 | META-category SINS unification | NUMERICAL/PREDICTION (Tao partition critique) | RESOLVED via SYNTHESIS-V2 Tao partition |
+| 5 | "43 vectors" cardinality | NUMERICAL/PREDICTION (Contrarian critique) | RESOLVED via per-sub-paradigm counting |
+| 6 | TOP-5 aggregate `[0.152, 0.180]` | NUMERICAL/PREDICTION (Boyd composition_alpha critique) | RESOLVED via SYNTHESIS-V2 sub-additive |
+| 7 | Cross-stack synthesis cheap-probe `[0.182, 0.189]` | NUMERICAL/PREDICTION (same as #6) | RESOLVED via sub-additive |
+| 8 | G1 "re-rank existing PUBLIC dual-eval data" | SCOPE/FRAMING OVERSTATEMENT | NEEDS CLARIFICATION (this framework's per-candidate G1 playbook §14.1) |
+| 9 | "14+ strategic landings today" | SCOPE/FRAMING OVERSTATEMENT | ACKNOWLEDGED |
+| 10 | E-category "NVDEC / NVJPEG free hardware decode" | SCOPE/FRAMING OVERSTATEMENT | NEEDS PER-VECTOR BUDGET AUDIT |
+| 11 | D-category "YUV-native skip RGB conversion" | SCOPE/FRAMING OVERSTATEMENT | NEEDS FRAMING CLARIFICATION |
+| 12 | "Hotz binding directive PROCEED IMMEDIATELY $0/~50 LOC" | SCOPE/FRAMING OVERSTATEMENT | NEEDS EXPECTATION RESET |
+
+### 7.2 The framework's 5 structural extinction mechanisms
+
+The framework prevents these 12 historical patterns from recurring via 5 structural mechanisms:
+
+#### Mechanism 1: Legal-receiver-path classifier (extincts pattern #1, #2, #3)
+
+Every primitive in §3 carries its legal-receiver-path classification per §6.1.(d). The classifier REFUSES STRICT_SCORER_RULE_VIOLATION primitives at framework Layer 1; the classifier GATES RECLAIMABLE_VIA_PACKET_COMPILER primitives on A1-SPECIALIZED size proof per Catalog #6 `contest_one_video_replay` target mode.
+
+**Coverage**: any future "encode in scorer internal" claim is structurally caught by the classifier before it enters a CompositionPlan.
+
+#### Mechanism 2: Per-primitive empirical anchor cite (extincts pattern #1, #4, #5, #12)
+
+Every primitive in §3 carries its empirical anchor cite per §6.1.(b). Claims without `[empirical:...]` / `[contest-CUDA]` / `[contest-CPU]` / `[prediction]` axis tag are REFUSED at plan construction time per Catalog #287.
+
+**Coverage**: any future "X works at Y" claim without empirical evidence is structurally caught.
+
+#### Mechanism 3: Dykstra-feasibility intersection per Catalog #296 (extincts pattern #6, #7)
+
+The framework's Layer 1 §6.1.(e) Dykstra-feasibility check projects N-primitive composition onto the Pareto polytope. Aggregate ΔS predictions are SUB-ADDITIVE per Catalog #322 default; the framework PREVENTS over-optimistic predictions structurally.
+
+**Coverage**: any future "aggregate ΔS = sum of per-primitive ΔS" naive prediction is structurally caught.
+
+#### Mechanism 4: HARD-EARNED vs CARGO-CULTED classification per Catalog #303 (extincts pattern #3, #4)
+
+Every primitive in §3 carries its HARD-EARNED-vs-CARGO-CULTED classification per §6.1.(a). Primitives classified as CARGO-CULTED-PENDING-EMPIRICAL get explicit reactivation criteria per CLAUDE.md "Forbidden premature KILL"; the framework PREVENTS over-pessimistic refusal structurally.
+
+**Coverage**: any future "X is forbidden because Y" claim without HARD-EARNED-PHYSICAL-VERIFICATION is structurally caught.
+
+#### Mechanism 5: Sister STRICT preflight gate (defense-in-depth)
+
+Per §16 OP-FRAMEWORK-5 sister directive: queue STRICT preflight gate `check_composition_plan_carries_per_primitive_evidence` that refuses any persisted CompositionPlan ledger entry lacking the 5-form evidence. Sister of Catalog #287 (docstring evidence tag) + Catalog #229 (premise verification before edit) + Catalog #303 (cargo-cult audit section) + Catalog #319 (Wyner-Ziv deliverability proof).
+
+**Coverage**: defense-in-depth at the persisted-state-ledger surface; the framework structurally extincts the pattern at BOTH the in-memory plan construction surface (Mechanisms 1-4) AND the persisted ledger surface (Mechanism 5).
+
+### 7.3 The framework's prospective error-pattern coverage
+
+| META-audit pattern | Mechanism extincted at framework | Coverage |
+|---|---|---|
+| CONFLATE_DECLARATIVE_WITH_PHYSICAL (4 claims) | Mechanism 1 (legal-receiver-path classifier) + Mechanism 5 (sister STRICT gate) | STRUCTURAL |
+| NUMERICAL/PREDICTION CONFLATIONS (3 claims) | Mechanism 3 (Dykstra-feasibility) + Mechanism 5 | STRUCTURAL |
+| SCOPE/FRAMING OVERSTATEMENTS (5 claims) | Mechanism 2 (empirical anchor cite) + Mechanism 4 (HARD-EARNED classification) + Mechanism 5 | STRUCTURAL |
+
+**Total coverage**: ALL 12 historical patterns are extincted structurally. Future per-candidate composition decisions go through the framework's Layer 1 anti-arbitrariness foundation; the patterns CANNOT recur.
+
+---
