@@ -30,6 +30,9 @@ EVAL_HW: tuple[int, int] = (384, 512)
 NUM_PAIRS: int = 600
 """Contest pair count (1200 frames / 2 frames per pair)."""
 
+CONTEXT_CONDITIONING_MODES: tuple[str, ...] = ("none", "latent_affine")
+"""Opt-in Z7 context-conditioning modes understood by train and inflate."""
+
 
 @dataclass(frozen=True)
 class Z7GruPredictiveCodingConfig:
@@ -61,10 +64,22 @@ class Z7GruPredictiveCodingConfig:
     output_height: int = EVAL_HW[0]
     output_width: int = EVAL_HW[1]
     latent_init_std: float = 0.02
+    context_conditioning_mode: str = "none"
+    context_affine_strength: float = 0.125
 
     @property
     def predictor_input_dim(self) -> int:
         return self.latent_dim + self.ego_motion_dim
+
+
+def normalize_context_conditioning_mode(value: str) -> str:
+    """Normalize and validate the Z7 decoder-context conditioning mode."""
+
+    mode = str(value).strip().lower().replace("-", "_")
+    if mode not in CONTEXT_CONDITIONING_MODES:
+        allowed = ", ".join(CONTEXT_CONDITIONING_MODES)
+        raise ValueError(f"context_conditioning_mode must be one of: {allowed}")
+    return mode
 
 
 class GruRecurrentPredictor(nn.Module):
@@ -213,6 +228,46 @@ class GruRecurrentPredictor(nn.Module):
         )
 
 
+class LatentAffineContextConditioner(nn.Module):
+    """Bounded affine modulation of replayed latents from recurrent context.
+
+    This is the smallest byte-closed branch that makes Z7 test a contextual
+    decoder mechanism instead of only a raw predictive residual channel.
+    """
+
+    def __init__(self, config: Z7GruPredictiveCodingConfig) -> None:
+        super().__init__()
+        if config.latent_dim <= 0:
+            raise ValueError("latent_dim must be positive")
+        if config.context_affine_strength < 0:
+            raise ValueError("context_affine_strength must be non-negative")
+        self.latent_dim = int(config.latent_dim)
+        self.strength = float(config.context_affine_strength)
+        self.proj = nn.Linear(self.latent_dim, 2 * self.latent_dim)
+
+    def forward(self, latents: torch.Tensor, contexts: torch.Tensor) -> torch.Tensor:
+        """Return context-modulated latents with the same shape as ``latents``."""
+
+        if latents.shape != contexts.shape:
+            raise ValueError(
+                f"latents shape {tuple(latents.shape)} must match contexts shape "
+                f"{tuple(contexts.shape)}"
+            )
+        if latents.shape[-1] != self.latent_dim:
+            raise ValueError(
+                f"latents last dim {latents.shape[-1]} != latent_dim {self.latent_dim}"
+            )
+        scale, shift = self.proj(contexts.to(dtype=latents.dtype)).chunk(2, dim=-1)
+        scale = torch.tanh(scale) * self.strength
+        shift = torch.tanh(shift) * self.strength
+        return latents * (1.0 + scale) + shift
+
+    def num_parameters(self) -> int:
+        """Count trainable conditioner parameters."""
+
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 class Z7GruPredictiveCodingSubstrate(nn.Module):
     """Z7 prebuild substrate: GRU recurrence + Z6-compatible RGB decoder.
 
@@ -237,9 +292,18 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
             raise ValueError("output_height/output_width must be positive")
         if config.latent_init_std < 0:
             raise ValueError("latent_init_std must be non-negative")
+        context_mode = normalize_context_conditioning_mode(
+            config.context_conditioning_mode
+        )
+        if config.context_affine_strength < 0:
+            raise ValueError("context_affine_strength must be non-negative")
 
         self.config = config
+        self.context_conditioning_mode = context_mode
         self.predictor = GruRecurrentPredictor(config)
+        self.context_conditioner: LatentAffineContextConditioner | None = None
+        if context_mode == "latent_affine":
+            self.context_conditioner = LatentAffineContextConditioner(config)
         self.decoder = _Z6Decoder(
             latent_dim=config.latent_dim,
             embed_dim=config.decoder_embed_dim,
@@ -262,24 +326,44 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
             persistent=True,
         )
 
-    def replay_latents(self) -> torch.Tensor:
-        """Replay the full recurrent latent sequence."""
+    def replay_latents_and_contexts(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Replay recurrent latents plus pre-residual temporal contexts."""
 
         z = self.latent_init.view(1, self.config.latent_dim)
         self.predictor.reset_state(1, device=z.device, dtype=z.dtype)
         outs: list[torch.Tensor] = []
+        contexts: list[torch.Tensor] = []
         for t in range(self.config.num_pairs):
             ego_t = self.ego_motion_buffer[t : t + 1].to(dtype=z.dtype)
             pred = self.predictor(z, ego_t)
             z = pred + self.residuals[t : t + 1]
+            contexts.append(pred.squeeze(0))
             outs.append(z.squeeze(0))
-        return torch.stack(outs, dim=0)
+        return torch.stack(outs, dim=0), torch.stack(contexts, dim=0)
+
+    def replay_latents(self) -> torch.Tensor:
+        """Replay the full recurrent latent sequence."""
+
+        latents, _contexts = self.replay_latents_and_contexts()
+        return latents
+
+    def condition_latents(
+        self,
+        latents: torch.Tensor,
+        contexts: torch.Tensor,
+    ) -> torch.Tensor:
+        """Apply the configured context-conditioning branch before decoding."""
+
+        if self.context_conditioner is None:
+            return latents
+        return self.context_conditioner(latents, contexts)
 
     def reconstruct_all_pairs(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Decode every pair in sequence order."""
 
-        latents = self.replay_latents()
-        rgb_0, rgb_1 = self.decoder(latents)
+        latents, contexts = self.replay_latents_and_contexts()
+        decoder_latents = self.condition_latents(latents, contexts)
+        rgb_0, rgb_1 = self.decoder(decoder_latents)
         return rgb_0, rgb_1, latents
 
     def reconstruct_pair(
@@ -303,7 +387,7 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
         rgb_0, rgb_1, latents = self.reconstruct_all_pairs()
         return rgb_0[pair_indices], rgb_1[pair_indices], latents[pair_indices]
 
-    def decoder_metadata(self) -> dict[str, int | list[int] | float]:
+    def decoder_metadata(self) -> dict[str, int | list[int] | float | str | bool]:
         """Return metadata required by the Z7PCWM1 inflate runtime."""
 
         return {
@@ -317,6 +401,11 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
             "output_height": int(self.config.output_height),
             "output_width": int(self.config.output_width),
             "latent_init_std": float(self.config.latent_init_std),
+            "context_conditioning_mode": self.context_conditioning_mode,
+            "context_affine_strength": float(self.config.context_affine_strength),
+            "context_conditioner_state_dict_in_encoder_blob": (
+                self.context_conditioner is not None
+            ),
         }
 
     def num_parameters(self) -> int:
@@ -330,6 +419,11 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
         return {
             "decoder": self.decoder.num_parameters(),
             "predictor": self.predictor.num_parameters(),
+            "context_conditioner": (
+                0
+                if self.context_conditioner is None
+                else self.context_conditioner.num_parameters()
+            ),
             "latent_init": self.latent_init.numel(),
             "residuals": self.residuals.numel(),
             "total": self.num_parameters(),
@@ -339,7 +433,10 @@ class Z7GruPredictiveCodingSubstrate(nn.Module):
 __all__ = [
     "EVAL_HW",
     "NUM_PAIRS",
+    "CONTEXT_CONDITIONING_MODES",
     "GruRecurrentPredictor",
+    "LatentAffineContextConditioner",
     "Z7GruPredictiveCodingConfig",
     "Z7GruPredictiveCodingSubstrate",
+    "normalize_context_conditioning_mode",
 ]

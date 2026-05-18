@@ -57,6 +57,8 @@ Z7_GRU_BATCH_SIZE="${Z7_GRU_BATCH_SIZE:-}"
 Z7_GRU_LR="${Z7_GRU_LR:-}"
 Z7_GRU_DEVICE="${Z7_GRU_DEVICE:-cuda}"
 Z7_GRU_LOSS_MODE="${Z7_GRU_LOSS_MODE:-score_aware}"
+Z7_GRU_CONTEXT_CONDITIONING_MODE="${Z7_GRU_CONTEXT_CONDITIONING_MODE:-none}"
+Z7_GRU_CONTEXT_AFFINE_STRENGTH="${Z7_GRU_CONTEXT_AFFINE_STRENGTH:-0.125}"
 Z7_GRU_LATENT_DIM="${Z7_GRU_LATENT_DIM:-}"
 Z7_GRU_EGO_MOTION_DIM="${Z7_GRU_EGO_MOTION_DIM:-}"
 Z7_GRU_HIDDEN_DIM="${Z7_GRU_HIDDEN_DIM:-}"
@@ -219,7 +221,7 @@ append_terminal_claim() {
         --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
         --agent "remote_lane_substrate_time_traveler_l5_z7_lstm_predictive_coding" \
         --status "$status" \
-        --notes "remote_driver_terminal rc=$rc evidence_marker=${EVIDENCE_MARKER:-unknown} ${SCORE_CLAIM_FLAG:-score_claim=unknown} stats_json=$Z7_STATS_JSON output_dir=$Z7_GRU_OUTPUT_DIR mode=$Z7_GRU_TRAINER_MODE loss_mode=$Z7_GRU_LOSS_MODE max_pairs=$Z7_GRU_MAX_PAIRS emit_static_control=$Z7_GRU_EMIT_STATIC_CONTROL" \
+        --notes "remote_driver_terminal rc=$rc evidence_marker=${EVIDENCE_MARKER:-unknown} ${SCORE_CLAIM_FLAG:-score_claim=unknown} stats_json=$Z7_STATS_JSON output_dir=$Z7_GRU_OUTPUT_DIR mode=$Z7_GRU_TRAINER_MODE loss_mode=$Z7_GRU_LOSS_MODE context_mode=$Z7_GRU_CONTEXT_CONDITIONING_MODE max_pairs=$Z7_GRU_MAX_PAIRS emit_static_control=$Z7_GRU_EMIT_STATIC_CONTROL" \
         >> "$LOG_DIR/run.log" 2>&1 || {
         log "WARN: failed to append terminal dispatch claim status=$status"
     }
@@ -283,6 +285,8 @@ cat > "$PROVENANCE" <<EOF
   "lr": "$Z7_GRU_LR",
   "device": "$Z7_GRU_DEVICE",
   "loss_mode": "$Z7_GRU_LOSS_MODE",
+  "context_conditioning_mode": "$Z7_GRU_CONTEXT_CONDITIONING_MODE",
+  "context_affine_strength": "$Z7_GRU_CONTEXT_AFFINE_STRENGTH",
   "latent_dim": "$Z7_GRU_LATENT_DIM",
   "ego_motion_dim": "$Z7_GRU_EGO_MOTION_DIM",
   "gru_hidden_dim": "$Z7_GRU_HIDDEN_DIM",
@@ -378,7 +382,7 @@ if [ -f "$Z7_STATS_JSON" ]; then
     log "quarantined_preexisting_stats_json path=$STALE_STATS_QUARANTINE"
 fi
 
-log "stage_4_trainer_begin mode=$Z7_GRU_TRAINER_MODE epochs=$Z7_GRU_EPOCHS max_pairs=$Z7_GRU_MAX_PAIRS loss_mode=$Z7_GRU_LOSS_MODE device=$Z7_GRU_DEVICE"
+log "stage_4_trainer_begin mode=$Z7_GRU_TRAINER_MODE epochs=$Z7_GRU_EPOCHS max_pairs=$Z7_GRU_MAX_PAIRS loss_mode=$Z7_GRU_LOSS_MODE context_mode=$Z7_GRU_CONTEXT_CONDITIONING_MODE device=$Z7_GRU_DEVICE"
 REMOTE_DRIVER_STAGE4_STARTED_UNIX="$(date +%s)"
 "$CLAIM_PYTHON" "$TRAINER_PY" \
     --video-path "$Z7_GRU_VIDEO_PATH" \
@@ -401,6 +405,8 @@ REMOTE_DRIVER_STAGE4_STARTED_UNIX="$(date +%s)"
     --output-height "$Z7_GRU_OUTPUT_HEIGHT" \
     --output-width "$Z7_GRU_OUTPUT_WIDTH" \
     --loss-mode "$Z7_GRU_LOSS_MODE" \
+    --context-conditioning-mode "$Z7_GRU_CONTEXT_CONDITIONING_MODE" \
+    --context-affine-strength "$Z7_GRU_CONTEXT_AFFINE_STRENGTH" \
     --upstream-dir "$Z7_GRU_UPSTREAM_DIR" \
     --alpha-rate "$Z7_GRU_ALPHA_RATE" \
     --beta-seg "$Z7_GRU_BETA_SEG" \

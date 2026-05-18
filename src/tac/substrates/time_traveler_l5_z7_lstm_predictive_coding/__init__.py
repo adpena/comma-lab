@@ -12,11 +12,14 @@ paired exact-eval disambiguator gates land.
 from __future__ import annotations
 
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture import (
+    CONTEXT_CONDITIONING_MODES,
     EVAL_HW,
     NUM_PAIRS,
     GruRecurrentPredictor,
+    LatentAffineContextConditioner,
     Z7GruPredictiveCodingConfig,
     Z7GruPredictiveCodingSubstrate,
+    normalize_context_conditioning_mode,
 )
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.archive import (
     Z7PCWM1_HEADER_FMT,
@@ -29,6 +32,7 @@ from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.archive import (
     parse_archive,
     parse_z7pcwm1_archive_bytes,
     replay_latent_sequence,
+    replay_latent_sequence_with_context,
 )
 
 IMPLEMENTATION_STATUS = "prebuild_research_only_gru_substrate_archive_runtime_export_and_score_aware_training_path"
@@ -36,6 +40,7 @@ RESEARCH_ONLY = True
 
 PLANNED_PUBLIC_API = (
     "GruRecurrentPredictor",
+    "LatentAffineContextConditioner",
     "Z7PredictiveCodingArchive",
     "Z7GruPredictiveCodingConfig",
     "Z7GruPredictiveCodingSubstrate",
@@ -43,13 +48,16 @@ PLANNED_PUBLIC_API = (
     "parse_archive",
     "parse_z7pcwm1_archive_bytes",
     "replay_latent_sequence",
+    "replay_latent_sequence_with_context",
 )
 
 __all__ = (
     "EVAL_HW",
     "NUM_PAIRS",
+    "CONTEXT_CONDITIONING_MODES",
     "GruRecurrentPredictor",
     "IMPLEMENTATION_STATUS",
+    "LatentAffineContextConditioner",
     "PLANNED_PUBLIC_API",
     "RESEARCH_ONLY",
     "Z7PCWM1_HEADER_FMT",
@@ -64,4 +72,6 @@ __all__ = (
     "parse_archive",
     "parse_z7pcwm1_archive_bytes",
     "replay_latent_sequence",
+    "replay_latent_sequence_with_context",
+    "normalize_context_conditioning_mode",
 )

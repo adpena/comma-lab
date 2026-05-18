@@ -15,6 +15,7 @@ from tac.substrates._shared.inflate_runtime import CAMERA_HW
 from tac.substrates.time_traveler_l5_z6.architecture import _Z6Decoder
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding import (
     GruRecurrentPredictor,
+    LatentAffineContextConditioner,
     Z7PCWM1_MAGIC,
     Z7PCWM1_SECTION_ROLES,
     Z7GruPredictiveCodingConfig,
@@ -23,6 +24,7 @@ from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding import (
     parse_archive,
     parse_z7pcwm1_archive_bytes,
     replay_latent_sequence,
+    replay_latent_sequence_with_context,
 )
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding import (
     inflate as z7_inflate,
@@ -174,6 +176,45 @@ def test_z7_gru_substrate_reconstructs_rgb_pairs_and_exports_decoder_metadata() 
     assert latents.shape == (2, cfg.latent_dim)
     assert model.decoder_metadata()["decoder_channels"] == [4, 4]
     assert model.num_parameters_breakdown()["total"] == model.num_parameters()
+
+
+def test_z7_latent_affine_context_conditioning_is_opt_in_and_trainable() -> None:
+    cfg = Z7GruPredictiveCodingConfig(
+        latent_dim=6,
+        ego_motion_dim=3,
+        gru_hidden_dim=8,
+        num_pairs=2,
+        decoder_embed_dim=4,
+        decoder_initial_grid_h=2,
+        decoder_initial_grid_w=2,
+        decoder_channels=(4, 4),
+        decoder_num_upsample_blocks=2,
+        output_height=8,
+        output_width=8,
+        context_conditioning_mode="latent_affine",
+        context_affine_strength=0.25,
+    )
+    model = Z7GruPredictiveCodingSubstrate(cfg)
+
+    latents, contexts = model.replay_latents_and_contexts()
+    conditioned = model.condition_latents(latents, contexts)
+    rgb_0, rgb_1, replayed = model.reconstruct_all_pairs()
+    (rgb_0.mean() + rgb_1.mean()).backward()
+
+    assert model.context_conditioner is not None
+    assert conditioned.shape == latents.shape
+    assert not torch.allclose(conditioned, latents)
+    assert replayed.shape == latents.shape
+    assert model.decoder_metadata()["context_conditioning_mode"] == "latent_affine"
+    assert model.decoder_metadata()["context_conditioner_state_dict_in_encoder_blob"]
+    assert model.num_parameters_breakdown()["context_conditioner"] > 0
+    grads = [
+        param.grad
+        for param in model.context_conditioner.parameters()
+        if param.grad is not None
+    ]
+    assert grads
+    assert sum(float(grad.abs().sum()) for grad in grads) > 0.0
 
 
 def test_z7_gru_smoke_trainer_writes_false_authority_stats(tmp_path: Path) -> None:
@@ -426,7 +467,10 @@ def _archive_inputs(config: Z7GruPredictiveCodingConfig) -> tuple[
 ]:
     torch.manual_seed(17)
     predictor = GruRecurrentPredictor(config)
-    encoder = {"encoder.weight": torch.randn(2, 3)}
+    if config.context_conditioning_mode == "latent_affine":
+        encoder = LatentAffineContextConditioner(config).state_dict()
+    else:
+        encoder = {"encoder.weight": torch.randn(2, 3)}
     decoder = {"decoder.bias": torch.randn(4)}
     latent_init = torch.linspace(-0.5, 0.5, config.latent_dim)
     residuals = torch.randn(config.num_pairs, config.latent_dim) * 0.05
@@ -582,6 +626,70 @@ def test_z7pcwm1_replay_consumes_predictor_bytes() -> None:
     assert not torch.allclose(base_replay, mutated_replay)
 
 
+def test_z7pcwm1_context_conditioner_is_byte_closed_and_parse_consumed() -> None:
+    config = Z7GruPredictiveCodingConfig(
+        latent_dim=6,
+        ego_motion_dim=3,
+        gru_hidden_dim=8,
+        gru_num_layers=1,
+        num_pairs=3,
+        context_conditioning_mode="latent_affine",
+        context_affine_strength=0.25,
+    )
+    encoder, decoder, predictor_sd, latent_init, residuals, ego_motion = (
+        _archive_inputs(config)
+    )
+    blob = pack_archive(
+        encoder,
+        decoder,
+        predictor_sd,
+        latent_init,
+        residuals,
+        ego_motion,
+        {"test_vector": "context_conditioner_consumed"},
+        config=config,
+    )
+
+    parsed = parse_archive(blob)
+    latents, contexts = replay_latent_sequence_with_context(parsed)
+    conditioner = LatentAffineContextConditioner(parsed.config)
+    conditioner.load_state_dict(parsed.encoder_state_dict, strict=True)
+    conditioned = conditioner(latents, contexts)
+    meta = parsed.meta["z7_recurrent_predictive_coding_meta"]
+
+    assert parsed.config.context_conditioning_mode == "latent_affine"
+    assert parsed.encoder_state_dict
+    assert meta["decoder_context_conditioning"] == "latent_affine"
+    assert "context_conditioned_decoder_requires_paired_exact_eval" in meta["blockers"]
+    assert not torch.allclose(conditioned, latents)
+
+
+def test_z7pcwm1_context_conditioned_archive_requires_conditioner_state() -> None:
+    config = Z7GruPredictiveCodingConfig(
+        latent_dim=6,
+        ego_motion_dim=3,
+        gru_hidden_dim=8,
+        gru_num_layers=1,
+        num_pairs=3,
+        context_conditioning_mode="latent_affine",
+    )
+    _encoder, decoder, predictor_sd, latent_init, residuals, ego_motion = (
+        _archive_inputs(config)
+    )
+
+    with pytest.raises(ValueError, match="context conditioner state_dict"):
+        pack_archive(
+            {},
+            decoder,
+            predictor_sd,
+            latent_init,
+            residuals,
+            ego_motion,
+            {"test_vector": "missing_context_conditioner"},
+            config=config,
+        )
+
+
 def test_z7_inflate_runtime_scaffold_is_scorer_free_and_three_arg_cli() -> None:
     source = inspect.getsource(z7_inflate)
 
@@ -622,6 +730,61 @@ def test_z7_inflate_runtime_consumes_decoder_weight_stream(tmp_path: Path) -> No
     )
     base_raw = tmp_path / "base.raw"
     mutated_raw = tmp_path / "mutated.raw"
+
+    z7_inflate.inflate_one_video(base_blob, base_raw, device="cpu")
+    z7_inflate.inflate_one_video(mutated_blob, mutated_raw, device="cpu")
+
+    assert base_raw.read_bytes() != mutated_raw.read_bytes()
+
+
+def test_z7_inflate_runtime_consumes_context_conditioner_stream(tmp_path: Path) -> None:
+    config = Z7GruPredictiveCodingConfig(
+        latent_dim=6,
+        ego_motion_dim=3,
+        gru_hidden_dim=8,
+        gru_num_layers=1,
+        num_pairs=2,
+        context_conditioning_mode="latent_affine",
+        context_affine_strength=0.25,
+    )
+    encoder, _decoder, predictor_sd, latent_init, residuals, ego_motion = (
+        _archive_inputs(config)
+    )
+    mutated_encoder = {k: v.clone() for k, v in encoder.items()}
+    mutated_encoder["proj.bias"] = mutated_encoder["proj.bias"] + 4.0
+    decoder_sd = _tiny_z6_decoder(config).state_dict()
+    meta = {
+        "test_vector": "z7_context_conditioner_runtime_scaffold",
+        "decoder_embed_dim": 4,
+        "decoder_initial_grid_h": 2,
+        "decoder_initial_grid_w": 2,
+        "decoder_channels": [4, 4],
+        "decoder_num_upsample_blocks": 2,
+        "output_height": 8,
+        "output_width": 8,
+    }
+    base_blob = pack_archive(
+        encoder,
+        decoder_sd,
+        predictor_sd,
+        latent_init,
+        residuals,
+        ego_motion,
+        meta,
+        config=config,
+    )
+    mutated_blob = pack_archive(
+        mutated_encoder,
+        decoder_sd,
+        predictor_sd,
+        latent_init,
+        residuals,
+        ego_motion,
+        meta,
+        config=config,
+    )
+    base_raw = tmp_path / "context_base.raw"
+    mutated_raw = tmp_path / "context_mutated.raw"
 
     z7_inflate.inflate_one_video(base_blob, base_raw, device="cpu")
     z7_inflate.inflate_one_video(mutated_blob, mutated_raw, device="cpu")

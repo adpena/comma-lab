@@ -193,3 +193,102 @@ Observed:
 3 passed in 0.15s
 latest_handoff_artifact=.omx/state/z7_exact_eval_handoff/z7_exact_eval_handoff_20260518T133855Z.json
 ```
+
+## Incidental Catalog #202 false-authority bug found
+
+While running the broader focused readiness suite, this pass found a stale-env
+hole in `tools/asymptotic_pursuit_dispatch_queue.py`: when a dirty tree had a
+truthy `OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON` pointing at a stale
+audit, the queue could still report
+`catalog202_dirty_tree_attestation.satisfied_in_current_environment=true` if no
+dirty sentinel audit was strictly required.
+
+Patch:
+
+```text
+tools/asymptotic_pursuit_dispatch_queue.py
+```
+
+New rule: any provided Catalog #202 audit JSON env path must match the current
+sentinel snapshot. A stale provided audit path now keeps the environment
+unsatisfied and asks for:
+
+```text
+OPERATOR_AUTHORIZE_TRUSTED_SENTINELS_AUDIT_JSON=<fresh_current_catalog202_audit_json>
+```
+
+Focused regression:
+
+```bash
+.venv/bin/python -m pytest -q \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py::test_dispatch_sequence_rejects_stale_external_catalog202_attestation_env \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py::test_catalog202_attestation_dirty_sentinel_accepts_current_env_audit_snapshot \
+  src/tac/tests/test_asymptotic_pursuit_candidate_readiness.py::test_catalog202_attestation_dirty_sentinel_rejects_stale_audit_snapshot
+```
+
+Observed:
+
+```text
+3 passed in 1.46s
+```
+
+Queue refresh after the Catalog #202 fix:
+
+```text
+.omx/state/asymptotic_pursuit/dispatch_queue_20260518T134352Z.json
+top_1_substrate=time_traveler_l5_z7_lstm_predictive_coding
+top_1_readiness_verdict=DEFER
+ready_for_paid_dispatch_count=0
+immediately_runnable_paid_dispatch_count=0
+current_worktree_dirty_path_count=2
+```
+
+## Context-conditioned Z7 handoff refresh
+
+The DCVC-informed next branch is now concrete and falsifiable:
+
+```text
+context_conditioning_mode=latent_affine
+context_affine_strength=0.25
+context_conditioner_state_dict_in_encoder_blob=true
+context_conditioner_params=84
+```
+
+Local artifact:
+
+```text
+experiments/results/z7_gru_context_affine_score_aware_smoke_codex_20260518T135435Z/
+```
+
+Packet facts:
+
+```text
+archive_zip_bytes=5450
+archive_zip_sha256=09bfa54ec5dea705b903d6086d71eb972142447ef0ec370f9d995bddf0a503ca
+static_control_archive_zip_bytes=5450
+static_control_archive_zip_sha256=ead3938bdc3046d785f5500c68710ec8dab1386220cd490c67eb2648e9c82b62
+same_archive_zip_bytes_as_recurrent=true
+runtime_output_changed_vs_recurrent=true
+runtime_output_byte_differences_vs_recurrent=1056252
+runtime_custody.aggregate_sha256=f912b8f87405ebf876487f1dc79c1dd4b9dfc72080d71c7464e6cd77110a5883
+score_claim=false
+promotion_eligible=false
+ready_for_paid_dispatch=false
+```
+
+Handoff doctor:
+
+```text
+.omx/state/z7_exact_eval_handoff/z7_exact_eval_handoff_20260518T135626Z.json
+ready_for_exact_eval_handoff=false
+current_pair_count=1
+required_pair_count=600
+result_review_blockers=[z7_exact_handoff_current_packet_not_600_pairs]
+provider_dispatch_attempted=false
+lane_claim_opened=false
+```
+
+No score, rank, promotion, or dispatch verdict follows from this artifact. Its
+value is implementation discrimination: the archive carries distinct context
+conditioner bytes, inflate consumes them, mutating the conditioner changes raw
+output, and the paired static control preserves archive.zip byte count.

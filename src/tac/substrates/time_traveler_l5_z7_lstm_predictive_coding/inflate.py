@@ -23,10 +23,14 @@ from tac.substrates._shared.inflate_runtime import (
     write_rgb_pair_to_raw,
 )
 from tac.substrates.time_traveler_l5_z6.architecture import EVAL_HW, _Z6Decoder
+from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture import (
+    LatentAffineContextConditioner,
+    normalize_context_conditioning_mode,
+)
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.archive import (
     Z7PredictiveCodingArchive,
     parse_archive,
-    replay_latent_sequence,
+    replay_latent_sequence_with_context,
 )
 
 
@@ -63,6 +67,33 @@ def _build_decoder(archive: Z7PredictiveCodingArchive, device: str) -> _Z6Decode
     return decoder.eval()
 
 
+def _context_condition_latents(
+    archive: Z7PredictiveCodingArchive,
+    latents: torch.Tensor,
+    contexts: torch.Tensor,
+    *,
+    device: str,
+) -> torch.Tensor:
+    """Apply any runtime-declared Z7 context-conditioned decoder pre-transform."""
+
+    mode = normalize_context_conditioning_mode(
+        str(archive.meta.get("context_conditioning_mode", "none"))
+    )
+    if mode == "none":
+        return latents
+    if mode != "latent_affine":
+        raise ValueError(f"unsupported Z7 context conditioning mode: {mode}")
+    conditioner = LatentAffineContextConditioner(archive.config).to(device)
+    if not archive.encoder_state_dict:
+        raise ValueError(
+            "latent_affine Z7 archive missing context conditioner state_dict "
+            "in encoder_blob"
+        )
+    conditioner.load_state_dict(archive.encoder_state_dict, strict=True)
+    conditioner.eval()
+    return conditioner(latents, contexts)
+
+
 def inflate_one_video(
     archive_bytes: bytes,
     output_raw_path: Path,
@@ -74,13 +105,21 @@ def inflate_one_video(
     archive = parse_archive(archive_bytes)
     render_device = select_inflate_device(device)
     decoder = _build_decoder(archive, render_device)
-    latents = replay_latent_sequence(archive).to(render_device, dtype=torch.float32)
+    latents_cpu, contexts_cpu = replay_latent_sequence_with_context(archive)
+    latents = latents_cpu.to(render_device, dtype=torch.float32)
+    contexts = contexts_cpu.to(render_device, dtype=torch.float32)
+    decoder_latents = _context_condition_latents(
+        archive,
+        latents,
+        contexts,
+        device=render_device,
+    )
 
     output_raw_path.parent.mkdir(parents=True, exist_ok=True)
     frames_written = 0
     with torch.no_grad(), output_raw_path.open("wb") as fh:
         for pair_idx in range(archive.config.num_pairs):
-            z_t = latents[pair_idx : pair_idx + 1]
+            z_t = decoder_latents[pair_idx : pair_idx + 1]
             rgb_0, rgb_1 = decoder(z_t)
             frames_written += write_rgb_pair_to_raw(
                 fh,

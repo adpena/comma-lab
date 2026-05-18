@@ -156,6 +156,8 @@ out.mkdir(parents=True, exist_ok=True)
         "--output-height": "16",
         "--output-width": "16",
         "--loss-mode": "score_aware",
+        "--context-conditioning-mode": "none",
+        "--context-affine-strength": "0.125",
     }
     for flag, value in expected_pairs.items():
         assert flag in argv
@@ -167,6 +169,8 @@ out.mkdir(parents=True, exist_ok=True)
     assert provenance["lane_id"] == lane_id
     assert provenance["mode"] == "timing_smoke"
     assert provenance["loss_mode"] == "score_aware"
+    assert provenance["context_conditioning_mode"] == "none"
+    assert provenance["context_affine_strength"] == "0.125"
     assert provenance["max_pairs"] == "1"
     assert provenance["emit_static_control"] == "true"
 
@@ -183,6 +187,7 @@ out.mkdir(parents=True, exist_ok=True)
     assert "evidence_marker=[z7_remote_timing_smoke_no_score_claim]" in notes
     assert "score_claim=false" in notes
     assert "mode=timing_smoke" in notes
+    assert "context_mode=none" in notes
 
 
 def test_z7_remote_driver_refuses_missing_stats_completion_marker(

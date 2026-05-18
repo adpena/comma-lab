@@ -171,6 +171,9 @@ src/tac.egg-info/
 .omx/state/modal_call_id_ledger.jsonl.lock
 .omx/state/modal_call_id_ledger.jsonl.tmp.*
 .omx/state/modal_call_id_ledger.jsonl.corrupt.*
+# Generated exact-eval handoff packets are local state; summarize durable signal
+# in .omx/research ledgers before publishing.
+.omx/state/z7_exact_eval_handoff/
 # OP-10: sidecar index for read-amortized query helpers (LIVE_STATE per
 # Catalog #113; lazily rebuilt from canonical JSONL - corruption / loss
 # has zero forensic cost; the canonical ledger is the source of truth).

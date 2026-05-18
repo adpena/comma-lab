@@ -112,10 +112,12 @@ def _catalog202_dirty_tree_attestation(
         env_sentinel_audit,
         current_sentinel_snapshot,
     )
+    env_audit_current_if_provided = (not audit_truthy) or env_audit_matches_current
     satisfied = (not required) or (
         intent_truthy
         and attestation_truthy
         and current_snapshot_valid
+        and env_audit_current_if_provided
         and (
             not dirty_sentinel_audit_required
             or (audit_truthy and env_audit_matches_current)
@@ -134,6 +136,10 @@ def _catalog202_dirty_tree_attestation(
             f"{(latest_sentinel_audit or {}).get('path', '<current_catalog202_audit.json>')}"
         )
     elif dirty_sentinel_audit_required and not env_audit_matches_current:
+        missing.append(
+            f"{CATALOG202_BYPASS_AUDIT_JSON_ENV_VAR}=<fresh_current_catalog202_audit_json>"
+        )
+    elif required and audit_truthy and not env_audit_matches_current:
         missing.append(
             f"{CATALOG202_BYPASS_AUDIT_JSON_ENV_VAR}=<fresh_current_catalog202_audit_json>"
         )

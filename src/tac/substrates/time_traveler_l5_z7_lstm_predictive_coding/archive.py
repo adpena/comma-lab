@@ -29,6 +29,7 @@ import torch
 from tac.substrates.time_traveler_l5_z7_lstm_predictive_coding.architecture import (
     GruRecurrentPredictor,
     Z7GruPredictiveCodingConfig,
+    normalize_context_conditioning_mode,
 )
 
 Z7PCWM1_MAGIC: bytes = b"Z7GR"
@@ -151,11 +152,27 @@ def _false_authority_meta(
     ]
     if not score_aware_used:
         blockers.insert(1, "score_aware_training_absent_prebuild")
+    context_mode = normalize_context_conditioning_mode(
+        str(meta.get("context_conditioning_mode", config.context_conditioning_mode))
+    )
+    if context_mode != "none":
+        blockers.append("context_conditioned_decoder_requires_paired_exact_eval")
+    meta.setdefault("context_conditioning_mode", context_mode)
+    meta.setdefault("context_affine_strength", float(config.context_affine_strength))
+    meta.setdefault(
+        "context_conditioner_state_dict_in_encoder_blob",
+        context_mode != "none",
+    )
     meta["z7_recurrent_predictive_coding_meta"] = {
         "schema": "z7_recurrent_predictive_coding_meta_v1",
         "substrate_id": "time_traveler_l5_z7_lstm_predictive_coding",
         "archive_grammar": "Z7PCWM1",
         "predictor": "gru_recurrent_predictor",
+        "decoder_context_conditioning": context_mode,
+        "context_affine_strength": float(config.context_affine_strength),
+        "context_conditioner_state_dict_in_encoder_blob": bool(
+            meta.get("context_conditioner_state_dict_in_encoder_blob")
+        ),
         "loss_mode": "score_aware" if score_aware_used else "proxy",
         "score_aware_scorer_loss_used": score_aware_used,
         "latent_dim": config.latent_dim,
@@ -234,6 +251,14 @@ def pack_archive(
         raise ValueError("config.gru_hidden_dim out of u16 range")
     if config.gru_num_layers <= 0 or config.gru_num_layers > 0xFF:
         raise ValueError("config.gru_num_layers out of u8 range")
+    context_mode = normalize_context_conditioning_mode(
+        config.context_conditioning_mode
+    )
+    if context_mode != "none" and not encoder_state_dict:
+        raise ValueError(
+            "context-conditioned Z7PCWM1 archives require a context conditioner "
+            "state_dict in encoder_state_dict"
+        )
 
     q_latent_init, scale_li, zp_li = _quantize_to_int8(latent_init)
     q_residuals, scale_r, zp_r = _quantize_to_int8(residuals)
@@ -419,6 +444,10 @@ def parse_archive(blob: bytes) -> Z7PredictiveCodingArchive:
         stateful=bool(int(flags) & _FLAG_STATEFUL),
         identity_predictor=bool(int(flags) & _FLAG_IDENTITY),
         num_pairs=int(num_pairs),
+        context_conditioning_mode=normalize_context_conditioning_mode(
+            str(meta.get("context_conditioning_mode", "none"))
+        ),
+        context_affine_strength=float(meta.get("context_affine_strength", 0.125)),
     )
     return Z7PredictiveCodingArchive(
         encoder_state_dict=_deserialize_state_dict(encoder_blob),
@@ -442,8 +471,10 @@ def _slice_section(
     return blob[start : start + length]
 
 
-def replay_latent_sequence(archive: Z7PredictiveCodingArchive) -> torch.Tensor:
-    """Replay the parsed GRU predictor + residual stream into latent sequence."""
+def replay_latent_sequence_with_context(
+    archive: Z7PredictiveCodingArchive,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Replay the parsed GRU stream into latents plus pre-residual contexts."""
 
     predictor = GruRecurrentPredictor(archive.config)
     if not archive.config.identity_predictor:
@@ -453,18 +484,27 @@ def replay_latent_sequence(archive: Z7PredictiveCodingArchive) -> torch.Tensor:
     ego = archive.ego_motion.to(torch.float32)
     residuals = archive.residuals.to(torch.float32)
     outs: list[torch.Tensor] = []
+    contexts: list[torch.Tensor] = []
     with torch.no_grad():
         predictor.reset_state(1, device=z.device, dtype=z.dtype)
         for t in range(archive.config.num_pairs):
             pred = predictor(z, ego[t : t + 1])
             z = pred + residuals[t : t + 1]
+            contexts.append(pred.squeeze(0).clone())
             outs.append(z.squeeze(0).clone())
-    return torch.stack(outs, dim=0)
+    return torch.stack(outs, dim=0), torch.stack(contexts, dim=0)
+
+
+def replay_latent_sequence(archive: Z7PredictiveCodingArchive) -> torch.Tensor:
+    """Replay the parsed GRU predictor + residual stream into latent sequence."""
+
+    latents, _contexts = replay_latent_sequence_with_context(archive)
+    return latents
 
 
 Z7PCWM1_SECTION_ROLES: dict[str, str] = {
     "z7pcwm1_header": "control_or_metadata",
-    "encoder_blob": "training_provenance_only",
+    "encoder_blob": "context_conditioner_weight_stream_or_training_provenance",
     "decoder_blob": "planned_decoder_weight_stream",
     "predictor_blob": "decoder_weight_stream",
     "latent_init_blob": "latent_stream",
@@ -485,4 +525,5 @@ __all__ = [
     "parse_archive",
     "parse_z7pcwm1_archive_bytes",
     "replay_latent_sequence",
+    "replay_latent_sequence_with_context",
 ]

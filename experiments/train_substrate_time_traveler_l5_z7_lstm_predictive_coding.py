@@ -199,6 +199,21 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         "default": "proxy",
         "choices": ("proxy", "score_aware"),
     },
+    "--context-conditioning-mode": {
+        "env": "Z7_GRU_CONTEXT_CONDITIONING_MODE",
+        "rationale": (
+            "Opt-in decoder-context branch. 'none' preserves the Z7-GRU "
+            "baseline; 'latent_affine' lets recurrent context modulate decoder "
+            "latents and is stored byte-closed in the encoder section."
+        ),
+        "default": "none",
+        "choices": ("none", "latent_affine"),
+    },
+    "--context-affine-strength": {
+        "env": "Z7_GRU_CONTEXT_AFFINE_STRENGTH",
+        "rationale": "Bounded affine modulation strength for latent_affine mode.",
+        "default": "0.125",
+    },
     "--upstream-dir": {
         "env": "Z7_GRU_UPSTREAM_DIR",
         "rationale": "Upstream scorer/runtime directory for score-aware training.",
@@ -294,6 +309,12 @@ def _resolve_smoke_config(args: argparse.Namespace) -> Z7GruPredictiveCodingConf
         stateful=_boolish(args.stateful),
         identity_predictor=_boolish(args.identity_predictor),
         beta_ib=float(args.beta_ib),
+        context_conditioning_mode=str(
+            getattr(args, "context_conditioning_mode", "none")
+        ),
+        context_affine_strength=float(
+            getattr(args, "context_affine_strength", "0.125")
+        ),
     )
 
 
@@ -311,6 +332,8 @@ def _nonidentity_probe_config(
         identity_predictor=False,
         beta_ib=cfg.beta_ib,
         num_pairs=cfg.num_pairs,
+        context_conditioning_mode=cfg.context_conditioning_mode,
+        context_affine_strength=cfg.context_affine_strength,
     )
 
 
@@ -341,6 +364,12 @@ def _resolve_full_config(args: argparse.Namespace) -> Z7GruPredictiveCodingConfi
         decoder_num_upsample_blocks=int(args.decoder_num_upsample_blocks),
         output_height=int(args.output_height),
         output_width=int(args.output_width),
+        context_conditioning_mode=str(
+            getattr(args, "context_conditioning_mode", "none")
+        ),
+        context_affine_strength=float(
+            getattr(args, "context_affine_strength", "0.125")
+        ),
     )
 
 
@@ -419,6 +448,7 @@ def _estimate_archive_bytes_proxy(
         int(
             (
                 int(params["predictor"])
+                + int(params.get("context_conditioner", 0))
                 + int(params["decoder"])
                 + int(params["latent_init"])
                 + int(params["residuals"])
@@ -479,6 +509,19 @@ def _build_archive_zip(
 
     archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
     archive_zip_path.write_bytes(_archive_zip_bytes(bin_bytes=bin_bytes, comment=comment))
+
+
+def _context_conditioner_state_dict(
+    model: Z7GruPredictiveCodingSubstrate,
+) -> dict[str, torch.Tensor]:
+    """Return the byte-closed context-conditioner stream for Z7PCWM1."""
+
+    if model.context_conditioner is None:
+        return {}
+    return {
+        key: value.detach().cpu()
+        for key, value in model.context_conditioner.state_dict().items()
+    }
 
 
 def _write_runtime(submission_dir: Path) -> None:
@@ -576,7 +619,7 @@ def _static_control_archive_pair(
         }
     )
     control_bytes = pack_archive(
-        {},
+        _context_conditioner_state_dict(model),
         model.decoder.state_dict(),
         {},
         model.latent_init.detach().cpu(),
@@ -687,6 +730,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "identity_predictor": cfg.identity_predictor,
             "beta_ib": cfg.beta_ib,
             "ego_source": args.ego_source,
+            "context_conditioning_mode": cfg.context_conditioning_mode,
+            "context_affine_strength": cfg.context_affine_strength,
         },
         "sanity_checks_passed": [
             "instantiation",
@@ -865,7 +910,7 @@ def _full_main(args: argparse.Namespace) -> int:
         "ready_for_paid_dispatch": False,
     }
     archive_bytes = pack_archive(
-        {},
+        _context_conditioner_state_dict(model),
         model.decoder.state_dict(),
         model.predictor.state_dict(),
         model.latent_init.detach().cpu(),

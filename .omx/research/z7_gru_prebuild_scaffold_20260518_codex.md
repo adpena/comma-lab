@@ -429,3 +429,62 @@ than plain predictive residual coding. The next optimized Z7 packet should
 compare recurrent latent residual baseline against context-conditioned decoder
 features and context-conditioned residual-symbol scales, under same archive
 bytes and paired axes.
+
+## Context-conditioned decoder branch
+
+The first distinct Z7 contextual-coding branch is now implemented as an opt-in
+runtime-consumed mode, not a cargo-cult label:
+
+```text
+--context-conditioning-mode none|latent_affine
+--context-affine-strength <float>
+```
+
+`none` preserves the prior Z7-GRU baseline. `latent_affine` computes the
+pre-residual recurrent prediction context, stores a tiny affine conditioner in
+the existing Z7PCWM1 encoder section, and applies that conditioner at inflate
+time before the Z6-compatible decoder consumes latents. Old archives default to
+`none`; context-conditioned archives fail closed if the conditioner state is
+missing.
+
+Code and tests:
+
+```text
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/architecture.py
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/archive.py
+src/tac/substrates/time_traveler_l5_z7_lstm_predictive_coding/inflate.py
+experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py
+scripts/remote_lane_substrate_time_traveler_l5_z7_lstm_predictive_coding.sh
+src/tac/tests/test_z7_lstm_predictive_coding_scaffold.py
+src/tac/tests/test_time_traveler_l5_z7_remote_driver.py
+```
+
+Local no-score artifact:
+
+```text
+experiments/results/z7_gru_context_affine_score_aware_smoke_codex_20260518T135435Z/
+archive_bin_bytes=6315
+archive_bin_sha256=350d5be5c78f71be617e2fd595cd4f346930911883dc26553d3720648a6b541e
+archive_zip_bytes=5450
+archive_zip_sha256=09bfa54ec5dea705b903d6086d71eb972142447ef0ec370f9d995bddf0a503ca
+context_conditioner_params=84
+loss_mode=score_aware
+final_loss=48.95578384399414 [local-trainer-timing advisory; not contest-CPU or contest-CUDA]
+inflate_verify_raw_sha256=e812787d006cf8e9ba53ae7e85889cabed511e09cde9113ecd5b316ba9cfb496
+static_control_archive_zip_sha256=ead3938bdc3046d785f5500c68710ec8dab1386220cd490c67eb2648e9c82b62
+same_archive_zip_bytes_as_recurrent=true
+static_control_raw_sha256=c16057501f0393b782eeb9d60bd9a670c1f0f50fe98194e618ef5034b6167a3b
+runtime_output_changed_vs_recurrent=true
+runtime_output_byte_differences_vs_recurrent=1056252
+score_claim=false
+promotion_eligible=false
+ready_for_paid_dispatch=false
+```
+
+Adversarial interpretation: this proves a byte-closed contextual decoder
+mechanism exists and is consumed by runtime. It does not prove that contextual
+coding lowers the contest score, because the packet is one pair, local CPU,
+small-resolution, and not exact-evaled. The next independent-design step is to
+compare `none`, `latent_affine`, and a future entropy-scale/residual-symbol
+context mode under the same archive bytes, then promote only through paired
+exact CPU/CUDA artifacts.
