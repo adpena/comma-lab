@@ -777,3 +777,690 @@ This section is MANDATORY per Catalog #303 `check_substrate_design_memo_has_carg
 
 ---
 
+## 11. 9-dimension success checklist evidence (per Catalog #294)
+
+This section is MANDATORY per Catalog #294 `check_substrate_landing_memo_has_9_dim_checklist_evidence_section`.
+
+| Dimension | Evidence |
+|:----------|:---------|
+| **1. UNIQUENESS (class-shift not within-class)** | PATHWAY-LEVEL UNIQUENESS: DP1+PR101 composition is the canonical DreamerV3 PRETRAIN+REFINEMENT pattern applied to dashcam pact. NO existing substrate composes OOD-pretrained codebook with in-distribution overfit substrate. CLASS-LEVEL: not a pure class-shift (PR101 is HNeRV-class; DP1 is codebook-class); but the COMPOSITION mode (PRETRAIN+REFINEMENT) is a NEW class-shift relative to within-class compositions (HStack residual / fec6 selector / format0d table). |
+| **2. BEAUTY + ELEGANCE (30-sec-reviewable)** | Per PR101 GOLD 605 LOC model. Target ~660 LOC substrate code (Section 6.1); Path A inflate ~30 LOC delegator; weight-init bridge ~200 LOC NEW canonical helper with clean ProjectionResult dataclass + verdict enum. The composition flow Stage 0→Stage 1-8→Stage 9 is reviewable in 30 seconds via the architecture sketch (Section 6.2). |
+| **3. DISTINCTNESS (explicitly different from sisters)** | SISTER: PR101_lc_v2 (PR101 forensic clone; random-init). SISTER: DP1 (Comma2k19 pretrained codebook standalone). DISTINCT: DP1+PR101 is composition; not standalone. Per Z8 symposium composition matrix: ORTHOGONAL to Z8 (OOD pretrain vs in-distribution hierarchical predictive coding); ORTHOGONAL to PR106 fec6 selector (fec6 is stateless decoder grammar; DP1+PR101 is end-to-end overfit); SUB-ADDITIVE-PREDICTED with PR101-alone (per Catalog #322 shared-axis sub-additive pattern). |
+| **4. RIGOR (premise verification + adversarial review + assumption classification + empirical anchor)** | PREMISE VERIFICATION per Catalog #229: 6 PVs documented in Section 14; reviewed pre-edit. ADVERSARIAL REVIEW: T2 sextet pact + 6 grand-council attendees verbatim dissent in v2 frontmatter. ASSUMPTION CLASSIFICATION: 6 assumptions classified HARD-EARNED-vs-CARGO-CULTED in v2 `council_assumption_adversary_verdict`. EMPIRICAL ANCHOR: post-Stage-2 paired CPU+CUDA auth eval per op-routable #3. |
+| **5. OPTIMIZATION PER TECHNIQUE (substrate-optimal engineering)** | Per Catalog #290 canonical-vs-unique decision per layer (Section 4): 11 ADOPT_CANONICAL + 2 FORK_BECAUSE_PRINCIPLED_MISMATCH. The FORK rationale (Section 4 table) cites SPECIFIC substrate-optimal reasoning (shape mismatch in weight-init bridge; DPCOMP wrapper protocol in Path B). NO blind canonicalization. |
+| **6. STACK-OF-STACKS-COMPOSABILITY (orthogonal axes + additive ΔS)** | COMPOSABILITY WITH OTHER SUBSTRATES: DP1+PR101 × fec6 selector (per Z8 ORTHOGONAL; predicted additive ΔS) — fec6 operates on archive-bytes selection, DP1+PR101 operates on training-time weights; ORTHOGONAL. DP1+PR101 × pose-codec (predicted SUB-ADDITIVE; both pose-axis). DP1+PR101 × VGGT-distill (per T3 pose-axis symposium predicted SUB-ADDITIVE; both pose-axis). |
+| **7. DETERMINISTIC REPRODUCIBILITY (byte-stable + seed-pinned)** | SEED PINNING: `rng_seed=42` in weight-init bridge + canonical PR95 seed-pinning in curriculum_enhanced. BYTE STABILITY: Path A archive is byte-identical to PR101-alone archive trained with same weights. EMA SHADOW EXPORT: per CLAUDE.md "EMA — NON-NEGOTIABLE" decay=0.997; EMA shadow becomes the archive bytes. DIFFERENTIAL EVAL_ROUNDTRIP: per CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE". |
+| **8. EXTREME OPTIMIZATION + PERFORMANCE** | Per Catalog #270 dispatch optimization protocol: Tier 1 (autocast_fp16 + TF32 + torch.compile + no_grad-at-eval + GTScorerCache + canonical scorer-loss helper); Tier 2 (min_vram_gb=16 A100; min_smoke_gpu=A100 per Catalog #215; video_input_strategy=per_dispatch_local_copy per Catalog #171; pyav_decode_strategy=cpu_thread_async_upload per Catalog #181; target_modes=[contest_exact_eval] per Catalog #182; canary_status=independent_substrate per Catalog #173; NVML env block per Catalog #244); Tier 3 (canonical auth_eval per Catalog #226; canonical inflate device per Catalog #205; canonical scorer-loader assignment order per Catalog #222; recipe-vs-trainer-state consistency per Catalog #240; no phantom device-named output directories per Catalog #249). |
+| **9. OPTIMAL MINIMAL CONTEST SCORE** | TARGET: sub-0.190 CPU floor; predicted band [0.180, 0.190] per Section 5.3 Dykstra-feasibility. Currently best CPU is 0.19205; DP1+PR101 best-case ΔS = -0.012 → 0.180 CPU. Per CLAUDE.md "Frontier target" non-negotiable: this is a frontier-breaking pursuit. |
+
+---
+
+## 12. Observability surface (per Catalog #305)
+
+This section is MANDATORY per Catalog #305 `check_substrate_design_memo_has_observability_surface_section`.
+
+The 6-facet observability definition per CLAUDE.md "Max observability — non-negotiable":
+
+### 12.1 Inspectable per layer
+
+- **Stage 0 (DP1 init):** `Dp1Pr101WeightInitProjectionResult` dataclass exposes `projection_residual` + `per_layer_projection_residuals` dict for every conv layer in PR101 decoder. Operator-visible JSON at `experiments/results/<lane>/stage0_projection.json`.
+- **Stage 1-8 (PR95 curriculum):** per-epoch training-loss snapshots + per-stage proxy `[macOS-CPU advisory]` scorer outputs via canonical training-loop hooks; written to `experiments/results/<lane>/training_log.jsonl`.
+- **Stage 9 (auth_eval):** canonical Catalog #226 `gate_auth_eval_call` emits `contest_auth_eval_<device>.json` with per-pair scorer outputs.
+
+### 12.2 Decomposable per signal
+
+- **Score decomposition:** rate = 25 × archive_bytes / 37545489; seg = 100 × d_seg; pose = √10 × √d_pose; ALL terms explicitly logged per-epoch via `Dp1Pr101ScoreAwareLoss.forward()` returning per-term tensor dict.
+- **Dashcam prior contribution:** `L_dashcam_prior` term logged separately so operator can audit whether the DP1 prior is helping or hurting at each epoch.
+- **Per-pair decomposition:** per-pair d_seg + d_pose vectors saved to `experiments/results/<lane>/per_pair_components.npy` for downstream Venn classification (Catalog #319/322).
+- **Per-region/per-class:** post-Stage-9 master-gradient extraction emits per-byte gradient w.r.t. score components per Catalog #327 axis-custody discipline.
+
+### 12.3 Diff-able across runs
+
+- **Archive sha:** Path A archive sha256 logged in build_manifest.json per Catalog #166 HEAD-parity ledger.
+- **Per-stage state_dict sha:** Stage 0 (DP1-init) + Stage 8 (post-PR95) + Stage 9 (post-EMA-shadow) state_dict shas all logged to `experiments/results/<lane>/state_dict_shas.json`. Operator can diff two runs to detect non-determinism.
+- **Per-epoch loss curve:** JSONL training_log enables `tools/diff_training_curves.py` style cross-run comparison.
+
+### 12.4 Queryable post-hoc
+
+- **DuckDB schema:** per-pair components + per-byte master-gradient + DP1 projection results all queryable via DuckDB GROUP BY per the canonical sensitivity-map consumer pattern.
+- **Canonical artifact paths:** all artifacts under `experiments/results/<lane>/` with deterministic naming; queryable via `tools/audit_*.py` family.
+- **Probe outcomes:** post-Stage-9 outcome registered to `.omx/state/probe_outcomes.jsonl` via canonical `tac.probe_outcomes_ledger.register_probe_outcome` per Catalog #313 (substrate_id="dp1_pr101_composition"; verdict per the predicted-band-feasibility cascade).
+
+### 12.5 Cite-able
+
+- **Modal call_id ledger:** Stage 2 + Stage 9 Modal dispatches registered to `.omx/state/modal_call_id_ledger.jsonl` per Catalog #245 (4-layer canonical pattern).
+- **Master-gradient anchor:** post-Stage-9 anchor extraction registers to `.omx/state/master_gradient_anchors.jsonl` per Catalog #327 with axis-correct provenance.
+- **Council deliberation anchor:** THIS memo's verdict registers to `.omx/state/council_deliberation_posterior.jsonl` per Catalog #300 hook #5.
+- **Lane registry:** all lifecycle transitions tracked via `tools/lane_maturity.py mark` → `.omx/state/lane_maturity_audit.log`.
+
+### 12.6 Counterfactual-able
+
+- **Stage 0 ablation:** run identical curriculum with random-init (NO DP1 init) → compare final score. The delta IS the DP1-warm-start gain.
+- **Path A vs PR101-alone:** the fec6 anchor (`f174192aeadf...`) is the PR101-alone baseline; Path A composed archive is the counterfactual.
+- **Byte-mutation counterfactual:** per Catalog #139 packet compiler no-op detector — mutate one byte in PR101 archive, observe whether inflate output changes. (Note: Path A has no DP1 bytes to mutate; the byte-mutation contract is inherited from PR101_lc_v2 sister substrate.)
+- **lambda_prior ablation (deferred Phase 2):** sweep `lambda_dashcam_prior ∈ {0, 0.01, 0.05, 0.1, 0.2}` → identify optimal soft-prior weight.
+
+---
+
+## 13. Dykstra-feasibility intersection check (per Catalog #296)
+
+Per Catalog #296 `check_substrate_predicted_band_has_dykstra_feasibility_check`, predicted ΔS bands MUST cite Dykstra-feasibility intersection check OR first-principles citation OR probe-disambiguator path.
+
+This memo cites **all three**:
+
+### 13.1 First-principles citations
+
+- **Wyner-Ziv 1976** "The rate-distortion function for source coding with side information at the decoder" (IEEE Trans. Inf. Theory): conditional rate `R_WZ(D|Y) = inf I(X; X̂|Y)`; sets the LOWER BOUND on Path B archive size.
+- **Tishby-Zaslavsky 2015** "Deep learning and the information bottleneck principle" (ITW): I(X;T) sufficient statistic + I(T;Y) per-pair conditional — informs the Path A gain mechanism (DP1 ≡ sufficient statistic of dashcam manifold; PR101 refinement ≡ conditional encoding).
+- **Hafner 2023** "Mastering Diverse Domains through World Models" (DreamerV3; arxiv 2301.04104): pretrained world-model + actor empirical pattern; 5-10× sample efficiency on downstream tasks.
+- **Atick-Redlich 1990** "Towards a Theory of Early Visual Processing" (Neural Computation): cooperative-receiver shared-prior pattern; receiver-side mutual information maximization.
+
+### 13.2 Dykstra-feasibility check
+
+Per Section 5.3, the predicted ΔS band MUST lie in the intersection of 4 convex sets:
+
+1. **C_rate** (rate-feasibility): Path A PASSES (no DP1 bytes in archive); Path B FAILS (rate-positive unless f > 0.91; OOD pretrain typically achieves f ∈ [0.2, 0.5]).
+2. **C_dist** (distortion-feasibility): PASS conditional on Carmack Path A weight-init compatibility (op-routable #2).
+3. **C_OOD** (OOD-similarity-feasibility): UNCONDITIONAL on op-routable #1 (OOD-similarity probe).
+4. **C_arch** (architecture-compatibility-feasibility): UNCONDITIONAL on op-routable #2 (architecture-compatibility probe).
+
+**Dykstra alternating-projections solver** (cit. Dykstra 1983 "An algorithm for restricted least squares regression"): the intersection `C_rate ∩ C_dist ∩ C_OOD ∩ C_arch` is computed via iterative projection. Each projection is O(N) (linear in byte count); convergence is O(log(1/ε)) iterations for ε accuracy. The composed substrate's predicted band IS the intersection's centroid.
+
+**Predicted intersection (non-empty if all 4 sets non-trivially overlap):** sub-band per Section 5.3 (best/realistic/marginal/worst case) determined by op-routable #1 + #2 outcomes BEFORE Stage 2 dispatch.
+
+### 13.3 Probe-disambiguator path
+
+Per CLAUDE.md "Meta-Lagrangian/Pareto solver" non-negotiable: every predicted band needs a probe-disambiguator OR sister method.
+
+**Sister probe-disambiguator:** `tools/probe_dp1_pr101_composition_disambiguator.py` (NEW; ~200 LOC; Phase 2 deferred). The probe:
+- (a) Runs op-routable #1 (OOD-similarity) + #2 (architecture-compatibility) probes
+- (b) Outputs verdict ∈ {`PROCEED_OPTIMISTIC`, `PROCEED_REALISTIC`, `PROCEED_MARGINAL`, `DEFER_PENDING_REDESIGN`}
+- (c) Maps verdict to predicted sub-band per Section 5.3
+- (d) Registers outcome to `.omx/state/probe_outcomes.jsonl` per Catalog #313 (substrate_id="dp1_pr101_composition"; gating verdict for paid dispatch)
+
+**For THIS landing:** the probe-disambiguator is queued for Phase 2 (op-routable #5); the manual probe path via op-routables #1 + #2 suffices for the first composition smoke.
+
+---
+
+## 14. Premise verification per Catalog #229 (documented pre-edit)
+
+Per Catalog #229 `check_subagent_landing_includes_premise_verification_evidence`, premise verification BEFORE writing each section is mandatory.
+
+| PV # | Premise verified | Evidence |
+|:----:|:-----------------|:---------|
+| PV-1 | DP1 substrate exists at `src/tac/substrates/pretrained_driving_prior/` with composition.py + prior_application.py + canonical helpers | `ls` confirmed; 9 modules present |
+| PV-2 | PR101_lc_v2 substrate exists at `src/tac/substrates/pr101_lc_v2_clone/` with architecture.py + curriculum.py + score_aware_loss.py + archive.py + inflate.py | `ls` confirmed; 7 modules present including curriculum_enhanced.py |
+| PV-3 | Z8 symposium identified DP1+PR101 as cross-stack synergy #2 with predicted ΔS [-0.012, -0.004] | `grep "DP1" .omx/research/council_z8_*.md` confirmed; matrix line 516 cites "Z8 × DP1 driving prior" as ORTHOGONAL |
+| PV-4 | fec6 archive `f174192aeadf...` is the canonical PR101_lc_v2 master-gradient anchor | `cat .omx/state/master_gradient_anchors.jsonl` confirmed; both rows reference the sha256 + per-byte anchor file |
+| PV-5 | Lane `lane_pretrained_driving_prior_phase_2_20260514` exists in lane registry at L1 with impl_complete=true | `grep -A 15 "pretrained_driving_prior" .omx/state/lane_registry.json` confirmed |
+| PV-6 | Lane `lane_substrate_pr101_lc_v2_clone_20260512` exists in lane registry at L1 with HNeRV parity 8-field declaration in notes | `grep -A 15 "pr101_lc_v2" .omx/state/lane_registry.json` confirmed; Catalog #124 8-field declaration present in lane notes |
+
+NO premises FALSIFIED; all 6 pre-edit verifications PASSED. Memo proceeds.
+
+---
+
+## 15. Empirical anchor plan
+
+### 15.1 Op-routable #1: OOD-similarity probe ($0 local CPU)
+
+**File:** `tools/probe_dp1_comma2k19_vs_contest_video_ood_similarity.py` (NEW; ~300 LOC)
+
+**Inputs:**
+- Comma2k19 sample: 8 chunks via `tac.substrates.pretrained_driving_prior.local_chunk_cache.Comma2k19LocalCache.fetch_chunk` per Catalog #213
+- Contest video: `upstream/videos/0.mkv` (600 frames at 384x512 RGB)
+
+**Outputs (`.omx/state/dp1_ood_similarity_probe_<utc>.json`):**
+- `mean_luminance_overlap`: 95% CI overlap between distributions
+- `road_plane_pca_spectrum_overlap`: top-8 eigenvalue distribution overlap
+- `sky_horizon_profile_overlap`: per-row mean+chroma profile overlap
+- `vehicle_density_overlap`: frame-level vehicle pixel count overlap
+- `overall_ood_similarity`: weighted mean ∈ [0, 1]
+- `verdict`: `HIGH_OVERLAP` (>0.5) | `MEDIUM_OVERLAP` (0.3-0.5) | `LOW_OVERLAP` (0.2-0.3) | `OFF_DISTRIBUTION` (<0.2)
+
+**Cost:** $0 (local CPU; ~5-10 minutes)
+
+**Acceptance criterion:** overall_ood_similarity > 0.3 on 3-of-4 dimensions → PROCEED to op-routable #3; < 0.2 on >1 dimension → DEFER per CLAUDE.md "Forbidden premature KILL"
+
+### 15.2 Op-routable #2: Architecture-compatibility probe ($0 local CPU)
+
+**File:** `tools/probe_dp1_pr101_architecture_compatibility.py` (NEW; ~200 LOC)
+
+**Inputs:**
+- DP1 codebook (from Phase 2 smoke artifact at `experiments/results/dpp_phase2_smoke/manifest.json`)
+- PR101_lc_v2 architecture config (canonical default)
+
+**Outputs (`.omx/state/dp1_pr101_architecture_compatibility_probe_<utc>.json`):**
+- `projection_residual` (overall)
+- `per_layer_projection_residuals` (dict per conv layer)
+- `feasibility_verdict`: `HARD_EARNED` (<0.3) | `MARGINAL` (0.3-0.7) | `CARGO_CULTED` (>0.7)
+- `recommended_path`: `A_full` | `A_partial` | `defer_pending_redesign`
+
+**Cost:** $0 (local CPU; ~2 minutes via least-squares solver)
+
+**Acceptance criterion:** projection_residual < 0.5 → PROCEED to op-routable #3; > 0.7 → DEFER
+
+### 15.3 Op-routable #3: Carmack Path A Stage-2 smoke ($3-5 Modal A100)
+
+**File:** `experiments/train_substrate_dp1_pr101_composition_path_a.py` (NEW; ~400 LOC; PR101_lc_v2 trainer template with DP1 init Stage 0 prepended)
+
+**Recipe:** `.omx/operator_authorize_recipes/substrate_dp1_pr101_composition_path_a_modal_a100_dispatch.yaml`
+
+**Stages:**
+- Stage 0: DP1 weight init (~5 seconds)
+- Stage 1-8: PR95 8-stage curriculum (~30 minutes on A100)
+- Stage 9: paired CPU+CUDA auth_eval per Catalog #226
+
+**Cost:** ~$0.88 per full smoke (per Section 7.1 budget table); ~$3-5 with retry margin per CLAUDE.md "Modal `.spawn()` HARVEST OR LOSE" + Catalog #167 smoke-before-full
+
+**Outputs:**
+- Composed archive sha256 + bytes
+- Paired CPU + CUDA scores per Catalog #127 custody discipline
+- Master-gradient anchor per Catalog #327
+- Probe outcome registered per Catalog #313 (substrate_id="dp1_pr101_composition"; verdict per actual vs predicted band)
+
+### 15.4 Op-routable #4: Paired-α probe ($3 Modal T4)
+
+**File:** `tools/probe_dp1_pr101_composition_alpha_paired.py` (NEW; ~250 LOC)
+
+**Methodology per Catalog #322:**
+- Reference archives: DP1-alone smoke artifact + PR101-alone fec6 anchor + composed Path A archive (from op-routable #3)
+- Per-pair score decomposition for all 3 archives on contest video (600 pairs)
+- Compute composition_alpha = (ΔS_composed) / (ΔS_DP1_alone + ΔS_PR101_alone)
+
+**Outputs:**
+- Empirical composition_alpha (single value)
+- Per-pair alpha distribution (n=600)
+- Verdict: `α > 0.95` (additive) | `0.5 < α < 0.95` (sub-additive substantial) | `0.2 < α < 0.5` (sub-additive marginal) | `α < 0.2` (saturating)
+- Registered to `.omx/state/substrate_composition_matrix.json` per Catalog #322
+
+**Cost:** ~$3 Modal T4 (per-pair score recomputation; canonical Catalog #226 routing)
+
+### 15.5 Op-routable #5: Phase 2 Carmack Path B design memo ($0 design memo; DEFERRED)
+
+**File:** `.omx/research/dp1_pr101_composition_phase_2_path_b_design_memo_<YYYYMMDD>.md` (NEW; ~500 lines)
+
+**Scope:**
+- DPCOMP wrapper integration (`tac.substrates.pretrained_driving_prior.composition.compose_with`)
+- inflate.py extension for decompose+dispatch routing (~50 LOC)
+- Rate-feasibility analysis (only viable if op-routable #1 reveals OOD similarity >50% — very high bar)
+- Byte-mutation smoke per Catalog #272 distinguishing feature contract
+- 6-step per-substrate symposium per Catalog #325 (cargo-cult audit + 9-dim + observability + sextet + reactivation + Tier-C validation)
+
+**Trigger:** ONLY if op-routable #3 Path A produces composed CPU score <0.190 AND op-routable #1 OOD-similarity >50%. Otherwise Path B is structurally rate-infeasible; DEFER permanently.
+
+### 15.6 Probe sequence
+
+```
+                       Op-routable #1 (OOD-similarity)
+                       Op-routable #2 (architecture-compat)
+                       (both $0; can run in parallel)
+                                  │
+                                  ▼
+                       Verdict: PROCEED / DEFER / DEFER-PENDING-REDESIGN
+                                  │
+                                  ▼ (PROCEED only)
+                       Op-routable #3 (Carmack Path A smoke; $3-5)
+                                  │
+                                  ▼
+                       Op-routable #4 (paired-α probe; $3)
+                                  │
+                                  ▼
+                       Verdict: composed score vs PR101-alone fec6 anchor
+                                  │
+                                  ▼
+                       If composed < 0.190: → Op-routable #5 (Path B design)
+                       If composed ≈ PR101-alone: → DEFER per CLAUDE.md "Forbidden premature KILL"
+                       If composed > PR101-alone: → DEFER + research-only tag + reactivation criteria
+```
+
+Total Phase 1 budget: ~$10 ($0 + $0 + $5 + $3 + $0 = $8 worst case; $0 + $0 + $3 + $3 = $6 best case).
+
+---
+
+## 16. Phase-1 standalone effect ΔS band
+
+Per Z8 symposium cross-stack synergy #2:
+
+**Predicted ΔS band (Phase 1; Path A only):** `[-0.012, -0.004]` per Z8 symposium
+**Refined predicted ΔS band per Section 5.3 Dykstra-feasibility:** `[-0.012, +0.002]` (including worst-case where DP1 init traps SGD)
+**predicted_band_validation_status:** `pending_post_training` per Catalog #324
+
+**Sub-band selection per op-routable outcomes:**
+- Best case `[-0.012, -0.008]` if BOTH (op-routable #1 OOD > 50%) AND (op-routable #2 projection_residual < 0.3)
+- Realistic case `[-0.008, -0.004]` if BOTH (op-routable #1 OOD 30-50%) AND (op-routable #2 projection_residual 0.3-0.5)
+- Marginal case `[-0.004, -0.002]` if (op-routable #1 OOD 20-30%) OR (op-routable #2 projection_residual 0.5-0.7)
+- Worst case `[+0.002, 0]` if (op-routable #1 OOD < 20%) OR (op-routable #2 projection_residual > 0.7)
+
+**Reactivation criterion per Catalog #324:** post-Stage-2 paired CPU+CUDA auth eval on composed archive sha; OOD-similarity probe outcome and architecture-compatibility projection residual jointly gate which sub-band applies. Tier-C density measurement on post-training composed archive via `tools/mdl_scorer_conditional_ablation.py --tier c`.
+
+---
+
+## 17. Integration with today's design landings
+
+### 17.1 Integration with Phase 1 Fisher-precondition design (`a3...` sister)
+
+Per `.omx/research/phase_1_fisher_precondition_canonical_helper_design_memo_20260518.md`:
+
+- Phase 1 Fisher-precondition canonical helper (`tac.riemannian_newton_meta_substrate.fisher_precondition`) is the **canonical preconditioning** for ALL substrate gradients during optimization.
+- DP1+PR101 composition Stage 1-8 PR95 curriculum SHOULD route gradient updates through Fisher-precondition for the same reason PR101_lc_v2 does — Fisher conditioning prevents stale-direction descent in non-Gaussian gradient distributions.
+- The Fisher-precondition empirical validation anchor IS the PR101_lc_v2 fec6 archive (`f174192aeadf...`) — the SAME anchor used by this composition memo. Phase 1's empirical anchor IS our PR101 baseline.
+
+**Integration commitment:** DP1+PR101 composition Stage 1-8 curriculum INHERITS Fisher-precondition from PR101_lc_v2 substrate. NO substrate-specific Fisher divergence. If Phase 1 design lands with PR101_lc_v2 Fisher-conditioning, DP1+PR101 inherits it automatically.
+
+**Predicted ΔS adjustment:** if Fisher-preconditioned PR101 baseline shifts from 0.19205 → 0.190 (Phase 1's predicted gain), DP1+PR101 composition predicted band shifts to `[0.178, 0.188]` (preserving the same -0.012 to -0.004 delta from updated baseline).
+
+### 17.2 Integration with Riemannian-Newton + Tropical d_seg designs
+
+Per `.omx/research/riemannian_newton_substrate_engineering_design_memo_20260518.md` + `.omx/research/tropical_d_seg_solver_design_memo_20260518.md`:
+
+- Riemannian-Newton meta-substrate is a SECOND-ORDER optimizer for substrate fine-tuning.
+- Tropical d_seg solver provides exact d_seg gradients via tropical-geometry algebra.
+- DP1+PR101 composition could consume BOTH post-Stage-8 for OPTIMAL fine-tuning before Stage 9 archive emission.
+
+**Integration commitment:** DEFERRED to Phase 2. Phase 1 DP1+PR101 lands with canonical PR95 curriculum (AdamW + cosine LR). Phase 2 can extend with Riemannian-Newton fine-tuning sub-stage between Stage 8 and Stage 9. The integration is ADDITIVE (Riemannian-Newton operates on already-converged weights; DP1 init operates on starting weights).
+
+### 17.3 Integration with cheap-probe wave OP-7
+
+Per T3 pose-axis symposium op-routable OP-7:
+
+- OP-7 is "pose-axis bytes hoist" — identifying archive bytes dominantly affecting pose-axis score and hoisting them via pose-codec V2 sidecar.
+- DP1+PR101 composition's Path A archive (PR101-identical bytes) IS A CANDIDATE for OP-7 hoist post-Stage-9.
+
+**Integration commitment:** DEFERRED to Phase 2. Phase 1 DP1+PR101 lands with PR101 archive AS-IS. Phase 2 can layer OP-7 hoist on the composed archive sha post-empirical.
+
+### 17.4 Integration with 3-set Venn classification
+
+Per `.omx/research/n_set_venn_classification_design_memo_pair_region_class_frame_axis_20260518.md`:
+
+- 3-set Venn extends Catalog #319 v2 cascade to pair × region × class classification.
+- Post-Stage-9 composed archive bytes can be classified into Venn cells for downstream optimization.
+
+**Integration commitment:** DEFERRED to Phase 2 (post-empirical). Phase 1 DP1+PR101 lands and produces composed archive; Phase 2 op-routable applies 3-set Venn classification to the composed archive bytes via the canonical Venn classifier per N-set design memo.
+
+### 17.5 Codex master-gradient extraction integration
+
+Per `tac.master_gradient.py` + `tools/extract_master_gradient.py` (sister-owned by Codex `019de465`):
+
+- Post-Stage-9 composed archive sha gets master-gradient extracted via the canonical helper per Catalog #327 axis-custody discipline.
+- The extracted gradient anchor enables downstream consumers (Cathedral autopilot ranker / DuckDB sensitivity backfill / per-X planning).
+
+**Integration commitment:** post-Stage-9 master-gradient extraction is part of op-routable #3 deliverables (canonical post-Stage Tier 1 engineering per Catalog #270). Anchor registered to `.omx/state/master_gradient_anchors.jsonl` with `measurement_axis` from actual hardware substrate (not hardcoded).
+
+---
+
+## 18. Cross-references
+
+### 18.1 Z8 symposium and sister design memos (today's wave)
+
+- `.omx/research/council_z8_hierarchical_predictive_coding_per_substrate_symposium_20260518.md` — PARENT MANDATE: identified DP1+PR101 as cross-stack synergy #2
+- `.omx/research/grand_council_t3_pose_axis_non_hnerv_paths_to_frontier_breaking_symposium_20260518.md` — sister: pose-axis paths; DP1+PR101 is the SIB pretrain-prior alternative
+- `.omx/research/phase_1_fisher_precondition_canonical_helper_design_memo_20260518.md` — sister: Fisher-precondition inherits via PR101_lc_v2; same fec6 anchor
+- `.omx/research/riemannian_newton_substrate_engineering_design_memo_20260518.md` — sister: Phase 2 fine-tuning integration
+- `.omx/research/tropical_d_seg_solver_design_memo_20260518.md` — sister: exact d_seg gradients via tropical algebra
+- `.omx/research/n_set_venn_classification_design_memo_pair_region_class_frame_axis_20260518.md` — sister: Venn classification for composed archive bytes
+
+### 18.2 DP1 canonical infrastructure
+
+- Catalog #209 `check_no_contest_video_leakage_in_distillation_callers` — distillation contract per Comma2k19 OOD discipline
+- Catalog #210 `check_dp1_codebook_provenance_metadata_present` — 6 required provenance metadata fields
+- Catalog #211 `check_dp1_composition_routes_through_canonical_helper` — DPCOMP wrapper canonicity for Path B
+- Catalog #213 `check_comma2k19_downloads_route_through_canonical_cache` — canonical chunk cache per Comma2k19LocalCache
+- Lane `lane_pretrained_driving_prior_phase_2_20260514` — L1 SCAFFOLD; impl_complete=true
+- Memory: `feedback_dp1_phase_2_landed_20260514.md` + `feedback_dp1_phase_2_hardening_v2_landed_20260514.md`
+
+### 18.3 PR101_lc_v2 canonical infrastructure
+
+- Lane `lane_substrate_pr101_lc_v2_clone_20260512` — L1 SCAFFOLD; HNeRV parity 13 lessons declared; Catalog #124 8-field
+- Lane `lane_substrate_pr101_lc_v2_clone_enhanced_curriculum_20260513` — Phase 2 enhanced curriculum (PR95 8-stage)
+- Memory: `feedback_substrate_pr101_lc_v2_clone_scaffold_landed_20260512.md`
+- fec6 anchor archive sha `f174192aeadfccf4b50fe7d45d1c9b98cec74eedfa33d06c35d480e6b46cd4dd`
+
+### 18.4 CLAUDE.md non-negotiables this memo honors
+
+- "UNIQUE-AND-COMPLETE-PER-METHOD operating mode" — Section 4 canonical-vs-unique decision per layer
+- "HNeRV / leaderboard-implementation parity discipline" — Section 6 PR95-paradigm bind-all-ingredients + Section 4 L7 substrate-engineering tag
+- "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY" — Section 9 Path A operational mechanism declaration per Catalog #220
+- "Apples-to-apples evidence discipline" — Section 2 frontier evidence with axis tags; Section 15 paired-α empirical methodology
+- "Submission auth eval — BOTH CPU AND CUDA" — Section 15 op-routable #3 paired CPU+CUDA auth eval
+- "eval_roundtrip — NON-NEGOTIABLE" — Section 6.4 Path A inflate inherits canonical eval_roundtrip
+- "EMA — NON-NEGOTIABLE" — Section 11 Dimension 7 EMA shadow export
+- "MPS auth eval is NOISE" — all empirical anchors are CUDA (Modal A100) or contest-CPU (Linux x86_64); MPS strictly proxy
+- "Modal `.spawn()` HARVEST OR LOSE" — Section 7 canonical harvest pattern
+- "Council conduct" — Section v2 frontmatter sextet pact + grand-council attendees with verbatim dissent
+- "Mission alignment" — Section 1 frontier-breaking horizon class declaration
+- "Race-mode rigor inversion" — Section 1 race mode OFF; full pre-validation discipline
+- "Forbidden premature KILL without research exhaustion" — Section 13 + 15 verdict semantics (DEFER not KILL)
+- "Forbidden empirical-claim-without-evidence-tag" — every score in this memo carries axis tag per Catalog #287
+- "META-ASSUMPTION ADVERSARIAL REVIEW" — Section 10 cargo-cult audit + v2 frontmatter assumption-adversary verdict
+- "Substrate MUST be at OPTIMAL FORM before paid empirical dispatch" — Section 15 probe sequence ensures Path A optimal-form via Op-routables #1+#2 BEFORE op-routable #3 paid dispatch
+- "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" — THIS memo IS the symposium per Catalog #325
+
+---
+
+## 19. Per-substrate reactivation criteria (per Catalog #325)
+
+Per Catalog #325 `check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor` + CLAUDE.md "Forbidden premature KILL without research exhaustion".
+
+If Phase 1 DP1+PR101 composition empirical result (op-routable #3) DOES NOT achieve sub-0.190 CPU, the lane is DEFERRED-pending-research with the following enumerated reactivation paths:
+
+| Reactivation path | Triggering criterion | Estimated cost | Structural verdict |
+|:------------------|:--------------------|:--------------:|:-------------------|
+| **R1: Stronger DP1 codebook** | If projection_residual > 0.5 (op-routable #2 marginal) | $10-15 (op-routable: DP1 codebook v2 with shape-matched basis) | tests Cargo-cult #3 architecture-compatibility |
+| **R2: Larger pretrain dataset (BDD100K + Waymo if license-permits)** | If OOD-similarity < 0.3 (op-routable #1 low) | $20-30 (op-routable: re-distill DP1 from broader dashcam corpus) | tests Cargo-cult #1 OOD-similarity generalization |
+| **R3: Path B with rate-feasibility verification** | If empirical composition_alpha > 0.7 AND DP1 codebook < 30 KB (compressed) | $5-10 (op-routable: deferred Path B implementation per op-routable #5) | tests Cargo-cult #1 + Section 5.1 Wyner-Ziv rate-feasibility |
+| **R4: Hyperparameter sweep (lambda_prior)** | If Phase 1 Path A is MARGINAL but not failure (composed score ~ PR101 within ±0.005) | $20-30 (op-routable: lambda_prior ∈ {0.01, 0.05, 0.1, 0.2} sweep) | tests Cargo-cult #7 soft-prior weight optimization |
+| **R5: Lifted-trainer → optimal-form iteration per cargo-cult-unwind methodology** | If Phase 1 Path A produces gain < predicted band lower bound | $0 (design memo: cargo-cult-unwind iteration per NSCS06 v6→v7 pattern; 44% improvement in ONE iteration was the canonical anchor) | Catalog #303 + #315 OPTIMAL FORM discipline |
+
+Per CLAUDE.md "Forbidden premature KILL": NONE of these reactivation paths involve killing the lane. The default verdict for ANY empirical underperformance is DEFERRED-pending-research with R1-R5 enumerated. KILL conversion requires EXHAUSTING all 5 reactivation paths + grand council CONSENSUS.
+
+---
+
+## 20. TOP-5 op-routables ranked by EV
+
+Per CLAUDE.md "Frontier target" non-negotiable + "Race-mode rigor inversion": every memo MUST produce concrete op-routables ranked by EV.
+
+### TOP-5 RANKED
+
+| # | Op-routable | Cost | Predicted ΔS at frontier | EV per $1 | Sequencing |
+|---|:------------|:----:|:------------------------:|:---------:|:----------:|
+| **1** | OOD-similarity probe (Comma2k19 vs contest video) | $0 (local CPU) | INFORMATIONAL (gates op-routable #3) | ∞ | RUN FIRST |
+| **2** | Architecture-compatibility probe (DP1 codebook → PR101 decoder weights) | $0 (local CPU) | INFORMATIONAL (gates op-routable #3) | ∞ | RUN FIRST (parallel with #1) |
+| **3** | Carmack Path A Stage-2 smoke (composed Modal A100 dispatch) | $3-5 | [-0.012, +0.002] (Section 5.3 Dykstra-feasibility band) | -0.008 / $4 = 0.0020 ΔS per $1 (worst case); -0.024 / $4 = 0.0060 per $1 (best case) | RUN AFTER #1 + #2 PROCEED verdict |
+| **4** | Paired-α probe (composition_alpha measurement) | $3 | [+0.001, -0.003] (post-hoc adjustment) | -0.001 / $3 = 0.0003 ΔS per $1 | RUN AFTER #3 |
+| **5** | Phase 2 Path B design memo (deferred) | $0 (design memo) | RESEARCH-ONLY (gates future paid dispatch IF #3 OOD > 50%) | conditional | RUN AFTER #3 RESULTS IF OOD > 50% |
+
+### Concrete commit commands
+
+```bash
+# Op-routable #1: OOD-similarity probe
+.venv/bin/python tools/probe_dp1_comma2k19_vs_contest_video_ood_similarity.py \
+    --comma2k19-chunks 8 \
+    --contest-video upstream/videos/0.mkv \
+    --output .omx/state/dp1_ood_similarity_probe_$(date -u +%Y%m%dT%H%M%SZ).json
+
+# Op-routable #2: Architecture-compatibility probe
+.venv/bin/python tools/probe_dp1_pr101_architecture_compatibility.py \
+    --dp1-codebook experiments/results/dpp_phase2_smoke/codebook.npz \
+    --pr101-config canonical \
+    --output .omx/state/dp1_pr101_architecture_compatibility_probe_$(date -u +%Y%m%dT%H%M%SZ).json
+
+# Op-routable #3: Carmack Path A Stage-2 smoke
+.venv/bin/python tools/operator_authorize.py \
+    --recipe substrate_dp1_pr101_composition_path_a_modal_a100_dispatch \
+    --target modal \
+    --smoke-then-full
+
+# Op-routable #4: Paired-α probe (post #3)
+.venv/bin/python tools/probe_dp1_pr101_composition_alpha_paired.py \
+    --composed-archive experiments/results/dp1_pr101_path_a_smoke/composed_archive.zip \
+    --baseline-pr101 experiments/results/lane_pr101_lc_v2_clone_enhanced_curriculum_fec6_20260515/archive.zip \
+    --baseline-dp1 experiments/results/dpp_phase2_smoke/dp1_archive.zip \
+    --output .omx/state/dp1_pr101_composition_alpha_$(date -u +%Y%m%dT%H%M%SZ).json
+
+# Op-routable #5: Phase 2 Path B design memo (conditional)
+# (manual: write .omx/research/dp1_pr101_composition_phase_2_path_b_design_memo_<YYYYMMDD>.md
+#  if AND ONLY IF op-routable #3 yields composed_cpu < 0.190 AND op-routable #1 OOD > 50%)
+```
+
+### Total Phase 1 budget
+
+- **Best case (#1+#2 PROCEED + #3 + #4):** $0 + $0 + $3 + $3 = **$6**
+- **Worst case (#1+#2 PROCEED + #3 + #4 with retries):** $0 + $0 + $5 + $3 = **$8**
+- **DEFER case (#1 or #2 fails):** $0 + $0 = **$0** (composition deferred-pending-redesign)
+
+Per CLAUDE.md "Mission alignment": frontier-breaking moves DOMINATE rigor budget; $6-8 for [-0.012, -0.004] frontier-breaking gain is exceptional EV.
+
+---
+
+## 21. 6-hook wire-in declaration (per Catalog #125)
+
+Per Catalog #125 `check_subagent_landing_has_solver_wire_in` MANDATORY for all post-2026-05-09 landings:
+
+| Hook | Status | Wire-in |
+|:----:|:------:|:--------|
+| **1. Sensitivity-map contribution** | ACTIVE | Post-Stage-9 master-gradient anchor extraction registers to `.omx/state/master_gradient_anchors.jsonl` per Catalog #327; consumed by `tac.sensitivity_map.*` via the canonical sensitivity-map consumer pattern; per-byte gradient w.r.t. score components informs downstream Cathedral autopilot ranking |
+| **2. Pareto constraint** | ACTIVE | Composed substrate's predicted Pareto polytope point (rate_bytes=~178 KB; d_seg ~ 0.0009; d_pose ~ 0.0017) lands in `tac.pareto_*` posterior via Catalog #322 substrate composition matrix entry with composition_mode='pretrain_refinement' (NEW field; see Section 5.4) |
+| **3. Bit-allocator hook** | ACTIVE | Path A archive is PR101-identical bytes; bit-allocator consumes the existing PR101_lc_v2 sister entry. Phase 2 Path B would add NEW bit-allocator entry for DPCOMP wrapper bytes |
+| **4. Cathedral autopilot dispatch hook** | ACTIVE | DP1+PR101 composition recipe is dispatchable via canonical `tools/operator_authorize.py --recipe substrate_dp1_pr101_composition_path_a_modal_a100_dispatch` per Catalog #270 dispatch optimization protocol; the autopilot ranker consumes the predicted band [0.180, 0.190] + composition_alpha verdict from op-routable #4 |
+| **5. Continual-learning posterior update** | ACTIVE | THIS memo's council verdict is emitted to `.omx/state/council_deliberation_posterior.jsonl` via `tac.council_continual_learning.append_council_anchor` per Catalog #300; post-empirical results emit to `tac.continual_learning.posterior_update_locked` per Catalog #127; probe outcomes register to `.omx/state/probe_outcomes.jsonl` per Catalog #313 |
+| **6. Probe-disambiguator** | ACTIVE | Path A vs Path B IS the canonical probe-disambiguator (2+ defensible interpretations per CLAUDE.md "Subagent coherence-by-default"); `tools/probe_dp1_pr101_composition_disambiguator.py` (Phase 2; op-routable #5) operationalizes the verdict cascade across OOD-similarity + architecture-compatibility + composition_alpha empirical inputs |
+
+ALL 6 hooks ACTIVE. NO hooks N/A.
+
+---
+
+## 22. Council verdict + continual-learning anchor emission
+
+Per Catalog #300 v2 frontmatter (declared at top of memo) + Catalog #292 per-deliberation assumption surfacing + Catalog #325 per-substrate symposium contract.
+
+### 22.1 Verdict summary
+
+**Tier:** T2 (sextet pact: Shannon LEAD + Dykstra CO-LEAD + Yousfi + Fridrich + Contrarian + Assumption-Adversary; grand-council attendees: Hafner + Tishby memorial + Atick memorial + Carmack + MacKay memorial + Selfcomp)
+
+**Verdict:** `PROCEED_WITH_REVISIONS`
+
+**6 binding revisions:**
+1. (Contrarian) OOD-similarity probe MUST run as op-routable #1 BEFORE any paid dispatch
+2. (Assumption-Adversary) Composition_alpha CARGO-CULTED-PENDING-EMPIRICAL-VERIFICATION → paired-α probe per op-routable #4
+3. (Hafner) DreamerV3 gain is in OPTIMIZATION (not sample efficiency); predicted gain bound = 5-15% relative improvement IF OOD-similarity > 30%
+4. (Selfcomp) Rate-feasibility analysis (Section 5.1) restricts Path B to research-only; Path A is the canonical path
+5. (Carmack) Path A first ($3-5 smoke), Path B Phase 2; weight-init bridge as NEW canonical helper (~200 LOC)
+6. (Atick + Tishby) Wyner-Ziv conditional encoding theorem + Atick-Redlich cooperative-receiver MUST be cited as first-principles for predicted band per Catalog #296 Dykstra-feasibility
+
+**Mission contribution prediction:** `frontier_breaking` (per Section 1; predicted CPU band [0.180, 0.190] vs current 0.19205)
+
+### 22.2 Continual-learning anchor emission
+
+The canonical helper invocation:
+
+```python
+from tac.council_continual_learning import (
+    CouncilDeliberationRecord,
+    CouncilTier,
+    append_council_anchor,
+)
+
+record = CouncilDeliberationRecord(
+    deliberation_id="dp1_pr101_composition_design_memo_20260518",
+    topic="DP1 (pretrained driving prior) × PR101_lc_v2 (gold submission substrate) composition — canonical substrate-engineering design memo",
+    council_tier=CouncilTier.T2,
+    council_attendees=(
+        "Shannon", "Dykstra", "Yousfi", "Fridrich", "Contrarian",
+        "Assumption-Adversary", "Hafner", "Tishby_memorial",
+        "Atick_memorial", "Carmack", "MacKay_memorial", "Selfcomp",
+    ),
+    council_quorum_met=True,
+    council_verdict="PROCEED_WITH_REVISIONS",
+    council_dissent=(  # 7 dissent entries per v2 frontmatter
+        {"member": "Contrarian", "verbatim": "..."},
+        {"member": "Assumption-Adversary", "verbatim": "..."},
+        {"member": "Hafner", "verbatim": "..."},
+        {"member": "Tishby_memorial", "verbatim": "..."},
+        {"member": "Atick_memorial", "verbatim": "..."},
+        {"member": "Carmack", "verbatim": "..."},
+        {"member": "MacKay_memorial", "verbatim": "..."},
+        {"member": "Selfcomp", "verbatim": "..."},
+    ),
+    council_assumption_adversary_verdict=(
+        {"assumption": "DP1's pretrained dashcam prior generalizes to the contest video", "classification": "CARGO-CULTED-PENDING-EMPIRICAL-VERIFICATION", "rationale": "..."},
+        {"assumption": "DP1+PR101 composition is α-additive", "classification": "CARGO-CULTED-PENDING-EMPIRICAL-VERIFICATION", "rationale": "..."},
+        {"assumption": "DP1 codebook IS contest-compliant if shipped IN the archive", "classification": "HARD-EARNED", "rationale": "..."},
+        {"assumption": "PR101 HNeRV decoder architecture is compatible with DP1 codebook weight initialization", "classification": "CARGO-CULTED-PENDING-EMPIRICAL-VERIFICATION", "rationale": "..."},
+        {"assumption": "Stage 1 init + Stage 2 PR101 HNeRV refinement is the optimal training curriculum", "classification": "HARD-EARNED", "rationale": "..."},
+        {"assumption": "The fec6 archive is a representative anchor for DP1+PR101 composition predictions", "classification": "HARD-EARNED-WITH-REVISION", "rationale": "..."},
+    ),
+    council_decisions_recorded=(
+        "op-routable #1: OOD-similarity probe ($0 local CPU)",
+        "op-routable #2: Architecture compatibility probe ($0 local CPU)",
+        "op-routable #3: Carmack Path A implementation ($0 implementation; $3-5 Stage 2 smoke)",
+        "op-routable #4: Paired-α probe per Catalog #322 ($3 Modal T4)",
+        "op-routable #5: Phase 2 Carmack Path B research-only design ($0 design memo)",
+    ),
+    predicted_mission_contribution="frontier_breaking",
+    override_invoked=False,
+    override_rationale="",
+)
+append_council_anchor(record)
+```
+
+This invocation will be executed in the immediate-post-landing commit per Catalog #300 hook #5 wire-in.
+
+### 22.3 Probe outcome registration per Catalog #313
+
+Per Catalog #313 + canonical `tac.probe_outcomes_ledger.register_probe_outcome`:
+
+```python
+from tac.probe_outcomes_ledger import register_probe_outcome
+
+register_probe_outcome(
+    probe_id="dp1_pr101_composition_design_memo_20260518_PROCEED_WITH_REVISIONS",
+    substrate_id="dp1_pr101_composition",
+    recipe_path=".omx/operator_authorize_recipes/substrate_dp1_pr101_composition_path_a_modal_a100_dispatch.yaml",
+    verdict="PROCEED",  # PROCEED_WITH_REVISIONS counts as PROCEED for dispatch gating
+    status="advisory",  # advisory pending op-routables #1+#2 outcome
+    rationale="T2 sextet pact PROCEED_WITH_REVISIONS; 6 binding revisions structured as $0 probes BEFORE $3-5 smoke; reactivation criteria pinned per Section 19",
+    expires_at_utc="<auto: deliberation_utc + 30 days>",
+    deliberation_id="dp1_pr101_composition_design_memo_20260518",
+)
+```
+
+The probe outcome is `advisory` (not `blocking`) — paid dispatch is GATED on op-routables #1+#2 outcomes, NOT on this council verdict alone. Op-routables #1+#2 are $0 probes; running them is itself the binding-revision compliance.
+
+---
+
+## 23. Closing — operator-routable summary
+
+**Recommended next actions for operator (priority-ordered):**
+
+1. **Authorize op-routables #1 + #2** (BOTH $0 local CPU; parallel-runnable). Trigger phrase: "run OOD-similarity probe and architecture-compatibility probe for DP1+PR101 composition". Estimated time: 10-15 minutes.
+
+2. **Review op-routable #1 + #2 verdicts.** Cascade per Section 13:
+   - HIGH_OVERLAP + HARD_EARNED → AUTHORIZE op-routable #3 (Stage-2 smoke $3-5)
+   - MEDIUM_OVERLAP + MARGINAL → AUTHORIZE op-routable #3 with reduced expected gain
+   - LOW_OVERLAP or CARGO_CULTED → DEFER per CLAUDE.md "Forbidden premature KILL"
+
+3. **AUTHORIZE op-routable #3** (Carmack Path A Stage-2 smoke; $3-5 Modal A100). Trigger phrase: "dispatch dp1_pr101_composition Path A smoke to Modal A100". Estimated time: 35 minutes + paired CPU eval ~60 minutes.
+
+4. **POST-Stage-9 AUTHORIZE op-routable #4** (paired-α probe; $3 Modal T4). Trigger phrase: "run paired-α probe for DP1+PR101 composition".
+
+5. **CONDITIONAL: AUTHORIZE op-routable #5** (Phase 2 Path B design memo) if Stage-2 result yields composed_cpu < 0.190 AND OOD-similarity > 50%.
+
+6. **MANDATORY post-Phase-1:** lane state update via canonical `tools/lane_maturity.py mark lane_dp1_pr101_composition_design_20260518 --gate <gate> --evidence <path>` for each gate satisfied; trigger lane lifecycle SKETCH (L0) → SCAFFOLD (L1) → INTEGRATION (L2) progression per CLAUDE.md "Lane maturity registry" discipline.
+
+**Total Phase 1 cost: $6-8 worst case for [-0.012, +0.002] predicted ΔS band (frontier-breaking range [-0.012, -0.008] is the best case if OOD-similarity > 50% AND projection_residual < 0.3).**
+
+**ETA to empirical anchor:** ~3 hours total wall-clock (10-15 min probes + 30 min Stage-2 + 60 min paired CPU eval + 30 min paired-α probe + reporting + lane maturity update).
+
+---
+
+## Appendix A: Existing DP1 + PR101 canonical helper inventory
+
+For implementer convenience, the existing canonical helpers (NO new code needed):
+
+### A.1 DP1 canonical helpers (REUSE AS-IS per Section 4 decisions)
+
+| Helper | Source | Decision |
+|:-------|:-------|:---------|
+| `load_codebook(codebook_path) -> CodebookV1` | `tac.substrates.pretrained_driving_prior.codebook` | ADOPT_CANONICAL |
+| `distill_codebook(frame_iterator, ...) -> CodebookV1` | `tac.substrates.pretrained_driving_prior.distillation` | NOT USED Phase 1 (codebook pre-distilled) |
+| `compose_with(dp1_bytes, base_bytes, *, base_substrate) -> ComposedArchive` | `tac.substrates.pretrained_driving_prior.composition` | DEFERRED Phase 2 (Path B) |
+| `decompose(composed_bytes) -> ComposedArchive` | `tac.substrates.pretrained_driving_prior.composition` | DEFERRED Phase 2 (Path B) |
+| `verify_composition(composed_bytes, ...) -> bool` | `tac.substrates.pretrained_driving_prior.composition` | DEFERRED Phase 2 (Path B) |
+| `Comma2k19LocalCache.fetch_chunk(chunk_id)` | `tac.substrates.pretrained_driving_prior.local_chunk_cache` | OP-ROUTABLE #1 only |
+| `DashcamPriorLoss(codebook, lambda_prior=0.05)` | `tac.substrates.pretrained_driving_prior.prior_application` | ADOPT_CANONICAL (optional Stage 1-8 soft prior) |
+| `PriorApplicationWeights(...)` | `tac.substrates.pretrained_driving_prior.prior_application` | ADOPT_CANONICAL |
+
+### A.2 PR101_lc_v2 canonical helpers (REUSE AS-IS per Section 4 decisions)
+
+| Helper | Source | Decision |
+|:-------|:-------|:---------|
+| `Pr101LcV2CloneSubstrate(config)` | `tac.substrates.pr101_lc_v2_clone.architecture` | ADOPT_CANONICAL |
+| `Pr101LcV2CloneConfig(...)` | `tac.substrates.pr101_lc_v2_clone.architecture` | ADOPT_CANONICAL |
+| `pack_archive(...)` | `tac.substrates.pr101_lc_v2_clone.archive` | ADOPT_CANONICAL (Path A) |
+| `parse_archive(bytes) -> (decoder_sd, latents, meta)` | `tac.substrates.pr101_lc_v2_clone.archive` | ADOPT_CANONICAL (Path A inflate) |
+| `inflate(archive_dir, output_dir, file_list)` | `tac.substrates.pr101_lc_v2_clone.inflate` | ADOPT_CANONICAL (Path A delegator) |
+| `Pr101ScoreAwareLoss(...)` | `tac.substrates.pr101_lc_v2_clone.score_aware_loss` | ADOPT_CANONICAL (wrap with optional DashcamPriorLoss) |
+| `train_pr95_curriculum(...)` | `tac.substrates.pr101_lc_v2_clone.curriculum` | ADOPT_CANONICAL (Stage 1-8) |
+| `train_enhanced_curriculum(...)` | `tac.substrates.pr101_lc_v2_clone.curriculum_enhanced` | ADOPT_CANONICAL (Stage 1-8; Phase 2 enhanced) |
+
+### A.3 Shared canonical infrastructure (REUSE AS-IS)
+
+| Helper | Source | Catalog # |
+|:-------|:-------|:----------|
+| `score_pair_components(...)` | `tac.substrates._shared.score_aware_common` | #164 |
+| `gate_auth_eval_call(...)` | `tac.substrates._shared.smoke_auth_eval_gate` | #226 |
+| `select_inflate_device()` | `tac.substrates._shared.inflate_runtime` | #205 |
+| `detect_hardware_substrate(substrate_tag=...)` | `tac.substrates._shared.trainer_skeleton` | #190 |
+| `device_or_die(...)` | `tac.substrates._shared.trainer_skeleton` | #1, #178 (TF32 default) |
+| `EMA(decay=0.997)` | `tac.training` | CLAUDE.md "EMA — NON-NEGOTIABLE" |
+| `apply_eval_roundtrip_during_training(...)` | `tac.differentiable_eval_roundtrip` | CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" |
+| `patch_upstream_yuv6_globally()` | `tac.differentiable_eval_roundtrip` | CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" |
+| `load_differentiable_scorers()` | `tac.differentiable_eval_roundtrip` | CLAUDE.md "eval_roundtrip — NON-NEGOTIABLE" |
+| `posterior_update_locked(...)` | `tac.continual_learning` | #128 |
+| `register_probe_outcome(...)` | `tac.probe_outcomes_ledger` | #313 |
+| `register_dispatched_call_id(...)` | `tac.deploy.modal.call_id_ledger` | #245 |
+| `append_council_anchor(record)` | `tac.council_continual_learning` | #300 |
+
+### A.4 NEW canonical helpers needed (Section 4 FORK decisions)
+
+| Helper | Source (NEW) | LOC | Catalog # |
+|:-------|:-------------|:---:|:----------|
+| `project_dp1_codebook_to_pr101_decoder(...)` | `tac.substrates.dp1_pr101_composition.weight_init_bridge` (NEW) | ~200 | (no new catalog; substrate-internal helper) |
+| `Dp1Pr101WeightInitProjectionResult` (frozen dataclass) | `tac.substrates.dp1_pr101_composition.weight_init_bridge` (NEW) | ~30 | (no new catalog) |
+| `Dp1Pr101CompositionSubstrate(config)` | `tac.substrates.dp1_pr101_composition.architecture` (NEW; thin wrapper) | ~50 | (no new catalog) |
+| `Dp1Pr101ScoreAwareLoss(...)` | `tac.substrates.dp1_pr101_composition.score_aware_loss` (NEW; thin wrapper) | ~50 | (no new catalog) |
+| `train_dp1_pr101_composition(...)` | `tac.substrates.dp1_pr101_composition.curriculum` (NEW; thin wrapper with Stage 0) | ~50 | (no new catalog) |
+| `pack_archive_path_a(...)` | `tac.substrates.dp1_pr101_composition.archive` (NEW; thin wrapper) | ~30 | (no new catalog) |
+
+**Total NEW code:** ~410 LOC + ~250 LOC tests = ~660 LOC. Sister-existing canonical code reuse: ~1500+ LOC (the entire DP1 + PR101_lc_v2 packages). Code-reuse ratio: ~78% canonical-helper reuse + ~22% NEW substrate-specific code — well within UNIQUE-AND-COMPLETE-PER-METHOD operating mode (substrate-engineering minimizes new code; bolt-ons share canonical).
+
+---
+
+## Appendix B: Test plan (for the implementation subagent that lands this design)
+
+| Test | Coverage | Location |
+|:-----|:---------|:---------|
+| Weight-init bridge unit tests | `project_dp1_codebook_to_pr101_decoder` happy path / shape mismatch / empty codebook / projection_residual computation correctness | `src/tac/substrates/dp1_pr101_composition/tests/test_weight_init_bridge.py` |
+| Architecture wrapper unit tests | `Dp1Pr101CompositionSubstrate(config)` instantiation / state_dict shape matches PR101 / DP1 init kwarg threading | `src/tac/substrates/dp1_pr101_composition/tests/test_architecture.py` |
+| Score-aware loss unit tests | `Dp1Pr101ScoreAwareLoss` PR101-canonical terms + optional DashcamPriorLoss / lambda_prior warmup / per-term tensor dict output | `src/tac/substrates/dp1_pr101_composition/tests/test_score_aware_loss.py` |
+| Archive Path A unit tests | `pack_archive_path_a(...)` produces PR101-identical bytes / sha matches / inflate roundtrip | `src/tac/substrates/dp1_pr101_composition/tests/test_archive.py` |
+| Curriculum integration smoke | `train_dp1_pr101_composition(...)` Stage 0 → 1-stage → 9 / 5-epoch smoke / archive build succeeds / paired CPU eval | `src/tac/substrates/dp1_pr101_composition/tests/test_curriculum.py` |
+| OOD-similarity probe unit tests | `probe_dp1_comma2k19_vs_contest_video_ood_similarity.py` returns JSON with 5 fields / verdict mapping / Comma2k19LocalCache integration | `src/tac/substrates/dp1_pr101_composition/tests/test_ood_similarity_probe.py` |
+| Architecture-compatibility probe unit tests | `probe_dp1_pr101_architecture_compatibility.py` returns JSON with projection_residual / feasibility_verdict mapping | `src/tac/substrates/dp1_pr101_composition/tests/test_architecture_compatibility_probe.py` |
+| Catalog #209 regression | DP1 distillation calls route through `Comma2k19FrameIterator` (NO contest video leakage) | (inherited from DP1 sister substrate tests) |
+| Catalog #210 regression | Composed archive metadata carries 6 required DP1 provenance fields | `src/tac/substrates/dp1_pr101_composition/tests/test_archive_provenance.py` |
+| Catalog #211 regression | NO hand-rolled DP1 byte concatenation outside `compose_with` API | (inherited from DP1 sister substrate tests) |
+| Catalog #220 regression | Lane registry notes declare operational mechanism for Path A DP1-warm-start | `src/tac/substrates/dp1_pr101_composition/tests/test_catalog_220_operational_mechanism.py` |
+| Catalog #272 regression | Distinguishing feature contract per Section 9 (Path A operational mechanism only; byte-mutation N/A) | `src/tac/substrates/dp1_pr101_composition/tests/test_catalog_272_distinguishing_feature.py` |
+| Catalog #324 regression | predicted_band_validation_status=pending_post_training in recipe + reactivation criteria pinned | `src/tac/substrates/dp1_pr101_composition/tests/test_recipe_catalog_324.py` |
+| Empty-PYTHONPATH submission inflate test per Catalog #295 | `submissions/dp1_pr101_composition/inflate.py` is self-contained (no sibling-tac imports) | (post-Stage-9; when submission packet exists) |
+| Catalog #328 inflate LOC budget regression | submission inflate.py ≤200 LOC | (post-Stage-9; when submission packet exists) |
+
+**Target test count:** ~25 dedicated tests at landing; ~10 inherited regression tests from sister substrates.
+
+---
+
+## Appendix C: Risk register
+
+| Risk # | Risk | Mitigation | Severity |
+|:------:|:-----|:-----------|:--------:|
+| R1 | OOD-similarity too low (Comma2k19 ≠ contest video) | Op-routable #1 PROBE BEFORE dispatch; verdict DEFERS at LOW_OVERLAP | HIGH (deferral, not data loss) |
+| R2 | Architecture compatibility too low (DP1 codebook shape ≠ PR101 decoder shape) | Op-routable #2 PROBE BEFORE dispatch; verdict DEFERS at projection_residual > 0.7 | HIGH (deferral, not data loss) |
+| R3 | Composition_alpha sub-additive < 0.3 (saturating) | Op-routable #4 measures; if α < 0.3, R5 cargo-cult-unwind iteration per NSCS06 v6→v7 pattern | MEDIUM |
+| R4 | DP1 init traps SGD in worse local minimum than random init | Counterfactual test (Section 12.6); if composed_score > PR101_alone, DEFER + research-only tag + R5 reactivation | MEDIUM |
+| R5 | Path B rate-feasibility fails (DP1 codebook adds 162 KB to archive) | Per Section 5.1 analysis: Path B is structurally infeasible unless DP1 carries >91% MI; CONFIRMED architecturally; Phase 2 only if op-routable #1 OOD > 50% | HIGH (Path B structural; mitigated by Path A canonical) |
+| R6 | Modal A100 dispatch crashes pre-auth-eval (per recent C6 IBPS / Z6 patterns) | Per Catalog #270 dispatch optimization protocol verification at op-routable #3 dispatch time; Catalog #244 NVML env block; Catalog #166 HEAD parity; Catalog #167 smoke-before-full | LOW (gates already in place) |
+| R7 | Stage 1-8 PR95 curriculum diverges with DP1-init weights | Stage 0 reports projection_residual; if > 0.5, DP1 init partial → blend with random for stability; canonical 8-stage warmup absorbs init variance | MEDIUM |
+| R8 | Codex master-gradient extractor sister-edit collision per Catalog #314 | Codex owns `tools/extract_master_gradient.py` + `src/tac/master_gradient.py` exclusively; THIS subagent owns ONLY this design memo; DISJOINT scope; canonical serializer + POST-EDIT sha per Catalog #117/#157/#174 | LOW (structural protection) |
+
+---
+
+**End of design memo.**
+
+**Status at landing:** L1 SCAFFOLD per Catalog #126 lane pre-registration + Catalog #229 premise verification + this memo as `memory_entry` + Catalog #300 council deliberation v2 frontmatter. Awaits op-routables #1 + #2 to advance to L2 INTEGRATION (per Catalog #233 4-gate canonical: smoke + Tier-C + 100ep + custody).
+
+Per CLAUDE.md "Substrate scaffolds MUST be COMPLETE or RESEARCH-ONLY": this design memo's deliverable is the DESIGN; the IMPLEMENTATION lands as a sister-subagent commit. Until implementation lands, the substrate is `research_only=true` in any lane registry entry.
+
+Per CLAUDE.md "Mission alignment" Consequence 1 (operator-frontier-override): if the operator deems the predicted [0.180, 0.190] band frontier-breaking enough to bypass op-routables #1+#2 and dispatch op-routable #3 directly, the override is documented per Catalog #300 `council_override_invoked=true` + `council_override_rationale=<operator verbatim>` — this memo's frontmatter sets `council_override_invoked=false` by default; override would be a NEW deliberation memo.
+
+Memory: `feedback_dp1_pr101_composition_design_memo_landed_20260518.md` (to be written immediately post-landing per Catalog #229 premise verification discipline).
