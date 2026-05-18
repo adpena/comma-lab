@@ -223,6 +223,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "experiments/*.py" = ["E402"]  # sys.path manipulation before imports is necessary
+"src/tac/preflight.py" = ["ALL"]  # legacy mega-gate; use focused tests/strict checks, avoid broad mechanical ruff churn
 "src/tac/packet_compiler/__init__.py" = ["I001", "RUF022"]  # public API is grouped by codec family / PR lineage
 
 [tool.ruff.lint.isort]

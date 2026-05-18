@@ -13,23 +13,22 @@ the source of truth.
 """
 from __future__ import annotations
 
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import fcntl
 import hashlib
 import json
+from collections.abc import Callable, Iterable
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Iterable
 
 from tac.canonical_duckdb.schema import CANONICAL_TABLES, connect
-
 
 DEFAULT_DB_PATH = Path(".omx/state/canonical.duckdb")
 CANONICAL_LOCK_PATH = Path(".omx/state/.canonical_duckdb.lock")
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -224,7 +223,72 @@ def _refresh_empty_json_table(con, table: str) -> int:
     return 0
 
 
+def refresh_canonical_task_status(con, repo_root: Path, refreshed_at: str) -> int:
+    from tac.canonical_task_status import load_canonical_task_status_strict
+
+    source_rows = load_canonical_task_status_strict(repo_root)
+    rows = []
+    source_path = ".omx/state/canonical_task_status.jsonl"
+    for row in source_rows:
+        lo = hi = None
+        if row.predicted_delta_s_band is not None:
+            lo, hi = row.predicted_delta_s_band
+        rows.append(
+            (
+                row.task_id,
+                row.source_design_memo,
+                row.title,
+                row.status,
+                row.owner,
+                row.predicted_cost_usd,
+                lo,
+                hi,
+                row.actual_delta_s,
+                json.dumps(list(row.commit_shas), sort_keys=True),
+                row.test_status,
+                json.dumps(list(row.blockers), sort_keys=True),
+                row.started_at_utc,
+                row.completed_at_utc,
+                row.event_type,
+                row.event_timestamp_utc,
+                row.event_actor,
+                row.event_notes,
+                row.session_id,
+                row.written_at_utc,
+                row.written_pid,
+                row.written_host,
+                row.schema_version,
+                refreshed_at,
+                source_path,
+            )
+        )
+    con.execute("BEGIN TRANSACTION")
+    try:
+        con.execute("DELETE FROM canonical_task_status")
+        if rows:
+            con.executemany(
+                """
+                INSERT OR REPLACE INTO canonical_task_status
+                (task_id, source_design_memo, title, status, owner, predicted_cost_usd,
+                 predicted_delta_s_lower, predicted_delta_s_upper, actual_delta_s,
+                 commit_shas, test_status, blockers, started_at_utc, completed_at_utc,
+                 event_type, event_timestamp_utc, event_actor, event_notes, session_id,
+                 written_at_utc, written_pid, written_host, schema_version,
+                 refreshed_at_utc, source_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::JSON, ?, ?::JSON, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    return len(rows)
+
+
 REFRESH_DISPATCH: dict[str, Callable] = {
+    "canonical_task_status": refresh_canonical_task_status,
     "lanes": refresh_lanes,
     "research_memos": refresh_research_memos,
     "state_json_files": refresh_state_json_files,

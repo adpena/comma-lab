@@ -36935,11 +36935,11 @@
       "id": "lane_set_theory_manifolds_geometry_deep_research_20260518",
       "name": "Set theory + manifolds + geometry + adjacent mathematics deep research",
       "phase": 4.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/set_theory_manifolds_geometry_deep_research_synthesis_20260518.md (1111 lines; 10 mandatory sections + cargo-cult audit + 9-dim checklist + observability surface; commit 4bbdf3f21)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -36962,8 +36962,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_set_theory_manifolds_geometry_deep_research_synthesis_landed_20260518.md (memory landing; cross-refs to parent T3 symposium + deeper-granularity sister + deterministic-optimizer sister)"
         },
         "deploy_runbook": {
           "status": false,
@@ -37017,6 +37017,211 @@
       "id": "lane_z8_hierarchical_predictive_coding_symposium_20260518",
       "name": "Z8 hierarchical predictive coding per-substrate symposium",
       "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/council_z8_hierarchical_predictive_coding_per_substrate_symposium_20260518.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "feedback_z8_per_substrate_symposium_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_riemannian_newton_substrate_engineering_design_20260518",
+      "name": "Riemannian-Newton substrate engineering with Fisher-preconditioned natural gradient + symplectic EMA",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/riemannian_newton_substrate_engineering_design_memo_20260518.md (1441-line design memo with all 16 sections + Catalog #300 v2 frontmatter)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "council deliberation anchor appended to .omx/state/council_deliberation_posterior.jsonl + probe outcome registered to .omx/state/probe_outcomes.jsonl"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_20260518",
+      "name": "TT5L V2 redesign per deep-research wave TOP-5 #1 (VGGT + DreamerV3 RSSM + NVIDIA VRSS 2 + DUSt3R/MASt3R)",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_cargo_cult_resurrection_top_3_symposiums_20260518",
+      "name": "Cargo-cult resurrection TOP-3 symposiums (V1 Faiss + C6 IBPS v2 + NSCS06 v8 Variant C)",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/cargo_cult_resurrection_top_3_symposiums_v1_faiss_c6_ibps_v2_nscs06_v8_variant_c_20260518.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "MEMORY entry pending session-end via parent agent; council posterior anchor appended via tac.council_continual_learning.append_council_anchor"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_procedural_codebook_generator_20260518",
+      "name": "Procedural codebook generator canonical helper",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/procedural_codebook_generator/hash_seed_codebook_generator.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_3set_4set_5set_venn_classification_design_20260518",
+      "name": "3-set/4-set/5-set Venn classification design (extends Catalog #319 v2 cascade per operator load-bearing insight)",
+      "phase": 4.0,
       "level": 0,
       "gates": {
         "impl_complete": {
@@ -37062,5 +37267,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T16:53:39Z"
+  "updated_at": "2026-05-18T17:22:51Z"
 }

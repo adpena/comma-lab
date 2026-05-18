@@ -203,6 +203,7 @@ from tac.source_index import SourceIndex  # noqa: E402
 
 TOOLS = REPO / "tools"
 SHELL_HAZARDS = TOOLS / "check_dispatch_cli_shell_hazards.py"
+CANONICAL_TASK_STATUS_AUDIT = TOOLS / "check_canonical_task_status_no_dangling_transitions.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -3684,6 +3685,7 @@ def main(argv: list[str] | None = None) -> int:
         PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT,
         LOCAL_CUSTODY_RELEASE_MANIFEST,
         OPERATOR_BRIEFING,
+        CANONICAL_TASK_STATUS_AUDIT,
         *[lane["tool"] for lane in lanes],
     ]:
         if not tool.is_file():
@@ -3956,6 +3958,17 @@ def main(argv: list[str] | None = None) -> int:
             _run_hlm1_frontier_prose_gate,
             "  ✓ Gate #30: HLM1 non-promotional frontier prose — PASSED",
             "  ✗ Gate #30: HLM1 non-promotional frontier prose — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            31,
+            "canonical task-status state machine",
+            lambda: _run_gate(
+                "canonical task-status state machine",
+                CANONICAL_TASK_STATUS_AUDIT,
+            ),
+            "  ✓ Gate #31: canonical task-status state machine — PASSED",
+            "  ✗ Gate #31: canonical task-status state machine — FAILED",
         ),
     ]
     lane_steps = [

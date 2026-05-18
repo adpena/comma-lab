@@ -14,13 +14,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 CANONICAL_TABLES: tuple[str, ...] = (
     "lanes",
     "council_deliberations",
     "probe_outcomes",
     "dispatch_claims",
     "modal_call_ids",
+    "canonical_task_status",
     "master_gradient_anchors",
     "continual_learning_posterior",
     "research_memos",
@@ -69,6 +69,43 @@ CREATE TABLE IF NOT EXISTS modal_call_ids (
     source_path VARCHAR,
     payload JSON,
     refreshed_at_utc TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS canonical_task_status (
+    task_id VARCHAR NOT NULL,
+    source_design_memo VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    status VARCHAR NOT NULL,
+    owner VARCHAR NOT NULL,
+    predicted_cost_usd DOUBLE,
+    predicted_delta_s_lower DOUBLE,
+    predicted_delta_s_upper DOUBLE,
+    actual_delta_s DOUBLE,
+    commit_shas JSON,
+    test_status VARCHAR NOT NULL,
+    blockers JSON,
+    started_at_utc TIMESTAMP,
+    completed_at_utc TIMESTAMP,
+    event_type VARCHAR NOT NULL,
+    event_timestamp_utc TIMESTAMP NOT NULL,
+    event_actor VARCHAR NOT NULL,
+    event_notes VARCHAR,
+    session_id VARCHAR,
+    written_at_utc TIMESTAMP NOT NULL,
+    written_pid INTEGER,
+    written_host VARCHAR,
+    schema_version VARCHAR NOT NULL,
+    refreshed_at_utc TIMESTAMP,
+    source_path VARCHAR,
+    PRIMARY KEY (task_id, event_timestamp_utc)
+);
+
+CREATE VIEW IF NOT EXISTS canonical_task_status_latest AS
+SELECT * FROM canonical_task_status t1
+WHERE event_timestamp_utc = (
+    SELECT MAX(event_timestamp_utc)
+    FROM canonical_task_status t2
+    WHERE t2.task_id = t1.task_id
 );
 
 CREATE TABLE IF NOT EXISTS master_gradient_anchors (

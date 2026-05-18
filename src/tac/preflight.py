@@ -5060,6 +5060,9 @@ def preflight_all(
         # Memory: feedback_production_hardened_standard_definition_20260430.
         # Memory: project_lane_maturity_harness_landed_20260430.
         check_lane_registry_consistent(strict=True, verbose=verbose)
+        check_canonical_task_status_no_dangling_transitions(
+            strict=True, verbose=verbose
+        )
 
         # 2026-04-30: Check 92 - Lane 8 inflate-time multipass forbidden.
         # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
@@ -11886,7 +11889,7 @@ _WAIVER_MARKER = "SCORER_AT_INFLATE_WAIVED"
 #   - For multi-line statements (e.g., a getattr(...) split across lines),
 #     each call on each line needs its own same-line marker because the
 #     AST records lineno per-call.
-#   - The legacy `# noqa: scorer-at-inflate` form is also recognised, but
+#   - The legacy noqa scorer-at-inflate marker is also recognised, but
 #     ONLY on the same line.
 # Same-line enforcement is the only policy that is auditable without a
 # walker - every waiver is structurally attached to the specific call
@@ -24809,7 +24812,7 @@ def check_deploy_script_profiles_exist_in_registry(
 #
 # Exemptions: tests/, vendored upstream/, this preflight.py file itself
 # (where regex pattern strings include `except:` literal text), and any line
-# with a SAME-LINE waiver marker `# noqa: E722` or `# silent-swallow-OK:`.
+# with a SAME-LINE noqa E722 marker or `# silent-swallow-OK:`.
 #
 # Reference: feedback_deep_hardening_pass_2_patterns_20260428 +
 # 2026-04-28 deep DX hardening pass.
@@ -27737,6 +27740,31 @@ def check_lane_registry_consistent(
             "see CLAUDE.md 'Lane maturity registry - non-negotiable'."
         )
     return violations
+
+
+def check_canonical_task_status_no_dangling_transitions(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate canonical_task_status JSONL before operator/autopilot routing."""
+
+    from tac.canonical_task_status import (
+        check_canonical_task_status_no_dangling_transitions as _check,
+    )
+
+    try:
+        return _check(
+            repo_root=repo_root or REPO_ROOT,
+            strict=strict,
+            verbose=verbose,
+        )
+    except AssertionError as exc:
+        if strict:
+            raise MetaBugViolation(str(exc)) from exc
+        if verbose:
+            print(f"  [canonical-task-status] WARN: {exc}")
+        return [str(exc)]
 
 
 # ── Check 93: logit-margin loss callers pass explicit threshold ──────────────

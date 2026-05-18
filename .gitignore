@@ -171,6 +171,14 @@ src/tac.egg-info/
 .omx/state/modal_call_id_ledger.jsonl.lock
 .omx/state/modal_call_id_ledger.jsonl.tmp.*
 .omx/state/modal_call_id_ledger.jsonl.corrupt.*
+# Canonical dual-agent task/resume ledgers are small append-only control-plane
+# state, not raw provider logs. Commit the JSONL; keep locks/tmp/corrupt local.
+!.omx/state/canonical_task_status.jsonl
+!.omx/state/codex_persistent_session_state.jsonl
+.omx/state/.canonical_task_status.lock
+.omx/state/canonical_task_status.jsonl.lock
+.omx/state/canonical_task_status.jsonl.tmp.*
+.omx/state/canonical_task_status.jsonl.corrupt.*
 # Master-gradient ledgers/sidecars are local live/advisory state. Promote durable
 # signal into .omx/research memos or compact tracked manifests instead.
 .omx/state/master_gradient_anchors.jsonl

@@ -55,7 +55,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 import torch
@@ -70,7 +70,7 @@ OPTIMIZER_ANALYTICAL_BOUNDARIES_EVIDENCE_GRADE = (
 )
 
 
-class TrackKind(str, Enum):
+class TrackKind(StrEnum):
     """Canonical track identifiers landed via the lateral-leap session."""
 
     SEG_BASELINE = "seg_baseline"  # 100 * argmax-disagreement (contest scorer canonical)
@@ -86,7 +86,7 @@ class TrackKind(str, Enum):
     LANE_12_V2 = "lane_12_v2_nerv_as_renderer"  # Architecture-class atom
 
 
-class SurfaceKind(str, Enum):
+class SurfaceKind(StrEnum):
     """Framework-agnostic analytical surfaces feeding deterministic solvers."""
 
     BOUNDARY = "boundary"
@@ -300,6 +300,7 @@ class OptimizerAnalyticalBoundaries:
     per_pair_difficulty_atlas: Mapping[str, Any] | None = None
     wyner_ziv_side_info: Mapping[str, Any] | None = None
     optimal_plan_candidate_row: Mapping[str, Any] | None = None
+    null_space_basis: Mapping[str, Any] | None = None
     sensitivity_axis_weights: Mapping[str, Any] | None = None
     sensitivity_byte_weights_summary: Mapping[str, Any] | None = None
     xray_hook_inventory: Mapping[str, Sequence[str]] = field(default_factory=dict)
@@ -340,6 +341,7 @@ class OptimizerAnalyticalBoundaries:
             "per_pair_difficulty_atlas",
             "wyner_ziv_side_info",
             "optimal_plan_candidate_row",
+            "null_space_basis",
             "bit_allocation_envelope",
             "lagrangian_dual_envelope",
         ):
@@ -362,6 +364,7 @@ class OptimizerAnalyticalBoundaries:
             "per_pair_difficulty_atlas": _json_safe(self.per_pair_difficulty_atlas),
             "wyner_ziv_side_info": _json_safe(self.wyner_ziv_side_info),
             "optimal_plan_candidate_row": _json_safe(self.optimal_plan_candidate_row),
+            "null_space_basis": _json_safe(self.null_space_basis),
             "sensitivity_axis_weights": _json_safe(self.sensitivity_axis_weights),
             "sensitivity_byte_weights_summary": _json_safe(
                 self.sensitivity_byte_weights_summary
@@ -527,6 +530,7 @@ def build_optimizer_analytical_boundaries(
         per_pair_difficulty_atlas,
         wyner_ziv_side_info_covariance,
     )
+    from tac.null_space_exploiter import build_null_space_basis
     from tac.sensitivity_map.axis_weights import default_axis_weights
     from tac.sensitivity_map.wyner_ziv_reweight import axis_level_reweight
     from tac.xray.wire_in import (
@@ -567,6 +571,10 @@ def build_optimizer_analytical_boundaries(
         write_sidecar=False,
     )
     sensitivity_weights = axis_level_reweight(wz)
+    null_space = build_null_space_basis(
+        torch.as_tensor(per_pair_gradient, dtype=torch.float64).cpu().numpy(),
+        archive_sha256=archive,
+    )
 
     if optimal_plan_payload is None:
         optimal_plan_payload = load_optimal_plan_for_archive(archive)
@@ -643,6 +651,7 @@ def build_optimizer_analytical_boundaries(
         per_pair_difficulty_atlas=_json_safe(difficulty),
         wyner_ziv_side_info=_json_safe(wz),
         optimal_plan_candidate_row=_json_safe(optimal_candidate),
+        null_space_basis=_json_safe(null_space),
         sensitivity_axis_weights=_axis_weights_payload(default_axis_weights()),
         sensitivity_byte_weights_summary=_summarize_sensitivity_weights(sensitivity_weights),
         xray_hook_inventory=inventory,
@@ -965,17 +974,17 @@ def make_action_from_track_callables(
 
 
 __all__ = [
-    "ACTION_SCHEMA_VERSION",
     "ACTION_EVIDENCE_GRADE",
-    "OPTIMIZER_ANALYTICAL_BOUNDARIES_SCHEMA_VERSION",
+    "ACTION_SCHEMA_VERSION",
     "OPTIMIZER_ANALYTICAL_BOUNDARIES_EVIDENCE_GRADE",
-    "TrackKind",
-    "SurfaceKind",
+    "OPTIMIZER_ANALYTICAL_BOUNDARIES_SCHEMA_VERSION",
+    "Action",
     "DualVariables",
     "MasterGradientBoundarySummary",
     "OptimizerAnalyticalBoundaries",
-    "summarize_master_gradient_boundaries",
+    "SurfaceKind",
+    "TrackKind",
     "build_optimizer_analytical_boundaries",
-    "Action",
     "make_action_from_track_callables",
+    "summarize_master_gradient_boundaries",
 ]

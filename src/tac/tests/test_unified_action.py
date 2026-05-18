@@ -33,7 +33,6 @@ from tac.unified_action import (
     summarize_master_gradient_boundaries,
 )
 
-
 # ── Per-track callable factories (deterministic, autograd-friendly) ─────────
 
 
@@ -220,6 +219,10 @@ def test_build_optimizer_analytical_boundaries_is_planning_only_and_json_safe():
     assert payload["dispatch_packet_ready"] is False
     assert payload["master_gradient_boundary_summary"]["score_claim"] is False
     assert payload["optimal_plan_candidate_row"]["dispatch_packet_ready"] is False
+    assert payload["null_space_basis"]["score_claim"] is False
+    assert payload["null_space_basis"]["dispatch_packet_ready"] is False
+    assert payload["null_space_basis"]["basis_payload_kind"] == "inline_float64_rows"
+    assert len(payload["null_space_basis"]["basis_sha256"]) == 64
     assert payload["lagrangian_dual_envelope"]["score_claim"] is False
     assert "sensitivity_map" in payload["xray_hook_inventory"]
     assert "cathedral_autopilot" in payload["xray_hook_bundles"]
