@@ -101,3 +101,58 @@ Predicted ΔS bands are `[prediction]`-tagged per Catalog #287; empirical anchor
 Per operator standing directive 2026-05-18 "burn down all cargo culted" + "all operator decisions approved" + "continue with all in context and continue feeding the queue as it returns" — these 3 routing directives are queued and ready. The TOP-1 ($1-3) is the cheapest framework validation; PROCEED-CHEAPEST-FIRST is the rigor-first cadence per CLAUDE.md "Race-mode rigor inversion" (default when no race window active).
 
 — Main-Claude 2026-05-18 (index for SYSTEMATIC RECLAIMABILITY TOP-3 reclamation paths per `4480d9b14` ranking + binary-distillation framework `0701c323b`)
+
+## OPERATOR DECISION 2026-05-18: PROCEED-ALL-3 ($5-13 envelope)
+
+Operator authorized PROCEED-ALL-3 verbatim via `AskUserQuestion` answer 2026-05-18.
+
+### Grand Council T2 sextet + grand-council convened seats verdict
+
+**Aggregate: 11-of-12 PROCEED-ALL-3 / 1 CONDITIONAL (Contrarian flags but does not block; operator override per Catalog #300 Consequence 1 documented).**
+
+| Seat | Verdict | Operating-within assumption (per Catalog #292) |
+|---|---|---|
+| Shannon LEAD | PROCEED-ALL-3 | 3 vectors are orthogonal information channels (A1 substrate manifold vs F4 PoseNet-head summary vs F5 PoseNet-head ResBlock); 3 measurements maximize information gain per dollar |
+| Dykstra CO-LEAD | PROCEED-ALL-3 | 3 reclamation paths = Pareto-feasibility intersection check across scorer-feature polytope |
+| Yousfi (PR #35 author) | PROCEED w/ binding caveat | `contest_one_video_replay` framing established; charged-byte packet proof + exact CUDA auth eval REQUIRED before any score promotion (preserved in Codex sister-edit tightenings on TOP-2 + TOP-3) |
+| Fridrich | PROCEED | Inverse-steganalysis directly applies; per-pattern PQ-8x8 is canonical UNIWARD principle |
+| Contrarian | CONDITIONAL (CHEAPEST-FIRST) | $1-3 settles 70% of framework-validation info for 3× lower cost — does not block; flags variance acceptance |
+| Assumption-Adversary | PROCEED w/ HARD-EARNED-PARTIAL classification | Framework-generalization assumption is HARD-EARNED via `0701c323b` + `4480d9b14` but NOT EMPIRICALLY VERIFIED; treat any single-vector failure as framework-class evidence |
+| van den Oord (VQ-VAE canonical) | PROCEED-ALL-3 | K=256 VQ-VAE on A1 + PQ-8x8 K=64 on F4/F5 within canonical training regimes |
+| Carmack (engineering) | PROCEED-ALL-3 | 3 binaries <20 KB each; small enough to ship multiple variants per archive |
+| Hotz (pragmatism) | PROCEED-ALL-3 PARALLEL-FIRE | $5-13 is single afternoon of Vast.ai; bottleneck is wall-clock not dollar |
+| Quantizr (PR101 canonical) | PROCEED-ALL-3 | A1 (TOP-1) directly grounded in PR101 paradigm; F4/F5 same paradigm-class; ESPECIALLY GOOD with PR101 hyperprior on residual |
+| Selfcomp/Szabolcs (PR #56) | PROCEED-ALL-3 + K=64 ABLATION CAVEAT | K=256 VQ-VAE for A1 potentially over-parameterized; recommends K=64 sister ablation in TOP-1 Phase 4 (NON-BLOCKING) |
+| MacKay memorial (MDL) | PROCEED-ALL-3 | 3 orthogonal binary-distillation variants = Bayesian model comparison; 3 ΔS bands = likelihood evidence on framework hypothesis at 3 feature-space scales |
+| Ballé (entropy bottleneck) | PROCEED-ALL-3 | PQ-8x8 + FP4 + Brotli mirrors 2018 hyperprior + scale-conditional Gaussian pipeline at binary-distillation surface |
+
+### Council-derived binding modifications
+
+1. **Yousfi (preserved binding caveat)**: charged-byte packet proof + exact CUDA auth eval REQUIRED before any score promotion across all 3 paths. ALREADY ENCODED in Codex sister-edited TOP-2 + TOP-3 directive prose.
+2. **Selfcomp (NON-BLOCKING)**: TOP-1 Phase 4 should add a K=64 sister VQ-VAE ablation alongside the K=256 canonical to test over-parameterization hypothesis. Add as Phase 4 ablation; does not block TOP-1 dispatch.
+3. **Assumption-Adversary (HARD-EARNED-PARTIAL)**: if any single-vector probe FAILS, treat as framework-class evidence — TOP-2 + TOP-3 cascade to revision rather than continuing independent measurement.
+
+### Operator-frontier-override rationale (per Catalog #300 mission-alignment Consequence 1)
+
+Verbatim operator quote: *"A"* (resolved via AskUserQuestion to PROCEED-ALL-3 ($5-13)).
+
+Contrarian's CHEAPEST-FIRST alternative was acknowledged but operator-overridden in favor of parallel-fire's orthogonality information + wall-clock velocity. Per CLAUDE.md "Frontier target — NON-NEGOTIABLE": operator preference for parallel-fire reflects asymptotic-pursuit cadence that values 3 orthogonal data points in single window over rigor-first sequential gating.
+
+### Mission contribution classification per Catalog #300
+
+`council_predicted_mission_contribution`: **frontier_breaking** (3 reclamation paths probe previously-buried STRICT_SCORER_RULE_VIOLATION vectors via binary-distillation framework; positive empirical anchors UNLOCK an entire reclamation-class of work that's been DEFER-pending for weeks).
+
+### Next-step routing
+
+PROCEED-ALL-3 authorization is logged here for Codex /goal LOOP consumption. The 3 routing directives (TOP-1 + TOP-2 + TOP-3) are queued and ready; Codex's persistent loop picks them up on next cycle. Operator-authorize wrapper invocation per Catalog #199 paired-env discipline if non-interactive:
+
+```bash
+OPERATOR_AUTHORIZE_CONFIRMED_VIA_SESSION_DIRECTIVE=1 \
+OPERATOR_AUTHORIZE_SESSION_BUDGET_USD=13.00 \
+  .venv/bin/python tools/operator_authorize.py \
+  --recipe substrate_a1_specialized_per_pattern_vq_vae_inverter_modal_t4_smoke
+
+# Repeat for f4 + f5 substrates (parallel-fire OR staggered per Codex /goal cadence)
+```
+
+Council deliberation anchor appended to `.omx/state/council_deliberation_posterior.jsonl` via `tac.council_continual_learning.append_council_anchor` per Catalog #300 hook #5 wire-in (see commit body for `deliberation_id`).
