@@ -47,7 +47,7 @@ jobs:
 
       - name: Ruff lint (F821 critical, full rule set warnings)
         run: |
-          .venv/bin/ruff check --force-exclude --select F821 src/ experiments/ submissions/robust_current/ scripts/ tools/
+          .venv/bin/ruff check --isolated --force-exclude --select F821 --ignore-noqa --exclude experiments/archive --exclude experiments/results src/ experiments/ submissions/robust_current/ scripts/ tools/
           .venv/bin/ruff check --force-exclude src/ || true  # warnings non-blocking initially
 
       - name: Type check (Astral ty)

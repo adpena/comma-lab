@@ -219,15 +219,20 @@ select = [
 ]
 ignore = [
     "E501",    # line length handled by formatter
-    "RUF002",  # unicode in docstrings is intentional (×, →)
+    "RUF001",  # mathematical/logging unicode is intentional in strings (×, →, Δ)
+    "RUF002",  # mathematical/logging unicode is intentional in docstrings (×, →, Δ)
+    "RUF003",  # mathematical/logging unicode is intentional in comments (×, →, Δ)
     "RUF059",  # unused unpacking is fine for shape destructuring
     "SIM105",  # try/except/pass is clearer than contextlib.suppress for signals
     "TC003",   # type-checking import optimization not worth the complexity
 ]
+external = [
+    "WPS",  # legacy wemake-python-styleguide suppressions retained as external historical markers
+]
 
 [tool.ruff.lint.per-file-ignores]
 "experiments/*.py" = ["E402"]  # sys.path manipulation before imports is necessary
-"src/tac/master_gradient_consumers.py" = ["RUF001", "RUF003", "RUF022"]  # mathematical notation + consumer-ordered public API
+"src/tac/master_gradient_consumers.py" = ["RUF022"]  # consumer-ordered public API
 "src/tac/preflight.py" = ["ALL"]  # legacy mega-gate; use focused tests/strict checks, avoid broad mechanical ruff churn
 "src/tac/packet_compiler/__init__.py" = ["I001", "RUF022"]  # public API is grouped by codec family / PR lineage
 

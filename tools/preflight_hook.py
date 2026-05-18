@@ -62,14 +62,28 @@ def run_ruff_undefined_name(staged: list[str]) -> int:
     """Run ruff on staged .py files, fail on F821 (undefined name) only.
 
     F821 is the rule that catches scope-leak bugs like the auth_eval
-    `expected_raw` NameError. We use --select F821 to keep this hook fast and
-    focused — broader linting belongs in CI, not pre-commit.
+    `expected_raw` NameError. Keep this isolated from project-level broad-lint
+    ignores so per-file style carve-outs cannot suppress undefined-name checks.
     """
     if not staged or os.environ.get("PREFLIGHT_SKIP_RUFF") == "1":
         return 0
     try:
         result = subprocess.run(
-            [".venv/bin/ruff", "check", "--force-exclude", "--select", "F821", "--no-cache", *staged],
+            [
+                ".venv/bin/ruff",
+                "check",
+                "--isolated",
+                "--force-exclude",
+                "--select",
+                "F821",
+                "--ignore-noqa",
+                "--exclude",
+                "experiments/archive",
+                "--exclude",
+                "experiments/results",
+                "--no-cache",
+                *staged,
+            ],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
