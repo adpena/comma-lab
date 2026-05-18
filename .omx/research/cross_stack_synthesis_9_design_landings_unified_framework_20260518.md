@@ -678,3 +678,76 @@ The 9 designs' COLLECTIVE 6-hook wire-in IS the canonical unified-Lagrangian act
 
 ---
 
+## 9. Canonical Task Queue — Top 10 Op-Routables Ranked by EV
+
+Per CLAUDE.md "Meta-Lagrangian/Pareto solver" + Carmack binding Revision #3 (synthesis MUST be queryable + machine-routable): the canonical task queue is the operator-facing routing surface. Each op-routable is typed (concrete file paths + estimated $/hour cost + dependencies on other designs); ranked by EV (`|predicted ΔS| / cost`).
+
+### 9.1 EV ranking methodology
+
+Per Catalog #319 v2 cascade + Catalog #322 anti-phantom alpha + Catalog #324 post-training Tier-C validation:
+
+- **EV numerator**: `|predicted_delta_s_lower_bound|` per the design memo's Catalog #287-tagged prediction band, REALISTIC sub-additive composition adjustment per Catalog #322.
+- **EV denominator**: `cost_envelope_upper_bound_usd` (operator's worst-case GPU spend per the design memo's Catalog #270 dispatch optimization protocol envelope).
+- **Tie-break**: cheapest envelope wins; equal envelope rank by Catalog #313 predecessor probe outcome consultation depth (fewer blocking predecessors = higher rank).
+
+### 9.2 Top 10 op-routables ranked by EV
+
+| Rank | OP ID | Description | Designs covered | Concrete file paths | Cost envelope | Dependencies | Predicted ΔS | EV (|ΔS|/$) |
+|---|---|---|---|---|---|---|---|---|
+| **1** | **OP-SYN-1** | Extend `tools/extract_master_gradient.py` to 6 archives (A1 + PR101_lc_v2 + PR106 format0d + PR107 apogee + DP1 + sane_hnerv) per theoretical floor estimator OP-3 + this synthesis | ALL 9 (universal anchor unlock) | `tools/extract_master_gradient.py` (extend `--archive-sha-list` flag); `src/tac/master_gradient.py` (extend `MASTER_GRADIENT_CANONICAL_ARCHIVES` constant); `.omx/state/master_gradient_anchors.jsonl` (extend posterior) | $0 GPU + ~$0 CPU + ~6-12h M5 Max fp64 compute | NONE (depends only on Codex 2026-05-18 landing — done) | unlocks ALL downstream OP `[prediction]` predictions cross-substrate | ∞ (zero cost; unblocks all) |
+| **2** | **OP-SYN-2** | Land Phase 1 Fisher-precondition canonical helper at `tac.riemannian_newton_meta_substrate.fisher_precondition` per FISHER design memo OP-1 + OP-2 + OP-3 + OP-4 + OP-5 | FISHER (PRIMARY); RIEM (CONSUMES); Z8 (CONSUMES); TT5L V2 (CONSUMES) | `src/tac/riemannian_newton_meta_substrate/fisher_precondition.py` (~400 LOC); `src/tac/tests/test_fisher_precondition.py` (~150 LOC); `.omx/state/fisher_conditioning_anchors.jsonl` (canonical posterior per Catalog #131/#138); FISHER OP-5 NEW Catalog # STRICT preflight gate `check_riemannian_newton_anchor_validation_status` | $0 GPU + ~3 day editor + 1 day empirical validation on PR101_lc_v2 anchor | OP-SYN-1 (full 600-pair anchor) | Phase 1 ALONE `[-0.015, -0.005]` per archive `[prediction]`; CASCADE Phase 1-5 aggregate `[-0.060, -0.019]` per archive `[prediction]` | `[5, 15] × 10^3` per $1k envelope |
+| **3** | **OP-SYN-3** | Land `tools/probe_n_set_venn_empirical_sparsity_atlas.py` (3-set Venn empirical sparsity probe per VENN design memo OP-3) + extend `tac.canonical_n_set_venn_classification` package per §15 architecture | VENN (PRIMARY); FISHER (CONSUMES); RIEM (CONSUMES); TROP (CONSUMES); POSEAXIS (CONSUMES); FLOOR (CONSUMES) | `src/tac/canonical_n_set_venn_classification/__init__.py` + sub-modules (~500 LOC); `tools/probe_n_set_venn_empirical_sparsity_atlas.py` (~300 LOC); `src/tac/tests/test_n_set_venn_classification.py` (~200 LOC); `.omx/state/n_set_venn_sparsity_atlas/` (canonical posterior) | $0 GPU + ~3-4 day editor | OP-SYN-1 (full 600-pair anchor) | `-0.005` per archive `[prediction]` per Shannon's H(X\|Y_6-set) lens; UNLOCKS 3-set cell structure for FISHER + RIEM + TROP | `[5, 5] × 10^3` per $1k envelope |
+| **4** | **OP-SYN-4** | Land COORDINATED cheap-probe wave: POSEAXIS OP-1 Wyner-Ziv pose hoist + OP-2 master-gradient pose-byte classification + OP-7 direct master-gradient pose-byte hoist + OP-10 cathedral autopilot v2 cascade extension | POSEAXIS (PRIMARY 4-OP coordinated wave); VENN (CONSUMES) | `tac.side_information.deliverability_proof_builder` (extend for pose-axis); `tac.master_gradient_consumers.classify_bytes_by_pair_variance` (extend with pose-axis-specific classification); `tac.master_gradient_consumers.adjust_predicted_delta_for_venn_classification_v2` (extend Cascade 2 with per-pair pose-axis-specific factors); `tools/cathedral_autopilot_autonomous_loop.py` (Cascade 2 extension wire-in); ~30-50 LOC + 15 tests per OP | $0 CPU offline + ~$0.30 Modal A10G CPU smoke for paired CUDA verification (OP-1 only; OP-2 + OP-7 + OP-10 are $0 CPU) | OP-SYN-1 + OP-SYN-2 (depends on FISHER for Fisher-orthogonal projection) | Aggregate cheap-probe family `[-0.007, -0.0025]` per archive `[prediction]` | `[23, 8] × 10^3` per $1k envelope |
+| **5** | **OP-SYN-5** | Land C6 IBPS Path B2 DreamerV3 RSSM categorical (cargo-cult resurrection TOP-3 #2 per sister symposium) | CCREZ (PRIMARY); Z8 (CONSUMES via RSSM categorical primitive); TT5L V2 (SUB via RSSM categorical overlap) | `experiments/train_substrate_c6_e4_mdl_ibps_path_b2.py` (~400-500 LOC; sister symposium `council_per_substrate_symposium_c6_ibps_post_empirical_reactivation_v2_20260518.md` provides design contract); `.omx/operator_authorize_recipes/substrate_c6_e4_mdl_ibps_path_b2_modal_t4_dispatch.yaml`; per Catalog #325 6-step contract symposium memo | $5-15 Modal T4 50-100ep | Per-substrate symposium per Catalog #325 (sister `council_per_substrate_symposium_c6_ibps_post_empirical_reactivation_v2_20260518` ALREADY LANDED); predecessor probe outcome ledger consultation per Catalog #313 (C6 IBPS 22× miss DEFER 2026-05-17 in ledger; Path B2 is NEW probe) | Predicted band `[0.18, 0.45]` per sister §3.2 `[prediction]`; if lower bound holds reaches frontier `0.19205` at $-0.012 advantage | `[36, 2] × 10^3` per $1k envelope |
+| **6** | **OP-SYN-6** | Land Phase 2 Riemannian-Newton META-canonical-helper at `tac.riemannian_newton_meta_substrate` per RIEM design memo OP-1 + OP-3 + OP-4 + OP-5 | RIEM (PRIMARY); FISHER (CONSUMES); Z8 (CONSUMES); TT5L V2 (CONSUMES) | `src/tac/riemannian_newton_meta_substrate/__init__.py` + sub-modules (~600 LOC total per parent §10.3); `src/tac/substrates/_shared/trainer_skeleton.py` (extend with Geomstats integration per Catalog #190); `src/tac/tests/test_riemannian_newton_meta_substrate.py` (~250 LOC); `.omx/state/riemannian_newton_convergence.jsonl` | $0 GPU + ~3-5 day editor | OP-SYN-2 (Phase 1 Fisher-precondition) + OP-SYN-1 (cross-substrate anchor) | `[-0.025, -0.008]` per archive `[prediction]` Phase 2 single-framework | `[5, 2] × 10^3` per $1k envelope |
+| **7** | **OP-SYN-7** | Land Tropical d_seg Phase 1 boundary detector + faithfulness probe per TROP design memo OP-1 + OP-2 | TROP (PRIMARY); VENN (CONSUMES); FISHER (SUB via boundary cell overlap); RIEM (SUB via boundary cell overlap) | `src/tac/tropical_d_seg_solver/boundary_detector.py` (~250 LOC Mallat wavelet); `src/tac/tropical_d_seg_solver/tests/test_boundary_detector.py` (~150 LOC); `tools/probe_tropical_polynomial_faithfulness.py` (~200 LOC) | $0 GPU + ~3-4 day editor + ~1 day empirical | OP-SYN-1 + OP-SYN-3 (cell structure prerequisite) | Phase 1 ALONE `[-0.010, -0.002]` per archive `[prediction]`; CASCADE Phase 1-4 aggregate `[-0.040, -0.012]` `[prediction]` | `[5, 1] × 10^3` per $1k envelope |
+| **8** | **OP-SYN-8** | Land V1 Faiss V5 wavelet-multi-scale probe (cargo-cult resurrection TOP-3 #1 per sister symposium) | CCREZ (PRIMARY) | `tools/probe_v1_faiss_v5_wavelet_multi_scale.py` (~200 LOC; sister symposium `council_per_substrate_symposium_v1_dense_faiss_ivf_pq_reactivation_20260518.md` provides design contract); CPU-only execution | $0.15-0.30 CPU probe | Per-substrate symposium per Catalog #325 (sister ALREADY LANDED); predecessor probe outcome ledger consultation (V4 SEGFAULT IMPLEMENTATION-level falsification 2026-05-18 in ledger) | `[-0.005, -0.001]` per archive `[prediction]` per sister §5.2 | `[33, 3] × 10^3` per $1k envelope |
+| **9** | **OP-SYN-9** | Migrate to unified-Lagrangian action `tac.unified_action.S_total(theta, archive_bytes, hardware)` per Catalog #125 migration target | ALL 9 (via 6-hook wire-in collective canonicalization) | `src/tac/unified_action/__init__.py` + sub-modules (~800 LOC; composes 9 individual designs' Lagrangian terms); `src/tac/tests/test_unified_action.py` (~300 LOC); migration adapters for the 9 designs' separate Lagrangian terms | $0 GPU + ~7-10 day editor | OP-SYN-1 + OP-SYN-2 + OP-SYN-3 + OP-SYN-4 + OP-SYN-6 + OP-SYN-7 (all Tier-1 OPs must land first) | indirect via solver coherence; estimated `[-0.005, -0.001]` per archive `[prediction]` via better Tier 1 outer optimization (codec configuration + composition alpha) | `[5, 1] × 10^3` per $1k envelope (deferred to Week 8+) |
+| **10** | **OP-SYN-10** | Per-substrate symposium for OP-4 (POSEAXIS pose-conditioned residual codec) AND OP-8 (POSEAXIS VGGT-encoder-as-pose-teacher distillation) per pose-axis T3 council OP-11 + Catalog #325 6-step contract | POSEAXIS (substrate-symposium discipline) | `.omx/research/council_per_substrate_symposium_pose_conditioned_residual_codec_20260518.md` (NEW); `.omx/research/council_per_substrate_symposium_vggt_pose_teacher_distillation_20260518.md` (NEW); both per Catalog #325 6-step contract | $0 (research-only symposium memos) | None (parallel to OP-SYN-1 through OP-SYN-7) | TRIGGERS OP-4 + OP-8 paid dispatch unlock (Week 6+); predicted `[-0.018, -0.006]` aggregate per archive `[prediction]` when paid dispatch lands | gating unlock; EV is in the unlocked downstream OPs |
+
+### 9.3 Operational sequencing
+
+Per Section 7.2 per-week sequencing:
+
+- **Weeks 1-2**: OP-SYN-1 + OP-SYN-2 (Tier-1 enabling primitives; $0 total).
+- **Weeks 3-4**: OP-SYN-3 + OP-SYN-4 + OP-SYN-7 (3-set Venn + cheap-probe wave + Tropical Phase 1; $0-$1 total).
+- **Week 4 cont**: OP-SYN-6 (Riemannian-Newton META lands; $0).
+- **Week 5**: OP-SYN-5 + OP-SYN-8 (cargo-cult resurrection wave; $5-15 total).
+- **Week 6+**: OP-SYN-10 (per-substrate symposium for OP-4 + OP-8 unlock; $0 + downstream $10-50).
+- **Week 8+**: OP-SYN-9 (unified-Lagrangian action migration; $0 editor; deferred to post-Tier-1 cascade).
+
+### 9.4 EV-ranked queue dependencies
+
+```
+OP-SYN-1 (anchor extension)
+   │
+   ├──► OP-SYN-2 (Phase 1 Fisher-precondition)
+   │       │
+   │       ├──► OP-SYN-6 (Phase 2 Riemannian-Newton)
+   │       │
+   │       └──► OP-SYN-4 (POSEAXIS cheap-probe wave; depends on FISHER's Fisher-orthogonal projection)
+   │
+   ├──► OP-SYN-3 (3-set Venn empirical sparsity atlas)
+   │       │
+   │       └──► OP-SYN-7 (Tropical Phase 1 boundary detector; depends on VENN cell structure)
+   │
+   ├──► OP-SYN-5 (C6 IBPS Path B2; cargo-cult resurrection; independent of Tier-1)
+   │
+   ├──► OP-SYN-8 (V1 Faiss V5 wavelet-multi-scale; cargo-cult resurrection; independent of Tier-1)
+   │
+   ├──► OP-SYN-10 (per-substrate symposium for POSEAXIS OP-4 + OP-8 unlock; independent)
+   │
+   └──► OP-SYN-9 (unified-Lagrangian action; depends on all Tier-1 OPs landing first)
+```
+
+### 9.5 Race-mode reordering (if leaderboard moves during Week 2-8)
+
+Per CLAUDE.md "Race-mode rigor inversion + parallel-dispatch first" non-negotiable: if the public leaderboard moves with a new sub-0.19 lower-bound during Weeks 2-8, the canonical task queue is REORDERED to prioritize the smallest credible bolt-on. The 2026-05-04 race postmortem template applies:
+
+- **Race-mode trigger**: new public PR archive with `[contest-CPU GHA Linux x86_64]` < 0.192 OR `[contest-CUDA T4]` < 0.205.
+- **Immediate action**: PAUSE OP-SYN-2 through OP-SYN-9; CONCENTRATE on OP-SYN-4 (POSEAXIS cheap-probe wave) which is the smallest credible bolt-on at $0-$1.
+- **Sister actions**: dispatch OP-SYN-5 (C6 IBPS Path B2) AND OP-SYN-8 (V1 Faiss V5) IN PARALLEL via `tools/parallel_dispatch_top_k.py` per the canonical actuator (CLAUDE.md "Race-mode rigor inversion" Rule 1).
+- **Defer**: OP-SYN-6 (Riemannian-Newton) + OP-SYN-7 (Tropical) + OP-SYN-9 (unified action) — these are LONG-burn substrate-engineering Lagrangian moves; race-mode prioritizes parallel bolt-ons.
+
+---
+
