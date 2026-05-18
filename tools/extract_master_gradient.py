@@ -384,6 +384,15 @@ class _ArchivePayload:
     gradient_byte_domain: str
 
 
+@dataclass(frozen=True)
+class ExtractAllArchiveSpec:
+    """One archive entry from an extract-all manifest."""
+
+    label: str
+    path: Path
+    expected_grammar: str | None = None
+
+
 class ArchiveGrammarUnknownError(ValueError):
     """Raised when archive bytes do not match a known parser grammar."""
 
@@ -828,6 +837,187 @@ def detect_archive_grammar_and_parse(archive_bytes: bytes) -> tuple[str, Archive
         except ValueError as exc:
             failures.append(f"{parser.__name__}: {exc}")
     raise ArchiveGrammarUnknownError("; ".join(failures))
+
+
+def _load_extract_all_manifest(path: Path) -> tuple[dict[str, object], tuple[ExtractAllArchiveSpec, ...]]:
+    """Load a batch xray manifest for ``extract-all``.
+
+    Relative archive paths resolve relative to the manifest file. Accepted
+    schemas are a top-level ``archives`` object-list or the object-list itself.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        manifest_meta: dict[str, object] = {}
+        archive_rows = payload
+    elif isinstance(payload, dict):
+        manifest_meta = {key: value for key, value in payload.items() if key != "archives"}
+        archive_rows = payload.get("archives")
+    else:
+        raise ValueError("extract-all manifest must be a JSON object or list")
+
+    if not isinstance(archive_rows, list):
+        raise ValueError("extract-all manifest must contain an 'archives' list")
+
+    specs: list[ExtractAllArchiveSpec] = []
+    for idx, row in enumerate(archive_rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"archives[{idx}] must be an object")
+        raw_path = row.get("path") or row.get("archive_path")
+        if not isinstance(raw_path, str) or not raw_path:
+            raise ValueError(f"archives[{idx}] requires a non-empty path/archive_path")
+        archive_path = Path(raw_path)
+        if not archive_path.is_absolute():
+            archive_path = (path.parent / archive_path).resolve()
+        label = row.get("label")
+        if label is None:
+            label = archive_path.stem
+        if not isinstance(label, str) or not label:
+            raise ValueError(f"archives[{idx}] label must be a non-empty string")
+        expected_grammar = row.get("expected_grammar")
+        if expected_grammar is not None and not isinstance(expected_grammar, str):
+            raise ValueError(f"archives[{idx}] expected_grammar must be a string when present")
+        specs.append(
+            ExtractAllArchiveSpec(
+                label=label,
+                path=archive_path,
+                expected_grammar=expected_grammar,
+            )
+        )
+    return manifest_meta, tuple(specs)
+
+
+def build_extract_all_manifest(manifest_path: Path) -> dict[str, object]:
+    """Detect every archive in a batch manifest without emitting anchors."""
+    manifest_meta, specs = _load_extract_all_manifest(manifest_path)
+    archive_rows: list[dict[str, object]] = []
+    counts = {
+        "anchor_ready": 0,
+        "detection_only_blocked": 0,
+        "expected_grammar_mismatch": 0,
+        "missing": 0,
+        "error": 0,
+    }
+
+    for spec in specs:
+        row: dict[str, object] = {
+            "label": spec.label,
+            "path": str(spec.path),
+            "expected_grammar": spec.expected_grammar,
+            "anchor_write_performed": False,
+            "score_claim_allowed": False,
+            "promotion_eligible": False,
+        }
+        if not spec.path.exists():
+            row.update(
+                {
+                    "status": "missing",
+                    "blockers": ["archive_path_missing"],
+                    "error": f"archive path does not exist: {spec.path}",
+                }
+            )
+            counts["missing"] += 1
+            archive_rows.append(row)
+            continue
+
+        try:
+            archive_bytes = spec.path.read_bytes()
+            _, layout = detect_archive_grammar_and_parse(archive_bytes)
+            layout_payload = layout.as_dict()
+            projection_contract = layout_payload["projection_contract"]
+            expected_match = spec.expected_grammar is None or spec.expected_grammar == layout.grammar_name
+            if not expected_match:
+                status = "expected_grammar_mismatch"
+                blockers = [
+                    f"expected_grammar={spec.expected_grammar}",
+                    f"detected_grammar={layout.grammar_name}",
+                ]
+                counts["expected_grammar_mismatch"] += 1
+            elif layout.gradient_projection_supported:
+                status = "anchor_ready"
+                blockers = []
+                counts["anchor_ready"] += 1
+            else:
+                status = "detection_only_blocked"
+                blockers = [
+                    str(projection_contract["required_projector"]),
+                    "anchor_emission_not_allowed_without_projector",
+                ]
+                counts["detection_only_blocked"] += 1
+
+            row.update(
+                {
+                    "status": status,
+                    "blockers": blockers,
+                    "expected_grammar_match": expected_match,
+                    "archive_sha256": layout.archive_sha256,
+                    "archive_bytes": layout.archive_bytes,
+                    "grammar_name": layout.grammar_name,
+                    "gradient_projection_supported": layout.gradient_projection_supported,
+                    "projection_contract": projection_contract,
+                    "layout": layout_payload,
+                }
+            )
+        except Exception as exc:  # pragma: no cover - exact parser text is data-dependent
+            row.update(
+                {
+                    "status": "error",
+                    "blockers": ["archive_grammar_detection_failed"],
+                    "error": str(exc),
+                }
+            )
+            counts["error"] += 1
+        archive_rows.append(row)
+
+    return {
+        "schema": "master_gradient_extract_all_manifest_v1",
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "manifest_path": str(manifest_path),
+        "manifest_meta": manifest_meta,
+        "archive_count": len(archive_rows),
+        "counts": counts,
+        "anchor_write_performed": False,
+        "score_claim_allowed": False,
+        "promotion_eligible": False,
+        "archives": archive_rows,
+    }
+
+
+def _main_extract_all(argv: Sequence[str]) -> int:
+    parser = argparse.ArgumentParser(
+        description="Batch-detect archive grammars and projection contracts without writing anchors."
+    )
+    parser.add_argument("--manifest", required=True, type=Path, help="JSON manifest listing archives to inspect.")
+    parser.add_argument("--output", default=None, type=Path, help="Optional JSON output path. Defaults to stdout.")
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return non-zero if any archive is missing, mismatched, errored, or detection-only.",
+    )
+    args = parser.parse_args(list(argv))
+
+    payload = build_extract_all_manifest(args.manifest)
+    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if args.output is None:
+        print(rendered, end="")
+    else:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(rendered, encoding="utf-8")
+
+    if args.strict:
+        counts = payload["counts"]
+        assert isinstance(counts, dict)
+        non_ready = sum(
+            int(counts[key])
+            for key in (
+                "detection_only_blocked",
+                "expected_grammar_mismatch",
+                "missing",
+                "error",
+            )
+        )
+        if non_ready:
+            return 2
+    return 0
 
 
 def _zigzag_encode_i8_to_u8(arr_i8: np.ndarray) -> np.ndarray:
@@ -1452,6 +1642,12 @@ def _write_layout_contract(path: Path, layout: ArchiveLayout) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    argv_list = list(sys.argv[1:] if argv is None else argv)
+    if argv_list and argv_list[0] == "extract-all":
+        return _main_extract_all(argv_list[1:])
+    if argv_list and argv_list[0] == "list-grammars":
+        argv_list = ["--list-grammars", *argv_list[1:]]
+
     parser = argparse.ArgumentParser(
         description="Extract master gradient (per-byte score sensitivity) for an archive at its operating point."
     )
@@ -1560,7 +1756,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ),
     )
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(argv_list)
     if args.storage_dtype is None:
         args.storage_dtype = args.compute_dtype
 

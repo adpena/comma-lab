@@ -879,6 +879,96 @@ def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
     assert contract["projection_contract"]["required_projector"] == "pr106_format0d_primary_payload_projector"
 
 
+def test_extract_all_cli_writes_batch_manifest_without_anchor_emission(tmp_path):
+    fixtures = {
+        "fec6": (_zip_payload(_fec6_payload()), "fec6_fp11_selector"),
+        "a1": (_zip_payload(_a1_payload()), "a1_finetuned"),
+        "pr101": (_zip_payload(_pr101_payload()), "pr101_lc_v2"),
+        "pr106": (_zip_payload(_pr106_payload()), "pr106_format0d"),
+        "dp1": (_zip_payload(_dp1_payload(), member_name="0.bin"), "dp1_pretrained_driving_prior"),
+        "pr106_ff": (_zip_payload(_pr106_ff_payload(), member_name="0.bin"), "pr106_ff_packed_hnerv"),
+        "hnerv_lc_v2": (
+            _zip_payload(_hnerv_lc_v2_payload(), member_name="0.bin"),
+            "hnerv_lc_v2_length_prefixed",
+        ),
+        "pr107": (_zip_payload(_pr107_payload(), member_name="0.bin"), "pr107_apogee_length_prefixed"),
+    }
+    for label, (archive_bytes, _) in fixtures.items():
+        (tmp_path / f"{label}.zip").write_bytes(archive_bytes)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "batch_id": "synthetic_extract_all",
+                "archives": [
+                    {
+                        "label": label,
+                        "path": f"{label}.zip",
+                        "expected_grammar": expected_grammar,
+                    }
+                    for label, (_, expected_grammar) in fixtures.items()
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "extract_all.json"
+
+    rc = emg.main(["extract-all", "--manifest", str(manifest), "--output", str(output)])
+
+    assert rc == 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["schema"] == "master_gradient_extract_all_manifest_v1"
+    assert payload["anchor_write_performed"] is False
+    assert payload["score_claim_allowed"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["archive_count"] == len(fixtures)
+    assert payload["counts"]["anchor_ready"] == 3
+    assert payload["counts"]["detection_only_blocked"] == 5
+
+    by_label = {row["label"]: row for row in payload["archives"]}
+    assert by_label["fec6"]["status"] == "anchor_ready"
+    assert by_label["a1"]["status"] == "anchor_ready"
+    assert by_label["pr101"]["status"] == "anchor_ready"
+    assert by_label["pr101"]["projection_contract"]["anchor_emission_allowed"] is True
+    assert by_label["pr101"]["anchor_write_performed"] is False
+    assert by_label["pr106"]["status"] == "detection_only_blocked"
+    assert by_label["dp1"]["status"] == "detection_only_blocked"
+    assert by_label["pr106_ff"]["status"] == "detection_only_blocked"
+    assert by_label["hnerv_lc_v2"]["status"] == "detection_only_blocked"
+    assert by_label["pr107"]["status"] == "detection_only_blocked"
+    assert by_label["dp1"]["projection_contract"]["authority"] == "fail_closed_detection_only"
+    assert by_label["dp1"]["projection_contract"]["anchor_emission_allowed"] is False
+    assert by_label["dp1"]["blockers"] == [
+        "dp1_pretrained_driving_prior_schema_projector",
+        "anchor_emission_not_allowed_without_projector",
+    ]
+
+
+def test_extract_all_cli_strict_fails_on_detection_only_grammar(tmp_path):
+    pr106 = tmp_path / "pr106.zip"
+    pr106.write_bytes(_zip_payload(_pr106_payload()))
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "archives": [
+                    {
+                        "label": "pr106",
+                        "path": str(pr106),
+                        "expected_grammar": "pr106_format0d",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = emg.main(["extract-all", "--manifest", str(manifest), "--strict"])
+
+    assert rc == 2
+
+
 def test_main_requires_explicit_axis_for_anchor_emitting_path(tmp_path):
     archive = tmp_path / "archive.zip"
     archive.write_bytes(_zip_payload(_pr101_payload()))
