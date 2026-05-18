@@ -36520,6 +36520,129 @@
       },
       "notes": "research_only=true (T3 symposium with \u0394S=0 direct; predicted_mission_contribution=frontier_protecting per Catalog #300 v2; enables Wyner-Ziv sister symposium 2026-05-17 Tier-2 baked-constants landing via OP-1 inflate.py LOC budget restoration); reactivation_criteria: OP-1 + OP-2 + OP-5 land + sister Wyner-Ziv Q4 first-empirical-anchor closes loop",
       "research_only": true
+    },
+    {
+      "id": "lane_canonical_upstream_pr_review_compliance_20260518",
+      "name": "Canonical upstream PR review for procedural-generation contest-compliance",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": ".omx/research/canonical_upstream_pr_review_procedural_generation_compliance_20260518.md"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/feedback_canonical_upstream_pr_review_procedural_generation_compliance_landed_20260518.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_comprehensive_analytical_surfaces_synthesis_20260518",
+      "name": "Comprehensive analytical surfaces inventory + master-gradient null-exploitation + synthesis design memo",
+      "phase": 4.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_codex_catalog_328_inflate_py_loc_budget_audit_20260518",
+      "name": "Catalog #328 inflate.py LOC budget audit",
+      "phase": 4.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/submission_inflate_loc_budget.py + tools/audit_submission_inflate_py_loc_budget.py + Catalog #328 preflight warn-only wire-in"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -36529,5 +36652,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-05-18T15:21:42Z"
+  "updated_at": "2026-05-18T15:48:28Z"
 }
