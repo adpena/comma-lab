@@ -155,6 +155,26 @@ def _resolve_predictor_architecture(
     )
 
 
+def _predictor_width_metadata(
+    args: argparse.Namespace,
+    *,
+    effective_predictor_hidden_dim: int,
+    predictor_depth: int,
+) -> dict[str, int | str]:
+    """Return predictor-width custody fields shared by archive and sidecars."""
+    requested_predictor_hidden_dim = int(
+        getattr(args, "predictor_hidden_dim", effective_predictor_hidden_dim)
+    )
+    return {
+        "predictor_hidden_dim": int(effective_predictor_hidden_dim),
+        "requested_predictor_hidden_dim": requested_predictor_hidden_dim,
+        "effective_predictor_hidden_dim": int(effective_predictor_hidden_dim),
+        "predictor_film_mlp_hidden_dim": int(args.predictor_film_mlp_hidden_dim),
+        "predictor_architecture": str(args.predictor_architecture),
+        "predictor_depth": int(predictor_depth),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Catalog #151 manifest — every flag below must be threaded by any operator
 # wrapper. AnnAssign per Catalog #168 (NOT bare Assign).
@@ -249,15 +269,34 @@ TIER_1_OPERATOR_REQUIRED_FLAGS: dict[str, dict[str, Any]] = {
         ),
         "default": "300000",
     },
+    "--predictor-hidden-dim": {
+        "env": "Z6_PREDICTOR_HIDDEN_DIM",
+        "rationale": (
+            "Single-layer FiLM width knob for Candidate 4c and other "
+            "source-channel probes. The multi-layer Candidate 1 resolver "
+            "overrides this value, but single-layer recipes must be able to "
+            "tune it without code edits."
+        ),
+        "default": "64",
+    },
+    "--predictor-film-mlp-hidden-dim": {
+        "env": "Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM",
+        "rationale": (
+            "FiLM modulation MLP width knob; exposes side-information channel "
+            "capacity to operator recipes and remote drivers."
+        ),
+        "default": "32",
+    },
     "--ego-source": {
         "env": "Z6_EGO_SOURCE",
         "rationale": (
             "Ego-motion source for the FiLM predictor. posenet_projection "
             "preserves Z6-v1 baseline (PoseNet head -> 8-dim projection); "
-            "alternative sources (raft / optical_flow / scorer_logit / "
-            "multi_frame) per Path B BUILD design memo §4 sub-options are "
-            "DEFERRED to subsequent Candidate 4 dispatches per Phase 3 "
-            "council Revision #6."
+            "scorer_logit is Z6-v2 Candidate 4c: compress-time SegNet logits "
+            "+ PoseNet head features reduced into the same fixed-size "
+            "ego-motion side-info vector. Remaining alternatives (raft / "
+            "optical_flow / multi_frame) per Path B BUILD design memo §4 "
+            "sub-options remain deferred to subsequent Candidate 4 dispatches."
         ),
         "default": "posenet_projection",
     },
@@ -458,12 +497,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--ego-source",
-        choices=("posenet_projection",),
+        choices=("posenet_projection", "scorer_logit"),
         default="posenet_projection",
         help=(
-            "Ego-motion source. Candidate 1 preserves Z6-v1's "
-            "posenet_projection per Phase 3 council §9 spec; alternative "
-            "sources (Candidate 4 sub-options) are DEFERRED."
+            "Ego-motion source. posenet_projection preserves Z6-v1's "
+            "baseline per Phase 3 council §9. scorer_logit enables Z6-v2 "
+            "Candidate 4c: compress-time SegNet logits + PoseNet head "
+            "features reduced into the same archive-side ego buffer."
         ),
     )
     p.add_argument(
@@ -823,14 +863,23 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
         "output_height": cfg.output_height,
         "output_width": cfg.output_width,
-        "predictor_hidden_dim": cfg.predictor_hidden_dim,
-        "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
+        **_predictor_width_metadata(
+            args,
+            effective_predictor_hidden_dim=cfg.predictor_hidden_dim,
+            predictor_depth=predictor_depth,
+        ),
         "latent_init_std": cfg.latent_init_std,
         "smoke": True,
         "smoke_target_mode": args.smoke_target_mode,
         "smoke_ego_motion_mode": args.smoke_ego_motion_mode,
         "requested_epochs": args.epochs,
         "effective_epochs": effective_epochs,
+        "ego_source": getattr(args, "ego_source", "posenet_projection"),
+        "ego_motion_source": (
+            "smoke_proxy_no_scorer_load"
+            if getattr(args, "ego_source", "posenet_projection") == "scorer_logit"
+            else "smoke_proxy"
+        ),
     }
     archive_bytes = pack_archive(
         enc_sd, dec_sd, pred_sd, latent_init, residuals, ego_motion, meta,
@@ -1044,6 +1093,7 @@ def _resolve_auth_eval_json_paths(
     output_dir: Path,
     *,
     durable_root: Path | None = None,
+    filename: str = "contest_auth_eval.json",
 ) -> tuple[Path, Path]:
     """Return ``(gate_json, local_copy_json)`` for score-grade auth eval.
 
@@ -1053,7 +1103,7 @@ def _resolve_auth_eval_json_paths(
     copies that JSON back into ``output_dir`` for artifact harvest. Sister of
     NSCS01 pattern.
     """
-    local_copy_json = output_dir / "contest_auth_eval.json"
+    local_copy_json = output_dir / filename
     temp_root = Path(tempfile.gettempdir())
     if not _path_is_under(local_copy_json, temp_root):
         return local_copy_json, local_copy_json
@@ -1065,7 +1115,166 @@ def _resolve_auth_eval_json_paths(
                 "/root/time_traveler_l5_z6_auth_eval",
             )
         )
-    return root / output_dir.name / "contest_auth_eval.json", local_copy_json
+    return root / output_dir.name / filename, local_copy_json
+
+
+def _standardize_ego_motion_features(stacked: torch.Tensor) -> torch.Tensor:
+    """Standardize per-column so FiLM modulation is well-conditioned."""
+    mean = stacked.mean(dim=0, keepdim=True)
+    std = stacked.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
+    return ((stacked - mean) / std).contiguous()
+
+
+def _pad_or_truncate_ego_features(
+    features: torch.Tensor,
+    *,
+    ego_motion_dim: int,
+) -> torch.Tensor:
+    """Return exactly ``ego_motion_dim`` columns without changing row order."""
+    if features.shape[1] < ego_motion_dim:
+        pad = torch.zeros(
+            features.shape[0],
+            ego_motion_dim - features.shape[1],
+            dtype=features.dtype,
+            device=features.device,
+        )
+        features = torch.cat([features, pad], dim=1)
+    return features[:, :ego_motion_dim]
+
+
+def _allocate_scorer_logit_feature_slots(ego_motion_dim: int) -> dict[str, int]:
+    """Allocate fixed ego-buffer slots across all Candidate 4c signal groups."""
+    if ego_motion_dim <= 0:
+        raise ValueError(f"ego_motion_dim must be > 0; got {ego_motion_dim}")
+    priority = ("seg_mean", "pose", "entropy", "margin", "seg_std")
+    slots = {name: 0 for name in priority}
+    if ego_motion_dim < len(priority):
+        for name in priority[:ego_motion_dim]:
+            slots[name] = 1
+        return slots
+
+    for name in priority:
+        slots[name] = 1
+    remaining = ego_motion_dim - len(priority)
+    # Default dim=8 becomes seg_mean=2, pose=2, seg_std=2, entropy=1,
+    # margin=1. This preserves every group instead of prefix-truncating the
+    # raw feature bank when SegNet has many classes.
+    expansion_order = ("seg_mean", "pose", "seg_std", "pose", "seg_mean")
+    idx = 0
+    while remaining > 0:
+        slots[expansion_order[idx % len(expansion_order)]] += 1
+        remaining -= 1
+        idx += 1
+    return slots
+
+
+def _scorer_logit_feature_slot_metadata(
+    ego_source: str,
+    ego_motion_dim: int,
+) -> dict[str, int] | None:
+    """Return JSON-safe Candidate 4c slot metadata when the path is active."""
+    if ego_source != "scorer_logit":
+        return None
+    return {
+        key: int(value)
+        for key, value in _allocate_scorer_logit_feature_slots(
+            ego_motion_dim
+        ).items()
+    }
+
+
+def _param_count_target_diagnostic(
+    breakdown: dict[str, int],
+    *,
+    target: int,
+    actual_num_pairs: int,
+    latent_dim: int,
+    full_num_pairs: int = N_PAIRS_FULL,
+) -> dict[str, object]:
+    """Return honest param-target diagnostics for full and pair-capped runs."""
+    actual_total = int(breakdown["total"])
+    residuals_actual = int(breakdown.get("residuals", 0))
+    residuals_full_equivalent = int(full_num_pairs) * int(latent_dim)
+    full_equivalent_total = (
+        actual_total - residuals_actual + residuals_full_equivalent
+    )
+    comparison_total = (
+        full_equivalent_total
+        if int(actual_num_pairs) < int(full_num_pairs)
+        else actual_total
+    )
+    if target > 0:
+        deviation_pct = abs(comparison_total - int(target)) / int(target) * 100.0
+        within_tolerance = deviation_pct <= 5.0
+    else:
+        deviation_pct = 0.0
+        within_tolerance = True
+    return {
+        "target": int(target),
+        "actual_total": actual_total,
+        "actual_num_pairs": int(actual_num_pairs),
+        "residuals_actual": residuals_actual,
+        "full_num_pairs": int(full_num_pairs),
+        "full_equivalent_total": int(full_equivalent_total),
+        "comparison_total": int(comparison_total),
+        "comparison_basis": (
+            "full_equivalent_total_from_pair_capped_run"
+            if int(actual_num_pairs) < int(full_num_pairs)
+            else "actual_total_full_run"
+        ),
+        "deviation_pct": float(deviation_pct),
+        "within_5pct": bool(within_tolerance),
+    }
+
+
+def _compress_feature_group(features: torch.Tensor, slots: int) -> torch.Tensor:
+    """Reduce one feature group to ``slots`` columns without prefix truncation."""
+    if slots <= 0:
+        return features.new_zeros((features.shape[0], 0))
+    if features.dim() != 2:
+        raise ValueError(f"feature group must be rank-2; got {tuple(features.shape)}")
+    width = int(features.shape[1])
+    if width == slots:
+        return features
+    if width < slots:
+        pad = torch.zeros(
+            features.shape[0],
+            slots - width,
+            dtype=features.dtype,
+            device=features.device,
+        )
+        return torch.cat([features, pad], dim=1)
+    pooled = torch.nn.functional.adaptive_avg_pool1d(
+        features.unsqueeze(1),
+        slots,
+    )
+    return pooled.squeeze(1)
+
+
+def _reduce_scorer_logit_feature_groups(
+    *,
+    seg_mean: torch.Tensor,
+    pose_tensor: torch.Tensor,
+    seg_std: torch.Tensor,
+    entropy: torch.Tensor,
+    margin: torch.Tensor,
+    ego_motion_dim: int,
+) -> torch.Tensor:
+    """Budget scorer-logit side-info slots across every signal family."""
+    slots = _allocate_scorer_logit_feature_slots(ego_motion_dim)
+    parts = [
+        _compress_feature_group(seg_mean, slots["seg_mean"]),
+        _compress_feature_group(pose_tensor, slots["pose"]),
+        _compress_feature_group(seg_std, slots["seg_std"]),
+        _compress_feature_group(entropy, slots["entropy"]),
+        _compress_feature_group(margin, slots["margin"]),
+    ]
+    reduced = torch.cat(parts, dim=1)
+    if reduced.shape[1] != ego_motion_dim:
+        raise RuntimeError(
+            f"reduced scorer-logit feature width {reduced.shape[1]} != {ego_motion_dim}"
+        )
+    return reduced
 
 
 def _derive_ego_motion_from_posenet(
@@ -1155,9 +1364,90 @@ def _derive_ego_motion_from_posenet(
             n_pairs, ego_motion_dim - stacked.shape[1], dtype=stacked.dtype
         )
         stacked = torch.cat([stacked, pad], dim=1)
-    mean = stacked.mean(dim=0, keepdim=True)
-    std = stacked.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
-    return ((stacked - mean) / std).contiguous()
+    return _standardize_ego_motion_features(stacked)
+
+
+def _derive_ego_motion_from_scorer_logits(
+    posenet: torch.nn.Module,
+    segnet: torch.nn.Module,
+    gt_pair_tensor: torch.Tensor,
+    *,
+    ego_motion_dim: int,
+    chunk_size: int = 16,
+    device: torch.device | None = None,
+) -> torch.Tensor:
+    """Derive Candidate 4c ego side-info from compress-time scorer outputs.
+
+    This is Z6-v2 Candidate 4c per the Path B design memo §4.4c: enrich the
+    predictor side-information channel with SegNet logits plus PoseNet head
+    features. The scorer is used only at compress/training time; the reduced
+    vector is stored in the existing Z6PCWM1 ego-motion buffer, so inflate
+    remains scorer-free.
+    """
+    if ego_motion_dim <= 0:
+        raise ValueError(f"ego_motion_dim must be > 0; got {ego_motion_dim}")
+    if gt_pair_tensor.dim() != 5 or gt_pair_tensor.shape[1] != 2:
+        raise ValueError(
+            f"gt_pair_tensor must be (N, 2, 3, H, W); got {tuple(gt_pair_tensor.shape)}"
+        )
+    n_pairs = int(gt_pair_tensor.shape[0])
+    compute_device = device if device is not None else gt_pair_tensor.device
+    posenet.eval()
+    segnet.eval()
+
+    reduced_features: list[torch.Tensor] = []
+    with torch.inference_mode():
+        for start in range(0, n_pairs, chunk_size):
+            chunk = gt_pair_tensor[start : start + chunk_size].to(compute_device)
+
+            pose_in = posenet.preprocess_input(chunk)
+            pose_out = posenet(pose_in)
+            if isinstance(pose_out, dict):
+                if "pose" not in pose_out:
+                    raise RuntimeError(
+                        f"PoseNet forward returned dict without 'pose' key; "
+                        f"keys={list(pose_out.keys())}"
+                    )
+                pose_tensor = pose_out["pose"]
+            else:
+                pose_tensor = pose_out
+            pose_tensor = pose_tensor.to(dtype=torch.float32)
+
+            seg_in = segnet.preprocess_input(chunk)
+            seg_logits = segnet(seg_in).to(dtype=torch.float32)
+            if seg_logits.dim() != 4:
+                raise RuntimeError(
+                    f"SegNet logits must be (B, C, H, W); got {tuple(seg_logits.shape)}"
+                )
+
+            seg_mean = seg_logits.mean(dim=(2, 3))
+            seg_std = seg_logits.std(dim=(2, 3), unbiased=False)
+            seg_prob = torch.softmax(seg_logits, dim=1)
+            entropy = -(seg_prob * seg_prob.clamp_min(1e-8).log()).sum(
+                dim=1, keepdim=True
+            ).mean(dim=(2, 3))
+            top2 = seg_logits.topk(k=min(2, int(seg_logits.shape[1])), dim=1).values
+            if top2.shape[1] == 1:
+                margin = top2[:, :1].mean(dim=(2, 3))
+            else:
+                margin = (top2[:, :1] - top2[:, 1:2]).mean(dim=(2, 3))
+
+            reduced = _reduce_scorer_logit_feature_groups(
+                seg_mean=seg_mean,
+                pose_tensor=pose_tensor,
+                seg_std=seg_std,
+                entropy=entropy,
+                margin=margin,
+                ego_motion_dim=ego_motion_dim,
+            )
+            reduced_features.append(reduced.to(device="cpu", dtype=torch.float32))
+
+    stacked = torch.cat(reduced_features, dim=0)
+    if stacked.shape[0] != n_pairs:
+        raise RuntimeError(
+            f"derived {stacked.shape[0]} scorer-logit vectors from {n_pairs} pairs"
+        )
+    return _standardize_ego_motion_features(stacked)
 
 
 def _write_runtime(submission_dir: Path) -> None:
@@ -1393,15 +1683,33 @@ def _full_main(args: argparse.Namespace) -> int:
     auth_eval_gate_json_path, auth_eval_json_path = _resolve_auth_eval_json_paths(
         args.output_dir
     )
+    (
+        identity_auth_eval_gate_json_path,
+        identity_auth_eval_json_path,
+    ) = _resolve_auth_eval_json_paths(
+        args.output_dir,
+        filename="contest_auth_eval_identity_predictor_disambiguator.json",
+    )
     archive_zip_path = args.output_dir / "archive.zip"
     archive_zip_sha = ""
     archive_zip_size = 0
     bin_sha = ""
     bin_size = 0
+    identity_disambiguator_bin_sha = ""
+    identity_disambiguator_bin_size = 0
+    identity_disambiguator_archive_zip_sha = ""
+    identity_disambiguator_archive_zip_size = 0
+    identity_disambiguator_bin_path = (
+        args.output_dir / "0_identity_predictor_disambiguator.bin"
+    )
+    identity_disambiguator_archive_zip_path = (
+        args.output_dir / "archive_identity_predictor_disambiguator.zip"
+    )
     n_params_total = 0
     best_val_lag = math.inf
     best_epoch = -1
     auth_eval_result: dict[str, object] | None = None
+    identity_auth_eval_result: dict[str, object] | None = None
 
     try:
         # 2. Load differentiable scorers (frozen; eval; no grad).
@@ -1429,12 +1737,11 @@ def _full_main(args: argparse.Namespace) -> int:
         n_pairs = int(gt_pair_tensor.shape[0])
         _stage(f"pairs_decoded_{n_pairs}")
 
-        # 4. **UNIQUE Z6 STEP**: derive ego-motion-conditioning vectors from
-        # PoseNet output (Catalog #311 NON-NEGOTIABLE ego-motion conditioning
-        # with FOE prior). Per Catalog #311 + design memo §11: the cooperative
-        # receiver's side-information channel IS the ego-motion sidecar; we
-        # project per-pair PoseNet head output into ego_motion_dim coordinates
-        # to capture the focus-of-expansion + relative-motion structure.
+        # 4. **UNIQUE Z6 STEP**: derive predictor side-information vectors.
+        # Candidate 1 uses PoseNet projection; Candidate 4c uses compress-time
+        # scorer logits + PoseNet features reduced into the same fixed-size
+        # ego-motion buffer. Both paths keep inflate scorer-free because the
+        # archive stores only the reduced vector.
         if args.identity_predictor:
             print(
                 f"[{SUBSTRATE_TAG}-full] identity_predictor=True; using zero "
@@ -1442,6 +1749,19 @@ def _full_main(args: argparse.Namespace) -> int:
             )
             ego_motion_vectors = torch.zeros(
                 n_pairs, args.predictor_ego_motion_dim, dtype=torch.float32
+            )
+            ego_motion_source_for_meta = "zero_identity_disambiguator_regime"
+        elif args.ego_source == "scorer_logit":
+            ego_motion_vectors = _derive_ego_motion_from_scorer_logits(
+                posenet,
+                segnet,
+                gt_pair_tensor,
+                ego_motion_dim=args.predictor_ego_motion_dim,
+                chunk_size=args.ego_motion_chunk_size,
+                device=device,
+            )
+            ego_motion_source_for_meta = (
+                "scorer_logit_segnet_logits_plus_posenet_head_standardized"
             )
         else:
             ego_motion_vectors = _derive_ego_motion_from_posenet(
@@ -1451,9 +1771,17 @@ def _full_main(args: argparse.Namespace) -> int:
                 chunk_size=args.ego_motion_chunk_size,
                 device=device,
             )
+            ego_motion_source_for_meta = (
+                "posenet_pose_head_first_k_coords_standardized"
+            )
         _stage(
-            f"ego_motion_derived_from_posenet_dim_{args.predictor_ego_motion_dim}_"
+            f"ego_motion_derived_from_{args.ego_source}_"
+            f"dim_{args.predictor_ego_motion_dim}_"
             f"l2_{float(ego_motion_vectors.pow(2).sum().sqrt()):.3f}"
+        )
+        scorer_logit_feature_slots = _scorer_logit_feature_slot_metadata(
+            args.ego_source,
+            args.predictor_ego_motion_dim,
         )
 
         # 5. Validation split: hold out the last N pairs for val loop.
@@ -1480,6 +1808,11 @@ def _full_main(args: argparse.Namespace) -> int:
             predictor_hidden_dim_resolved
             if predictor_depth_full > 1
             else args.predictor_hidden_dim
+        )
+        predictor_width_metadata = _predictor_width_metadata(
+            args,
+            effective_predictor_hidden_dim=effective_predictor_hidden_dim,
+            predictor_depth=predictor_depth_full,
         )
         cfg = Z6PredictiveCodingConfig(
             latent_dim=args.latent_dim,
@@ -1514,6 +1847,13 @@ def _full_main(args: argparse.Namespace) -> int:
         n_params_predictor = int(breakdown["predictor"])
         n_params_encoder = int(breakdown["encoder"])
         n_params_decoder = int(breakdown["decoder"])
+        target = int(getattr(args, "predictor_param_count_target", 300_000))
+        param_count_diagnostic = _param_count_target_diagnostic(
+            breakdown,
+            target=target,
+            actual_num_pairs=n_pairs,
+            latent_dim=cfg.latent_dim,
+        )
         print(
             f"[{SUBSTRATE_TAG}-full] params: total={n_params_total:,} "
             f"predictor={n_params_predictor:,} encoder={n_params_encoder:,} "
@@ -1525,19 +1865,22 @@ def _full_main(args: argparse.Namespace) -> int:
         # knows the substrate's empirical params deviate from the binding
         # council ceiling. NOT a hard failure - the cfg-derived params reflect
         # the operator's --predictor-architecture choice exactly.
-        target = int(getattr(args, "predictor_param_count_target", 300_000))
         if target > 0:
-            deviation_pct = abs(n_params_total - target) / target * 100.0
-            if deviation_pct > 5.0:
+            comparison_total = int(param_count_diagnostic["comparison_total"])
+            deviation_pct = float(param_count_diagnostic["deviation_pct"])
+            basis = str(param_count_diagnostic["comparison_basis"])
+            if not bool(param_count_diagnostic["within_5pct"]):
                 print(
                     f"[{SUBSTRATE_TAG}-full] WARNING: substrate total params "
-                    f"{n_params_total:,} deviates {deviation_pct:.1f}% from "
-                    f"council binding ceiling {target:,} (Phase 3 council §9)"
+                    f"{comparison_total:,} ({basis}) deviates "
+                    f"{deviation_pct:.1f}% from council binding ceiling "
+                    f"{target:,} (Phase 3 council §9)"
                 )
             else:
                 print(
                     f"[{SUBSTRATE_TAG}-full] OK: substrate total params "
-                    f"{n_params_total:,} within ±5%% of ceiling {target:,}"
+                    f"{comparison_total:,} ({basis}) within ±5%% of "
+                    f"ceiling {target:,}"
                 )
         _stage(
             f"substrate_built_total_{n_params_total}_predictor_"
@@ -1735,6 +2078,40 @@ def _full_main(args: argparse.Namespace) -> int:
                         )
             substrate.eval()
 
+            archive_meta = {
+                "lane_id": SUBSTRATE_LANE_ID,
+                "encoder_input_channels": cfg.encoder_input_channels,
+                "encoder_hidden_dim": cfg.encoder_hidden_dim,
+                "decoder_embed_dim": cfg.decoder_embed_dim,
+                "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
+                "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
+                "decoder_channels": list(cfg.decoder_channels),
+                "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
+                "output_height": cfg.output_height,
+                "output_width": cfg.output_width,
+                **predictor_width_metadata,
+                "latent_init_std": cfg.latent_init_std,
+                "smoke": False,
+                "best_val_lag": (
+                    float(best_val_lag) if math.isfinite(best_val_lag) else None
+                ),
+                "best_epoch": int(best_epoch),
+                "git_head": _git_head_sha(),
+                "trained_at_utc": _utc_now_iso(),
+                "n_params_total": int(n_params_total),
+                "n_params_predictor": int(n_params_predictor),
+                "n_params_encoder": int(n_params_encoder),
+                "n_params_decoder": int(n_params_decoder),
+                "param_count_target_diagnostic": param_count_diagnostic,
+                "ego_motion_source": ego_motion_source_for_meta,
+                "ego_source": args.ego_source,
+                "scorer_logit_feature_slot_allocation": scorer_logit_feature_slots,
+                "scorer_logit_feature_slot_allocation_version": (
+                    "z6_candidate4c_v1"
+                    if scorer_logit_feature_slots is not None
+                    else None
+                ),
+            }
             bin_bytes = pack_archive(
                 substrate.encoder.state_dict(),
                 substrate.decoder.state_dict(),
@@ -1742,35 +2119,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 substrate.latent_init.detach().cpu(),
                 substrate.residuals.detach().cpu(),
                 substrate.ego_motion_buffer.detach().cpu(),
-                {
-                    "lane_id": SUBSTRATE_LANE_ID,
-                    "encoder_input_channels": cfg.encoder_input_channels,
-                    "encoder_hidden_dim": cfg.encoder_hidden_dim,
-                    "decoder_embed_dim": cfg.decoder_embed_dim,
-                    "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
-                    "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
-                    "decoder_channels": list(cfg.decoder_channels),
-                    "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
-                    "output_height": cfg.output_height,
-                    "output_width": cfg.output_width,
-                    "predictor_hidden_dim": cfg.predictor_hidden_dim,
-                    "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
-                    "latent_init_std": cfg.latent_init_std,
-                    "smoke": False,
-                    "best_val_lag": float(best_val_lag) if math.isfinite(best_val_lag) else None,
-                    "best_epoch": int(best_epoch),
-                    "git_head": _git_head_sha(),
-                    "trained_at_utc": _utc_now_iso(),
-                    "n_params_total": int(n_params_total),
-                    "n_params_predictor": int(n_params_predictor),
-                    "n_params_encoder": int(n_params_encoder),
-                    "n_params_decoder": int(n_params_decoder),
-                    "ego_motion_source": (
-                        "posenet_pose_head_first_k_coords_standardized"
-                        if not args.identity_predictor
-                        else "zero_identity_disambiguator_regime"
-                    ),
-                },
+                archive_meta,
                 lambda_residual_entropy=args.lambda_residual_entropy,
                 predictor_kernel_size=args.predictor_kernel_size,
                 identity_predictor=args.identity_predictor,
@@ -1783,15 +2132,74 @@ def _full_main(args: argparse.Namespace) -> int:
             )
             _stage(f"archive_built_{bin_size}_B_sha{bin_sha[:8]}")
 
+            if getattr(args, "emit_identity_predictor_disambiguator_archive", False):
+                identity_meta = dict(archive_meta)
+                identity_meta["identity_predictor_disambiguator"] = True
+                identity_meta["paired_control_marker"] = PAIRED_CONTROL_INITIALIZATION
+                identity_meta["paired_control_decision_criterion_delta_s"] = float(
+                    args.paired_control_disambiguator_decision_criterion_delta_s
+                )
+                identity_meta["paired_control_full_predictor_archive_sha256"] = bin_sha
+                identity_meta["paired_control_full_predictor_archive_bytes"] = bin_size
+                identity_disambiguator_bytes = pack_archive(
+                    substrate.encoder.state_dict(),
+                    substrate.decoder.state_dict(),
+                    substrate.predictor.state_dict(),
+                    substrate.latent_init.detach().cpu(),
+                    substrate.residuals.detach().cpu(),
+                    substrate.ego_motion_buffer.detach().cpu(),
+                    identity_meta,
+                    lambda_residual_entropy=args.lambda_residual_entropy,
+                    predictor_kernel_size=args.predictor_kernel_size,
+                    identity_predictor=True,
+                )
+                identity_disambiguator_bin_sha = _sha256_bytes(
+                    identity_disambiguator_bytes
+                )
+                identity_disambiguator_bin_size = len(identity_disambiguator_bytes)
+                identity_disambiguator_bin_path.write_bytes(
+                    identity_disambiguator_bytes
+                )
+                _build_archive_zip(
+                    identity_disambiguator_archive_zip_path,
+                    bin_bytes=identity_disambiguator_bytes,
+                )
+                identity_disambiguator_archive_zip_sha = _sha256_bytes(
+                    identity_disambiguator_archive_zip_path.read_bytes()
+                )
+                identity_disambiguator_archive_zip_size = (
+                    identity_disambiguator_archive_zip_path.stat().st_size
+                )
+                print(
+                    f"[{SUBSTRATE_TAG}-full] identity disambiguator archive: "
+                    f"{identity_disambiguator_bin_size} B "
+                    f"sha256={identity_disambiguator_bin_sha[:16]}..."
+                )
+                _stage(
+                    "identity_disambiguator_archive_built_"
+                    f"{identity_disambiguator_bin_size}_B_"
+                    f"sha{identity_disambiguator_bin_sha[:8]}"
+                )
+
             # 12. Emit contest-compliant runtime tree + archive.zip.
             submission_dir = args.output_dir / "submission_dir"
             _write_runtime(submission_dir)
             (submission_dir / "0.bin").write_bytes(bin_bytes)
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
+            if identity_disambiguator_bin_size:
+                shutil.copy2(
+                    identity_disambiguator_bin_path,
+                    submission_dir / "0_identity_predictor_disambiguator.bin",
+                )
             _build_archive_zip(archive_zip_path, bin_bytes=bin_bytes)
             archive_zip_sha = _sha256_bytes(archive_zip_path.read_bytes())
             archive_zip_size = archive_zip_path.stat().st_size
             shutil.copy2(archive_zip_path, submission_dir / "archive.zip")
+            if identity_disambiguator_archive_zip_size:
+                shutil.copy2(
+                    identity_disambiguator_archive_zip_path,
+                    submission_dir / "archive_identity_predictor_disambiguator.zip",
+                )
             _stage("archive_emitted")
 
             # 13. Auth eval ([contest-CUDA] inline) through the canonical gate
@@ -1820,6 +2228,42 @@ def _full_main(args: argparse.Namespace) -> int:
                         substrate_tag=SUBSTRATE_TAG,
                     )
                     _stage("auth_eval_cuda_done_valid_claim")
+                    if identity_disambiguator_archive_zip_size:
+                        identity_auth_eval_result = _canon_gate_auth_eval_call(
+                            args=args,
+                            archive_zip=identity_disambiguator_archive_zip_path,
+                            inflate_sh=submission_dir / "inflate.sh",
+                            upstream_dir=args.upstream_dir,
+                            output_json=identity_auth_eval_gate_json_path,
+                            contest_auth_eval_script=CONTEST_AUTH_EVAL_SCRIPT,
+                            substrate_tag=SUBSTRATE_TAG,
+                            device=device,
+                            full_cpu_active=bool(args.full_cpu),
+                        )
+                        if identity_auth_eval_result is not None:
+                            if (
+                                identity_auth_eval_gate_json_path
+                                != identity_auth_eval_json_path
+                            ):
+                                identity_auth_eval_json_path.parent.mkdir(
+                                    parents=True, exist_ok=True
+                                )
+                                shutil.copy2(
+                                    identity_auth_eval_gate_json_path,
+                                    identity_auth_eval_json_path,
+                                )
+                            _canon_require_contest_cuda_auth_eval_claim(
+                                identity_auth_eval_json_path,
+                                archive_sha256=(
+                                    identity_disambiguator_archive_zip_sha
+                                ),
+                                substrate_tag=SUBSTRATE_TAG,
+                            )
+                            _stage(
+                                "identity_disambiguator_auth_eval_cuda_done_valid_claim"
+                            )
+                        else:
+                            _stage("identity_disambiguator_auth_eval_skipped_gate_refused")
                 else:
                     _stage("auth_eval_skipped_gate_refused")
     finally:
@@ -1866,7 +2310,30 @@ def _full_main(args: argparse.Namespace) -> int:
         "bin_bytes": bin_size,
         "archive_zip_sha256": archive_zip_sha,
         "archive_zip_bytes": archive_zip_size,
+        "identity_predictor_disambiguator_archive_sha256": (
+            identity_disambiguator_bin_sha or None
+        ),
+        "identity_predictor_disambiguator_archive_bytes": (
+            identity_disambiguator_bin_size or None
+        ),
+        "identity_predictor_disambiguator_archive_zip_sha256": (
+            identity_disambiguator_archive_zip_sha or None
+        ),
+        "identity_predictor_disambiguator_archive_zip_bytes": (
+            identity_disambiguator_archive_zip_size or None
+        ),
+        "identity_predictor_disambiguator_archive_path": (
+            str(identity_disambiguator_bin_path)
+            if identity_disambiguator_bin_size
+            else None
+        ),
+        "identity_predictor_disambiguator_archive_zip_path": (
+            str(identity_disambiguator_archive_zip_path)
+            if identity_disambiguator_archive_zip_size
+            else None
+        ),
         "n_params": n_params_total,
+        "param_count_target_diagnostic": param_count_diagnostic,
         "best_val_lag": float(best_val_lag) if math.isfinite(best_val_lag) else None,
         "best_epoch": best_epoch,
         "epochs": args.epochs,
@@ -1874,7 +2341,20 @@ def _full_main(args: argparse.Namespace) -> int:
         "lambda_residual_entropy": args.lambda_residual_entropy,
         "predictor_kernel_size": args.predictor_kernel_size,
         "predictor_ego_motion_dim": args.predictor_ego_motion_dim,
+        **predictor_width_metadata,
+        "ego_source": args.ego_source,
+        "ego_motion_source": ego_motion_source_for_meta,
+        "scorer_logit_feature_slot_allocation": scorer_logit_feature_slots,
+        "scorer_logit_feature_slot_allocation_version": (
+            "z6_candidate4c_v1" if scorer_logit_feature_slots is not None else None
+        ),
         "identity_predictor": args.identity_predictor,
+        "emit_identity_predictor_disambiguator_archive": bool(
+            args.emit_identity_predictor_disambiguator_archive
+        ),
+        "paired_control_disambiguator_decision_criterion_delta_s": float(
+            args.paired_control_disambiguator_decision_criterion_delta_s
+        ),
         "design_memo": (
             ".omx/research/time_traveler_l5_z6_z7_z8_predictive_coding_"
             "world_models_asymptotic_pursuit_scoping_design_20260516.md"
@@ -1883,6 +2363,16 @@ def _full_main(args: argparse.Namespace) -> int:
         "stage_log": stage_log,
         "auth_eval_gate_json_path": str(auth_eval_gate_json_path),
         "auth_eval_json_path": str(auth_eval_json_path),
+        "identity_predictor_disambiguator_auth_eval_gate_json_path": str(
+            identity_auth_eval_gate_json_path
+        ),
+        "identity_predictor_disambiguator_auth_eval_json_path": str(
+            identity_auth_eval_json_path
+        ),
+        "auth_eval_result": auth_eval_result,
+        "identity_predictor_disambiguator_auth_eval_result": (
+            identity_auth_eval_result
+        ),
         "hardware_substrate_cuda": hardware_substrate_cuda,
     }
     (args.output_dir / "provenance.json").write_text(
@@ -1904,13 +2394,47 @@ def _full_main(args: argparse.Namespace) -> int:
         "archive_sha256": bin_sha,
         "archive_zip_bytes": archive_zip_size,
         "archive_zip_sha256": archive_zip_sha,
+        "identity_predictor_disambiguator_archive_bytes": (
+            identity_disambiguator_bin_size or None
+        ),
+        "identity_predictor_disambiguator_archive_sha256": (
+            identity_disambiguator_bin_sha or None
+        ),
+        "identity_predictor_disambiguator_archive_zip_bytes": (
+            identity_disambiguator_archive_zip_size or None
+        ),
+        "identity_predictor_disambiguator_archive_zip_sha256": (
+            identity_disambiguator_archive_zip_sha or None
+        ),
+        "param_count_target_diagnostic": param_count_diagnostic,
         "max_pairs": args.max_pairs,
+        **predictor_width_metadata,
+        "ego_source": args.ego_source,
+        "ego_motion_source": ego_motion_source_for_meta,
+        "scorer_logit_feature_slot_allocation": scorer_logit_feature_slots,
+        "scorer_logit_feature_slot_allocation_version": (
+            "z6_candidate4c_v1" if scorer_logit_feature_slots is not None else None
+        ),
         "n_pairs_full_required_for_auth_eval": N_PAIRS_FULL,
         "auth_eval_skipped": bool(args.skip_auth_eval),
+        "emit_identity_predictor_disambiguator_archive": bool(
+            args.emit_identity_predictor_disambiguator_archive
+        ),
+        "paired_control_disambiguator_decision_criterion_delta_s": float(
+            args.paired_control_disambiguator_decision_criterion_delta_s
+        ),
         "auth_eval_skipped_reason": (
             "pair_capped_smoke_emits_truncated_raw_stream"
             if pair_capped and args.skip_auth_eval
             else ""
+        ),
+        "auth_eval_json_path": str(auth_eval_json_path),
+        "identity_predictor_disambiguator_auth_eval_json_path": str(
+            identity_auth_eval_json_path
+        ),
+        "auth_eval_result": auth_eval_result,
+        "identity_predictor_disambiguator_auth_eval_result": (
+            identity_auth_eval_result
         ),
         "result": {
             "training_mode": "pair_capped_smoke" if pair_capped else "full",
@@ -1918,10 +2442,73 @@ def _full_main(args: argparse.Namespace) -> int:
             "archive_sha256": bin_sha,
             "archive_zip_bytes": archive_zip_size,
             "archive_zip_sha256": archive_zip_sha,
+            "identity_predictor_disambiguator_archive_bytes": (
+                identity_disambiguator_bin_size or None
+            ),
+            "identity_predictor_disambiguator_archive_sha256": (
+                identity_disambiguator_bin_sha or None
+            ),
         },
     }
     (args.output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    paired_identity_required = bool(
+        args.emit_identity_predictor_disambiguator_archive
+        and identity_disambiguator_archive_zip_size
+    )
+    primary_auth_valid = (
+        auth_eval_result is not None
+        and auth_eval_result.get("auth_eval_score_claim_valid") is True
+        and auth_eval_result.get("auth_eval_score_axis") == "contest_cuda"
+    )
+    identity_auth_valid = (
+        identity_auth_eval_result is not None
+        and identity_auth_eval_result.get("auth_eval_score_claim_valid") is True
+        and identity_auth_eval_result.get("auth_eval_score_axis") == "contest_cuda"
+    )
+    paired_auth_valid = primary_auth_valid and (
+        identity_auth_valid if paired_identity_required else True
+    )
+    stats = {
+        **manifest,
+        "stats_schema": "time_traveler_l5_z6_full_stats_v1",
+        "auth_eval_score_claim_valid": paired_auth_valid,
+        "auth_eval_score_axis": (
+            auth_eval_result.get("auth_eval_score_axis")
+            if auth_eval_result is not None
+            else None
+        ),
+        "auth_eval_lane_tag": (
+            auth_eval_result.get("auth_eval_lane_tag")
+            if auth_eval_result is not None
+            else None
+        ),
+        "primary_auth_eval_score_claim_valid": primary_auth_valid,
+        "identity_predictor_disambiguator_auth_eval_score_claim_valid": (
+            identity_auth_valid
+        ),
+        "paired_identity_auth_eval_required": paired_identity_required,
+        "paired_identity_auth_eval_complete": (
+            paired_auth_valid if paired_identity_required else None
+        ),
+    }
+    if auth_eval_result is not None:
+        stats.update(auth_eval_result)
+    if identity_auth_eval_result is not None:
+        for key, value in identity_auth_eval_result.items():
+            stats[f"identity_predictor_disambiguator_{key}"] = value
+    stats["auth_eval_score_claim_valid"] = paired_auth_valid
+    stats["primary_auth_eval_score_claim_valid"] = primary_auth_valid
+    stats["identity_predictor_disambiguator_auth_eval_score_claim_valid"] = (
+        identity_auth_valid
+    )
+    stats["paired_identity_auth_eval_required"] = paired_identity_required
+    stats["paired_identity_auth_eval_complete"] = (
+        paired_auth_valid if paired_identity_required else None
+    )
+    (args.output_dir / "stats.json").write_text(
+        json.dumps(stats, indent=2, sort_keys=True), encoding="utf-8"
     )
     print(
         f"[{SUBSTRATE_TAG}-full] wrote {args.output_dir / 'provenance.json'}"

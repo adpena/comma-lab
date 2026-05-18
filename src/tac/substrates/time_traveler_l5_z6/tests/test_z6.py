@@ -564,6 +564,54 @@ def test_inflate_end_to_end_roundtrip(tmp_path) -> None:
     assert raw_path.stat().st_size > 0
 
 
+def test_inflate_identity_control_ignores_full_predictor_blob(tmp_path) -> None:
+    """Paired identity-control archives keep predictor bytes for rate parity."""
+    from tac.substrates.time_traveler_l5_z6 import inflate as z6_inflate
+
+    cfg = _tiny_config(num_pairs=2)
+    sub = Z6PredictiveCodingSubstrate(cfg)
+    meta = {
+        "encoder_input_channels": cfg.encoder_input_channels,
+        "encoder_hidden_dim": cfg.encoder_hidden_dim,
+        "decoder_embed_dim": cfg.decoder_embed_dim,
+        "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
+        "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
+        "decoder_channels": list(cfg.decoder_channels),
+        "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
+        "output_height": cfg.output_height,
+        "output_width": cfg.output_width,
+        "predictor_hidden_dim": cfg.predictor_hidden_dim,
+        "predictor_film_mlp_hidden_dim": cfg.predictor_film_mlp_hidden_dim,
+        "identity_predictor_disambiguator": True,
+        "latent_init_std": cfg.latent_init_std,
+        "smoke": True,
+    }
+    archive = pack_archive(
+        sub.encoder.state_dict(),
+        sub.decoder.state_dict(),
+        sub.predictor.state_dict(),
+        sub.latent_init.detach().cpu(),
+        sub.residuals.detach().cpu(),
+        sub.ego_motion_buffer.detach().cpu(),
+        meta,
+        lambda_residual_entropy=1.0,
+        predictor_kernel_size=3,
+        identity_predictor=True,
+    )
+    arc = parse_archive(archive)
+    assert arc.predictor_state_dict, "identity control should preserve predictor blob"
+    assert (
+        arc.meta["predictive_coding_world_model_meta"]["identity_predictor"]
+        is True
+    )
+
+    raw_path = tmp_path / "identity.raw"
+    frames = z6_inflate.inflate_one_video(archive, raw_path, device="cpu")
+    assert frames == 4
+    assert raw_path.exists()
+    assert raw_path.stat().st_size > 0
+
+
 # ===========================================================================
 # (F) Score-aware loss — 3 tests
 # ===========================================================================

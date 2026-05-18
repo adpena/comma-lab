@@ -58,6 +58,10 @@ if cmd == "summary":
         }]
     }))
 elif cmd == "claim":
+    claim_args_path = os.environ.get("CLAIM_ARGS_PATH")
+    if claim_args_path:
+        with open(claim_args_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(sys.argv[1:]) + "\\n")
     print("terminal-claim-ok")
 else:
     raise SystemExit(f"unexpected claim helper command: {cmd}")
@@ -92,12 +96,14 @@ out.mkdir(parents=True, exist_ok=True)
     )
 
     output_dir = tmp_path / "output"
+    claim_args_path = tmp_path / "claim_args.jsonl"
     lane_id = "lane_z6_v2_candidate_1_wave_2_build_trainer_extension_and_recipe_20260517"
     env = os.environ.copy()
     env.update(
         {
             "WORKSPACE": str(workspace),
             "PYBIN": sys.executable,
+            "CLAIM_ARGS_PATH": str(claim_args_path),
             "LOG_DIR": str(tmp_path / "logs"),
             "OUTPUT_DIR": str(output_dir),
             "Z6_OUTPUT_DIR": str(output_dir),
@@ -110,7 +116,9 @@ out.mkdir(parents=True, exist_ok=True)
             "Z6_EPOCHS": "100",
             "Z6_PREDICTOR_ARCHITECTURE": "multi_layer_film_depth_3_300k",
             "Z6_PREDICTOR_PARAM_COUNT_TARGET": "300000",
-            "Z6_EGO_SOURCE": "posenet_projection",
+            "Z6_PREDICTOR_HIDDEN_DIM": "72",
+            "Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM": "40",
+            "Z6_EGO_SOURCE": "scorer_logit",
             "Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION": "shared_modules_seed_order_matched_v2",
             "Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE": "true",
             "Z6_PAIRED_CONTROL_DISAMBIGUATOR_DECISION_CRITERION_DELTA_S": "0.005",
@@ -134,9 +142,11 @@ out.mkdir(parents=True, exist_ok=True)
     argv = json.loads((output_dir / "argv.json").read_text(encoding="utf-8"))
     assert "--smoke" not in argv
     expected_pairs = {
+        "--predictor-hidden-dim": "72",
+        "--predictor-film-mlp-hidden-dim": "40",
         "--predictor-architecture": "multi_layer_film_depth_3_300k",
         "--predictor-param-count-target": "300000",
-        "--ego-source": "posenet_projection",
+        "--ego-source": "scorer_logit",
         "--enable-paired-control-initialization": "shared_modules_seed_order_matched_v2",
         "--paired-control-disambiguator-decision-criterion-delta-s": "0.005",
     }
@@ -152,4 +162,361 @@ out.mkdir(parents=True, exist_ok=True)
     )
     assert provenance["smoke_only"] == "0"
     assert provenance["predictor_architecture"] == "multi_layer_film_depth_3_300k"
+    assert provenance["predictor_hidden_dim"] == "72"
+    assert provenance["predictor_film_mlp_hidden_dim"] == "40"
+    assert provenance["ego_source"] == "scorer_logit"
     assert provenance["emit_identity_predictor_disambiguator_archive"] == "true"
+    claim_rows = [
+        json.loads(line)
+        for line in claim_args_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert claim_rows
+    terminal_args = claim_rows[-1]
+    assert terminal_args[terminal_args.index("--status") + 1] == (
+        "completed_z6_pcwm_remote_driver_no_score_claim"
+    )
+    notes = terminal_args[terminal_args.index("--notes") + 1]
+    assert "evidence_marker=[training-artifact-no-score-claim]" in notes
+    assert "score_claim=false" in notes
+
+
+def test_z6_remote_driver_refuses_missing_stats_completion_marker(
+    tmp_path: Path,
+) -> None:
+    """A zero-rc trainer without stats.json is a failed harvest, not DONE."""
+
+    workspace = tmp_path / "workspace"
+    (workspace / "tools").mkdir(parents=True)
+    (workspace / "scripts").mkdir(parents=True)
+    (workspace / "experiments").mkdir(parents=True)
+
+    (workspace / "tools" / "claim_lane_dispatch.py").write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+if cmd == "summary":
+    print(json.dumps({
+        "active": [{
+            "lane_id": os.environ["Z6_LANE_ID"],
+            "instance_job_id": os.environ["Z6_DISPATCH_INSTANCE_JOB_ID"],
+        }]
+    }))
+elif cmd == "claim":
+    claim_args_path = os.environ.get("CLAIM_ARGS_PATH")
+    if claim_args_path:
+        with open(claim_args_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(sys.argv[1:]) + "\\n")
+    print("terminal-claim-ok")
+else:
+    raise SystemExit(f"unexpected claim helper command: {cmd}")
+""",
+        encoding="utf-8",
+    )
+    (workspace / "scripts" / "remote_archive_only_eval.sh").write_text(
+        "bootstrap_runtime_deps() { return 0; }\n",
+        encoding="utf-8",
+    )
+    trainer = workspace / "experiments" / "train_substrate_time_traveler_l5_z6.py"
+    trainer.write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+argv = sys.argv[1:]
+out = Path(argv[argv.index("--output-dir") + 1])
+out.mkdir(parents=True, exist_ok=True)
+(out / "argv.txt").write_text(" ".join(argv), encoding="utf-8")
+raise SystemExit(0)
+""",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "output"
+    log_dir = tmp_path / "logs"
+    claim_args_path = tmp_path / "claim_args_missing_stats.jsonl"
+    env = os.environ.copy()
+    env.update(
+        {
+            "WORKSPACE": str(workspace),
+            "PYBIN": sys.executable,
+            "CLAIM_ARGS_PATH": str(claim_args_path),
+            "LOG_DIR": str(log_dir),
+            "OUTPUT_DIR": str(output_dir),
+            "Z6_OUTPUT_DIR": str(output_dir),
+            "Z6_DISPATCH_INSTANCE_JOB_ID": "z6-missing-stats-test-job",
+            "Z6_LANE_ID": "lane_z6_missing_stats_completion_marker_test",
+            "Z6_TRAINER_MODE": "full",
+            "Z6_EPOCHS": "1",
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(REMOTE_DRIVER)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env=env,
+        timeout=30,
+    )
+
+    assert result.returncode == 31, result.stdout + result.stderr
+    assert "missing required stats.json" in result.stderr
+    completion_log = log_dir / "completion.log"
+    if completion_log.exists():
+        assert "LANE_Z6_PCWM_DONE" not in completion_log.read_text(
+            encoding="utf-8"
+        )
+    claim_rows = [
+        json.loads(line)
+        for line in claim_args_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert claim_rows
+    terminal_args = claim_rows[-1]
+    assert terminal_args[terminal_args.index("--status") + 1] == (
+        "failed_z6_pcwm_remote_driver_rc_31"
+    )
+    notes = terminal_args[terminal_args.index("--notes") + 1]
+    assert "evidence_marker=[not-yet-classified]" in notes
+    assert "score_claim=unknown" in notes
+
+
+def test_z6_remote_driver_refuses_stale_stats_completion_marker(
+    tmp_path: Path,
+) -> None:
+    """A trainer-written stale stats.json cannot satisfy this invocation."""
+
+    workspace = tmp_path / "workspace"
+    (workspace / "tools").mkdir(parents=True)
+    (workspace / "scripts").mkdir(parents=True)
+    (workspace / "experiments").mkdir(parents=True)
+
+    (workspace / "tools" / "claim_lane_dispatch.py").write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+if cmd == "summary":
+    print(json.dumps({
+        "active": [{
+            "lane_id": os.environ["Z6_LANE_ID"],
+            "instance_job_id": os.environ["Z6_DISPATCH_INSTANCE_JOB_ID"],
+        }]
+    }))
+elif cmd == "claim":
+    claim_args_path = os.environ.get("CLAIM_ARGS_PATH")
+    if claim_args_path:
+        with open(claim_args_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(sys.argv[1:]) + "\\n")
+    print("terminal-claim-ok")
+else:
+    raise SystemExit(f"unexpected claim helper command: {cmd}")
+""",
+        encoding="utf-8",
+    )
+    (workspace / "scripts" / "remote_archive_only_eval.sh").write_text(
+        "bootstrap_runtime_deps() { return 0; }\n",
+        encoding="utf-8",
+    )
+    trainer = workspace / "experiments" / "train_substrate_time_traveler_l5_z6.py"
+    trainer.write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+argv = sys.argv[1:]
+out = Path(argv[argv.index("--output-dir") + 1])
+out.mkdir(parents=True, exist_ok=True)
+stats = out / "stats.json"
+stats.write_text(
+    json.dumps({"evidence_grade": "stale-training-artifact-no-score-claim"}),
+    encoding="utf-8",
+)
+old_epoch = 946684800
+os.utime(stats, (old_epoch, old_epoch))
+raise SystemExit(0)
+""",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "output"
+    log_dir = tmp_path / "logs"
+    claim_args_path = tmp_path / "claim_args_stale_stats.jsonl"
+    env = os.environ.copy()
+    env.update(
+        {
+            "WORKSPACE": str(workspace),
+            "PYBIN": sys.executable,
+            "CLAIM_ARGS_PATH": str(claim_args_path),
+            "LOG_DIR": str(log_dir),
+            "OUTPUT_DIR": str(output_dir),
+            "Z6_OUTPUT_DIR": str(output_dir),
+            "Z6_DISPATCH_INSTANCE_JOB_ID": "z6-stale-stats-test-job",
+            "Z6_LANE_ID": "lane_z6_stale_stats_completion_marker_test",
+            "Z6_TRAINER_MODE": "full",
+            "Z6_EPOCHS": "1",
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(REMOTE_DRIVER)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env=env,
+        timeout=30,
+    )
+
+    assert result.returncode == 33, result.stdout + result.stderr
+    assert "stale stats.json" in result.stderr
+    completion_log = log_dir / "completion.log"
+    if completion_log.exists():
+        assert "LANE_Z6_PCWM_DONE" not in completion_log.read_text(
+            encoding="utf-8"
+        )
+    claim_rows = [
+        json.loads(line)
+        for line in claim_args_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert claim_rows
+    terminal_args = claim_rows[-1]
+    assert terminal_args[terminal_args.index("--status") + 1] == (
+        "failed_z6_pcwm_remote_driver_rc_33"
+    )
+    notes = terminal_args[terminal_args.index("--notes") + 1]
+    assert "evidence_marker=[not-yet-classified]" in notes
+    assert "score_claim=unknown" in notes
+
+
+def test_z6_remote_driver_quarantines_preexisting_stats_before_trainer(
+    tmp_path: Path,
+) -> None:
+    """A previous stats.json is preserved aside and cannot satisfy Stage 5."""
+
+    workspace = tmp_path / "workspace"
+    (workspace / "tools").mkdir(parents=True)
+    (workspace / "scripts").mkdir(parents=True)
+    (workspace / "experiments").mkdir(parents=True)
+
+    (workspace / "tools" / "claim_lane_dispatch.py").write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+if cmd == "summary":
+    print(json.dumps({
+        "active": [{
+            "lane_id": os.environ["Z6_LANE_ID"],
+            "instance_job_id": os.environ["Z6_DISPATCH_INSTANCE_JOB_ID"],
+        }]
+    }))
+elif cmd == "claim":
+    claim_args_path = os.environ.get("CLAIM_ARGS_PATH")
+    if claim_args_path:
+        with open(claim_args_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(sys.argv[1:]) + "\\n")
+    print("terminal-claim-ok")
+else:
+    raise SystemExit(f"unexpected claim helper command: {cmd}")
+""",
+        encoding="utf-8",
+    )
+    (workspace / "scripts" / "remote_archive_only_eval.sh").write_text(
+        "bootstrap_runtime_deps() { return 0; }\n",
+        encoding="utf-8",
+    )
+    trainer = workspace / "experiments" / "train_substrate_time_traveler_l5_z6.py"
+    trainer.write_text(
+        """#!/usr/bin/env python3
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+argv = sys.argv[1:]
+out = Path(argv[argv.index("--output-dir") + 1])
+out.mkdir(parents=True, exist_ok=True)
+(out / "trainer_ran.txt").write_text("trainer exited without stats rewrite", encoding="utf-8")
+raise SystemExit(0)
+""",
+        encoding="utf-8",
+    )
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir(parents=True)
+    preexisting_stats = output_dir / "stats.json"
+    preexisting_stats.write_text(
+        json.dumps({"evidence_grade": "previous-run-no-score"}),
+        encoding="utf-8",
+    )
+    log_dir = tmp_path / "logs"
+    claim_args_path = tmp_path / "claim_args_preexisting_stats.jsonl"
+    env = os.environ.copy()
+    env.update(
+        {
+            "WORKSPACE": str(workspace),
+            "PYBIN": sys.executable,
+            "CLAIM_ARGS_PATH": str(claim_args_path),
+            "LOG_DIR": str(log_dir),
+            "OUTPUT_DIR": str(output_dir),
+            "Z6_OUTPUT_DIR": str(output_dir),
+            "Z6_DISPATCH_INSTANCE_JOB_ID": "z6-preexisting-stats-test-job",
+            "Z6_LANE_ID": "lane_z6_preexisting_stats_quarantine_test",
+            "Z6_TRAINER_MODE": "full",
+            "Z6_EPOCHS": "1",
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(REMOTE_DRIVER)],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env=env,
+        timeout=30,
+    )
+
+    assert result.returncode == 31, result.stdout + result.stderr
+    assert "missing required stats.json" in result.stderr
+    assert not preexisting_stats.exists()
+    quarantine_dir = log_dir / "stale_stats_quarantine"
+    quarantined = list(quarantine_dir.glob("stats.before_z6-preexisting-stats-test-job.*.json"))
+    assert len(quarantined) == 1
+    assert json.loads(quarantined[0].read_text(encoding="utf-8")) == {
+        "evidence_grade": "previous-run-no-score"
+    }
+    assert "quarantined_preexisting_stats_json" in (
+        log_dir / "run.log"
+    ).read_text(encoding="utf-8")
+    completion_log = log_dir / "completion.log"
+    if completion_log.exists():
+        assert "LANE_Z6_PCWM_DONE" not in completion_log.read_text(
+            encoding="utf-8"
+        )
+    claim_rows = [
+        json.loads(line)
+        for line in claim_args_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert claim_rows
+    terminal_args = claim_rows[-1]
+    assert terminal_args[terminal_args.index("--status") + 1] == (
+        "failed_z6_pcwm_remote_driver_rc_31"
+    )

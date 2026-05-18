@@ -87,6 +87,12 @@ def inflate_one_video(
         ("decoder", model.decoder, arc.decoder_state_dict),
         ("predictor", model.predictor, arc.predictor_state_dict),
     ):
+        if sub_name == "predictor" and cfg.identity_predictor:
+            # Identity-control archives deliberately keep the full predictor blob
+            # in 0.bin so paired disambiguator evals pay the same byte budget.
+            # The identity predictor has no trainable parameters, so the blob is
+            # parsed for custody but not consumed by the runtime module.
+            continue
         load_res = sub_mod.load_state_dict(sd, strict=False)
         if set(load_res.missing_keys) or set(load_res.unexpected_keys):
             raise RuntimeError(

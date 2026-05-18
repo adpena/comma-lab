@@ -220,6 +220,7 @@ remote_driver: scripts/remote_lane_substrate_time_traveler_l5_z6.sh
 # bootstrap sentinel + Catalog #189 empty-array guard. The new Wave 2 BUILD
 # flags are threaded via env_overrides below; the driver passes
 # Z6_PREDICTOR_ARCHITECTURE / Z6_PREDICTOR_PARAM_COUNT_TARGET /
+# Z6_PREDICTOR_HIDDEN_DIM / Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM /
 # Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE through to the trainer.
 timeout_hours: 1.0
 
@@ -270,6 +271,8 @@ env_overrides:
   Z6_IDENTITY_PREDICTOR: "false"
   Z6_PREDICTOR_ARCHITECTURE: "multi_layer_film_depth_3_300k"
   Z6_PREDICTOR_PARAM_COUNT_TARGET: "300000"
+  Z6_PREDICTOR_HIDDEN_DIM: "64"
+  Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM: "32"
   Z6_EGO_SOURCE: "posenet_projection"
   Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION: "shared_modules_seed_order_matched_v2"
   Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE: "true"
@@ -318,6 +321,8 @@ operator_required_flags:
     - --emit-identity-predictor-disambiguator-archive
     - --predictor-architecture
     - --predictor-param-count-target
+    - --predictor-hidden-dim
+    - --predictor-film-mlp-hidden-dim
     - --ego-source
     - --paired-control-disambiguator-decision-criterion-delta-s
 

@@ -16,7 +16,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
+import zipfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -45,6 +47,7 @@ DEFAULT_OUTPUT_MD = (
     "l5_v2_z6_identity_predictor_disambiguator_20260516_codex.md"
 )
 TRAINER_PATH = "experiments/train_substrate_time_traveler_l5_z6.py"
+CONTEST_ARCHIVE_NORMALIZER_BYTES = 37_545_489.0
 FALSE_AUTHORITY_FLAGS = {
     "score_claim": False,
     "promotion_eligible": False,
@@ -59,6 +62,12 @@ SMOKE_PROXY_BLOCKERS = [
     "no_contest_cpu_cuda_pair",
     "no_byte_closed_score_anchor",
     "not_paradigm_claim_authority",
+]
+
+ARCHIVE_PAIR_BLOCKERS_NO_SCORE = [
+    "no_paired_exact_eval_json",
+    "no_contest_cpu_cuda_pair",
+    "not_score_authority",
 ]
 
 
@@ -113,6 +122,326 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return payload
+
+
+def _read_archive_blob(path: Path) -> tuple[bytes, list[str]]:
+    """Read a Z6 archive blob from either ``0.bin`` or a single-member ZIP."""
+
+    blob = path.read_bytes()
+    if path.suffix.lower() != ".zip":
+        return blob, []
+    with zipfile.ZipFile(path) as zf:
+        names = [info.filename for info in zf.infolist() if not info.is_dir()]
+        if len(names) != 1:
+            raise ValueError(
+                f"{path}: expected single-member Z6 archive ZIP, got {names!r}"
+            )
+        return zf.read(names[0]), names
+
+
+def _zip_sidecar_members(path: Path) -> tuple[list[dict[str, Any]], bytes | None]:
+    """Return ZIP member custody rows and the sole member bytes when available."""
+
+    if path.suffix.lower() != ".zip":
+        return [], None
+    rows: list[dict[str, Any]] = []
+    sole_blob: bytes | None = None
+    with zipfile.ZipFile(path) as zf:
+        infos = [info for info in zf.infolist() if not info.is_dir()]
+        for info in infos:
+            blob = zf.read(info.filename)
+            rows.append(
+                {
+                    "name": info.filename,
+                    "file_size": info.file_size,
+                    "compress_size": info.compress_size,
+                    "crc": f"{info.CRC:08x}",
+                    "sha256": hashlib.sha256(blob).hexdigest(),
+                    "compression_method": info.compress_type,
+                }
+            )
+            sole_blob = blob
+    if len(rows) != 1:
+        sole_blob = None
+    return rows, sole_blob
+
+
+def _load_z6_archive(path: Path) -> Any:
+    src_root = REPO_ROOT / "src"
+    if str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
+    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
+
+    blob, _ = _read_archive_blob(path)
+    return parse_archive(blob)
+
+
+def _identity_flag(arc: Any) -> bool | None:
+    pcwm = arc.meta.get("predictive_coding_world_model_meta")
+    if not isinstance(pcwm, Mapping):
+        return None
+    value = pcwm.get("identity_predictor")
+    if type(value) is not bool:
+        return None
+    return value
+
+
+def _derive_archive_zip_path(path: Path, *, identity: bool) -> Path | None:
+    if path.suffix.lower() == ".zip":
+        return path
+    candidate = (
+        path.parent / "archive_identity_predictor_disambiguator.zip"
+        if identity
+        else path.parent / "archive.zip"
+    )
+    return candidate if candidate.is_file() else None
+
+
+def _archive_row(
+    *,
+    path: Path,
+    arc: Any,
+    repo_root: Path,
+    mode: str,
+    identity: bool,
+) -> dict[str, Any]:
+    blob, zip_members = _read_archive_blob(path)
+    zip_path = _derive_archive_zip_path(path, identity=identity)
+    zip_bytes = zip_path.stat().st_size if zip_path is not None else None
+    zip_sha = _sha256_file(zip_path) if zip_path is not None else None
+    zip_member_rows: list[dict[str, Any]] = []
+    zip_member_matches_path_bytes: bool | None = None
+    if zip_path is not None:
+        zip_member_rows, sole_member_blob = _zip_sidecar_members(zip_path)
+        zip_members = [str(row["name"]) for row in zip_member_rows]
+        if sole_member_blob is not None:
+            zip_member_matches_path_bytes = sole_member_blob == blob
+    pcwm = arc.meta.get("predictive_coding_world_model_meta")
+    pcwm_meta = dict(pcwm) if isinstance(pcwm, Mapping) else {}
+    return {
+        "mode": mode,
+        "path": _repo_relative(path, repo_root=repo_root),
+        "bytes": path.stat().st_size,
+        "sha256": _sha256_file(path),
+        "parsed_member_bytes": len(blob),
+        "zip_members": zip_members,
+        "zip_path": (
+            _repo_relative(zip_path, repo_root=repo_root)
+            if zip_path is not None
+            else None
+        ),
+        "zip_bytes": zip_bytes,
+        "zip_sha256": zip_sha,
+        "zip_member_rows": zip_member_rows,
+        "zip_member_matches_path_bytes": zip_member_matches_path_bytes,
+        "contest_archive_bytes_basis": zip_bytes if zip_bytes is not None else len(blob),
+        "contest_archive_sha256_basis": zip_sha if zip_sha is not None else _sha256_file(path),
+        "schema_version": arc.schema_version,
+        "identity_predictor": _identity_flag(arc),
+        "identity_predictor_disambiguator": bool(
+            arc.meta.get("identity_predictor_disambiguator", False)
+        ),
+        "predictor_state_dict_key_count": len(arc.predictor_state_dict),
+        "predictor_state_dict_keys": sorted(arc.predictor_state_dict.keys()),
+        "latent_dim": int(arc.latent_init.numel()),
+        "num_pairs": int(arc.residuals.shape[0]),
+        "ego_motion_dim": int(arc.ego_motion.shape[1]),
+        "predictor_hidden_dim": arc.meta.get("predictor_hidden_dim"),
+        "requested_predictor_hidden_dim": arc.meta.get(
+            "requested_predictor_hidden_dim"
+        ),
+        "effective_predictor_hidden_dim": arc.meta.get(
+            "effective_predictor_hidden_dim"
+        ),
+        "predictor_film_mlp_hidden_dim": arc.meta.get(
+            "predictor_film_mlp_hidden_dim"
+        ),
+        "predictor_architecture": arc.meta.get("predictor_architecture"),
+        "predictor_depth": arc.meta.get("predictor_depth"),
+        "lambda_residual_entropy": pcwm_meta.get("lambda_residual_entropy"),
+        "predictor_kernel_size": pcwm_meta.get("predictor_kernel_size"),
+    }
+
+
+def _state_dict_equal(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    if set(left.keys()) != set(right.keys()):
+        return False
+    import torch
+
+    return all(torch.equal(left[key], right[key]) for key in left)
+
+
+def _tensor_equal(left: Any, right: Any) -> bool:
+    import torch
+
+    return bool(torch.equal(left, right))
+
+
+def _archive_pair_checks(full_arc: Any, identity_arc: Any) -> dict[str, bool]:
+    return {
+        "encoder_state_dict_equal": _state_dict_equal(
+            full_arc.encoder_state_dict,
+            identity_arc.encoder_state_dict,
+        ),
+        "decoder_state_dict_equal": _state_dict_equal(
+            full_arc.decoder_state_dict,
+            identity_arc.decoder_state_dict,
+        ),
+        "predictor_state_dict_equal": _state_dict_equal(
+            full_arc.predictor_state_dict,
+            identity_arc.predictor_state_dict,
+        ),
+        "predictor_keysets_equal": (
+            set(full_arc.predictor_state_dict.keys())
+            == set(identity_arc.predictor_state_dict.keys())
+        ),
+        "latent_init_equal": _tensor_equal(full_arc.latent_init, identity_arc.latent_init),
+        "residuals_equal": _tensor_equal(full_arc.residuals, identity_arc.residuals),
+        "ego_motion_equal": _tensor_equal(full_arc.ego_motion, identity_arc.ego_motion),
+    }
+
+
+def _default_archive_pair_from_run_dir(run_dir: Path) -> tuple[Path, Path]:
+    full = run_dir / "0.bin"
+    identity = run_dir / "0_identity_predictor_disambiguator.bin"
+    if not full.is_file():
+        raise ValueError(f"run-dir archive pair missing {full}")
+    if not identity.is_file():
+        raise ValueError(f"run-dir archive pair missing {identity}")
+    return full, identity
+
+
+def _default_eval_pair_from_run_dir(run_dir: Path) -> tuple[Path | None, Path | None]:
+    full = run_dir / "contest_auth_eval.json"
+    identity = run_dir / "contest_auth_eval_identity_predictor_disambiguator.json"
+    if full.is_file() and identity.is_file():
+        return full, identity
+    if full.is_file() != identity.is_file():
+        missing = identity if full.is_file() else full
+        raise ValueError(f"run-dir paired exact-eval JSON missing {missing}")
+    return None, None
+
+
+def _first_number(payload: Mapping[str, Any], keys: tuple[str, ...]) -> float | None:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            return float(value)
+    return None
+
+
+def _first_int(payload: Mapping[str, Any], keys: tuple[str, ...]) -> int | None:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            return int(value)
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+    return None
+
+
+def _archive_sha_from_eval(payload: Mapping[str, Any]) -> str | None:
+    for key in ("archive_sha256", "archive_sha", "archive_hash"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    provenance = payload.get("provenance")
+    if isinstance(provenance, Mapping):
+        for key in ("archive_sha256", "archive_sha", "archive_hash"):
+            value = provenance.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return None
+
+
+def _axis_label(payload: Mapping[str, Any], override: str | None) -> str | None:
+    if override:
+        return override
+    for key in ("axis", "evidence_axis", "lane_tag"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    score_axis = payload.get("score_axis")
+    if score_axis == "contest_cuda":
+        return "[contest-CUDA]"
+    if score_axis == "contest_cpu":
+        return "[contest-CPU]"
+    if score_axis == "cpu_advisory":
+        return "[macOS-CPU advisory]"
+    if isinstance(score_axis, str) and score_axis:
+        return score_axis
+    return None
+
+
+def _score_fields_from_eval(
+    *,
+    path: Path,
+    expected_archive_bytes: int | None,
+    expected_archive_sha256: str | None,
+    axis: str | None,
+    repo_root: Path,
+) -> dict[str, Any]:
+    payload = _load_json_object(path)
+    score = _first_number(
+        payload,
+        (
+            "score_recomputed_from_components",
+            "canonical_score_recomputed",
+            "canonical_score",
+            "score",
+            "final_score",
+        ),
+    )
+    seg = _first_number(payload, ("avg_segnet_dist", "seg_dist", "seg_distortion"))
+    pose = _first_number(
+        payload,
+        ("avg_posenet_dist", "pose_dist", "pose_distortion"),
+    )
+    archive_bytes = _first_int(
+        payload,
+        ("archive_size_bytes", "archive_bytes", "bytes"),
+    )
+    n_samples = _first_int(payload, ("n_samples", "sample_count", "samples"))
+    recomputed = None
+    recompute_matches_payload = None
+    if seg is not None and pose is not None and archive_bytes is not None:
+        recomputed = (
+            100.0 * seg
+            + math.sqrt(10.0 * pose)
+            + 25.0 * archive_bytes / CONTEST_ARCHIVE_NORMALIZER_BYTES
+        )
+        if score is not None:
+            recompute_matches_payload = abs(float(score) - recomputed) <= 1e-9
+    eval_archive_sha = _archive_sha_from_eval(payload)
+    archive_bytes_match = (
+        expected_archive_bytes is not None
+        and archive_bytes is not None
+        and int(expected_archive_bytes) == int(archive_bytes)
+    )
+    archive_sha_match = (
+        expected_archive_sha256 is not None
+        and eval_archive_sha is not None
+        and expected_archive_sha256 == eval_archive_sha
+    )
+    return {
+        "path": _repo_relative(path, repo_root=repo_root),
+        "sha256": _sha256_file(path),
+        "axis": _axis_label(payload, axis),
+        "score": score,
+        "avg_segnet_dist": seg,
+        "avg_posenet_dist": pose,
+        "archive_size_bytes": archive_bytes,
+        "archive_sha256": eval_archive_sha,
+        "n_samples": n_samples,
+        "score_recomputed_from_components": recomputed,
+        "score_recompute_matches_payload": recompute_matches_payload,
+        "archive_bytes_match_expected": archive_bytes_match,
+        "archive_sha256_match_expected": archive_sha_match,
+        "evidence_grade": payload.get("evidence_grade"),
+        "score_axis": payload.get("score_axis"),
+        "score_claim_valid": payload.get("score_claim_valid"),
+        "promotion_eligible": payload.get("promotion_eligible"),
+    }
 
 
 def _expect_bool(payload: Mapping[str, Any], key: str, expected: bool) -> None:
@@ -421,6 +750,209 @@ def evaluate_stats_pair(
     }
 
 
+def evaluate_archive_pair(
+    *,
+    full_archive_path: Path,
+    identity_archive_path: Path,
+    repo_root: Path = REPO_ROOT,
+    full_eval_json_path: Path | None = None,
+    identity_eval_json_path: Path | None = None,
+    axis: str | None = None,
+    decision_delta_s: float = 0.005,
+) -> dict[str, Any]:
+    """Validate a byte-closed full/identity Z6 archive pair.
+
+    This consumes the real paired archives emitted by the full trainer. Exact
+    eval JSON is optional; without it, the probe records archive custody and
+    remains explicitly blocked from score, rank, or paradigm authority.
+    """
+
+    full_arc = _load_z6_archive(full_archive_path)
+    identity_arc = _load_z6_archive(identity_archive_path)
+    if _identity_flag(full_arc) is not False:
+        raise ValueError("full archive must carry identity_predictor=false")
+    if _identity_flag(identity_arc) is not True:
+        raise ValueError("identity archive must carry identity_predictor=true")
+    if identity_arc.meta.get("identity_predictor_disambiguator") is not True:
+        raise ValueError(
+            "identity archive must carry identity_predictor_disambiguator=true"
+        )
+
+    full_row = _archive_row(
+        path=full_archive_path,
+        arc=full_arc,
+        repo_root=repo_root,
+        mode="full_film_predictor",
+        identity=False,
+    )
+    identity_row = _archive_row(
+        path=identity_archive_path,
+        arc=identity_arc,
+        repo_root=repo_root,
+        mode="identity_predictor",
+        identity=True,
+    )
+    checks = _archive_pair_checks(full_arc, identity_arc)
+    shared_sections_equal = all(checks.values())
+    blockers: list[str] = []
+    if not shared_sections_equal:
+        blockers.append("paired_archive_shared_sections_mismatch")
+    if full_row["zip_path"] is not None and full_row["zip_member_matches_path_bytes"] is not True:
+        blockers.append("full_archive_zip_member_mismatch")
+    if (
+        identity_row["zip_path"] is not None
+        and identity_row["zip_member_matches_path_bytes"] is not True
+    ):
+        blockers.append("identity_archive_zip_member_mismatch")
+
+    deltas: dict[str, Any] = {
+        "identity_minus_full_archive_bytes": int(identity_row["bytes"]) - int(full_row["bytes"]),
+        "identity_minus_full_parsed_member_bytes": (
+            int(identity_row["parsed_member_bytes"])
+            - int(full_row["parsed_member_bytes"])
+        ),
+        "identity_minus_full_zip_bytes": (
+            None
+            if identity_row["zip_bytes"] is None or full_row["zip_bytes"] is None
+            else int(identity_row["zip_bytes"]) - int(full_row["zip_bytes"])
+        ),
+        "identity_minus_full_contest_archive_bytes_basis": (
+            int(identity_row["contest_archive_bytes_basis"])
+            - int(full_row["contest_archive_bytes_basis"])
+        ),
+        "identity_minus_full_rate_term_basis": (
+            25.0
+            * (
+                int(identity_row["contest_archive_bytes_basis"])
+                - int(full_row["contest_archive_bytes_basis"])
+            )
+            / CONTEST_ARCHIVE_NORMALIZER_BYTES
+        ),
+    }
+
+    exact_eval: dict[str, Any] | None = None
+    verdict = "pending_paired_exact_eval_json"
+    evidence_grade = "byte_closed_archive_pair_no_score"
+    result_classification = "byte_closed_archive_pair_no_score"
+    paired_eval_paths_provided = (
+        full_eval_json_path is not None and identity_eval_json_path is not None
+    )
+    if (full_eval_json_path is None) != (identity_eval_json_path is None):
+        raise ValueError(
+            "--full-eval-json and --identity-eval-json must be supplied together"
+        )
+    if not paired_eval_paths_provided:
+        blockers.extend(ARCHIVE_PAIR_BLOCKERS_NO_SCORE)
+    else:
+        full_eval = _score_fields_from_eval(
+            path=full_eval_json_path,
+            expected_archive_bytes=full_row["contest_archive_bytes_basis"],
+            expected_archive_sha256=full_row["contest_archive_sha256_basis"],
+            axis=axis,
+            repo_root=repo_root,
+        )
+        identity_eval = _score_fields_from_eval(
+            path=identity_eval_json_path,
+            expected_archive_bytes=identity_row["contest_archive_bytes_basis"],
+            expected_archive_sha256=identity_row["contest_archive_sha256_basis"],
+            axis=axis,
+            repo_root=repo_root,
+        )
+        exact_eval = {
+            "full_film_predictor": full_eval,
+            "identity_predictor": identity_eval,
+        }
+        for label, fields in (
+            ("full", full_eval),
+            ("identity", identity_eval),
+        ):
+            if fields["axis"] is None:
+                blockers.append(f"{label}_exact_eval_axis_missing")
+            if fields["score"] is None:
+                blockers.append(f"{label}_exact_eval_score_missing")
+            if fields["n_samples"] != 600:
+                blockers.append(f"{label}_exact_eval_sample_count_not_600")
+            if not fields["archive_bytes_match_expected"]:
+                blockers.append(f"{label}_exact_eval_archive_bytes_mismatch")
+            if not fields["archive_sha256_match_expected"]:
+                blockers.append(f"{label}_exact_eval_archive_sha256_mismatch")
+            if fields["score_recompute_matches_payload"] is False:
+                blockers.append(f"{label}_exact_eval_formula_recompute_mismatch")
+        if full_eval["axis"] != identity_eval["axis"]:
+            blockers.append("paired_exact_eval_axis_mismatch")
+
+        if not blockers and full_eval["score"] is not None and identity_eval["score"] is not None:
+            full_minus_identity_score = float(full_eval["score"]) - float(identity_eval["score"])
+            deltas["full_minus_identity_score"] = full_minus_identity_score
+            deltas["identity_minus_full_score"] = -full_minus_identity_score
+            if full_minus_identity_score <= -float(decision_delta_s):
+                verdict = "full_film_predictor_exact_eval_lower_score"
+                result_classification = "paired_exact_eval_full_film_lower_score"
+            elif full_minus_identity_score >= float(decision_delta_s):
+                verdict = "identity_predictor_exact_eval_lower_score"
+                result_classification = "paired_exact_eval_identity_lower_score"
+            else:
+                verdict = "paired_exact_eval_indeterminate_within_delta_s"
+                result_classification = "paired_exact_eval_delta_s_tie"
+            evidence_grade = f"paired_exact_eval_{full_eval['axis']}"
+        else:
+            verdict = "blocked_paired_exact_eval_custody"
+            evidence_grade = "paired_exact_eval_fail_closed"
+            result_classification = "paired_exact_eval_custody_blocked"
+
+    if not shared_sections_equal or any(
+        blocker.endswith("_archive_zip_member_mismatch") for blocker in blockers
+    ):
+        verdict = "blocked_paired_archive_custody"
+        evidence_grade = "byte_closed_archive_pair_fail_closed"
+        result_classification = "paired_archive_custody_blocked"
+
+    return {
+        "schema": SCHEMA,
+        "probe_id": PROBE_ID,
+        "lane_id": LANE_ID,
+        "substrate_tag": SUBSTRATE_TAG,
+        "evidence_grade": evidence_grade,
+        "verdict": verdict,
+        "paired": True,
+        "paired_control_initialization": PAIRED_CONTROL_INITIALIZATION,
+        "decision_delta_s": float(decision_delta_s),
+        **FALSE_AUTHORITY_FLAGS,
+        "blockers": blockers,
+        "source_archives": [full_row, identity_row],
+        "paired_archive_checks": checks,
+        "exact_eval": exact_eval,
+        "deltas": deltas,
+        "result_review": {
+            "classification": result_classification,
+            "score_formula_recomputed": (
+                exact_eval is not None
+                and all(
+                    row.get("score_recomputed_from_components") is not None
+                    for row in exact_eval.values()
+                )
+            ),
+            "score_claim_authority": False,
+            "component_score_authority": exact_eval is not None and not blockers,
+            "contest_compliance_authority": exact_eval is not None and not blockers,
+            "full_minus_identity_score_semantics": (
+                "negative means full-FiLM lower score; positive means identity lower score"
+            ),
+            "next_authoritative_gate": (
+                "paired contest-CUDA exact eval with matching ZIP custody"
+                if exact_eval is None
+                else "operator promotion review; probe itself remains non-authoritative"
+            ),
+        },
+        "reactivation_criteria": [
+            "provide both paired contest_auth_eval JSON files for the exact same ZIP sidecars",
+            "keep axis labels adjacent to all score language",
+            "treat full_minus_identity_score <= -decision_delta_s as a full-FiLM win",
+            "do not promote, rank, or kill from this probe without operator review",
+        ],
+    }
+
+
 def render_markdown(payload: Mapping[str, Any]) -> str:
     """Render a compact operator-facing Markdown report."""
 
@@ -489,6 +1021,63 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
                     f"- ego_motion_nonzero_fraction: `{row.get('ego_motion_nonzero_fraction')}`",
                 ]
             )
+    archives = payload.get("source_archives")
+    if isinstance(archives, list):
+        lines.extend(["", "## Source Archives"])
+        for row in archives:
+            if not isinstance(row, Mapping):
+                continue
+            lines.extend(
+                [
+                    "",
+                    f"### {row.get('mode')}",
+                    "",
+                    f"- path: `{row.get('path')}`",
+                    f"- bytes: `{row.get('bytes')}`",
+                    f"- sha256: `{row.get('sha256')}`",
+                    f"- zip_path: `{row.get('zip_path')}`",
+                    f"- zip_bytes: `{row.get('zip_bytes')}`",
+                    f"- zip_sha256: `{row.get('zip_sha256')}`",
+                    f"- zip_members: `{row.get('zip_members')}`",
+                    f"- zip_member_matches_path_bytes: `{row.get('zip_member_matches_path_bytes')}`",
+                    f"- contest_archive_bytes_basis: `{row.get('contest_archive_bytes_basis')}`",
+                    f"- identity_predictor: `{row.get('identity_predictor')}`",
+                    f"- identity_predictor_disambiguator: `{row.get('identity_predictor_disambiguator')}`",
+                    f"- predictor_state_dict_key_count: `{row.get('predictor_state_dict_key_count')}`",
+                    f"- num_pairs: `{row.get('num_pairs')}`",
+                    f"- ego_motion_dim: `{row.get('ego_motion_dim')}`",
+                    f"- predictor_architecture: `{row.get('predictor_architecture')}`",
+                ]
+            )
+    checks = payload.get("paired_archive_checks")
+    if isinstance(checks, Mapping):
+        lines.extend(["", "## Paired Archive Checks"])
+        for key, value in checks.items():
+            lines.append(f"- {key}: `{value}`")
+    exact_eval = payload.get("exact_eval")
+    if isinstance(exact_eval, Mapping):
+        lines.extend(["", "## Exact Eval Inputs"])
+        for mode, row in exact_eval.items():
+            if not isinstance(row, Mapping):
+                continue
+            lines.extend(
+                [
+                    "",
+                    f"### {mode}",
+                    "",
+                    f"- path: `{row.get('path')}`",
+                    f"- axis: `{row.get('axis')}`",
+                    f"- score: `{row.get('score')}`",
+                    f"- score_recomputed_from_components: `{row.get('score_recomputed_from_components')}`",
+                    f"- avg_segnet_dist: `{row.get('avg_segnet_dist')}`",
+                    f"- avg_posenet_dist: `{row.get('avg_posenet_dist')}`",
+                    f"- archive_size_bytes: `{row.get('archive_size_bytes')}`",
+                    f"- archive_sha256: `{row.get('archive_sha256')}`",
+                    f"- n_samples: `{row.get('n_samples')}`",
+                    f"- archive_bytes_match_expected: `{row.get('archive_bytes_match_expected')}`",
+                    f"- archive_sha256_match_expected: `{row.get('archive_sha256_match_expected')}`",
+                ]
+            )
     deltas = payload.get("deltas")
     if isinstance(deltas, Mapping):
         lines.extend(["", "## Deltas"])
@@ -512,6 +1101,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
     parser.add_argument("--full-stats", type=Path, default=None)
     parser.add_argument("--identity-stats", type=Path, default=None)
+    parser.add_argument("--run-dir", type=Path, default=None)
+    parser.add_argument("--full-archive", type=Path, default=None)
+    parser.add_argument("--identity-archive", type=Path, default=None)
+    parser.add_argument("--full-eval-json", type=Path, default=None)
+    parser.add_argument("--identity-eval-json", type=Path, default=None)
+    parser.add_argument("--axis", default=None)
+    parser.add_argument("--decision-delta-s", type=float, default=0.005)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--seed", type=int, default=0)
@@ -536,7 +1132,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if (args.full_stats is None) != (args.identity_stats is None):
             raise ValueError("--full-stats and --identity-stats must be supplied together")
-        if args.full_stats is None:
+        if (args.full_archive is None) != (args.identity_archive is None):
+            raise ValueError(
+                "--full-archive and --identity-archive must be supplied together"
+            )
+        archive_mode = args.run_dir is not None or args.full_archive is not None
+        stats_mode = args.full_stats is not None
+        if archive_mode and stats_mode:
+            raise ValueError("archive-pair mode and stats-pair mode are mutually exclusive")
+        if args.run_dir is not None and args.full_archive is not None:
+            raise ValueError("--run-dir cannot be combined with explicit archive paths")
+        if not archive_mode and (args.full_eval_json is not None or args.identity_eval_json is not None):
+            raise ValueError("exact eval JSON inputs require archive-pair mode")
+        if not archive_mode and not stats_mode:
             payload = build_plan_payload(
                 epochs=args.epochs,
                 device=args.device,
@@ -544,7 +1152,7 @@ def main(argv: list[str] | None = None) -> int:
                 target_mode=args.smoke_target_mode,
                 ego_motion_mode=args.smoke_ego_motion_mode,
             )
-        else:
+        elif stats_mode:
             full_stats_path = _resolve_repo_path(args.full_stats, repo_root=repo_root)
             identity_stats_path = _resolve_repo_path(
                 args.identity_stats,
@@ -554,6 +1162,45 @@ def main(argv: list[str] | None = None) -> int:
                 full_stats_path=full_stats_path,
                 identity_stats_path=identity_stats_path,
                 repo_root=repo_root,
+            )
+        else:
+            if args.run_dir is not None:
+                run_dir = _resolve_repo_path(args.run_dir, repo_root=repo_root)
+                full_archive_path, identity_archive_path = (
+                    _default_archive_pair_from_run_dir(run_dir)
+                )
+                default_full_eval_json_path, default_identity_eval_json_path = (
+                    _default_eval_pair_from_run_dir(run_dir)
+                )
+            else:
+                default_full_eval_json_path = None
+                default_identity_eval_json_path = None
+                full_archive_path = _resolve_repo_path(
+                    args.full_archive,
+                    repo_root=repo_root,
+                )
+                identity_archive_path = _resolve_repo_path(
+                    args.identity_archive,
+                    repo_root=repo_root,
+                )
+            full_eval_json_path = (
+                _resolve_repo_path(args.full_eval_json, repo_root=repo_root)
+                if args.full_eval_json is not None
+                else default_full_eval_json_path
+            )
+            identity_eval_json_path = (
+                _resolve_repo_path(args.identity_eval_json, repo_root=repo_root)
+                if args.identity_eval_json is not None
+                else default_identity_eval_json_path
+            )
+            payload = evaluate_archive_pair(
+                full_archive_path=full_archive_path,
+                identity_archive_path=identity_archive_path,
+                repo_root=repo_root,
+                full_eval_json_path=full_eval_json_path,
+                identity_eval_json_path=identity_eval_json_path,
+                axis=args.axis,
+                decision_delta_s=args.decision_delta_s,
             )
         output_json = _resolve_repo_path(args.output_json, repo_root=repo_root)
         output_md = _resolve_repo_path(args.output_md, repo_root=repo_root)

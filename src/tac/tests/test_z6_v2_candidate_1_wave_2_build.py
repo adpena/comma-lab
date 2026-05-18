@@ -24,12 +24,18 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RECIPE_PATH = (
     REPO_ROOT
     / ".omx/operator_authorize_recipes/"
     "substrate_z6_v2_candidate_1_multi_layer_film_modal_t4_smoke_dispatch.yaml"
+)
+CANDIDATE4C_RECIPE_PATH = (
+    REPO_ROOT
+    / ".omx/operator_authorize_recipes/"
+    "substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch.yaml"
 )
 TRAINER_PATH = REPO_ROOT / "experiments/train_substrate_time_traveler_l5_z6.py"
 
@@ -60,6 +66,31 @@ def test_resolver_unknown_architecture_raises_systemexit() -> None:
     import experiments.train_substrate_time_traveler_l5_z6 as z6
     with pytest.raises(SystemExit):
         z6._resolve_predictor_architecture("not_a_real_arch")
+
+
+def test_predictor_width_metadata_uses_effective_hidden_dim_alias() -> None:
+    """Sidecars and archive meta must expose the same effective width alias."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    args = z6._build_parser().parse_args([
+        "--output-dir", "/tmp/_test",
+        "--predictor-architecture", "single_layer_film_75k",
+        "--predictor-hidden-dim", "72",
+        "--predictor-film-mlp-hidden-dim", "32",
+    ])
+
+    assert z6._predictor_width_metadata(
+        args,
+        effective_predictor_hidden_dim=72,
+        predictor_depth=1,
+    ) == {
+        "predictor_hidden_dim": 72,
+        "requested_predictor_hidden_dim": 72,
+        "effective_predictor_hidden_dim": 72,
+        "predictor_film_mlp_hidden_dim": 32,
+        "predictor_architecture": "single_layer_film_75k",
+        "predictor_depth": 1,
+    }
 
 
 # ===========================================================================
@@ -101,6 +132,30 @@ def test_argparse_disambiguator_decision_criterion_delta_s_default() -> None:
     assert args.paired_control_disambiguator_decision_criterion_delta_s == 0.005
 
 
+def test_auth_eval_json_path_resolver_supports_identity_disambiguator_suffix(
+    tmp_path: Path,
+) -> None:
+    """Paired exact eval needs distinct durable/local JSON paths for identity."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    out_dir = tmp_path / "output"
+    durable_root = tmp_path / "durable_auth_eval"
+    gate_json, local_json = z6._resolve_auth_eval_json_paths(
+        out_dir,
+        durable_root=durable_root,
+        filename="contest_auth_eval_identity_predictor_disambiguator.json",
+    )
+
+    assert gate_json == (
+        durable_root
+        / out_dir.name
+        / "contest_auth_eval_identity_predictor_disambiguator.json"
+    )
+    assert local_json == (
+        out_dir / "contest_auth_eval_identity_predictor_disambiguator.json"
+    )
+
+
 def test_argparse_predictor_param_count_target_default() -> None:
     """Default --predictor-param-count-target=300_000 per Council binding ceiling."""
     import experiments.train_substrate_time_traveler_l5_z6 as z6
@@ -125,6 +180,214 @@ def test_argparse_ego_source_default() -> None:
     assert args.ego_source == "posenet_projection"
 
 
+def test_argparse_accepts_candidate_4c_scorer_logit_ego_source() -> None:
+    """Candidate 4c scorer-logit conditioning is executable, not just prose."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+    args = z6._build_parser().parse_args([
+        "--output-dir", "/tmp/_test",
+        "--ego-source", "scorer_logit",
+    ])
+    assert args.ego_source == "scorer_logit"
+
+
+def test_candidate_4c_slot_allocator_preserves_all_signal_groups() -> None:
+    """Default 8-dim scorer-logit buffer must not prefix-truncate a raw bank."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    assert z6._allocate_scorer_logit_feature_slots(8) == {
+        "seg_mean": 2,
+        "pose": 2,
+        "entropy": 1,
+        "margin": 1,
+        "seg_std": 2,
+    }
+
+
+def test_candidate_4c_slot_metadata_is_json_safe_and_source_gated() -> None:
+    """Artifact metadata should disclose the exact active side-info grammar."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    assert z6._scorer_logit_feature_slot_metadata(
+        "posenet_projection",
+        8,
+    ) is None
+    assert z6._scorer_logit_feature_slot_metadata("scorer_logit", 8) == {
+        "seg_mean": 2,
+        "pose": 2,
+        "entropy": 1,
+        "margin": 1,
+        "seg_std": 2,
+    }
+
+
+def test_candidate_4c_pair_capped_param_diagnostic_uses_full_equivalent_count() -> None:
+    """Pair-capped probes must not falsely mark full-run capacity underfilled."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    diagnostic = z6._param_count_target_diagnostic(
+        {"total": 103_762, "residuals": 48},
+        target=120_000,
+        actual_num_pairs=2,
+        latent_dim=24,
+    )
+
+    assert diagnostic["actual_total"] == 103_762
+    assert diagnostic["full_equivalent_total"] == 118_114
+    assert diagnostic["comparison_total"] == 118_114
+    assert diagnostic["comparison_basis"] == (
+        "full_equivalent_total_from_pair_capped_run"
+    )
+    assert diagnostic["within_5pct"] is True
+
+
+def test_candidate_4c_archive_meta_contains_effective_width_fields(tmp_path: Path) -> None:
+    """Archive metadata must preserve the width config used for sweep evidence."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+    from tac.substrates.time_traveler_l5_z6 import (
+        Z6PredictiveCodingConfig,
+        Z6PredictiveCodingSubstrate,
+        parse_archive,
+        pack_archive,
+    )
+
+    cfg = Z6PredictiveCodingConfig(
+        latent_dim=4,
+        decoder_embed_dim=4,
+        decoder_channels=(4,),
+        decoder_num_upsample_blocks=1,
+        num_pairs=2,
+        output_height=6,
+        output_width=8,
+        predictor_hidden_dim=72,
+        predictor_film_mlp_hidden_dim=32,
+        predictor_ego_motion_dim=8,
+    )
+    sub = Z6PredictiveCodingSubstrate(cfg)
+    slot_meta = z6._scorer_logit_feature_slot_metadata("scorer_logit", 8)
+    args = z6._build_parser().parse_args([
+        "--output-dir", str(tmp_path),
+        "--predictor-architecture", "single_layer_film_75k",
+        "--predictor-hidden-dim", "72",
+        "--predictor-film-mlp-hidden-dim", "32",
+    ])
+    width_meta = z6._predictor_width_metadata(
+        args,
+        effective_predictor_hidden_dim=cfg.predictor_hidden_dim,
+        predictor_depth=1,
+    )
+    blob = pack_archive(
+        sub.encoder.state_dict(),
+        sub.decoder.state_dict(),
+        sub.predictor.state_dict(),
+        sub.latent_init.detach().cpu(),
+        sub.residuals.detach().cpu(),
+        sub.ego_motion_buffer.detach().cpu(),
+        {
+            "decoder_embed_dim": cfg.decoder_embed_dim,
+            "decoder_initial_grid_h": cfg.decoder_initial_grid_h,
+            "decoder_initial_grid_w": cfg.decoder_initial_grid_w,
+            "decoder_channels": list(cfg.decoder_channels),
+            "decoder_num_upsample_blocks": cfg.decoder_num_upsample_blocks,
+            "output_height": cfg.output_height,
+            "output_width": cfg.output_width,
+            **width_meta,
+            "scorer_logit_feature_slot_allocation": slot_meta,
+        },
+    )
+
+    archive_path = tmp_path / "0.bin"
+    archive_path.write_bytes(blob)
+    arc = parse_archive(blob)
+    assert arc.meta["predictor_hidden_dim"] == 72
+    assert arc.meta["requested_predictor_hidden_dim"] == 72
+    assert arc.meta["effective_predictor_hidden_dim"] == 72
+    assert arc.meta["predictor_film_mlp_hidden_dim"] == 32
+    assert arc.meta["predictor_architecture"] == "single_layer_film_75k"
+    assert arc.meta["predictor_depth"] == 1
+    assert arc.meta["scorer_logit_feature_slot_allocation"] == slot_meta
+
+
+def test_candidate_4c_feature_reduction_keeps_pose_entropy_margin() -> None:
+    """Regression for scorer-logit concat-then-truncate dropping key signals."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    batch = 2
+    reduced = z6._reduce_scorer_logit_feature_groups(
+        seg_mean=torch.full((batch, 12), 10.0),
+        pose_tensor=torch.full((batch, 12), 100.0),
+        seg_std=torch.full((batch, 12), 200.0),
+        entropy=torch.full((batch, 1), 300.0),
+        margin=torch.full((batch, 1), 400.0),
+        ego_motion_dim=8,
+    )
+
+    assert tuple(reduced.shape) == (batch, 8)
+    assert torch.equal(reduced[:, 0:2], torch.full((batch, 2), 10.0))
+    assert torch.equal(reduced[:, 2:4], torch.full((batch, 2), 100.0))
+    assert torch.equal(reduced[:, 4:6], torch.full((batch, 2), 200.0))
+    assert torch.equal(reduced[:, 6:7], torch.full((batch, 1), 300.0))
+    assert torch.equal(reduced[:, 7:8], torch.full((batch, 1), 400.0))
+
+
+class _FakePoseNet(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.preprocess_calls = 0
+
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+        self.preprocess_calls += 1
+        return x
+
+    def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+        base = x.mean(dim=(1, 2, 3, 4), keepdim=False).reshape(-1, 1)
+        offsets = torch.arange(12, device=x.device, dtype=x.dtype).reshape(1, 12)
+        return {"pose": base + offsets}
+
+
+class _FakeSegNet(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.preprocess_calls = 0
+
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+        self.preprocess_calls += 1
+        return x[:, -1]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        batch = x.shape[0]
+        base = x.mean(dim=(1, 2, 3), keepdim=True).reshape(batch, 1, 1, 1)
+        class_offsets = torch.arange(5, device=x.device, dtype=x.dtype).reshape(
+            1, 5, 1, 1
+        )
+        spatial = torch.arange(4, device=x.device, dtype=x.dtype).reshape(1, 1, 2, 2)
+        return base + class_offsets + spatial
+
+
+def test_candidate_4c_scorer_logit_ego_motion_uses_both_scorers() -> None:
+    """Scorer-logit side-info reduces SegNet logits + PoseNet head to ego buffer."""
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+    posenet = _FakePoseNet()
+    segnet = _FakeSegNet()
+    pairs = torch.arange(4 * 2 * 3 * 4 * 4, dtype=torch.float32).reshape(
+        4, 2, 3, 4, 4
+    )
+
+    ego = z6._derive_ego_motion_from_scorer_logits(
+        posenet,
+        segnet,
+        pairs,
+        ego_motion_dim=8,
+        chunk_size=2,
+        device=torch.device("cpu"),
+    )
+
+    assert tuple(ego.shape) == (4, 8)
+    assert torch.isfinite(ego).all()
+    assert float(ego.abs().sum()) > 0.0
+    assert posenet.preprocess_calls == 2
+    assert segnet.preprocess_calls == 2
+
+
 # ===========================================================================
 # TIER_1_OPERATOR_REQUIRED_FLAGS manifest (Catalog #151 + #168 AnnAssign)
 # ===========================================================================
@@ -136,6 +399,8 @@ def test_tier1_required_flags_contains_all_6_wave_2_build_flags() -> None:
     required = {
         "--predictor-architecture",
         "--predictor-param-count-target",
+        "--predictor-hidden-dim",
+        "--predictor-film-mlp-hidden-dim",
         "--ego-source",
         "--enable-paired-control-initialization",
         "--emit-identity-predictor-disambiguator-archive",
@@ -183,11 +448,10 @@ def test_recipe_yaml_loads_and_has_required_fields() -> None:
     # Identity + lifecycle
     assert recipe["name"] == "substrate_z6_v2_candidate_1_multi_layer_film_modal_t4_smoke_dispatch"
     assert recipe["lane_id"].startswith("lane_z6_v2_candidate_1_wave_2_build")
-    # Per Catalog #240 + CLAUDE.md "Substrate scaffolds MUST be COMPLETE or
-    # RESEARCH-ONLY": Wave 2 BUILD recipe IS non-dispatchable until operator
-    # sign-off on Phase 3 council PROCEED_WITH_REVISIONS verdict.
-    assert recipe["research_only"] is True
-    assert recipe["dispatch_enabled"] is False
+    # The recipe was flipped after operator approval; dispatch is still guarded
+    # by operator_authorize/probe-predecessor checks before provider creation.
+    assert recipe["research_only"] is False
+    assert recipe["dispatch_enabled"] is True
     # Per Catalog #270 dispatch optimization protocol Tier 2/3
     assert recipe["platform"] == "modal"
     assert recipe["min_vram_gb"] >= 14
@@ -237,6 +501,8 @@ def test_recipe_yaml_env_overrides_thread_all_tier1_required_flags() -> None:
     for required_env in (
         "Z6_PREDICTOR_ARCHITECTURE",
         "Z6_PREDICTOR_PARAM_COUNT_TARGET",
+        "Z6_PREDICTOR_HIDDEN_DIM",
+        "Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM",
         "Z6_EGO_SOURCE",
         "Z6_ENABLE_PAIRED_CONTROL_INITIALIZATION",
         "Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE",
@@ -247,23 +513,81 @@ def test_recipe_yaml_env_overrides_thread_all_tier1_required_flags() -> None:
     assert env["Z6_PREDICTOR_ARCHITECTURE"] == "multi_layer_film_depth_3_300k"
 
 
-def test_recipe_yaml_dispatch_blockers_enforce_pre_dispatch_gate() -> None:
-    """Wave 2 BUILD recipe MUST list all 4 dispatch_blockers per Phase 3 §17."""
+def test_recipe_yaml_dispatch_blockers_cleared_after_operator_approval() -> None:
+    """Wave 2 recipe blockers are cleared; authorize/probe gates still guard spend."""
     import yaml
     recipe = yaml.safe_load(RECIPE_PATH.read_text(encoding="utf-8"))
-    blockers = recipe["dispatch_blockers"]
-    assert any("operator_sign_off" in b for b in blockers), (
-        "missing operator_sign_off blocker (Phase 3 §17 op-routable #1)"
+    assert recipe["dispatch_blockers"] == []
+    assert recipe["research_only"] is False
+    assert recipe["dispatch_enabled"] is True
+
+
+def test_candidate_4c_recipe_yaml_loads_and_is_distinct_launchable_lane() -> None:
+    """Candidate 4c is a separate scorer-logit branch, not a Candidate 1 edit."""
+    import yaml
+    assert CANDIDATE4C_RECIPE_PATH.is_file(), (
+        f"Candidate 4c recipe missing at {CANDIDATE4C_RECIPE_PATH}"
     )
-    assert any("c6_ibps_outcome" in b for b in blockers), (
-        "missing c6_ibps_outcome blocker (Phase 3 §9 conditional)"
+    recipe = yaml.safe_load(CANDIDATE4C_RECIPE_PATH.read_text(encoding="utf-8"))
+
+    assert (
+        recipe["name"]
+        == "substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch"
     )
-    assert any("catalog_167_smoke_before_full" in b for b in blockers), (
-        "missing Catalog #167 smoke-before-full blocker"
+    assert recipe["lane_id"] == (
+        "lane_z6_v2_candidate_4c_scorer_logit_conditioning_20260518"
     )
-    assert any("paired_cpu_cuda_empirical_anchor" in b for b in blockers), (
-        "missing paired CPU/CUDA blocker per Catalog #220"
+    assert recipe["research_only"] is False
+    assert recipe["dispatch_enabled"] is True
+    assert recipe["dispatch_blockers"] == []
+    assert recipe["distinguishing_feature_name"] == "scorer_logit_ego_source"
+    assert recipe["distinguishing_bytes_path"] == "ego_motion_blob"
+    assert recipe["smoke_before_full"] is True
+    assert recipe["horizon_class"] == "frontier_pursuit"
+    assert recipe["predicted_band"] == [0.11, 0.17]
+    assert recipe["smoke_score_band"] == [0.13, 0.25]
+    assert "full_minus_identity_score <= -0.005" in recipe["pact_must_prove"]
+    assert "identity_minus_full_score >= 0.005" in recipe["pact_must_prove"]
+    assert "lower score wins" in recipe["pact_must_prove"]
+
+    cost_band = recipe["cost_band"]
+    assert cost_band["epochs"] == 300
+    assert cost_band["predicted_cost_usd"] == 13.0
+    assert cost_band["hand_calibrated_fallback_p50_usd"] == 10.0
+
+
+def test_candidate_4c_recipe_threads_scorer_logit_env_ladder() -> None:
+    """The recipe must dispatch the scorer-logit side-info hypothesis explicitly."""
+    import yaml
+    recipe = yaml.safe_load(CANDIDATE4C_RECIPE_PATH.read_text(encoding="utf-8"))
+    env = recipe["env_overrides"]
+
+    assert env["Z6_LANE_ID"] == recipe["lane_id"]
+    assert env["Z6_RECIPE_PATH"] == (
+        ".omx/operator_authorize_recipes/"
+        "substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch.yaml"
     )
+    assert env["Z6_EGO_SOURCE"] == "scorer_logit"
+    assert env["Z6_PREDICTOR_ARCHITECTURE"] == "single_layer_film_75k"
+    assert env["Z6_PREDICTOR_PARAM_COUNT_TARGET"] == "120000"
+    assert env["Z6_PREDICTOR_HIDDEN_DIM"] == "64"
+    assert env["Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM"] == "32"
+    assert env["Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE"] == "true"
+    assert env["Z6_TRAINER_MODE"] == "full"
+    assert env["SMOKE_ONLY"] == "0"
+
+
+def test_full_main_runs_paired_identity_auth_eval_when_disambiguator_emits() -> None:
+    """Candidate 4c exact arbitration must not require hand-running identity eval."""
+    import inspect
+
+    import experiments.train_substrate_time_traveler_l5_z6 as z6
+
+    source = inspect.getsource(z6._full_main)
+    assert "contest_auth_eval_identity_predictor_disambiguator.json" in source
+    assert "identity_auth_eval_result = _canon_gate_auth_eval_call" in source
+    assert "identity_disambiguator_archive_zip_path" in source
+    assert "identity_disambiguator_auth_eval_cuda_done_valid_claim" in source
 
 
 # ===========================================================================
@@ -293,6 +617,35 @@ def test_recipe_passes_catalog_270_dispatch_optimization_protocol() -> None:
         f"blockers: {verdict.get('blockers', [])}"
     )
     # Per-tier zero-blockers contract
+    assert verdict["tier1"]["blockers"] == []
+    assert verdict["tier2"]["blockers"] == []
+    assert verdict["tier3"]["blockers"] == []
+
+
+def test_candidate_4c_recipe_passes_dispatch_optimization_protocol() -> None:
+    """Candidate 4c must stay launchable through the same Catalog #270 gate."""
+    tool = REPO_ROOT / "tools/canonical_dispatch_optimization_protocol.py"
+    if not tool.is_file():
+        pytest.skip(f"protocol tool missing at {tool}")
+    result = subprocess.run(
+        [
+            sys.executable, str(tool),
+            "--trainer", str(TRAINER_PATH),
+            "--recipe", (
+                "substrate_z6_v2_candidate_4c_scorer_logit_modal_t4_smoke_dispatch"
+            ),
+            "--json",
+        ],
+        capture_output=True, text=True, cwd=REPO_ROOT, timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"protocol returned rc={result.returncode}; stderr={result.stderr}"
+    )
+    verdict = json.loads(result.stdout)
+    assert verdict["overall_pass"] is True, (
+        "Catalog #270 protocol FAILED for Z6-v2 Candidate 4c scorer-logit "
+        f"recipe; blockers: {verdict.get('blockers', [])}"
+    )
     assert verdict["tier1"]["blockers"] == []
     assert verdict["tier2"]["blockers"] == []
     assert verdict["tier3"]["blockers"] == []
@@ -341,6 +694,84 @@ def test_smoke_disambiguator_emits_two_archives_at_same_bytes(tmp_path: Path) ->
     # Wave 2 BUILD architecture recorded
     assert stats["predictor_architecture"] == "multi_layer_film_depth_3_300k"
     assert stats["predictor_depth"] == 3
+
+
+def test_full_pair_capped_disambiguator_emits_identity_archive(tmp_path: Path) -> None:
+    """Full path must honor the disambiguator flag, not only smoke mode."""
+    video_path = REPO_ROOT / "upstream" / "videos" / "0.mkv"
+    if not video_path.is_file():
+        pytest.skip(f"missing local contest video: {video_path}")
+
+    result = subprocess.run(
+        [
+            sys.executable, str(TRAINER_PATH),
+            "--video-path", str(video_path),
+            "--output-dir", str(tmp_path),
+            "--epochs", "1",
+            "--batch-size", "1",
+            "--device", "cpu",
+            "--full-cpu",
+            "--advisory-cpu-explicitly-waived",
+            "--max-pairs", "2",
+            "--skip-auth-eval",
+            "--ego-source", "scorer_logit",
+            "--predictor-architecture", "single_layer_film_75k",
+            "--predictor-hidden-dim", "72",
+            "--predictor-film-mlp-hidden-dim", "32",
+            "--predictor-param-count-target", "120000",
+            "--predictor-ego-motion-dim", "8",
+            "--emit-identity-predictor-disambiguator-archive",
+        ],
+        capture_output=True, text=True, cwd=REPO_ROOT, timeout=180,
+        env={"PYTHONPATH": "src:upstream", "PATH": "/usr/bin:/bin"},
+    )
+    assert result.returncode == 0, (
+        f"full pair-capped rc={result.returncode}; stderr={result.stderr[-500:]}"
+    )
+
+    from tac.substrates.time_traveler_l5_z6.archive import parse_archive
+
+    full_archive = tmp_path / "0.bin"
+    identity_archive = tmp_path / "0_identity_predictor_disambiguator.bin"
+    identity_zip = tmp_path / "archive_identity_predictor_disambiguator.zip"
+    assert full_archive.is_file()
+    assert identity_archive.is_file()
+    assert identity_zip.is_file()
+
+    full_arc = parse_archive(full_archive.read_bytes())
+    identity_arc = parse_archive(identity_archive.read_bytes())
+    assert (
+        full_arc.meta["predictive_coding_world_model_meta"]["identity_predictor"]
+        is False
+    )
+    assert (
+        identity_arc.meta["predictive_coding_world_model_meta"]["identity_predictor"]
+        is True
+    )
+    assert identity_arc.meta["identity_predictor_disambiguator"] is True
+    assert identity_arc.predictor_state_dict.keys() == full_arc.predictor_state_dict.keys()
+
+    provenance = json.loads((tmp_path / "provenance.json").read_text(encoding="utf-8"))
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    stats = json.loads((tmp_path / "stats.json").read_text(encoding="utf-8"))
+    assert provenance["identity_predictor_disambiguator_archive_bytes"] > 0
+    assert provenance["identity_predictor_disambiguator_archive_sha256"]
+    assert (
+        provenance["identity_predictor_disambiguator_auth_eval_json_path"]
+        .endswith("contest_auth_eval_identity_predictor_disambiguator.json")
+    )
+    assert manifest["identity_predictor_disambiguator_archive_bytes"] > 0
+    assert (
+        manifest["identity_predictor_disambiguator_auth_eval_json_path"]
+        .endswith("contest_auth_eval_identity_predictor_disambiguator.json")
+    )
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+    assert stats["stats_schema"] == "time_traveler_l5_z6_full_stats_v1"
+    assert stats["paired_identity_auth_eval_required"] is True
+    assert stats["primary_auth_eval_score_claim_valid"] is False
+    assert stats["identity_predictor_disambiguator_auth_eval_score_claim_valid"] is False
+    assert stats["auth_eval_score_claim_valid"] is False
 
 
 def test_smoke_default_does_not_emit_disambiguator(tmp_path: Path) -> None:

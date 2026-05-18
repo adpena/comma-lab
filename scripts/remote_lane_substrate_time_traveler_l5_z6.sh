@@ -111,6 +111,8 @@ fi
 Z6_BATCH_SIZE="${Z6_BATCH_SIZE:-4}"
 Z6_LR="${Z6_LR:-5e-4}"
 Z6_LAMBDA_RESIDUAL_ENTROPY="${Z6_LAMBDA_RESIDUAL_ENTROPY:-1.0}"
+Z6_PREDICTOR_HIDDEN_DIM="${Z6_PREDICTOR_HIDDEN_DIM:-64}"
+Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM="${Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM:-32}"
 Z6_PREDICTOR_KERNEL_SIZE="${Z6_PREDICTOR_KERNEL_SIZE:-3}"
 Z6_PREDICTOR_EGO_MOTION_DIM="${Z6_PREDICTOR_EGO_MOTION_DIM:-8}"
 Z6_IDENTITY_PREDICTOR="${Z6_IDENTITY_PREDICTOR:-false}"
@@ -129,6 +131,8 @@ DISPATCH_CLAIMS_PATH="${Z6_DISPATCH_CLAIMS_PATH:-$WORKSPACE/.omx/state/active_la
 DISPATCH_PLATFORM="${DISPATCH_PLATFORM:-modal}"
 HEARTBEAT_PID=""
 CLAIM_VERIFIED=0
+EVIDENCE_MARKER="[not-yet-classified]"
+SCORE_CLAIM_FLAG="score_claim=unknown"
 
 log() { echo "[lane-z6-pcwm] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
@@ -196,7 +200,11 @@ append_terminal_claim() {
     fi
     local status
     if [ "$rc" -eq 0 ]; then
-        status="completed_z6_pcwm_remote_driver"
+        if [ "${EVIDENCE_MARKER:-}" = "[contest-CUDA]" ] && [ "${SCORE_CLAIM_FLAG:-}" = "score_claim=true" ]; then
+            status="completed_z6_pcwm_remote_driver_contest_cuda_score_claim"
+        else
+            status="completed_z6_pcwm_remote_driver_no_score_claim"
+        fi
     elif [ "${CLAIM_VERIFIED:-0}" != "1" ]; then
         status="failed_z6_pcwm_claim_verification_rc_${rc}"
     else
@@ -210,7 +218,7 @@ append_terminal_claim() {
         --instance-job-id "$DISPATCH_INSTANCE_JOB_ID" \
         --agent "remote_lane_substrate_time_traveler_l5_z6" \
         --status "$status" \
-        --notes "remote_driver_terminal rc=$rc output_dir=$Z6_OUTPUT_DIR smoke=$SMOKE_ONLY identity_predictor=$Z6_IDENTITY_PREDICTOR predictor_architecture=$Z6_PREDICTOR_ARCHITECTURE emit_disambiguator=$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE predictor_kernel=$Z6_PREDICTOR_KERNEL_SIZE" \
+        --notes "remote_driver_terminal rc=$rc evidence_marker=${EVIDENCE_MARKER:-unknown} ${SCORE_CLAIM_FLAG:-score_claim=unknown} stats_json=$Z6_OUTPUT_DIR/stats.json output_dir=$Z6_OUTPUT_DIR smoke=$SMOKE_ONLY identity_predictor=$Z6_IDENTITY_PREDICTOR predictor_architecture=$Z6_PREDICTOR_ARCHITECTURE emit_disambiguator=$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE predictor_kernel=$Z6_PREDICTOR_KERNEL_SIZE" \
         >> "$LOG_DIR/run.log" 2>&1 || {
         log "WARN: failed to append terminal dispatch claim status=$status"
     }
@@ -271,6 +279,8 @@ cat > "$PROVENANCE" <<EOF
   "lr": "$Z6_LR",
   "device": "$Z6_DEVICE",
   "lambda_residual_entropy": "$Z6_LAMBDA_RESIDUAL_ENTROPY",
+  "predictor_hidden_dim": "$Z6_PREDICTOR_HIDDEN_DIM",
+  "predictor_film_mlp_hidden_dim": "$Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM",
   "predictor_kernel_size": "$Z6_PREDICTOR_KERNEL_SIZE",
   "predictor_ego_motion_dim": "$Z6_PREDICTOR_EGO_MOTION_DIM",
   "identity_predictor": "$Z6_IDENTITY_PREDICTOR",
@@ -341,6 +351,16 @@ case "$Z6_EMIT_IDENTITY_PREDICTOR_DISAMBIGUATOR_ARCHIVE" in
         ;;
 esac
 
+PREEXISTING_STATS_JSON="$Z6_OUTPUT_DIR/stats.json"
+if [ -f "$PREEXISTING_STATS_JSON" ]; then
+    STALE_STATS_DIR="$LOG_DIR/stale_stats_quarantine"
+    mkdir -p "$STALE_STATS_DIR"
+    STALE_STATS_QUARANTINE="$STALE_STATS_DIR/stats.before_${DISPATCH_INSTANCE_JOB_ID:-unknown}.$(date -u +%Y%m%dT%H%M%SZ).$$.json"
+    mv "$PREEXISTING_STATS_JSON" "$STALE_STATS_QUARANTINE"
+    log "quarantined_preexisting_stats_json path=$STALE_STATS_QUARANTINE"
+fi
+
+REMOTE_DRIVER_STAGE4_STARTED_UNIX="$(date +%s)"
 "$PYBIN_RESOLVED" "$TRAINER_PY" \
     --video-path "$Z6_VIDEO_PATH" \
     --output-dir "$Z6_OUTPUT_DIR" \
@@ -350,6 +370,8 @@ esac
     --device "$Z6_DEVICE" \
     --upstream-dir "$Z6_UPSTREAM_DIR" \
     --lambda-residual-entropy "$Z6_LAMBDA_RESIDUAL_ENTROPY" \
+    --predictor-hidden-dim "$Z6_PREDICTOR_HIDDEN_DIM" \
+    --predictor-film-mlp-hidden-dim "$Z6_PREDICTOR_FILM_MLP_HIDDEN_DIM" \
     --predictor-kernel-size "$Z6_PREDICTOR_KERNEL_SIZE" \
     --predictor-ego-motion-dim "$Z6_PREDICTOR_EGO_MOTION_DIM" \
     --predictor-architecture "$Z6_PREDICTOR_ARCHITECTURE" \
@@ -364,27 +386,39 @@ esac
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
 # Stage 5: emit completion marker (operator + autopilot consume).
-EVIDENCE_STATUS="$("$PYBIN_RESOLVED" - "$Z6_OUTPUT_DIR/stats.json" <<'PY'
+EVIDENCE_STATUS="$("$PYBIN_RESOLVED" - "$Z6_OUTPUT_DIR/stats.json" "$REMOTE_DRIVER_STAGE4_STARTED_UNIX" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 stats_path = Path(sys.argv[1])
+stage4_started_unix = float(sys.argv[2])
 marker = "[training-artifact-no-score-claim]"
 score_claim = "score_claim=false"
-if stats_path.is_file():
-    try:
-        stats = json.loads(stats_path.read_text())
-    except json.JSONDecodeError:
-        stats = {}
-    if (
-        stats.get("auth_eval_score_claim_valid") is True
-        and stats.get("auth_eval_score_axis") == "contest_cuda"
-    ):
-        marker = "[contest-CUDA]"
-        score_claim = "score_claim=true"
-    elif stats.get("evidence_grade"):
-        marker = f"[{stats['evidence_grade']}]"
+if not stats_path.is_file():
+    print(f"missing required stats.json at {stats_path}", file=sys.stderr)
+    raise SystemExit(31)
+stats_mtime = stats_path.stat().st_mtime
+if stats_mtime < stage4_started_unix:
+    print(
+        f"stale stats.json at {stats_path}: "
+        f"mtime={stats_mtime:.6f} < stage4_started_unix={stage4_started_unix:.6f}",
+        file=sys.stderr,
+    )
+    raise SystemExit(33)
+try:
+    stats = json.loads(stats_path.read_text())
+except json.JSONDecodeError as exc:
+    print(f"malformed stats.json at {stats_path}: {exc}", file=sys.stderr)
+    raise SystemExit(32)
+if (
+    stats.get("auth_eval_score_claim_valid") is True
+    and stats.get("auth_eval_score_axis") == "contest_cuda"
+):
+    marker = "[contest-CUDA]"
+    score_claim = "score_claim=true"
+elif stats.get("evidence_grade"):
+    marker = f"[{stats['evidence_grade']}]"
 print(f"{marker} {score_claim}")
 PY
 )"
