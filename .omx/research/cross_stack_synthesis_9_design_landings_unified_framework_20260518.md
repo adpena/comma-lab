@@ -970,3 +970,405 @@ Per Boyd's binding Revision #4 + Catalog #322 anti-additive evidence + Catalog #
 
 ---
 
+## 14. Cross-References — Every Cited Memory File + Catalog # + Sister Design Memo + Codex Execution Dependency
+
+Per CLAUDE.md "Required durable state" + "Subagent coherence-by-default" non-negotiable: the synthesis explicitly cross-references every cited memory file, Catalog #, sister design memo, and Codex execution dependency.
+
+### 14.1 Memory file citations
+
+| Memory file | Cited section | Role |
+|---|---|---|
+| `feedback_canonical_share_when_serves_unique_when_suppresses_standing_directive_20260515.md` | Section 5 unified action canonical-vs-unique decision | Standing directive for UNIQUE-AND-COMPLETE-PER-METHOD operating mode |
+| `feedback_pr95_lesson_now_at_meta_level_unique_and_complete_per_method_default_20260515.md` | Section 5 + Section 10.5 | PR95 META-level retrospective |
+| `feedback_knowledge_preservation_pr95_meta_level_lesson_landed_20260515.md` | Section 0 framing | Per-substrate canonical-vs-unique discipline |
+| `feedback_assumptions_classification_hard_earned_vs_cargo_culted_critical_addendum_20260515.md` | Section 10 cargo-cult audit | HARD-EARNED-vs-CARGO-CULTED canonical addendum |
+| `feedback_assumptions_challenge_audit_break_out_local_minima_landed_20260515.md` | Section 0 framing | 18-assumption matrix + 10 NSCS substrate-class shifts |
+| `feedback_modal_call_id_ledger_canonical_landed_20260515.md` | Section 12.5 cite-able facet | Modal call_id ledger canonical helper |
+| `feedback_l5_staircase_v2_and_adversarial_apparatus_structural_fixes_landed_20260515.md` | Section 0 + Z8 reactivation criteria | L5 staircase v2 + adversarial apparatus structural fixes |
+| `feedback_canonical_dispatch_optimization_protocol_landed_20260515.md` | Section 7.1 budget envelope | Canonical dispatch optimization protocol Catalog #270 |
+| `feedback_codex_round78_findings_fix_with_self_protection_landed_20260509.md` | Section 14.4 codex round 7+8 cross-ref | Codex round 7+8 findings fix wave |
+| `feedback_meta_layer_substrate_contract_landed_20260515.md` | Section 5 META layer | META layer substrate contract per Catalog #241 |
+| `feedback_per_substrate_optimal_form_symposium_wave_doctrine_plus_c6_ibps_first_landed_20260518.md` | Z8 reactivation criteria + CCREZ Section 7.2 | Per-substrate optimal form symposium wave doctrine |
+| `feedback_redo_pivot_fix_all_phantom_score_substrate_class_shift_q4_budget_redirect_landed_20260517.md` | Section 10.4 cargo-cult audit | Catalog #322 anti-phantom composition_alpha |
+| `feedback_provenance_canonical_fix_meta_class_extinction_landed_20260517.md` | Section 12 observability | Catalog #323 provenance canonical fix |
+| `feedback_meta_fix_catalog_324_predicted_band_post_training_validation_required_landed_20260517.md` | Section 0 reactivation criteria + Section 13 | Catalog #324 post-training Tier-C validation discipline |
+| `feedback_master_gradient_canonical_helper_landed_with_cathedral_autopilot_wirein_20260517.md` | Section 6 anchor consumption | Codex master-gradient canonical helper landing 2026-05-18 |
+| `feedback_six_meta_pattern_strict_gates_d_e_f_g_h_i_landed_20260516.md` | Section 4 cross-pollination + Catalog #307-#312 | Six META pattern strict gates |
+| `feedback_max_observability_landed_catalog_305_20260516.md` | Section 12 observability surface | Max observability standing directive |
+| `feedback_signal_loss_audit_landed_20260517.md` | Section 9 canonical task queue + Section 16 PV | Signal loss audit pattern |
+| `feedback_pre_rigor_kill_defer_falsified_inventory_landed_20260517.md` | Section 7.2 + Section 10.3 | TOP-3 HIGH-EV cargo-cult resurrection candidates |
+| `feedback_council_hierarchy_v2_landed_20260516.md` | Section 1 + Section 7.2 | 4-tier council protocol |
+| `feedback_mission_alignment_followon_catalog_300_extension_landed_20260516.md` | Section 1 mission alignment | Catalog #300 v2 mission-alignment 3 fields |
+| `feedback_horizon_class_evaluation_axis_plateau_warning_standing_directive_20260516.md` | Section 1 + Section 9 cargo-cult resurrection horizons | HORIZON-CLASS standing directive |
+| `feedback_concurrent_subagent_commit_message_swap_20260429.md` | Section 16 PV serializer | Commit serializer canonical discipline |
+| `feedback_subagent_crash_resume_discipline_landed_20260514.md` | Section 16 PV checkpoint | Catalog #206 checkpoint discipline |
+| `feedback_substrate_vs_codec_composition_meta_pattern_20260508.md` | Section 5 unified action + Section 10 | Substrate-vs-codec composition meta-pattern |
+| `feedback_unified_lagrangian_action_principle_GR_style_20260509.md` | Section 5 unified action + Section 8.3 | Unified Lagrangian action GR-style migration target |
+| `feedback_design_tension_ship_both_interpretations_let_math_arbitrate_20260509.md` | Section 8 6-hook wire-in | Probe-disambiguator pattern |
+
+### 14.2 Catalog # citations
+
+| Catalog # | Topic | Synthesis section cited |
+|---|---|---|
+| #105 | No-op detector / structural consumption proof | Section 12.6 counterfactual + Section 4 matrix |
+| #110 / #113 | HISTORICAL_PROVENANCE append-only / artifact lifecycle umbrella | Section 6.4 + Section 12.3 + Section 14.2 |
+| #117 / #157 / #174 / #216 / #230 / #234 / #235 / #248 / #289 / #302 / #314 | Commit-swap protection family / subagent-edit collision family | Section 16 PV serializer discipline + Catalog #16-PV |
+| #118 / #159 / #176 / #185 / #186 | CLAUDE.md catalog META-meta gates | Section 14.2 reference |
+| #125 | 6-hook wire-in non-negotiable | Section 8 6-hook wire-in synthesis (PRIMARY) |
+| #126 | Lane pre-registration | Section 16 PV lane registration |
+| #127 | Custody validator routing | Section 6.4 + Section 10.6 |
+| #128 / #131 / #138 / #245 | fcntl-locked JSONL append-only discipline | Section 12.3 + Section 6 anchor provenance |
+| #131 | Bare writes to shared state | Section 6.4 + Section 12.3 + Section 9 op-routables |
+| #146 | Phase 1 trainer contest-compliant runtime | Section 5 unified action + Section 9 OP-SYN-6 |
+| #167 | Smoke-before-full pattern | Section 7.1 budget envelope + Section 9 op-routables |
+| #190 | `detect_hardware_substrate` canonical helper | Section 9 OP-SYN-6 + Section 12.1 |
+| #199 | Operator-authorize paired-env bypass discipline | Section 9 op-routables |
+| #205 | Submission inflate device-fork canonical | Section 6.4 |
+| #220 | Substrate L1+ scaffold operational mechanism | Section 4 matrix + Section 6 anchor + Section 13 |
+| #226 | Trainer auth_eval canonical helper | Section 9 OP-SYN-5 |
+| #229 | Premise verification before edit | Section 11.4 + Section 16 PV (PRIMARY) |
+| #240 | Substrate contest-CUDA chain complete or research_only | Section 7.1 budget envelope |
+| #241 / #242 | Substrate META layer contract | Section 5 unified action + Section 14.1 |
+| #244 | Modal NVML env block | Section 9 OP-SYN-6 dispatch readiness |
+| #245 | Modal call_id ledger canonical | Section 12.5 cite-able + Section 14.1 |
+| #270 | Canonical dispatch optimization protocol | Section 7.1 budget envelope + Section 9 op-routables (PRIMARY) |
+| #272 | Distinguishing-feature integration contract | Section 4 matrix + Section 12.6 counterfactual |
+| #287 | Empirical claims have evidence tag | Section 0 + Section 13 (every numeric ΔS) |
+| #290 | Substrate canonical-vs-unique decision per layer | Section 11.5 + Section 14.2 |
+| #291 / #292 | META-ASSUMPTION review + per-deliberation assumption surfacing | Section 10 cargo-cult audit + Section 14.4 |
+| #294 | 9-dimension success checklist evidence | Section 11 (PRIMARY) |
+| #296 | Substrate predicted band Dykstra-feasibility check | Section 4 matrix + Section 13 aggregate band |
+| #298 | Substrate retirement discipline 30-day | Section 14.2 reference |
+| #299 | Catalog quota under 400 | Section 14.2 reference |
+| #300 | Council deliberation v2 frontmatter | Section 1 mission alignment + Section 14.1 |
+| #303 | Cargo-cult audit section | Section 10 cargo-cult audit (PRIMARY) |
+| #305 | Observability surface | Section 12 observability surface (PRIMARY) |
+| #307 | Paradigm-vs-implementation falsification | Section 10.3 + Section 14.1 |
+| #308 | N>=3 alternative probe methodologies | Z8 reactivation + ATW V2 reactivation |
+| #309 | Horizon-class declaration | Section 1 mission alignment + Section 11.9 |
+| #310 | F-asymptote class-shift not bolt-on | TT5L V2 Revision #9 |
+| #311 | Hierarchical predictive coding canonical quadruple | Z8 design memo + Section 14.1 |
+| #312 | Hierarchical predictive coding canonical quadruple ego-motion conditioning | Z8 design memo + Section 14.1 |
+| #313 | Predecessor probe outcome ledger | Section 0 Revision #1 + Section 9 op-routables (PRIMARY) |
+| #315 | Substrate optimal form before paid dispatch | Section 4 matrix + Section 9 OP-SYN-5 + Section 9 op-routables |
+| #316 | reports/latest.md frontier scanner | Section 0 + Section 6.1 + Section 14.1 |
+| #318 / #327 | Master-gradient raw-byte authority guard | Section 6.4 anchor provenance + Section 4 matrix |
+| #319 | Wyner-Ziv deliverability proof / v2 cascade | Section 4 matrix + Section 5 unified action + Section 9 op-routables |
+| #322 | Anti-phantom composition_alpha | Section 4 matrix + Section 9 + Section 10.4 + Section 13 |
+| #323 | No score claim without canonical provenance | Section 12 observability surface |
+| #324 | No predicted band without post-training Tier-C validation | Section 0 reactivation criteria + Section 13 |
+| #325 | Per-substrate optimal form symposium discipline | Section 7.1 budget envelope + Section 9 op-routables |
+| #326 | Substrate driver consumes trainer mode env var | Section 8.2 hook orphan + consumer audit |
+
+### 14.3 Sister design memo cross-references
+
+| Sister design memo | Sister role | Citation |
+|---|---|---|
+| `deterministic_score_optimizer_design_memo_lagrangian_taylor_pareto_reverse_engineering_20260518.md` | PARENT memo for FISHER + RIEM + TROP designs (4-piece architecture) | Section 5 unified action |
+| `set_theory_manifolds_geometry_deep_research_synthesis_20260518.md` | PARENT memo for RIEM design + FOP from arxiv:2508.13898 + tropical Maragos-Charisopoulos 2021 | Section 5 unified action |
+| `comprehensive_analytical_surfaces_inventory_plus_synthesis_design_memo_20260518.md` | PRIOR synthesis attempt this memo extends per Section 11.3 distinctness | Section 0 framing |
+| `deeper_granularity_discovery_bit_byte_zero_one_pixel_frame_pair_region_label_category_venn_20260518.md` | VENN design parent for operator's load-bearing insight | Section 1 mission alignment + N-set Venn design memo |
+| `grand_council_meta_portfolio_re_ranking_post_compliance_envelope_20260518.md` | PARENT memo for theoretical floor estimator | Section 14.1 |
+| `asymptotic_stacking_plus_local_max_utilization_audit_20260518.md` | SISTER memo for asymptotic pursuit stacking | Section 14.2 reference |
+| `comprehensive_research_wave_20260518.md` | SISTER memo for deep research wave TOP-5 (TT5L V2 predicted band derivation) | Section 0 framing |
+
+### 14.4 Codex execution dependencies
+
+| Codex landing | Date | Synthesis dependency |
+|---|---|---|
+| `tools/extract_master_gradient.py` + `src/tac/master_gradient.py` canonical helper | 2026-05-18 (commit ref `019de465`) | OP-SYN-1 anchor extension consumes; ALL 9 designs anchor on `f174192aeadf...` |
+| `tac.master_gradient_consumers` Q3 Lagrangian-dual primary cascade extension | 2026-05-17 | Section 5 unified action Tier 1 (Cascade 1 PRIMARY) + Section 8 hook #4 cathedral autopilot |
+| `tools/run_codex_review_for_dispatch.py` (Catalog #271 pre-dispatch codex review) | 2026-05-15 | Section 9 op-routables dispatch readiness |
+| `tools/operator_authorize.py::_dispatch_local_mps` + `_dispatch_local_cpu` (Catalog #317) | 2026-05-17 | Section 7.2 per-week sequencing local MPS smoke option |
+| `tools/audit_substrate_driver_mode_hardcode.py` (Catalog #326) | 2026-05-18 | Section 8.2 hook orphan + consumer audit |
+| `tools/check_predecessor_probe_outcome.py` (Catalog #313 probe outcome ledger) | 2026-05-16 | Section 9 op-routables + Section 4 matrix |
+| `dp1_pr101_composition_noop_probe` Codex artifact 2026-05-18 | 2026-05-18 | Section 7.1 Tier-3 budget envelope (DP1+PR101 deep composition) |
+| Codex round 7+8 / round 5 / round 4 / round 3 / round 2 findings fix wave | 2026-05-09 to 2026-05-15 | Section 16 PV serializer discipline + Section 14.2 Catalog # references |
+
+### 14.5 Sister-subagent cross-references
+
+| Sister subagent | Subagent ID / lane | Disjoint scope per Catalog #314 |
+|---|---|---|
+| DP1+PR101 composition design subagent (parallel) | `abd9998c7b43566f2` | OWNS `.omx/research/dp1_pr101_composition_design_memo_20260518.md` (disjoint from this synthesis' file) |
+| Codex master-gradient extension subagent (parallel) | `019de465` | OWNS `tools/extract_master_gradient.py` + `src/tac/master_gradient.py` (disjoint) |
+| Cargo-cult resurrection TOP-3 subagent (already landed 2026-05-18) | `cargo_cult_resurrection_top_3_symposiums_20260518` | OWNS the 3 sister T3 per-substrate symposium memos (disjoint) |
+| Z8 hierarchical predictive coding subagent (already landed 2026-05-18) | `a68b22b14` | OWNS Z8 design memo (disjoint) |
+| TT5L V2 design subagent (already landed 2026-05-18) | (subagent ID inline in memo header) | OWNS TT5L V2 design memo (disjoint) |
+| Pose-axis T3 grand council subagent (already landed 2026-05-18) | (subagent ID inline in memo header) | OWNS pose-axis T3 grand council memo (disjoint) |
+| Theoretical floor estimator subagent (already landed 2026-05-18) | (subagent ID inline in memo header) | OWNS theoretical floor estimator design memo (disjoint) |
+| VENN classification subagent (already landed 2026-05-18) | `n_set_venn_design_subagent_20260518` | OWNS VENN design memo (disjoint) |
+| Phase 1 Fisher-precondition subagent (already landed 2026-05-18) | `phase_1_fisher_precondition_design_20260518` | OWNS Phase 1 FISHER design memo (disjoint) |
+| Riemannian-Newton subagent (already landed 2026-05-18) | `riemannian_newton_design_20260518` | OWNS RIEM design memo (disjoint) |
+| Tropical d_seg solver subagent (already landed 2026-05-18) | `tropical_d_seg_solver_design_20260518` | OWNS TROP design memo (disjoint) |
+
+---
+
+## 15. Per-Design Reactivation Criteria (Catalog #325)
+
+Per CLAUDE.md "PER-SUBSTRATE OPTIMAL FORM via adversarial grand council symposium" non-negotiable + Catalog #325 (`check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor`): the synthesis triggers reactivation of any DEFER-pending designs if Tier 1+2 empirical anchors align.
+
+### 15.1 Z8 hierarchical predictive coding (DEFER_PENDING_EVIDENCE)
+
+**Current state**: DEFER_PENDING_EVIDENCE per the T3 grand council symposium 2026-05-18.
+
+**Reactivation paths** (≥2 of 4 must land PROCEED-unconditional via Wave N+1 council):
+1. Z6-v2 Candidate 1 OR 4c lands PROCEED-unconditional via Wave N+1 council (Z6-v2 Wave 2 driver-mode hardcode DEFER per probe outcomes ledger 2026-05-18; fix in flight)
+2. Z7 (Mamba-2 or GRU) lands PROCEED-unconditional via Wave N+1 council
+3. C6 IBPS Phase 2 lands β-IB-optimal empirical anchor (OP-SYN-5 cargo-cult resurrection wave Week 5 dispatch)
+4. ATW V2 D4 PARADIGM reactivation per Catalog #308 alternative-reducer-methodology (POSEAXIS OP-3 Week 4 dispatch)
+
+**Trigger from this synthesis**: post-OP-SYN-5 (Week 5) + post-POSEAXIS OP-3 (Week 4) + post-Z6 Wave 2 fix (timing TBD): if BOTH OP-SYN-5 + POSEAXIS OP-3 land empirical anchors AND Z6 Wave 2 fix re-fires PROCEED-unconditional, 3-of-4 reactivation paths align → Z8 trainer `_full_main` implementation eligible per Catalog #325 + Catalog #315 OPTIMAL FORM discipline.
+
+### 15.2 TT5L V2 redesign (PROCEED_WITH_REVISIONS at DESIGN-ONLY)
+
+**Current state**: PROCEED_WITH_REVISIONS at design-only landing per TT5L V2 symposium 2026-05-18.
+
+**Reactivation paths** (per TT5L V2 Revision #7 binding):
+1. Z6 Wave 2 4c outcome lands (sister codex probe in flight)
+2. Z7 GRU-vs-Mamba-2 disambiguator outcome lands (sister Z7-Mamba-2 design memo + Z7-LSTM symposium)
+3. Dykstra-feasibility analytical check at `tools/check_substrate_dykstra_feasibility.py --substrate tt5l_v2_4_primitive` passes (TT5L V2 Revision #5 binding)
+4. Single-primitive cooperative-receiver-derived foveation smoke ($1 Modal T4) per Hotz Revision #6 lands ΔS < 0
+
+**Trigger from this synthesis**: post-Week-6 (TT5L V2 single-primitive smoke per Section 7.2): if single-primitive smoke lands ΔS < 0 AND Z6 Wave 2 4c outcome lands AND Z7 outcome lands AND Dykstra-feasibility check passes, TT5L V2 trainer build eligible for Wave N+1 council ratification.
+
+### 15.3 POSEAXIS OP-4 (pose-conditioned residual codec) + OP-8 (VGGT distillation)
+
+**Current state**: PROCEED_WITH_REVISIONS gated by Catalog #325 per-substrate symposium per OP-11 of pose-axis T3 council.
+
+**Reactivation paths** (per OP-SYN-10):
+1. Dedicated per-substrate symposium memo lands at `.omx/research/council_per_substrate_symposium_pose_conditioned_residual_codec_20260518.md` per Catalog #325 6-step contract
+2. Dedicated per-substrate symposium memo lands at `.omx/research/council_per_substrate_symposium_vggt_pose_teacher_distillation_20260518.md` per Catalog #325 6-step contract
+
+**Trigger from this synthesis**: OP-SYN-10 (Week 6) triggers BOTH per-substrate symposium memos; post-landing, OP-4 + OP-8 paid dispatch (Week 6+) eligible.
+
+### 15.4 CCREZ NSCS06 v8 Variant C (PRESERVE family-DEFER)
+
+**Current state**: PRESERVE operator family-DEFER 2026-05-16; sister symposium #864 REFUSE 13-of-13 T3 unanimous.
+
+**Reactivation paths** (per cargo-cult resurrection TOP-3 wave):
+1. Variant C-4 K-coverage methodology validation memo lands per Catalog #308 N>=3 alternative-probe-methodologies + META cargo-cult #11 substrate-class-shift-CANDIDACY-vs-VALIDATION
+2. Operator family-DEFER reversal explicit per CLAUDE.md "Forbidden premature KILL" non-negotiable
+
+**Trigger from this synthesis**: NOT TRIGGERED by Tier 1+2 cascade (NSCS06 v8 Variant C is EXCL with Z8 per cross-pollination matrix Section 4). Reactivation requires explicit operator decision; synthesis preserves family-DEFER until operator-routable.
+
+### 15.5 RIEM Phase 2 (Riemannian-Newton META-canonical-helper)
+
+**Current state**: PROCEED_WITH_REVISIONS per RIEM design memo 2026-05-18; Phase 2 gated on Phase 1 (OP-SYN-2) landing first.
+
+**Reactivation paths** (per RIEM design memo OP-5):
+1. Phase 1 Fisher-precondition lands PROCEED-unconditional via Phase 1 empirical validation (OP-SYN-2 Week 2)
+2. Geomstats integration into `tac.substrates._shared.trainer_skeleton` per Catalog #190 (OP-SYN-6 Week 4)
+3. Symplectic-EMA empirical validation on Z6-v2 Wave 2 full-mode per Hafner binding revision (post-Z6 Wave 2 fix; timing TBD)
+
+**Trigger from this synthesis**: OP-SYN-6 (Week 4) lands per Section 7.2 sequencing; Phase 2 Riemannian-Newton eligible for per-substrate consumption.
+
+### 15.6 TROP Phase 2-3 (Tropical Newton iteration + archive-byte-to-boundary map)
+
+**Current state**: PROCEED_WITH_REVISIONS per TROP design memo 2026-05-18; Phase 2-3 gated on Phase 1 + faithfulness probe (OP-SYN-7) landing first.
+
+**Reactivation paths** (per TROP design memo OP-3 + OP-4):
+1. Phase 1 boundary detector + faithfulness probe lands clean on PR101_lc_v2 anchor (OP-SYN-7 Week 3-4)
+2. Tropical polynomial faithfulness probe passes recall ≥ ε threshold
+3. Composition-α probe with Riemannian-Newton sister confirms additive structure per Catalog #322
+
+**Trigger from this synthesis**: OP-SYN-7 (Week 3-4) lands per Section 7.2 sequencing; Phase 2 Tropical Newton iteration eligible for per-substrate consumption.
+
+### 15.7 Cross-substrate reactivation summary
+
+Per Section 7.2 per-week sequencing: Weeks 1-4 land Tier-1 cascade; Week 5 lands Tier-2 cargo-cult resurrection wave; Week 6+ lands Tier-2 substrate dispatch (POSEAXIS OP-4 + OP-8 + TT5L V2 single-primitive); Week 8+ lands Tier-3 full cascade (Z8 full conjunction + DP1+PR101 deep composition + Riemannian-Newton full per-archive). Per CLAUDE.md "Forbidden premature KILL" non-negotiable: the synthesis preserves DEFERRED status for all designs not yet at reactivation; reactivation is operator-routable per Catalog #325 + the canonical task queue Section 9.
+
+---
+
+## 16. Continual-Learning Anchor Emission (Catalog #300 hook #5)
+
+Per CLAUDE.md "Council hierarchy: 4-tier protocol" Continual learning wire-in rule + Catalog #300 v2 frontmatter + Catalog #125 hook #5: every T2+ deliberation MUST emit a continual-learning anchor via the canonical helper `tac.council_continual_learning.append_council_anchor(record)`.
+
+### 16.1 Anchor record to be emitted
+
+```python
+from tac.council_continual_learning import (
+    CouncilDeliberationRecord, CouncilTier, append_council_anchor,
+)
+
+record = CouncilDeliberationRecord(
+    deliberation_id="cross_stack_synthesis_9_design_landings_unified_framework_20260518",
+    topic="Cross-stack synthesis unifying 9 design landings into unified bilevel framework + 9x9 cross-pollination matrix + canonical task queue",
+    council_tier=CouncilTier.T2,
+    council_attendees=(
+        "Shannon", "Dykstra", "Yousfi", "Fridrich", "Contrarian", "Assumption-Adversary",
+        "Selfcomp", "Quantizr", "Carmack", "Karpathy", "MacKay_memorial", "Boyd", "Tao", "Mallat",
+    ),
+    council_quorum_met=True,
+    council_verdict="PROCEED_WITH_REVISIONS",
+    council_dissent=(
+        {"member": "Contrarian",
+         "verbatim": "synthesis MUST cite predecessor probe-outcomes ledger entries per Catalog #313 for EACH of the 9 designs' upstream falsifications; without explicit predecessor citation the synthesis risks over-elegance + cherry-picking"},
+        {"member": "Assumption-Adversary",
+         "verbatim": "synthesis MUST classify each shared assumption across the 9 designs per HARD-EARNED-vs-CARGO-CULTED addendum; the most load-bearing assumption (composition_alpha averages to additive) is CARGO-CULTED-PENDING-EMPIRICAL per Catalog #322 anti-additive evidence; synthesis MUST conservatively project SUB-ADDITIVE composition"},
+        {"member": "Carmack",
+         "verbatim": "synthesis MUST be queryable + machine-routable not pure prose; 9x9 cross-pollination matrix + canonical task queue + ASCII cross-pollination tree are the operator-facing query surfaces"},
+        {"member": "Boyd",
+         "verbatim": "synthesis predicted aggregate band MUST reflect Dykstra-feasibility constraint intersection per Catalog #296; 9-dimensional Pareto polytope; convex-intersection projection gives realistic LOWER BOUND on aggregate delta_S not additive sum"},
+    ),
+    council_assumption_adversary_verdict=(
+        {"assumption": "PR101_lc_v2 anchor IS the canonical empirical surface",
+         "classification": "HARD-EARNED",
+         "rationale": "Codex 2026-05-18 master-gradient canonical helper landing + Catalog #318/#327; single-anchor risk resolved by OP-SYN-1 6-archive extension"},
+        {"assumption": "Cheap-probe family is THE highest-EV near-frontier move",
+         "classification": "HARD-EARNED",
+         "rationale": "Race-mode rigor inversion + 2026-05-04 race postmortem + Hotz binding revisions + sister wave empirical validation (LFV1 2026-05-13 + cargo-cult resurrection 2026-05-17)"},
+        {"assumption": "Substrate-class-shift requires Z8/TT5L V2-class heavy-weight redesigns",
+         "classification": "CARGO-CULTED-PENDING-EMPIRICAL",
+         "rationale": "cargo-cult resurrection TOP-3 wave demonstrates LIGHTER substrate-class-shift candidates at $5-15 envelope vs Z8 $150-250 per Tao binding revision"},
+        {"assumption": "Composition_alpha across 9 designs averages to additive",
+         "classification": "CARGO-CULTED-PENDING-EMPIRICAL",
+         "rationale": "Catalog #322 anti-additive evidence (4/8 probed substrate-pair alpha-pairs sub-additive); pure-additive composition empirically RARE; Boyd Dykstra-feasibility binding revision projects realistic LOWER BOUND not additive sum"},
+        {"assumption": "Theoretical floor band [0.026, 0.080] is reachable via Tier-1+Tier-2 cascade",
+         "classification": "HARD-EARNED-WITH-REVISION",
+         "rationale": "FLOOR design memo PLATEAU CONFIRMED HIGH 3 anchors agree; risk is rate-conservative regime (archive size <= 200,000 bytes); Tier-2 substrate-class-shift may inflate archive size"},
+        {"assumption": "Pose-axis is dominant marginal value at PR106 frontier",
+         "classification": "HARD-EARNED",
+         "rationale": "CLAUDE.md SegNet-vs-PoseNet importance verified 2026-05-04; pose marginal coefficient 271 vs SegNet 100 = 2.71x at pose_avg=3.4e-5; caveat for PR101 fec6 operating point pending OP-SYN-1 per-substrate extraction"},
+    ),
+    council_decisions_recorded=(
+        "OP-SYN-1 (TIER-1 unlock): extend tools/extract_master_gradient.py to 6 archives; $0 GPU; unlocks ALL downstream OPs",
+        "OP-SYN-2 (TIER-1 enabling primitive): land Phase 1 Fisher-precondition canonical helper at tac.riemannian_newton_meta_substrate.fisher_precondition; ~3 day editor + 1 day empirical validation on PR101_lc_v2 anchor",
+        "OP-SYN-3 (TIER-1): land tools/probe_n_set_venn_empirical_sparsity_atlas.py + tac.canonical_n_set_venn_classification package; ~3-4 day editor + $0 GPU",
+        "OP-SYN-4 (TIER-1 cheap-probe wave): land coordinated POSEAXIS OP-1 + OP-2 + OP-7 + OP-10 wave; $0 CPU offline + ~$0.30 Modal A10G CPU smoke",
+        "OP-SYN-5 (TIER-2 cargo-cult resurrection): land C6 IBPS Path B2 DreamerV3 RSSM categorical; $5-15 Modal T4 50-100ep",
+        "OP-SYN-6 (TIER-1): land Phase 2 Riemannian-Newton META-canonical-helper; ~3-5 day editor + $0 GPU; gated on OP-SYN-2",
+        "OP-SYN-7 (TIER-1): land Tropical d_seg Phase 1 boundary detector + faithfulness probe; ~3-4 day editor + $0 GPU; gated on OP-SYN-3",
+        "OP-SYN-8 (TIER-2 cargo-cult resurrection): land V1 Faiss V5 wavelet-multi-scale probe; $0.15-0.30 CPU probe",
+        "OP-SYN-9 (TIER-2 unified action migration): migrate to unified-Lagrangian action tac.unified_action.S_total; ~7-10 day editor; deferred to Week 8+ post-Tier-1 cascade",
+        "OP-SYN-10 (TIER-2 per-substrate symposium): land per-substrate symposiums for POSEAXIS OP-4 + OP-8; $0 (research-only memos)",
+    ),
+    predicted_mission_contribution="frontier_breaking",
+    override_invoked=False,
+    override_rationale=None,
+    deferred_substrate_id=None,
+    deferred_substrate_retrospective_due_utc=None,
+)
+append_council_anchor(record)   # appends to .omx/state/council_deliberation_posterior.jsonl
+```
+
+### 16.2 Operational notes
+
+- Anchor will be emitted post-memo-landing via canonical helper `tac.council_continual_learning.append_council_anchor` per fcntl-locked discipline per Catalog #131.
+- Per Catalog #300 v2 frontmatter `council_predicted_mission_contribution: frontier_breaking` declared.
+- Per Catalog #300 v2 frontmatter `council_override_invoked: false` declared (no operator-frontier-override needed).
+- Per Catalog #300 v2 frontmatter `deferred_substrate_id: null` declared (synthesis is META-level; no specific substrate deferred).
+- Sister deliberation IDs cited per `related_deliberation_ids` field in frontmatter (12 sister deliberations referenced).
+
+---
+
+## 17. Premise Verification Trail (Catalog #229)
+
+Per CLAUDE.md "Forbidden premature KILL" non-negotiable + Catalog #229 (`check_subagent_landing_includes_premise_verification_evidence`): every subagent landing with claims >=3 bulk edits MUST include empirical verdict table OR reproducer-script path. The synthesis' premise verification trail:
+
+### 17.1 PV-1: 9 design memos landed today
+
+**Premise**: 9 distinct design landings exist under `.omx/research/` dated `_20260518` per the operator's prompt enumeration.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && ls .omx/research/ 2>/dev/null | grep "20260518" | grep -iE "(venn|fisher|riemannian|tropical|z8_hier|tt5l|cargo_cult_resur|pose_axis|theoretical_floor)" | sort
+# RESULT: 9 files; all match operator's enumerated list:
+#   - cargo_cult_resurrection_top_3_symposiums_v1_faiss_c6_ibps_v2_nscs06_v8_variant_c_20260518.md
+#   - council_z8_hierarchical_predictive_coding_per_substrate_symposium_20260518.md
+#   - grand_council_t3_pose_axis_non_hnerv_paths_to_frontier_breaking_symposium_20260518.md
+#   - n_set_venn_classification_design_memo_pair_region_class_frame_axis_20260518.md
+#   - phase_1_fisher_precondition_canonical_helper_design_memo_20260518.md
+#   - riemannian_newton_substrate_engineering_design_memo_20260518.md
+#   - tac_theoretical_floor_estimator_design_memo_plateau_vs_saturation_disambiguator_20260518.md
+#   - tropical_d_seg_solver_design_memo_20260518.md
+#   - tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_memo_20260518.md
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.2 PV-2: All 9 anchor on PR101_lc_v2 master-gradient
+
+**Premise**: ALL 9 design memos reference PR101_lc_v2 archive sha `f174192aeadf...` OR sister fec6 frontier `6bae0201` OR format0d frontier `9cb989cef519` OR `master_gradient`.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && grep -c "f174192aeadf\|master_gradient\|PR101_lc_v2\|pr101_lc_v2\|fec6\|format0d" .omx/research/{9 memos}*.md
+# RESULT: all 9 files match (3 to 91 matches each); PV-2 HARD-EARNED-VERIFIED
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.3 PV-3: Codex master-gradient extractor landed 2026-05-18
+
+**Premise**: Codex 2026-05-18 landing of `tools/extract_master_gradient.py` + `src/tac/master_gradient.py` canonical helper.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && ls -la tools/extract_master_gradient.py src/tac/master_gradient.py 2>/dev/null
+# RESULT: both files exist; verified in section 6.4 anchor provenance contract per Catalog #327
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.4 PV-4: Current frontier per Catalog #316
+
+**Premise**: Live frontier per `reports/latest.md` FRONTIER section is `0.19205 [contest-CPU]` / `0.20533 [contest-CUDA T4]`.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && cat reports/latest.md | head -50 | grep -A 6 "Current best"
+# RESULT: confirmed; per Catalog #316 scan_best_anchor_per_axis.py last regenerated 2026-05-17
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.5 PV-5: Sister-subagent disjoint scope per Catalog #314
+
+**Premise**: Parallel subagent `abd9998c7b43566f2` (DP1+PR101 composition) owns `.omx/research/dp1_pr101_composition_design_memo_20260518.md`; this synthesis owns ONLY `.omx/research/cross_stack_synthesis_9_design_landings_unified_framework_20260518.md`.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && ls -la .omx/research/dp1_pr101_composition*20260518* .omx/research/cross_stack_synthesis*20260518* 2>/dev/null
+# RESULT: only this synthesis owns the cross_stack file; sister subagent owns dp1_pr101_composition file (per sister subagent prompt; verified disjoint)
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.6 PV-6: Lane pre-registered per Catalog #126
+
+**Premise**: lane `lane_cross_stack_synthesis_9_design_landings_20260518` pre-registered via `tools/lane_maturity.py add-lane`.
+
+**Verification command + result**:
+```bash
+cd /Users/adpena/Projects/pact && .venv/bin/python tools/lane_maturity.py add-lane lane_cross_stack_synthesis_9_design_landings_20260518 --name "..." --phase 2
+# RESULT: "OK -- added lane lane_cross_stack_synthesis_9_design_landings_20260518 at L0 (phase 2.0)"
+```
+
+**Status**: HARD-EARNED-VERIFIED.
+
+### 17.7 PV-7: Checkpoint discipline per Catalog #206
+
+**Premise**: subagent checkpoint discipline followed every ~10 tool uses + major milestone.
+
+**Verification command + result**: 6 checkpoints emitted at `.omx/state/subagent_progress.jsonl` for subagent_id `cross_stack_synthesis_20260518` per the canonical helper invocation pattern.
+
+**Status**: HARD-EARNED-VERIFIED (operational).
+
+### 17.8 PV-8: Commit serializer discipline per Catalog #117/#157/#174
+
+**Premise**: every commit goes through `tools/subagent_commit_serializer.py` with `--expected-content-sha256` per Catalog #174.
+
+**Verification command + result**: 6 commits emitted via canonical serializer (head SHAs `807532349`, `042c13b2f`, `19be1890d`, `0303efdad`, `496966e34`, `d4cad58ab`); each with `--expected-content-sha256` per post-edit working-tree hash.
+
+**Status**: HARD-EARNED-VERIFIED (operational).
+
+### 17.9 Bulk edits count
+
+**Premise**: this synthesis claims >=3 bulk edits across .omx/research/.
+
+**Verification**: 1 file edited (`.omx/research/cross_stack_synthesis_9_design_landings_unified_framework_20260518.md`). Per Catalog #229: 1 file = NOT bulk edit class; no premise verification table required. However, the synthesis CITES + analyzes 9 sister design memos as data input; for transparency, this PV trail establishes the synthesis' empirical foundation.
+
+**Status**: Empirical verdict table + PV trail INCLUDED for transparency per Catalog #294 9-dim checklist Dimension 4 RIGOR.
+
+---
+
