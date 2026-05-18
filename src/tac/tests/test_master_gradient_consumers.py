@@ -661,6 +661,56 @@ def test_select_pose_axis_dominant_bytes_emits_typed_specs_and_sidecar(tmp_path:
     assert payload["candidate_modification_specs"][0]["coordinate_system"] == "grammar_aware_operator_response"
 
 
+def test_select_pose_axis_dominant_bytes_does_not_invent_scored_custody(tmp_path: Path):
+    archive = "c" * 64
+    arr = np.array(
+        [
+            [0.01, 10.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+    npy_path = tmp_path / "aggregate.npy"
+    np.save(npy_path, arr)
+    ledger = tmp_path / "master_gradient_anchors.jsonl"
+    anchor = {
+        "archive_sha256": archive,
+        "gradient_array_path": str(npy_path),
+        "gradient_tensor_kind": "aggregate_per_byte_v1",
+        "gradient_byte_domain": "scored_archive_bytes",
+        "measurement_axis": "[diagnostic-CPU]",
+        "measurement_hardware": "linux_x86_64_cpu",
+        "measurement_method": "aggregate_projection",
+        "measurement_utc": "2026-05-18T01:00:00Z",
+        "n_bytes": 2,
+        "operating_point": {"d_pose": 0.1, "d_seg": 0.1, "rate": 0.1, "score": 0.1},
+        "schema_version": "master_gradient_anchor_v1",
+    }
+    ledger.write_text(json.dumps(anchor) + "\n")
+    output_root = tmp_path / "consumers"
+    sidecar_path = output_root / "pose_axis_dominant_bytes_custody.json"
+
+    specs = mgc.select_pose_axis_dominant_bytes(
+        archive,
+        top_k=1,
+        axis_dominance_threshold=0.7,
+        anchor_path=ledger,
+        output_root=output_root,
+        sidecar_path=sidecar_path,
+    )
+
+    assert len(specs) == 1
+    assert specs[0].source_archive_sha256 is None
+    assert specs[0].source_archive_bytes is None
+    assert specs[0].section_name == "diagnostic_uncustodied_gradient_subject_bytes"
+    assert "scored_archive_custody_missing" in specs[0].blockers
+    payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    assert payload["scored_archive_sha256"] is None
+    assert payload["scored_archive_bytes"] is None
+    assert payload["scored_archive_custody_available"] is False
+    assert "scored_archive_custody_missing" in payload["blockers"]
+
+
 def test_select_pose_axis_dominant_bytes_validates_thresholds(tmp_path: Path):
     with pytest.raises(ValueError, match="top_k"):
         mgc.select_pose_axis_dominant_bytes("d" * 64, top_k=0, anchor_path=tmp_path / "missing.jsonl")

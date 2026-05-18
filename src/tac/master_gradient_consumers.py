@@ -311,7 +311,7 @@ def load_aggregate_gradient_from_anchor(
         candidates = [a for a in candidates if a.get("archive_sha256") == archive_sha256]
     if not candidates:
         raise FileNotFoundError(
-            f"no aggregate master gradient anchor found in ledger"
+            "no aggregate master gradient anchor found in ledger"
             + (f" for archive {archive_sha256[:16]}..." if archive_sha256 else "")
         )
     anchor = max(candidates, key=lambda a: a.get("measurement_utc", ""))
@@ -397,6 +397,7 @@ def select_pose_axis_dominant_bytes(
     anchor_path: Path | None = None,
     write_sidecar: bool = True,
     output_root: Path | None = None,
+    sidecar_path: Path | None = None,
 ) -> tuple[CandidateModificationSpec, ...]:
     """Return planning-only typed specs for pose-axis-dominant gradient bytes.
 
@@ -427,14 +428,30 @@ def select_pose_axis_dominant_bytes(
         key=lambda i: (-float(pose_contribution[i]), -float(pose_share[i]), i),
     )[:top_k]
 
-    scored_archive_sha = str(anchor.get("scored_archive_sha256") or archive_sha256)
+    scored_archive_sha_obj = anchor.get("scored_archive_sha256")
+    scored_archive_sha = (
+        scored_archive_sha_obj.lower()
+        if (
+            isinstance(scored_archive_sha_obj, str)
+            and len(scored_archive_sha_obj) == 64
+            and all(c in "0123456789abcdefABCDEF" for c in scored_archive_sha_obj)
+        )
+        else None
+    )
     scored_archive_bytes_obj = anchor.get("scored_archive_bytes")
     scored_archive_bytes = (
         int(scored_archive_bytes_obj)
         if isinstance(scored_archive_bytes_obj, int) and not isinstance(scored_archive_bytes_obj, bool)
         else None
     )
-    gradient_byte_domain = str(anchor.get("gradient_byte_domain") or "scored_archive_bytes")
+    scored_archive_custody_available = scored_archive_sha is not None and scored_archive_bytes is not None
+    gradient_byte_domain = str(anchor.get("gradient_byte_domain") or "diagnostic_gradient_subject_bytes")
+    emitted_section_name = (
+        gradient_byte_domain
+        if scored_archive_custody_available or gradient_byte_domain != "scored_archive_bytes"
+        else "diagnostic_uncustodied_gradient_subject_bytes"
+    )
+    custody_blockers = () if scored_archive_custody_available else ("scored_archive_custody_missing",)
 
     specs: list[CandidateModificationSpec] = []
     selected_payload: list[dict[str, object]] = []
@@ -448,7 +465,7 @@ def select_pose_axis_dominant_bytes(
                 source_archive_sha256=scored_archive_sha,
                 source_archive_bytes=scored_archive_bytes,
                 operator_id=f"pose_axis_dominant_gradient_subject_rank_{rank:04d}",
-                section_name=gradient_byte_domain,
+                section_name=emitted_section_name,
                 section_role="diagnostic_master_gradient_pose_axis_dominant_byte",
                 mutation_grain="grammar_aware_operator",
                 mutation_operator="pose_axis_response_probe",
@@ -466,6 +483,7 @@ def select_pose_axis_dominant_bytes(
                 coordinate_system="grammar_aware_operator_response",
                 raw_archive_byte_coordinates_allowed=False,
                 blockers=(
+                    *custody_blockers,
                     "grammar_aware_pose_axis_mutation_builder_missing",
                     "packet_proofs_missing",
                 ),
@@ -474,6 +492,9 @@ def select_pose_axis_dominant_bytes(
                     f"diagnostic_gradient_subject_byte_index={byte_idx}",
                     f"pose_axis_share={pose_share_i:.6g}",
                     f"pose_axis_abs_score_contribution={pose_contribution_i:.6g}",
+                    "source archive custody must be present before grammar resolution"
+                    if not scored_archive_custody_available
+                    else "source archive custody available for grammar resolution",
                     "operator must resolve the diagnostic index through archive grammar before probing",
                 ),
             )
@@ -490,7 +511,7 @@ def select_pose_axis_dominant_bytes(
         )
 
     if write_sidecar:
-        path = consumer_output_path(
+        path = sidecar_path or consumer_output_path(
             "pose_axis_dominant_bytes",
             archive_sha256=archive_sha256,
             root=output_root,
@@ -503,7 +524,9 @@ def select_pose_axis_dominant_bytes(
                 "archive_sha256": archive_sha256,
                 "scored_archive_sha256": scored_archive_sha,
                 "scored_archive_bytes": scored_archive_bytes,
+                "scored_archive_custody_available": scored_archive_custody_available,
                 "gradient_byte_domain": gradient_byte_domain,
+                "emitted_section_name": emitted_section_name,
                 "measurement_axis": anchor.get("measurement_axis"),
                 "measurement_hardware": anchor.get("measurement_hardware"),
                 "gradient_tensor_kind": anchor.get("gradient_tensor_kind"),
@@ -518,6 +541,7 @@ def select_pose_axis_dominant_bytes(
                 },
                 "candidate_modification_specs": [spec.to_manifest() for spec in specs],
                 "blockers": (
+                    *custody_blockers,
                     "grammar_aware_pose_axis_mutation_builder_missing",
                     "packet_proofs_missing",
                 ),
@@ -1174,7 +1198,7 @@ def wyner_ziv_side_info_covariance(
     )[0]
 
     aggregate_mean = float(mean_corr_per_byte.mean())
-    estimated_wyner_ziv_gain_bytes = int(len(candidate_shared_prior))
+    estimated_wyner_ziv_gain_bytes = len(candidate_shared_prior)
 
     result = WynerZivSideInfoClassification(
         candidate_shared_prior_byte_indices=tuple(int(i) for i in candidate_shared_prior),
@@ -1564,7 +1588,7 @@ def rashomon_disagreement_queue(
         raise ValueError(f"top_k must be >= 1; got {top_k}")
 
     n_bytes, n_pairs, n_axes = per_pair_gradient.shape
-    pair_subsample_size = max(1, int(math.floor(n_pairs * pair_subsample_fraction)))
+    pair_subsample_size = max(1, math.floor(n_pairs * pair_subsample_fraction))
     if pair_subsample_size > n_pairs:
         pair_subsample_size = n_pairs
 
@@ -2025,7 +2049,7 @@ def _project_lambda_r_bump(g: np.ndarray, theta: float) -> tuple[float, float, i
     seg_grad_l1 = float(np.abs(g[:, 0]).sum())
     pose_grad_l1 = float(np.abs(g[:, 1]).sum())
     # Bytes saved scales with this pair's contribution to the rate gradient
-    bytes_saved = int(round(float(theta) * rate_grad_l1 * 1e8))
+    bytes_saved = round(float(theta) * rate_grad_l1 * 1e8)
     # Small regression on seg + pose proportional to θ (rate-distortion tradeoff)
     delta_seg = float(theta) * seg_grad_l1 * 0.01
     delta_pose = float(theta) * pose_grad_l1 * 0.01
@@ -2046,7 +2070,7 @@ def _project_per_pair_pareto_envelope(g: np.ndarray, theta: float) -> tuple[floa
     rate_weight = float(theta)
     delta_seg = -distortion_weight * seg_grad_l2 * 0.03
     delta_pose = -distortion_weight * pose_grad_l2 * 0.03
-    bytes_saved = int(round(rate_weight * rate_grad_l1 * 5e7))
+    bytes_saved = round(rate_weight * rate_grad_l1 * 5e7)
     return delta_seg, delta_pose, -bytes_saved
 
 
@@ -2083,7 +2107,7 @@ def _project_decoder_pruning(g: np.ndarray, theta: float) -> tuple[float, float,
     """
     # Bytes saved proportional to θ × this pair's contribution to dead capacity
     dead_capacity = float((np.abs(g).sum(axis=1) < 1e-12).sum())
-    bytes_saved = int(round(float(theta) * dead_capacity * 0.5))
+    bytes_saved = round(float(theta) * dead_capacity * 0.5)
     # Small regression if θ too aggressive
     delta_seg = float(theta) * 0.001
     delta_pose = float(theta) * 0.001
@@ -2139,7 +2163,7 @@ def _project_wyner_ziv_hoist(g: np.ndarray, theta: float) -> tuple[float, float,
     # side stream maps to ~50 LOC overhead — well under the 100-LOC default
     # budget. Larger budgets would push into the 200-LOC waiver territory.
     theta_clamped = max(0.0, min(1.0, float(theta)))
-    side_budget = int(round(200 + theta_clamped * 1800))  # [200, 2000]
+    side_budget = round(200 + theta_clamped * 1800)  # [200, 2000]
 
     # Derive Y from canonical torch_defaults source (Tier 1 zero-cost per the
     # DeliverabilityTier taxonomy; no network / disk I/O at compress time).
@@ -2421,7 +2445,7 @@ def _per_pair_jacobian_table(
 
 
 def _compose_objective_coefficients(
-    operating_point: "OperatingPoint",
+    operating_point: OperatingPoint,
 ) -> tuple[float, float, float]:
     """Per the operator's EXACT linearization at the operating point:
         ∂S/∂d_seg  = 100
@@ -2673,7 +2697,7 @@ def _admm_solve(
     theta_table: np.ndarray,
     catalog: TreatmentCatalog,
     budget: Budget,
-    operating_point: "OperatingPoint",
+    operating_point: OperatingPoint,
     max_iters: int,
     kkt_tolerance: float,
     warm_start_plan_t: np.ndarray | None,
@@ -2849,7 +2873,7 @@ def per_pair_optimal_treatment_plan_via_lagrangian_dual(
     per_pair_gradient: np.ndarray,
     *,
     archive_sha256: str,
-    operating_point: "OperatingPoint",
+    operating_point: OperatingPoint,
     measurement_axis: str,
     measurement_hardware: str,
     treatment_catalog: TreatmentCatalog | None = None,
