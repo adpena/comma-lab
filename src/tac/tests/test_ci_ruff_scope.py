@@ -15,6 +15,7 @@ def test_ruff_excludes_generated_experiment_artifacts() -> None:
     pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
 
     assert "experiments/results" in pyproject
+    assert "force-exclude = true" in pyproject
 
 
 def test_preflight_hook_forces_ruff_excludes_for_explicit_staged_paths() -> None:

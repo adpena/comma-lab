@@ -200,6 +200,103 @@ class ArchiveSection:
 
 
 @dataclass(frozen=True)
+class ArchiveProjectionContract:
+    """Consumer-facing authority contract for one detected archive grammar.
+
+    Archive boundary detection is useful for xray and routing, but it is not
+    sufficient authority to emit a master-gradient anchor. Consumers need an
+    explicit projector contract so packed/length-prefixed grammars cannot be
+    accidentally treated like the PR101 fixed-section Jacobian path.
+    """
+
+    grammar_name: str
+    authority: str
+    anchor_emission_allowed: bool
+    required_projector: str
+    reason: str
+    candidate_modification_spec_required: bool = True
+    score_claim_allowed: bool = False
+    promotion_eligible: bool = False
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "grammar_name": self.grammar_name,
+            "authority": self.authority,
+            "anchor_emission_allowed": self.anchor_emission_allowed,
+            "required_projector": self.required_projector,
+            "reason": self.reason,
+            "candidate_modification_spec_required": self.candidate_modification_spec_required,
+            "score_claim_allowed": self.score_claim_allowed,
+            "promotion_eligible": self.promotion_eligible,
+        }
+
+
+_SUPPORTED_PROJECTORS: dict[str, tuple[str, str]] = {
+    "fec6_fp11_selector": (
+        "fec6_pr101_fixed_section_int8_fp16_jacobian",
+        "FP11 wraps a PR101-family fixed-section payload; existing fec6/PR101 projector preserves scored archive and gradient-subject custody.",
+    ),
+    "pr101_lc_v2": (
+        "fec6_pr101_fixed_section_int8_fp16_jacobian",
+        "PR101 fixed decoder/latent/sidecar offsets match the existing split-Brotli Jacobian path.",
+    ),
+    "a1_finetuned": (
+        "a1_headered_pr101_fixed_section_int8_fp16_jacobian",
+        "A1 adds a 4-byte decoder-section header, then reuses the PR101-family fixed-section projector with zero-gradient header semantics.",
+    ),
+}
+
+_DETECTION_ONLY_PROJECTORS: dict[str, tuple[str, str]] = {
+    "pr106_format0d": (
+        "pr106_format0d_primary_payload_projector",
+        "Format0d boundaries are exact, but the primary PR106 payload and ranked/no-op sidecar do not share the PR101 fixed-section Jacobian.",
+    ),
+    "pr106_ff_packed_hnerv": (
+        "pr106_packed_brotli_schema_projector",
+        "Public PR106 uses packed decoder and latents/sidecar Brotli sections; byte-gradient authority requires a packed-section schema projector.",
+    ),
+    "hnerv_lc_v2_length_prefixed": (
+        "hnerv_lc_v2_schema_projector",
+        "True hnerv_lc_v2 is four length-prefixed streams; fixed-offset PR101 projection would misattribute byte authority.",
+    ),
+    "pr107_apogee_length_prefixed": (
+        "pr107_apogee_schema_projector",
+        "PR107 Apogee uses metadata/decoder/latent length-prefixed sections and must remain xray-only until its parser is paired with a projector.",
+    ),
+}
+
+
+def archive_projection_contract(layout: ArchiveLayout) -> ArchiveProjectionContract:
+    """Return the fail-closed projection authority contract for ``layout``."""
+    if layout.gradient_projection_supported:
+        supported = _SUPPORTED_PROJECTORS.get(layout.grammar_name)
+        if supported is None:
+            raise ValueError(
+                f"layout {layout.grammar_name!r} claims gradient projection support without a registered projector"
+            )
+        projector, reason = supported
+        return ArchiveProjectionContract(
+            grammar_name=layout.grammar_name,
+            authority="gradient_projector_supported",
+            anchor_emission_allowed=True,
+            required_projector=projector,
+            reason=reason,
+        )
+
+    projector, reason = _DETECTION_ONLY_PROJECTORS.get(
+        layout.grammar_name,
+        (f"{layout.grammar_name}_projector", "Archive grammar is detectable, but no registered projector authorizes anchor emission."),
+    )
+    return ArchiveProjectionContract(
+        grammar_name=layout.grammar_name,
+        authority="fail_closed_detection_only",
+        anchor_emission_allowed=False,
+        required_projector=projector,
+        reason=reason,
+    )
+
+
+@dataclass(frozen=True)
 class ArchiveLayout:
     """Detected scored-archive grammar without claiming score authority.
 
@@ -234,6 +331,7 @@ class ArchiveLayout:
             "gradient_byte_domain": self.gradient_byte_domain,
             "sections": [section.as_dict() for section in self.sections],
             "gradient_projection_supported": self.gradient_projection_supported,
+            "projection_contract": archive_projection_contract(self).as_dict(),
             "parser_notes": list(self.parser_notes),
         }
 
@@ -1266,6 +1364,12 @@ def _serialize_archive_to_temp(raw_bytes: bytes, scratch_dir: Path) -> Path:
     return target
 
 
+def _write_layout_contract(path: Path, layout: ArchiveLayout) -> None:
+    """Persist a grammar/xray manifest before any projector-authority decision."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(layout.as_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Extract master gradient (per-byte score sensitivity) for an archive at its operating point."
@@ -1313,6 +1417,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--detect-grammar-only",
         action="store_true",
         help="Print detected archive grammar/layout JSON and exit without scorer or codec imports.",
+    )
+    parser.add_argument(
+        "--layout-contract-output",
+        default=None,
+        type=Path,
+        help=(
+            "Optional JSON path for the detected archive layout plus projection authority contract. "
+            "Written before fail-closed unsupported-grammar exits."
+        ),
     )
     parser.add_argument("--no-anchor-write", action="store_true", help="Skip writing the ledger anchor (smoke / dry-run mode)")
     parser.add_argument("--verbose", action="store_true", help="Verbose progress logging")
@@ -1373,6 +1486,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     scored_archive_bytes = args.archive.read_bytes()
     detected_name, detected_layout = detect_archive_grammar_and_parse(scored_archive_bytes)
+    if args.layout_contract_output is not None:
+        _write_layout_contract(args.layout_contract_output, detected_layout)
     if args.detect_grammar_only:
         print(json.dumps(detected_layout.as_dict(), sort_keys=True))
         return 0

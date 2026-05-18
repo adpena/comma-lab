@@ -756,7 +756,18 @@ def test_detect_archive_grammar_and_parse_synthetic_boundaries(
     assert [section.name for section in layout.sections] == section_names
     assert layout.sections[0].offset == 0
     assert layout.sections[-1].end_offset == layout.gradient_subject_bytes
-    assert layout.as_dict()["grammar_name"] == expected_grammar
+    serialized = layout.as_dict()
+    assert serialized["grammar_name"] == expected_grammar
+    projection_contract = serialized["projection_contract"]
+    assert projection_contract["grammar_name"] == expected_grammar
+    assert projection_contract["anchor_emission_allowed"] is projection_supported
+    assert projection_contract["score_claim_allowed"] is False
+    assert projection_contract["promotion_eligible"] is False
+    if projection_supported:
+        assert projection_contract["authority"] == "gradient_projector_supported"
+    else:
+        assert projection_contract["authority"] == "fail_closed_detection_only"
+        assert projection_contract["required_projector"].endswith("_projector")
 
 
 def test_detect_archive_grammar_preserves_raw_domain_for_unzipped_payload():
@@ -778,6 +789,9 @@ def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
     parsed = json.loads(capsys.readouterr().out)
     assert parsed["grammar_name"] == "pr106_format0d"
     assert parsed["gradient_projection_supported"] is False
+    assert parsed["projection_contract"]["authority"] == "fail_closed_detection_only"
+    assert parsed["projection_contract"]["anchor_emission_allowed"] is False
+    assert parsed["projection_contract"]["required_projector"] == "pr106_format0d_primary_payload_projector"
 
 
 def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
@@ -787,6 +801,7 @@ def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
     fake_inflate.write_text("# no src import should happen before fail-closed grammar gate\n")
     fake_upstream = tmp_path / "upstream"
     fake_upstream.mkdir()
+    contract_path = tmp_path / "layout_contract.json"
 
     with pytest.raises(SystemExit, match="xray/detection-only"):
         emg.main(
@@ -801,10 +816,17 @@ def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
                 "[diagnostic-CPU]",
                 "--output-npy",
                 str(tmp_path / "grad.npy"),
+                "--layout-contract-output",
+                str(contract_path),
                 "--device",
                 "cpu",
             ]
         )
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    assert contract["grammar_name"] == "pr106_format0d"
+    assert contract["projection_contract"]["authority"] == "fail_closed_detection_only"
+    assert contract["projection_contract"]["anchor_emission_allowed"] is False
+    assert contract["projection_contract"]["required_projector"] == "pr106_format0d_primary_payload_projector"
 
 
 def test_main_requires_explicit_axis_for_anchor_emitting_path(tmp_path):
