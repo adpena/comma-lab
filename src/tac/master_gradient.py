@@ -69,6 +69,7 @@ __all__ = [
     "OperatingPoint",
     "append_anchor_locked",
     "compute_marginal_coefficients",
+    "is_authoritative_axis_anchor",
     "latest_anchor_for_archive",
     "load_anchors_lenient",
     "load_anchors_strict",
@@ -427,6 +428,33 @@ def query_anchors_by_archive(
     ]
 
 
+def is_authoritative_axis_anchor(row: Mapping[str, object]) -> bool:
+    """Return whether a row can be consumed as an authoritative contest-axis anchor.
+
+    Historical advisory/subset rows may carry an over-strong axis label. Treat
+    those as diagnostic even if ``measurement_axis`` says ``[contest-CPU]`` or
+    ``[contest-CUDA]`` so downstream consumers fail closed instead of promoting
+    stale local probes.
+    """
+    axis = row.get("measurement_axis")
+    if axis not in {"[contest-CPU]", "[contest-CUDA]"}:
+        return True
+
+    hardware = str(row.get("measurement_hardware", "")).lower()
+    if any(token in hardware for token in ("advisory", "darwin", "macos", "mps")):
+        return False
+
+    n_pairs_used = row.get("n_pairs_used")
+    n_pairs_total = row.get("n_pairs_total")
+    if n_pairs_used is not None and n_pairs_total is not None:
+        try:
+            if int(n_pairs_used) != int(n_pairs_total):
+                return False
+        except (TypeError, ValueError):
+            return False
+    return True
+
+
 def latest_anchor_for_archive(
     archive_sha256: str,
     *,
@@ -437,6 +465,8 @@ def latest_anchor_for_archive(
     rows = query_anchors_by_archive(archive_sha256, path=path)
     if axis is not None:
         rows = [r for r in rows if r.get("measurement_axis") == axis]
+        if axis in {"[contest-CPU]", "[contest-CUDA]"}:
+            rows = [r for r in rows if is_authoritative_axis_anchor(r)]
     if not rows:
         return None
     return max(rows, key=lambda r: r.get("measurement_utc", ""))

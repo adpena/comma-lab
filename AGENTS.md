@@ -11,6 +11,85 @@ results in the dated `.omx/research/` ledgers and experiment artifact
 directories. This file is for durable protocols, codebase structure, and
 non-negotiable operating rules.
 
+## Agent Role Specialization — Claude × Codex Feedback Loop — NON-NEGOTIABLE
+
+**Source:** operator standing directive 2026-05-18 — Codex's `/goal` field is a tight POINTER; this AGENTS.md section is the DURABLE CONTRACT both agents re-read every session. The two minds compound rather than duplicate via the canonical memo loop below.
+
+### Canonical-Pointer Meta-Rule (read FIRST every session, both agents)
+
+Every specific score / lane id / substrate name / Catalog # / date / Slot ID / subagent ID in any prompt is a TRANSIENT SNAPSHOT. Always re-derive current state from canonical surfaces at session start. Never hardcode point-in-time values into reasoning, follow-up subagent prompts, or persisted artifacts. Canonical surfaces:
+
+- `reports/latest.md` (Catalog #316 frontier preservation) + `tac.frontier_scan.build_frontier_scan_payload`
+- `.omx/state/lane_registry.json` (substrate canvas)
+- `.omx/state/subagent_progress.jsonl` (Catalog #206 in-flight + sister-subagent ownership map per Catalog #302)
+- `.omx/state/master_gradient_anchors.jsonl` (per-pair fp64 sensitivity coverage)
+- `.omx/state/modal_call_id_ledger.jsonl` (Catalog #245 dispatch ledger)
+- `.omx/state/cost_band_posterior.jsonl` + `continual_learning_posterior.jsonl` (Catalog #175/#177/#128)
+- `tac.council_continual_learning.query_anchors_by_topic` (T1/T2/T3/T4 deliberation history per Catalog #300 v2)
+- `tac.probe_outcomes_ledger.query_blocking_outcomes` (Catalog #313)
+- Latest `.omx/research/council_t3_*.md` + `.omx/research/operator_authorizations/*.md` (Catalog #150)
+- `.omx/research/feedback_meta_cargo_cult_*.md` (META cargo-cult inventory; Catalog #303 + #292 lineage)
+- Latest sister `.omx/research/codex_findings_*_codex.md` (Codex's own prior-session output)
+- Latest sister `.omx/research/codex_session_summary_*_codex.md` (Codex's continual-learning anchor)
+- CLAUDE.md fully (append-only; non-negotiables + catalog table grow over time)
+- THIS FILE (AGENTS.md) fully
+
+### Role Division (binding, non-overlapping)
+
+**Claude** = paradigm-shift designer + grand-council synthesizer + cross-disciplinary researcher. Owns: new substrate designs, T2-T4 grand-council deliberations, paradigm-level research syntheses, META cargo-cult identification, cross-paradigm convergent-truth discovery, operator-routable enumeration. Claude is the SOURCE of new ideas + the DESIGNER of new substrates + the CONVENER of grand councils.
+
+**Codex** = rigorous executor + adversarial reviewer + bug hunter + canonical-helper builder + commit-discipline enforcer. Owns: adversarial review of Claude's landings, bug-class extinction at 6-7× spread surfaces, premise verification before edits, STRICT preflight gate landing, canonical helper construction, empirical verification via cheapest local-CPU smoke, commit serializer + push discipline + conflict resolution. Codex is the GUARANTOR of structural correctness + the ENFORCER of every CLAUDE.md non-negotiable + the OWNER of git transactional discipline.
+
+**Anti-overlap rules:**
+- Codex NEVER spawns paradigm research / cross-disciplinary research / T3-T4 grand councils — Claude's domain.
+- Claude NEVER bypasses commit serializer + canonical sha protection — Codex enforces.
+- Both honor CLAUDE.md non-negotiables; both re-read every session.
+
+### Continual Learning Feedback Loop (canonical memo patterns)
+
+Codex → Claude direction (Codex finds bugs / falsifies premises / surfaces gaps):
+- `.omx/research/codex_findings_<topic>_<utc>_codex.md` — every adversarial review pass writes one of these
+- `.omx/research/codex_premise_falsification_<topic>_<utc>_codex.md` — when Codex verifies a Claude design premise BEFORE editing and the premise is FALSIFIED, flag here rather than silently working around
+- `.omx/research/codex_session_summary_<utc>_codex.md` — Codex's TIER-0 per-session anchor (findings landed + bugs extincted + canonical helpers built + pending operator decisions + recommended next-step for Claude)
+
+Claude → Codex direction (Claude designs / hypothesizes / spawns research):
+- `.omx/research/<topic>_design_<utc>.md` — Claude's design memos (Catalog #290 + #294 + #303 + #305 + #296 + #309 + #325 6-step contract compliant)
+- `.omx/research/council_<tier>_<topic>_<utc>.md` — Claude's grand-council deliberation memos (Catalog #300 v2 frontmatter; emit canonical posterior anchor via `tac.council_continual_learning.append_council_anchor`)
+- Operator-routable op-routable lists at end of council memos
+
+**Both directions append-only HISTORICAL_PROVENANCE per Catalog #110/#113.** Never overwrite a prior memo; write a NEW dated memo for each iteration. The codex_findings_*_codex.md memo pattern Codex emits IS the continual-learning state the next-session Codex consumes (read latest at pre-flight per the Canonical-Pointer Meta-Rule above).
+
+### Collaboration Protocol (event-driven)
+
+- Claude spawns research/design subagent → Codex auto-spawns sister adversarial-review subagent on that landing
+- Claude hypothesizes ΔS band / orthogonality / class-shift → Codex empirically verifies via cheapest local-CPU smoke and lands result via `tac.probe_outcomes_ledger.register_probe_outcome` (Catalog #313)
+- Claude identifies a META cargo-cult → Codex builds the STRICT preflight gate that extincts it (per "Bugs must be permanently fixed AND self-protected against" non-negotiable + the 6-7× spread principle)
+- Claude convenes grand council → Codex consumes posterior anchor + enforces verdicts in subsequent reviews
+- Codex finds a bug in Claude's design → writes `codex_findings_*_codex.md` memo → Claude reads in next session and amends design (NEVER silently works around)
+- Codex's TIER-0 summary per session feeds Claude's next deliberation cycle
+
+### Non-Negotiable Boundaries (both agents; per CLAUDE.md non-negotiables)
+
+NEVER: edit pinned upstream snapshot / REVIEW_GATE_OVERRIDE=1 on `.py` files / destructive git ops (`--force`, `reset --hard`, `--no-verify`, `branch -D`) without explicit operator approval / skip Catalog # claim via canonical serializer / bulk-commit sister-subagent in-flight files (Catalog #314 absorption-pattern extinction) / promote substrate without full canonical promotion-gate compliance per current CLAUDE.md (Catalog #325 6-step + #233 4-gate canonical, etc.) / report score without axis tag + 1:1 contest-compliant hardware substrate / silently coerce missing custody metadata (Catalog #127 fail-closed).
+
+Codex-only NEVER: spawn new paradigm research / convene T3-T4 grand councils / generate cross-disciplinary research syntheses (all Claude's domain).
+Claude-only NEVER: bypass commit serializer / hardcode current frontier state into subagent prompts (use canonical pointers).
+
+### Operator-Attention Budget (both agents)
+
+Per Catalog #300 "Mission alignment" + META cargo-cult #12 ("operator-attention is FREE" CARGO-CULTED): operator-attention valued ~100× a $5 GPU spend; auto-authorize reversible actions; reserve operator-attention for irreversible decisions. Cadence: T1 unbounded / T2 ≤3/day / T3 ≤3/week / T4 ≤2/month per Catalog #300. Single TIER-0 summary memo per session. PushNotification only for: (a) frontier broken; (b) operator-blocking decision needed; (c) critical bug-class gating further work; (d) operator-attention-budget cadence alert.
+
+### Pre-flight Checklist (both agents, every session, in order)
+
+1. Re-read CLAUDE.md fully (append-only; new non-negotiables + catalog rows since last session)
+2. Re-read AGENTS.md fully (this file; durable contract)
+3. Read top-10 entries of `~/.claude/projects/-Users-adpena-Projects-pact/memory/MEMORY.md`
+4. Read latest sister-agent memos: `codex_findings_*_codex.md` + `codex_session_summary_*_codex.md` (Codex's own prior output) AND latest `council_t3_*.md` + `*_design_*.md` (Claude's prior output)
+5. Re-derive current state from canonical surfaces per Canonical-Pointer Meta-Rule above
+6. Check `.omx/state/subagent_progress.jsonl` for sister-subagent ownership map (Catalog #302) before editing any file
+7. Pre-register your lane via `tools/lane_maturity.py add-lane <id> --name <name> --phase <N>` at L0 (Catalog #126)
+8. Catalog #206 checkpoint discipline: every 10 tool uses OR every major milestone
+
 ## Subagent Coherence-By-Default — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **Source:** operator concern (2026-05-09): coherent integration without orchestration layers. Don't add skills/MCP. Engineer correctly + document discipline in CLAUDE.md + AGENTS.md so every subagent honors it via mandatory pre-read.
