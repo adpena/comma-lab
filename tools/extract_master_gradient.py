@@ -67,11 +67,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
+import json
 import math
 import platform
 import struct
 import sys
 import time
+import zipfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -168,6 +171,85 @@ class _Fec6ArchiveLayout:
     has_fp11_outer_wrapper: bool
 
 
+@dataclass(frozen=True)
+class ArchiveSection:
+    """One byte section in a scored archive's gradient subject domain."""
+
+    name: str
+    offset: int
+    length: int
+    codec: str
+    sha256: str
+    notes: str = ""
+
+    @property
+    def end_offset(self) -> int:
+        return self.offset + self.length
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "offset": self.offset,
+            "length": self.length,
+            "end_offset": self.end_offset,
+            "codec": self.codec,
+            "sha256": self.sha256,
+            "notes": self.notes,
+        }
+
+
+@dataclass(frozen=True)
+class ArchiveLayout:
+    """Detected scored-archive grammar without claiming score authority.
+
+    ``sections`` index the gradient subject, not necessarily the charged ZIP.
+    The scored archive identity is always preserved separately so consumers
+    cannot confuse differentiable payload bytes with contest-charged bytes.
+    """
+
+    grammar_name: str
+    archive_sha256: str
+    archive_bytes: int
+    member_name: str | None
+    member_sha256: str
+    member_bytes: int
+    gradient_subject_sha256: str
+    gradient_subject_bytes: int
+    gradient_byte_domain: str
+    sections: tuple[ArchiveSection, ...]
+    gradient_projection_supported: bool
+    parser_notes: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "grammar_name": self.grammar_name,
+            "archive_sha256": self.archive_sha256,
+            "archive_bytes": self.archive_bytes,
+            "member_name": self.member_name,
+            "member_sha256": self.member_sha256,
+            "member_bytes": self.member_bytes,
+            "gradient_subject_sha256": self.gradient_subject_sha256,
+            "gradient_subject_bytes": self.gradient_subject_bytes,
+            "gradient_byte_domain": self.gradient_byte_domain,
+            "sections": [section.as_dict() for section in self.sections],
+            "gradient_projection_supported": self.gradient_projection_supported,
+            "parser_notes": list(self.parser_notes),
+        }
+
+
+@dataclass(frozen=True)
+class _ArchivePayload:
+    """Single contest payload extracted from a raw or ZIP archive."""
+
+    payload: bytes
+    member_name: str | None
+    gradient_byte_domain: str
+
+
+class ArchiveGrammarUnknownError(ValueError):
+    """Raised when archive bytes do not match a known parser grammar."""
+
+
 # ---------------------------------------------------------------------------- #
 # Archive parsing                                                                #
 # ---------------------------------------------------------------------------- #
@@ -175,6 +257,397 @@ class _Fec6ArchiveLayout:
 
 def _sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def _extract_gradient_subject_from_archive_bytes(archive_bytes: bytes) -> _ArchivePayload:
+    """Return the single payload member that archive-layout parsers should index."""
+    bio = io.BytesIO(archive_bytes)
+    if not zipfile.is_zipfile(bio):
+        return _ArchivePayload(
+            payload=archive_bytes,
+            member_name=None,
+            gradient_byte_domain="scored_archive_bytes",
+        )
+
+    bio.seek(0)
+    with zipfile.ZipFile(bio) as zf:
+        infos = zf.infolist()
+        if len(infos) != 1:
+            raise ValueError(f"zip must have exactly one payload member, got {len(infos)}")
+        info = infos[0]
+        if info.is_dir():
+            raise ValueError(f"single ZIP entry must be a file, got directory {info.filename!r}")
+        bad = zf.testzip()
+        if bad is not None:
+            raise ValueError(f"ZIP CRC validation failed for member {bad!r}")
+        return _ArchivePayload(
+            payload=zf.read(info.filename),
+            member_name=info.filename,
+            gradient_byte_domain="zip_inner_member_payload",
+        )
+
+
+def _section(name: str, offset: int, length: int, codec: str, payload: bytes, notes: str = "") -> ArchiveSection:
+    if offset < 0 or length < 0 or offset + length > len(payload):
+        raise ValueError(
+            f"bad section {name!r}: offset={offset}, length={length}, payload_bytes={len(payload)}"
+        )
+    return ArchiveSection(
+        name=name,
+        offset=offset,
+        length=length,
+        codec=codec,
+        sha256=_sha256_bytes(payload[offset : offset + length]),
+        notes=notes,
+    )
+
+
+def _validate_contiguous_sections(sections: Sequence[ArchiveSection], payload_len: int, grammar_name: str) -> None:
+    expected_offset = 0
+    for section in sections:
+        if section.offset != expected_offset:
+            raise ValueError(
+                f"{grammar_name} non-contiguous section {section.name}: "
+                f"offset={section.offset}, expected={expected_offset}"
+            )
+        expected_offset = section.end_offset
+    if expected_offset != payload_len:
+        raise ValueError(
+            f"{grammar_name} sections end at {expected_offset}, expected payload_len={payload_len}"
+        )
+
+
+def _make_archive_layout(
+    *,
+    grammar_name: str,
+    archive_bytes: bytes,
+    extracted: _ArchivePayload,
+    sections: Sequence[ArchiveSection],
+    gradient_projection_supported: bool,
+    parser_notes: Sequence[str] = (),
+) -> ArchiveLayout:
+    _validate_contiguous_sections(sections, len(extracted.payload), grammar_name)
+    member_sha256 = _sha256_bytes(extracted.payload)
+    return ArchiveLayout(
+        grammar_name=grammar_name,
+        archive_sha256=_sha256_bytes(archive_bytes),
+        archive_bytes=len(archive_bytes),
+        member_name=extracted.member_name,
+        member_sha256=member_sha256,
+        member_bytes=len(extracted.payload),
+        gradient_subject_sha256=member_sha256,
+        gradient_subject_bytes=len(extracted.payload),
+        gradient_byte_domain=extracted.gradient_byte_domain,
+        sections=tuple(sections),
+        gradient_projection_supported=gradient_projection_supported,
+        parser_notes=tuple(parser_notes),
+    )
+
+
+def parse_fec6_fp11_selector_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse the fec6 FP11 selector wrapper around a PR101-like inner payload."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "x"):
+        raise ValueError(f"fec6 FP11 expected raw payload or member 'x', got {extracted.member_name!r}")
+    if len(payload) < 10 or payload[:4] != b"FP11":
+        raise ValueError("not a fec6 FP11 selector payload")
+    source_len = struct.unpack_from("<I", payload, 4)[0]
+    pr101_minimum = 162_164 + 15_387
+    if source_len < pr101_minimum:
+        raise ValueError(f"fec6 source payload too short: {source_len} < {pr101_minimum}")
+    source_offset = 8
+    selector_len_offset = source_offset + source_len
+    if selector_len_offset + 2 > len(payload):
+        raise ValueError(f"fec6 source_len {source_len} exceeds payload bytes {len(payload)}")
+    source_payload = payload[source_offset:selector_len_offset]
+    if source_payload[:4] != b"\x1b\xcd\x03\xf8":
+        raise ValueError("fec6 source payload missing expected PR101 first Brotli-stream prefix")
+    selector_len = struct.unpack_from("<H", payload, selector_len_offset)[0]
+    selector_offset = selector_len_offset + 2
+    if selector_offset + selector_len != len(payload):
+        raise ValueError(
+            f"fec6 selector length mismatch: selector_offset={selector_offset}, "
+            f"selector_len={selector_len}, payload_bytes={len(payload)}"
+        )
+    if selector_len < 6:
+        raise ValueError(f"fec6 selector payload too short: {selector_len}")
+    selector_magic = payload[selector_offset : selector_offset + 4]
+    if selector_magic != b"FEC6":
+        raise ValueError(f"fec6 selector magic mismatch: {selector_magic!r}")
+    n_pairs = struct.unpack_from("<H", payload, selector_offset + 4)[0]
+    if n_pairs != 600:
+        raise ValueError(f"fec6 selector n_pairs mismatch: expected 600, got {n_pairs}")
+    sections = (
+        _section("fp11_magic", 0, 4, "raw_magic", payload, "ASCII FP11 outer-wrapper marker."),
+        _section("source_len_le_u32", 4, 4, "raw_uint32_le", payload, "Length of the PR101-like inner source payload."),
+        _section("source_payload", source_offset, source_len, "hnerv_ft_microcodec_payload", payload, "Differentiable inner archive consumed by codec.parse_archive."),
+        _section("selector_len_le_u16", selector_len_offset, 2, "raw_uint16_le", payload, "Length of the compact hard-pair selector stream."),
+        _section("selector_payload", selector_offset, selector_len, "fec6_huffman_selector", payload, "Discrete post-round selector side information; diagnostic zero-gradient in v1."),
+    )
+    return _make_archive_layout(
+        grammar_name="fec6_fp11_selector",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=True,
+        parser_notes=(
+            "Existing autograd extractor supports this grammar via parse_fec6_archive_layout.",
+            "Selector payload remains discrete/zero-gradient until a packet-valid operator path exists.",
+        ),
+    )
+
+
+def parse_a1_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse A1 fine-tuned HNeRV layout with a 4-byte decoder-section header."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "x"):
+        raise ValueError(f"A1 expected raw payload or member 'x', got {extracted.member_name!r}")
+    decoder_len = 162_164
+    expected_section_total = 4 + decoder_len
+    latent_len = 15_387
+    if len(payload) < 4 + latent_len:
+        raise ValueError("A1 payload too short for header + latent blob")
+    section_total = struct.unpack_from("<I", payload, 0)[0]
+    if section_total != expected_section_total:
+        raise ValueError(
+            f"A1 decoder_section_total {section_total} != expected {expected_section_total}"
+        )
+    if section_total + latent_len > len(payload):
+        raise ValueError(f"bad A1 decoder_section_total {section_total}")
+    if payload[4:8] != b"\x1b\xcd\x03\xf8":
+        raise ValueError("A1 decoder payload missing expected first Brotli-stream prefix")
+    sidecar_offset = section_total + latent_len
+    sections = (
+        _section("a1_section_header", 0, 4, "raw_uint32_le_section_total", payload, "uint32 LE decoder_section_total."),
+        _section("decoder", 4, section_total - 4, "brotli_streams_int8", payload, "A1 fine-tuned PR101-family decoder section."),
+        _section("latent", section_total, latent_len, "lzma_temporal_delta", payload, "PR101-family latent blob."),
+        _section("sidecar", sidecar_offset, len(payload) - sidecar_offset, "brotli_per_pair_corrections", payload, "Per-pair correction sidecar tail."),
+    )
+    return _make_archive_layout(
+        grammar_name="a1_finetuned",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "A1 boundary detection is available, but byte-gradient projection is fail-closed until its length-header decoder path is wired.",
+        ),
+    )
+
+
+def parse_pr101_lc_v2_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse PR101/HNeRV fixed decoder + latent + sidecar layout."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "x"):
+        raise ValueError(f"PR101 fixed-offset expected raw payload or member 'x', got {extracted.member_name!r}")
+    decoder_len = 162_164
+    latent_len = 15_387
+    minimum = decoder_len + latent_len
+    if len(payload) < decoder_len + latent_len:
+        raise ValueError(f"PR101 payload too short: {len(payload)} < {minimum}")
+    if len(payload) > 180_000:
+        raise ValueError(f"PR101 fixed-offset payload unexpectedly large: {len(payload)}")
+    if payload[:4] != b"\x1b\xcd\x03\xf8":
+        raise ValueError("PR101 fixed-offset payload missing expected first Brotli-stream prefix")
+    sidecar_offset = decoder_len + latent_len
+    sections = (
+        _section("decoder", 0, decoder_len, "brotli_streams_int8", payload, "Concatenated decoder tensor Brotli streams."),
+        _section("latent", decoder_len, latent_len, "lzma_temporal_delta", payload, "Temporal-delta latent payload."),
+        _section("sidecar", sidecar_offset, len(payload) - sidecar_offset, "brotli_per_pair_corrections", payload, "Per-pair correction sidecar tail."),
+    )
+    return _make_archive_layout(
+        grammar_name="pr101_lc_v2",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=True,
+        parser_notes=("Existing fec6/PR101 fixed-section path can project decoder/latent bytes when paired with the matching codec module.",),
+    )
+
+
+def parse_pr106_format0d_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse PR106 format0d sidecar archive materialized on 2026-05-15."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "x"):
+        raise ValueError(f"PR106 format0d expected raw payload or member 'x', got {extracted.member_name!r}")
+    if len(payload) < 8 or payload[:2] != b"\xfe\x0d":
+        raise ValueError("not a PR106 format0d payload")
+    pr106_len = struct.unpack_from("<I", payload, 2)[0]
+    pr106_offset = 6
+    base_sidecar_offset = pr106_offset + pr106_len
+    base_sidecar_len = 511
+    extra_len_offset = base_sidecar_offset + base_sidecar_len
+    if extra_len_offset + 2 > len(payload):
+        raise ValueError("PR106 format0d payload truncated before extra length")
+    extra_len = struct.unpack_from("<H", payload, extra_len_offset)[0]
+    extra_offset = extra_len_offset + 2
+    framing_offset = extra_offset + extra_len
+    framing_len = len(payload) - framing_offset
+    if framing_len != 6:
+        raise ValueError(f"PR106 format0d expected 6B framing meta, got {framing_len}")
+    sections = (
+        _section("format_magic", 0, 1, "raw_magic_byte", payload, "PR106 magic byte 0xfe."),
+        _section("format_id", 1, 1, "raw_format_id", payload, "PR106 format id 0x0d."),
+        _section("pr106_len_le_u32", 2, 4, "raw_uint32_le", payload, "Length of the primary PR106 payload."),
+        _section("pr106_payload", pr106_offset, pr106_len, "pr106_primary_payload", payload, "Primary PR106 format0d payload."),
+        _section("base_format0c_sidecar_payload", base_sidecar_offset, base_sidecar_len, "format0c_sidecar_payload", payload, "Base format0c sidecar payload retained by format0d."),
+        _section("extra_payload_len_le_u16", extra_len_offset, 2, "raw_uint16_le", payload, "Length of extra ranked no-op payload."),
+        _section("extra_pr101_ranked_no_op_payload", extra_offset, extra_len, "ranked_no_op_payload", payload, "Extra PR101 ranked no-op payload."),
+        _section("extra_framing_meta", framing_offset, framing_len, "raw_framing_meta", payload, "Format0d trailing framing metadata."),
+    )
+    return _make_archive_layout(
+        grammar_name="pr106_format0d",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "PR106 format0d boundary detection is exact for the materialized sidecar archive, but gradient projection is not yet wired.",
+        ),
+    )
+
+
+def parse_pr106_ff_packed_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse public PR106's 0xff + uint24 packed HNeRV layout."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "0.bin"):
+        raise ValueError(f"PR106 packed expected raw payload or member '0.bin', got {extracted.member_name!r}")
+    if len(payload) < 5 or payload[0] != 0xFF:
+        raise ValueError("not a PR106 0xff packed payload")
+    decoder_len = int.from_bytes(payload[1:4], "little")
+    decoder_offset = 4
+    decoder_end = decoder_offset + decoder_len
+    if decoder_len <= 0 or decoder_end >= len(payload):
+        raise ValueError(f"bad PR106 packed decoder length {decoder_len}")
+    sections = (
+        _section("ff_magic", 0, 1, "raw_magic_byte", payload, "PR106 packed payload marker 0xff."),
+        _section("decoder_len_u24le", 1, 3, "raw_uint24_le", payload, "24-bit little-endian decoder Brotli length."),
+        _section("decoder_packed_brotli", decoder_offset, decoder_len, "brotli_packed_decoder", payload, "Packed decoder stream from PR106 belt_and_suspenders."),
+        _section("latents_and_sidecar_brotli", decoder_end, len(payload) - decoder_end, "brotli_latents_and_sidecar", payload, "PR106 latents plus sidecar stream."),
+    )
+    return _make_archive_layout(
+        grammar_name="pr106_ff_packed_hnerv",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "Direct PR106 packed layout is detectable, but its packed Brotli sections need a dedicated projector before master-gradient anchors are legal.",
+        ),
+    )
+
+
+def parse_hnerv_lc_v2_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse true hnerv_lc_v2 four-part length-prefixed layout."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "0.bin"):
+        raise ValueError(f"hnerv_lc_v2 expected raw payload or member '0.bin', got {extracted.member_name!r}")
+    pos = 0
+    parts: list[tuple[str, int, int, str, str]] = []
+    for name, codec, notes in (
+        ("decoder_brotli", "brotli_schema_decoder_int8", "Schema-driven decoder INT8 codes."),
+        ("scales_fp16", "raw_fp16_scales", "One fp16 scale per tensor in schema order."),
+        ("latents_brotli", "brotli_asym_delta_latents", "Per-dim asymmetric latent delta stream."),
+        ("wrap_sidecar_brotli", "brotli_per_pair_sidecar", "Per-pair correction sidecar."),
+    ):
+        if pos + 4 > len(payload):
+            raise ValueError("hnerv_lc_v2 payload truncated before length field")
+        length_offset = pos
+        part_len = struct.unpack_from("<I", payload, pos)[0]
+        pos += 4
+        if part_len <= 0 or pos + part_len > len(payload):
+            raise ValueError(f"bad hnerv_lc_v2 section {name} length {part_len}")
+        parts.append((f"{name}_len_le_u32", length_offset, 4, "raw_uint32_le", f"Length of {name}."))
+        parts.append((name, pos, part_len, codec, notes))
+        pos += part_len
+    if pos != len(payload):
+        raise ValueError(f"hnerv_lc_v2 trailing bytes: parsed={pos}, payload={len(payload)}")
+    scales_len = parts[3][2]
+    if scales_len != 56:
+        raise ValueError(f"hnerv_lc_v2 expected 56B fp16 scale section, got {scales_len}")
+    sections = tuple(
+        _section(name, offset, length, codec, payload, notes)
+        for name, offset, length, codec, notes in parts
+    )
+    return _make_archive_layout(
+        grammar_name="hnerv_lc_v2_length_prefixed",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "This is the true hnerv_lc_v2 four-part packet, distinct from PR101 fixed offsets; it is xray-only until a schema-aware projector exists.",
+        ),
+    )
+
+
+def parse_pr107_apogee_archive_layout(archive_bytes: bytes) -> ArchiveLayout:
+    """Parse PR107 Apogee's three-part length-prefixed payload."""
+    extracted = _extract_gradient_subject_from_archive_bytes(archive_bytes)
+    payload = extracted.payload
+    if extracted.member_name not in (None, "0.bin"):
+        raise ValueError(f"PR107 Apogee expected raw payload or member '0.bin', got {extracted.member_name!r}")
+    pos = 0
+    parts: list[tuple[str, int, int, str, str]] = []
+    for name, codec, notes in (
+        ("meta_brotli", "brotli_json_meta", "Brotli-compressed Apogee metadata JSON."),
+        ("decoder_blob", "apogee_decoder_blob", "PR107 Apogee decoder payload."),
+        ("latents_brotli", "brotli_latents", "Brotli-compressed PR107 Apogee latents."),
+    ):
+        if pos + 4 > len(payload):
+            raise ValueError("PR107 payload truncated before length field")
+        length_offset = pos
+        part_len = struct.unpack_from("<I", payload, pos)[0]
+        pos += 4
+        if part_len <= 0 or pos + part_len > len(payload):
+            raise ValueError(f"bad PR107 section {name} length {part_len}")
+        parts.append((f"{name}_len_le_u32", length_offset, 4, "raw_uint32_le", f"Length of {name}."))
+        parts.append((name, pos, part_len, codec, notes))
+        pos += part_len
+    if pos != len(payload):
+        raise ValueError(f"PR107 trailing bytes: parsed={pos}, payload={len(payload)}")
+    sections = (
+        *(
+            _section(name, offset, length, codec, payload, notes)
+            for name, offset, length, codec, notes in parts
+        ),
+    )
+    return _make_archive_layout(
+        grammar_name="pr107_apogee_length_prefixed",
+        archive_bytes=archive_bytes,
+        extracted=extracted,
+        sections=sections,
+        gradient_projection_supported=False,
+        parser_notes=(
+            "PR107 Apogee boundaries are detectable from its source parser, but gradient projection is fail-closed.",
+        ),
+    )
+
+
+def detect_archive_grammar_and_parse(archive_bytes: bytes) -> tuple[str, ArchiveLayout]:
+    """Detect the known archive grammar and return a typed layout."""
+    failures: list[str] = []
+    for parser in (
+        parse_fec6_fp11_selector_archive_layout,
+        parse_pr106_format0d_archive_layout,
+        parse_pr106_ff_packed_archive_layout,
+        parse_hnerv_lc_v2_archive_layout,
+        parse_a1_archive_layout,
+        parse_pr107_apogee_archive_layout,
+        parse_pr101_lc_v2_archive_layout,
+    ):
+        try:
+            layout = parser(archive_bytes)
+            return layout.grammar_name, layout
+        except ValueError as exc:
+            failures.append(f"{parser.__name__}: {exc}")
+    raise ArchiveGrammarUnknownError("; ".join(failures))
 
 
 def _zigzag_encode_i8_to_u8(arr_i8: np.ndarray) -> np.ndarray:
@@ -771,19 +1244,8 @@ def _validate_measurement_authority(
 
 
 def _maybe_extract_inner_archive_from_zip(zip_path: Path) -> bytes:
-    """If zip_path is a real .zip with a single 0.bin member, return its bytes; else assume it's already raw."""
-    import zipfile
-    if zipfile.is_zipfile(zip_path):
-        with zipfile.ZipFile(zip_path) as zf:
-            names = zf.namelist()
-            if len(names) == 1:
-                return zf.read(names[0])
-            # Look for a canonical name
-            for cand in ("0.bin", "archive.bin"):
-                if cand in names:
-                    return zf.read(cand)
-            raise ValueError(f"zip has multiple members {names}; no canonical name found")
-    return zip_path.read_bytes()
+    """Return canonical contest payload bytes from a ZIP, or raw file bytes otherwise."""
+    return _extract_gradient_subject_from_archive_bytes(zip_path.read_bytes()).payload
 
 
 def _serialize_archive_to_temp(raw_bytes: bytes, scratch_dir: Path) -> Path:
@@ -799,11 +1261,21 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Extract master gradient (per-byte score sensitivity) for an archive at its operating point."
     )
     parser.add_argument("--archive", required=True, type=Path, help="Path to fec6 archive.zip or raw archive bytes")
-    parser.add_argument("--inflate-py", required=True, type=Path, help="Path to submission_dir/inflate.py (the codec source)")
-    parser.add_argument("--upstream-dir", required=True, type=Path, help="Path to upstream repository root (with models/posenet.safetensors etc.)")
+    parser.add_argument(
+        "--inflate-py",
+        default=None,
+        type=Path,
+        help="Path to submission_dir/inflate.py (required unless --detect-grammar-only)",
+    )
+    parser.add_argument(
+        "--upstream-dir",
+        default=None,
+        type=Path,
+        help="Path to upstream repository root (required unless --detect-grammar-only)",
+    )
     parser.add_argument(
         "--axis",
-        required=True,
+        default=None,
         choices=[
             "[contest-CPU]",
             "[contest-CUDA]",
@@ -812,9 +1284,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             "[macOS-CPU advisory]",
             "[MPS-PROXY]",
         ],
-        help="Score axis tag. Contest tags require full pair count and authoritative hardware.",
+        help="Score axis tag. Required unless --detect-grammar-only; contest tags require full pair count and authoritative hardware.",
     )
-    parser.add_argument("--output-npy", required=True, type=Path, help="Sidecar .npy path for the (n_bytes, 3) gradient array (NOT in /tmp per Catalog #220)")
+    parser.add_argument(
+        "--output-npy",
+        default=None,
+        type=Path,
+        help="Sidecar .npy path for the (n_bytes, 3) gradient array (required unless --detect-grammar-only)",
+    )
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Compute device (cpu for Modal CPU dispatch)")
     parser.add_argument("--video-path", default=None, type=Path, help="GT video path (defaults to upstream/videos/0.mkv)")
     parser.add_argument("--n-pairs-used", type=int, default=8, help="Pairs to use for forward+backward (CPU economics; default 8)")
@@ -822,6 +1299,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--call-id", default=None, help="Optional dispatch call_id for the ledger anchor")
     parser.add_argument("--hardware-substrate", default=None, help="Hardware substrate tag (default: derived from device)")
     parser.add_argument("--scratch-dir", default=None, type=Path, help="Scratch dir for raw archive bytes (default: alongside output-npy)")
+    parser.add_argument(
+        "--detect-grammar-only",
+        action="store_true",
+        help="Print detected archive grammar/layout JSON and exit without scorer or codec imports.",
+    )
     parser.add_argument("--no-anchor-write", action="store_true", help="Skip writing the ledger anchor (smoke / dry-run mode)")
     parser.add_argument("--verbose", action="store_true", help="Verbose progress logging")
     parser.add_argument(
@@ -873,10 +1355,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.storage_dtype is None:
         args.storage_dtype = args.compute_dtype
 
-    if args.output_npy.is_absolute() and str(args.output_npy).startswith(("/tmp/", "/private/tmp/", "/var/tmp/")):
+    if args.output_npy is not None and args.output_npy.is_absolute() and str(args.output_npy).startswith(("/tmp/", "/private/tmp/", "/var/tmp/")):
         raise SystemExit(
             f"--output-npy {args.output_npy} forbidden under /tmp per CLAUDE.md "
             "'Forbidden /tmp paths in any persisted artifact' (Catalog #220 + transient-evidence trap)"
+        )
+
+    scored_archive_bytes = args.archive.read_bytes()
+    detected_name, detected_layout = detect_archive_grammar_and_parse(scored_archive_bytes)
+    if args.detect_grammar_only:
+        print(json.dumps(detected_layout.as_dict(), sort_keys=True))
+        return 0
+
+    if args.axis is None:
+        raise SystemExit("--axis is required unless --detect-grammar-only is set")
+    if args.output_npy is None:
+        raise SystemExit("--output-npy is required unless --detect-grammar-only is set")
+    if args.inflate_py is None:
+        raise SystemExit("--inflate-py is required unless --detect-grammar-only is set")
+    if args.upstream_dir is None:
+        raise SystemExit("--upstream-dir is required unless --detect-grammar-only is set")
+    if detected_name not in {"fec6_fp11_selector", "pr101_lc_v2"}:
+        raise SystemExit(
+            f"archive grammar {detected_name!r} is xray/detection-only in this extractor; "
+            "byte-gradient authority is currently implemented only for fec6_fp11_selector "
+            "and pr101_lc_v2 with matching codec.py. Re-run with --detect-grammar-only "
+            "or wire a grammar-aware projector before emitting a master-gradient anchor."
         )
 
     hardware_substrate = args.hardware_substrate or _default_hardware_substrate(args.device)
@@ -894,7 +1398,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Populate the CONV4 permutation cache
     _conv4_storage_perms(codec_module)
 
-    scored_archive_bytes = args.archive.read_bytes()
     scored_archive_sha256 = _sha256_bytes(scored_archive_bytes)
     raw_archive_bytes = _maybe_extract_inner_archive_from_zip(args.archive)
     gradient_subject_sha256 = _sha256_bytes(raw_archive_bytes)
@@ -913,6 +1416,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         f"[master-gradient] gradient subject sha256={gradient_subject_sha256[:16]}... "
         f"bytes={len(raw_archive_bytes)} domain={gradient_byte_domain}"
+    )
+    print(
+        f"[master-gradient] detected grammar={detected_layout.grammar_name} "
+        f"projection_supported={detected_layout.gradient_projection_supported} "
+        f"sections={len(detected_layout.sections)}"
     )
     print(f"[master-gradient] parsing archive layout from {scratch_archive} ({len(raw_archive_bytes)} bytes)")
     layout = parse_fec6_archive_layout(scratch_archive, codec_module)

@@ -10,7 +10,10 @@ fec6 codec's int8 mantissa + fp16 scale grammar at small scale.
 """
 from __future__ import annotations
 
+import io
+import json
 import sys
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +43,70 @@ from tac.master_gradient import (  # noqa: E402
     load_anchors_lenient,
     update_from_anchor,
 )
+
+# ─────────────────────────────────────────────────────────────────────────── #
+# Synthetic archive grammar fixtures                                          #
+# ─────────────────────────────────────────────────────────────────────────── #
+
+
+def _zip_payload(payload: bytes, member_name: str = "x") -> bytes:
+    bio = io.BytesIO()
+    with zipfile.ZipFile(bio, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr(member_name, payload)
+    return bio.getvalue()
+
+
+def _a1_payload() -> bytes:
+    section_total = 4 + 162_164
+    return (
+        section_total.to_bytes(4, "little")
+        + b"\x1b\xcd\x03\xf8"
+        + b"D" * (162_164 - 4)
+        + b"L" * 15_387
+        + b"SIDE"
+    )
+
+
+def _pr101_payload() -> bytes:
+    return b"\x1b\xcd\x03\xf8" + b"D" * (162_164 - 4) + b"L" * 15_387 + b"SIDE"
+
+
+def _pr106_payload() -> bytes:
+    primary = b"P" * 5
+    base_sidecar = b"B" * 511
+    extra = b"EE"
+    return (
+        b"\xfe\x0d"
+        + len(primary).to_bytes(4, "little")
+        + primary
+        + base_sidecar
+        + len(extra).to_bytes(2, "little")
+        + extra
+        + b"FRAME!"
+    )
+
+
+def _pr106_ff_payload() -> bytes:
+    decoder = b"D" * 7
+    tail = b"T" * 11
+    return b"\xff" + len(decoder).to_bytes(3, "little") + decoder + tail
+
+
+def _hnerv_lc_v2_payload() -> bytes:
+    parts = (b"D" * 7, b"S" * 56, b"L" * 9, b"W" * 3)
+    return b"".join(len(part).to_bytes(4, "little") + part for part in parts)
+
+
+def _pr107_payload() -> bytes:
+    parts = (b"M" * 5, b"D" * 8, b"L" * 6)
+    return b"".join(len(part).to_bytes(4, "little") + part for part in parts)
+
+
+def _fec6_payload() -> bytes:
+    source = _pr101_payload()
+    selector = b"FEC6" + (600).to_bytes(2, "little") + b"SEL"
+    return b"FP11" + len(source).to_bytes(4, "little") + source + len(selector).to_bytes(2, "little") + selector
+
 
 # ─────────────────────────────────────────────────────────────────────────── #
 # Synthetic small decoder + matching codec module                             #
@@ -534,6 +601,229 @@ def test_validate_measurement_authority_refuses_advisory_contest_axis():
 
 
 # ─────────────────────────────────────────────────────────────────────────── #
+# Test: archive grammar detection and typed boundaries                         #
+# ─────────────────────────────────────────────────────────────────────────── #
+
+
+@pytest.mark.parametrize(
+    ("archive_bytes", "expected_grammar", "section_names", "projection_supported"),
+    [
+        (
+            _zip_payload(_fec6_payload()),
+            "fec6_fp11_selector",
+            [
+                "fp11_magic",
+                "source_len_le_u32",
+                "source_payload",
+                "selector_len_le_u16",
+                "selector_payload",
+            ],
+            True,
+        ),
+        (
+            _zip_payload(_a1_payload()),
+            "a1_finetuned",
+            ["a1_section_header", "decoder", "latent", "sidecar"],
+            False,
+        ),
+        (
+            _zip_payload(_pr101_payload()),
+            "pr101_lc_v2",
+            ["decoder", "latent", "sidecar"],
+            True,
+        ),
+        (
+            _zip_payload(_pr106_payload()),
+            "pr106_format0d",
+            [
+                "format_magic",
+                "format_id",
+                "pr106_len_le_u32",
+                "pr106_payload",
+                "base_format0c_sidecar_payload",
+                "extra_payload_len_le_u16",
+                "extra_pr101_ranked_no_op_payload",
+                "extra_framing_meta",
+            ],
+            False,
+        ),
+        (
+            _zip_payload(_pr106_ff_payload(), member_name="0.bin"),
+            "pr106_ff_packed_hnerv",
+            [
+                "ff_magic",
+                "decoder_len_u24le",
+                "decoder_packed_brotli",
+                "latents_and_sidecar_brotli",
+            ],
+            False,
+        ),
+        (
+            _zip_payload(_hnerv_lc_v2_payload(), member_name="0.bin"),
+            "hnerv_lc_v2_length_prefixed",
+            [
+                "decoder_brotli_len_le_u32",
+                "decoder_brotli",
+                "scales_fp16_len_le_u32",
+                "scales_fp16",
+                "latents_brotli_len_le_u32",
+                "latents_brotli",
+                "wrap_sidecar_brotli_len_le_u32",
+                "wrap_sidecar_brotli",
+            ],
+            False,
+        ),
+        (
+            _zip_payload(_pr107_payload(), member_name="0.bin"),
+            "pr107_apogee_length_prefixed",
+            [
+                "meta_brotli_len_le_u32",
+                "meta_brotli",
+                "decoder_blob_len_le_u32",
+                "decoder_blob",
+                "latents_brotli_len_le_u32",
+                "latents_brotli",
+            ],
+            False,
+        ),
+    ],
+)
+def test_detect_archive_grammar_and_parse_synthetic_boundaries(
+    archive_bytes,
+    expected_grammar,
+    section_names,
+    projection_supported,
+):
+    grammar, layout = emg.detect_archive_grammar_and_parse(archive_bytes)
+
+    assert grammar == expected_grammar
+    assert layout.grammar_name == expected_grammar
+    assert layout.archive_bytes == len(archive_bytes)
+    assert layout.gradient_byte_domain == "zip_inner_member_payload"
+    assert layout.gradient_projection_supported is projection_supported
+    assert [section.name for section in layout.sections] == section_names
+    assert layout.sections[0].offset == 0
+    assert layout.sections[-1].end_offset == layout.gradient_subject_bytes
+    assert layout.as_dict()["grammar_name"] == expected_grammar
+
+
+def test_detect_archive_grammar_preserves_raw_domain_for_unzipped_payload():
+    grammar, layout = emg.detect_archive_grammar_and_parse(_pr101_payload())
+
+    assert grammar == "pr101_lc_v2"
+    assert layout.member_name is None
+    assert layout.gradient_byte_domain == "scored_archive_bytes"
+    assert layout.archive_sha256 == layout.gradient_subject_sha256
+
+
+def test_detect_archive_grammar_only_cli_prints_json(tmp_path, capsys):
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(_zip_payload(_pr106_payload()))
+
+    rc = emg.main(["--archive", str(archive), "--detect-grammar-only"])
+
+    assert rc == 0
+    parsed = json.loads(capsys.readouterr().out)
+    assert parsed["grammar_name"] == "pr106_format0d"
+    assert parsed["gradient_projection_supported"] is False
+
+
+def test_main_fail_closes_detection_only_grammar_before_codec_import(tmp_path):
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(_zip_payload(_pr106_payload()))
+    fake_inflate = tmp_path / "inflate.py"
+    fake_inflate.write_text("# no src import should happen before fail-closed grammar gate\n")
+    fake_upstream = tmp_path / "upstream"
+    fake_upstream.mkdir()
+
+    with pytest.raises(SystemExit, match="xray/detection-only"):
+        emg.main(
+            [
+                "--archive",
+                str(archive),
+                "--inflate-py",
+                str(fake_inflate),
+                "--upstream-dir",
+                str(fake_upstream),
+                "--axis",
+                "[diagnostic-CPU]",
+                "--output-npy",
+                str(tmp_path / "grad.npy"),
+                "--device",
+                "cpu",
+            ]
+        )
+
+
+def test_main_requires_explicit_axis_for_anchor_emitting_path(tmp_path):
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(_zip_payload(_pr101_payload()))
+    fake_inflate = tmp_path / "inflate.py"
+    fake_inflate.write_text("# noop\n")
+    fake_upstream = tmp_path / "upstream"
+    fake_upstream.mkdir()
+
+    with pytest.raises(SystemExit, match="--axis is required"):
+        emg.main(
+            [
+                "--archive",
+                str(archive),
+                "--inflate-py",
+                str(fake_inflate),
+                "--upstream-dir",
+                str(fake_upstream),
+                "--output-npy",
+                str(tmp_path / "grad.npy"),
+                "--device",
+                "cpu",
+            ]
+        )
+
+
+def test_detect_archive_grammar_real_local_fixtures_if_present():
+    fixtures = [
+        (
+            REPO_ROOT
+            / "experiments/results/a1_cuda_cpu_drift_discriminator_v_baseline_20260509T110211Z/submission_dir/archive.zip",
+            "a1_finetuned",
+        ),
+        (
+            REPO_ROOT / "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+            "pr101_lc_v2",
+        ),
+        (
+            REPO_ROOT / "experiments/results/pr106_format0d_latent_score_table_materialized_20260515_codex/sidecar_archive.zip",
+            "pr106_format0d",
+        ),
+        (
+            REPO_ROOT / "experiments/results/public_pr_intake_full/public_pr106_intake_20260505_auto/archive.zip",
+            "pr106_ff_packed_hnerv",
+        ),
+        (
+            REPO_ROOT / "experiments/results/public_pr100_intake_20260504_codex/archive.zip",
+            "hnerv_lc_v2_length_prefixed",
+        ),
+        (
+            REPO_ROOT / "experiments/results/pr107_apogee_cpu_auth_eval_gha_20260508T124452Z/archive.zip",
+            "pr107_apogee_length_prefixed",
+        ),
+        (
+            REPO_ROOT / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/archive.zip",
+            "pr107_apogee_length_prefixed",
+        ),
+    ]
+    existing = [(path, grammar) for path, grammar in fixtures if path.exists()]
+    if not existing:
+        pytest.skip("local production-size archive fixtures are not present")
+
+    for path, expected_grammar in existing:
+        grammar, layout = emg.detect_archive_grammar_and_parse(path.read_bytes())
+        assert grammar == expected_grammar
+        assert layout.gradient_subject_bytes > 100_000
+        assert layout.sections[-1].end_offset == layout.gradient_subject_bytes
+
+
+# ─────────────────────────────────────────────────────────────────────────── #
 # Test: archive-zip extraction (synthetic 1-member zip)                        #
 # ─────────────────────────────────────────────────────────────────────────── #
 
@@ -548,15 +838,15 @@ def test_maybe_extract_inner_archive_from_zip_single_member(tmp_path):
     assert out == inner
 
 
-def test_maybe_extract_inner_archive_from_zip_canonical_name(tmp_path):
+def test_maybe_extract_inner_archive_from_zip_refuses_multi_member_zip(tmp_path):
     import zipfile
     z = tmp_path / "archive.zip"
     inner = b"the canonical archive"
     with zipfile.ZipFile(z, "w") as zf:
         zf.writestr("0.bin", inner)
         zf.writestr("metadata.json", b"{}")
-    out = emg._maybe_extract_inner_archive_from_zip(z)
-    assert out == inner
+    with pytest.raises(ValueError, match="exactly one payload member"):
+        emg._maybe_extract_inner_archive_from_zip(z)
 
 
 def test_maybe_extract_inner_archive_from_zip_raw_bytes_passthrough(tmp_path):
